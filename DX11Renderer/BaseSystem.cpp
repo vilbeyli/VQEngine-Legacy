@@ -53,8 +53,8 @@ void BaseSystem::Run()
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			TranslateMessage(&msg);		// Translates virtual-key messages into character messages
+			DispatchMessage(&msg);		// indirectly causes Windows to invoke WndProc
 		}
 
 		if (msg.message == WM_QUIT)
@@ -180,12 +180,13 @@ void BaseSystem::InitWindows(int& width, int& height)
 
 	// create window with screen settings
 	m_hwnd = CreateWindowEx(
-		WS_EX_APPWINDOW,
-		m_appName,
-		m_appName,
+		WS_EX_APPWINDOW,		// Forces a top-level window onto the taskbar when the window is visible.
+		m_appName,				// class name
+		m_appName,				// Window name
 		WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP,
 		posX, posY, width, height,
-		NULL, NULL, m_hInstance, NULL
+		NULL, NULL,				// parent, menu
+		m_hInstance, NULL
 		);
 
 	// focus window

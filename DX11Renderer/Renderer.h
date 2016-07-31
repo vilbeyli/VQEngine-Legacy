@@ -2,6 +2,8 @@
 
 #include <windows.h>
 
+class DXInterface;
+
 class Renderer
 {
 public:
@@ -19,6 +21,7 @@ public:
 	static const bool VSYNC = true;
 private:
 
+	DXInterface* m_Direct3D;
 };
 
 

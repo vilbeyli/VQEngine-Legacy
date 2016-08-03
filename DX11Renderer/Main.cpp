@@ -2,13 +2,10 @@
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdShow)
 {
-	BaseSystem* sys;
-	bool initialized;
-
-	sys = new BaseSystem();
+	BaseSystem* sys = new BaseSystem();
 	if (!sys)	return -1;
 
-	initialized = sys->Init();
+	bool initialized = sys->Init();
 	if (initialized)
 		sys->Run();
 

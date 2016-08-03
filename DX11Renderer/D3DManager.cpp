@@ -1,10 +1,10 @@
-#include "DXInterface.h"
+#include "D3DManager.h"
 
 #include <windows.h>
 
 #define PI 3.141592654f
 
-DXInterface::DXInterface()
+D3DManager::D3DManager()
 {
 	m_swapChain					= nullptr;
 	m_device					= nullptr;
@@ -20,11 +20,11 @@ DXInterface::DXInterface()
 }
 
 
-DXInterface::~DXInterface()
+D3DManager::~D3DManager()
 {
 }
 
-bool DXInterface::Init(int width, int height, const bool VSYNC, HWND hWnd, const bool FULL_SCREEN, const float nearPlane, const float farPlane)
+bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const bool FULL_SCREEN, const float nearPlane, const float farPlane)
 {
 	HRESULT result;
 	IDXGIFactory* factory;
@@ -212,7 +212,7 @@ bool DXInterface::Init(int width, int height, const bool VSYNC, HWND hWnd, const
 	return true;
 }
 
-void DXInterface::Shutdown()
+void D3DManager::Shutdown()
 {	
 	// Before shutting down set to windowed mode or when you release the swap chain it will throw an exception.
 	if (m_swapChain)
@@ -271,19 +271,19 @@ void DXInterface::Shutdown()
 	return;
 }
 
-void DXInterface::BeginFrame(const float* clearColor)
+void D3DManager::BeginFrame(const float* clearColor)
 {
 	m_deviceContext->ClearRenderTargetView(m_RTV, clearColor);
 	m_deviceContext->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 }
 
-void DXInterface::EndFrame()
+void D3DManager::EndFrame()
 {
 	if (m_vsync_enabled)		m_swapChain->Present(1, 0);
 	else						m_swapChain->Present(0, 0);
 }
 
-void DXInterface::EnableAlphaBlending(bool enable)
+void D3DManager::EnableAlphaBlending(bool enable)
 {
 	float blendFactor[4] = { 0 };
 
@@ -297,7 +297,7 @@ void DXInterface::EnableAlphaBlending(bool enable)
 	}
 }
 
-void DXInterface::EnableZBuffer(bool enable)
+void D3DManager::EnableZBuffer(bool enable)
 {
 	if (enable)
 	{
@@ -309,26 +309,7 @@ void DXInterface::EnableZBuffer(bool enable)
 	}
 }
 
-void DXInterface::GetProjMatrix(XMMATRIX& projectionMatrix)
-{
-	projectionMatrix = m_mProj;
-	return;
-}
-
-void DXInterface::GetWorldMatrix(XMMATRIX& worldMatrix)
-{
-	worldMatrix = m_mWorld;
-	return;
-}
-
-
-void DXInterface::GetOrthoMatrix(XMMATRIX& orthoMatrix)
-{
-	orthoMatrix = m_mOrtho;
-	return;
-}
-
-void DXInterface::GetVideoCardInfo(char* cardName, int& memory)
+void D3DManager::GetVideoCardInfo(char* cardName, int& memory)
 {
 	strcpy_s(cardName, 128, m_GPUDescription);
 	memory = m_VRAM;
@@ -338,7 +319,7 @@ void DXInterface::GetVideoCardInfo(char* cardName, int& memory)
 //----------------------------------------------------------------------------------------------------------------------------------------
 // private functions
 
-bool DXInterface::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator)
+bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator)
 {
 	HRESULT result;
 	DXGI_SWAP_CHAIN_DESC swapChainDesc;
@@ -403,7 +384,7 @@ bool DXInterface::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int sc
 	return true;
 }
 
-bool DXInterface::InitDepthBuffer(int scrWidth, int scrHeight)
+bool D3DManager::InitDepthBuffer(int scrWidth, int scrHeight)
 {
 
 	HRESULT result;
@@ -435,7 +416,7 @@ bool DXInterface::InitDepthBuffer(int scrWidth, int scrHeight)
 	return true;
 }
 
-bool DXInterface::InitDepthStencilBuffer()
+bool D3DManager::InitDepthStencilBuffer()
 {
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
 	HRESULT result;
@@ -477,7 +458,7 @@ bool DXInterface::InitDepthStencilBuffer()
 	return true;
 }
 
-bool DXInterface::InitRasterizerState()
+bool D3DManager::InitRasterizerState()
 {
 
 	HRESULT result;
@@ -508,7 +489,7 @@ bool DXInterface::InitRasterizerState()
 	return true;
 }
 
-bool DXInterface::InitStencilView()
+bool D3DManager::InitStencilView()
 {
 
 	HRESULT result;
@@ -532,7 +513,7 @@ bool DXInterface::InitStencilView()
 	return true;
 }
 
-void DXInterface::InitViewport(int scrWidth, int scrHeight)
+void D3DManager::InitViewport(int scrWidth, int scrHeight)
 {
 
 	D3D11_VIEWPORT viewport;
@@ -549,7 +530,7 @@ void DXInterface::InitViewport(int scrWidth, int scrHeight)
 	m_deviceContext->RSSetViewports(1, &viewport);
 }
 
-bool DXInterface::InitAlphaBlending()
+bool D3DManager::InitAlphaBlending()
 {
 	HRESULT result;
 	D3D11_BLEND_DESC blendStateDesc;
@@ -583,7 +564,7 @@ bool DXInterface::InitAlphaBlending()
 	return true;
 }
 
-bool DXInterface::InitZBuffer()
+bool D3DManager::InitZBuffer()
 {
 	HRESULT result;
 	D3D11_DEPTH_STENCIL_DESC depthDisabledStencilDesc;
@@ -620,4 +601,25 @@ bool DXInterface::InitZBuffer()
 	}
 
 	return true;
+}
+
+//-----------------
+
+
+void D3DManager::GetProjMatrix(XMMATRIX& projectionMatrix)
+{
+	projectionMatrix = m_mProj;
+	return;
+}
+
+void D3DManager::GetWorldMatrix(XMMATRIX& worldMatrix)
+{
+	worldMatrix = m_mWorld;
+	return;
+}
+
+void D3DManager::GetOrthoMatrix(XMMATRIX& orthoMatrix)
+{
+	orthoMatrix = m_mOrtho;
+	return;
 }

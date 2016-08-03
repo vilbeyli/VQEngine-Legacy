@@ -11,11 +11,11 @@
 using namespace DirectX;
 
 
-class DXInterface
+class D3DManager
 {
 public:
-	DXInterface();
-	~DXInterface();
+	D3DManager();
+	~D3DManager();
 
 	bool Init(int width, int height, const bool VSYNC, HWND m_hwnd, const bool FULL_SCREEN, const float g_nearPlane, const float g_farPlane);
 	void Shutdown();

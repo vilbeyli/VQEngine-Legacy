@@ -3,11 +3,7 @@
 
 #define WIN32_LEAN_AND_MEAN		// speeds up build process
 
-#include <windows.h>
-
-// forward declarations
-class Input;
-class Renderer;
+#include "Engine.h"
 
 class BaseSystem
 {
@@ -24,16 +20,13 @@ public:
 
 private:
 	bool Frame();
-	void InitWindows(int&, int&);
+	void InitWindow(int&, int&);
 	void ShutdownWindows();
 
 private:
 	LPCSTR		m_appName;
 	HINSTANCE	m_hInstance;
 	HWND		m_hwnd;
-
-	Input*		mp_Input;
-	Renderer*	mp_Renderer;
 };
 
 // The WndProc function and ApplicationHandle pointer are also included in this class file so we can redirect 

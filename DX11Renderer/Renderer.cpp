@@ -1,5 +1,5 @@
 #include "Renderer.h"
-#include "DXInterface.h"
+#include "D3DManager.h"
 
 #include <cassert>
 
@@ -13,14 +13,12 @@ Renderer::~Renderer()
 {
 }
 
-bool Renderer::Init(int width, int height, HWND m_hWnd)
+bool Renderer::Init(int width, int height, HWND hwnd)
 {
-
-	bool result;
-
+	m_hWnd = hwnd;
 
 	// Create the Direct3D object.
-	m_Direct3D = new DXInterface();
+	m_Direct3D = new D3DManager();
 	if (!m_Direct3D)
 	{
 		assert(false);
@@ -28,7 +26,7 @@ bool Renderer::Init(int width, int height, HWND m_hWnd)
 	}
 
 	// Initialize the Direct3D object.
-	result = m_Direct3D->Init(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN, g_nearPlane, g_farPlane);
+	bool result = m_Direct3D->Init(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN, g_nearPlane, g_farPlane);
 	if (!result)
 	{
 		MessageBox(m_hWnd, "Could not initialize Direct3D", "Error", MB_OK);

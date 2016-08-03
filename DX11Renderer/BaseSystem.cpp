@@ -5,46 +5,36 @@
 
 #include <new>
 
+#define WIDTH 800
+#define HEIGHT 600
 
 BaseSystem::BaseSystem()
 {
-	mp_Input = NULL;
-	mp_Renderer = NULL;
+	m_hInstance		= GetModuleHandle(NULL);	// instance of this application
+	m_appName		= "DX11 Renderer";
 }
 
 
-BaseSystem::BaseSystem(const BaseSystem& other)
-{
+BaseSystem::BaseSystem(const BaseSystem& other){}
 
-}
-
-BaseSystem::~BaseSystem()
-{
-}
+BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
 	int width, height;
-	bool b_gfxInit;
+	InitWindow(width, height);
 
-	InitWindows(width, height);
+	// TODO: think error handling during initialization | engine/renderer separate init?
+	if(!ENGINE->Initialize(m_hwnd, width, height))
+		return false;
 
-	// create subclasses
-	mp_Input	= new Input();
-	mp_Renderer = new Renderer();
-	if (!mp_Input)		return false;
-	if (!mp_Renderer)	return false;
-
-	// initialize
-	mp_Input->Init();
-	b_gfxInit = mp_Renderer->Init(width, height, m_hwnd);
-	return b_gfxInit;
+	return true;
 }
 
 void BaseSystem::Run()
 {
 	MSG msg;
-	bool done, result;
+	bool done;
 
 	ZeroMemory(&msg, sizeof(MSG));
 
@@ -63,11 +53,12 @@ void BaseSystem::Run()
 		}
 		else
 		{
-			result = Frame();
-			if (!result)
-			{
-				done = true;
-			}
+			done = !Frame();
+			//result = Frame();
+			//if (!result)
+			//{
+			//	done = true;
+			//}
 		}
 	}
 
@@ -76,19 +67,7 @@ void BaseSystem::Run()
 
 void BaseSystem::Exit()
 {
-	if (mp_Input)
-	{
-		delete mp_Input;
-	}
-
-	if (mp_Renderer)
-	{
-		mp_Renderer->Exit();
-		delete mp_Renderer;
-	}
-
 	ShutdownWindows();
-	return;
 }
 
 LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
@@ -97,15 +76,17 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 	{
 	case WM_KEYDOWN:
 	{
-		mp_Input->KeyDown((KeyCode)wparam);
+		ENGINE->m_input->KeyDown((KeyCode)wparam);
 		return 0;
 	}
 
 	case WM_KEYUP:
 	{
-		mp_Input->KeyUp((KeyCode)wparam);
+		ENGINE->m_input->KeyUp((KeyCode)wparam);
 		return 0;
 	}
+
+	// TODO: PAINT ???
 
 	default:
 		return DefWindowProc(hwnd, umsg, wparam, lparam);
@@ -114,26 +95,16 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 
 bool BaseSystem::Frame()
 {
-	bool result;
-
-	if (mp_Input->IsKeyDown(VK_ESCAPE))
-	{
-		return false;
-	}
-
-	result = mp_Renderer->MakeFrame();
-	return result;
+	return ENGINE->Run();
 }
 
-void BaseSystem::InitWindows(int& width, int& height)
+void BaseSystem::InitWindow(int& width, int& height)
 {
 	WNDCLASSEX wc;
 	DEVMODE dmScreenSettings;
 	int posX, posY;
 
-	gp_appHandle	= this;						// global handle
-	m_hInstance		= GetModuleHandle(NULL);	// instance of this application
-	m_appName		= "DX11 Renderer";			
+	gp_appHandle	= this;						// global handle		
 
 	// default settings for windows class
 	wc.style			= CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
@@ -171,8 +142,8 @@ void BaseSystem::InitWindows(int& width, int& height)
 	}
 	else
 	{
-		width = 800;
-		height = 600;
+		width = WIDTH;
+		height = HEIGHT;
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
 		posY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
@@ -188,6 +159,16 @@ void BaseSystem::InitWindows(int& width, int& height)
 		NULL, NULL,				// parent, menu
 		m_hInstance, NULL
 		);
+
+	if (m_hwnd == nullptr)
+	{
+		MessageBox(NULL, "CreateWindowEx() failed", "Error", MB_OK);
+		ENGINE->Exit();
+		PostQuitMessage(0);
+		return;
+	}
+
+	// init engine here maybe?
 
 	// focus window
 	ShowWindow(m_hwnd, SW_SHOW);

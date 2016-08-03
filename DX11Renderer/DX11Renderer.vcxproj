@@ -124,7 +124,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DXInterface.cpp" />
+    <ClCompile Include="D3DManager.cpp" />
+    <ClCompile Include="Engine.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="BaseSystem.cpp" />
@@ -132,7 +133,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseSystem.h" />
-    <ClInclude Include="DXInterface.h" />
+    <ClInclude Include="D3DManager.h" />
+    <ClInclude Include="Engine.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="resource.h" />

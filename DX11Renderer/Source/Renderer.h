@@ -1,8 +1,18 @@
 #pragma once
 
 #include <windows.h>
+#include "GeometryGenerator.h"
+#include "Shader.h"
+#include <string>
+#include <vector>
 
+// forward declarations
 class D3DManager;
+struct ID3D11Device;
+struct ID3D11DeviceContext;
+class BufferObject;
+
+typedef unsigned int ShaderID;
 
 class Renderer
 {
@@ -17,19 +27,26 @@ public:
 	void EnableAlphaBlending(bool enable);
 	void EnableZBuffer(bool enable);
 
-	ID3D11Device*			GetDevice();
-	ID3D11DeviceContext*	GetDeviceContext();
+	ShaderID AddShader(const std::string& shdFileName, const std::string& fileRoot = "");
 
 private:
 	bool Render();
+
+	void GeneratePrimitives();
 
 public:
 	static const bool FULL_SCREEN  = false;
 	static const bool VSYNC = true;
 private:
+	D3DManager*						m_Direct3D;
+	HWND							m_hWnd;
+	ID3D11Device*					m_device;
+	ID3D11DeviceContext*			m_deviceContext;
 
-	D3DManager* m_Direct3D;
-	HWND m_hWnd;
+	GeometryGenerator				m_geom;
+	std::vector<BufferObject*>		m_bufferObjects;
+
+	std::vector<Shader*>			m_shaders;
 };
 
 

@@ -5,8 +5,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdSh
 	BaseSystem* sys = new BaseSystem();
 	if (!sys)	return -1;
 
-	bool initialized = sys->Init();
-	if (initialized)
+	if (sys->Init())
 		sys->Run();
 
 	sys->Exit();

@@ -1,0 +1,12 @@
+struct PSIn
+{
+	float4 position : SV_POSITION;
+	float3 normal	: NORMAL;
+	float2 texCoord : TEXCOORD0;
+};
+
+
+float4 PSMain(PSIn In) : SV_TARGET
+{
+	return float4(0.2,0.4,0.8,1);
+}

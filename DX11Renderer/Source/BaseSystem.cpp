@@ -1,12 +1,9 @@
 #include "BaseSystem.h"
-
+#include "SystemDefs.h"
 #include "Input.h"
 #include "Renderer.h"
 
 #include <new>
-
-#define WIDTH 800
-#define HEIGHT 600
 
 BaseSystem::BaseSystem()
 {
@@ -28,17 +25,17 @@ bool BaseSystem::Init()
 	if(!ENGINE->Initialize(m_hwnd, width, height))
 		return false;
 
+	if (!ENGINE->Load())	return false;
+
 	return true;
 }
 
 void BaseSystem::Run()
 {
 	MSG msg;
-	bool done;
-
 	ZeroMemory(&msg, sizeof(MSG));
 
-	done = false;
+	bool done = false;
 	while (!done)
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
@@ -142,8 +139,8 @@ void BaseSystem::InitWindow(int& width, int& height)
 	}
 	else
 	{
-		width = WIDTH;
-		height = HEIGHT;
+		width = SCREEN_WIDTH;
+		height = SCREEN_HEIGHT;
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
 		posY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;

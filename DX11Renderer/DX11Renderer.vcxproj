@@ -124,20 +124,35 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="D3DManager.cpp" />
-    <ClCompile Include="Engine.cpp" />
-    <ClCompile Include="Input.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="BaseSystem.cpp" />
-    <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="Source\BufferObject.cpp" />
+    <ClCompile Include="Source\Camera.cpp" />
+    <ClCompile Include="Source\D3DManager.cpp" />
+    <ClCompile Include="Source\Engine.cpp" />
+    <ClCompile Include="Source\GeometryGenerator.cpp" />
+    <ClCompile Include="Source\Input.cpp" />
+    <ClCompile Include="Source\Main.cpp" />
+    <ClCompile Include="Source\BaseSystem.cpp" />
+    <ClCompile Include="Source\Mesh.cpp" />
+    <ClCompile Include="Source\Renderer.cpp" />
+    <ClCompile Include="Source\Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="BaseSystem.h" />
-    <ClInclude Include="D3DManager.h" />
-    <ClInclude Include="Engine.h" />
-    <ClInclude Include="Input.h" />
-    <ClInclude Include="Renderer.h" />
-    <ClInclude Include="resource.h" />
+    <ClInclude Include="Source\BaseSystem.h" />
+    <ClInclude Include="Source\BufferObject.h" />
+    <ClInclude Include="Source\Camera.h" />
+    <ClInclude Include="Source\D3DManager.h" />
+    <ClInclude Include="Source\Engine.h" />
+    <ClInclude Include="Source\GeometryGenerator.h" />
+    <ClInclude Include="Source\Input.h" />
+    <ClInclude Include="Source\Mesh.h" />
+    <ClInclude Include="Source\Renderer.h" />
+    <ClInclude Include="Source\resource.h" />
+    <ClInclude Include="Source\Shader.h" />
+    <ClInclude Include="Source\SystemDefs.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\Shaders\tex.ps" />
+    <None Include="Data\Shaders\tex.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

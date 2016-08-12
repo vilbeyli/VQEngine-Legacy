@@ -29,11 +29,8 @@ public:
 	ID3D11Device*			GetDevice()			{ return m_device; }
 	ID3D11DeviceContext*	GetDeviceContext()	{ return m_deviceContext;}
 
-	void GetProjMatrix(XMMATRIX&)		;//{return m_mProj;}
-	void GetWorldMatrix(XMMATRIX&)		;//{return m_mProj;}
-	void GetOrthoMatrix(XMMATRIX&)		;//{return m_mProj;}
-
 	void GetVideoCardInfo(char*, int&);
+
 private:
 	bool InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator);
 	bool InitDepthBuffer(int scrWidth, int scrHeight);
@@ -62,9 +59,5 @@ private:
 	ID3D11BlendState*			m_alphaEnableBlendState;
 	ID3D11BlendState*			m_alphaDisableBlendState;
 	ID3D11DepthStencilState*	m_depthDisabledStencilState;
-
-	XMMATRIX					m_mProj;
-	XMMATRIX					m_mWorld;
-	XMMATRIX					m_mOrtho;
 };
 

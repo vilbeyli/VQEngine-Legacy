@@ -37,9 +37,6 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 	int error;
 	ID3D11Texture2D* backBufferPtr;
 
-	float fieldOfView, screenAspect;
-
-
 	// Store the vsync setting.
 	m_vsync_enabled = VSYNC;
 
@@ -197,17 +194,6 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 	{
 		return false;
 	}
-	
-
-
-	// Setup the projection matrix.
-	fieldOfView = PI / 4.0f;
-	screenAspect = (float)width / (float)height;
-
-	// Create the projection matrix for 3D rendering.
-	m_mProj = XMMatrixPerspectiveFovLH(fieldOfView, screenAspect, nearPlane, farPlane);
-	m_mWorld = XMMatrixIdentity();
-	m_mOrtho = XMMatrixOrthographicLH((float)width, (float)height, nearPlane, farPlane);
 
 	return true;
 }
@@ -279,6 +265,10 @@ void D3DManager::BeginFrame(const float* clearColor)
 
 void D3DManager::EndFrame()
 {
+	m_deviceContext->IASetInputLayout(NULL);
+	m_deviceContext->VSSetShader(NULL, NULL, 0);
+	m_deviceContext->PSSetShader(NULL, NULL, 0);
+
 	if (m_vsync_enabled)		m_swapChain->Present(1, 0);
 	else						m_swapChain->Present(0, 0);
 }
@@ -601,25 +591,4 @@ bool D3DManager::InitZBuffer()
 	}
 
 	return true;
-}
-
-//-----------------
-
-
-void D3DManager::GetProjMatrix(XMMATRIX& projectionMatrix)
-{
-	projectionMatrix = m_mProj;
-	return;
-}
-
-void D3DManager::GetWorldMatrix(XMMATRIX& worldMatrix)
-{
-	worldMatrix = m_mWorld;
-	return;
-}
-
-void D3DManager::GetOrthoMatrix(XMMATRIX& orthoMatrix)
-{
-	orthoMatrix = m_mOrtho;
-	return;
 }

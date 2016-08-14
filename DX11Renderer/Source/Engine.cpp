@@ -38,7 +38,7 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 
 bool Engine::Load()
 {
-	m_renderer->AddShader("tex", "Assets/Shaders/");
+	m_renderer->AddShader("tex", "Data/Shaders/");
 
 	return true;
 }

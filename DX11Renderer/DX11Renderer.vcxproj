@@ -135,6 +135,7 @@
     <ClCompile Include="Source\Mesh.cpp" />
     <ClCompile Include="Source\Renderer.cpp" />
     <ClCompile Include="Source\Shader.cpp" />
+    <ClCompile Include="Source\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\BaseSystem.h" />
@@ -149,6 +150,7 @@
     <ClInclude Include="Source\resource.h" />
     <ClInclude Include="Source\Shader.h" />
     <ClInclude Include="Source\SystemDefs.h" />
+    <ClInclude Include="Source\utils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Data\Shaders\tex.ps" />

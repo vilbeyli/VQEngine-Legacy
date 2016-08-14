@@ -27,14 +27,15 @@ protected:
 	//virtual bool Init(ID3D11Device* device, HWND hwnd, WCHAR* shaderFileName);
 
 private:
-	bool Compile(ID3D11Device* device, HWND hwnd, WCHAR* shaderFileName);
-	void OutputShadeErrorMessage(ID3D10Blob* errorMessage, HWND hwnd, WCHAR* shaderFileName);
+	void Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderFileName);
+	void OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName);
 
 	ID3D11VertexShader* m_vertexShader;
 	ID3D11PixelShader*	m_pixelShader;
 	ID3D11InputLayout*	m_layout;
 	ID3D11Buffer*		m_matrixBuffer;
 	std::string			m_name;
+	void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath);
 	//ShaderID			m_id;
 
 private:

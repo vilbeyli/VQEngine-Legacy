@@ -4,9 +4,8 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "SystemDefs.h"
+#include "utils.h"
 
-#include <atlbase.h>
-#include <atlconv.h>
 
 #include <cassert>
 
@@ -78,19 +77,13 @@ bool Renderer::MakeFrame()
 
 ShaderID Renderer::AddShader(const std::string& shdFileName, const std::string& fileRoot)
 {
-	// tex, Shader/
+	// example params: "tex", "Shader/"
 	Shader* shd = new Shader(shdFileName);
 
-	// shader file path: convert from std::string to WCHAR*
-	std::string shdFilePath(fileRoot + shdFileName);
-	CA2W ca2w(shdFilePath.c_str());
-	WCHAR* wPath = ca2w;
-
-	shd->Compile(m_device, m_hWnd, wPath);
-
-	m_shaders.push_back(shd);
+	std::string path = fileRoot + shdFileName;
 	
-
+	shd->Compile(m_device, m_hWnd, path);
+	m_shaders.push_back(shd);
 	return 0;	// todo rethink
 }
 

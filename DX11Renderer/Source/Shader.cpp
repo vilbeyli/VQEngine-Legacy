@@ -1,6 +1,7 @@
 #include "Shader.h"
 #include <d3dcompiler.h>
 #include <fstream>
+#include <sstream>
 
 Shader::Shader(const std::string& shaderFileName)
 	:
@@ -64,64 +65,49 @@ void Shader::End(ID3D11DeviceContext* deviceContext)
 	deviceContext->PSSetShader(NULL, NULL, 0);
 }
 
-bool Shader::Compile(ID3D11Device* device, HWND hwnd, WCHAR* shaderFileName)
+void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderFileName)
 {
 	HRESULT result;
 	ID3D10Blob* errorMessage = 0;
-	ID3D10Blob* vertexShaderBuffer = 0;
-	ID3D10Blob* pixelShaderBuffer = 0;
-	shaderFileName = L"Assets/Shaders/tex.vs";	// TODO: string processing
-	std::ifstream file("Assets/Shaders/tex.vs");
-	if (file)	file.close();
-	else
-	{
-		int i = 5; i++;
-	}
 
+	// SHADER PATHS
+	//----------------------------------------------------------------------------
+	std::string vspath = shaderFileName + ".vs";
+	std::string gspath = shaderFileName + ".gs";
+	std::string pspath = shaderFileName + ".ps";
+	std::wstring vspath_w(vspath.begin(), vspath.end());
+	std::wstring gspath_w(gspath.begin(), gspath.end());
+	std::wstring pspath_w(pspath.begin(), pspath.end());
+	const WCHAR* VSPath = vspath_w.c_str();
+	const WCHAR* GSPath = gspath_w.c_str();
+	const WCHAR* PSPath = pspath_w.c_str();
+
+	// COMPILE SHADERS
+	//----------------------------------------------------------------------------
 	//compile vertex shader
-	result = D3DCompileFromFile(shaderFileName, NULL, NULL, 
-								"VSMain", "vs_4_0", D3DCOMPILE_ENABLE_STRICTNESS,
+	ID3D10Blob* vertexShaderBuffer = NULL;
+	result = D3DCompileFromFile(VSPath, NULL, NULL, "VSMain", "vs_4_0",
+								D3DCOMPILE_ENABLE_STRICTNESS,
 								0, &vertexShaderBuffer, &errorMessage);
-	if (FAILED(result))
-	{
-		//if we have an error message
-		if (errorMessage)
-		{
-			OutputShadeErrorMessage(errorMessage, hwnd, shaderFileName);
-		}
-		else
-		{
-			MessageBox(hwnd, (LPCSTR)shaderFileName, "Error in VS Shader File", MB_OK);
-		}
-
-		return false;
-	}
+	if (FAILED(result))			HandleCompileError(errorMessage, vspath);
 
 	//compile pixel shader
-	shaderFileName = L"Assets/Shaders/tex.ps";
-	result = D3DCompileFromFile(shaderFileName, NULL, NULL, 
-								"PSMain", "ps_4_0", D3DCOMPILE_ENABLE_STRICTNESS, 
+	ID3D10Blob* pixelShaderBuffer = NULL;
+	result = D3DCompileFromFile(PSPath, NULL, NULL, "PSMain", "ps_4_0",
+								D3DCOMPILE_ENABLE_STRICTNESS, 
 								0, &pixelShaderBuffer, &errorMessage);
-	if (FAILED(result))
-	{
-		//if we have an error message
-		if (errorMessage)
-		{
-			OutputShadeErrorMessage(errorMessage, hwnd, shaderFileName);
-		}
-		else
-		{
-			MessageBox(hwnd, (LPCSTR)shaderFileName, "Error in PS Shader File", MB_OK);
-		}
-	}
+	if (FAILED(result))			HandleCompileError(errorMessage, pspath);
 
+	// CREATER SHADER PROGRAMS
+	//---------------------------------------------------------------------------
 	//create vertex shader buffer
 	result = device->CreateVertexShader(vertexShaderBuffer->GetBufferPointer(), 
 										vertexShaderBuffer->GetBufferSize(), 
 										NULL, &m_vertexShader);
 	if (FAILED(result))
 	{
-		return false;
+
+		assert(false);
 	}
 
 	//create pixel shader buffer
@@ -130,9 +116,12 @@ bool Shader::Compile(ID3D11Device* device, HWND hwnd, WCHAR* shaderFileName)
 										NULL, &m_pixelShader);
 	if (FAILED(result))
 	{
-		return false;
+
+		assert(false);
 	}
 
+	// INPUT & BUFFER DESCRIPTIONS	
+	//---------------------------------------------------------------------------
 	//setup the layout of the data that goes into the shader
 	D3D11_INPUT_ELEMENT_DESC polygonLayout[3];
 	polygonLayout[0].SemanticName			= "POSITION";
@@ -167,7 +156,7 @@ bool Shader::Compile(ID3D11Device* device, HWND hwnd, WCHAR* shaderFileName)
 										vertexShaderBuffer->GetBufferSize(), &m_layout);
 	if (FAILED(result))
 	{
-		return false;
+		assert(false);
 	}
 
 	//release shader buffers
@@ -190,37 +179,42 @@ bool Shader::Compile(ID3D11Device* device, HWND hwnd, WCHAR* shaderFileName)
 	result = device->CreateBuffer(&matrixBufferDesc, NULL, &m_matrixBuffer);
 	if (FAILED(result))
 	{
-		return false;
+		assert(false);
 	}
 
-	return true;
 }
 
-void Shader::OutputShadeErrorMessage(ID3D10Blob* errorMessage, HWND hwnd, WCHAR* shaderFileName)
+void Shader::OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName)
 {
 	char* compileErrors = (char*)errorMessage->GetBufferPointer();
 	unsigned long bufferSize = errorMessage->GetBufferSize();
 
-	std::ofstream fout;
-	//open file to write
-	fout.open("shader-error-txt");
-
+	std::stringstream ss;
 	for (unsigned int i = 0; i < bufferSize; ++i)
 	{
-		fout << compileErrors[i];
+		ss << compileErrors[i];
 	}
-
-	//close file
-	fout.close();
+	OutputDebugString(ss.str().c_str());
 
 	//release
 	errorMessage->Release();
 	errorMessage = 0;
-
-	MessageBox(hwnd, "Error compiling shader. Check shader-error.txt for message", 
-				(LPCSTR)shaderFileName, MB_OK);
-
 	return;
+}
+
+void Shader::HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath)
+{
+	if (errorMessage)
+	{
+		OutputShaderErrorMessage(errorMessage, shdPath.c_str());
+	}
+	else
+	{
+		std::string err("Error: Can't find shader file: "); err += shdPath;
+		OutputDebugString(err.c_str());
+	}
+
+	assert(false);
 }
 
 bool Shader::SetShaderParameters(ID3D11DeviceContext* deviceContext, ID3D11ShaderResourceView* texture)

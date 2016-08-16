@@ -2,17 +2,19 @@
 
 #include <windows.h>
 #include "GeometryGenerator.h"
-#include "Shader.h"
 #include <string>
 #include <vector>
+
+#include "Shader.h"
 
 // forward declarations
 class D3DManager;
 struct ID3D11Device;
 struct ID3D11DeviceContext;
-class BufferObject;
 
-typedef unsigned int ShaderID;
+class BufferObject;
+class Camera;
+class Shader;
 
 class Renderer
 {
@@ -29,6 +31,11 @@ public:
 
 	ShaderID AddShader(const std::string& shdFileName, const std::string& fileRoot = "");
 
+	// state management
+	void SetShader(ShaderID);
+	void Reset();
+
+	void SetCamera(Camera* m_camera);
 private:
 	bool Render();
 
@@ -44,9 +51,14 @@ private:
 	ID3D11DeviceContext*			m_deviceContext;
 
 	GeometryGenerator				m_geom;
-	std::vector<BufferObject*>		m_bufferObjects;
 
+	Camera*							m_mainCamera;
+	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
+
+	// state variables
+	ShaderID						m_activeShader;
+
 };
 
 

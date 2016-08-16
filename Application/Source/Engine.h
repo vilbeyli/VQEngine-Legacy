@@ -3,6 +3,8 @@
 #include <windows.h>
 #include "SystemDefs.h"
 
+#include "Components/Transform.h"
+
 class Renderer;
 class Input;
 class Camera;
@@ -33,6 +35,8 @@ private:
 	Input*			m_input;
 
 	Camera*			m_camera;
+
+	Transform	m_tf;	//test
 
 	static Engine*	s_instance;
 };

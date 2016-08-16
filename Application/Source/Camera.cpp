@@ -60,20 +60,19 @@ XMVECTOR Camera::GetRotation()
 	return XMLoadFloat3(&m_rotation);
 }
 
-// TODO: return as XMMATRIX?
-XMFLOAT4X4 Camera::GetViewMatrix()
+XMMATRIX Camera::GetViewMatrix()
 {
-	return m_viewMatrix;
+	return XMLoadFloat4x4(&m_viewMatrix);
 }
 
-XMFLOAT4X4 Camera::GetProjectionMatrix()
+XMMATRIX Camera::GetProjectionMatrix()
 {
-	return m_projectionMatrix;
+	return  XMLoadFloat4x4(&m_projectionMatrix);
 }
 
-XMFLOAT4X4 Camera::GetOrthoMatrix()
+XMMATRIX Camera::GetOrthoMatrix()
 {
-	return m_orthoMatrix;
+	return  XMLoadFloat4x4(&m_orthoMatrix);
 }
 
 void Camera::SetPosition(float x, float y, float z)

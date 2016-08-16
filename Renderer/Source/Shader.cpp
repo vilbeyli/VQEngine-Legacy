@@ -9,7 +9,8 @@ Shader::Shader(const std::string& shaderFileName)
 	m_pixelShader(nullptr),
 	m_layout(nullptr),
 	m_matrixBuffer(nullptr),
-	m_name(shaderFileName)
+	m_name(shaderFileName),
+	m_id(-1)
 {}
 
 Shader::~Shader(void)
@@ -41,28 +42,6 @@ Shader::~Shader(void)
 		m_vertexShader->Release();
 		m_vertexShader = 0;
 	}
-
-	m_name.clear();
-}
-
-void Shader::Begin(ID3D11DeviceContext* deviceContext, int indexCount)
-{
-	//set the vertex input layout
-	deviceContext->IASetInputLayout(m_layout);
-
-	//Set the vertex and pixel shaders that will used to render
-	deviceContext->VSSetShader(m_vertexShader, NULL, 0);
-	deviceContext->PSSetShader(m_pixelShader, NULL, 0);
-
-	//render
-	deviceContext->DrawIndexed(indexCount, 0, 0);
-}
-
-void Shader::End(ID3D11DeviceContext* deviceContext)
-{
-	deviceContext->IASetInputLayout(NULL);
-	deviceContext->VSSetShader(NULL, NULL, 0);
-	deviceContext->PSSetShader(NULL, NULL, 0);
 }
 
 void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderFileName)
@@ -82,6 +61,9 @@ void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderF
 	const WCHAR* GSPath = gspath_w.c_str();
 	const WCHAR* PSPath = pspath_w.c_str();
 
+	std::string info("\nCompiling shader "); info += m_name; info += "\n";
+	OutputDebugString(info.c_str());
+
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
 	//compile vertex shader
@@ -90,6 +72,7 @@ void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderF
 								D3DCOMPILE_ENABLE_STRICTNESS,
 								0, &vertexShaderBuffer, &errorMessage);
 	if (FAILED(result))			HandleCompileError(errorMessage, vspath);
+	
 
 	//compile pixel shader
 	ID3D10Blob* pixelShaderBuffer = NULL;
@@ -106,7 +89,7 @@ void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderF
 										NULL, &m_vertexShader);
 	if (FAILED(result))
 	{
-
+		OutputDebugString("Error creating vertex shader program");
 		assert(false);
 	}
 
@@ -116,7 +99,7 @@ void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderF
 										NULL, &m_pixelShader);
 	if (FAILED(result))
 	{
-
+		OutputDebugString("Error creating pixel shader program");
 		assert(false);
 	}
 
@@ -156,6 +139,7 @@ void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderF
 										vertexShaderBuffer->GetBufferSize(), &m_layout);
 	if (FAILED(result))
 	{
+		OutputDebugString("Error creating input layout");
 		assert(false);
 	}
 
@@ -179,6 +163,7 @@ void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderF
 	result = device->CreateBuffer(&matrixBufferDesc, NULL, &m_matrixBuffer);
 	if (FAILED(result))
 	{
+		OutputDebugString("Error creating constant buffer");
 		assert(false);
 	}
 
@@ -217,62 +202,62 @@ void Shader::HandleCompileError(ID3D10Blob* errorMessage, const std::string& shd
 	assert(false);
 }
 
-bool Shader::SetShaderParameters(ID3D11DeviceContext* deviceContext, ID3D11ShaderResourceView* texture)
+void Shader::AssignID(ShaderID id)
 {
-	deviceContext->PSSetShaderResources(0, 1, &texture);
-
-	return true;
+	m_id = id;
 }
 
-bool Shader::SetShaderParameters(ID3D11DeviceContext* deviceContext, 
-								XMFLOAT4X4 worldMatrix,
-								XMFLOAT4X4 viewMatrix, 
-								XMFLOAT4X4 projectionMatrix)
-{
-	HRESULT result;
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	MatrixBuffer* dataPtr;
-	unsigned int bufferNumber;
+//bool Shader::SetShaderParameters(ID3D11DeviceContext* deviceContext, ID3D11ShaderResourceView* texture)
+//{
+//	deviceContext->PSSetShaderResources(0, 1, &texture);
+//
+//	return true;
+//}
 
-	// Transpose the matrices to prepare them for the shader.
-	/*D3DXMatrixTranspose(&mWorld, &mWorld);
-	D3DXMatrixTranspose(&viewMatrix, &viewMatrix);
-	D3DXMatrixTranspose(&projectionMatrix, &projectionMatrix);*/
+//bool Shader::SetShaderParameters(ID3D11DeviceContext* deviceContext, 
+//								XMFLOAT4X4 worldMatrix,
+//								XMFLOAT4X4 viewMatrix, 
+//								XMFLOAT4X4 projectionMatrix)
+//{
+//	HRESULT result;
+//	D3D11_MAPPED_SUBRESOURCE mappedResource;
+//	unsigned int bufferNumber;
+//
+//	// Lock the constant buffer so it can be written to.
+//	result = deviceContext->Map(m_matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+//	if (FAILED(result))
+//	{
+//		return false;
+//	}
+//
+//	// Get a pointer to the data in the constant buffer.
+//	
+//	MatrixBuffer* dataPtr;
+//	dataPtr = (MatrixBuffer*)mappedResource.pData;
+//
+//	// Copy the matrices into the constant buffer.
+//	dataPtr->mWorld = XMMatrixTranspose(XMLoadFloat4x4(&worldMatrix));
+//	dataPtr->mView	= XMMatrixTranspose(XMLoadFloat4x4(&viewMatrix));
+//	dataPtr->mProj	= XMMatrixTranspose(XMLoadFloat4x4(&projectionMatrix));
+//
+//	// Unlock the constant buffer.
+//	deviceContext->Unmap(m_matrixBuffer, 0);
+//
+//	// Set the position of the constant buffer in the vertex shader.
+//	bufferNumber = 0;
+//
+//	// Finally set the constant buffer in the vertex shader with the updated values.
+//	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_matrixBuffer);
+//
+//	return true;
+//}
 
-	// Lock the constant buffer so it can be written to.
-	result = deviceContext->Map(m_matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	if (FAILED(result))
-	{
-		return false;
-	}
-
-	// Get a pointer to the data in the constant buffer.
-	dataPtr = (MatrixBuffer*)mappedResource.pData;
-
-	// Copy the matrices into the constant buffer.
-	dataPtr->mWorld = XMMatrixTranspose(XMLoadFloat4x4(&worldMatrix));
-	dataPtr->mView	= XMMatrixTranspose(XMLoadFloat4x4(&viewMatrix));
-	dataPtr->mProj	= XMMatrixTranspose(XMLoadFloat4x4(&projectionMatrix));
-
-	// Unlock the constant buffer.
-	deviceContext->Unmap(m_matrixBuffer, 0);
-
-	// Set the position of the constant buffer in the vertex shader.
-	bufferNumber = 0;
-
-	// Finally set the constant buffer in the vertex shader with the updated values.
-	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_matrixBuffer);
-
-	return true;
-}
-
-std::string Shader::GetName() const
+std::string Shader::Name() const
 {
 	return m_name;
 }
 
-bool Shader::IsInitialized() const
+ShaderID Shader::ID() const
 {
-	//return m_initialized;
-	return false;
+	return m_id;
 }

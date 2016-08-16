@@ -3,9 +3,9 @@
 #include "BufferObject.h"
 #include "Shader.h"
 #include "Mesh.h"
-#include "SystemDefs.h"
-#include "utils.h"
-
+#include "../../Application/Source/SystemDefs.h"
+#include "../../Application/Source/utils.h"
+#include "../../Application/Source/Camera.h"
 
 #include <cassert>
 
@@ -78,13 +78,29 @@ bool Renderer::MakeFrame()
 ShaderID Renderer::AddShader(const std::string& shdFileName, const std::string& fileRoot)
 {
 	// example params: "tex", "Shader/"
-	Shader* shd = new Shader(shdFileName);
-
 	std::string path = fileRoot + shdFileName;
-	
+
+	Shader* shd = new Shader(shdFileName);
 	shd->Compile(m_device, m_hWnd, path);
 	m_shaders.push_back(shd);
-	return 0;	// todo rethink
+	shd->AssignID(m_shaders.size() - 1);
+	return shd->ID();
+}
+
+void Renderer::SetShader(ShaderID id)
+{
+	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
+	m_activeShader = id;
+}
+
+void Renderer::Reset()
+{
+	m_activeShader = -1;
+}
+
+void Renderer::SetCamera(Camera* cam)
+{
+	m_mainCamera = cam;
 }
 
 bool Renderer::Render()
@@ -92,13 +108,38 @@ bool Renderer::Render()
 	const float clearColor[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	m_Direct3D->BeginFrame(clearColor);
 
-	XMMATRIX world, view, proj;
+	XMMATRIX world = XMMatrixIdentity();
+	XMMATRIX view = m_mainCamera->GetViewMatrix();
+	XMMATRIX proj = m_mainCamera->GetProjectionMatrix();
 
-
+	// set shaders & data layout
 	m_deviceContext->IASetInputLayout(m_shaders[0]->m_layout);
 	m_deviceContext->VSSetShader(m_shaders[0]->m_vertexShader, nullptr, 0);
 	m_deviceContext->PSSetShader(m_shaders[0]->m_pixelShader, nullptr, 0);
 
+	// set shader constants
+	static ID3D11Buffer* shaderConsts = nullptr;
+	if (!shaderConsts)	// TODO: move const buffer creation
+	{
+		D3D11_BUFFER_DESC matrixBufferDesc;
+		matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+		matrixBufferDesc.ByteWidth = sizeof(MatrixBuffer);
+		matrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		matrixBufferDesc.MiscFlags = 0;
+		matrixBufferDesc.StructureByteStride = 0;
+		m_device->CreateBuffer(&matrixBufferDesc, NULL, &shaderConsts);
+	}
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	m_deviceContext->Map(shaderConsts, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	MatrixBuffer* dataPtr = static_cast<MatrixBuffer*>(mappedResource.pData);
+	dataPtr->mProj	= proj;
+	dataPtr->mView	= view;
+	dataPtr->mWorld = world;
+	m_deviceContext->Unmap(shaderConsts, 0);
+	m_deviceContext->VSSetConstantBuffers(0, 1, &shaderConsts);
+
+	// set viewport
 	D3D11_VIEWPORT viewPort = { 0 };
 	viewPort.TopLeftX = 0;
 	viewPort.TopLeftY = 0;
@@ -106,12 +147,14 @@ bool Renderer::Render()
 	viewPort.Height = SCREEN_HEIGHT;
 	m_deviceContext->RSSetViewports(1, &viewPort);
 
+	// set vertex & index buffers & topology
 	unsigned stride = sizeof(Vertex);
 	unsigned offset = 0;
-
 	m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[0]->m_vertexBuffer, &stride, &offset);
 	m_deviceContext->IASetIndexBuffer(m_bufferObjects[0]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	
+	// draw
 	m_deviceContext->DrawIndexed(m_bufferObjects[0]->m_indexCount, 0, 0);
 
 	m_Direct3D->EndFrame();

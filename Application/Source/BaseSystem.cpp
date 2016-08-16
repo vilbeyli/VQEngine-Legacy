@@ -1,7 +1,6 @@
 #include "BaseSystem.h"
 #include "SystemDefs.h"
 #include "Input.h"
-#include "Renderer.h"
 
 #include <new>
 
@@ -124,7 +123,7 @@ void BaseSystem::InitWindow(int& width, int& height)
 	height	= GetSystemMetrics(SM_CYSCREEN);
 
 	// set screen settings
-	if (Renderer::FULL_SCREEN)
+	if (FULL_SCREEN)
 	{
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
 		dmScreenSettings.dmSize			= sizeof(dmScreenSettings);
@@ -181,7 +180,7 @@ void BaseSystem::ShutdownWindows()
 {
 	ShowCursor(true);
 
-	if (Renderer::FULL_SCREEN)
+	if (FULL_SCREEN)
 	{
 		ChangeDisplaySettings(NULL, 0);
 	}

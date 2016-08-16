@@ -22,7 +22,7 @@
     <ProjectGuid>{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}</ProjectGuid>
     <RootNamespace>DX11Renderer</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
-    <ProjectName>DX11Renderer</ProjectName>
+    <ProjectName>Application</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -71,6 +71,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)3rdPartyLibs\</IncludePath>
+    <IntDir>$(Configuration)\Temp\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)3rdPartyLibs\</IncludePath>
@@ -124,37 +125,36 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Source\BufferObject.cpp" />
+    <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
-    <ClCompile Include="Source\D3DManager.cpp" />
+    <ClCompile Include="Source\Components\Component.cpp" />
+    <ClCompile Include="Source\Components\Transform.cpp" />
     <ClCompile Include="Source\Engine.cpp" />
-    <ClCompile Include="Source\GeometryGenerator.cpp" />
     <ClCompile Include="Source\Input.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\BaseSystem.cpp" />
-    <ClCompile Include="Source\Mesh.cpp" />
-    <ClCompile Include="Source\Renderer.cpp" />
-    <ClCompile Include="Source\Shader.cpp" />
     <ClCompile Include="Source\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GameObject.h" />
     <ClInclude Include="Source\BaseSystem.h" />
-    <ClInclude Include="Source\BufferObject.h" />
     <ClInclude Include="Source\Camera.h" />
-    <ClInclude Include="Source\D3DManager.h" />
+    <ClInclude Include="Source\Components\Component.h" />
+    <ClInclude Include="Source\Components\Transform.h" />
     <ClInclude Include="Source\Engine.h" />
-    <ClInclude Include="Source\GeometryGenerator.h" />
     <ClInclude Include="Source\Input.h" />
-    <ClInclude Include="Source\Mesh.h" />
-    <ClInclude Include="Source\Renderer.h" />
     <ClInclude Include="Source\resource.h" />
-    <ClInclude Include="Source\Shader.h" />
     <ClInclude Include="Source\SystemDefs.h" />
     <ClInclude Include="Source\utils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Data\Shaders\tex.ps" />
     <None Include="Data\Shaders\tex.vs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Renderer\Renderer.vcxproj">
+      <Project>{eaf3c9db-a325-40fc-bdb4-7ee2e0756b00}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -21,9 +21,10 @@ struct PSIn
 
 PSIn VSMain(VSIn In)
 {
+	matrix wvp = mul(proj, mul(view, world));
+
 	PSIn Out;
-	
-	Out.position = float4(In.position, 1);
+	Out.position = mul(wvp, float4(In.position, 1));
 	Out.normal = In.normal;
 	Out.texCoord = In.texCoord;
 	

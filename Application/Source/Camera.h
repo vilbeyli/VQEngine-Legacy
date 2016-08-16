@@ -24,9 +24,9 @@ public:
 
 	XMVECTOR GetPosition();
 	XMVECTOR GetRotation();
-	XMFLOAT4X4 GetViewMatrix();
-	XMFLOAT4X4 GetProjectionMatrix();
-	XMFLOAT4X4 GetOrthoMatrix();
+	XMMATRIX GetViewMatrix();
+	XMMATRIX GetProjectionMatrix();
+	XMMATRIX GetOrthoMatrix();
 
 	void SetPosition(float x, float y, float z);
 	void SetRotation(float x, float y, float z);

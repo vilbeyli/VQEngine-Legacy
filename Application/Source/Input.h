@@ -15,7 +15,8 @@ public:
 
 	void KeyDown(KeyCode);
 	void KeyUp(KeyCode);
-	bool IsKeyDown(KeyCode);
+
+	bool IsKeyDown(KeyCode) const;
 
 private:
 	bool m_keys[KEY_COUNT];

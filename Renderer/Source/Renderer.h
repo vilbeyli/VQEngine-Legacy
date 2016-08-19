@@ -46,7 +46,8 @@ public:
 	void EnableAlphaBlending(bool enable);
 	void EnableZBuffer(bool enable);
 
-	ShaderID AddShader(const std::string& shdFileName, const std::string& fileRoot = "");
+	// shader interface
+	ShaderID	AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts);
 
 	// state management
 	void SetShader(ShaderID);

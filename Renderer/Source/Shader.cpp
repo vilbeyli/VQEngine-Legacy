@@ -1,5 +1,22 @@
+//	DX11Renderer - VDemo | DirectX11 Renderer
+//	Copyright(C) 2016  - Volkan Ilbeyli
+//
+//	This program is free software : you can redistribute it and / or modify
+//	it under the terms of the GNU General Public License as published by
+//	the Free Software Foundation, either version 3 of the License, or
+//	(at your option) any later version.
+//
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+//	GNU General Public License for more details.
+//
+//	You should have received a copy of the GNU General Public License
+//	along with this program.If not, see <http://www.gnu.org/licenses/>.
+//
+//	Contact: volkanilbeyli@gmail.com
+
 #include "Shader.h"
-#include <d3dcompiler.h>
 #include <fstream>
 #include <sstream>
 
@@ -8,7 +25,7 @@ Shader::Shader(const std::string& shaderFileName)
 	m_vertexShader(nullptr),
 	m_pixelShader(nullptr),
 	m_layout(nullptr),
-	m_matrixBuffer(nullptr),
+	//m_matrixBuffer(nullptr),
 	m_name(shaderFileName),
 	m_id(-1)
 {}
@@ -16,11 +33,11 @@ Shader::Shader(const std::string& shaderFileName)
 Shader::~Shader(void)
 {
 	// Release the matrix constant buffer.
-	if (m_matrixBuffer)
-	{
-		m_matrixBuffer->Release();
-		m_matrixBuffer = 0;
-	}
+	//if (m_matrixBuffer)
+	//{
+	//	m_matrixBuffer->Release();
+	//	m_matrixBuffer = 0;
+	//}
 
 	// Release the layout.
 	if (m_layout)
@@ -44,10 +61,10 @@ Shader::~Shader(void)
 	}
 }
 
-void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderFileName)
+void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts)
 {
 	HRESULT result;
-	ID3D10Blob* errorMessage = 0;
+	ID3D10Blob* errorMessage = nullptr;
 
 	// SHADER PATHS
 	//----------------------------------------------------------------------------
@@ -67,26 +84,48 @@ void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderF
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
 	//compile vertex shader
-	ID3D10Blob* vertexShaderBuffer = NULL;
-	result = D3DCompileFromFile(VSPath, NULL, NULL, "VSMain", "vs_4_0",
-								D3DCOMPILE_ENABLE_STRICTNESS,
-								0, &vertexShaderBuffer, &errorMessage);
-	if (FAILED(result))			HandleCompileError(errorMessage, vspath);
-	
+	ID3D10Blob* vsBlob = NULL;
+	if (FAILED(D3DCompileFromFile(
+		VSPath,
+		NULL,
+		NULL,
+		"VSMain",
+		"vs_5_0",
+		D3DCOMPILE_ENABLE_STRICTNESS,
+		0,
+		&vsBlob,
+		&errorMessage)))
+	{
+		HandleCompileError(errorMessage, vspath);
+	}
 
 	//compile pixel shader
-	ID3D10Blob* pixelShaderBuffer = NULL;
-	result = D3DCompileFromFile(PSPath, NULL, NULL, "PSMain", "ps_4_0",
-								D3DCOMPILE_ENABLE_STRICTNESS, 
-								0, &pixelShaderBuffer, &errorMessage);
-	if (FAILED(result))			HandleCompileError(errorMessage, pspath);
+	ID3D10Blob* psBlob = NULL;
+	if (FAILED(D3DCompileFromFile(
+		PSPath,
+		NULL,
+		NULL,
+		"PSMain",
+		"ps_5_0",
+		D3DCOMPILE_ENABLE_STRICTNESS,
+		0,
+		&psBlob,
+		&errorMessage)))
+	{
+		HandleCompileError(errorMessage, pspath);
+	}
+	
+	SetReflections(vsBlob, psBlob);
+	CheckSignatures();
 
-	// CREATER SHADER PROGRAMS
+
+	// CREATE SHADER PROGRAMS
 	//---------------------------------------------------------------------------
 	//create vertex shader buffer
-	result = device->CreateVertexShader(vertexShaderBuffer->GetBufferPointer(), 
-										vertexShaderBuffer->GetBufferSize(), 
-										NULL, &m_vertexShader);
+	result = device->CreateVertexShader(vsBlob->GetBufferPointer(), 
+										vsBlob->GetBufferSize(), 
+										NULL, 
+										&m_vertexShader);
 	if (FAILED(result))
 	{
 		OutputDebugString("Error creating vertex shader program");
@@ -94,74 +133,173 @@ void Shader::Compile(ID3D11Device* device, HWND hwnd, const std::string& shaderF
 	}
 
 	//create pixel shader buffer
-	result = device->CreatePixelShader(pixelShaderBuffer->GetBufferPointer(), 
-										pixelShaderBuffer->GetBufferSize(), 
-										NULL, &m_pixelShader);
+	result = device->CreatePixelShader(psBlob->GetBufferPointer(), 
+										psBlob->GetBufferSize(), 
+										NULL, 
+										&m_pixelShader);
 	if (FAILED(result))
 	{
 		OutputDebugString("Error creating pixel shader program");
 		assert(false);
 	}
 
-	// INPUT & BUFFER DESCRIPTIONS	
+
+	// INPUT LAYOUT & CBUFFERS
 	//---------------------------------------------------------------------------
 	//setup the layout of the data that goes into the shader
-	D3D11_INPUT_ELEMENT_DESC polygonLayout[3];
-	polygonLayout[0].SemanticName			= "POSITION";
-	polygonLayout[0].SemanticIndex			= 0;
-	polygonLayout[0].Format					= DXGI_FORMAT_R32G32B32_FLOAT;
-	polygonLayout[0].InputSlot				= 0;
-	polygonLayout[0].AlignedByteOffset		= 0;
-	polygonLayout[0].InputSlotClass			= D3D11_INPUT_PER_VERTEX_DATA;
-	polygonLayout[0].InstanceDataStepRate	= 0;
-
-	polygonLayout[1].SemanticName			= "NORMAL";
-	polygonLayout[1].SemanticIndex			= 0;
-	polygonLayout[1].Format					= DXGI_FORMAT_R32G32B32_FLOAT;
-	polygonLayout[1].InputSlot				= 0;
-	polygonLayout[1].AlignedByteOffset		= 0;
-	polygonLayout[1].InputSlotClass			= D3D11_INPUT_PER_VERTEX_DATA;
-	polygonLayout[1].InstanceDataStepRate	= 0;
-
-	polygonLayout[2].SemanticName			= "TEXCOORD";
-	polygonLayout[2].SemanticIndex			= 0;
-	polygonLayout[2].Format					= DXGI_FORMAT_R32G32_FLOAT;
-	polygonLayout[2].InputSlot				= 0;
-	polygonLayout[2].AlignedByteOffset		= 0;
-	polygonLayout[2].InputSlotClass			= D3D11_INPUT_PER_VERTEX_DATA;
-	polygonLayout[2].InstanceDataStepRate	= 0;
-
-	unsigned numElements = sizeof(polygonLayout) / sizeof(polygonLayout[0]);
-
-	//create the vertex input layout
-	result = device->CreateInputLayout(polygonLayout, numElements, 
-										vertexShaderBuffer->GetBufferPointer(),
-										vertexShaderBuffer->GetBufferSize(), &m_layout);
+	std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(layouts.size());
+	for (unsigned i = 0; i < layouts.size(); ++i)
+	{
+		inputLayout[i].SemanticName			= layouts[i].semanticName.c_str();
+		inputLayout[i].SemanticIndex		= 0;	// TODO: process string for semantic index
+		inputLayout[i].Format				= static_cast<DXGI_FORMAT>(layouts[i].format);
+		inputLayout[i].InputSlot			= 0;
+		inputLayout[i].AlignedByteOffset	= i == 0 ? 0 : D3D11_APPEND_ALIGNED_ELEMENT;
+		inputLayout[i].InputSlotClass		= D3D11_INPUT_PER_VERTEX_DATA;
+		inputLayout[i].InstanceDataStepRate	= 0;
+	}
+	result = device->CreateInputLayout(	inputLayout.data(), 
+										inputLayout.size(), 
+										vsBlob->GetBufferPointer(),
+										vsBlob->GetBufferSize(), 
+										&m_layout);
 	if (FAILED(result))
 	{
 		OutputDebugString("Error creating input layout");
 		assert(false);
 	}
+	SetCBuffers(device);
 
 	//release shader buffers
-	vertexShaderBuffer->Release();
-	vertexShaderBuffer = 0;
+	vsBlob->Release();
+	vsBlob = 0;
 
-	pixelShaderBuffer->Release();
-	pixelShaderBuffer = 0;
+	psBlob->Release();
+	psBlob = 0;
+}
+
+void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob)
+{
+	// Vertex Shader
+	if (FAILED(D3DReflect(
+		vsBlob->GetBufferPointer(),
+		vsBlob->GetBufferSize(),
+		IID_ID3D11ShaderReflection,
+		(void**)&m_vsRefl)))
+	{
+		OutputDebugString("Error getting vertex shader reflection\n");
+		assert(false);
+	}
+
+	// Pixel Shader
+	if (FAILED(D3DReflect(
+		psBlob->GetBufferPointer(),
+		psBlob->GetBufferSize(),
+		IID_ID3D11ShaderReflection,
+		(void**)&m_psRefl)))
+	{
+		OutputDebugString("Error getting pixel shader reflection\n");
+		assert(false);
+	}
+
+}
+
+void Shader::CheckSignatures()
+{
+	// get shader description --> input/output parameters
+	std::vector<D3D11_SIGNATURE_PARAMETER_DESC> VSISignDescs, VSOSignDescs, PSISignDescs, PSOSignDescs;
+	D3D11_SHADER_DESC VSDesc;
+	m_vsRefl->GetDesc(&VSDesc);
+	for (unsigned i = 0; i < VSDesc.InputParameters; ++i)
+	{
+		D3D11_SIGNATURE_PARAMETER_DESC input_desc;
+		m_vsRefl->GetInputParameterDesc(i, &input_desc);
+		VSISignDescs.push_back(input_desc);
+	}
+
+	for (unsigned i = 0; i < VSDesc.OutputParameters; ++i)
+	{
+		D3D11_SIGNATURE_PARAMETER_DESC output_desc;
+		m_vsRefl->GetInputParameterDesc(i, &output_desc);
+		VSOSignDescs.push_back(output_desc);
+	}
+
+
+	D3D11_SHADER_DESC PSDesc;
+	m_psRefl->GetDesc(&PSDesc);
+	for (unsigned i = 0; i < PSDesc.InputParameters; ++i)
+	{
+		D3D11_SIGNATURE_PARAMETER_DESC input_desc;
+		m_psRefl->GetInputParameterDesc(i, &input_desc);
+		PSISignDescs.push_back(input_desc);
+	}
+
+	for (unsigned i = 0; i < PSDesc.OutputParameters; ++i)
+	{
+		D3D11_SIGNATURE_PARAMETER_DESC output_desc;
+		m_psRefl->GetInputParameterDesc(i, &output_desc);
+		PSOSignDescs.push_back(output_desc);
+	}
+
+	// check VS-PS signature compatibility | wont be necessary when its 1 file.
+	// THIS IS TEMPORARY
+	if (VSOSignDescs.size() != PSISignDescs.size())
+	{
+		OutputDebugString("Error: Incompatible shader input/output signatures (sizes don't match)\n");
+		assert(false);
+	}
+	else
+	{
+		for (size_t i = 0; i < VSOSignDescs.size(); ++i)
+		{
+			// TODO: order matters, semantic slot doesnt. check order
+			;
+		}
+	}
+}
+
+void Shader::SetCBuffers(ID3D11Device* device)
+{
+	// Get constant buffer layouts
+	D3D11_SHADER_DESC VSDesc;
+	m_vsRefl->GetDesc(&VSDesc);
+	for (unsigned i = 0; i < VSDesc.ConstantBuffers; ++i)
+	{
+		cBufferLayout bufferLayout;
+		ID3D11ShaderReflectionConstantBuffer* pCBuffer = m_vsRefl->GetConstantBufferByIndex(i);
+		pCBuffer->GetDesc(&bufferLayout.desc);
+
+		// load desc of each variable for binding on buffer later on
+		for (unsigned j = 0; j < bufferLayout.desc.Variables; ++j)
+		{
+			// get variable and type descriptions
+			ID3D11ShaderReflectionVariable* pVariable = pCBuffer->GetVariableByIndex(j);
+			D3D11_SHADER_VARIABLE_DESC varDesc;
+			pVariable->GetDesc(&varDesc);
+			bufferLayout.variables.push_back(varDesc);
+
+			ID3D11ShaderReflectionType* pType = pVariable->GetType();
+			D3D11_SHADER_TYPE_DESC typeDesc;
+			pType->GetDesc(&typeDesc);
+			bufferLayout.types.push_back(typeDesc);
+		}
+
+		m_cBufferLayouts.push_back(bufferLayout);
+	}
+
+
 
 	//setup the matrix buffer description
-	D3D11_BUFFER_DESC matrixBufferDesc;
-	matrixBufferDesc.Usage					= D3D11_USAGE_DYNAMIC;
-	matrixBufferDesc.ByteWidth				= sizeof(MatrixBuffer);
-	matrixBufferDesc.BindFlags				= D3D11_BIND_CONSTANT_BUFFER;
-	matrixBufferDesc.CPUAccessFlags			= D3D11_CPU_ACCESS_WRITE;
-	matrixBufferDesc.MiscFlags				= 0;
-	matrixBufferDesc.StructureByteStride	= 0;
+	D3D11_BUFFER_DESC cBufferDesc;
+	cBufferDesc.Usage					= D3D11_USAGE_DYNAMIC;
+	cBufferDesc.ByteWidth				= m_cBufferLayouts[0].desc.Size;
+	cBufferDesc.BindFlags				= D3D11_BIND_CONSTANT_BUFFER;
+	cBufferDesc.CPUAccessFlags			= D3D11_CPU_ACCESS_WRITE;
+	cBufferDesc.MiscFlags				= 0;
+	cBufferDesc.StructureByteStride	= 0;
 
 	//create the constant buffer pointer
-	result = device->CreateBuffer(&matrixBufferDesc, NULL, &m_matrixBuffer);
-	if (FAILED(result))
+	if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &m_cBuffer)))
 	{
 		OutputDebugString("Error creating constant buffer");
 		assert(false);

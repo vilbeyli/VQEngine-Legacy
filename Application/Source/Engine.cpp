@@ -59,7 +59,12 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 
 bool Engine::Load()
 {
-	m_renderer->AddShader("tex", "Data/Shaders/");
+	std::vector<InputLayout> layout = {
+		{ "POSITION",	FLOAT32_3 },
+		{ "NORMAL",		FLOAT32_3 },
+		{ "TEXCOORD",	FLOAT32_2 }
+	};
+	ShaderID texShader = m_renderer->AddShader("tex", "Data/Shaders/", layout);
 
 	return true;
 }
@@ -98,7 +103,6 @@ Engine * Engine::GetEngine()
 
 bool Engine::Run()
 {
-	// TODO: remove to input management?
 	if (m_input->IsKeyDown(VK_ESCAPE))
 	{
 		return false;
@@ -141,6 +145,7 @@ void Engine::Update()
 
 void Engine::Render()
 {
+	// todo: set states, apply and draw
 	m_renderer->MakeFrame();
 }
 

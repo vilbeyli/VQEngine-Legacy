@@ -93,13 +93,15 @@ bool Renderer::MakeFrame()
 	return success;
 }
 
-ShaderID Renderer::AddShader(const std::string& shdFileName, const std::string& fileRoot)
+ShaderID Renderer::AddShader(const std::string& shdFileName, 
+							 const std::string& fileRoot,
+							 const std::vector<InputLayout>& layouts)
 {
 	// example params: "tex", "Shader/"
 	std::string path = fileRoot + shdFileName;
 
 	Shader* shd = new Shader(shdFileName);
-	shd->Compile(m_device, m_hWnd, path);
+	shd->Compile(m_device, path, layouts);
 	m_shaders.push_back(shd);
 	shd->AssignID(m_shaders.size() - 1);
 	return shd->ID();
@@ -136,18 +138,7 @@ bool Renderer::Render()
 	m_deviceContext->PSSetShader(m_shaders[0]->m_pixelShader, nullptr, 0);
 
 	// set shader constants
-	static ID3D11Buffer* shaderConsts = nullptr;
-	if (!shaderConsts)	// TODO: move const buffer creation
-	{
-		D3D11_BUFFER_DESC matrixBufferDesc;
-		matrixBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-		matrixBufferDesc.ByteWidth = sizeof(MatrixBuffer);
-		matrixBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-		matrixBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-		matrixBufferDesc.MiscFlags = 0;
-		matrixBufferDesc.StructureByteStride = 0;
-		m_device->CreateBuffer(&matrixBufferDesc, NULL, &shaderConsts);
-	}
+	ID3D11Buffer* shaderConsts = m_shaders[0]->m_cBuffer;
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 	m_deviceContext->Map(shaderConsts, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	MatrixBuffer* dataPtr = static_cast<MatrixBuffer*>(mappedResource.pData);
@@ -185,3 +176,4 @@ void Renderer::GeneratePrimitives()
 	m_bufferObjects[TRIANGLE]	= m_geom.Triangle();
 	//m_bufferObjects[QUAD]		= m_geom.Quad();
 }
+

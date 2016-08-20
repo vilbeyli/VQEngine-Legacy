@@ -21,6 +21,7 @@
 #include "../Renderer/Source/Renderer.h"
 #include "Input.h"
 #include "Camera.h"
+#include "../Renderer/Source/Mesh.h"
 
 Engine* Engine::s_instance = nullptr;
 
@@ -80,6 +81,7 @@ void Engine::Exit()
 
 	if (m_renderer)
 	{
+		m_renderer->Exit();
 		delete m_renderer;
 		m_renderer = nullptr;
 	}
@@ -127,6 +129,7 @@ void Engine::Update()
 	if (m_input->IsKeyDown(VK_SPACE))	m_tf.Translate(Transform::Up);
 	if (m_input->IsKeyDown(VK_CONTROL))	m_tf.Translate(Transform::Down);
 	
+#ifdef _DEBUG
 	{
 		char info[128];
 		XMFLOAT3 pos;
@@ -134,7 +137,8 @@ void Engine::Update()
 		sprintf_s(info, 128, "Transform: %.2f, %.2f, %.2f\n", pos.x, pos.y, pos.z);
 		OutputDebugString(info);
 	}
-	
+#endif
+
 	XMVECTOR pos = m_tf.GetPosition() * 0.1f;
 	m_camera->SetPosition(pos.m128_f32[0], pos.m128_f32[1], pos.m128_f32[2]);
 
@@ -145,7 +149,21 @@ void Engine::Update()
 
 void Engine::Render()
 {
-	// todo: set states, apply and draw
-	m_renderer->MakeFrame();
+	const float clearColor[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
+	XMMATRIX world = XMMatrixIdentity();
+	XMMATRIX view = m_camera->GetViewMatrix();
+	XMMATRIX proj = m_camera->GetProjectionMatrix();
+
+	ShaderID shd = 0;	// first shader for now
+	m_renderer->Begin(clearColor);
+	m_renderer->SetShader(shd);
+	m_renderer->SetViewport(SCREEN_WIDTH, SCREEN_HEIGHT);
+	m_renderer->SetBufferObj(MESH_TYPE::TRIANGLE);
+	m_renderer->SetConstant4x4f("world", world);
+	m_renderer->SetConstant4x4f("view", view);
+	m_renderer->SetConstant4x4f("proj", proj);
+	m_renderer->Apply();
+	m_renderer->DrawIndexed();
+	m_renderer->End();
 }
 

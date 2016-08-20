@@ -25,39 +25,64 @@ Shader::Shader(const std::string& shaderFileName)
 	m_vertexShader(nullptr),
 	m_pixelShader(nullptr),
 	m_layout(nullptr),
-	//m_matrixBuffer(nullptr),
 	m_name(shaderFileName),
 	m_id(-1)
 {}
 
 Shader::~Shader(void)
 {
-	// Release the matrix constant buffer.
-	//if (m_matrixBuffer)
-	//{
-	//	m_matrixBuffer->Release();
-	//	m_matrixBuffer = 0;
-	//}
+	// release constants
+	for (CBuffer& cbuf : m_cBuffers)
+	{
+		if (cbuf.data)
+		{
+			cbuf.data->Release();
+			cbuf.data = nullptr;
+		}
+	}
+
+	for (std::vector<CPUConstant>& consts : m_constants)
+	{
+		for (CPUConstant& c : consts)
+		{
+			if (c.data)
+			{
+				delete[] c.data;
+				c.data = nullptr;
+			}
+		}
+	}
 
 	// Release the layout.
 	if (m_layout)
 	{
 		m_layout->Release();
-		m_layout = 0;
+		m_layout = nullptr;
 	}
 
-	// Release the pixel shader.
+	// release shaders
 	if (m_pixelShader)
 	{
 		m_pixelShader->Release();
-		m_pixelShader = 0;
+		m_pixelShader = nullptr;
 	}
 
-	// Release the vertex shader.
 	if (m_vertexShader)
 	{
 		m_vertexShader->Release();
-		m_vertexShader = 0;
+		m_vertexShader = nullptr;
+	}
+
+	if (m_vsRefl)
+	{
+		m_vsRefl->Release();
+		m_vsRefl = nullptr;
+	}
+
+	if (m_psRefl)
+	{
+		m_psRefl->Release();
+		m_psRefl = nullptr;
 	}
 }
 
@@ -260,12 +285,13 @@ void Shader::CheckSignatures()
 
 void Shader::SetCBuffers(ID3D11Device* device)
 {
-	// Get constant buffer layouts
+	// Obtain CBuffer layout information
 	D3D11_SHADER_DESC VSDesc;
 	m_vsRefl->GetDesc(&VSDesc);
 	for (unsigned i = 0; i < VSDesc.ConstantBuffers; ++i)
 	{
 		cBufferLayout bufferLayout;
+		bufferLayout.buffSize = 0;
 		ID3D11ShaderReflectionConstantBuffer* pCBuffer = m_vsRefl->GetConstantBufferByIndex(i);
 		pCBuffer->GetDesc(&bufferLayout.desc);
 
@@ -282,29 +308,51 @@ void Shader::SetCBuffers(ID3D11Device* device)
 			D3D11_SHADER_TYPE_DESC typeDesc;
 			pType->GetDesc(&typeDesc);
 			bufferLayout.types.push_back(typeDesc);
+
+			// accumulate buffer size
+			bufferLayout.buffSize += varDesc.Size;
 		}
 
 		m_cBufferLayouts.push_back(bufferLayout);
 	}
 
-
-
-	//setup the matrix buffer description
+	// GPU CBuffer Description
 	D3D11_BUFFER_DESC cBufferDesc;
 	cBufferDesc.Usage					= D3D11_USAGE_DYNAMIC;
-	cBufferDesc.ByteWidth				= m_cBufferLayouts[0].desc.Size;
 	cBufferDesc.BindFlags				= D3D11_BIND_CONSTANT_BUFFER;
 	cBufferDesc.CPUAccessFlags			= D3D11_CPU_ACCESS_WRITE;
 	cBufferDesc.MiscFlags				= 0;
-	cBufferDesc.StructureByteStride	= 0;
+	cBufferDesc.StructureByteStride		= 0;
 
-	//create the constant buffer pointer
-	if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &m_cBuffer)))
+	// Create CPU CBuffers
+	for (cBufferLayout cbLayout : m_cBufferLayouts)
 	{
-		OutputDebugString("Error creating constant buffer");
-		assert(false);
+		std::vector<CPUConstant> cpuBuffers;
+		for (D3D11_SHADER_VARIABLE_DESC varDesc : cbLayout.variables)
+		{
+			CPUConstant c;
+			c.name = varDesc.Name;
+			c.size = varDesc.Size;
+			c.data = new char[c.size];
+			memset(c.data, 0, c.size);
+			cpuBuffers.push_back(c);
+		}
+		m_constants.push_back(cpuBuffers);
 	}
 
+	// Create GPU CBuffers
+	for (cBufferLayout cbLayout : m_cBufferLayouts)
+	{
+		CBuffer cBuffer;
+		cBufferDesc.ByteWidth = cbLayout.desc.Size;
+		if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &cBuffer.data)))
+		{
+			OutputDebugString("Error creating constant buffer");
+			assert(false);
+		}
+		cBuffer.dirty = true;
+		m_cBuffers.push_back(cBuffer);
+	}
 }
 
 void Shader::OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName)

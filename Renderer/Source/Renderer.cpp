@@ -53,7 +53,7 @@ bool Renderer::Init(int width, int height, HWND hwnd)
 	}
 
 	// Initialize the Direct3D object.
-	bool result = m_Direct3D->Init(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN, g_nearPlane, g_farPlane);
+	bool result = m_Direct3D->Init(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN, NEAR_PLANE, FAR_PLANE);
 	if (!result)
 	{
 		MessageBox(m_hWnd, "Could not initialize Direct3D", "Error", MB_OK);
@@ -83,14 +83,21 @@ void Renderer::Exit()
 		bo = nullptr;
 	}
 
+	for (Shader* shd : m_shaders)
+	{
+		delete shd;
+		shd = nullptr;
+	}
+
 	return;
 }
 
-bool Renderer::MakeFrame()
+void Renderer::GeneratePrimitives()
 {
-	bool success = Render();
-
-	return success;
+	m_geom.SetDevice(m_device);
+	m_bufferObjects[TRIANGLE]	= m_geom.Triangle();
+	//m_bufferObjects[QUAD]		= m_geom.Quad();
+	//m_bufferObjects[CUBE]		= m_geom.Cube();
 }
 
 ShaderID Renderer::AddShader(const std::string& shdFileName, 
@@ -116,6 +123,21 @@ void Renderer::SetShader(ShaderID id)
 void Renderer::Reset()
 {
 	m_activeShader = -1;
+	m_activeBuffer = -1;
+}
+
+
+void Renderer::SetViewport(const unsigned width, const unsigned height)
+{
+	m_viewPort.TopLeftX = 0;
+	m_viewPort.TopLeftY = 0;
+	m_viewPort.Width	= static_cast<float>(width);
+	m_viewPort.Height	= static_cast<float>(height);
+}
+
+void Renderer::SetBufferObj(int BufferID)
+{
+	m_activeBuffer = BufferID;
 }
 
 void Renderer::SetCamera(Camera* cam)
@@ -123,57 +145,99 @@ void Renderer::SetCamera(Camera* cam)
 	m_mainCamera = cam;
 }
 
-bool Renderer::Render()
+void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 {
-	const float clearColor[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
-	m_Direct3D->BeginFrame(clearColor);
+	// prepare data to be copied
+	XMFLOAT4X4 m;
+	XMStoreFloat4x4(&m, matrix);
+	float* data = &m.m[0][0];
 
-	XMMATRIX world = XMMatrixIdentity();
-	XMMATRIX view = m_mainCamera->GetViewMatrix();
-	XMMATRIX proj = m_mainCamera->GetProjectionMatrix();
+
+	// find data in CPUConstantBuffer
+	bool found = false;
+	for (size_t i = 0; i < m_shaders[m_activeShader]->m_constants.size() && !found; i++)
+	{
+		std::vector<CPUConstant> cVector = m_shaders[m_activeShader]->m_constants[i];
+		for (CPUConstant& c : cVector)
+		{
+			if (strcmp(cName, c.name.c_str()) == 0)
+			{
+				found = true;
+				memcpy(c.data, data, c.size);
+				m_shaders[m_activeShader]->m_cBuffers[i].dirty = true;
+				break;
+			}
+		}
+	}
+	if (!found)
+	{
+		std::string err("Error: Constant not found: "); err += cName;
+		OutputDebugString(err.c_str());
+	}
+
+	return;
+}
+
+void Renderer::Begin(const float clearColor[4])
+{
+	m_Direct3D->BeginFrame(clearColor);
+}
+
+void Renderer::End()
+{
+	m_Direct3D->EndFrame();
+}
+
+
+void Renderer::Apply()
+{
+	Shader* shader = m_shaders[m_activeShader];
 
 	// set shaders & data layout
-	m_deviceContext->IASetInputLayout(m_shaders[0]->m_layout);
-	m_deviceContext->VSSetShader(m_shaders[0]->m_vertexShader, nullptr, 0);
-	m_deviceContext->PSSetShader(m_shaders[0]->m_pixelShader, nullptr, 0);
-
-	// set shader constants
-	ID3D11Buffer* shaderConsts = m_shaders[0]->m_cBuffer;
-	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	m_deviceContext->Map(shaderConsts, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	MatrixBuffer* dataPtr = static_cast<MatrixBuffer*>(mappedResource.pData);
-	dataPtr->mProj	= proj;
-	dataPtr->mView	= view;
-	dataPtr->mWorld = world;
-	m_deviceContext->Unmap(shaderConsts, 0);
-	m_deviceContext->VSSetConstantBuffers(0, 1, &shaderConsts);
-
-	// set viewport
-	D3D11_VIEWPORT viewPort = { 0 };
-	viewPort.TopLeftX = 0;
-	viewPort.TopLeftY = 0;
-	viewPort.Width = SCREEN_WIDTH;
-	viewPort.Height = SCREEN_HEIGHT;
-	m_deviceContext->RSSetViewports(1, &viewPort);
+	m_deviceContext->IASetInputLayout(shader->m_layout);
+	m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
+	m_deviceContext->PSSetShader(shader->m_pixelShader, nullptr, 0);
 
 	// set vertex & index buffers & topology
-	unsigned stride = sizeof(Vertex);
+	unsigned stride = sizeof(Vertex);	// layout?
 	unsigned offset = 0;
-	m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[0]->m_vertexBuffer, &stride, &offset);
-	m_deviceContext->IASetIndexBuffer(m_bufferObjects[0]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_activeBuffer]->m_vertexBuffer, &stride, &offset);
+	m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	
-	// draw
-	m_deviceContext->DrawIndexed(m_bufferObjects[0]->m_indexCount, 0, 0);
 
-	m_Direct3D->EndFrame();
-	return true;
+	// viewport
+	m_deviceContext->RSSetViewports(1, &m_viewPort);
+
+	// CBuffers
+	for (size_t i = 0; i < shader->m_cBuffers.size(); ++i)
+	{
+		CBuffer cbuf = shader->m_cBuffers[i];
+		if (cbuf.dirty)
+		{
+			ID3D11Buffer* bufferData = cbuf.data;
+			D3D11_MAPPED_SUBRESOURCE mappedResource;
+			m_deviceContext->Map(bufferData, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+
+			char* bufferPos = static_cast<char*>(mappedResource.pData);
+			std::vector<CPUConstant>& cpuConsts = shader->m_constants[i];
+			for (CPUConstant& c : cpuConsts)
+			{
+				memcpy(bufferPos, c.data, c.size);
+				bufferPos += c.size;
+			}
+
+			m_deviceContext->Unmap(bufferData, 0);
+			m_deviceContext->VSSetConstantBuffers(0, 1, &bufferData);
+			cbuf.dirty = false;
+		}
+	}
 }
 
-void Renderer::GeneratePrimitives()
+void Renderer::DrawIndexed()
 {
-	m_geom.SetDevice(m_device);
-	m_bufferObjects[TRIANGLE]	= m_geom.Triangle();
-	//m_bufferObjects[QUAD]		= m_geom.Quad();
+	m_deviceContext->DrawIndexed(m_bufferObjects[m_activeBuffer]->m_indexCount, 0, 0);
+
 }
+
+
 

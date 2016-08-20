@@ -68,11 +68,6 @@ void BaseSystem::Run()
 		else
 		{
 			done = !Frame();
-			//result = Frame();
-			//if (!result)
-			//{
-			//	done = true;
-			//}
 		}
 	}
 
@@ -81,6 +76,7 @@ void BaseSystem::Run()
 
 void BaseSystem::Exit()
 {
+	ENGINE->Exit(); 
 	ShutdownWindows();
 }
 

@@ -27,14 +27,6 @@
 using namespace DirectX;
 
 
-// todo: remove
-struct MatrixBuffer
-{
-	XMMATRIX mWorld;
-	XMMATRIX mView;
-	XMMATRIX mProj;
-};
-
 enum LayoutFormat
 {
 	FLOAT32_2 = DXGI_FORMAT_R32G32_FLOAT,
@@ -54,13 +46,22 @@ struct cBufferLayout
 	D3D11_SHADER_BUFFER_DESC					desc;
 	std::vector<D3D11_SHADER_VARIABLE_DESC>		variables;
 	std::vector<D3D11_SHADER_TYPE_DESC>			types;
+	unsigned									buffSize;
 };
 
-struct cBuffer
+// CPU side constant buffer
+struct CPUConstant
 {
 	std::string name;
+	size_t		size;
+	void*		data;
 };
 
+struct CBuffer
+{
+	ID3D11Buffer* data;
+	bool dirty;
+};
 
 // typedefs
 typedef int ShaderID;
@@ -87,22 +88,22 @@ private:
 	void AssignID(ShaderID id);
 
 private:
-	const std::string				m_name;
-	ShaderID						m_id;
+	const std::string			m_name;
+	ShaderID					m_id;
 
-	ID3D11VertexShader*				m_vertexShader;
-	ID3D11PixelShader*				m_pixelShader;
+	ID3D11VertexShader*			m_vertexShader;
+	ID3D11PixelShader*			m_pixelShader;
 
-	ID3D11ShaderReflection*			m_vsRefl;
-	ID3D11ShaderReflection*			m_psRefl;
+	ID3D11ShaderReflection*		m_vsRefl;
+	ID3D11ShaderReflection*		m_psRefl;
 
-	ID3D11InputLayout*				m_layout;
+	ID3D11InputLayout*			m_layout;
 
-	//ID3D11Buffer*					m_matrixBuffer;
-	ID3D11Buffer*					m_cBuffer;
-	
-	
-	std::vector<cBufferLayout>		m_cBufferLayouts;
+	std::vector<CBuffer>					m_cBuffers;
+	std::vector<std::vector<CPUConstant>>	m_constants;
+
+
+	std::vector<cBufferLayout>	m_cBufferLayouts;
 
 };
 

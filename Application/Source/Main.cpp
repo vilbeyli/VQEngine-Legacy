@@ -28,5 +28,6 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdSh
 
 	sys->Exit();
 	delete sys;
+	sys = nullptr;
 	return 0;
 }

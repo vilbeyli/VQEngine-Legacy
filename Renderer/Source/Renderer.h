@@ -33,6 +33,8 @@ class BufferObject;
 class Camera;
 class Shader;
 
+typedef int BufferID;
+
 class Renderer
 {
 public:
@@ -41,7 +43,6 @@ public:
 
 	bool Init(int width, int height, HWND hwnd);
 	void Exit();
-	bool MakeFrame();
 
 	void EnableAlphaBlending(bool enable);
 	void EnableZBuffer(bool enable);
@@ -51,17 +52,25 @@ public:
 
 	// state management
 	void SetShader(ShaderID);
-	void Reset();
-
 	void SetCamera(Camera* m_camera);
+	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
+
+	void Begin(const float clearColor[4]);
+	void Reset();
+	void Apply();
+	void DrawIndexed();
+	void End();
+
+	void SetViewport(const unsigned width, const unsigned height);
+	void SetBufferObj(int BufferID);
 private:
-	bool Render();
 
 	void GeneratePrimitives();
 
 public:
 	static const bool FULL_SCREEN  = false;
 	static const bool VSYNC = true;
+
 private:
 	D3DManager*						m_Direct3D;
 	HWND							m_hWnd;
@@ -71,22 +80,15 @@ private:
 	GeometryGenerator				m_geom;
 
 	Camera*							m_mainCamera;
+	D3D11_VIEWPORT					m_viewPort;
+
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
 
 	// state variables
 	ShaderID						m_activeShader;
-
+	BufferID						m_activeBuffer;
 };
 
-
-// FUNCTION PROTOTYPES
-//----------------------------------------------------------------------
-
-
-// GLOBALS
-//----------------------------------------------------------------------
-const float g_farPlane		= 1000.0f;
-const float g_nearPlane		= 0.1f;
 
  

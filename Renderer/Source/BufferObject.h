@@ -37,6 +37,7 @@ public:
 	~BufferObject();
 
 public:
+	// gpu data
 	ID3D11Buffer*	m_vertexBuffer;
 	ID3D11Buffer*	m_indexBuffer;
 

@@ -50,10 +50,10 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 
 	m_camera->SetOthoMatrix(scr_width, scr_height, NEAR_PLANE, FAR_PLANE);
 	m_camera->SetProjectionMatrix((float)XM_PIDIV4, SCREEN_RATIO, NEAR_PLANE, FAR_PLANE);
-	m_camera->SetPosition(0, 0, -11);
+	m_camera->SetPosition(0, 20, -100);
 	m_renderer->SetCamera(m_camera);
 	
-	m_tf.SetPosition(0, 0, -11);
+	m_tf.SetPosition(0, 20, -100);
 
 	return true;
 }
@@ -150,15 +150,17 @@ void Engine::Update()
 void Engine::Render()
 {
 	const float clearColor[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
-	XMMATRIX world = XMMatrixIdentity();
+	XMMATRIX world	= XMMatrixIdentity();
 	XMMATRIX view = m_camera->GetViewMatrix();
 	XMMATRIX proj = m_camera->GetProjectionMatrix();
+	//XMMATRIX view	= XMMatrixIdentity();
+	//XMMATRIX proj	= XMMatrixIdentity();
 
 	ShaderID shd = 0;	// first shader for now
 	m_renderer->Begin(clearColor);
 	m_renderer->SetShader(shd);
 	m_renderer->SetViewport(SCREEN_WIDTH, SCREEN_HEIGHT);
-	m_renderer->SetBufferObj(MESH_TYPE::TRIANGLE);
+	m_renderer->SetBufferObj(MESH_TYPE::CUBE);
 	m_renderer->SetConstant4x4f("world", world);
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);

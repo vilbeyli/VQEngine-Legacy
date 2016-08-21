@@ -66,6 +66,7 @@ public:
 private:
 
 	void GeneratePrimitives();
+	void PollShaderFiles();
 
 public:
 	static const bool FULL_SCREEN  = false;
@@ -79,6 +80,7 @@ private:
 
 	GeometryGenerator				m_geom;
 
+	// render data
 	Camera*							m_mainCamera;
 	D3D11_VIEWPORT					m_viewPort;
 
@@ -88,6 +90,9 @@ private:
 	// state variables
 	ShaderID						m_activeShader;
 	BufferID						m_activeBuffer;
+
+	// 
+	unsigned long long				m_frameCount;
 };
 
 

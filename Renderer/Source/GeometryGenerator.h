@@ -18,9 +18,7 @@
 
 #pragma once
 
-#include <DirectXMath.h>
-using namespace DirectX;
-
+// forward decl
 class BufferObject;
 struct ID3D11Device;
 

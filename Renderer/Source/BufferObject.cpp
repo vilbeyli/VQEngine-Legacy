@@ -52,3 +52,56 @@ BufferObject::~BufferObject()
 	}
 
 }
+
+bool BufferObject::FillGPUBuffers(ID3D11Device* device, bool writable)
+{
+		// vertex buffer
+	D3D11_BUFFER_DESC vertexBufferDesc;
+	vertexBufferDesc.Usage					= writable ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.ByteWidth				= sizeof(Vertex) * m_vertexCount;
+	vertexBufferDesc.BindFlags				= D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDesc.CPUAccessFlags			= writable ? D3D11_CPU_ACCESS_WRITE : 0;
+	vertexBufferDesc.MiscFlags				= 0;
+	vertexBufferDesc.StructureByteStride	= 0;
+	
+	D3D11_SUBRESOURCE_DATA vertData;
+	vertData.pSysMem			= m_vertices;
+	vertData.SysMemPitch		= 0;
+	vertData.SysMemSlicePitch	= 0;
+
+	if (FAILED(device->CreateBuffer(
+		&vertexBufferDesc, 
+		&vertData, 
+		&m_vertexBuffer)))
+	{
+		OutputDebugString("Error: Failed to create vertex buffer!");
+		return false;
+	}
+
+	// index buffer
+	D3D11_BUFFER_DESC indexBufferDesc;
+	indexBufferDesc.Usage				= D3D11_USAGE_DEFAULT;
+	indexBufferDesc.ByteWidth			= sizeof(unsigned) * m_indexCount;
+	indexBufferDesc.BindFlags			= D3D11_BIND_INDEX_BUFFER;
+	indexBufferDesc.CPUAccessFlags		= 0;
+	indexBufferDesc.MiscFlags			= 0;
+	indexBufferDesc.StructureByteStride = 0;
+
+	//set up index data
+	D3D11_SUBRESOURCE_DATA indexData;
+	indexData.pSysMem			= m_indices;
+	indexData.SysMemPitch		= 0;
+	indexData.SysMemSlicePitch	= 0;
+
+	//create index buffer
+	if (FAILED(device->CreateBuffer(
+		&indexBufferDesc, 
+		&indexData, 
+		&m_indexBuffer)))
+	{
+		OutputDebugString("Error: Failed to create index buffer!");
+		return false;
+	}
+
+	return true;
+}

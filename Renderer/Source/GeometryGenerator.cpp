@@ -19,6 +19,8 @@
 #include "GeometryGenerator.h"
 #include "BufferObject.h"
 
+// Direct3D Transformation Pipeline: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418867(v=vs.85).aspx
+
 GeometryGenerator::GeometryGenerator()
 	:
 	m_device(nullptr)
@@ -30,85 +32,44 @@ GeometryGenerator::~GeometryGenerator()
 
 BufferObject* GeometryGenerator::Triangle()
 {
-	HRESULT succeed;
-
 	// create CPU buffer object
 	//-----------------------------------------------------------------
-	BufferObject* bufferObj = new BufferObject();	// deleted in renderer->exit()
-	bufferObj->m_vertexCount = 3;
-	bufferObj->m_indexCount = 3;
-	bufferObj->m_vertices = new Vertex[bufferObj->m_vertexCount];	// deleted in dtor
-	bufferObj->m_indices = new unsigned[bufferObj->m_indexCount];	// deleted in dtor
-	
+	BufferObject* bufferObj		= new BufferObject();	// deleted in renderer->exit()
+	bufferObj->m_vertexCount	= 3;
+	bufferObj->m_indexCount		= 3;
+	bufferObj->m_vertices		= new Vertex[bufferObj->m_vertexCount];		// deleted in dtor
+	bufferObj->m_indices		= new unsigned[bufferObj->m_indexCount];	// deleted in dtor
 
 	// set geometry data
 	//------------------------------------------------------------------
-	const float size = 0.8f;
+	const float size = 1.0f;
+
+	// vertices - CW
+	bufferObj->m_vertices[0].position	= XMFLOAT3(-size, -size, 0.0f);
+	bufferObj->m_vertices[0].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[0].texCoords	= XMFLOAT3(0.0f, 1.0f, 0.0f);
+
+	bufferObj->m_vertices[1].position	= XMFLOAT3(0, size, 0.0f);
+	bufferObj->m_vertices[1].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[1].texCoords	= XMFLOAT3(0.5f, 0.0f, 0.0f);
+
+	bufferObj->m_vertices[2].position	= XMFLOAT3(size, -size, 0.0f);
+	bufferObj->m_vertices[2].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[2].texCoords	= XMFLOAT3(1.0f, 1.0f, 0.0f);
 
 	// indices
 	bufferObj->m_indices[0] = 0;
 	bufferObj->m_indices[1] = 1;
 	bufferObj->m_indices[2] = 2;
 
-	// vertices
-	bufferObj->m_vertices[0].position	= XMFLOAT3(-size, -size, 0.0f);
-	bufferObj->m_vertices[0].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
-	bufferObj->m_vertices[0].texCoords	= XMFLOAT2(0.0f, 1.0f);
-
-	bufferObj->m_vertices[1].position	= XMFLOAT3(0, size, 0.0f);
-	bufferObj->m_vertices[1].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
-	bufferObj->m_vertices[1].texCoords	= XMFLOAT2(0.5f, 0.0f);
-
-	bufferObj->m_vertices[2].position	= XMFLOAT3(size, -size, 0.0f);
-	bufferObj->m_vertices[2].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
-	bufferObj->m_vertices[2].texCoords	= XMFLOAT2(1.0f, 1.0f);
-
-	// buffer descriptions & GPU buffer objects
+	// initialize GPU buffers
 	//------------------------------------------------------------------
 	bool writable = false;
-
-	// vertex buffer
-	D3D11_BUFFER_DESC vertexBufferDesc;
-	vertexBufferDesc.Usage					= writable ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.ByteWidth				= sizeof(Vertex) * bufferObj->m_vertexCount;
-	vertexBufferDesc.BindFlags				= D3D11_BIND_VERTEX_BUFFER;
-	vertexBufferDesc.CPUAccessFlags			= writable ? D3D11_CPU_ACCESS_WRITE : 0;
-	vertexBufferDesc.MiscFlags				= 0;
-	vertexBufferDesc.StructureByteStride	= 0;
-	
-	D3D11_SUBRESOURCE_DATA vertData;
-	vertData.pSysMem			= bufferObj->m_vertices;
-	vertData.SysMemPitch		= 0;
-	vertData.SysMemSlicePitch	= 0;
-
-	succeed = m_device->CreateBuffer(&vertexBufferDesc, &vertData, &bufferObj->m_vertexBuffer);
-	if (FAILED(succeed))
+	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{
-		// TODO: WARN
-		return NULL;
-	}
-
-	// index buffer
-	D3D11_BUFFER_DESC indexBufferDesc;
-	indexBufferDesc.Usage				= D3D11_USAGE_DEFAULT;
-	indexBufferDesc.ByteWidth			= sizeof(unsigned) * bufferObj->m_indexCount;
-	indexBufferDesc.BindFlags			= D3D11_BIND_INDEX_BUFFER;
-	indexBufferDesc.CPUAccessFlags		= 0;
-	indexBufferDesc.MiscFlags			= 0;
-	indexBufferDesc.StructureByteStride = 0;
-
-	//set up index data
-	D3D11_SUBRESOURCE_DATA indexData;
-	indexData.pSysMem			= bufferObj->m_indices;
-	indexData.SysMemPitch		= 0;
-	indexData.SysMemSlicePitch	= 0;
-
-	//create index buffer
-	succeed = m_device->CreateBuffer(&indexBufferDesc, &indexData, &bufferObj->m_indexBuffer);
-	if (FAILED(succeed))
-	{
-		// TODO: WARN
-		return NULL;
+		OutputDebugString("Error Triangle creation failed");
+		delete bufferObj;
+		bufferObj = nullptr;
 	}
 
 	return bufferObj;
@@ -116,16 +77,235 @@ BufferObject* GeometryGenerator::Triangle()
 
 BufferObject* GeometryGenerator::Quad()
 {
-	BufferObject* bufferObj = new BufferObject();
+	BufferObject* bufferObj		= new BufferObject();
+	bufferObj->m_vertexCount	= 4;
+	bufferObj->m_indexCount		= 6;
+	bufferObj->m_vertices		= new Vertex[bufferObj->m_vertexCount];	// deleted in dtor
+	bufferObj->m_indices		= new unsigned[bufferObj->m_indexCount];	// deleted in dtor
 
+	// set geometry data
+	//------------------------------------------------------------------
+	const float size = 1.0f;
+
+	//	  1	+-----+ 2	0, 1, 2
+	//		|	  |		2, 3, 0
+	//		|	  |		
+	//	  0 +-----+ 3	
+
+	// vertices - CW
+	bufferObj->m_vertices[0].position	= XMFLOAT3(-size, -size, 0.0f);
+	bufferObj->m_vertices[0].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[0].texCoords	= XMFLOAT3(0.0f, 0.0f, 0.0f);
+
+	bufferObj->m_vertices[1].position	= XMFLOAT3(-size, +size, 0.0f);
+	bufferObj->m_vertices[1].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[1].texCoords	= XMFLOAT3(0.0f, 1.0f, 0.0f);
+
+	bufferObj->m_vertices[2].position	= XMFLOAT3(+size, +size, 0.0f);
+	bufferObj->m_vertices[2].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[2].texCoords	= XMFLOAT3(1.0f, 1.0f, 0.0f);
+
+	bufferObj->m_vertices[3].position	= XMFLOAT3(+size, -size, 0.0f);
+	bufferObj->m_vertices[3].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[3].texCoords	= XMFLOAT3(1.0f, 0.0f, 0.0f);
+
+	// indices
+	unsigned indices[] = {
+		0, 1, 2,
+		2, 3, 0
+	};
+	memcpy(bufferObj->m_indices, indices, bufferObj->m_indexCount * sizeof(unsigned));
+
+	// initialize GPU buffers
+	//------------------------------------------------------------------
+	bool writable = false;	
+	if (!bufferObj->FillGPUBuffers(m_device, writable))
+	{
+		OutputDebugString("Error Quad creation failed");
+		delete bufferObj;
+		bufferObj = nullptr;
+	}
 
 	return bufferObj;
 }
 
 BufferObject* GeometryGenerator::Cube()
 {
-	BufferObject* bufferObj = new BufferObject();
+	BufferObject* bufferObj		= new BufferObject();
+	bufferObj->m_vertexCount	= 24;
+	bufferObj->m_indexCount		= 36;
+	bufferObj->m_vertices		= new Vertex[bufferObj->m_vertexCount];		// deleted in dtor
+	bufferObj->m_indices		= new unsigned[bufferObj->m_indexCount];	// deleted in dtor
 
+	// set geometry data
+	//------------------------------------------------------------------
+//		ASCII Cube art from: http://www.lonniebest.com/ASCII/Art/?ID=2
+// 
+//			   0 _________________________ 1		0, 1, 2, 0, 2, 3,		// Top
+//		        / _____________________  /|			4, 5, 6, 4, 6, 7,		// back
+//		       / / ___________________/ / |			8, 9, 10, 8, 10, 11,	// Right
+//		      / / /| |               / /  |			12, 13, 14, 12, 14, 15, // Left
+//		     / / / | |              / / . |			16, 17, 18, 16, 18, 19, // Back
+//		    / / /| | |             / / /| |			20, 22, 21, 20, 23, 22, // Bottom
+//		   / / / | | |            / / / | |			
+//		  / / /  | | |           / / /| | |		   +Y
+//		 / /_/__________________/ / / | | |			|  +Z
+//	4,3 /________________________/5/  | | |			|  /
+//		| ______________________8|2|  | | |			| /
+//		| | |    | | |_________| | |__| | |			|/______+X
+//		| | |    | |___________| | |____| |			
+//		| | |   / / ___________| | |_  / /		
+//		| | |  / / /           | | |/ / /		
+//		| | | / / /            | | | / /		
+//		| | |/ / /             | | |/ /			
+//		| | | / /              | | ' /			
+//		| | |/_/_______________| |  /			
+//		| |____________________| | /			
+//		|________________________|/6			
+//		7
+
+	// vertices - CW 
+	bufferObj->m_vertices[0].position	= XMFLOAT3(-1.0f, +1.0f, +1.0f);
+	bufferObj->m_vertices[0].normal		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[0].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[0].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[1].position	= XMFLOAT3(+1.0f, +1.0f, +1.0f);
+	bufferObj->m_vertices[1].normal		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[1].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[1].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[2].position	= XMFLOAT3(+1.0f, +1.0f, -1.0f);
+	bufferObj->m_vertices[2].normal		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[2].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[2].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[3].position	= XMFLOAT3(-1.0f, +1.0f, -1.0f);
+	bufferObj->m_vertices[3].normal		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[3].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[3].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[4].position	= XMFLOAT3(-1.0f, +1.0f, -1.0f);
+	bufferObj->m_vertices[4].normal		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
+	bufferObj->m_vertices[4].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[4].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[5].position	= XMFLOAT3(+1.0f, +1.0f, -1.0f);
+	bufferObj->m_vertices[5].normal		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
+	bufferObj->m_vertices[5].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[5].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[6].position	= XMFLOAT3(+1.0f, -1.0f, -1.0f);
+	bufferObj->m_vertices[6].normal		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
+	bufferObj->m_vertices[6].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[6].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[7].position	= XMFLOAT3(-1.0f, -1.0f, -1.0f);
+	bufferObj->m_vertices[7].normal		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
+	bufferObj->m_vertices[7].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[7].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[8].position	= XMFLOAT3(+1.0f, +1.0f, -1.0f);
+	bufferObj->m_vertices[8].normal		= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[8].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[8].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[9].position	= XMFLOAT3(+1.0f, +1.0f, +1.0f);
+	bufferObj->m_vertices[9].normal		= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[9].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[9].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[10].position	= XMFLOAT3(+1.0f, -1.0f, +1.0f);
+	bufferObj->m_vertices[10].normal	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[10].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[10].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[11].position	= XMFLOAT3(+1.0f, -1.0f, -1.0f);
+	bufferObj->m_vertices[11].normal	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[11].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[11].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	
+	bufferObj->m_vertices[12].position	= XMFLOAT3(-1.0f, +1.0f, +1.0f);
+	bufferObj->m_vertices[12].normal	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[12].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[12].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[13].position	= XMFLOAT3(-1.0f, +1.0f, -1.0f);
+	bufferObj->m_vertices[13].normal	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[13].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[13].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	
+	bufferObj->m_vertices[14].position	= XMFLOAT3(-1.0f, -1.0f, -1.0f);
+	bufferObj->m_vertices[14].normal	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[14].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[14].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[15].position	= XMFLOAT3(-1.0f, -1.0f, +1.0f);
+	bufferObj->m_vertices[15].normal	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[15].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[15].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	
+	bufferObj->m_vertices[16].position	= XMFLOAT3(+1.0f, +1.0f, +1.0f);
+	bufferObj->m_vertices[16].normal	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
+	bufferObj->m_vertices[16].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[16].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[17].position	= XMFLOAT3(-1.0f, +1.0f, +1.0f);
+	bufferObj->m_vertices[17].normal	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
+	bufferObj->m_vertices[17].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[17].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	
+	bufferObj->m_vertices[18].position	= XMFLOAT3(-1.0f, -1.0f, +1.0f);
+	bufferObj->m_vertices[18].normal	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
+	bufferObj->m_vertices[18].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[18].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[19].position	= XMFLOAT3(+1.0f, -1.0f, +1.0f);
+	bufferObj->m_vertices[19].normal	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
+	bufferObj->m_vertices[19].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[19].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	
+	bufferObj->m_vertices[20].position	= XMFLOAT3(+1.0f, -1.0f, -1.0f);
+	bufferObj->m_vertices[20].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
+	bufferObj->m_vertices[20].texCoords	= XMFLOAT3(+1.0f, +1.0f, +1.0f);
+	bufferObj->m_vertices[20].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[21].position	= XMFLOAT3(-1.0f, -1.0f, -1.0f);
+	bufferObj->m_vertices[21].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
+	bufferObj->m_vertices[21].texCoords	= XMFLOAT3(+0.0f, +1.0f, +1.0f);
+	bufferObj->m_vertices[21].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	
+	bufferObj->m_vertices[22].position	= XMFLOAT3(-1.0f, -1.0f, +1.0f);
+	bufferObj->m_vertices[22].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
+	bufferObj->m_vertices[22].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[22].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	bufferObj->m_vertices[23].position	= XMFLOAT3(+1.0f, -1.0f, +1.0f);
+	bufferObj->m_vertices[23].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
+	bufferObj->m_vertices[23].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[23].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+
+	// Create the index buffer
+	unsigned indices[] = {
+		0, 1, 2, 0, 2, 3,		// Top
+		4, 5, 6, 4, 6, 7,		// back
+		8, 9, 10, 8, 10, 11,	// Right
+		12, 13, 14, 12, 14, 15, // Left
+		16, 17, 18, 16, 18, 19, // Back
+		20, 22, 21, 20, 23, 22, // Bottom
+	};
+	memcpy(bufferObj->m_indices, indices, bufferObj->m_indexCount * sizeof(unsigned));
+	
+
+	// initialize GPU buffers
+	//------------------------------------------------------------------
+	bool writable = false;	
+	if (!bufferObj->FillGPUBuffers(m_device, writable))
+	{
+		OutputDebugString("Error Quad creation failed");
+		delete bufferObj;
+		bufferObj = nullptr;
+	}
 
 	return bufferObj;
 }

@@ -285,6 +285,8 @@ void Shader::CheckSignatures()
 
 void Shader::SetCBuffers(ID3D11Device* device)
 {
+	// example: http://gamedev.stackexchange.com/a/62395/39920
+
 	// Obtain CBuffer layout information
 	D3D11_SHADER_DESC VSDesc;
 	m_vsRefl->GetDesc(&VSDesc);

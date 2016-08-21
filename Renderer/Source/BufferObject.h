@@ -27,7 +27,8 @@ struct Vertex
 {
 	XMFLOAT3 position;
 	XMFLOAT3 normal;
-	XMFLOAT2 texCoords;
+	XMFLOAT3 texCoords;
+	XMFLOAT3 tangent;
 };
 
 class BufferObject
@@ -35,6 +36,8 @@ class BufferObject
 public:
 	BufferObject();
 	~BufferObject();
+
+	bool FillGPUBuffers(ID3D11Device* device, bool writable);
 
 public:
 	// gpu data

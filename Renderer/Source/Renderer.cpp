@@ -96,8 +96,13 @@ void Renderer::GeneratePrimitives()
 {
 	m_geom.SetDevice(m_device);
 	m_bufferObjects[TRIANGLE]	= m_geom.Triangle();
-	//m_bufferObjects[QUAD]		= m_geom.Quad();
-	//m_bufferObjects[CUBE]		= m_geom.Cube();
+	m_bufferObjects[QUAD]		= m_geom.Quad();
+	m_bufferObjects[CUBE]		= m_geom.Cube();
+}
+
+void Renderer::PollShaderFiles()
+{
+	// todo: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
 }
 
 ShaderID Renderer::AddShader(const std::string& shdFileName, 
@@ -162,6 +167,7 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 	XMStoreFloat4x4(&m, matrix);
 	float* data = &m.m[0][0];
 
+	// find data in CPUConstantBuffer array of shader
 	Shader* shader = m_shaders[m_activeShader];
 	bool found = false;
 	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)
@@ -198,6 +204,10 @@ void Renderer::Begin(const float clearColor[4])
 void Renderer::End()
 {
 	m_Direct3D->EndFrame();
+	++m_frameCount;
+#ifdef _DEBUG
+	if (m_frameCount % 60 == 0)	PollShaderFiles();
+#endif
 }
 
 
@@ -251,7 +261,6 @@ void Renderer::Apply()
 void Renderer::DrawIndexed()
 {
 	m_deviceContext->DrawIndexed(m_bufferObjects[m_activeBuffer]->m_indexCount, 0, 0);
-
 }
 
 

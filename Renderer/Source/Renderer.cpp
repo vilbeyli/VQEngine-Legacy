@@ -147,25 +147,37 @@ void Renderer::SetCamera(Camera* cam)
 
 void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 {
+	// Here, we write to the CPU version of the constant buffer -- if the contents are updated 
+	// ofc, otherwise we don't write -- and set the dirty flag of the GPU CBuffer counterpart.
+	// When all the constants are set on the CPU side, right before the draw call,
+	// we will use a mapped resource as a block of memory, transfer our CPU
+	// version of constants to there, and then send it to GPU CBuffers at one call as a block memory.
+	// Otherwise, we would have to make an API call each time we set the constants, which
+	// would be slower.
+	// Read more here: https://developer.nvidia.com/sites/default/files/akamai/gamedev/files/gdc12/Efficient_Buffer_Management_McDonald.pdf
+	//      and  here: https://developer.nvidia.com/content/constant-buffers-without-constant-pain-0
+
 	// prepare data to be copied
 	XMFLOAT4X4 m;
 	XMStoreFloat4x4(&m, matrix);
 	float* data = &m.m[0][0];
 
-
-	// find data in CPUConstantBuffer
+	Shader* shader = m_shaders[m_activeShader];
 	bool found = false;
-	for (size_t i = 0; i < m_shaders[m_activeShader]->m_constants.size() && !found; i++)
+	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)
 	{
-		std::vector<CPUConstant> cVector = m_shaders[m_activeShader]->m_constants[i];
+		std::vector<CPUConstant>& cVector = shader->m_constants[i];
 		for (CPUConstant& c : cVector)
 		{
 			if (strcmp(cName, c.name.c_str()) == 0)
 			{
 				found = true;
-				memcpy(c.data, data, c.size);
-				m_shaders[m_activeShader]->m_cBuffers[i].dirty = true;
-				break;
+				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
+				{
+					memcpy(c.data, data, c.size);
+					shader->m_cBuffers[i].dirty = true;
+					break;
+				}
 			}
 		}
 	}
@@ -191,6 +203,8 @@ void Renderer::End()
 
 void Renderer::Apply()
 {
+	// Here, we make all the API calls for GPU data
+
 	Shader* shader = m_shaders[m_activeShader];
 
 	// set shaders & data layout
@@ -208,26 +222,27 @@ void Renderer::Apply()
 	// viewport
 	m_deviceContext->RSSetViewports(1, &m_viewPort);
 
-	// CBuffers
+	// set shader constants
 	for (size_t i = 0; i < shader->m_cBuffers.size(); ++i)
 	{
-		CBuffer cbuf = shader->m_cBuffers[i];
-		if (cbuf.dirty)
+		CBuffer& cbuf = shader->m_cBuffers[i];
+		if (cbuf.dirty)	// if the CPU-side buffer is updated
 		{
 			ID3D11Buffer* bufferData = cbuf.data;
 			D3D11_MAPPED_SUBRESOURCE mappedResource;
-			m_deviceContext->Map(bufferData, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 
-			char* bufferPos = static_cast<char*>(mappedResource.pData);
+			// Map subresource to GPU - update contends - discard the subresource
+			m_deviceContext->Map(bufferData, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+			char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
 			std::vector<CPUConstant>& cpuConsts = shader->m_constants[i];
 			for (CPUConstant& c : cpuConsts)
 			{
 				memcpy(bufferPos, c.data, c.size);
 				bufferPos += c.size;
 			}
-
 			m_deviceContext->Unmap(bufferData, 0);
-			m_deviceContext->VSSetConstantBuffers(0, 1, &bufferData);
+
+			m_deviceContext->VSSetConstantBuffers(i, 1, &bufferData);
 			cbuf.dirty = false;
 		}
 	}

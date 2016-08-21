@@ -22,6 +22,14 @@ cbuffer MatrixBuffer
 	matrix view;
 	matrix	proj;
 }
+//cbuffer MatrixBuffer2
+//{
+//    matrix view;
+//}
+//cbuffer MatrixBuffer3
+//{
+//    matrix proj;
+//}
 
 struct VSIn
 {

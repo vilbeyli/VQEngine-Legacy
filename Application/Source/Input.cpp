@@ -17,14 +17,20 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Input.h"
+#include "SystemDefs.h"
 
 #ifdef _DEBUG
 #include <string>
 #include <Windows.h>
 #endif
 
+#define LOG
+
 Input::Input()
 {
+	memset(m_mouseDelta, 0, 2 * sizeof(int));
+	m_mousePos[0] = SCREEN_WIDTH / 2;
+	m_mousePos[1] = SCREEN_HEIGHT / 2;
 }
 
 Input::Input(const Input &)
@@ -46,7 +52,7 @@ void Input::KeyDown(KeyCode key)
 {
 	m_keys[key] = true;
 
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(LOG)
 	std::string info("KeyDown: "); info += std::to_string(key); info += "\n";
 	OutputDebugString(info.c_str());
 #endif
@@ -54,14 +60,65 @@ void Input::KeyDown(KeyCode key)
 
 void Input::KeyUp(KeyCode key)
 {
-#ifdef _DEBUG
+#if defined(_DEBUG) && defined(LOG)
 	std::string info("KeyReleased: "); info += std::to_string(key); info += "\n";
 	OutputDebugString(info.c_str());
 #endif
 	m_keys[key] = false;
 }
 
+void Input::ButtonDown(KeyCode btn)
+{
+#if defined(_DEBUG) && defined(LOG)
+	char msg[128];
+	sprintf_s(msg, "Mouse Button Down: %d\n", btn);
+	OutputDebugString(msg);
+#endif
+
+	m_buttons[btn] = true;
+}
+
+void Input::ButtonUp(KeyCode btn)
+{
+#if defined(_DEBUG) && defined(LOG)
+	char msg[128];
+	sprintf_s(msg, "Mouse Button Up: %d\n", btn);
+	OutputDebugString(msg);
+#endif
+
+	m_buttons[btn] = false;
+}
+
+void Input::UpdateMousePos(int x, int y)
+{
+	m_mouseDelta[0] = x - m_mousePos[0];
+	m_mouseDelta[1] = y - m_mousePos[1];
+	m_mousePos[0] = x;
+	m_mousePos[1] = y;
+
+#if defined(_DEBUG) && defined(LOG)
+	char info[128];
+	sprintf_s(info, "Mouse Delta: %d, %d\n", m_mouseDelta[0], m_mouseDelta[1]);
+	OutputDebugString(info);
+#endif
+}
+
 bool Input::IsKeyDown(KeyCode key) const
 {
 	return m_keys[key];
+}
+
+bool Input::IsMouseDown(KeyCode btn) const
+{
+	return m_buttons[btn];
+}
+
+int Input::MouseDeltaX() const
+{
+	return m_mouseDelta[0];
+}
+
+int Input::MouseDeltaY() const
+{
+	return m_mouseDelta[1];
 }

@@ -20,14 +20,17 @@
 #define _CAMERA_H
 
 #include <directxmath.h>
+#include "../../Application/Source/Components/Transform.h"	// dependency. rethink this
 
 using namespace DirectX;
+
+class Input;
 
 //__declspec(align(16)) class Camera
 class Camera
 {
 public:
-	Camera(void);
+	Camera(Input const*);
 	~Camera(void);
 
 	// new/delete overrides for 16-bit alignment 
@@ -47,14 +50,21 @@ public:
 	XMMATRIX GetOrthoMatrix();
 
 	void SetPosition(float x, float y, float z);
-	void SetRotation(float x, float y, float z);
+	void Rotate(float yaw, float pitch);
+	//void SetRotation(float x, float y, float z);
 
 private:
-	XMFLOAT3	m_position;
-	XMFLOAT3	m_rotation;
+	void Move();
+	void Rotate();
+
+private:
+	Transform	m_transform;
+
 	XMFLOAT4X4	m_viewMatrix;
 	XMFLOAT4X4	m_projectionMatrix;
 	XMFLOAT4X4	m_orthoMatrix;
+
+	Input const* m_input;
 };
 
 #endif

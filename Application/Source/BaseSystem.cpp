@@ -19,6 +19,7 @@
 #include "BaseSystem.h"
 #include "SystemDefs.h"
 #include "Input.h"
+#include "Windowsx.h"
 
 #include <new>
 
@@ -87,20 +88,42 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 	case WM_KEYDOWN:
 	{
 		ENGINE->m_input->KeyDown((KeyCode)wparam);
-		return 0;
+		break;
 	}
 
 	case WM_KEYUP:
 	{
 		ENGINE->m_input->KeyUp((KeyCode)wparam);
-		return 0;
+		break;
 	}
 
-	// TODO: PAINT ???
+	case WM_MBUTTONDOWN:
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	{
+		ENGINE->m_input->KeyDown((KeyCode)wparam);
+		break;
+	}
+
+	case WM_MBUTTONUP:
+	case WM_RBUTTONUP:
+	case WM_LBUTTONUP:
+	{
+		ENGINE->m_input->KeyUp((KeyCode)wparam);
+		break;
+	}
+
+	case WM_MOUSEMOVE:
+	{
+		ENGINE->m_input->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+		break;
+	}
 
 	default:
 		return DefWindowProc(hwnd, umsg, wparam, lparam);
 	}
+
+	return 0;
 }
 
 bool BaseSystem::Frame()
@@ -178,15 +201,35 @@ void BaseSystem::InitWindow(int& width, int& height)
 		return;
 	}
 
-	// init engine here maybe?
-
 	// focus window
 	ShowWindow(m_hwnd, SW_SHOW);
 	SetForegroundWindow(m_hwnd);
 	SetFocus(m_hwnd);
 
 	ShowCursor(false);
+	SetCursorPos(posX + width / 2, posY + height / 2);
+	SetCapture(m_hwnd);
 
+	RECT rect;
+	GetClientRect(m_hwnd, &rect);
+	POINT ul;
+	ul.x = rect.left;
+	ul.y = rect.top;
+
+	POINT lr;
+	lr.x = rect.right;
+	lr.y = rect.bottom;
+
+	MapWindowPoints(m_hwnd, nullptr, &ul, 1);
+	MapWindowPoints(m_hwnd, nullptr, &lr, 1);
+
+	rect.left = ul.x;
+	rect.top = ul.y;
+
+	rect.right = lr.x;
+	rect.bottom = lr.y;
+
+	ClipCursor(&rect);
 	return;
 }
 

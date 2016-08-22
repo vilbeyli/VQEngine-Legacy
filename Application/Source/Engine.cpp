@@ -40,7 +40,7 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 	if (!m_renderer) return false;
 	m_input = new Input();
 	if (!m_input)	return false;
-	m_camera = new Camera();
+	m_camera = new Camera(m_input);
 	if (!m_camera)	return false;
 	
 	// initialize systems
@@ -50,10 +50,8 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 
 	m_camera->SetOthoMatrix(scr_width, scr_height, NEAR_PLANE, FAR_PLANE);
 	m_camera->SetProjectionMatrix((float)XM_PIDIV4, SCREEN_RATIO, NEAR_PLANE, FAR_PLANE);
-	m_camera->SetPosition(0, 20, -100);
+	m_camera->SetPosition(0, 1, -10);
 	m_renderer->SetCamera(m_camera);
-	
-	m_tf.SetPosition(0, 20, -100);
 
 	return true;
 }
@@ -119,32 +117,18 @@ bool Engine::Run()
 void Engine::Update()
 {
 	m_camera->Update();
-	
-	//-----------------------------------------------------------------------------------
-	// TRANSLATION TEST
-	if (m_input->IsKeyDown(VK_LEFT))	m_tf.Translate(Transform::Left);
-	if (m_input->IsKeyDown(VK_RIGHT))	m_tf.Translate(Transform::Right);
-	if (m_input->IsKeyDown(VK_UP))		m_tf.Translate(Transform::Forward);
-	if (m_input->IsKeyDown(VK_DOWN))	m_tf.Translate(Transform::Backward);
-	if (m_input->IsKeyDown(VK_SPACE))	m_tf.Translate(Transform::Up);
-	if (m_input->IsKeyDown(VK_CONTROL))	m_tf.Translate(Transform::Down);
-	
+
 #ifdef _DEBUG
 	{
 		char info[128];
 		XMFLOAT3 pos;
 		XMStoreFloat3(&pos, m_tf.GetPosition());
 		sprintf_s(info, 128, "Transform: %.2f, %.2f, %.2f\n", pos.x, pos.y, pos.z);
-		OutputDebugString(info);
+		//OutputDebugString(info);
 	}
 #endif
 
-	XMVECTOR pos = m_tf.GetPosition() * 0.1f;
-	m_camera->SetPosition(pos.m128_f32[0], pos.m128_f32[1], pos.m128_f32[2]);
 
-	// ROTATION TEST
-
-	// SCALE TEST
 }
 
 void Engine::Render()

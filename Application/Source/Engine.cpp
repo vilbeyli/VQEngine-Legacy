@@ -18,10 +18,10 @@
 
 #include "Engine.h"
 
-#include "../Renderer/Source/Renderer.h"
+#include "../../Renderer/Source/Renderer.h"
 #include "Input.h"
 #include "Camera.h"
-#include "../Renderer/Source/Mesh.h"
+#include "../../Renderer/Source/Mesh.h"
 
 Engine* Engine::s_instance = nullptr;
 

@@ -112,7 +112,9 @@ void Camera::Rotate(float yaw, float pitch)
 // internal update functions
 void Camera::Rotate()
 {
-	Rotate(m_input->MouseDeltaX(), m_input->MouseDeltaY());
+	float dy = static_cast<float>(m_input->MouseDeltaY());
+	float dx = static_cast<float>(m_input->MouseDeltaX());
+	Rotate(dx, dy);
 }
 
 void Camera::Move()

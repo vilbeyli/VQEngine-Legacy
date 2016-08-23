@@ -115,7 +115,7 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 	Shader* shd = new Shader(shdFileName);
 	shd->Compile(m_device, path, layouts);
 	m_shaders.push_back(shd);
-	shd->AssignID(m_shaders.size() - 1);
+	shd->AssignID(static_cast<int>(m_shaders.size()) - 1);
 	return shd->ID();
 }
 
@@ -233,7 +233,7 @@ void Renderer::Apply()
 	m_deviceContext->RSSetViewports(1, &m_viewPort);
 
 	// set shader constants
-	for (size_t i = 0; i < shader->m_cBuffers.size(); ++i)
+	for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
 	{
 		CBuffer& cbuf = shader->m_cBuffers[i];
 		if (cbuf.dirty)	// if the CPU-side buffer is updated

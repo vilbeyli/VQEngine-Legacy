@@ -184,7 +184,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		inputLayout[i].InstanceDataStepRate	= 0;
 	}
 	result = device->CreateInputLayout(	inputLayout.data(), 
-										inputLayout.size(), 
+										static_cast<UINT>(inputLayout.size()), 
 										vsBlob->GetBufferPointer(),
 										vsBlob->GetBufferSize(), 
 										&m_layout);
@@ -360,7 +360,7 @@ void Shader::SetCBuffers(ID3D11Device* device)
 void Shader::OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName)
 {
 	char* compileErrors = (char*)errorMessage->GetBufferPointer();
-	unsigned long bufferSize = errorMessage->GetBufferSize();
+	size_t bufferSize = errorMessage->GetBufferSize();
 
 	std::stringstream ss;
 	for (unsigned int i = 0; i < bufferSize; ++i)

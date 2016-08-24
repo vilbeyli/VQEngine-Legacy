@@ -37,9 +37,9 @@ public:
 	LRESULT CALLBACK MessageHandler(HWND, UINT, WPARAM, LPARAM);
 
 private:
-	bool Frame();
 	void InitWindow(int&, int&);
 	void ShutdownWindows();
+	void InitRawInputDevices();
 
 private:
 	LPCSTR		m_appName;

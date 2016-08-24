@@ -20,9 +20,10 @@
 #include "Input.h"
 #include <windows.h>
 #include <string>
+#include "SystemDefs.h"
 
-#define CAM_ANGULAR_SPEED_DEG 0.1f
-#define CAM_MOVE_SPEED 0.5f
+#define CAM_ANGULAR_SPEED_DEG 5.0f
+#define CAM_MOVE_SPEED 10.0f
 #define DEG2RAD XM_PI / 180.0f
 
 Camera::Camera(Input const* inp)
@@ -54,10 +55,10 @@ void Camera::SetProjectionMatrix(float fov, float screenAspect, float screenNear
 }
 
 // updates View Matrix
-void Camera::Update()
+void Camera::Update(float dt)
 {
-	Rotate();
-	Move();
+	Rotate(dt);
+	Move(dt);
 
 	XMVECTOR up		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
@@ -101,23 +102,24 @@ void Camera::SetPosition(float x, float y, float z)
 }
 
 
-void Camera::Rotate(float yaw, float pitch)
+void Camera::Rotate(float yaw, float pitch, const float dt)
 {
-	float yaw_		= yaw   * CAM_ANGULAR_SPEED_DEG * DEG2RAD;
-	float pitch_	= pitch * CAM_ANGULAR_SPEED_DEG * DEG2RAD;
+	float delta = CAM_ANGULAR_SPEED_DEG * DEG2RAD * dt;
+	float yaw_		= yaw   * delta;
+	float pitch_	= pitch * delta;
 	XMVECTOR rot = XMVectorSet(pitch_, yaw_, 0, 0);
 	m_transform.Rotate(rot);
 }
 
 // internal update functions
-void Camera::Rotate()
+void Camera::Rotate(const float dt)
 {
 	float dy = static_cast<float>(m_input->MouseDeltaY());
 	float dx = static_cast<float>(m_input->MouseDeltaX());
-	Rotate(dx, dy);
+	Rotate(dx, dy, dt);
 }
 
-void Camera::Move()
+void Camera::Move(const float dt)
 {
 	float pitch = m_transform.GetRotation().m128_f32[0];
 	float yaw	= m_transform.GetRotation().m128_f32[1];
@@ -125,13 +127,13 @@ void Camera::Move()
 	XMMATRIX MRotation = XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
 
 	XMVECTOR translation = XMVectorSet(0,0,0,0);
-	if (m_input->IsKeyDown(0x41))		translation = XMVector3TransformCoord(Transform::Left,		MRotation);
-	if (m_input->IsKeyDown(0x44))		translation = XMVector3TransformCoord(Transform::Right,		MRotation);
-	if (m_input->IsKeyDown(0x57))		translation = XMVector3TransformCoord(Transform::Forward,	MRotation);
-	if (m_input->IsKeyDown(0x53))		translation = XMVector3TransformCoord(Transform::Backward,	MRotation);
-	if (m_input->IsKeyDown(VK_SPACE))	translation = XMVector3TransformCoord(Transform::Up,		MRotation);
-	if (m_input->IsKeyDown(VK_CONTROL))	translation = XMVector3TransformCoord(Transform::Down,		MRotation);
-	m_transform.Translate(translation * CAM_MOVE_SPEED);
+	if (m_input->IsKeyDown(0x41))		translation += XMVector3TransformCoord(Transform::Left,		MRotation);
+	if (m_input->IsKeyDown(0x44))		translation += XMVector3TransformCoord(Transform::Right,		MRotation);
+	if (m_input->IsKeyDown(0x57))		translation += XMVector3TransformCoord(Transform::Forward,	MRotation);
+	if (m_input->IsKeyDown(0x53))		translation += XMVector3TransformCoord(Transform::Backward,	MRotation);
+	if (m_input->IsKeyDown(VK_SPACE))	translation += XMVector3TransformCoord(Transform::Up,		MRotation);
+	if (m_input->IsKeyDown(VK_CONTROL))	translation += XMVector3TransformCoord(Transform::Down,		MRotation);
+	m_transform.Translate(translation * CAM_MOVE_SPEED * dt);
 }
 
 //void Camera::SetRotation(float x, float y, float z)

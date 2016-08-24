@@ -20,7 +20,8 @@
 #include "SystemDefs.h"
 #include "Input.h"
 #include "Windowsx.h"
-
+#include <strsafe.h>
+#include <vector>
 #include <new>
 
 BaseSystem::BaseSystem()
@@ -68,7 +69,7 @@ void BaseSystem::Run()
 		}
 		else
 		{
-			done = !Frame();
+			done = !ENGINE->Run();
 		}
 	}
 
@@ -85,6 +86,8 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 {
 	switch (umsg)
 	{
+	
+	// keyboard
 	case WM_KEYDOWN:
 	{
 		ENGINE->m_input->KeyDown((KeyCode)wparam);
@@ -97,6 +100,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 		break;
 	}
 
+	// mouse buttons
 	case WM_MBUTTONDOWN:
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
@@ -113,33 +117,71 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 		break;
 	}
 
-	case WM_MOUSEMOVE:
+	// raw input for mouse - see: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418864.aspx
+	case WM_INPUT:	
 	{
-		ENGINE->m_input->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+		UINT rawInputSize = 48;
+		LPBYTE inputBuffer[48];
+		ZeroMemory(inputBuffer, rawInputSize);
+
+		GetRawInputData(
+			(HRAWINPUT)lparam, 
+			RID_INPUT,
+			inputBuffer, 
+			&rawInputSize, 
+			sizeof(RAWINPUTHEADER));
+
+		RAWINPUT* raw = (RAWINPUT*)inputBuffer;
+
+		if (raw->header.dwType == RIM_TYPEMOUSE &&
+			raw->data.mouse.usFlags == MOUSE_MOVE_RELATIVE)
+		{
+			long xPosRelative = raw->data.mouse.lLastX;
+			long yPosRelative = raw->data.mouse.lLastY;
+			ENGINE->m_input->UpdateMousePos(xPosRelative, yPosRelative);
+			SetCursorPos(SCREEN_WIDTH/2, SCREEN_HEIGHT/2);
+			
+#ifdef LOG
+			char szTempOutput[1024];
+			StringCchPrintf(szTempOutput, STRSAFE_MAX_CCH, TEXT("%u  Mouse: usFlags=%04x ulButtons=%04x usButtonFlags=%04x usButtonData=%04x ulRawButtons=%04x lLastX=%04x lLastY=%04x ulExtraInformation=%04x\r\n"),
+				rawInputSize,
+				raw->data.mouse.usFlags,
+				raw->data.mouse.ulButtons,
+				raw->data.mouse.usButtonFlags,
+				raw->data.mouse.usButtonData,
+				raw->data.mouse.ulRawButtons,
+				raw->data.mouse.lLastX,
+				raw->data.mouse.lLastY,
+				raw->data.mouse.ulExtraInformation);
+			OutputDebugString(szTempOutput);
+#endif
+		}
 		break;
 	}
 
+	// client area mouse - not good for first person camera
+	//case WM_MOUSEMOVE:
+	//{
+	//	ENGINE->m_input->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+	//	break;
+	//}
+
 	default:
+	{
 		return DefWindowProc(hwnd, umsg, wparam, lparam);
+	}
 	}
 
 	return 0;
 }
 
-bool BaseSystem::Frame()
-{
-	return ENGINE->Run();
-}
-
 void BaseSystem::InitWindow(int& width, int& height)
 {
-	WNDCLASSEX wc;
-	DEVMODE dmScreenSettings;
-	int posX, posY;
-
-	gp_appHandle	= this;						// global handle		
+	int posX, posY;				// window position
+	gp_appHandle	= this;		// global handle		
 
 	// default settings for windows class
+	WNDCLASSEX wc;
 	wc.style			= CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	wc.lpfnWndProc		= WndProc;
 	wc.cbClsExtra		= 0;
@@ -152,7 +194,6 @@ void BaseSystem::InitWindow(int& width, int& height)
 	wc.lpszMenuName		= NULL;
 	wc.lpszClassName	= m_appName;
 	wc.cbSize			= sizeof(WNDCLASSEX);
-
 	RegisterClassEx(&wc);
 
 	// get clients desktop resolution
@@ -162,20 +203,20 @@ void BaseSystem::InitWindow(int& width, int& height)
 	// set screen settings
 	if (FULL_SCREEN)
 	{
+		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
 		dmScreenSettings.dmSize			= sizeof(dmScreenSettings);
 		dmScreenSettings.dmPelsWidth	= (unsigned long)width;
 		dmScreenSettings.dmPelsHeight	= (unsigned long)height;
 		dmScreenSettings.dmBitsPerPel	= 32;
 		dmScreenSettings.dmFields		= DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
-
 		ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN);
 
 		posX = posY = 0;
 	}
 	else
 	{
-		width = SCREEN_WIDTH;
+		width  = SCREEN_WIDTH;
 		height = SCREEN_HEIGHT;
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
@@ -184,12 +225,12 @@ void BaseSystem::InitWindow(int& width, int& height)
 
 	// create window with screen settings
 	m_hwnd = CreateWindowEx(
-		WS_EX_APPWINDOW,		// Forces a top-level window onto the taskbar when the window is visible.
-		m_appName,				// class name
-		m_appName,				// Window name
-		WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP,
-		posX, posY, width, height,
-		NULL, NULL,				// parent, menu
+		WS_EX_APPWINDOW,			// Forces a top-level window onto the taskbar when the window is visible.
+		m_appName,					// class name
+		m_appName,					// Window name
+		WS_OVERLAPPEDWINDOW,		// Window style //WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP,
+		posX, posY, width, height,	// Window position and dimensions
+		NULL, NULL,					// parent, menu
 		m_hInstance, NULL
 		);
 
@@ -205,31 +246,10 @@ void BaseSystem::InitWindow(int& width, int& height)
 	ShowWindow(m_hwnd, SW_SHOW);
 	SetForegroundWindow(m_hwnd);
 	SetFocus(m_hwnd);
-
 	ShowCursor(false);
-	SetCursorPos(posX + width / 2, posY + height / 2);
-	SetCapture(m_hwnd);
+	//SetCursorPos(posX + width / 2, posY + height / 2);
 
-	RECT rect;
-	GetClientRect(m_hwnd, &rect);
-	POINT ul;
-	ul.x = rect.left;
-	ul.y = rect.top;
-
-	POINT lr;
-	lr.x = rect.right;
-	lr.y = rect.bottom;
-
-	MapWindowPoints(m_hwnd, nullptr, &ul, 1);
-	MapWindowPoints(m_hwnd, nullptr, &lr, 1);
-
-	rect.left = ul.x;
-	rect.top = ul.y;
-
-	rect.right = lr.x;
-	rect.bottom = lr.y;
-
-	ClipCursor(&rect);
+	InitRawInputDevices();
 	return;
 }
 
@@ -254,6 +274,82 @@ void BaseSystem::ShutdownWindows()
 	gp_appHandle = NULL;
 
 	return;
+}
+
+void BaseSystem::InitRawInputDevices()
+{
+	// register mouse for raw input
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms645565.aspx
+	RAWINPUTDEVICE Rid[1];
+	Rid[0].usUsagePage = (USHORT)0x01;	// HID_USAGE_PAGE_GENERIC;
+	Rid[0].usUsage = (USHORT)0x02;	// HID_USAGE_GENERIC_MOUSE;
+	Rid[0].dwFlags = 0;
+	Rid[0].hwndTarget = m_hwnd;
+	if (FAILED(RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]))))
+	{
+		OutputDebugString("Failed to register raw input device!");
+	}
+
+	// get devices and print info
+	//-----------------------------------------------------
+	UINT numDevices;
+	GetRawInputDeviceList(
+		NULL, &numDevices, sizeof(RAWINPUTDEVICELIST));
+	if (numDevices == 0) return;
+
+	std::vector<RAWINPUTDEVICELIST> deviceList(numDevices);
+	GetRawInputDeviceList(
+		&deviceList[0], &numDevices, sizeof(RAWINPUTDEVICELIST));
+
+	std::vector<wchar_t> deviceNameData;
+	std::wstring deviceName;
+	for (UINT i = 0; i < numDevices; ++i)
+	{
+		const RAWINPUTDEVICELIST& device = deviceList[i];
+		if (device.dwType == RIM_TYPEMOUSE)
+		{
+			char info[1024];
+			sprintf_s(info, "Mouse: Handle=0x%08X\n", (unsigned)device.hDevice);
+			OutputDebugString(info);
+
+			UINT dataSize;
+			GetRawInputDeviceInfo(
+				device.hDevice, RIDI_DEVICENAME, nullptr, &dataSize);
+			if (dataSize)
+			{
+				deviceNameData.resize(dataSize);
+				UINT result = GetRawInputDeviceInfo(
+					device.hDevice, RIDI_DEVICENAME, &deviceNameData[0], &dataSize);
+				if (result != UINT_MAX)
+				{
+					deviceName.assign(deviceNameData.begin(), deviceNameData.end());
+
+					char info[1024];
+					sprintf_s(info, "  Name=%s\n", deviceName.c_str());
+					OutputDebugString(info);
+				}
+			}
+
+			RID_DEVICE_INFO deviceInfo;
+			deviceInfo.cbSize = sizeof deviceInfo;
+			dataSize = sizeof deviceInfo;
+			UINT result = GetRawInputDeviceInfo(
+				device.hDevice, RIDI_DEVICEINFO, &deviceInfo, &dataSize);
+			if (result != UINT_MAX)
+			{
+				assert(deviceInfo.dwType == RIM_TYPEMOUSE);
+
+				char info[1024];
+				sprintf_s(info,
+					"  Id=%u, Buttons=%u, SampleRate=%u, HorizontalWheel=%s\n",
+					deviceInfo.mouse.dwId,
+					deviceInfo.mouse.dwNumberOfButtons,
+					deviceInfo.mouse.dwSampleRate,
+					deviceInfo.mouse.fHasHorizontalWheel ? L"1" : L"0");
+				OutputDebugString(info);
+			}
+		}
+	}
 }
 
 //-----------------------------------------------------------------------------

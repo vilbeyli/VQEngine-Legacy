@@ -43,6 +43,7 @@ public:
 
 	bool Init(int width, int height, HWND hwnd);
 	void Exit();
+	HWND GetWindow() const;
 
 	void EnableAlphaBlending(bool enable);
 	void EnableZBuffer(bool enable);
@@ -70,7 +71,7 @@ private:
 
 public:
 	static const bool FULL_SCREEN  = false;
-	static const bool VSYNC = true;
+	static const bool VSYNC = false;	// insane input lag; turned off
 
 private:
 	D3DManager*						m_Direct3D;

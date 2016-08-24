@@ -23,13 +23,43 @@
 #include "Camera.h"
 #include "../../Renderer/Source/Mesh.h"
 
+#include <sstream>
+
 Engine* Engine::s_instance = nullptr;
 
 Engine::Engine()
+	:
+	m_renderer(nullptr),
+	m_input(nullptr),
+	m_camera(nullptr),
+	m_isPaused(false)
+{}
+
+void Engine::TogglePause()
 {
-	m_renderer	= nullptr;
-	m_input		= nullptr;
-	m_camera	= nullptr;
+	m_isPaused = !m_isPaused;
+}
+
+void Engine::CalcFrameStats()
+{
+	static long frameCount = 0;
+	static float timeElaped = 0.0f;
+
+	++frameCount;
+	if (m_timer.TotalTime() - timeElaped >= 1.0f)
+	{
+		float fps = static_cast<float>(frameCount);	// #frames / 1.0f
+		float frameTime = 1000.0f / fps;	// milliseconds
+
+		std::ostringstream stats;
+		stats.precision(6);
+		stats << "VDemo | "
+			<< "FPS: " << fps << " "
+			<< "FrameTime: " << frameTime << "ms";
+		SetWindowText(m_renderer->GetWindow(), stats.str().c_str());
+		frameCount = 0;
+		timeElaped += 1.0f;
+	}
 }
 
 Engine::~Engine(){}
@@ -65,9 +95,9 @@ bool Engine::Load()
 	};
 	ShaderID texShader = m_renderer->AddShader("tex", "Data/Shaders/", layout);
 
+	m_timer.Reset();
 	return true;
 }
-
 
 void Engine::Exit()
 {
@@ -103,30 +133,40 @@ Engine * Engine::GetEngine()
 
 bool Engine::Run()
 {
+	m_timer.Tick();
 	if (m_input->IsKeyDown(VK_ESCAPE))
 	{
 		return false;
 	}
 
-	Update();
-	Render();
+	if (m_input->IsKeyTriggered(0x50)) // Key P
+		TogglePause(); 
 
+	if (!m_isPaused)
+	{
+		CalcFrameStats();
+		Update(m_timer.DeltaTime());
+		Render();
+	}
+
+	// since keyboard state is updated async, update previous state after frame;
+	m_input->Update();	
 	return true;
 }
 
-void Engine::Update()
+void Engine::Pause()
 {
-	m_camera->Update();
+	m_isPaused = true;
+}
 
-#ifdef _DEBUG
-	{
-		char info[128];
-		XMFLOAT3 pos;
-		XMStoreFloat3(&pos, m_tf.GetPosition());
-		sprintf_s(info, 128, "Transform: %.2f, %.2f, %.2f\n", pos.x, pos.y, pos.z);
-		//OutputDebugString(info);
-	}
-#endif
+void Engine::Unpause()
+{
+	m_isPaused = false;
+}
+
+void Engine::Update(float dt)
+{
+	m_camera->Update(dt);
 
 
 }

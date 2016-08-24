@@ -41,7 +41,7 @@ public:
 	void SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, float screenFar);
 	void SetProjectionMatrix(float fov, float screenAspect, float screenNear, float screenFar);
 
-	void Update();
+	void Update(float dt);
 
 	XMVECTOR GetPosition();
 	XMVECTOR GetRotation();
@@ -50,12 +50,12 @@ public:
 	XMMATRIX GetOrthoMatrix();
 
 	void SetPosition(float x, float y, float z);
-	void Rotate(float yaw, float pitch);
+	void Rotate(float yaw, float pitch, const float dt);
 	//void SetRotation(float x, float y, float z);
 
 private:
-	void Move();
-	void Rotate();
+	void Move(const float dt);
+	void Rotate(const float dt);
 
 private:
 	Transform	m_transform;

@@ -18,53 +18,32 @@
 
 #pragma once
 
-#include <windows.h>
-#include "SystemDefs.h"
-#include "PerfTimer.h"
-
-#include "Components/Transform.h"
-
-class Renderer;
-class Input;
-class Camera;
-
-class Engine
+// Borrowed from Frank Luna's DirectX11 book's GameTimer class
+// https://www.amazon.com/Introduction-3D-Game-Programming-DirectX/dp/1936420228
+class PerfTimer
 {
-	friend class BaseSystem;
-
 public:
-	~Engine();
+	PerfTimer();
+	~PerfTimer();
 
-	bool Initialize(HWND hWnd, int scr_width, int scr_height);
-	bool Load();
-	bool Run();
+	float TotalTime() const;
+	float DeltaTime() const;
 
-	void Pause();
-	void Unpause();
-
-	void Update(float dt);
-	void Render();
-
-	void Exit();
-
-	static Engine* GetEngine();
+	void Reset();
+	void Start();
+	void Stop();
+	void Tick();	
 
 private:
-	Engine();
+	double m_secPerCount;
+	double m_dt;
 
-	void TogglePause();
-	void CalcFrameStats();
-private:
-	Input*			m_input;
-	Renderer*		m_renderer;
-	Camera*			m_camera;
+	long m_baseTime;
+	long m_pausedTime;
+	long m_stopTime;
+	long m_prevTime;
+	long m_currTime;
 
-	Transform	m_tf;	//test
-
-	bool			m_isPaused;
-
-	PerfTimer		m_timer;
-	static Engine*	s_instance;
+	bool m_stopped;
 };
 
-#define ENGINE Engine::GetEngine()

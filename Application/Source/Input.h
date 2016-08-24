@@ -31,21 +31,30 @@ public:
 
 	void Init();
 
+	// update state
 	void KeyDown(KeyCode);
 	void KeyUp(KeyCode);
 	void ButtonDown(KeyCode);
 	void ButtonUp(KeyCode);
-	void UpdateMousePos(int x, int y);
+	void UpdateMousePos(long x, long y);
 
+	// quert state
 	bool IsKeyDown(KeyCode) const;
 	bool IsMouseDown(KeyCode) const;
+	bool IsKeyTriggered(KeyCode) const;
 	int  MouseDeltaX() const;
 	int  MouseDeltaY() const;
 
+	void Update();
+
 private:
+	// keyboard
 	bool m_keys[KEY_COUNT];
+	bool m_prevKeys[KEY_COUNT];
+
+	// mouse
 	bool m_buttons[17];
-	int m_mouseDelta[2];
-	int m_mousePos[2];
+	long m_mouseDelta[2];
+	long m_mousePos[2];
 };
 

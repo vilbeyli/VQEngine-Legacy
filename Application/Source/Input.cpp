@@ -19,8 +19,9 @@
 #include "Input.h"
 #include "SystemDefs.h"
 
-#ifdef _DEBUG
 #include <string>
+
+#ifdef _DEBUG
 #include <Windows.h>
 #endif
 
@@ -28,9 +29,10 @@
 
 Input::Input()
 {
-	memset(m_mouseDelta, 0, 2 * sizeof(int));
-	m_mousePos[0] = SCREEN_WIDTH / 2;
-	m_mousePos[1] = SCREEN_HEIGHT / 2;
+	memset(m_mouseDelta, 0, 2 * sizeof(long));
+	memset(m_mousePos  , 0, 2 * sizeof(long));
+	//m_mousePos[0] = SCREEN_WIDTH / 2;
+	//m_mousePos[1] = SCREEN_HEIGHT / 2;
 }
 
 Input::Input(const Input &)
@@ -44,8 +46,8 @@ Input::~Input()
 
 void Input::Init()
 {
-	for (size_t i = 0; i < KEY_COUNT; ++i)
-		m_keys[i] = false;
+	memset(m_keys,	   false, sizeof(bool) * KEY_COUNT);
+	memset(m_prevKeys, false, sizeof(bool) * KEY_COUNT);
 }
 
 void Input::KeyDown(KeyCode key)
@@ -89,16 +91,20 @@ void Input::ButtonUp(KeyCode btn)
 	m_buttons[btn] = false;
 }
 
-void Input::UpdateMousePos(int x, int y)
+void Input::UpdateMousePos(long x, long y)
 {
-	m_mouseDelta[0] = x - m_mousePos[0];
-	m_mouseDelta[1] = y - m_mousePos[1];
-	m_mousePos[0] = x;
-	m_mousePos[1] = y;
+	m_mouseDelta[0] = x;
+	m_mouseDelta[1] = y;
 
-#if defined(_DEBUG) && defined(LOG)
+	// unused for now
+	m_mousePos[0] = 0;
+	m_mousePos[1] = 0;
+
+#if defined(_DEBUG) && defined(N_LOG)
 	char info[128];
-	sprintf_s(info, "Mouse Delta: %d, %d\n", m_mouseDelta[0], m_mouseDelta[1]);
+	sprintf_s(info, "Mouse Delta: (%d, %d)\tMouse Pos: (%d, %d)\n", 
+		m_mouseDelta[0], m_mouseDelta[1],
+		m_mousePos[0], m_mousePos[1]);
 	OutputDebugString(info);
 #endif
 }
@@ -113,6 +119,11 @@ bool Input::IsMouseDown(KeyCode btn) const
 	return m_buttons[btn];
 }
 
+bool Input::IsKeyTriggered(KeyCode key) const
+{
+	return !m_prevKeys[key] && m_keys[key];
+}
+
 int Input::MouseDeltaX() const
 {
 	return m_mouseDelta[0];
@@ -121,4 +132,9 @@ int Input::MouseDeltaX() const
 int Input::MouseDeltaY() const
 {
 	return m_mouseDelta[1];
+}
+
+void Input::Update()
+{
+	memcpy(m_prevKeys, m_keys, sizeof(bool) * KEY_COUNT);
 }

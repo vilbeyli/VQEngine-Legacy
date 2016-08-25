@@ -78,8 +78,8 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 	if(!m_renderer->Init(scr_width, scr_height, hWnd)) 
 		return false;
 
-	m_camera->SetOthoMatrix(scr_width, scr_height, NEAR_PLANE, FAR_PLANE);
-	m_camera->SetProjectionMatrix((float)XM_PIDIV4, SCREEN_RATIO, NEAR_PLANE, FAR_PLANE);
+	m_camera->SetOthoMatrix(m_renderer->WindowWidth(), m_renderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
+	m_camera->SetProjectionMatrix((float)XM_PIDIV4, m_renderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
 	m_camera->SetPosition(0, 1, -10);
 	m_renderer->SetCamera(m_camera);
 
@@ -183,7 +183,7 @@ void Engine::Render()
 	ShaderID shd = 0;	// first shader for now
 	m_renderer->Begin(clearColor);
 	m_renderer->SetShader(shd);
-	m_renderer->SetViewport(SCREEN_WIDTH, SCREEN_HEIGHT);
+	m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
 	m_renderer->SetBufferObj(MESH_TYPE::CUBE);
 	m_renderer->SetConstant4x4f("world", world);
 	m_renderer->SetConstant4x4f("view", view);

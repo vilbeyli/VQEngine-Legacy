@@ -44,6 +44,9 @@ public:
 	bool Init(int width, int height, HWND hwnd);
 	void Exit();
 	HWND GetWindow() const;
+	float AspectRatio() const;
+	unsigned WindowHeight() const;
+	unsigned WindowWidth() const;
 
 	void EnableAlphaBlending(bool enable);
 	void EnableZBuffer(bool enable);

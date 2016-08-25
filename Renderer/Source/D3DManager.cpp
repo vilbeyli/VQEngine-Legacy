@@ -19,6 +19,7 @@
 #include "D3DManager.h"
 
 #include <windows.h>
+#include <string>
 
 #define PI 3.141592654f
 
@@ -35,6 +36,7 @@ D3DManager::D3DManager()
 	m_alphaEnableBlendState		= nullptr;
 	m_alphaDisableBlendState	= nullptr;
 	m_depthDisabledStencilState = nullptr;
+	m_wndHeight = m_wndWidth	= 0;
 }
 
 
@@ -48,12 +50,7 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 	IDXGIFactory* factory;
 	IDXGIAdapter* adapter;
 	IDXGIOutput* adapterOutput;
-	unsigned numModes, numerator, denominator;
-	size_t stringLength;
-	DXGI_MODE_DESC* displayModeList;
-	DXGI_ADAPTER_DESC adapterDesc;
-	int error;
-	ID3D11Texture2D* backBufferPtr;
+	unsigned numModes;
 
 	// Store the vsync setting.
 	m_vsync_enabled = VSYNC;
@@ -90,6 +87,7 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 	}
 
 	// Create a list to hold all the possible display modes for this monitor/video card combination.
+	DXGI_MODE_DESC* displayModeList;
 	displayModeList = new DXGI_MODE_DESC[numModes];
 	if (!displayModeList)
 	{
@@ -105,6 +103,8 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 
 	// Now go through all the display modes and find the one that matches the screen width and height.
 	// When a match is found store the numerator and denominator of the refresh rate for that monitor.
+	unsigned numerator = 0;
+	unsigned denominator = 0;
 	for (unsigned i = 0; i<numModes; i++)
 	{
 		if (displayModeList[i].Width == (unsigned int)width)
@@ -119,10 +119,22 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 
 	if (numerator == 0 && denominator == 0)
 	{
-		return false;
+		char info[127];
+		numerator	= displayModeList[numModes / 2].RefreshRate.Numerator;
+		denominator = displayModeList[numModes / 2].RefreshRate.Denominator;
+		sprintf_s(info, "Specified resolution (%ux%u) not found: Using (%ux%u) instead\n",
+			width, height,
+			displayModeList[numModes / 2].Width, displayModeList[numModes / 2].Height);
+		width = displayModeList[numModes / 2].Width;
+		height = displayModeList[numModes / 2].Height;
+		OutputDebugString(info);
+
+		// also resize window
+		SetWindowPos(hWnd, 0, 10, 10, width, height, SWP_NOZORDER);
 	}
 
 	// Get the adapter (video card) description.
+	DXGI_ADAPTER_DESC adapterDesc;
 	result = adapter->GetDesc(&adapterDesc);
 	if (FAILED(result))
 	{
@@ -133,6 +145,8 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 	m_VRAM = (int)(adapterDesc.DedicatedVideoMemory / 1024 / 1024);
 
 	// Convert the name of the video card to a character array and store it.
+	size_t stringLength;
+	int error;
 	error = wcstombs_s(&stringLength, m_GPUDescription, 128, adapterDesc.Description, 128);
 	if (error != 0)
 	{
@@ -160,6 +174,7 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 	}
 
 	// Get the pointer to the back buffer.
+	ID3D11Texture2D* backBufferPtr;
 	result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
 	if (FAILED(result))
 	{
@@ -213,6 +228,8 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 		return false;
 	}
 
+	m_wndWidth  = width;
+	m_wndHeight = height;
 	return true;
 }
 
@@ -322,6 +339,21 @@ void D3DManager::GetVideoCardInfo(char* cardName, int& memory)
 	strcpy_s(cardName, 128, m_GPUDescription);
 	memory = m_VRAM;
 	return;
+}
+
+float D3DManager::AspectRatio() const
+{
+	return static_cast<float>(m_wndWidth) / static_cast<float>(m_wndHeight);
+}
+
+unsigned D3DManager::WindowWidth() const
+{
+	return m_wndWidth;
+}
+
+unsigned D3DManager::WindowHeight() const
+{
+	return m_wndHeight;
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------------

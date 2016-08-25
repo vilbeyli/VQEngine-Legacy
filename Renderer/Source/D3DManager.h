@@ -48,6 +48,9 @@ public:
 	ID3D11DeviceContext*	GetDeviceContext()	{ return m_deviceContext;}
 
 	void GetVideoCardInfo(char*, int&);
+	float AspectRatio() const;
+	unsigned WindowWidth() const;
+	unsigned WindowHeight() const;
 
 private:
 	bool InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator);
@@ -69,6 +72,7 @@ private:
 	ID3D11RenderTargetView*		m_RTV;
 	ID3D11Texture2D*			m_depthStencilBuffer;
 	ID3D11DepthStencilView*		m_depthStencilView;
+	unsigned					m_wndWidth, m_wndHeight;
 	
 	//-----------------------------------------------
 	// State Management

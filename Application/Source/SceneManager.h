@@ -18,46 +18,27 @@
 
 #pragma once
 
-#define KEY_COUNT 256
+#include "GameObject.h"
 
-typedef unsigned int KeyCode;
+class Renderer;
 
-class Input
+class SceneManager
 {
 public:
-	Input();
-	Input(const Input&);
-	~Input();
+	SceneManager();
+	~SceneManager();
 
-	void Init();
+	void Initialize(Renderer* renderer);
 
-	// update state
-	void KeyDown(KeyCode);
-	void KeyUp(KeyCode);
-	void ButtonDown(KeyCode);
-	void ButtonUp(KeyCode);
-	void UpdateMousePos(long x, long y);
-
-	// quert state
-	bool IsKeyDown(KeyCode) const;
-	bool IsMouseDown(KeyCode) const;
-	bool IsKeyTriggered(KeyCode) const;
-	int  MouseDeltaX() const;
-	int  MouseDeltaY() const;
-
-	void Update();
-	const long* GetDelta() const;
-	bool IsConsumed() const;
+	void Update(float dt);
+	void Render() const;
 
 private:
-	// keyboard
-	bool m_keys[KEY_COUNT];
-	bool m_prevKeys[KEY_COUNT];
-
-	// mouse
-	bool m_buttons[17];
-	long m_mouseDelta[2];
-	long m_mousePos[2];
-	bool m_isConsumed;	// experimental
+	Renderer* m_renderer;
+	GameObject m_floor;
+	GameObject m_wallL;
+	GameObject m_wallR;
+	GameObject m_wallF;
+	GameObject m_centralObj;
 };
 

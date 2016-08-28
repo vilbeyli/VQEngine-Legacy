@@ -80,7 +80,7 @@ BufferObject* GeometryGenerator::Quad()
 	BufferObject* bufferObj		= new BufferObject();
 	bufferObj->m_vertexCount	= 4;
 	bufferObj->m_indexCount		= 6;
-	bufferObj->m_vertices		= new Vertex[bufferObj->m_vertexCount];	// deleted in dtor
+	bufferObj->m_vertices		= new Vertex[bufferObj->m_vertexCount];		// deleted in dtor
 	bufferObj->m_indices		= new unsigned[bufferObj->m_indexCount];	// deleted in dtor
 
 	// set geometry data
@@ -314,6 +314,116 @@ BufferObject* GeometryGenerator::Sphere()
 {
 	BufferObject* bufferObj = new BufferObject();
 
+
+	return bufferObj;
+}
+
+BufferObject* GeometryGenerator::Grid(float width, float depth, unsigned m, unsigned n)
+{
+	//		Grid of m x n vertices
+	//		-----------------------------------------------------------
+	//		+	: Vertex
+	//		d	: depth
+	//		w	: width
+	//		dx	: horizontal cell spacing = width / (m-1)
+	//		dz	: z-axis	 cell spacing = depth / (n-1)
+	// 
+	//		  V(0,0)		  V(m-1,0)	^ Z
+	//		^	+-------+-------+ ^		|
+	//		|	|		|		| |		|
+	//		|	|		|		| dz	|
+	//		|	|		|		| |		|
+	//		d	+-------+-------+ v		+--------> X
+	//		|	|		|		|		
+	//		|	|		|		|
+	//		|	|		|		|
+	//		v	+-------+-------+		
+	//			<--dx--->		  V(m-1, n-1)
+	//			<------ w ------>
+
+	unsigned numQuads  = (m - 1) * (n - 1);
+	unsigned faceCount = numQuads * 2; // 2 faces per quad = triangle count
+	unsigned vertCount = m * n;
+	float dx = width / (n - 1);
+	float dz = depth / (m - 1);	// m & n mixed up??
+
+	// offsets for centering the grid : V(0,0) = (-halfWidth, halfDepth)
+	float halfDepth = depth / 2;
+	float halfWidth = width / 2;
+
+	// texture coord increments
+	float du = 1.0f / (n - 1);
+	float dv = 1.0f / (m - 1);
+
+	BufferObject* bufferObj		= new BufferObject();
+	bufferObj->m_vertexCount	= vertCount;
+	bufferObj->m_indexCount		= faceCount * 3;
+	bufferObj->m_vertices		= new Vertex[bufferObj->m_vertexCount];		// deleted in dtor
+	bufferObj->m_indices		= new unsigned[bufferObj->m_indexCount];	// deleted in dtor
+
+	// position the vertices
+	for (unsigned i = 0; i < m; ++i)
+	{
+		float z = halfDepth - i * dz;
+		for (unsigned j = 0; j < n; ++j)
+		{
+			float x = -halfWidth + j * dx;
+			float u = j * du;
+			float v = i * dv;
+			bufferObj->m_vertices[i*n + j].position		= XMFLOAT3( x  , 0.0f,  z  );
+			bufferObj->m_vertices[i*n + j].normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+			bufferObj->m_vertices[i*n + j].texCoords	= XMFLOAT3( u  ,  v  , 0.0f);
+			bufferObj->m_vertices[i*n + j].tangent		= XMFLOAT3(1.0f, 0.0f, 0.0f);
+		}
+	}
+
+	//	generate indices
+	//
+	//	  A	+------+ B
+	//		|	 / |
+	//		|	/  |
+	//		|  /   |
+	//		| /	   |
+	//		|/	   |
+	//	  C	+------+ D
+	//
+	//	A	: V(i  , j  )
+	//	B	: V(i  , j+1)
+	//	C	: V(i+1, j  )
+	//	D	: V(i+1, j+1)
+	//
+	//	ABC	: (i*n +j    , i*n + j+1, (i+1)*n + j  )
+	//	CBD : ((i+1)*n +j, i*n + j+1, (i+1)*n + j+1)
+
+	unsigned k = 0;
+	for (unsigned i = 0; i < m-1; ++i)
+	{
+		for (unsigned j = 0; j < n-1; ++j)
+		{
+			bufferObj->m_indices[k  ] = i*n + j;
+			bufferObj->m_indices[k+1] = i*n + j + 1;
+			bufferObj->m_indices[k+2] = (i + 1)*n + j;
+			bufferObj->m_indices[k+3] = (i + 1)*n + j;
+			bufferObj->m_indices[k+4] = i*n + j + 1;
+			bufferObj->m_indices[k+5] = (i + 1)*n + j + 1;
+			k += 6;
+		}
+	}
+
+	// apply height function
+	for (unsigned i = 0; i < bufferObj->m_vertexCount; ++i)
+	{
+		XMFLOAT3& pos = bufferObj->m_vertices[i].position;
+		pos.y = 0.2f * (pos.z * sinf(20.0f * pos.x) + pos.x * cosf(10.0f * pos.z));
+	}
+
+	bool writable = true;
+	if (!bufferObj->FillGPUBuffers(m_device, writable))
+	{
+		OutputDebugString("Error Grid creation failed");
+		delete bufferObj;
+		bufferObj = nullptr;
+	}
 
 	return bufferObj;
 }

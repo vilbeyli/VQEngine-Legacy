@@ -28,11 +28,11 @@
 #define LOG
 
 Input::Input()
+	:
+	m_isConsumed(false)
 {
 	memset(m_mouseDelta, 0, 2 * sizeof(long));
 	memset(m_mousePos  , 0, 2 * sizeof(long));
-	//m_mousePos[0] = SCREEN_WIDTH / 2;
-	//m_mousePos[1] = SCREEN_HEIGHT / 2;
 }
 
 Input::Input(const Input &)
@@ -107,6 +107,7 @@ void Input::UpdateMousePos(long x, long y)
 		m_mousePos[0], m_mousePos[1]);
 	OutputDebugString(info);
 #endif
+	m_isConsumed = false;
 }
 
 bool Input::IsKeyDown(KeyCode key) const
@@ -134,7 +135,20 @@ int Input::MouseDeltaY() const
 	return m_mouseDelta[1];
 }
 
+// called at the end of the frame
 void Input::Update()
 {
 	memcpy(m_prevKeys, m_keys, sizeof(bool) * KEY_COUNT);
+	m_mouseDelta[0] = m_mouseDelta[1] = 0;
+	m_isConsumed = true;
+}
+
+const long * Input::GetDelta() const
+{
+	return m_mouseDelta;
+}
+
+bool Input::IsConsumed() const
+{
+	return m_isConsumed;
 }

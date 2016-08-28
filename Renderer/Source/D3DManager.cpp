@@ -180,7 +180,7 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 	{
 		return false;
 	}
-
+	
 	// Create the render target view with the back buffer pointer.
 	result = m_device->CreateRenderTargetView(backBufferPtr, NULL, &m_RTV);
 	if (FAILED(result))
@@ -438,7 +438,7 @@ bool D3DManager::InitDepthBuffer(int scrWidth, int scrHeight)
 	depthBufferDesc.Height = scrHeight;
 	depthBufferDesc.MipLevels = 1;
 	depthBufferDesc.ArraySize = 1;
-	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 	depthBufferDesc.SampleDesc.Count = 1;
 	depthBufferDesc.SampleDesc.Quality = 0;
 	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -467,9 +467,9 @@ bool D3DManager::InitDepthStencilBuffer()
 	// Set up the description of the stencil state.
 	depthStencilDesc.DepthEnable = true;
 	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 
-	depthStencilDesc.StencilEnable = true;
+	depthStencilDesc.StencilEnable = false;
 	depthStencilDesc.StencilReadMask = 0xFF;
 	depthStencilDesc.StencilWriteMask = 0xFF;
 
@@ -534,12 +534,14 @@ bool D3DManager::InitStencilView()
 
 	HRESULT result;
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
+	D3D11_TEXTURE2D_DESC txDesc;
+	m_depthStencilBuffer->GetDesc(&txDesc);
 
 	// Initialize the depth stencil view.
 	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
 
 	// Set up the depth stencil view description.
-	depthStencilViewDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilViewDesc.Format = txDesc.Format;
 	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
 

@@ -25,4 +25,4 @@ const bool FULL_SCREEN = false;
 
 // temp
 const float NEAR_PLANE = 1.0f;
-const float FAR_PLANE  = 1000.0f;
+const float FAR_PLANE  = 200.0f;

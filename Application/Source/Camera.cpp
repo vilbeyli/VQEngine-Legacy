@@ -22,7 +22,7 @@
 #include <string>
 #include "SystemDefs.h"
 
-#define CAM_ANGULAR_SPEED_DEG 5.0f
+#define CAM_ANGULAR_SPEED_DEG 25.0f
 #define CAM_MOVE_SPEED 10.0f
 #define DEG2RAD XM_PI / 180.0f
 
@@ -114,8 +114,9 @@ void Camera::Rotate(float yaw, float pitch, const float dt)
 // internal update functions
 void Camera::Rotate(const float dt)
 {
-	float dy = static_cast<float>(m_input->MouseDeltaY());
-	float dx = static_cast<float>(m_input->MouseDeltaX());
+	const long* dxdy = m_input->GetDelta();
+	float dy = static_cast<float>(dxdy[1]);
+	float dx = static_cast<float>(dxdy[0]);
 	Rotate(dx, dy, dt);
 }
 
@@ -128,7 +129,7 @@ void Camera::Move(const float dt)
 
 	XMVECTOR translation = XMVectorSet(0,0,0,0);
 	if (m_input->IsKeyDown(0x41))		translation += XMVector3TransformCoord(Transform::Left,		MRotation);
-	if (m_input->IsKeyDown(0x44))		translation += XMVector3TransformCoord(Transform::Right,		MRotation);
+	if (m_input->IsKeyDown(0x44))		translation += XMVector3TransformCoord(Transform::Right,	MRotation);
 	if (m_input->IsKeyDown(0x57))		translation += XMVector3TransformCoord(Transform::Forward,	MRotation);
 	if (m_input->IsKeyDown(0x53))		translation += XMVector3TransformCoord(Transform::Backward,	MRotation);
 	if (m_input->IsKeyDown(VK_SPACE))	translation += XMVector3TransformCoord(Transform::Up,		MRotation);

@@ -34,6 +34,7 @@ public:
 	BufferObject* Quad();
 	BufferObject* Cube();
 	BufferObject* Sphere();
+	BufferObject* Grid(float width, float depth, unsigned m, unsigned n);
 
 private:
 	ID3D11Device* m_device;

@@ -17,6 +17,10 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
+
+#include "Components/Transform.h"
+
+
 class GameObject
 {
 public:
@@ -24,5 +28,7 @@ public:
 	~GameObject();
 
 
+public:
+	Transform m_transform;
 };
 

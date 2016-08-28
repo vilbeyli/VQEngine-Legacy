@@ -35,6 +35,45 @@ Engine::Engine()
 	m_isPaused(false)
 {}
 
+Engine::~Engine(){}
+
+bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
+{
+	m_renderer = new Renderer();
+	if (!m_renderer) return false;
+	m_input = new Input();
+	if (!m_input)	return false;
+	m_camera = new Camera(m_input);
+	if (!m_camera)	return false;
+	
+	// initialize systems
+	m_input->Init();
+	if(!m_renderer->Init(scr_width, scr_height, hWnd)) 
+		return false;
+
+	m_camera->SetOthoMatrix(m_renderer->WindowWidth(), m_renderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
+	m_camera->SetProjectionMatrix((float)XM_PIDIV4, m_renderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
+	m_camera->SetPosition(0, 1, -30);
+	m_renderer->SetCamera(m_camera);
+
+	m_sceneMan.Initialize(m_renderer);
+
+	return true;
+}
+
+bool Engine::Load()
+{
+	std::vector<InputLayout> layout = {
+		{ "POSITION",	FLOAT32_3 },
+		{ "NORMAL",		FLOAT32_3 },
+		{ "TEXCOORD",	FLOAT32_2 }
+	};
+	ShaderID texShader = m_renderer->AddShader("tex", "Data/Shaders/", layout);
+
+	m_timer.Reset();
+	return true;
+}
+
 void Engine::TogglePause()
 {
 	m_isPaused = !m_isPaused;
@@ -62,42 +101,6 @@ void Engine::CalcFrameStats()
 	}
 }
 
-Engine::~Engine(){}
-
-bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
-{
-	m_renderer = new Renderer();
-	if (!m_renderer) return false;
-	m_input = new Input();
-	if (!m_input)	return false;
-	m_camera = new Camera(m_input);
-	if (!m_camera)	return false;
-	
-	// initialize systems
-	m_input->Init();
-	if(!m_renderer->Init(scr_width, scr_height, hWnd)) 
-		return false;
-
-	m_camera->SetOthoMatrix(m_renderer->WindowWidth(), m_renderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
-	m_camera->SetProjectionMatrix((float)XM_PIDIV4, m_renderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
-	m_camera->SetPosition(0, 1, -10);
-	m_renderer->SetCamera(m_camera);
-
-	return true;
-}
-
-bool Engine::Load()
-{
-	std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 }
-	};
-	ShaderID texShader = m_renderer->AddShader("tex", "Data/Shaders/", layout);
-
-	m_timer.Reset();
-	return true;
-}
 
 void Engine::Exit()
 {
@@ -139,7 +142,7 @@ bool Engine::Run()
 		return false;
 	}
 
-	if (m_input->IsKeyTriggered(0x50)) // Key P
+	if (m_input->IsKeyTriggered(0x08)) // Key backspace
 		TogglePause(); 
 
 	if (!m_isPaused)
@@ -167,27 +170,42 @@ void Engine::Unpause()
 void Engine::Update(float dt)
 {
 	m_camera->Update(dt);
+	m_sceneMan.Update(dt);
 
+	// test
+	m_tf.SetScale(XMFLOAT3(3*4, 5*4, 2*4));
 
+	XMVECTOR rot = XMVectorZero();
+	XMVECTOR tr = XMVectorZero();
+	if (m_input->IsKeyDown('O')) rot += XMVectorSet(45.0f, 0.0f, 0.0f, 1.0f);
+	if (m_input->IsKeyDown('P')) rot += XMVectorSet(0.0f, 45.0f, 0.0f, 1.0f);
+	if (m_input->IsKeyDown('U')) rot += XMVectorSet(0.0f, 0.0f, 45.0f, 1.0f);
+
+	if (m_input->IsKeyDown('L')) tr += XMVectorSet(45.0f, 0.0f, 0.0f, 1.0f);
+	if (m_input->IsKeyDown('J')) tr += XMVectorSet(-45.0f, 0.0f, 0.0f, 1.0f);
+	if (m_input->IsKeyDown('K')) tr += XMVectorSet(0.0f, 0.0f, -45.0f, 1.0f);
+	if (m_input->IsKeyDown('I')) tr += XMVectorSet(0.0f, 0.0f, +45.0f, 1.0f);
+	m_tf.Rotate(rot * dt * 0.1f);
+	m_tf.Translate(tr * dt * 0.2f);
 }
 
 void Engine::Render()
 {
 	const float clearColor[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
-	XMMATRIX world	= XMMatrixIdentity();
 	XMMATRIX view = m_camera->GetViewMatrix();
 	XMMATRIX proj = m_camera->GetProjectionMatrix();
-	//XMMATRIX view	= XMMatrixIdentity();
-	//XMMATRIX proj	= XMMatrixIdentity();
-
-	ShaderID shd = 0;	// first shader for now
 	m_renderer->Begin(clearColor);
-	m_renderer->SetShader(shd);
 	m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
-	m_renderer->SetBufferObj(MESH_TYPE::CUBE);
-	m_renderer->SetConstant4x4f("world", world);
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
+
+	m_sceneMan.Render();
+
+	//m_renderer->SetRasterizerState();
+	XMMATRIX world = m_tf.WorldTransformationMatrix();
+	m_renderer->SetShader(0);
+	m_renderer->SetBufferObj(MESH_TYPE::GRID);
+	m_renderer->SetConstant4x4f("world", world);
 	m_renderer->Apply();
 	m_renderer->DrawIndexed();
 	m_renderer->End();

@@ -40,10 +40,13 @@ void Transform::Scale(XMVECTOR scl)
 	XMStoreFloat3(&m_scale, scl);
 }
 
-XMMATRIX Transform::ModelTransformationMatrix() const
+XMMATRIX Transform::WorldTransformationMatrix() const
 {
-	// TODO: Implement
-	return XMMATRIX();
+	XMVECTOR scale = GetScale();
+	XMVECTOR translation = GetPosition();
+	XMVECTOR zeroVec = XMVectorSet(0, 0, 0, 1);
+	XMVECTOR rotation = XMQuaternionRotationRollPitchYawFromVector(GetRotation());
+	return XMMatrixAffineTransformation(scale, zeroVec, rotation, translation);
 }
 
 XMMATRIX Transform::RotationMatrix() const

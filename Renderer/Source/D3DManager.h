@@ -31,6 +31,8 @@ using namespace DirectX;
 
 class D3DManager
 {
+	friend class Renderer;
+
 public:
 	D3DManager();
 	~D3DManager();

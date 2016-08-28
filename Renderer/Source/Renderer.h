@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "Shader.h"
+#include "Mesh.h"
 
 // forward declarations
 class D3DManager;
@@ -34,6 +35,17 @@ class Camera;
 class Shader;
 
 typedef int BufferID;
+typedef int RasterizerStateID;
+typedef ID3D11RasterizerState RasterizerState;
+
+enum RASTERIZER_STATE
+{
+	CULL_NONE = 0,
+	CULL_FRONT,
+	CULL_BACK,
+
+	RS_COUNT
+};
 
 class Renderer
 {
@@ -58,6 +70,7 @@ public:
 	void SetShader(ShaderID);
 	void SetCamera(Camera* m_camera);
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
+	void SetRasterizerState(int stateID);
 
 	void Begin(const float clearColor[4]);
 	void Reset();
@@ -72,6 +85,7 @@ private:
 	void GeneratePrimitives();
 	void PollShaderFiles();
 
+	void InitRasterizerStates();
 public:
 	static const bool FULL_SCREEN  = false;
 	static const bool VSYNC = false;	// insane input lag; turned off
@@ -94,8 +108,10 @@ private:
 	// state variables
 	ShaderID						m_activeShader;
 	BufferID						m_activeBuffer;
-
-	// 
+	
+	std::vector<RasterizerState*>	m_rasterizerStates;
+	
+	// performance counters
 	unsigned long long				m_frameCount;
 };
 

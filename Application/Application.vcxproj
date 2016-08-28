@@ -135,6 +135,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\SceneManager.cpp" />
     <ClCompile Include="Source\PerfTimer.cpp" />
     <ClCompile Include="Source\GameObject.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
@@ -147,6 +148,7 @@
     <ClCompile Include="Source\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Source\SceneManager.h" />
     <ClInclude Include="Source\PerfTimer.h" />
     <ClInclude Include="Source\GameObject.h" />
     <ClInclude Include="Source\BaseSystem.h" />

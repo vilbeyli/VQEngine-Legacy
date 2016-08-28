@@ -4,6 +4,8 @@
 
 using namespace DirectX;
 
+#define DEG2RAD XM_PI / 180.0f
+
 class Transform : public Component
 {
 public:
@@ -27,15 +29,18 @@ public:
 
 	// GETTERS & SETTERS
 	//-----------------------------------------------------------------------------------
-	inline XMVECTOR GetPosition() { return XMLoadFloat3(&m_position); }
-	inline XMVECTOR GetRotation() { return XMLoadFloat3(&m_rotation); }
-	inline XMVECTOR GetScale()    { return XMLoadFloat3(&m_scale   ); }
+	inline XMVECTOR GetPosition() const { return XMLoadFloat3(&m_position); }
+	inline XMVECTOR GetRotation() const { return XMLoadFloat3(&m_rotation); }
+	inline XMVECTOR GetScale()    const { return XMLoadFloat3(&m_scale   ); }
 	//inline glm::quat GetOrientation() { return mOrientation_; }
 
-	inline void SetRotation	(XMFLOAT3 rot)				{ m_rotation = rot; }
-	inline void SetScale	(XMFLOAT3 scale)			{ m_scale = scale;	}
-	inline void SetPosition	(XMFLOAT3 val)				{ m_position = val; }
-	inline void SetPosition(float x, float y, float z)	{ m_position = XMFLOAT3(x, y, z); }
+	inline void SetRotation	(XMFLOAT3 rot)					{ m_rotation = rot; }
+	inline void SetRotation	(float x, float y, float z)		{ m_rotation = XMFLOAT3(x, y, z); }
+	inline void SetRotationDeg(float x, float y, float z)	{ m_rotation = XMFLOAT3(x * DEG2RAD, y * DEG2RAD, z * DEG2RAD); }
+	inline void SetScale	(XMFLOAT3 scale)				{ m_scale = scale;	}
+	inline void SetScale	(float x, float y, float z)		{ m_scale = XMFLOAT3(x,y,z); }
+	inline void SetPosition	(XMFLOAT3 val)					{ m_position = val; }
+	inline void SetPosition	(float x, float y, float z)		{ m_position = XMFLOAT3(x, y, z); }
 	//inline void SetOrientation(glm::quat orient) { mOrientation_ = orient; }
 
 	// MOVEMENT
@@ -49,7 +54,7 @@ public:
 	void Scale(XMVECTOR scl);
 
 	// Returns the Model Transformation Matrix
-	XMMATRIX ModelTransformationMatrix() const;
+	XMMATRIX WorldTransformationMatrix() const;
 	XMMATRIX RotationMatrix() const;
 
 	// transforms a vector from local to global space
@@ -57,7 +62,7 @@ public:
 
 private:
 	XMFLOAT3 m_position;			
-	XMFLOAT3 m_rotation;			
+	XMFLOAT3 m_rotation;	// radians		
 	XMFLOAT3 m_scale;				
 
 	//	glm::quat mOrientation_;	

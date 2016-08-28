@@ -24,6 +24,8 @@
 
 #include "Components/Transform.h"
 
+#include "SceneManager.h"
+
 class Renderer;
 class Input;
 class Camera;
@@ -65,6 +67,9 @@ private:
 
 	PerfTimer		m_timer;
 	static Engine*	s_instance;
+
+	// Scene
+	SceneManager	m_sceneMan;
 };
 
 #define ENGINE Engine::GetEngine()

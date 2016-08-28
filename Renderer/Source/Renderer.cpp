@@ -32,7 +32,9 @@ Renderer::Renderer()
 	m_Direct3D(nullptr),
 	m_device(nullptr),
 	m_deviceContext(nullptr),
-	m_bufferObjects(std::vector<BufferObject*>(MESH_TYPE::COUNT))
+	m_mainCamera(nullptr),
+	m_bufferObjects(std::vector<BufferObject*>(MESH_TYPE::MESH_TYPE_COUNT)),
+	m_rasterizerStates(std::vector<RasterizerState*>(RASTERIZER_STATE::RS_COUNT))
 {}
 
 
@@ -62,6 +64,7 @@ bool Renderer::Init(int width, int height, HWND hwnd)
 	m_device		= m_Direct3D->GetDevice();
 	m_deviceContext = m_Direct3D->GetDeviceContext();
 
+	InitRasterizerStates();
 
 	GeneratePrimitives();
 	return true;
@@ -118,11 +121,59 @@ void Renderer::GeneratePrimitives()
 	m_bufferObjects[TRIANGLE]	= m_geom.Triangle();
 	m_bufferObjects[QUAD]		= m_geom.Quad();
 	m_bufferObjects[CUBE]		= m_geom.Cube();
+	m_bufferObjects[GRID]		= m_geom.Grid(1, 1, 100, 100);
 }
 
 void Renderer::PollShaderFiles()
 {
 	// todo: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
+}
+
+void Renderer::InitRasterizerStates()
+{
+	HRESULT hr;
+	char info[129];
+	ID3D11RasterizerState*& cullNone = m_rasterizerStates[CULL_NONE];
+	//ID3D11RasterizerState* cullBack;
+	//ID3D11RasterizerState* cullFront;
+	
+	// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
+	D3D11_RASTERIZER_DESC rsDesc;
+	//ZeroMemory(&rsDesc, sizeof(D3D11_RASTERIZER_DESC));
+
+	rsDesc.FillMode					= D3D11_FILL_SOLID;
+	rsDesc.FrontCounterClockwise	= false;
+	rsDesc.DepthBias				= 0;
+	rsDesc.ScissorEnable			= false;
+	rsDesc.DepthBiasClamp			= 0;
+	rsDesc.SlopeScaledDepthBias		= 0.0f;
+
+	
+	//rsDesc.CullMode					= D3D11_CULL_BACK;
+	//if (!m_device->CreateRasterizerState(&rsDesc, &cullBack))
+	//{
+	//	sprintf_s(info, "Error creating Rasterizer State: Cull Back\n");
+	//	OutputDebugString(info);
+	//}
+
+	//rsDesc.CullMode = D3D11_CULL_FRONT;
+	//if (!m_device->CreateRasterizerState(&rsDesc, &cullFront))
+	//{
+	//	sprintf_s(info, "Error creating Rasterizer State: Cull Front\n");
+	//	OutputDebugString(info);
+	//}
+
+	rsDesc.CullMode = D3D11_CULL_NONE;
+	hr = m_device->CreateRasterizerState(&rsDesc, &cullNone);
+	if (FAILED(hr))
+	{
+		sprintf_s(info, "Error creating Rasterizer State: Cull None\n");
+		OutputDebugString(info);
+	}
+
+	//m_rasterizerStates[CULL_NONE] = cullNone;
+	//m_rasterizerStates[CULL_FRONT] = cullFront;
+	//m_rasterizerStates[CULL_BACK] = cullBack;
 }
 
 ShaderID Renderer::AddShader(const std::string& shdFileName, 
@@ -158,6 +209,8 @@ void Renderer::SetViewport(const unsigned width, const unsigned height)
 	m_viewPort.TopLeftY = 0;
 	m_viewPort.Width	= static_cast<float>(width);
 	m_viewPort.Height	= static_cast<float>(height);
+	m_viewPort.MinDepth = NEAR_PLANE;
+	m_viewPort.MaxDepth = FAR_PLANE;
 }
 
 void Renderer::SetBufferObj(int BufferID)
@@ -237,6 +290,8 @@ void Renderer::Apply()
 
 	Shader* shader = m_shaders[m_activeShader];
 
+	// TODO: check if state is changed
+
 	// set shaders & data layout
 	m_deviceContext->IASetInputLayout(shader->m_layout);
 	m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
@@ -251,6 +306,9 @@ void Renderer::Apply()
 
 	// viewport
 	m_deviceContext->RSSetViewports(1, &m_viewPort);
+	m_deviceContext->RSSetState(m_rasterizerStates[CULL_NONE]);
+	D3D11_RASTERIZER_DESC rsDesc; 
+	m_rasterizerStates[CULL_NONE]->GetDesc(&rsDesc);
 
 	// set shader constants
 	for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
@@ -276,6 +334,8 @@ void Renderer::Apply()
 			cbuf.dirty = false;
 		}
 	}
+
+	m_deviceContext->OMSetDepthStencilState(m_Direct3D->m_depthStencilState, 0);
 }
 
 void Renderer::DrawIndexed()

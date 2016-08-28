@@ -168,6 +168,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 
 	default:
 	{
+
 		return DefWindowProc(hwnd, umsg, wparam, lparam);
 	}
 	}
@@ -228,7 +229,7 @@ void BaseSystem::InitWindow(int& width, int& height)
 		WS_EX_APPWINDOW,			// Forces a top-level window onto the taskbar when the window is visible.
 		m_appName,					// class name
 		m_appName,					// Window name
-		WS_OVERLAPPEDWINDOW,		// Window style //WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_POPUP,
+		WS_POPUP,					// Window style
 		posX, posY, width, height,	// Window position and dimensions
 		NULL, NULL,					// parent, menu
 		m_hInstance, NULL

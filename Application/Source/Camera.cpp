@@ -22,7 +22,7 @@
 #include <string>
 #include "SystemDefs.h"
 
-#define CAM_ANGULAR_SPEED_DEG 25.0f
+#define CAM_ANGULAR_SPEED_DEG 60.0f
 #define CAM_MOVE_SPEED 10.0f
 #define DEG2RAD XM_PI / 180.0f
 

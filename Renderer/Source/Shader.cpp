@@ -93,9 +93,9 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 
 	// SHADER PATHS
 	//----------------------------------------------------------------------------
-	std::string vspath = shaderFileName + ".vs";
-	std::string gspath = shaderFileName + ".gs";
-	std::string pspath = shaderFileName + ".ps";
+	std::string vspath = shaderFileName + "_vs.hlsl";
+	std::string gspath = shaderFileName + "_gs.hlsl";
+	std::string pspath = shaderFileName + "_ps.hlsl";
 	std::wstring vspath_w(vspath.begin(), vspath.end());
 	std::wstring gspath_w(gspath.begin(), gspath.end());
 	std::wstring pspath_w(pspath.begin(), pspath.end());
@@ -103,7 +103,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	const WCHAR* GSPath = gspath_w.c_str();
 	const WCHAR* PSPath = pspath_w.c_str();
 
-	std::string info("\nCompiling shader "); info += m_name; info += "\n";
+	std::string info("\tCompiling  \""); info += m_name; info += "\"";
 	OutputDebugString(info.c_str());
 
 	// COMPILE SHADERS
@@ -169,7 +169,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	}
 
 
-	// INPUT LAYOUT & CBUFFERS
+	// INPUT LAYOUT
 	//---------------------------------------------------------------------------
 	//setup the layout of the data that goes into the shader
 	std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(layouts.size());
@@ -193,7 +193,14 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		OutputDebugString("Error creating input layout");
 		assert(false);
 	}
+
+
+	// CBUFFERS & SSHADER RESOURCES
+	//---------------------------------------------------------------------------
 	SetCBuffers(device);
+
+	ID3D11ShaderResourceView* diffuseMapSRV;
+	result = 
 
 	//release shader buffers
 	vsBlob->Release();
@@ -201,6 +208,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 
 	psBlob->Release();
 	psBlob = 0;
+	OutputDebugString(" - Done.\n");
 }
 
 void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob)
@@ -287,14 +295,66 @@ void Shader::SetCBuffers(ID3D11Device* device)
 {
 	// example: http://gamedev.stackexchange.com/a/62395/39920
 
-	// Obtain CBuffer layout information
-	D3D11_SHADER_DESC VSDesc;
-	m_vsRefl->GetDesc(&VSDesc);
-	for (unsigned i = 0; i < VSDesc.ConstantBuffers; ++i)
+	// OBTAIN CBUFFER LAYOUT INFORMATION
+	//---------------------------------------------------------------------------------------
+	RegisterCBufferLayout(m_vsRefl, ShaderType::VS);
+	RegisterCBufferLayout(m_psRefl, ShaderType::PS);
+	
+
+	// CREATE CPU & GPU CONSTANT BUFFERS
+	//---------------------------------------------------------------------------------------
+	// CPU CBuffers
+	for (const cBufferLayout& cbLayout : m_cBufferLayouts)
+	{
+		std::vector<CPUConstant> cpuBuffers;
+		for (D3D11_SHADER_VARIABLE_DESC varDesc : cbLayout.variables)
+		{
+			CPUConstant c;
+			c.name = varDesc.Name;
+			c.size = varDesc.Size;
+			c.data = new char[c.size];
+			memset(c.data, 0, c.size);
+			cpuBuffers.push_back(c);
+		}
+		m_constants.push_back(cpuBuffers);
+	}
+
+	// GPU CBuffer Description
+	D3D11_BUFFER_DESC cBufferDesc;
+	cBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	cBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	cBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	cBufferDesc.MiscFlags = 0;
+	cBufferDesc.StructureByteStride = 0;
+
+	// GPU CBuffers
+	for (const cBufferLayout& cbLayout : m_cBufferLayouts)
+	{
+		CBuffer cBuffer;
+		cBufferDesc.ByteWidth = cbLayout.desc.Size;
+		if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &cBuffer.data)))
+		{
+			OutputDebugString("Error creating constant buffer");
+			assert(false);
+		}
+		cBuffer.dirty = true;
+		cBuffer.shdType = cbLayout.shdType;
+		cBuffer.bufferSlot = cbLayout.bufSlot;
+		m_cBuffers.push_back(cBuffer);
+	}
+}
+
+void Shader::RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType type)
+{
+	D3D11_SHADER_DESC desc;
+	sRefl->GetDesc(&desc);
+
+	unsigned bufSlot = 0;
+	for (unsigned i = 0; i < desc.ConstantBuffers; ++i)
 	{
 		cBufferLayout bufferLayout;
 		bufferLayout.buffSize = 0;
-		ID3D11ShaderReflectionConstantBuffer* pCBuffer = m_vsRefl->GetConstantBufferByIndex(i);
+		ID3D11ShaderReflectionConstantBuffer* pCBuffer = sRefl->GetConstantBufferByIndex(i);
 		pCBuffer->GetDesc(&bufferLayout.desc);
 
 		// load desc of each variable for binding on buffer later on
@@ -314,46 +374,10 @@ void Shader::SetCBuffers(ID3D11Device* device)
 			// accumulate buffer size
 			bufferLayout.buffSize += varDesc.Size;
 		}
-
+		bufferLayout.shdType = type;
+		bufferLayout.bufSlot = bufSlot;
+		++bufSlot;
 		m_cBufferLayouts.push_back(bufferLayout);
-	}
-
-	// GPU CBuffer Description
-	D3D11_BUFFER_DESC cBufferDesc;
-	cBufferDesc.Usage					= D3D11_USAGE_DYNAMIC;
-	cBufferDesc.BindFlags				= D3D11_BIND_CONSTANT_BUFFER;
-	cBufferDesc.CPUAccessFlags			= D3D11_CPU_ACCESS_WRITE;
-	cBufferDesc.MiscFlags				= 0;
-	cBufferDesc.StructureByteStride		= 0;
-
-	// Create CPU CBuffers
-	for (cBufferLayout cbLayout : m_cBufferLayouts)
-	{
-		std::vector<CPUConstant> cpuBuffers;
-		for (D3D11_SHADER_VARIABLE_DESC varDesc : cbLayout.variables)
-		{
-			CPUConstant c;
-			c.name = varDesc.Name;
-			c.size = varDesc.Size;
-			c.data = new char[c.size];
-			memset(c.data, 0, c.size);
-			cpuBuffers.push_back(c);
-		}
-		m_constants.push_back(cpuBuffers);
-	}
-
-	// Create GPU CBuffers
-	for (cBufferLayout cbLayout : m_cBufferLayouts)
-	{
-		CBuffer cBuffer;
-		cBufferDesc.ByteWidth = cbLayout.desc.Size;
-		if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &cBuffer.data)))
-		{
-			OutputDebugString("Error creating constant buffer");
-			assert(false);
-		}
-		cBuffer.dirty = true;
-		m_cBuffers.push_back(cBuffer);
 	}
 }
 

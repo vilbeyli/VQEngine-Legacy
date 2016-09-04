@@ -20,12 +20,17 @@
 #include "D3DManager.h"
 #include "BufferObject.h"
 #include "Shader.h"
-#include "Mesh.h"
-#include "../../Application/Source/SystemDefs.h"
-#include "../../Application/Source/utils.h"
-#include "../../Application/Source/Camera.h"
+
+#include "SystemDefs.h"
+#include "utils.h"
+#include "Camera.h"
+
+#include <mutex>
+
 
 #include <cassert>
+
+#define SHADER_HOTSWAP 0
 
 Renderer::Renderer()
 	:
@@ -117,16 +122,144 @@ unsigned Renderer::WindowWidth() const
 
 void Renderer::GeneratePrimitives()
 {
+	// cylinder parameters
+	const float	 cylHeight = 3.1415f;
+	const float	 cylTopRadius = 1.0f;
+	const float	 cylBottomRadius = 1.0f;
+	const unsigned cylSliceCount = 120;
+	const unsigned cylStackCount = 100;
+
+	// grid parameters
+	const float gridWidth = 1.0f;
+	const float gridDepth = 1.0f;
+	const unsigned gridFinenessH = 100;
+	const unsigned gridFinenessV = 100;
+
+	// sphere parameters
+	const float sphRadius = 2.0f;
+	const unsigned sphRingCount = 90;
+	const unsigned sphSliceCount = 120;
+
 	m_geom.SetDevice(m_device);
 	m_bufferObjects[TRIANGLE]	= m_geom.Triangle();
 	m_bufferObjects[QUAD]		= m_geom.Quad();
 	m_bufferObjects[CUBE]		= m_geom.Cube();
-	m_bufferObjects[GRID]		= m_geom.Grid(1, 1, 100, 100);
+	m_bufferObjects[GRID]		= m_geom.Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV);
+	m_bufferObjects[CYLINDER]	= m_geom.Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount);
+	m_bufferObjects[SPHERE]		= m_geom.Sphere(sphRadius, sphRingCount, sphSliceCount);
+}
+
+void Renderer::PollThread()
+{
+	// Concerns:
+	// separate thread sharing window resources like context and d3d11device
+	// might not perform as expected
+	// link: https://www.opengl.org/discussion_boards/showthread.php/185980-recompile-the-shader-on-runtime-like-hot-plug-the-new-compiled-shader
+	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
+
+	char info[129];
+	sprintf_s(info, "Thread here : PollStarted.\n");
+	OutputDebugString(info);
+	Sleep(800);
+
+
+	static HANDLE dwChangeHandle;
+	DWORD dwWaitStatus;
+	LPTSTR lpDir = "Data/Shaders/";
+
+	dwChangeHandle = FindFirstChangeNotification(
+		lpDir,                         // directory to watch 
+		TRUE,                         // do not watch subtree 
+		FILE_NOTIFY_CHANGE_FILE_NAME); // watch file name changes 
+
+	if (dwChangeHandle == INVALID_HANDLE_VALUE)
+	{
+		OutputDebugString("\n ERROR: FindFirstChangeNotification function failed.\n");
+		;// ExitProcess(GetLastError());
+	}
+
+	while (TRUE)
+	{
+		//	Wait for notification.
+		OutputDebugString("\nWaiting for notification...\n");
+
+		dwWaitStatus = WaitForSingleObject(dwChangeHandle,
+			INFINITE);
+
+		switch (dwWaitStatus)
+		{
+		case WAIT_OBJECT_0:
+
+			//A file was created, renamed, or deleted in the directory.
+			//Refresh this directory and restart the notification.
+
+			OnShaderChange(lpDir);
+			if (FindNextChangeNotification(dwChangeHandle) == FALSE)
+			{
+				OutputDebugString("\n ERROR: FindNextChangeNotification function failed.\n");
+				ExitProcess(GetLastError());
+			}
+			break;
+
+			case WAIT_OBJECT_0 + 1:
+
+				// A directory was created, renamed, or deleted.
+				// Refresh the tree and restart the notification.
+
+				//RefreshTree(lpDrive);
+				/*if (FindNextChangeNotification(dwChangeHandles[1]) == FALSE)
+				{
+					printf("\n ERROR: FindNextChangeNotification function failed.\n");
+					ExitProcess(GetLastError());
+				}*/
+			break;
+
+		case WAIT_TIMEOUT:
+
+			//A timeout occurred, this would happen if some value other 
+			//than INFINITE is used in the Wait call and no changes occur.
+			//In a single-threaded environment you might not want an
+			//INFINITE wait.
+
+			OutputDebugString("\nNo changes in the timeout period.\n");
+			break;
+
+		default:
+			OutputDebugString("\n ERROR: Unhandled dwWaitStatus.\n");
+			ExitProcess(GetLastError());
+			break;
+		}
+	}
+	OutputDebugString("Done.\n");
+}
+
+void Renderer::OnShaderChange(LPTSTR dir)
+{
+	char info[129];
+	sprintf_s(info, "OnShaderChange(%s)\n\n", dir);
+	OutputDebugString(info);
+
+	// we know that a change occurred in the 'dir' directory. Read source again
+	// works		: create file, delete file
+	// doesnt work	: modify file
+	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
+
+
 }
 
 void Renderer::PollShaderFiles()
 {
-	// todo: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
+#if (SHADER_HOTSWAP != 0)
+	static bool pollStarted = false;
+	if (!pollStarted)
+	{
+		std::thread t1(&Renderer::PollThread, this);
+		t1.detach();	// dont wait for t1 to finish;
+
+		OutputDebugString("poll started main thread\n");
+		pollStarted = true;
+	}
+#endif
 }
 
 void Renderer::InitRasterizerStates()
@@ -251,7 +384,8 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 			if (strcmp(cName, c.name.c_str()) == 0)
 			{
 				found = true;
-				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
+				// TODO: figure out why this breaks
+				//if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
 				{
 					memcpy(c.data, data, c.size);
 					shader->m_cBuffers[i].dirty = true;
@@ -262,12 +396,44 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 	}
 	if (!found)
 	{
-		std::string err("Error: Constant not found: "); err += cName;
+		std::string err("Error: Constant not found: "); err += cName; err += "\n";
 		OutputDebugString(err.c_str());
 	}
 
-	return;
 }
+
+// TODO: this is the same as 4x4. rethink set constant function
+void Renderer::SetConstant3f(const char * cName, const XMFLOAT3 & float3)
+{
+	const float* data = &float3.x;
+	// find data in CPUConstantBuffer array of shader
+	Shader* shader = m_shaders[m_activeShader];
+	bool found = false;
+	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
+	{
+		std::vector<CPUConstant>& cVector = shader->m_constants[i];
+		for (CPUConstant& c : cVector)					// for each constant in a cbuffer
+		{
+			if (strcmp(cName, c.name.c_str()) == 0)		// if name matches
+			{
+				found = true;
+				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
+				{
+					memcpy(c.data, data, c.size);
+					shader->m_cBuffers[i].dirty = true;
+					//break;	// ensures write on first occurance
+				}
+			}
+		}
+	}
+	if (!found)
+	{
+		char err[256];
+		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
+		OutputDebugString(err);
+	}
+}
+
 
 void Renderer::Begin(const float clearColor[4])
 {
@@ -278,9 +444,6 @@ void Renderer::End()
 {
 	m_Direct3D->EndFrame();
 	++m_frameCount;
-#ifdef _DEBUG
-	if (m_frameCount % 60 == 0)	PollShaderFiles();
-#endif
 }
 
 
@@ -307,6 +470,8 @@ void Renderer::Apply()
 	// viewport
 	m_deviceContext->RSSetViewports(1, &m_viewPort);
 	m_deviceContext->RSSetState(m_rasterizerStates[CULL_NONE]);
+
+	// test
 	D3D11_RASTERIZER_DESC rsDesc; 
 	m_rasterizerStates[CULL_NONE]->GetDesc(&rsDesc);
 
@@ -319,7 +484,7 @@ void Renderer::Apply()
 			ID3D11Buffer* bufferData = cbuf.data;
 			D3D11_MAPPED_SUBRESOURCE mappedResource;
 
-			// Map subresource to GPU - update contends - discard the subresource
+			// Map sub-resource to GPU - update contends - discard the sub-resource
 			m_deviceContext->Map(bufferData, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 			char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
 			std::vector<CPUConstant>& cpuConsts = shader->m_constants[i];
@@ -330,7 +495,19 @@ void Renderer::Apply()
 			}
 			m_deviceContext->Unmap(bufferData, 0);
 
-			m_deviceContext->VSSetConstantBuffers(i, 1, &bufferData);
+			switch (cbuf.shdType)
+			{
+			case ShaderType::VS:
+				m_deviceContext->VSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				break;
+			case ShaderType::PS:
+				m_deviceContext->PSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				break;
+			default:
+				OutputDebugString("ERROR: Renderer::Apply() - UNKOWN Shader Type\n");
+				break;
+			}
+
 			cbuf.dirty = false;
 		}
 	}

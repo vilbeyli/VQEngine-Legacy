@@ -70,7 +70,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)../Renderer/Include</IncludePath>
     <IntDir>$(Configuration)\Temp\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -148,18 +148,18 @@
     <ClCompile Include="Source\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\SceneManager.h" />
-    <ClInclude Include="Source\PerfTimer.h" />
-    <ClInclude Include="Source\GameObject.h" />
-    <ClInclude Include="Source\BaseSystem.h" />
-    <ClInclude Include="Source\Camera.h" />
+    <ClInclude Include="Include\SceneManager.h" />
+    <ClInclude Include="Include\PerfTimer.h" />
+    <ClInclude Include="Include\GameObject.h" />
+    <ClInclude Include="Include\BaseSystem.h" />
+    <ClInclude Include="Include\Camera.h" />
     <ClInclude Include="Source\Components\Component.h" />
     <ClInclude Include="Source\Components\Transform.h" />
-    <ClInclude Include="Source\Engine.h" />
-    <ClInclude Include="Source\Input.h" />
-    <ClInclude Include="Source\resource.h" />
-    <ClInclude Include="Source\SystemDefs.h" />
-    <ClInclude Include="Source\utils.h" />
+    <ClInclude Include="Include\Engine.h" />
+    <ClInclude Include="Include\Input.h" />
+    <ClInclude Include="Include\resource.h" />
+    <ClInclude Include="Include\SystemDefs.h" />
+    <ClInclude Include="Include\utils.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Data\Shaders\tex.ps" />

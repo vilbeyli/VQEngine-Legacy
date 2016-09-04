@@ -68,7 +68,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)../Application/Include</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -118,7 +120,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Model.cpp" />
     <ClCompile Include="Source\BufferObject.cpp" />
+    <ClCompile Include="Source\Color.cpp" />
     <ClCompile Include="Source\D3DManager.cpp" />
     <ClCompile Include="Source\GeometryGenerator.cpp" />
     <ClCompile Include="Source\Mesh.cpp" />
@@ -126,12 +130,14 @@
     <ClCompile Include="Source\Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\BufferObject.h" />
-    <ClInclude Include="Source\D3DManager.h" />
-    <ClInclude Include="Source\GeometryGenerator.h" />
-    <ClInclude Include="Source\Mesh.h" />
-    <ClInclude Include="Source\Renderer.h" />
-    <ClInclude Include="Source\Shader.h" />
+    <ClInclude Include="Include\Model.h" />
+    <ClInclude Include="Include\BufferObject.h" />
+    <ClInclude Include="Include\Color.h" />
+    <ClInclude Include="Include\D3DManager.h" />
+    <ClInclude Include="Include\GeometryGenerator.h" />
+    <ClInclude Include="Include\Mesh.h" />
+    <ClInclude Include="Include\Renderer.h" />
+    <ClInclude Include="Include\Shader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

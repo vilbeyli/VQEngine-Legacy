@@ -19,6 +19,8 @@
 #include "GeometryGenerator.h"
 #include "BufferObject.h"
 
+#include <vector>
+
 // Direct3D Transformation Pipeline: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418867(v=vs.85).aspx
 
 GeometryGenerator::GeometryGenerator()
@@ -310,10 +312,101 @@ BufferObject* GeometryGenerator::Cube()
 	return bufferObj;
 }
 
-BufferObject* GeometryGenerator::Sphere()
+// TODO: figure out TBN vectors
+BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceCount)
 {
-	BufferObject* bufferObj = new BufferObject();
+	// CYLINDER BODY
+	//-----------------------------------------------------------
+	// Compute vertices for each stack ring starting at
+	// the bottom and moving up.
+	std::vector<Vertex> Vertices;
+	float dPhi = XM_PI / (ringCount - 1);
+	for (float phi = -XM_PIDIV2; phi <= XM_PIDIV2 + 0.001f; phi += dPhi)
+	{
+		float y = radius * sinf(phi);	// horizontal slice center height
+		float r = radius * cosf(phi);	// horizontal slice radius
 
+		// vertices of ring
+		float dTheta = 2.0f*XM_PI / sliceCount;
+		for (UINT j = 0; j <= sliceCount; ++j)	// for each pice(slice) in horizontal slice
+		{
+			Vertex vertex;
+			float x = r * cosf(j*dTheta);
+			float z = r * sinf(j*dTheta);
+			vertex.position = XMFLOAT3(x, y, z);
+			{
+				float u = (float)j / sliceCount;
+				float v = (y + radius) / (2 * radius);
+				vertex.texCoords = XMFLOAT3(u, v, 0.0f);
+			}
+			// Cylinder can be parameterized as follows, where we
+			// introduce v parameter that goes in the same direction
+			// as the v tex-coord so that the bitangent goes in the
+			// same direction as the v tex-coord.
+			// Let r0 be the bottom radius and let r1 be the
+			// top radius.
+			// y(v) = h - hv for v in [0,1].
+			// r(v) = r1 + (r0-r1)v
+			//
+			// x(t, v) = r(v)*cos(t)
+			// y(t, v) = h - hv
+			// z(t, v) = r(v)*sin(t)
+			//
+			// dx/dt = -r(v)*sin(t)
+			// dy/dt = 0
+			// dz/dt = +r(v)*cos(t)
+			//
+			// dx/dv = (r0-r1)*cos(t)
+			// dy/dv = -h
+			// dz/dv = (r0-r1)*sin(t)
+
+			// TangentU us unit length.
+			//vertex.tangent = XMFLOAT3(-s, 0.0f, c);
+			//float dr = bottomRadius - topRadius;
+			//XMFLOAT3 bitangent(dr*c, -height, dr*s);
+			//XMVECTOR T = XMLoadFloat3(&vertex.tangent);
+			//XMVECTOR B = XMLoadFloat3(&bitangent);
+			//XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
+			//XMStoreFloat3(&vertex.normal, N);
+			Vertices.push_back(vertex);
+		}
+	}
+
+	std::vector<unsigned> Indices;
+	// Add one because we duplicate the first and last vertex per ring
+	// since the texture coordinates are different.
+	UINT ringVertexCount = sliceCount + 1;
+	// Compute indices for each stack.
+	for (UINT i = 0; i < ringCount; ++i)
+	{
+		for (UINT j = 0; j < sliceCount; ++j)
+		{
+			Indices.push_back(i*ringVertexCount + j);
+			Indices.push_back((i + 1)*ringVertexCount + j);
+			Indices.push_back((i + 1)*ringVertexCount + j + 1);
+			Indices.push_back(i*ringVertexCount + j);
+			Indices.push_back((i + 1)*ringVertexCount + j + 1);
+			Indices.push_back(i*ringVertexCount + j + 1);
+		}
+	}
+
+	//------------------------------------------------
+	BufferObject* bufferObj = new BufferObject();
+	bufferObj->m_vertexCount = Vertices.size();
+	bufferObj->m_indexCount = Indices.size();
+	bufferObj->m_vertices = new Vertex[bufferObj->m_vertexCount];		// deleted in dtor
+	bufferObj->m_indices = new unsigned[bufferObj->m_indexCount];	// deleted in dtor
+	memcpy(bufferObj->m_vertices, Vertices.data(), Vertices.size() * sizeof(Vertex));
+	memcpy(bufferObj->m_indices, Indices.data(), Indices.size() * sizeof(unsigned));
+
+	// fill gpu buffers
+	bool writable = true;
+	if (!bufferObj->FillGPUBuffers(m_device, writable))
+	{
+		OutputDebugString("Error Grid creation failed");
+		delete bufferObj;
+		bufferObj = nullptr;
+	}
 
 	return bufferObj;
 }
@@ -395,6 +488,7 @@ BufferObject* GeometryGenerator::Grid(float width, float depth, unsigned m, unsi
 	//	ABC	: (i*n +j    , i*n + j+1, (i+1)*n + j  )
 	//	CBD : ((i+1)*n +j, i*n + j+1, (i+1)*n + j+1)
 
+	//	generate indices
 	unsigned k = 0;
 	for (unsigned i = 0; i < m-1; ++i)
 	{
@@ -417,6 +511,195 @@ BufferObject* GeometryGenerator::Grid(float width, float depth, unsigned m, unsi
 		pos.y = 0.2f * (pos.z * sinf(20.0f * pos.x) + pos.x * cosf(10.0f * pos.z));
 	}
 
+	// fill gpu buffers
+	bool writable = true;
+	if (!bufferObj->FillGPUBuffers(m_device, writable))
+	{
+		OutputDebugString("Error Grid creation failed");
+		delete bufferObj;
+		bufferObj = nullptr;
+	}
+
+	return bufferObj;
+}
+
+BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount)
+{
+	// slice count	: horizontal resolution
+	// stack count	: height resolution
+	float stackHeight = height / stackCount;
+	float radiusStep  = (topRadius - bottomRadius) / stackCount;
+	unsigned ringCount = stackCount + 1;
+	
+	// CYLINDER BODY
+	//-----------------------------------------------------------
+	// Compute vertices for each stack ring starting at
+	// the bottom and moving up.
+	std::vector<Vertex> Vertices;
+	for (UINT i = 0; i < ringCount; ++i)
+	{
+		float y = -0.5f*height + i*stackHeight;
+		float r = bottomRadius + i*radiusStep;
+
+		// vertices of ring
+		float dTheta = 2.0f*XM_PI / sliceCount;
+		for (UINT j = 0; j <= sliceCount; ++j)
+		{
+			Vertex vertex;
+			float c = cosf(j*dTheta);
+			float s = sinf(j*dTheta);
+			vertex.position = XMFLOAT3(r*c, y, r*s);
+			{
+				float u = (float)j / sliceCount;
+				float v = 1.0f - (float)i / stackCount;
+				vertex.texCoords = XMFLOAT3(u, v, 0.0f);
+			}
+			// Cylinder can be parameterized as follows, where we
+			// introduce v parameter that goes in the same direction
+			// as the v tex-coord so that the bitangent goes in the
+			// same direction as the v tex-coord.
+			// Let r0 be the bottom radius and let r1 be the
+			// top radius.
+			// y(v) = h - hv for v in [0,1].
+			// r(v) = r1 + (r0-r1)v
+			//
+			// x(t, v) = r(v)*cos(t)
+			// y(t, v) = h - hv
+			// z(t, v) = r(v)*sin(t)
+			//
+			// dx/dt = -r(v)*sin(t)
+			// dy/dt = 0
+			// dz/dt = +r(v)*cos(t)
+			//
+			// dx/dv = (r0-r1)*cos(t)
+			// dy/dv = -h
+			// dz/dv = (r0-r1)*sin(t)
+
+			// TangentU us unit length.
+			vertex.tangent = XMFLOAT3(-s, 0.0f, c);
+			float dr = bottomRadius - topRadius;
+			XMFLOAT3 bitangent(dr*c, -height, dr*s);
+			XMVECTOR T = XMLoadFloat3(&vertex.tangent);
+			XMVECTOR B = XMLoadFloat3(&bitangent);
+			XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
+			XMStoreFloat3(&vertex.normal, N);
+			Vertices.push_back(vertex);
+		}
+	}
+
+	std::vector<unsigned> Indices;
+	// Add one because we duplicate the first and last vertex per ring
+	// since the texture coordinates are different.
+	UINT ringVertexCount = sliceCount + 1;
+	// Compute indices for each stack.
+	for (UINT i = 0; i < stackCount; ++i)
+	{
+		for (UINT j = 0; j < sliceCount; ++j)
+		{
+			Indices.push_back(i*ringVertexCount + j);
+			Indices.push_back((i + 1)*ringVertexCount + j);
+			Indices.push_back((i + 1)*ringVertexCount + j + 1);
+			Indices.push_back(i*ringVertexCount + j);
+			Indices.push_back((i + 1)*ringVertexCount + j + 1);
+			Indices.push_back(i*ringVertexCount + j + 1);
+		}
+	}
+
+	// CYLINDER TOP
+	//-----------------------------------------------------------
+	{
+		UINT baseIndex = (UINT)Vertices.size();
+		float y = 0.5f*height;
+		float dTheta = 2.0f*XM_PI / sliceCount;
+		// Duplicate cap ring vertices because the texture coordinates
+		// and normals differ.
+		for (UINT i = 0; i <= sliceCount; ++i)
+		{
+			float x = topRadius*cosf(i*dTheta);
+			float z = topRadius*sinf(i*dTheta);
+			// Scale down by the height to try and make top cap
+			// texture coord area proportional to base.
+			float u = x / height + 0.5f;
+			float v = z / height + 0.5f;
+
+			Vertex Vert;
+			Vert.position	= XMFLOAT3(x, y, z);
+			Vert.normal		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+			Vert.tangent	= XMFLOAT3(1.0f, 0.0f, 0.0f);	// ?
+			Vert.texCoords = XMFLOAT3(u, v, 0.0f);
+			Vertices.push_back(Vert);
+		}
+		// Cap center vertex.
+		Vertex capCenter;
+		capCenter.position = XMFLOAT3(0.0f, y, 0.0f);
+		capCenter.normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		capCenter.tangent = XMFLOAT3(1.0f, 0.0f, 0.0f);
+		capCenter.texCoords = XMFLOAT3(0.5f, 0.5f, 0.0f);
+		Vertices.push_back(capCenter);
+
+		// Index of center vertex.
+		UINT centerIndex = (UINT)Vertices.size() - 1;
+		for (UINT i = 0; i < sliceCount; ++i)
+		{
+			Indices.push_back(centerIndex);
+			Indices.push_back(baseIndex + i + 1);
+			Indices.push_back(baseIndex + i);
+		}
+	}
+
+
+	// CYLINDER BOTTOM
+	//-----------------------------------------------------------
+	{
+		UINT baseIndex = (UINT)Vertices.size();
+		float y = -0.5f*height;
+		float dTheta = 2.0f*XM_PI / sliceCount;
+		// Duplicate cap ring vertices because the texture coordinates
+		// and normals differ.
+		for (UINT i = 0; i <= sliceCount; ++i)
+		{
+			float x = bottomRadius*cosf(i*dTheta);
+			float z = bottomRadius*sinf(i*dTheta);
+			// Scale down by the height to try and make top cap
+			// texture coord area proportional to base.
+			float u = x / height + 0.5f;
+			float v = z / height + 0.5f;
+
+			Vertex Vert;
+			Vert.position = XMFLOAT3(x, y, z);
+			Vert.normal = XMFLOAT3(0.0f, -1.0f, 0.0f);
+			Vert.tangent = XMFLOAT3(-1.0f, 0.0f, 0.0f);	// ?
+			Vert.texCoords = XMFLOAT3(u, v, 0.0f);
+			Vertices.push_back(Vert);
+		}
+		// Cap center vertex.
+		Vertex capCenter;
+		capCenter.position = XMFLOAT3(0.0f, y, 0.0f);
+		capCenter.normal = XMFLOAT3(0.0f, -1.0f, 0.0f);
+		capCenter.tangent = XMFLOAT3(-1.0f, 0.0f, 0.0f);
+		capCenter.texCoords = XMFLOAT3(0.5f, 0.5f, 0.0f);
+		Vertices.push_back(capCenter);
+
+		// Index of center vertex.
+		UINT centerIndex = (UINT)Vertices.size() - 1;
+		for (UINT i = 0; i < sliceCount; ++i)
+		{
+			Indices.push_back(centerIndex);
+			Indices.push_back(baseIndex + i + 1);
+			Indices.push_back(baseIndex + i);
+		}
+	}
+
+	//------------------------------------------------
+	BufferObject* bufferObj		= new BufferObject();
+	bufferObj->m_vertexCount	= Vertices.size();
+	bufferObj->m_indexCount		= Indices.size();
+	bufferObj->m_vertices		= new Vertex[bufferObj->m_vertexCount];		// deleted in dtor
+	bufferObj->m_indices		= new unsigned[bufferObj->m_indexCount];	// deleted in dtor
+	memcpy(bufferObj->m_vertices, Vertices.data(), Vertices.size() * sizeof(Vertex));
+	memcpy(bufferObj->m_indices, Indices.data(), Indices.size() * sizeof(unsigned) );
+
+	// fill gpu buffers
 	bool writable = true;
 	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{

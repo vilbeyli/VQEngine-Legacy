@@ -18,10 +18,11 @@
 
 #include "Engine.h"
 
-#include "../../Renderer/Source/Renderer.h"
+#include "Renderer.h"
 #include "Input.h"
 #include "Camera.h"
-#include "../../Renderer/Source/Mesh.h"
+
+#include "Mesh.h"
 
 #include <sstream>
 
@@ -68,7 +69,8 @@ bool Engine::Load()
 		{ "NORMAL",		FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 }
 	};
-	ShaderID texShader = m_renderer->AddShader("tex", "Data/Shaders/", layout);
+	m_renderer->AddShader("UnlitTextureColor", "Data/Shaders/", layout);
+	m_renderer->AddShader("TextureCoord", "Data/Shaders/", layout);
 
 	m_timer.Reset();
 	return true;
@@ -154,6 +156,10 @@ bool Engine::Run()
 
 	// since keyboard state is updated async, update previous state after frame;
 	m_input->Update();	
+
+#ifdef _DEBUG
+	m_renderer->PollShaderFiles();
+#endif
 	return true;
 }
 
@@ -172,8 +178,6 @@ void Engine::Update(float dt)
 	m_camera->Update(dt);
 	m_sceneMan.Update(dt);
 
-	// test
-	m_tf.SetScale(XMFLOAT3(3*4, 5*4, 2*4));
 
 	XMVECTOR rot = XMVectorZero();
 	XMVECTOR tr = XMVectorZero();
@@ -195,19 +199,37 @@ void Engine::Render()
 	XMMATRIX view = m_camera->GetViewMatrix();
 	XMMATRIX proj = m_camera->GetProjectionMatrix();
 	m_renderer->Begin(clearColor);
+	m_renderer->SetShader(0);	// unlit texture color shader
 	m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
 
-	m_sceneMan.Render();
+	m_sceneMan.Render();	// renders room
 
+	// renders central models - temporarily
 	//m_renderer->SetRasterizerState();
 	XMMATRIX world = m_tf.WorldTransformationMatrix();
-	m_renderer->SetShader(0);
+	m_renderer->SetShader(1);	//texcoord shader
+
+	//m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
+	//m_renderer->SetConstant4x4f("view", view);
+	//m_renderer->SetConstant4x4f("proj", proj);
+
 	m_renderer->SetBufferObj(MESH_TYPE::GRID);
 	m_renderer->SetConstant4x4f("world", world);
 	m_renderer->Apply();
 	m_renderer->DrawIndexed();
+
+	m_renderer->SetBufferObj(MESH_TYPE::SPHERE);
+	m_tf.Translate(XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
+	m_tf.SetScale(XMFLOAT3(1, 1, 1));
+	world = m_tf.WorldTransformationMatrix();
+	m_renderer->SetConstant4x4f("world", world);
+	m_renderer->Apply();
+	m_renderer->DrawIndexed();
+	m_tf.Translate(XMVectorSet(-10.0f, 0.0f, 0.0f, 0.0f));
+	m_tf.SetScale(XMFLOAT3(3 * 4, 5 * 4, 2 * 4));
+
 	m_renderer->End();
 }
 

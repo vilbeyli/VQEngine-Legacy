@@ -1,3 +1,21 @@
+//	DX11Renderer - VDemo | DirectX11 Renderer
+//	Copyright(C) 2016  - Volkan Ilbeyli
+//
+//	This program is free software : you can redistribute it and / or modify
+//	it under the terms of the GNU General Public License as published by
+//	the Free Software Foundation, either version 3 of the License, or
+//	(at your option) any later version.
+//
+//	This program is distributed in the hope that it will be useful,
+//	but WITHOUT ANY WARRANTY; without even the implied warranty of
+//	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+//	GNU General Public License for more details.
+//
+//	You should have received a copy of the GNU General Public License
+//	along with this program.If not, see <http://www.gnu.org/licenses/>.
+//
+//	Contact: volkanilbeyli@gmail.com
+
 #pragma once
 #include "Component.h"
 #include <DirectXMath.h>
@@ -29,8 +47,10 @@ public:
 
 	// GETTERS & SETTERS
 	//-----------------------------------------------------------------------------------
-	inline XMVECTOR GetPosition() const { return XMLoadFloat3(&m_position); }
-	inline XMVECTOR GetRotation() const { return XMLoadFloat3(&m_rotation); }
+	inline XMVECTOR GetPositionV()  const { return XMLoadFloat3(&m_position); }
+	inline XMFLOAT3 GetPositionF3() const { return m_position; }
+	inline XMVECTOR GetRotationV()  const { return XMLoadFloat3(&m_rotation); }
+	inline XMFLOAT3 GetRotationF3() const { return m_rotation; }
 	inline XMVECTOR GetScale()    const { return XMLoadFloat3(&m_scale   ); }
 	//inline glm::quat GetOrientation() { return mOrientation_; }
 
@@ -39,6 +59,7 @@ public:
 	inline void SetRotationDeg(float x, float y, float z)	{ m_rotation = XMFLOAT3(x * DEG2RAD, y * DEG2RAD, z * DEG2RAD); }
 	inline void SetScale	(XMFLOAT3 scale)				{ m_scale = scale;	}
 	inline void SetScale	(float x, float y, float z)		{ m_scale = XMFLOAT3(x,y,z); }
+	inline void SetScaleUniform(float scl)					{ m_scale = XMFLOAT3(scl, scl, scl); }
 	inline void SetPosition	(XMFLOAT3 val)					{ m_position = val; }
 	inline void SetPosition	(float x, float y, float z)		{ m_position = XMFLOAT3(x, y, z); }
 	//inline void SetOrientation(glm::quat orient) { mOrientation_ = orient; }

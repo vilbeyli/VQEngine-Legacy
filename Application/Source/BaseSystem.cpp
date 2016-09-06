@@ -47,7 +47,7 @@ bool BaseSystem::Init()
 	if (!ENGINE->Load())	return false;
 
 	return true;
-}
+}	
 
 void BaseSystem::Run()
 {

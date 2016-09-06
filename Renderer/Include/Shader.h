@@ -107,6 +107,8 @@ private:
 	void SetCBuffers(ID3D11Device* device);
 	void RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType type);
 	
+	void VoidBuffers();
+
 	void OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName);
 	void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath);
 	void AssignID(ShaderID id);

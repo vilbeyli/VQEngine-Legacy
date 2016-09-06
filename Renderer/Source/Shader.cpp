@@ -381,6 +381,14 @@ void Shader::RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType typ
 	}
 }
 
+void Shader::VoidBuffers()
+{
+	for (CBuffer& cBuf : m_cBuffers)
+	{
+		cBuf.dirty = true;
+	}
+}
+
 void Shader::OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName)
 {
 	char* compileErrors = (char*)errorMessage->GetBufferPointer();

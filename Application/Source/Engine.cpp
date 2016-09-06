@@ -57,20 +57,21 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 	m_camera->SetPosition(0, 1, -30);
 	m_renderer->SetCamera(m_camera);
 
-	m_sceneMan.Initialize(m_renderer);
-
 	return true;
 }
 
 bool Engine::Load()
 {
+	const char* shaderRoot = "Data/Shaders/";
 	std::vector<InputLayout> layout = {
 		{ "POSITION",	FLOAT32_3 },
 		{ "NORMAL",		FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 }
 	};
-	m_renderer->AddShader("UnlitTextureColor", "Data/Shaders/", layout);
-	m_renderer->AddShader("TextureCoord", "Data/Shaders/", layout);
+	m_renderData.unlitShader	= m_renderer->AddShader("UnlitTextureColor", shaderRoot, layout);
+	m_renderData.texCoordShader	= m_renderer->AddShader("TextureCoord", shaderRoot, layout);
+	m_renderData.phongShader	= m_renderer->AddShader("Forward_Phong", shaderRoot, layout);
+	m_sceneMan.Initialize(m_renderer, m_renderData, m_camera);
 
 	m_timer.Reset();
 	return true;
@@ -126,6 +127,11 @@ void Engine::Exit()
 	}
 }
 
+const Input* Engine::INP() const
+{
+	return m_input;
+}
+
 Engine * Engine::GetEngine()
 {
 	if (s_instance == nullptr)
@@ -138,6 +144,7 @@ Engine * Engine::GetEngine()
 
 bool Engine::Run()
 {
+	//float begin = m_timer.CurrentTime();	// fps lock
 	m_timer.Tick();
 	if (m_input->IsKeyDown(VK_ESCAPE))
 	{
@@ -152,10 +159,19 @@ bool Engine::Run()
 		CalcFrameStats();
 		Update(m_timer.DeltaTime());
 		Render();
+		
+		// 70 fps block - won't work because of input lag
+		//float end = 0.0f;
+		//do 
+		//{
+		//	end = m_timer.CurrentTime();
+		//	//char info[128];
+		//	//sprintf_s(info, "end=%f, begin=%f, end-begin=%f\n", end, begin, end - begin);
+		//	//OutputDebugString(info);
+		//} while ((end-begin) < 0.01428f);		
 	}
 
-	// since keyboard state is updated async, update previous state after frame;
-	m_input->Update();	
+	m_input->Update();	// update previous state after frame;
 
 #ifdef _DEBUG
 	m_renderer->PollShaderFiles();
@@ -177,20 +193,6 @@ void Engine::Update(float dt)
 {
 	m_camera->Update(dt);
 	m_sceneMan.Update(dt);
-
-
-	XMVECTOR rot = XMVectorZero();
-	XMVECTOR tr = XMVectorZero();
-	if (m_input->IsKeyDown('O')) rot += XMVectorSet(45.0f, 0.0f, 0.0f, 1.0f);
-	if (m_input->IsKeyDown('P')) rot += XMVectorSet(0.0f, 45.0f, 0.0f, 1.0f);
-	if (m_input->IsKeyDown('U')) rot += XMVectorSet(0.0f, 0.0f, 45.0f, 1.0f);
-
-	if (m_input->IsKeyDown('L')) tr += XMVectorSet(45.0f, 0.0f, 0.0f, 1.0f);
-	if (m_input->IsKeyDown('J')) tr += XMVectorSet(-45.0f, 0.0f, 0.0f, 1.0f);
-	if (m_input->IsKeyDown('K')) tr += XMVectorSet(0.0f, 0.0f, -45.0f, 1.0f);
-	if (m_input->IsKeyDown('I')) tr += XMVectorSet(0.0f, 0.0f, +45.0f, 1.0f);
-	m_tf.Rotate(rot * dt * 0.1f);
-	m_tf.Translate(tr * dt * 0.2f);
 }
 
 void Engine::Render()
@@ -199,37 +201,8 @@ void Engine::Render()
 	XMMATRIX view = m_camera->GetViewMatrix();
 	XMMATRIX proj = m_camera->GetProjectionMatrix();
 	m_renderer->Begin(clearColor);
-	m_renderer->SetShader(0);	// unlit texture color shader
 	m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
-	m_renderer->SetConstant4x4f("view", view);
-	m_renderer->SetConstant4x4f("proj", proj);
-
-	m_sceneMan.Render();	// renders room
-
-	// renders central models - temporarily
-	//m_renderer->SetRasterizerState();
-	XMMATRIX world = m_tf.WorldTransformationMatrix();
-	m_renderer->SetShader(1);	//texcoord shader
-
-	//m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
-	//m_renderer->SetConstant4x4f("view", view);
-	//m_renderer->SetConstant4x4f("proj", proj);
-
-	m_renderer->SetBufferObj(MESH_TYPE::GRID);
-	m_renderer->SetConstant4x4f("world", world);
-	m_renderer->Apply();
-	m_renderer->DrawIndexed();
-
-	m_renderer->SetBufferObj(MESH_TYPE::SPHERE);
-	m_tf.Translate(XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
-	m_tf.SetScale(XMFLOAT3(1, 1, 1));
-	world = m_tf.WorldTransformationMatrix();
-	m_renderer->SetConstant4x4f("world", world);
-	m_renderer->Apply();
-	m_renderer->DrawIndexed();
-	m_tf.Translate(XMVectorSet(-10.0f, 0.0f, 0.0f, 0.0f));
-	m_tf.SetScale(XMFLOAT3(3 * 4, 5 * 4, 2 * 4));
-
+	m_sceneMan.Render(view, proj);	// renders room
 	m_renderer->End();
 }
 

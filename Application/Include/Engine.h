@@ -49,6 +49,8 @@ public:
 
 	void Exit();
 
+	const Input* INP() const;
+
 	static Engine* GetEngine();
 
 private:
@@ -61,8 +63,6 @@ private:
 	Renderer*		m_renderer;
 	Camera*			m_camera;
 
-	Transform	m_tf;	//test
-
 	bool			m_isPaused;
 
 	PerfTimer		m_timer;
@@ -70,6 +70,7 @@ private:
 
 	// Scene
 	SceneManager	m_sceneMan;
+	RenderData		m_renderData;
 };
 
 #define ENGINE Engine::GetEngine()

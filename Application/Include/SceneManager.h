@@ -20,7 +20,19 @@
 
 #include "GameObject.h"
 
+#include "Light.h"
+#include <vector>
+
 class Renderer;
+class Camera;
+
+typedef int ShaderID;
+struct RenderData
+{
+	ShaderID phongShader;
+	ShaderID unlitShader;
+	ShaderID texCoordShader;
+};
 
 class SceneManager
 {
@@ -28,18 +40,29 @@ public:
 	SceneManager();
 	~SceneManager();
 
-	void Initialize(Renderer* renderer);
-
+	void Initialize(Renderer* renderer, RenderData rData, Camera* cam);
 	void Update(float dt);
-	void Render() const;
+	void Render(const XMMATRIX& view, const XMMATRIX& proj) ;	// todo: const
 
 private:
-	Renderer* m_renderer;
+	void InitializeBuilding();
+	void InitializeLights();
+
+private:
+	Renderer*	m_renderer;
+	Camera*		m_camera;
+	RenderData	m_renderData;
+
 	GameObject m_floor;
 	GameObject m_wallL;
 	GameObject m_wallR;
 	GameObject m_wallF;
 	GameObject m_ceiling;
+
 	GameObject m_centralObj;
+
+	std::vector<Light> m_lights;
+	void RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const;
+	void RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const;
 };
 

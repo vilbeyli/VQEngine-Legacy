@@ -327,6 +327,7 @@ void Renderer::SetShader(ShaderID id)
 {
 	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
 	m_activeShader = id;
+	m_shaders[id]->VoidBuffers();
 }
 
 void Renderer::Reset()
@@ -384,8 +385,7 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 			if (strcmp(cName, c.name.c_str()) == 0)
 			{
 				found = true;
-				// TODO: figure out why this breaks
-				//if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
+				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
 				{
 					memcpy(c.data, data, c.size);
 					shader->m_cBuffers[i].dirty = true;
@@ -418,6 +418,37 @@ void Renderer::SetConstant3f(const char * cName, const XMFLOAT3 & float3)
 			{
 				found = true;
 				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
+				{
+					memcpy(c.data, data, c.size);
+					shader->m_cBuffers[i].dirty = true;
+					//break;	// ensures write on first occurance
+				}
+			}
+		}
+	}
+	if (!found)
+	{
+		char err[256];
+		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
+		OutputDebugString(err);
+	}
+}
+
+// TODO: this is the same as 4x4. rethink set constant function
+void Renderer::SetConstantStruct(const char * cName, void* data, size_t size)
+{
+	// find data in CPUConstantBuffer array of shader
+	Shader* shader = m_shaders[m_activeShader];
+	bool found = false;
+	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
+	{
+		std::vector<CPUConstant>& cVector = shader->m_constants[i];
+		for (CPUConstant& c : cVector)					// for each constant in a cbuffer
+		{
+			if (strcmp(cName, c.name.c_str()) == 0)		// if name matches
+			{
+				found = true;
+				//if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
 				{
 					memcpy(c.data, data, c.size);
 					shader->m_cBuffers[i].dirty = true;
@@ -493,6 +524,23 @@ void Renderer::Apply()
 				memcpy(bufferPos, c.data, c.size);
 				bufferPos += c.size;
 			}
+
+			// rethink packing;
+			//size_t prevSize = 0;
+			//for (int i = 0; i < cpuConsts.size(); ++i)
+			//{
+			//	CPUConstant& c = cpuConsts[i];
+			//	memcpy(bufferPos, c.data, c.size);
+			//	bufferPos += c.size;
+
+			//	if (i > 0)
+			//	{
+			//		if ((prevSize + c.size) % 16);
+			//	}
+
+			//	prevSize = c.size;
+			//}
+
 			m_deviceContext->Unmap(bufferData, 0);
 
 			switch (cbuf.shdType)

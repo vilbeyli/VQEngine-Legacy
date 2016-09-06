@@ -23,7 +23,7 @@
 #include "SystemDefs.h"
 
 #define CAM_ANGULAR_SPEED_DEG 60.0f
-#define CAM_MOVE_SPEED 10.0f
+#define CAM_MOVE_SPEED 20.0f
 #define DEG2RAD XM_PI / 180.0f
 
 Camera::Camera(Input const* inp)
@@ -62,15 +62,15 @@ void Camera::Update(float dt)
 
 	XMVECTOR up		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-	XMVECTOR pos	= m_transform.GetPosition();
+	XMVECTOR pos	= m_transform.GetPositionV();
 
-	float pitch	= m_transform.GetRotation().m128_f32[0];
-	float yaw	= m_transform.GetRotation().m128_f32[1];
-	float roll	= m_transform.GetRotation().m128_f32[2];	// 0
+	float pitch	= m_transform.GetRotationV().m128_f32[0];
+	float yaw	= m_transform.GetRotationV().m128_f32[1];
+	float roll	= m_transform.GetRotationV().m128_f32[2];	
 	XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
 
 	//transform the lookat and up vector by rotation matrix
-	lookAt	= XMVector3TransformCoord(lookAt, rotationMatrix);
+	lookAt	= XMVector3TransformCoord(lookAt, m_transform.RotationMatrix());
 	up		= XMVector3TransformCoord(up, rotationMatrix);
 
 	//translate the lookat
@@ -81,17 +81,22 @@ void Camera::Update(float dt)
 }
 
 
-XMMATRIX Camera::GetViewMatrix()
+XMFLOAT3 Camera::GetPositionF() const
+{
+	return m_transform.GetPositionF3();
+}
+
+XMMATRIX Camera::GetViewMatrix() const
 {
 	return XMLoadFloat4x4(&m_viewMatrix);
 }
 
-XMMATRIX Camera::GetProjectionMatrix()
+XMMATRIX Camera::GetProjectionMatrix() const
 {
 	return  XMLoadFloat4x4(&m_projectionMatrix);
 }
 
-XMMATRIX Camera::GetOrthoMatrix()
+XMMATRIX Camera::GetOrthoMatrix() const
 {
 	return  XMLoadFloat4x4(&m_orthoMatrix);
 }
@@ -122,9 +127,9 @@ void Camera::Rotate(const float dt)
 
 void Camera::Move(const float dt)
 {
-	float pitch = m_transform.GetRotation().m128_f32[0];
-	float yaw	= m_transform.GetRotation().m128_f32[1];
-	float roll	= m_transform.GetRotation().m128_f32[2];
+	float pitch = m_transform.GetRotationV().m128_f32[0];
+	float yaw	= m_transform.GetRotationV().m128_f32[1];
+	float roll	= m_transform.GetRotationV().m128_f32[2];
 	XMMATRIX MRotation = XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
 
 	XMVECTOR translation = XMVectorSet(0,0,0,0);

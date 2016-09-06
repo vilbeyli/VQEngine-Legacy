@@ -74,6 +74,7 @@ public:
 	void SetCamera(Camera* m_camera);
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
 	void SetConstant3f(const char* cName, const XMFLOAT3& float3);
+	void SetConstantStruct(const char * cName, void* data, size_t size);
 	void SetRasterizerState(int stateID);
 
 	void Begin(const float clearColor[4]);

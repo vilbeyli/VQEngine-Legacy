@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Components/Transform.h"
+#include "../Source/Components/Transform.h"
 #include "Model.h"
 
 class GameObject

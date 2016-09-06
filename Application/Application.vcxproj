@@ -162,13 +162,15 @@
     <ClInclude Include="Include\utils.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Data\Shaders\tex.ps" />
-    <None Include="Data\Shaders\tex.vs" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Renderer\Renderer.vcxproj">
       <Project>{eaf3c9db-a325-40fc-bdb4-7ee2e0756b00}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Data\Shaders\gf.txt" />
+    <Text Include="Data\Shaders\New Text Document (2).txt" />
+    <Text Include="Data\Shaders\New Text Document.txt" />
+    <Text Include="Data\Shaders\newstuff.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

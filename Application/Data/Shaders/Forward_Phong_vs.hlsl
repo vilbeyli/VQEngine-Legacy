@@ -16,35 +16,51 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#pragma once
-
-// Borrowed from Frank Luna's DirectX11 book's GameTimer class
-// https://www.amazon.com/Introduction-3D-Game-Programming-DirectX/dp/1936420228
-class PerfTimer
+cbuffer perFrame
 {
-public:
-	PerfTimer();
-	~PerfTimer();
+	//matrix world;
+	matrix view;
+	matrix	proj;
+}
+cbuffer perModel
+{
+    matrix world;
+}
 
-	float TotalTime() const;
-	float CurrentTime();
-	float DeltaTime() const;
+//cbuffer MatrixBuffer3
+//{
+//    matrix proj;
+//}
 
-	void Reset();
-	void Start();
-	void Stop();
-	void Tick();	
-
-private:
-	double m_secPerCount;
-	double m_dt;
-
-	long m_baseTime;
-	long m_pausedTime;
-	long m_stopTime;
-	long m_prevTime;
-	long m_currTime;
-
-	bool m_stopped;
+struct VSIn
+{
+	float3 position : POSITION;
+	float3 normal	: NORMAL;
+	float2 texCoord : TEXCOORD0;
 };
 
+struct PSIn
+{
+	float4 position : SV_POSITION;
+	float3 worldPos : POSITION;
+	float3 normal	: NORMAL;
+	float2 texCoord : TEXCOORD4;
+};
+
+PSIn VSMain(VSIn In)
+{
+	matrix wvp = mul(proj, mul(view, world));
+	float3x3 normMatrix = 
+	{
+		world._11_12_13,
+		world._21_22_23,
+		world._31_32_33
+	};
+
+	PSIn Out;
+	Out.position = mul(wvp  , float4(In.position, 1));
+	Out.worldPos = mul(world, float4(In.position, 1)).xyz;
+	Out.normal   = mul(normMatrix, In.normal);
+	Out.texCoord = In.texCoord;
+	return Out;
+}

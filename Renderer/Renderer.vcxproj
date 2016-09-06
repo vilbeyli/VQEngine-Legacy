@@ -120,6 +120,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Light.cpp" />
     <ClCompile Include="Source\Model.cpp" />
     <ClCompile Include="Source\BufferObject.cpp" />
     <ClCompile Include="Source\Color.cpp" />
@@ -130,6 +131,7 @@
     <ClCompile Include="Source\Shader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Include\Light.h" />
     <ClInclude Include="Include\Model.h" />
     <ClInclude Include="Include\BufferObject.h" />
     <ClInclude Include="Include\Color.h" />

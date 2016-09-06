@@ -43,11 +43,12 @@ public:
 
 	void Update(float dt);
 
-	XMVECTOR GetPosition();
-	XMVECTOR GetRotation();
-	XMMATRIX GetViewMatrix();
-	XMMATRIX GetProjectionMatrix();
-	XMMATRIX GetOrthoMatrix();
+	XMVECTOR GetPositionV() const;
+	XMFLOAT3 GetPositionF() const;
+	XMVECTOR GetRotation() const;
+	XMMATRIX GetViewMatrix() const;
+	XMMATRIX GetProjectionMatrix() const;
+	XMMATRIX GetOrthoMatrix() const;
 
 	void SetPosition(float x, float y, float z);
 	void Rotate(float yaw, float pitch, const float dt);

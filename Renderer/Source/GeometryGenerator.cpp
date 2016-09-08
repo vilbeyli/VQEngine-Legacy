@@ -331,8 +331,9 @@ BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsign
 		for (UINT j = 0; j <= sliceCount; ++j)	// for each pice(slice) in horizontal slice
 		{
 			Vertex vertex;
-			float x = r * cosf(j*dTheta);
-			float z = r * sinf(j*dTheta);
+			float theta = j*dTheta;
+			float x = r * cosf(theta);
+			float z = r * sinf(theta);
 			vertex.position = XMFLOAT3(x, y, z);
 			{
 				float u = (float)j / sliceCount;
@@ -361,13 +362,18 @@ BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsign
 			// dz/dv = (r0-r1)*sin(t)
 
 			// TangentU us unit length.
-			//vertex.tangent = XMFLOAT3(-s, 0.0f, c);
+			//vertex.tangent = XMFLOAT3(-z, 0.0f, x);
 			//float dr = bottomRadius - topRadius;
-			//XMFLOAT3 bitangent(dr*c, -height, dr*s);
+			//XMFLOAT3 bitangent(dr*x, -, dr*z);
 			//XMVECTOR T = XMLoadFloat3(&vertex.tangent);
 			//XMVECTOR B = XMLoadFloat3(&bitangent);
 			//XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
 			//XMStoreFloat3(&vertex.normal, N);
+			XMVECTOR N = XMVectorSet(0, 1, 0, 1);
+			XMVECTOR ROT = XMQuaternionRotationRollPitchYaw(0.0f, XM_PI-theta, XM_PIDIV2-phi);
+			N = XMVector3Rotate(N, ROT);
+
+			XMStoreFloat3(&vertex.normal, N);
 			Vertices.push_back(vertex);
 		}
 	}

@@ -326,7 +326,8 @@ void BaseSystem::InitRawInputDevices()
 					deviceName.assign(deviceNameData.begin(), deviceNameData.end());
 
 					char info[1024];
-					sprintf_s(info, "  Name=%s\n", deviceName.c_str());
+					std::string ndeviceName(deviceName.begin(), deviceName.end());
+					sprintf_s(info, "  Name=%s\n", ndeviceName.c_str());
 					OutputDebugString(info);
 				}
 			}
@@ -346,7 +347,7 @@ void BaseSystem::InitRawInputDevices()
 					deviceInfo.mouse.dwId,
 					deviceInfo.mouse.dwNumberOfButtons,
 					deviceInfo.mouse.dwSampleRate,
-					deviceInfo.mouse.fHasHorizontalWheel ? L"1" : L"0");
+					deviceInfo.mouse.fHasHorizontalWheel ? "1" : "0");
 				OutputDebugString(info);
 			}
 		}

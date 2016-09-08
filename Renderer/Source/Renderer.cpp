@@ -24,10 +24,9 @@
 #include "SystemDefs.h"
 #include "utils.h"
 #include "Camera.h"
+#include "DirectXTex.h"
 
 #include <mutex>
-
-
 #include <cassert>
 
 #define SHADER_HOTSWAP 0
@@ -313,7 +312,7 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 							 const std::string& fileRoot,
 							 const std::vector<InputLayout>& layouts)
 {
-	// example params: "tex", "Shader/"
+	// example params: "TextureCoord", "Data/Shaders/"
 	std::string path = fileRoot + shdFileName;
 
 	Shader* shd = new Shader(shdFileName);
@@ -321,6 +320,26 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 	m_shaders.push_back(shd);
 	shd->AssignID(static_cast<int>(m_shaders.size()) - 1);
 	return shd->ID();
+}
+
+TextureID Renderer::AddTexture(const std::string& textureFileName, const std::string& fileRoot)
+{
+	// example params: "bricks_d.png", "Data/Textures/"
+	std::string path = fileRoot + textureFileName;
+	std::wstring wpath(path.begin(), path.end());
+
+	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
+	if (FAILED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
+	{
+		OutputDebugString("Error loading texture file");
+		return -1;
+	}
+	else
+	{
+		//m_textures.push_back(img);
+		return static_cast<int>(m_textures.size()-1);
+	}
+
 }
 
 void Renderer::SetShader(ShaderID id)
@@ -351,6 +370,8 @@ void Renderer::SetBufferObj(int BufferID)
 {
 	m_activeBuffer = BufferID;
 }
+
+
 
 void Renderer::SetCamera(Camera* cam)
 {
@@ -434,8 +455,39 @@ void Renderer::SetConstant3f(const char * cName, const XMFLOAT3 & float3)
 	}
 }
 
+void Renderer::SetConstant1f(const char* cName, const float f)
+{
+	const float* data = &f;
+	// find data in CPUConstantBuffer array of shader
+	Shader* shader = m_shaders[m_activeShader];
+	bool found = false;
+	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
+	{
+		std::vector<CPUConstant>& cVector = shader->m_constants[i];
+		for (CPUConstant& c : cVector)					// for each constant in a cbuffer
+		{
+			if (strcmp(cName, c.name.c_str()) == 0)		// if name matches
+			{
+				found = true;
+				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
+				{
+					memcpy(c.data, data, c.size);
+					shader->m_cBuffers[i].dirty = true;
+					//break;	// ensures write on first occurance
+				}
+			}
+		}
+	}
+	if (!found)
+	{
+		char err[256];
+		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
+		OutputDebugString(err);
+	}
+}
+
 // TODO: this is the same as 4x4. rethink set constant function
-void Renderer::SetConstantStruct(const char * cName, void* data, size_t size)
+void Renderer::SetConstantStruct(const char * cName, void* data)
 {
 	// find data in CPUConstantBuffer array of shader
 	Shader* shader = m_shaders[m_activeShader];

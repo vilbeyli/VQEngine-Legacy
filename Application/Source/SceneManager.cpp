@@ -21,6 +21,14 @@
 #include "Input.h"
 #include "Renderer.h"
 #include "Camera.h"
+#include "utils.h"
+
+//#include <algorithm>
+//#include <random>
+
+#define MAX_LIGHTS 50
+#define RAND_LIGHT_COUNT 30
+#define DISCO_PERIOD 0.09
 
 SceneManager::SceneManager()
 {}
@@ -39,57 +47,13 @@ void SceneManager::Initialize(Renderer * renderer, RenderData rData, Camera* cam
 	m_centralObj.m_model.m_mesh = MESH_TYPE::GRID;
 }
 
-void SceneManager::Update(float dt)
-{
-	XMVECTOR rot = XMVectorZero();
-	XMVECTOR tr = XMVectorZero();
-	if (ENGINE->INP()->IsKeyDown('O')) rot += XMVectorSet(45.0f, 0.0f, 0.0f, 1.0f);
-	if (ENGINE->INP()->IsKeyDown('P')) rot += XMVectorSet(0.0f, 45.0f, 0.0f, 1.0f);
-	if (ENGINE->INP()->IsKeyDown('U')) rot += XMVectorSet(0.0f, 0.0f, 45.0f, 1.0f);
-
-	if (ENGINE->INP()->IsKeyDown('L')) tr += XMVectorSet(45.0f, 0.0f, 0.0f, 1.0f);
-	if (ENGINE->INP()->IsKeyDown('J')) tr += XMVectorSet(-45.0f, 0.0f, 0.0f, 1.0f);
-	if (ENGINE->INP()->IsKeyDown('K')) tr += XMVectorSet(0.0f, 0.0f, -45.0f, 1.0f);
-	if (ENGINE->INP()->IsKeyDown('I')) tr += XMVectorSet(0.0f, 0.0f, +45.0f, 1.0f);
-	m_centralObj.m_transform.Rotate(rot * dt * 0.1f);
-	m_lights[0].tf.Translate(tr * dt * 0.2f);
-}
-
-void SceneManager::Render(const XMMATRIX& view, const XMMATRIX& proj) 
-{
-	RenderLights(view, proj);
-	RenderBuilding(view, proj);
-
-	// central obj
-	m_renderer->SetShader(m_renderData.texCoordShader);
-	//m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
-	m_renderer->SetConstant4x4f("view", view);
-	m_renderer->SetConstant4x4f("proj", proj);
-
-	m_renderer->SetBufferObj(MESH_TYPE::GRID);
-	m_centralObj.m_transform.SetScale(XMFLOAT3(3 * 4, 5 * 4, 2 * 4));
-	XMMATRIX world = m_centralObj.m_transform.WorldTransformationMatrix();
-	m_renderer->SetConstant4x4f("world", world);
-	m_renderer->Apply();
-	m_renderer->DrawIndexed();
-
-	m_renderer->SetBufferObj(MESH_TYPE::SPHERE);
-	m_centralObj.m_transform.Translate(XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
-	m_centralObj.m_transform.SetScale(XMFLOAT3(1, 1, 1));
-	world = m_centralObj.m_transform.WorldTransformationMatrix();
-	m_renderer->SetConstant4x4f("world", world);
-	m_renderer->Apply();
-	m_renderer->DrawIndexed();
-	m_centralObj.m_transform.Translate(XMVectorSet(-10.0f, 0.0f, 0.0f, 0.0f));
-}
-
 void SceneManager::InitializeBuilding()
 {
 	const float floorWidth = 19.0f;
 	const float floorDepth = 30.0f;
 	const float wallHieght = 15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
-	
-	// FLOOR
+
+									// FLOOR
 	{
 		Transform& tf = m_floor.m_transform;
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
@@ -135,14 +99,142 @@ void SceneManager::InitializeBuilding()
 
 void SceneManager::InitializeLights()
 {
-	Light l;
-	l.tf.SetPosition(-8.0f, 10.0f, 0);
-	l.tf.SetScaleUniform(0.1f);
-	l.model.m_material.color = Color::orange;
-	l.color_ = Color::orange;
-	l.SetLightRange(50);
-	m_lights.push_back(l);
+	{
+		Light l;
+		l.tf.SetPosition(-8.0f, 10.0f, 0);
+		l.tf.SetScaleUniform(0.1f);
+		l.model.m_material.color = Color::orange;
+		l.color_ = Color::orange;
+		l.SetLightRange(50);
+		m_lights.push_back(l);
+	}
+	{
+		Light l;
+		l.tf.SetPosition(8.0f, -8.0f, 17.0f);
+		l.tf.SetScaleUniform(0.1f);
+		l.model.m_material.color = Color::white;
+		l.color_ = Color::white;
+		l.SetLightRange(30);
+		m_lights.push_back(l);
+	}
+
+	for (size_t i = 0; i < RAND_LIGHT_COUNT; i++)
+	{
+		unsigned rndIndex = rand() % Color::Palette().size();
+		Color rndColor = Color::Palette()[rndIndex];
+		Light l;
+		float x = RandF(-20.0f, 20.0f);
+		float y = RandF(-20.0f, 20.0f);
+		float z = RandF(-10.0f, 20.0f);
+		l.tf.SetPosition(x, y, z);
+		l.tf.SetScaleUniform(0.1f);
+		l.model.m_material.color = l.color_ = rndColor;
+		l.SetLightRange(5);
+		m_lights.push_back(l);
+	}
 }
+
+void SceneManager::Update(float dt)
+{
+	XMVECTOR rot = XMVectorZero();
+	XMVECTOR tr = XMVectorZero();
+	if (ENGINE->INP()->IsKeyDown('O')) rot += XMVectorSet(45.0f, 0.0f, 0.0f, 1.0f);
+	if (ENGINE->INP()->IsKeyDown('P')) rot += XMVectorSet(0.0f, 45.0f, 0.0f, 1.0f);
+	if (ENGINE->INP()->IsKeyDown('U')) rot += XMVectorSet(0.0f, 0.0f, 45.0f, 1.0f);
+
+	if (ENGINE->INP()->IsKeyDown('L')) tr += XMVectorSet(45.0f, 0.0f, 0.0f, 1.0f);
+	if (ENGINE->INP()->IsKeyDown('J')) tr += XMVectorSet(-45.0f, 0.0f, 0.0f, 1.0f);
+	if (ENGINE->INP()->IsKeyDown('K')) tr += XMVectorSet(0.0f, 0.0f, -45.0f, 1.0f);
+	if (ENGINE->INP()->IsKeyDown('I')) tr += XMVectorSet(0.0f, 0.0f, +45.0f, 1.0f);
+	m_centralObj.m_transform.Rotate(rot * dt * 0.1f);
+	m_lights[0].tf.Translate(tr * dt * 0.2f);
+
+	static double accumulator = 0;
+	accumulator += dt;
+	if (accumulator > DISCO_PERIOD)
+	{
+		// shuffling won't rearrange data, just the means of indexing.
+		//char info[256];
+		//sprintf_s(info, "Shuffle(L1:(%f, %f, %f)\tL2:(%f, %f, %f)\n",
+		//	m_lights[0].tf.GetPositionF3().x,
+		//	m_lights[0].tf.GetPositionF3().y,
+		//	m_lights[0].tf.GetPositionF3().z,
+		//	m_lights[1].tf.GetPositionF3().x,
+		//	m_lights[1].tf.GetPositionF3().y,
+		//	m_lights[1].tf.GetPositionF3().z);
+		//OutputDebugString(info);
+		//static auto engine = std::default_random_engine{};
+		//std::shuffle(std::begin(m_lights), std::end(m_lights), engine);
+
+		// randomize all lights
+		//for (Light& l : m_lights)
+		//{
+		//	size_t i = rand() % Color::Palette().size();
+		//	Color c = Color::Color::Palette()[i];
+		//	l.color_ = c;
+		//	l.model.m_material.color = c;
+		//}
+
+		// randomize all lights except 1 and 2
+		for (int j = 2; j<m_lights.size(); ++j)
+		{
+			Light& l = m_lights[j];
+			size_t i = rand() % Color::Palette().size();
+			Color c = Color::Color::Palette()[i];
+			l.color_ = c;
+			l.model.m_material.color = c;
+		}
+
+		accumulator = 0;
+	}
+}
+
+void SceneManager::Render(const XMMATRIX& view, const XMMATRIX& proj) 
+{
+	RenderLights(view, proj);
+	RenderBuilding(view, proj);
+
+	// central obj
+	m_renderer->SetBufferObj(MESH_TYPE::GRID);
+	m_renderer->SetShader(m_renderData.texCoordShader);
+	m_renderer->SetConstant4x4f("view", view);
+	m_renderer->SetConstant4x4f("proj", proj);
+
+	m_centralObj.m_transform.SetScale(XMFLOAT3(3 * 4, 5 * 4, 2 * 4));
+	XMMATRIX world = m_centralObj.m_transform.WorldTransformationMatrix();
+	m_renderer->SetConstant4x4f("world", world);
+	m_renderer->Apply();
+	m_renderer->DrawIndexed();
+
+
+	m_renderer->SetBufferObj(MESH_TYPE::SPHERE);
+	m_centralObj.m_transform.SetScale(XMFLOAT3(1, 1, 1));
+
+	m_renderer->SetShader(m_renderData.normalShader);
+	m_renderer->SetConstant4x4f("view", view);
+	m_renderer->SetConstant4x4f("proj", proj);
+
+	m_centralObj.m_transform.Translate(XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
+	world = m_centralObj.m_transform.WorldTransformationMatrix();
+	m_renderer->SetConstant4x4f("world", world);
+	m_renderer->Apply();
+	m_renderer->DrawIndexed();
+
+	m_renderer->SetShader(m_renderData.texCoordShader);
+	m_renderer->SetConstant4x4f("view", view);
+	m_renderer->SetConstant4x4f("proj", proj);
+
+	m_centralObj.m_transform.Translate(XMVectorSet(-20.0f, 0.0f, 0.0f, 0.0f));
+	world = m_centralObj.m_transform.WorldTransformationMatrix();
+	m_renderer->SetConstant4x4f("world", world);
+	m_renderer->Apply();
+	m_renderer->DrawIndexed();
+	m_centralObj.m_transform.Translate(XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
+
+
+}
+
+
 
 void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const
 {
@@ -171,14 +263,29 @@ void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) co
 	//OutputDebugString(info);
 
 	m_renderer->SetShader(m_renderData.phongShader); 
+	//m_renderer->SetShader(m_renderData.normalShader); 
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
 	m_renderer->SetBufferObj(MESH_TYPE::CUBE);
 
-	ShaderLight sl = m_lights[0].ShaderLightStruct();
-	m_renderer->SetConstantStruct("light", static_cast<void*>(&sl), sizeof(sl));
 	m_renderer->SetConstant3f("cameraPos", camPos_real);
-	//m_renderer->SetConstant3f("cameraPos", camPos);
+
+	// send light information
+	std::vector<ShaderLight> lights;
+	const ShaderLight defaultLight = ShaderLight();
+	for (const Light& l : m_lights)
+	{
+		lights.push_back(l.ShaderLightStruct());
+	}
+	while (lights.size() < MAX_LIGHTS) lights.push_back(defaultLight);
+	m_renderer->SetConstant1f("lightCount", static_cast<float>(m_lights.size()));
+	m_renderer->SetConstantStruct("lights", static_cast<void*>(lights.data()));
+
+#ifdef _DEBUG
+	if (lights.size() > MAX_LIGHTS)
+		OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
+#endif
+
 	{
 		XMMATRIX world = m_floor.m_transform.WorldTransformationMatrix();
 		XMFLOAT3 color = m_floor.m_model.m_material.color.Value();

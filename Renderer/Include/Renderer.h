@@ -25,6 +25,8 @@
 
 #include "Mesh.h"
 
+#include <memory>
+
 // forward declarations
 class D3DManager;
 struct ID3D11Device;
@@ -34,10 +36,15 @@ class BufferObject;
 class Camera;
 class Shader;
 
+namespace DirectX
+{
+	class ScratchImage;
+}
 
 // typedefs
 typedef int ShaderID;
 typedef int BufferID;
+typedef int TextureID;
 typedef int RasterizerStateID;
 typedef ID3D11RasterizerState RasterizerState;
 
@@ -68,13 +75,15 @@ public:
 
 	// shader interface
 	ShaderID	AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts);
+	TextureID	AddTexture(const std::string& shdFileName, const std::string& fileRoot);
 
 	// state management
 	void SetShader(ShaderID);
 	void SetCamera(Camera* m_camera);
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
 	void SetConstant3f(const char* cName, const XMFLOAT3& float3);
-	void SetConstantStruct(const char * cName, void* data, size_t size);
+	void SetConstant1f(const char* cName, const float data);
+	void SetConstantStruct(const char * cName, void* data);
 	void SetRasterizerState(int stateID);
 
 	void Begin(const float clearColor[4]);
@@ -99,6 +108,8 @@ public:
 	static const bool VSYNC = false;	// insane input lag; turned off
 
 private:
+	typedef std::vector<DirectX::ScratchImage*> TextureVector;
+
 	D3DManager*						m_Direct3D;
 	HWND							m_hWnd;
 	ID3D11Device*					m_device;
@@ -112,6 +123,7 @@ private:
 
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
+	TextureVector					m_textures;
 
 	// state variables
 	ShaderID						m_activeShader;

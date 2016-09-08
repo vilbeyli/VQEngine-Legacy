@@ -111,7 +111,7 @@ float PerfTimer::TotalTime() const
 	return static_cast<float>(timeLength * m_secPerCount);
 }
 
-float PerfTimer::CurrentTime()
+double PerfTimer::CurrentTime()
 {
 	__int64 currTime;
 	QueryPerformanceCounter((LARGE_INTEGER*)&currTime);

@@ -42,11 +42,11 @@ public:
 
 public:
 	static const Color black, white, red, green, blue, magenta, yellow, cyan, gray, orange, purple;
-	static std::vector<Color> colorPalette;
 private:
 	//typedef std::map<const std::string, Color> ColorMap;
 	//static ColorMap colorRefTable;//created for easier deserialization in Mesh
-
+	
+	static std::vector<Color> colorPalette;
 	XMFLOAT3 value;
 };
 

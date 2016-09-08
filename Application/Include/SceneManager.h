@@ -32,6 +32,8 @@ struct RenderData
 	ShaderID phongShader;
 	ShaderID unlitShader;
 	ShaderID texCoordShader;
+	ShaderID normalShader;
+	TextureID exampleTex;
 };
 
 class SceneManager

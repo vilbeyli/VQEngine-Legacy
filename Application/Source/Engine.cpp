@@ -62,15 +62,18 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 
 bool Engine::Load()
 {
-	const char* shaderRoot = "Data/Shaders/";
+	const char* shaderRoot	= "Data/Shaders/";
+	const char* textureRoot	= "Data/Textures/";
 	std::vector<InputLayout> layout = {
 		{ "POSITION",	FLOAT32_3 },
 		{ "NORMAL",		FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 }
 	};
 	m_renderData.unlitShader	= m_renderer->AddShader("UnlitTextureColor", shaderRoot, layout);
-	m_renderData.texCoordShader	= m_renderer->AddShader("TextureCoord", shaderRoot, layout);
+	m_renderData.texCoordShader = m_renderer->AddShader("TextureCoord", shaderRoot, layout);
+	m_renderData.normalShader	= m_renderer->AddShader("Normal", shaderRoot, layout);
 	m_renderData.phongShader	= m_renderer->AddShader("Forward_Phong", shaderRoot, layout);
+	m_renderData.exampleTex		= m_renderer->AddTexture("bricks_d.png", textureRoot);
 	m_sceneMan.Initialize(m_renderer, m_renderData, m_camera);
 
 	m_timer.Reset();

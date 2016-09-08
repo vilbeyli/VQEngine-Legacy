@@ -27,7 +27,7 @@ public:
 	~PerfTimer();
 
 	float TotalTime() const;
-	float CurrentTime();
+	double CurrentTime();
 	float DeltaTime() const;
 
 	void Reset();

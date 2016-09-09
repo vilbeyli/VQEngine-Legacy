@@ -6,9 +6,9 @@ A DirectX11 Windows renderer demo.
  
 ## Controls
 
- - **WASD*:	Camera Movement
- - **IJKL*:	Central Object Movement
- - **UOP*:	Central Object Rotation 
+ - **WASD**:	Camera Movement
+ - **IJKL**:	Central Object Movement
+ - **UOP**:	Central Object Rotation 
    
  - **F1**:	TexCoord Shader
  - **F2**:	Normals Shader

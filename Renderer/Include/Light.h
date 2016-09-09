@@ -28,7 +28,10 @@ struct ShaderLight
 	XMFLOAT3 position;
 	float pad1;
 	XMFLOAT3 color;
-	float pad2;
+	float brightness;
+
+	XMFLOAT3 spotDir;
+	float halfAngle;
 
 	XMFLOAT2 attenuation;
 	float range;

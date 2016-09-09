@@ -50,11 +50,22 @@ private:
 	void InitializeBuilding();
 	void InitializeLights();
 
+	void RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const;
+	void RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const;
+	void RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj); // todo: const
+
+	void SendLightData() const;
 private:
 	Renderer*	m_renderer;
 	Camera*		m_camera;
-	RenderData	m_renderData;
 
+	// render data
+	RenderData	m_renderData;
+	ShaderID	m_selectedShader;
+	bool		m_gammaCorrection;
+	std::vector<Light> m_lights;
+
+	// scene variables
 	GameObject m_floor;
 	GameObject m_wallL;
 	GameObject m_wallR;
@@ -62,9 +73,5 @@ private:
 	GameObject m_ceiling;
 
 	GameObject m_centralObj;
-
-	std::vector<Light> m_lights;
-	void RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const;
-	void RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const;
 };
 

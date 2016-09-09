@@ -64,14 +64,9 @@ void Camera::Update(float dt)
 	XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
 	XMVECTOR pos	= m_transform.GetPositionV();
 
-	float pitch	= m_transform.GetRotationV().m128_f32[0];
-	float yaw	= m_transform.GetRotationV().m128_f32[1];
-	float roll	= m_transform.GetRotationV().m128_f32[2];	
-	XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
-
 	//transform the lookat and up vector by rotation matrix
 	lookAt	= XMVector3TransformCoord(lookAt, m_transform.RotationMatrix());
-	up		= XMVector3TransformCoord(up, rotationMatrix);
+	up		= XMVector3TransformCoord(up,	  m_transform.RotationMatrix());
 
 	//translate the lookat
 	lookAt = pos + lookAt;

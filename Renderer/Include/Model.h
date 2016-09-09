@@ -36,6 +36,7 @@ struct Material
 {
 	Color color;
 	float alpha;	// embed it in color maybe?
+	float shininess;
 
 	Texture diffuseMap;
 	Texture normalMap;
@@ -44,7 +45,7 @@ struct Material
 class Model
 {
 public:
-	Model();
+	Model() : m_mesh(-1) {}
 	~Model();
 
 public:

@@ -368,6 +368,7 @@ void Renderer::SetViewport(const unsigned width, const unsigned height)
 
 void Renderer::SetBufferObj(int BufferID)
 {
+	assert(BufferID > 0);
 	m_activeBuffer = BufferID;
 }
 
@@ -415,12 +416,14 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 			}
 		}
 	}
+
+#ifdef DEBUG_LOG
 	if (!found)
 	{
 		std::string err("Error: Constant not found: "); err += cName; err += "\n";
 		OutputDebugString(err.c_str());
 	}
-
+#endif
 }
 
 // TODO: this is the same as 4x4. rethink set constant function
@@ -447,12 +450,14 @@ void Renderer::SetConstant3f(const char * cName, const XMFLOAT3 & float3)
 			}
 		}
 	}
+#ifdef DEBUG_LOG
 	if (!found)
 	{
 		char err[256];
 		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
+#endif
 }
 
 void Renderer::SetConstant1f(const char* cName, const float f)
@@ -478,12 +483,15 @@ void Renderer::SetConstant1f(const char* cName, const float f)
 			}
 		}
 	}
+
+#ifdef DEBUG_LOG
 	if (!found)
 	{
 		char err[256];
 		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
+#endif
 }
 
 // TODO: this is the same as 4x4. rethink set constant function
@@ -509,12 +517,15 @@ void Renderer::SetConstantStruct(const char * cName, void* data)
 			}
 		}
 	}
+
+#ifdef DEBUG_LOG
 	if (!found)
 	{
 		char err[256];
 		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
+#endif
 }
 
 

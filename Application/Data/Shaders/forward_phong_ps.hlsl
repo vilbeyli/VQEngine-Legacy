@@ -25,33 +25,49 @@ struct PSIn
 };
 
 // defines maximum number of dynamic lights
-#define LIGHT_COUNT 50  // update CPU define too (SceneManager.cpp)
+#define LIGHT_COUNT 20  // don't forget to update CPU define too (SceneManager.cpp)
+#define SPOT_COUNT 10   // ^
 struct Light
 {
+    // COMMON
 	float3 position;
+    float pad1;
 	float3 color;
+    float brightness;
 
-	// spotlight
+	// SPOTLIGHT
+    float3 spotDir;
+    float halfAngle;
 
-	//point
+	// POINT LIGHT
 	float2 attenuation;
 	float range;
+    float pad3;
 };
 
 cbuffer renderConsts
 {
-	//float gammaCorrection;
+	float gammaCorrection;
 	float3 cameraPos;
-	float lightCount;	// alignment
-	Light lights[LIGHT_COUNT];
+
+	float lightCount;
+    float spotCount;
+    float2 padding;
+	
+    Light lights[LIGHT_COUNT];
+    Light spots[SPOT_COUNT];
 //	float ambient;
 };
 
 cbuffer perObject
 {
 	float3 color;
+    float shininess;
+
+
 };
 
+// point light attenuation equation
 float Attenuation(float2 coeffs, float dist)
 {
 	return 1.0f / (
@@ -73,64 +89,58 @@ float Attenuation(float2 coeffs, float dist)
 	//);
 }
 
+// spotlight intensity calculataion
+float Intensity(Light l, float3 worldPos)
+{   // TODO: figure out halfAngle behavior
+    float3 L = normalize(l.position - worldPos);
+    float3 spotDir = normalize(-l.spotDir);
+    float theta = dot(L, spotDir);
+    float softAngle = l.halfAngle * 1.25f;
+    float softRegion = softAngle - l.halfAngle; 
+    return clamp((theta - softAngle) / softRegion, 0.0f, 1.0f);
+}
+
+#define ATTENUATION_TEST
+
 // returns diffuse and specular light
 float3 Phong(Light light, float3 N, float3 V, float3 worldPos)
 {
-    // material properties
-    const float shininess = 40.0f;
-
     float3 L = normalize(light.position - worldPos);
     float3 R = normalize(2 * N * dot(N, L) - L);
-    
-    float diffuse = max(0.0f, dot(N, L));   // lights
-    float3 Id = color * diffuse;
-	float3 Is = light.color * pow(max(dot(R, V), 0.0f), shininess) * diffuse;
+	//float3 R = normalize(2*N*max(dot(N, L), 0.0f) - L);
+	//if (dot(R,L) < -0.99f)
+	//	R = float3(0, 0, 0);
 
-	// check range and compute attenuation
-	float dist = length(light.position - worldPos);
-	if (dist >= light.range)
-	{
-		Id = float3(0, 0, 0);
-	}
-	else
-	{
-		Id *= Attenuation(light.attenuation, dist) * light.color;
-	}
+    float diffuse = max(0.0f, dot(N, L));   // lights
+    float3 Id = light.color * color * diffuse;
+    float3 Is = light.color * pow(max(dot(R, V), 0.0f), shininess) * diffuse;
+	//float3 Is = light.color * pow(max(dot(R, V), 0.0f), 240) ;
 
     return Id + Is;
 }
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	// gamma correction
-	//bool gammaCorrect = gammaCorrection > 0.99f;
-	float gamma = 1.0/2.2;
-
+	// surface parameters
     float3 N = normalize(In.normal);
     float3 V = normalize(cameraPos - In.worldPos);
-	//float3 R = normalize(2*N*max(dot(N, L), 0.0f) - L);
-	//if (dot(R,L) < -0.99f)
-	//	R = float3(0, 0, 0);
-
-
-	// lighting parameters
 	const float ambient = 0.005f;
 
-	//float3 color = float3(1, 1, 1);
-	float3 Ia = color * ambient;
-    float3 IdIs = float3(0.0f, 0.0f, 0.0f);
+	// illumination
+	float3 Ia = color * ambient;                // ambient
+    float3 IdIs = float3(0.0f, 0.0f, 0.0f);     // diffuse & specular
+    for (int i = 0; i < lightCount; ++i)    // POINT Lights
+        IdIs += Phong(lights[i], N, V, In.worldPos) * Attenuation(lights[i].attenuation, length(lights[i].position - In.worldPos));
 
-    for (int i = 0; i < lightCount; ++i)
-    {
-        IdIs += Phong(lights[i], N, V, In.worldPos);
-    }
+    for (int j = 0; j < spotCount; ++j)     // SPOT Lights
+        IdIs += Phong(spots[j], N, V, In.worldPos) * Intensity(spots[j], In.worldPos);
 
-	// lighting
-        float4 outColor = float4(Ia + IdIs, 1);
-	//float4 outColor = float4(N, 1);
 
-	//if(gammaCorrect)
-		return pow(outColor, float4(gamma,gamma,gamma,1.0f));
-	//else
-	//	return outColor;
+    float4 outColor = float4(Ia + IdIs, 1);
+    
+    // gamma correction
+    const bool gammaCorrect = gammaCorrection > 0.99f;
+    const float gamma = 1.0 / 2.2;
+	if(gammaCorrect)	return pow(outColor, float4(gamma,gamma,gamma,1.0f));
+	else        		return outColor;
 }

@@ -54,7 +54,7 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 
 	m_camera->SetOthoMatrix(m_renderer->WindowWidth(), m_renderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
 	m_camera->SetProjectionMatrix((float)XM_PIDIV4, m_renderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
-	m_camera->SetPosition(0, 1, -30);
+	m_camera->SetPosition(0, 0, -40);
 	m_renderer->SetCamera(m_camera);
 
 	return true;

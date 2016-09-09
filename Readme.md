@@ -20,3 +20,7 @@ A DirectX11 Windows renderer demo.
  - *F9*:	Toggle Gamma Correction
 
  - *ESC*:	Exit App
+ 
+ ## Screenshot
+ 
+ ![](Screenshots/spot.PNG)

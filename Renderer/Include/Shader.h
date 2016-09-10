@@ -23,6 +23,7 @@
 #include <d3dcompiler.h>
 #include <string>
 #include <vector>
+#include <queue>
 
 using namespace DirectX;
 
@@ -86,6 +87,25 @@ struct CBuffer
 };
 //-------------------------------------------------------------
 
+// SHADER RESOURCE MANAGEMENT
+//-------------------------------------------------------------
+struct ShaderTexture
+{
+	std::string name;
+	unsigned bufferSlot;
+	ShaderType shdType;
+};
+
+
+struct ShaderSampler
+{
+	std::string name;
+	unsigned bufferSlot;
+	ShaderType shdType;
+};
+
+//-------------------------------------------------------------
+
 // typedefs
 typedef int ShaderID;
 
@@ -127,7 +147,8 @@ private:
 
 	std::vector<CBuffer>					m_cBuffers;
 	std::vector<std::vector<CPUConstant>>	m_constants;
-
+	std::vector<ShaderTexture>				m_textures;
+	std::vector<ShaderSampler>				m_samplers;
 
 	std::vector<cBufferLayout>	m_cBufferLayouts;
 

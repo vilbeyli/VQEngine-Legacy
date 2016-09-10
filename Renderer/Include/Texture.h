@@ -18,36 +18,28 @@
 
 #pragma once
 
-#include <DirectXMath.h>
+#include <string>
+#include <d3d11.h>
 
-#include <map>
-#include <vector>
+typedef int TextureID;
 
-using namespace DirectX;
-
-class Color
+class Texture
 {
 public:
-	Color();
-	~Color();
-	Color(const XMFLOAT3);
-	Color(float r, float g, float b);
-	Color& operator=(const Color&);
-	Color& operator=(const XMFLOAT3&);
+	Texture();
+	~Texture();
 
-	XMFLOAT3 Value() const { return value; }
-	static const std::vector<Color> Palette();
+	std::string name;
+	TextureID id;
 
-	//static Color GetColorByName(std::string);
-	//static std::string GetNameByColor(Color c);
+	// shader resource view does 2 things
+	// - tell d3d how the resource will be used: at what stage if the pipeline it will be bound etc.
+	// - tell if the resource format was specified as typeless at creation time, then we must specify
+	//   the type right before binding by reinterpret casting.
+	// note: typed resources are optimized for access. use typeless if you really need.
+	ID3D11ShaderResourceView* srv;
 
-public:
-	static const Color black, white, red, green, blue, magenta, yellow, cyan, gray, orange, purple;
-private:
-	//typedef std::map<const std::string, Color> ColorMap;
-	//static ColorMap colorRefTable;//created for easier deserialization in Mesh
-	
-	static std::vector<Color> colorPalette;
-	XMFLOAT3 value;
+	unsigned width;
+	unsigned height;
 };
 

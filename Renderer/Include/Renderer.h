@@ -20,6 +20,7 @@
 #include <windows.h>
 #include "GeometryGenerator.h"
 #include "Shader.h"
+#include "Texture.h"
 //#include <string>
 //#include <vector>
 
@@ -57,6 +58,12 @@ enum RASTERIZER_STATE
 	RS_COUNT
 };
 
+struct TextureSetCommand
+{
+	TextureID texID;
+	ShaderTexture shdTex;
+};
+
 class Renderer
 {
 public:
@@ -73,28 +80,28 @@ public:
 	void EnableAlphaBlending(bool enable);
 	void EnableZBuffer(bool enable);
 
-	// shader interface
+	// resource interface
 	ShaderID	AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts);
 	TextureID	AddTexture(const std::string& shdFileName, const std::string& fileRoot);
 
 	// state management
-	void SetShader(ShaderID);
+	void SetViewport(const unsigned width, const unsigned height);
 	void SetCamera(Camera* m_camera);
+	void SetShader(ShaderID);
+	void SetBufferObj(int BufferID);
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
 	void SetConstant3f(const char* cName, const XMFLOAT3& float3);
 	void SetConstant1f(const char* cName, const float data);
 	void SetConstantStruct(const char * cName, void* data);
+	void SetTexture(const char* texName, TextureID tex);
 	void SetRasterizerState(int stateID);
 
 	void Begin(const float clearColor[4]);
 	void Reset();
 	void Apply();
-	void DrawIndexed();
 	void End();
+	void DrawIndexed();
 	void PollShaderFiles();
-
-	void SetViewport(const unsigned width, const unsigned height);
-	void SetBufferObj(int BufferID);
 private:
 
 	void GeneratePrimitives();
@@ -108,8 +115,6 @@ public:
 	static const bool VSYNC = false;	// insane input lag; turned off
 
 private:
-	typedef std::vector<DirectX::ScratchImage*> TextureVector;
-
 	D3DManager*						m_Direct3D;
 	HWND							m_hWnd;
 	ID3D11Device*					m_device;
@@ -123,7 +128,9 @@ private:
 
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
-	TextureVector					m_textures;
+	std::vector<Texture>			m_textures;
+
+	std::queue<TextureSetCommand>	m_texSetCommands;
 
 	// state variables
 	ShaderID						m_activeShader;

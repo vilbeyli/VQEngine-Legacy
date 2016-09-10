@@ -30,7 +30,17 @@ cbuffer renderConsts
 
 cbuffer perObject
 {
-	float3 color;
+	float3 diffuse;
+    float isDiffuseMap;
+};
+
+Texture2D gDiffuseMap;
+SamplerState samAnisotropic
+{
+    Filter = ANISOTROPIC;
+    MaxAnisotropy = 4;
+    AddressU = WRAP;
+    AddressV = WRAP;
 };
 
 float4 PSMain(PSIn In) : SV_TARGET
@@ -41,19 +51,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 
 	float2 uv = In.texCoord;
-	//float4 color = float4(0.2,0.4,0.8,1);	
-	//float4 color = float4(1, 0.5, 0.5, 1);
-	//float4 color = float4(0.1, 0.1, 0.1, 1);
-
-    // texcoord
-	//float4 color = float4(uv,0,1);
-    
-    // normal
-    //float3 nrm = (normalize(In.normal) + float3(1,1,1)) / 2;
-	//float4 color = float4(nrm, 1);
-	
-	// color
-	float4 outColor = float4(color, 1);
+    float4 outColor = isDiffuseMap          * gDiffuseMap.Sample(samAnisotropic, uv) * float4(diffuse, 1) 
+                    + (1.0f - isDiffuseMap) * float4(diffuse,1);
 
 	if(gammaCorrect)
 		return pow(outColor, float4(gamma,gamma,gamma,1.0f));

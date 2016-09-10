@@ -24,15 +24,25 @@ struct PSIn
 	float2 texCoord : TEXCOORD0;
 };
 
+struct Surface
+{
+    float3 N;
+    float3 diffuseColor;
+    float3 specularColor;
+};
+
+
+// CBUFFERS
+//---------------------------------------------------------
 // defines maximum number of dynamic lights
 #define LIGHT_COUNT 20  // don't forget to update CPU define too (SceneManager.cpp)
 #define SPOT_COUNT 10   // ^
 struct Light
 {
     // COMMON
-	float3 position;
+    float3 position;
     float pad1;
-	float3 color;
+    float3 color;
     float brightness;
 
 	// SPOTLIGHT
@@ -40,8 +50,8 @@ struct Light
     float halfAngle;
 
 	// POINT LIGHT
-	float2 attenuation;
-	float range;
+    float2 attenuation;
+    float range;
     float pad3;
 };
 
@@ -61,12 +71,27 @@ cbuffer renderConsts
 
 cbuffer perObject
 {
-	float3 color;
+	float3 diffuse;
+    float alpha;
+    float3 specular;
     float shininess;
-
+    float isDiffuseMap;
 
 };
 
+// TEXTURES & SAMPLERS
+//---------------------------------------------------------
+Texture2D gDiffuseMap;
+SamplerState samAnisotropic
+{
+    Filter = ANISOTROPIC;
+    MaxAnisotropy = 4;
+    AddressU = WRAP;
+    AddressV = WRAP;
+};
+
+// FUNCTIONS
+//---------------------------------------------------------
 // point light attenuation equation
 float Attenuation(float2 coeffs, float dist)
 {
@@ -103,8 +128,9 @@ float Intensity(Light l, float3 worldPos)
 #define ATTENUATION_TEST
 
 // returns diffuse and specular light
-float3 Phong(Light light, float3 N, float3 V, float3 worldPos)
+float3 Phong(Light light, Surface s, float3 V, float3 worldPos)
 {
+    float3 N = s.N;
     float3 L = normalize(light.position - worldPos);
     float3 R = normalize(2 * N * dot(N, L) - L);
 	//float3 R = normalize(2*N*max(dot(N, L), 0.0f) - L);
@@ -112,8 +138,8 @@ float3 Phong(Light light, float3 N, float3 V, float3 worldPos)
 	//	R = float3(0, 0, 0);
 
     float diffuse = max(0.0f, dot(N, L));   // lights
-    float3 Id = light.color * color * diffuse;
-    float3 Is = light.color * pow(max(dot(R, V), 0.0f), shininess) * diffuse;
+    float3 Id = light.color * s.diffuseColor  * diffuse;
+    float3 Is = light.color * s.specularColor * pow(max(dot(R, V), 0.0f), shininess) * diffuse;
 	//float3 Is = light.color * pow(max(dot(R, V), 0.0f), 240) ;
 
     return Id + Is;
@@ -121,19 +147,24 @@ float3 Phong(Light light, float3 N, float3 V, float3 worldPos)
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	// surface parameters
+	// lighting parameters
     float3 N = normalize(In.normal);
     float3 V = normalize(cameraPos - In.worldPos);
-	const float ambient = 0.005f;
+    const float ambient = 0.005f;
+    Surface s;
+    s.N = N;
+    s.diffuseColor = diffuse * ( isDiffuseMap            * gDiffuseMap.Sample(samAnisotropic, In.texCoord).xyz +
+                                (1.0f - isDiffuseMap)   * float3(1,1,1));
+    s.specularColor = specular;
 
 	// illumination
-	float3 Ia = color * ambient;                // ambient
+	float3 Ia = s.diffuseColor * ambient;                // ambient
     float3 IdIs = float3(0.0f, 0.0f, 0.0f);     // diffuse & specular
     for (int i = 0; i < lightCount; ++i)    // POINT Lights
-        IdIs += Phong(lights[i], N, V, In.worldPos) * Attenuation(lights[i].attenuation, length(lights[i].position - In.worldPos));
+        IdIs += Phong(lights[i], s, V, In.worldPos) * Attenuation(lights[i].attenuation, length(lights[i].position - In.worldPos));
 
     for (int j = 0; j < spotCount; ++j)     // SPOT Lights
-        IdIs += Phong(spots[j], N, V, In.worldPos) * Intensity(spots[j], In.worldPos);
+        IdIs += Phong(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos);
 
 
     float4 outColor = float4(Ia + IdIs, 1);

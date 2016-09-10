@@ -16,38 +16,16 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#pragma once
+#include "Texture.h"
 
-#include <DirectXMath.h>
+Texture::Texture()
+	:
+	name(""),
+	id(-1),
+	srv(nullptr),	// assigned and deleted by renderer
+	width(0),
+	height(0)
+{}
 
-#include <map>
-#include <vector>
-
-using namespace DirectX;
-
-class Color
-{
-public:
-	Color();
-	~Color();
-	Color(const XMFLOAT3);
-	Color(float r, float g, float b);
-	Color& operator=(const Color&);
-	Color& operator=(const XMFLOAT3&);
-
-	XMFLOAT3 Value() const { return value; }
-	static const std::vector<Color> Palette();
-
-	//static Color GetColorByName(std::string);
-	//static std::string GetNameByColor(Color c);
-
-public:
-	static const Color black, white, red, green, blue, magenta, yellow, cyan, gray, orange, purple;
-private:
-	//typedef std::map<const std::string, Color> ColorMap;
-	//static ColorMap colorRefTable;//created for easier deserialization in Mesh
-	
-	static std::vector<Color> colorPalette;
-	XMFLOAT3 value;
-};
-
+Texture::~Texture()
+{}

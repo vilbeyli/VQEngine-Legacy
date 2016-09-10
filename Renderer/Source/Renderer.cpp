@@ -96,6 +96,12 @@ void Renderer::Exit()
 		shd = nullptr;
 	}
 
+	for (Texture& tex : m_textures)
+	{
+		tex.srv->Release();
+		tex.srv = nullptr;
+	}
+
 	return;
 }
 
@@ -328,16 +334,39 @@ TextureID Renderer::AddTexture(const std::string& textureFileName, const std::st
 	std::string path = fileRoot + textureFileName;
 	std::wstring wpath(path.begin(), path.end());
 
+	Texture tex;
+	tex.name = textureFileName;
+
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
-	if (FAILED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
+	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
 	{
-		OutputDebugString("Error loading texture file");
-		return -1;
+		CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), img->GetMetadata(), &tex.srv);
+		
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		ZeroMemory(&srvDesc, sizeof(srvDesc));
+		tex.srv->GetDesc(&srvDesc);
+
+		ID3D11Resource* resource = nullptr;
+		tex.srv->GetResource(&resource);
+
+		ID3D11Texture2D* tex2D = nullptr;
+		if (SUCCEEDED(resource->QueryInterface(&tex2D)))
+		{
+			D3D11_TEXTURE2D_DESC desc;
+			tex2D->GetDesc(&desc);
+
+			tex.width = desc.Width;
+			tex.height = desc.Height;
+		}
+
+		tex.id = static_cast<int>(m_textures.size());
+		m_textures.push_back(tex);
+		return tex.id;
 	}
 	else
 	{
-		//m_textures.push_back(img);
-		return static_cast<int>(m_textures.size()-1);
+		OutputDebugString("Error loading texture file");
+		return -1;
 	}
 
 }
@@ -345,8 +374,48 @@ TextureID Renderer::AddTexture(const std::string& textureFileName, const std::st
 void Renderer::SetShader(ShaderID id)
 {
 	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
+	if (m_activeShader != -1)
+	{
+		Shader* shader = m_shaders[m_activeShader];
+		for (ShaderTexture& tex : shader->m_textures)
+		{
+			ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+			switch (tex.shdType)
+			{
+			case ShaderType::VS:
+				m_deviceContext->VSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+				break;
+			case ShaderType::PS:
+				m_deviceContext->PSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+				break;
+			default:
+				break;
+			}
+		}
+
+		//for (ShaderSampler& smp : shader->m_samplers)
+		//{
+		//	switch (smp.shdType)
+		//	{
+		//	case ShaderType::VS:
+		//		m_deviceContext->VSSetSamplers(smp.bufferSlot, 1, nullptr);
+		//		break;
+		//	case ShaderType::PS:
+		//		m_deviceContext->PSSetSamplers(smp.bufferSlot, 1, nullptr);
+		//		break;
+		//	default:
+		//		break;
+		//	}
+		//}
+	}
+
 	m_activeShader = id;
 	m_shaders[id]->VoidBuffers();
+
+
+	//m_deviceContext->VSSetShaderResources(0, 1, NULL);
+	//m_deviceContext->PSSetShaderResources(0, 1, NULL);
+	
 }
 
 void Renderer::Reset()
@@ -508,7 +577,7 @@ void Renderer::SetConstantStruct(const char * cName, void* data)
 			if (strcmp(cName, c.name.c_str()) == 0)		// if name matches
 			{
 				found = true;
-				//if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
+				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
 				{
 					memcpy(c.data, data, c.size);
 					shader->m_cBuffers[i].dirty = true;
@@ -523,6 +592,34 @@ void Renderer::SetConstantStruct(const char * cName, void* data)
 	{
 		char err[256];
 		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
+		OutputDebugString(err);
+	}
+#endif
+}
+
+void Renderer::SetTexture(const char * texName, TextureID tex)
+{
+	Shader* shader = m_shaders[m_activeShader];
+	bool found = false;
+
+	for (size_t i = 0; i < shader->m_textures.size(); ++i)
+	{
+		// texture found
+		if (strcmp(texName, shader->m_textures[i].name.c_str()) == 0)
+		{
+			found = true;
+			TextureSetCommand cmd;
+			cmd.texID = tex;
+			cmd.shdTex = shader->m_textures[i];
+			m_texSetCommands.push(cmd);
+		}
+	}
+
+#ifdef DEBUG_LOG
+	if (!found)
+	{
+		char err[256];
+		sprintf_s(err, "Error: Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
 #endif
@@ -621,6 +718,25 @@ void Renderer::Apply()
 
 			cbuf.dirty = false;
 		}
+	}
+
+	// set textures and sampler states
+	while (m_texSetCommands.size() > 0)
+	{
+		TextureSetCommand& cmd = m_texSetCommands.front();
+		switch (cmd.shdTex.shdType)
+		{
+		case ShaderType::VS:
+			m_deviceContext->VSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
+			break;
+		case ShaderType::PS:
+			m_deviceContext->PSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
+			break;
+		default:
+			break;
+		}
+
+		m_texSetCommands.pop();
 	}
 
 	m_deviceContext->OMSetDepthStencilState(m_Direct3D->m_depthStencilState, 0);

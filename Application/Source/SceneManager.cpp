@@ -28,7 +28,7 @@
 
 #define MAX_LIGHTS 20
 #define MAX_SPOTS 10
-#define RAND_LIGHT_COUNT 2
+#define RAND_LIGHT_COUNT 0
 #define DISCO_PERIOD 0.25
 
 SceneManager::SceneManager()
@@ -64,8 +64,9 @@ void SceneManager::InitializeBuilding()
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
 		tf.SetPosition(0, -wallHieght, 0);
 		tf.SetRotationDeg(0.0f, 0.0f, 0.0f);
-		m_floor.m_model.m_material.color		= Color::green;
-		m_floor.m_model.m_material.shininess	= 40.0f;
+		//m_floor.m_model.m_material.color		= Color::green;
+		//m_floor.m_model.m_material.shininess	= 40.0f;
+		m_floor.m_model.m_material = Material::jade;
 	}
 	// CEILING
 	{
@@ -73,8 +74,9 @@ void SceneManager::InitializeBuilding()
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
 		tf.SetPosition(0, wallHieght, 0);
 		tf.SetRotationDeg(0.0f, 0.0f, 0.0f);
-		m_ceiling.m_model.m_material.color		= Color::purple;
-		m_ceiling.m_model.m_material.shininess	= 10.0f;
+		//m_ceiling.m_model.m_material.color		= Color::purple;
+		//m_ceiling.m_model.m_material.shininess	= 10.0f;
+		m_ceiling.m_model.m_material = Material::jade;
 	}
 
 	// RIGHT WALL
@@ -83,8 +85,9 @@ void SceneManager::InitializeBuilding()
 		tf.SetScale(wallHieght, 0.1f, floorDepth);
 		tf.SetPosition(floorWidth, 0, 0);
 		tf.SetRotationDeg(0.0f, 0.0f, 90.0f);
-		m_wallR.m_model.m_material.color		= Color::gray;
-		m_wallR.m_model.m_material.shininess	= 120.0f;
+		//m_wallR.m_model.m_material.color		= Color::gray;
+		//m_wallR.m_model.m_material.shininess	= 120.0f;
+		m_wallR.m_model.m_material = Material::bronze;
 	}
 
 	// LEFT WALL
@@ -93,8 +96,9 @@ void SceneManager::InitializeBuilding()
 		tf.SetScale(wallHieght, 0.1f, floorDepth);
 		tf.SetPosition(-floorWidth, 0, 0);
 		tf.SetRotationDeg(0.0f, 0.0f, -90.0f);
-		m_wallL.m_model.m_material.color		= Color::gray;
-		m_wallL.m_model.m_material.shininess	= 60.0f;
+		//m_wallL.m_model.m_material.color		= Color::gray;
+		//m_wallL.m_model.m_material.shininess	= 60.0f;
+		m_wallL.m_model.m_material = Material::bronze;
 	}
 	// WALL
 	{
@@ -102,8 +106,9 @@ void SceneManager::InitializeBuilding()
 		tf.SetScale(floorWidth, 0.1f, wallHieght);
 		tf.SetPosition(0, 0, floorDepth);
 		tf.SetRotationDeg(90.0f, 0.0f, 0.0f);
-		m_wallF.m_model.m_material.color		= Color::gray;
-		m_wallF.m_model.m_material.shininess	= 90.0f;
+		//m_wallF.m_model.m_material.color		= Color::gray;
+		//m_wallF.m_model.m_material.shininess	= 90.0f;
+		m_wallF.m_model.m_material = Material::gold;
 	}
 }
 
@@ -132,7 +137,7 @@ void SceneManager::InitializeLights()
 		l.model.m_mesh = MESH_TYPE::SPHERE;
 		l.model.m_material.color = Color::red;
 		l.color_ = Color::red;
-		l.SetLightRange(10);
+		l.SetLightRange(50);
 		m_lights.push_back(l);
 	}
 	{
@@ -142,7 +147,7 @@ void SceneManager::InitializeLights()
 		l.model.m_mesh = MESH_TYPE::SPHERE;
 		l.model.m_material.color = Color::yellow;
 		l.color_ = Color::yellow;
-		l.SetLightRange(30);
+		l.SetLightRange(60);
 		m_lights.push_back(l);
 	}
 
@@ -158,7 +163,7 @@ void SceneManager::InitializeLights()
 		l.tf.SetScaleUniform(0.1f);
 		l.model.m_mesh = MESH_TYPE::SPHERE;
 		l.model.m_material.color = l.color_ = rndColor;
-		l.SetLightRange(rand() % 50 + 10);
+		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
 		m_lights.push_back(l);
 	}
 }
@@ -275,49 +280,43 @@ void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) co
 
 	SendLightData();
 	{
+		m_floor.m_model.m_material.SetMaterialConstants(m_renderer);
 		XMMATRIX world = m_floor.m_transform.WorldTransformationMatrix();
-		XMFLOAT3 color = m_floor.m_model.m_material.color.Value();
 		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant3f("color", color);
-		m_renderer->SetConstant1f("shininess", m_floor.m_model.m_material.shininess);
 		m_renderer->Apply();
 		m_renderer->DrawIndexed();
 	}
 	{
+		m_ceiling.m_model.m_material.SetMaterialConstants(m_renderer);
 		XMMATRIX world = m_ceiling.m_transform.WorldTransformationMatrix();
-		XMFLOAT3 color = m_ceiling.m_model.m_material.color.Value();
+		m_renderer->SetTexture("gDiffuseMap", m_renderData.exampleTex);
+		m_renderer->SetConstant1f("isDiffuseMap", 1.0f);
 		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant3f("color", color);
-		m_renderer->SetConstant1f("shininess", m_ceiling.m_model.m_material.shininess);
 		m_renderer->Apply();
 		m_renderer->DrawIndexed();
 	}
 	{
+		m_wallR.m_model.m_material.SetMaterialConstants(m_renderer);
 		XMMATRIX world = m_wallR.m_transform.WorldTransformationMatrix();
 		XMFLOAT3 color = m_wallR.m_model.m_material.color.Value();
 		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant3f("color", color);
-		m_renderer->SetConstant1f("shininess", m_wallR.m_model.m_material.shininess);
 		m_renderer->Apply();
 		m_renderer->DrawIndexed();
 	}
 	{
+		m_wallL.m_model.m_material.SetMaterialConstants(m_renderer);
 		XMMATRIX world = m_wallL.m_transform.WorldTransformationMatrix();
-		XMFLOAT3 color = m_wallL.m_model.m_material.color.Value();
 		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant3f("color", color);
-		m_renderer->SetConstant1f("shininess", m_wallL.m_model.m_material.shininess);
 		m_renderer->Apply();
 		m_renderer->DrawIndexed();
 	}
 	{
+		m_wallF.m_model.m_material.SetMaterialConstants(m_renderer);
 		XMMATRIX world = m_wallF.m_transform.WorldTransformationMatrix();
-		XMFLOAT3 color = m_wallF.m_model.m_material.color.Value();
 		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant3f("color", color);
-		m_renderer->SetConstant1f("shininess", m_wallF.m_model.m_material.shininess);
 		m_renderer->Apply();
 		m_renderer->DrawIndexed();
+		m_renderer->SetConstant1f("isDiffuseMap", 0.0f);
 	}
 }
 
@@ -333,7 +332,8 @@ void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) cons
 		XMMATRIX world = light.tf.WorldTransformationMatrix();
 		XMFLOAT3 color = light.model.m_material.color.Value();
 		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant3f("color", color);
+		m_renderer->SetConstant3f("diffuse", color);
+		m_renderer->SetConstant1f("isDiffuseMap", 0.0f);
 		m_renderer->Apply();
 		m_renderer->DrawIndexed();
 	}
@@ -348,7 +348,7 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	m_renderer->SetShader(m_selectedShader);
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
-	m_renderer->SetConstant3f("color", m_centralObj.m_model.m_material.color.Value());
+	m_renderer->SetConstant3f("diffuse", m_centralObj.m_model.m_material.color.Value());
 	m_centralObj.m_model.m_material.shininess /= 3.0;
 	m_renderer->SetConstant1f("shininess", m_centralObj.m_model.m_material.shininess);
 	m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
@@ -400,7 +400,7 @@ void SceneManager::SendLightData() const
 			spots[spotCount] = l.ShaderLightStruct();
 			++spotCount;
 			break;
-		defatult:
+		default:
 			OutputDebugString("SceneManager::RenderBuilding(): ERROR: UNKOWN LIGHT TYPE\n");
 			break;
 		}

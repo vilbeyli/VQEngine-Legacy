@@ -19,34 +19,35 @@
 #pragma once
 
 #include "Color.h"
+#include "Texture.h"
 
 #include <string>
 
 typedef int BufferID;
-typedef int TextureID;
 
-struct Texture
-{
-	Texture() : id(-1), name("") {}
-	TextureID	id;
-	std::string	name;
-};
+class Renderer;
 
 struct Material
 {
-	Color color;
-	float alpha;	// embed it in color maybe?
-	float shininess;
+	Color		color;
+	float		alpha;	
+	XMFLOAT3	specular;
+	float		shininess;
 
-	Texture diffuseMap;
-	Texture normalMap;
+	Texture		diffuseMap;
+	Texture		normalMap;
+
+	static const Material jade, ruby, bronze, gold;
+	Material(const XMFLOAT3& diffuse, const XMFLOAT3& specular, float shininess);
+	Material();
+	void SetMaterialConstants(Renderer* renderer) const;
 };
 
 class Model
 {
 public:
 	Model() : m_mesh(-1) {}
-	~Model();
+	~Model() {}
 
 public:
 	BufferID m_mesh;

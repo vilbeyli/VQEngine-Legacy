@@ -195,12 +195,41 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	}
 
 
-	// CBUFFERS & SSHADER RESOURCES
+	// CBUFFERS & SHADER RESOURCES
 	//---------------------------------------------------------------------------
 	SetCBuffers(device);
+	
+	// SET TEXTURES
+	auto sRefl = m_psRefl;
+	D3D11_SHADER_DESC desc;
+	sRefl->GetDesc(&desc);
 
-	ID3D11ShaderResourceView* diffuseMapSRV;
-	result = 
+	unsigned texSlot = 0;
+	unsigned smpSlot = 0;
+	for (int i = 0; i < desc.BoundResources; ++i)
+	{
+		D3D11_SHADER_INPUT_BIND_DESC shdInpDesc;
+		sRefl->GetResourceBindingDesc(i, &shdInpDesc);
+		if (shdInpDesc.Type == D3D_SIT_SAMPLER)
+		{
+			ShaderSampler smp;
+			smp.name = shdInpDesc.Name;
+			smp.shdType = ShaderType::PS;
+			smp.bufferSlot = smpSlot++;
+			m_samplers.push_back(smp);
+		}
+		else if (shdInpDesc.Type == D3D_SIT_TEXTURE)
+		{
+			ShaderTexture tex;
+			tex.name = shdInpDesc.Name;
+			tex.shdType = ShaderType::PS;
+			tex.bufferSlot = texSlot++;
+			m_textures.push_back(tex);
+		}
+
+		int j = 5;
+		++j;
+	}
 
 	//release shader buffers
 	vsBlob->Release();

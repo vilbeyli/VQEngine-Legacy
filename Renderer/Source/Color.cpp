@@ -76,6 +76,12 @@ Color & Color::operator=(const Color & rhs)
 	return *this;
 }
 
+Color & Color::operator=(const XMFLOAT3& flt)
+{
+	this->value = flt;
+	return *this;
+}
+
 //Color::ColorMap Color::colorRefTable
 //{
 //	{ "red", Color::red },

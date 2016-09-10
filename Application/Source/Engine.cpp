@@ -74,6 +74,7 @@ bool Engine::Load()
 	m_renderData.normalShader	= m_renderer->AddShader("Normal", shaderRoot, layout);
 	m_renderData.phongShader	= m_renderer->AddShader("Forward_Phong", shaderRoot, layout);
 	m_renderData.exampleTex		= m_renderer->AddTexture("bricks_d.png", textureRoot);
+	m_renderData.exampleNormMap	= m_renderer->AddTexture("bricks_n.png", textureRoot);
 	m_sceneMan.Initialize(m_renderer, m_renderData, m_camera);
 
 	m_timer.Reset();

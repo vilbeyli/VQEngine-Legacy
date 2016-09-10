@@ -34,6 +34,7 @@ struct RenderData
 	ShaderID texCoordShader;
 	ShaderID normalShader;
 	TextureID exampleTex;
+	TextureID exampleNormMap;
 };
 
 class SceneManager

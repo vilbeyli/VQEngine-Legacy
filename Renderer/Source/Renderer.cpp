@@ -31,6 +31,32 @@
 
 #define SHADER_HOTSWAP 0
 
+void Skydome::Render(Renderer* renderer, const XMMATRIX& view, const XMMATRIX& proj) const
+{
+	renderer->Reset();
+	renderer->SetShader(0);
+
+	XMMATRIX world = skydomeObj.m_transform.WorldTransformationMatrix();
+	renderer->SetConstant4x4f("world", world);
+	renderer->SetConstant4x4f("view", view);
+	renderer->SetConstant4x4f("proj", proj);
+	renderer->SetConstant1f("isDiffuseMap", 1.0f);
+	renderer->SetTexture("gDiffuseMap", skydomeTex);
+	renderer->SetConstant3f("diffuse", XMFLOAT3(1.0f, 1.0f, 1.0f));	// must set this or yellow?
+	renderer->SetBufferObj(MESH_TYPE::SPHERE);
+	renderer->Apply();
+	renderer->DrawIndexed();
+}
+
+
+void Skydome::Init(Renderer* renderer_in, const char* tex, float scale)
+{
+	renderer = renderer_in;
+	skydomeObj.m_transform.SetScaleUniform(scale);
+	skydomeTex = renderer->AddTexture(tex, "Data/Textures/");
+	skydomeShader = 0;	// hack: first shader added is unlitTextureColor in Engine.cpp
+}
+
 Renderer::Renderer()
 	:
 	m_Direct3D(nullptr),
@@ -152,6 +178,12 @@ void Renderer::GeneratePrimitives()
 	m_bufferObjects[GRID]		= m_geom.Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV);
 	m_bufferObjects[CYLINDER]	= m_geom.Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount);
 	m_bufferObjects[SPHERE]		= m_geom.Sphere(sphRadius, sphRingCount, sphSliceCount);
+
+	// set skydome
+	//m_skydome.Init(this, "skydomeTex.png", FAR_PLANE / 3.97f);
+	//m_skydome.Init(this, "bluecloud_dn.jpg", FAR_PLANE / 3.97f);
+	//m_skydome.Init(this, "browncloud_rt.jpg", FAR_PLANE / 3.97f);
+	m_skydome.Init(this, "browncloud_lf.jpg", FAR_PLANE / 3.97f);
 }
 
 void Renderer::PollThread()
@@ -373,10 +405,13 @@ TextureID Renderer::AddTexture(const std::string& textureFileName, const std::st
 
 void Renderer::SetShader(ShaderID id)
 {
+	// boundary check
 	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
-	if (m_activeShader != -1)
+	if (m_activeShader != -1)	// if valid shader
 	{
 		Shader* shader = m_shaders[m_activeShader];
+
+		// nullify texture units
 		for (ShaderTexture& tex : shader->m_textures)
 		{
 			ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
@@ -393,6 +428,7 @@ void Renderer::SetShader(ShaderID id)
 			}
 		}
 
+		// and samplers
 		//for (ShaderSampler& smp : shader->m_samplers)
 		//{
 		//	switch (smp.shdType)
@@ -411,11 +447,6 @@ void Renderer::SetShader(ShaderID id)
 
 	m_activeShader = id;
 	m_shaders[id]->VoidBuffers();
-
-
-	//m_deviceContext->VSSetShaderResources(0, 1, NULL);
-	//m_deviceContext->PSSetShaderResources(0, 1, NULL);
-	
 }
 
 void Renderer::Reset()
@@ -433,6 +464,11 @@ void Renderer::SetViewport(const unsigned width, const unsigned height)
 	m_viewPort.Height	= static_cast<float>(height);
 	m_viewPort.MinDepth = NEAR_PLANE;
 	m_viewPort.MaxDepth = FAR_PLANE;
+
+	// ?
+	XMMATRIX view = m_mainCamera->GetViewMatrix();
+	XMMATRIX proj = m_mainCamera->GetProjectionMatrix();
+	m_skydome.Render(this, view, proj);
 }
 
 void Renderer::SetBufferObj(int BufferID)

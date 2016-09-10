@@ -25,6 +25,7 @@
 //#include <vector>
 
 #include "Mesh.h"
+#include "GameObject.h"
 
 #include <memory>
 
@@ -56,6 +57,17 @@ enum RASTERIZER_STATE
 	CULL_BACK,
 
 	RS_COUNT
+};
+
+struct Skydome
+{
+	void Render(Renderer* renderer, const XMMATRIX& view, const XMMATRIX& proj) const;
+	void Init(Renderer* renderer_in, const char* tex, float scale);
+
+	GameObject skydomeObj;
+	TextureID skydomeTex;
+	ShaderID skydomeShader;
+	Renderer* renderer;
 };
 
 struct TextureSetCommand
@@ -125,6 +137,7 @@ private:
 	// render data
 	Camera*							m_mainCamera;
 	D3D11_VIEWPORT					m_viewPort;
+	Skydome							m_skydome;
 
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;

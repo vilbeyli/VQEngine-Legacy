@@ -31,6 +31,7 @@
 #define RAND_LIGHT_COUNT 0
 #define DISCO_PERIOD 0.25
 
+
 SceneManager::SceneManager()
 {}
 

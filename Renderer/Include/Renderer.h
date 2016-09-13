@@ -96,6 +96,8 @@ public:
 	ShaderID	AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts);
 	TextureID	AddTexture(const std::string& shdFileName, const std::string& fileRoot);
 
+	const Texture& GetTexture(TextureID) const;
+
 	// state management
 	void SetViewport(const unsigned width, const unsigned height);
 	void SetCamera(Camera* m_camera);

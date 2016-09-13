@@ -403,6 +403,11 @@ TextureID Renderer::AddTexture(const std::string& textureFileName, const std::st
 
 }
 
+const Texture& Renderer::GetTexture(TextureID id) const
+{
+	return m_textures[id];
+}
+
 void Renderer::SetShader(ShaderID id)
 {
 	// boundary check

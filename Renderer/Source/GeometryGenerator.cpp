@@ -144,7 +144,7 @@ BufferObject* GeometryGenerator::Cube()
 //		ASCII Cube art from: http://www.lonniebest.com/ASCII/Art/?ID=2
 // 
 //			   0 _________________________ 1		0, 1, 2, 0, 2, 3,		// Top
-//		        / _____________________  /|			4, 5, 6, 4, 6, 7,		// back
+//		        / _____________________  /|			4, 5, 6, 4, 6, 7,		// Front
 //		       / / ___________________/ / |			8, 9, 10, 8, 10, 11,	// Right
 //		      / / /| |               / /  |			12, 13, 14, 12, 14, 15, // Left
 //		     / / / | |              / / . |			16, 17, 18, 16, 18, 19, // Back
@@ -167,125 +167,131 @@ BufferObject* GeometryGenerator::Cube()
 //		7
 
 	// vertices - CW 
+	// TOP
 	bufferObj->m_vertices[0].position	= XMFLOAT3(-1.0f, +1.0f, +1.0f);
 	bufferObj->m_vertices[0].normal		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
 	bufferObj->m_vertices[0].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[0].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[0].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[1].position	= XMFLOAT3(+1.0f, +1.0f, +1.0f);
 	bufferObj->m_vertices[1].normal		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
 	bufferObj->m_vertices[1].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[1].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[1].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[2].position	= XMFLOAT3(+1.0f, +1.0f, -1.0f);
 	bufferObj->m_vertices[2].normal		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
 	bufferObj->m_vertices[2].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[2].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[2].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[3].position	= XMFLOAT3(-1.0f, +1.0f, -1.0f);
 	bufferObj->m_vertices[3].normal		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
 	bufferObj->m_vertices[3].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[3].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[3].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
+	// FRONT
 	bufferObj->m_vertices[4].position	= XMFLOAT3(-1.0f, +1.0f, -1.0f);
 	bufferObj->m_vertices[4].normal		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
-	bufferObj->m_vertices[4].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[4].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[4].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[4].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[5].position	= XMFLOAT3(+1.0f, +1.0f, -1.0f);
 	bufferObj->m_vertices[5].normal		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
-	bufferObj->m_vertices[5].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[5].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[5].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[5].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[6].position	= XMFLOAT3(+1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[6].normal		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
-	bufferObj->m_vertices[6].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[6].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[6].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[6].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[7].position	= XMFLOAT3(-1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[7].normal		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
-	bufferObj->m_vertices[7].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[7].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[7].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[7].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
+	// RIGHT
 	bufferObj->m_vertices[8].position	= XMFLOAT3(+1.0f, +1.0f, -1.0f);
 	bufferObj->m_vertices[8].normal		= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[8].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[8].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[8].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[8].tangent	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
 
 	bufferObj->m_vertices[9].position	= XMFLOAT3(+1.0f, +1.0f, +1.0f);
 	bufferObj->m_vertices[9].normal		= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[9].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[9].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[9].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[9].tangent	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
 
 	bufferObj->m_vertices[10].position	= XMFLOAT3(+1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[10].normal	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[10].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[10].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[10].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[10].tangent	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
 
 	bufferObj->m_vertices[11].position	= XMFLOAT3(+1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[11].normal	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[11].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[11].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-	
+	bufferObj->m_vertices[11].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[11].tangent	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
+
+	// LEFT
 	bufferObj->m_vertices[12].position	= XMFLOAT3(-1.0f, +1.0f, +1.0f);
 	bufferObj->m_vertices[12].normal	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[12].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[12].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[12].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[12].tangent	= XMFLOAT3(+0.0f, +0.0f, -1.0f);
 
 	bufferObj->m_vertices[13].position	= XMFLOAT3(-1.0f, +1.0f, -1.0f);
 	bufferObj->m_vertices[13].normal	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[13].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[13].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[13].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[13].tangent	= XMFLOAT3(+0.0f, +0.0f, -1.0f);
 	
 	bufferObj->m_vertices[14].position	= XMFLOAT3(-1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[14].normal	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[14].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[14].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[14].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[14].tangent	= XMFLOAT3(+0.0f, +0.0f, -1.0f);
 
 	bufferObj->m_vertices[15].position	= XMFLOAT3(-1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[15].normal	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[15].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[15].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-	
+	bufferObj->m_vertices[15].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+	bufferObj->m_vertices[15].tangent	= XMFLOAT3(+0.0f, +0.0f, -1.0f);
+
+	//BACK
 	bufferObj->m_vertices[16].position	= XMFLOAT3(+1.0f, +1.0f, +1.0f);
 	bufferObj->m_vertices[16].normal	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
 	bufferObj->m_vertices[16].texCoords	= XMFLOAT3(+1.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[16].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[16].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[17].position	= XMFLOAT3(-1.0f, +1.0f, +1.0f);
 	bufferObj->m_vertices[17].normal	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
 	bufferObj->m_vertices[17].texCoords	= XMFLOAT3(+0.0f, +1.0f, +0.0f);
-	bufferObj->m_vertices[17].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[17].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 	
 	bufferObj->m_vertices[18].position	= XMFLOAT3(-1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[18].normal	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
 	bufferObj->m_vertices[18].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[18].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-
+	bufferObj->m_vertices[18].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	
 	bufferObj->m_vertices[19].position	= XMFLOAT3(+1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[19].normal	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
 	bufferObj->m_vertices[19].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[19].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-	
+	bufferObj->m_vertices[19].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+
+	// BOTTOM
 	bufferObj->m_vertices[20].position	= XMFLOAT3(+1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[20].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
 	bufferObj->m_vertices[20].texCoords	= XMFLOAT3(+1.0f, +1.0f, +1.0f);
-	bufferObj->m_vertices[20].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[20].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[21].position	= XMFLOAT3(-1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[21].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
 	bufferObj->m_vertices[21].texCoords	= XMFLOAT3(+0.0f, +1.0f, +1.0f);
-	bufferObj->m_vertices[21].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[21].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 	
 	bufferObj->m_vertices[22].position	= XMFLOAT3(-1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[22].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
 	bufferObj->m_vertices[22].texCoords	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[22].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[22].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[23].position	= XMFLOAT3(+1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[23].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
 	bufferObj->m_vertices[23].texCoords	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-	bufferObj->m_vertices[23].tangent	= XMFLOAT3(+0.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[23].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
 
 	// Create the index buffer
 	unsigned indices[] = {

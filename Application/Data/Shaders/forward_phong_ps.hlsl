@@ -21,7 +21,8 @@ struct PSIn
 	float4 position : SV_POSITION;
 	float3 worldPos : POSITION;
 	float3 normal	: NORMAL;
-	float2 texCoord : TEXCOORD0;
+    float3 tangent	: TANGENT;
+    float2 texCoord : TEXCOORD4;
 };
 
 struct Surface
@@ -29,8 +30,11 @@ struct Surface
     float3 N;
     float3 diffuseColor;
     float3 specularColor;
+    float shininess;
 };
 
+
+#define SHININESS_ADJUSTER 1.0f
 
 // CBUFFERS
 //---------------------------------------------------------
@@ -73,15 +77,19 @@ cbuffer perObject
 {
 	float3 diffuse;
     float alpha;
+
     float3 specular;
     float shininess;
+
     float isDiffuseMap;
+    float isNormalMap;
 
 };
 
 // TEXTURES & SAMPLERS
 //---------------------------------------------------------
 Texture2D gDiffuseMap;
+Texture2D gNormalMap;
 SamplerState samAnisotropic
 {
     Filter = ANISOTROPIC;
@@ -139,31 +147,60 @@ float3 Phong(Light light, Surface s, float3 V, float3 worldPos)
 
     float diffuse = max(0.0f, dot(N, L));   // lights
     float3 Id = light.color * s.diffuseColor  * diffuse;
-    float3 Is = light.color * s.specularColor * pow(max(dot(R, V), 0.0f), shininess) * diffuse;
+    float3 Is = light.color * s.specularColor * pow(max(dot(R, V), 0.0f), s.shininess) * diffuse;
 	//float3 Is = light.color * pow(max(dot(R, V), 0.0f), 240) ;
 
     return Id + Is;
 }
 
+inline float3 UnpackNormals(float2 uv, float3 vertNormal, float3 vertTangent)
+{
+	// uncompressed normal in tangent space
+	float3 TNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
+	TNormal = TNormal.xzy;
+	//TNormal.y *= -1.0f;
+	//TNormal.z *= -1.0f;
+
+	TNormal = normalize(TNormal * 2.0f - 1.0f);
+	float3 N = normalize(vertNormal);
+
+
+    // float3 T = WTangent;	// after interpolation, T and N might not be orthonormal
+	// make sure T is orthonormal to N by subtracting off any component of T along direction N.
+	float3 T = normalize(vertTangent - dot(vertNormal, vertTangent) * vertNormal);
+	float3 B = normalize(cross(N, T));
+	float3x3 TBN = float3x3(T, B, N);
+    //float3x3 TBN = float3x3(T, N, B);
+    
+	
+	//TBN = transpose(TBN);
+	return mul(TBN, TNormal);
+    //return TNormal;
+    //return T;
+}
+
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	// lighting parameters
+	// lighting & surface parameters
     float3 N = normalize(In.normal);
+    float3 T = normalize(In.tangent);
     float3 V = normalize(cameraPos - In.worldPos);
     const float ambient = 0.005f;
     Surface s;
-    s.N = N;
-    s.diffuseColor = diffuse * ( isDiffuseMap            * gDiffuseMap.Sample(samAnisotropic, In.texCoord).xyz +
-                                (1.0f - isDiffuseMap)   * float3(1,1,1));
+    s.N             =   (isNormalMap       ) * UnpackNormals(In.texCoord, N, T) + 
+                        (1.0f - isNormalMap) * N;
+    s.diffuseColor  = diffuse *  ( isDiffuseMap          * gDiffuseMap.Sample(samAnisotropic, In.texCoord).xyz +
+                                 (1.0f - isDiffuseMap)   * float3(1,1,1));
     s.specularColor = specular;
+    s.shininess = shininess * SHININESS_ADJUSTER;
 
 	// illumination
-	float3 Ia = s.diffuseColor * ambient;                // ambient
-    float3 IdIs = float3(0.0f, 0.0f, 0.0f);     // diffuse & specular
-    for (int i = 0; i < lightCount; ++i)    // POINT Lights
+	float3 Ia = s.diffuseColor * ambient;	// ambient
+    float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
+    for (int i = 0; i < lightCount; ++i)	// POINT Lights
         IdIs += Phong(lights[i], s, V, In.worldPos) * Attenuation(lights[i].attenuation, length(lights[i].position - In.worldPos));
 
-    for (int j = 0; j < spotCount; ++j)     // SPOT Lights
+    for (int j = 0; j < spotCount; ++j)		// SPOT Lights
         IdIs += Phong(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos);
 
 

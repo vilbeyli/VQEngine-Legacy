@@ -67,7 +67,8 @@ bool Engine::Load()
 	std::vector<InputLayout> layout = {
 		{ "POSITION",	FLOAT32_3 },
 		{ "NORMAL",		FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 }
+		{ "TANGENT",	FLOAT32_3 },
+		{ "TEXCOORD",	FLOAT32_2 },
 	};
 	m_renderData.unlitShader	= m_renderer->AddShader("UnlitTextureColor", shaderRoot, layout);
 	m_renderData.texCoordShader = m_renderer->AddShader("TextureCoord", shaderRoot, layout);

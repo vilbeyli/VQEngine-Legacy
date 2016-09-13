@@ -48,9 +48,15 @@ void SceneManager::Initialize(Renderer * renderer, RenderData rData, Camera* cam
 	InitializeBuilding();
 	InitializeLights();
 	
-	m_centralObj.m_model.m_mesh = MESH_TYPE::GRID;
-	m_centralObj.m_model.m_material.color = Color::blue;
-	m_centralObj.m_model.m_material.shininess = 40.0f;
+	//m_centralObj.m_model.m_mesh = MESH_TYPE::GRID;
+	//m_centralObj.m_model.m_material.color = Color::blue;
+	//m_centralObj.m_model.m_material.shininess = 40.0f;
+	m_centralObj.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_centralObj.m_model.m_material.color = Color::white;
+	m_centralObj.m_model.m_material.shininess = 90.0f;
+	m_centralObj.m_model.m_material.normalMap = m_renderer->GetTexture(rData.exampleNormMap);
+	
+	
 }
 
 void SceneManager::InitializeBuilding()
@@ -68,6 +74,8 @@ void SceneManager::InitializeBuilding()
 		//m_floor.m_model.m_material.color		= Color::green;
 		//m_floor.m_model.m_material.shininess	= 40.0f;
 		m_floor.m_model.m_material = Material::jade;
+		//m_floor.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
+		m_floor.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
 	}
 	// CEILING
 	{
@@ -78,6 +86,8 @@ void SceneManager::InitializeBuilding()
 		//m_ceiling.m_model.m_material.color		= Color::purple;
 		//m_ceiling.m_model.m_material.shininess	= 10.0f;
 		m_ceiling.m_model.m_material = Material::jade;
+		m_ceiling.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
+		m_ceiling.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
 	}
 
 	// RIGHT WALL
@@ -89,6 +99,8 @@ void SceneManager::InitializeBuilding()
 		//m_wallR.m_model.m_material.color		= Color::gray;
 		//m_wallR.m_model.m_material.shininess	= 120.0f;
 		m_wallR.m_model.m_material = Material::bronze;
+		m_wallR.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
+		m_wallR.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
 	}
 
 	// LEFT WALL
@@ -100,6 +112,8 @@ void SceneManager::InitializeBuilding()
 		//m_wallL.m_model.m_material.color		= Color::gray;
 		//m_wallL.m_model.m_material.shininess	= 60.0f;
 		m_wallL.m_model.m_material = Material::bronze;
+		m_wallL.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
+		m_wallL.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
 	}
 	// WALL
 	{
@@ -110,6 +124,8 @@ void SceneManager::InitializeBuilding()
 		//m_wallF.m_model.m_material.color		= Color::gray;
 		//m_wallF.m_model.m_material.shininess	= 90.0f;
 		m_wallF.m_model.m_material = Material::gold;
+		m_wallF.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
+		m_wallF.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
 	}
 }
 
@@ -276,7 +292,7 @@ void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) co
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
 	m_renderer->SetBufferObj(MESH_TYPE::CUBE);	
-	m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
+	m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_renderer->SetConstant3f("cameraPos", camPos_real);
 
 	SendLightData();
@@ -290,8 +306,6 @@ void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) co
 	{
 		m_ceiling.m_model.m_material.SetMaterialConstants(m_renderer);
 		XMMATRIX world = m_ceiling.m_transform.WorldTransformationMatrix();
-		m_renderer->SetTexture("gDiffuseMap", m_renderData.exampleTex);
-		m_renderer->SetConstant1f("isDiffuseMap", 1.0f);
 		m_renderer->SetConstant4x4f("world", world);
 		m_renderer->Apply();
 		m_renderer->DrawIndexed();
@@ -317,7 +331,6 @@ void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) co
 		m_renderer->SetConstant4x4f("world", world);
 		m_renderer->Apply();
 		m_renderer->DrawIndexed();
-		m_renderer->SetConstant1f("isDiffuseMap", 0.0f);
 	}
 }
 
@@ -347,11 +360,11 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	m_centralObj.m_transform.SetScale(XMFLOAT3(1, 1, 1));
 
 	m_renderer->SetShader(m_selectedShader);
+	SendLightData();
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
-	m_renderer->SetConstant3f("diffuse", m_centralObj.m_model.m_material.color.Value());
 	m_centralObj.m_model.m_material.shininess /= 3.0;
-	m_renderer->SetConstant1f("shininess", m_centralObj.m_model.m_material.shininess);
+	m_centralObj.m_model.m_material.SetMaterialConstants(m_renderer);
 	m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
 
 	m_centralObj.m_transform.Translate(XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
@@ -360,8 +373,9 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	m_renderer->Apply();
 	m_renderer->DrawIndexed();
 
+	m_renderer->SetBufferObj(MESH_TYPE::CUBE);
 	m_centralObj.m_model.m_material.shininess *= 3.0;
-	m_renderer->SetConstant1f("shininess", m_centralObj.m_model.m_material.shininess);
+	m_centralObj.m_model.m_material.SetMaterialConstants(m_renderer);
 	m_centralObj.m_transform.Translate(XMVectorSet(-20.0f, 0.0f, 0.0f, 0.0f));
 	world = m_centralObj.m_transform.WorldTransformationMatrix();
 	m_renderer->SetConstant4x4f("world", world);
@@ -370,12 +384,13 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 
 	// grid
 	m_centralObj.m_transform.Translate(XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
-	m_renderer->SetBufferObj(MESH_TYPE::GRID);
+	m_renderer->SetBufferObj(m_centralObj.m_model.m_mesh);
 	m_renderer->SetShader(m_renderData.texCoordShader);
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
 
-	m_centralObj.m_transform.SetScale(XMFLOAT3(3 * 4, 5 * 4, 2 * 4));
+	m_centralObj.m_transform.SetScaleUniform(2);
+	//m_centralObj.m_transform.SetScale(XMFLOAT3(3 * 4, 5 * 4, 2 * 4));
 	world = m_centralObj.m_transform.WorldTransformationMatrix();
 	m_renderer->SetConstant4x4f("world", world);
 	m_renderer->Apply();

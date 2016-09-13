@@ -37,6 +37,7 @@ struct VSIn
 	float3 position : POSITION;
 	float3 normal	: NORMAL;
 	float2 texCoord : TEXCOORD0;
+    float3 tangent	: TANGENT0;
 };
 
 struct PSIn
@@ -44,13 +45,14 @@ struct PSIn
 	float4 position : SV_POSITION;
 	float3 worldPos : POSITION;
 	float3 normal	: NORMAL;
-	float2 texCoord : TEXCOORD4;
+    float3 tangent  : TANGENT;
+    float2 texCoord : TEXCOORD4;
 };
 
 PSIn VSMain(VSIn In)
 {
 	matrix wvp = mul(proj, mul(view, world));
-	float3x3 normMatrix = 
+	float3x3 rotMatrix = 
 	{
 		world._11_12_13,
 		world._21_22_23,
@@ -58,9 +60,10 @@ PSIn VSMain(VSIn In)
 	};
 
 	PSIn Out;
-	Out.position = mul(wvp  , float4(In.position, 1));
-	Out.worldPos = mul(world, float4(In.position, 1)).xyz;
-	Out.normal   = mul(normMatrix, In.normal);
-	Out.texCoord = In.texCoord;
+	Out.position	= mul(wvp  , float4(In.position, 1));
+	Out.worldPos	= mul(world, float4(In.position, 1)).xyz;
+    Out.normal		= mul(rotMatrix, In.normal);
+    Out.tangent		= mul(rotMatrix, In.tangent);
+	Out.texCoord	= In.texCoord;
 	return Out;
 }

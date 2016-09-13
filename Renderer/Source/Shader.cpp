@@ -199,7 +199,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	//---------------------------------------------------------------------------
 	SetCBuffers(device);
 	
-	// SET TEXTURES
+	// SET TEXTURES & SAMPLERS
 	auto sRefl = m_psRefl;
 	D3D11_SHADER_DESC desc;
 	sRefl->GetDesc(&desc);
@@ -455,51 +455,6 @@ void Shader::AssignID(ShaderID id)
 {
 	m_id = id;
 }
-
-//bool Shader::SetShaderParameters(ID3D11DeviceContext* deviceContext, ID3D11ShaderResourceView* texture)
-//{
-//	deviceContext->PSSetShaderResources(0, 1, &texture);
-//
-//	return true;
-//}
-
-//bool Shader::SetShaderParameters(ID3D11DeviceContext* deviceContext, 
-//								XMFLOAT4X4 worldMatrix,
-//								XMFLOAT4X4 viewMatrix, 
-//								XMFLOAT4X4 projectionMatrix)
-//{
-//	HRESULT result;
-//	D3D11_MAPPED_SUBRESOURCE mappedResource;
-//	unsigned int bufferNumber;
-//
-//	// Lock the constant buffer so it can be written to.
-//	result = deviceContext->Map(m_matrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-//	if (FAILED(result))
-//	{
-//		return false;
-//	}
-//
-//	// Get a pointer to the data in the constant buffer.
-//	
-//	MatrixBuffer* dataPtr;
-//	dataPtr = (MatrixBuffer*)mappedResource.pData;
-//
-//	// Copy the matrices into the constant buffer.
-//	dataPtr->mWorld = XMMatrixTranspose(XMLoadFloat4x4(&worldMatrix));
-//	dataPtr->mView	= XMMatrixTranspose(XMLoadFloat4x4(&viewMatrix));
-//	dataPtr->mProj	= XMMatrixTranspose(XMLoadFloat4x4(&projectionMatrix));
-//
-//	// Unlock the constant buffer.
-//	deviceContext->Unmap(m_matrixBuffer, 0);
-//
-//	// Set the position of the constant buffer in the vertex shader.
-//	bufferNumber = 0;
-//
-//	// Finally set the constant buffer in the vertex shader with the updated values.
-//	deviceContext->VSSetConstantBuffers(bufferNumber, 1, &m_matrixBuffer);
-//
-//	return true;
-//}
 
 std::string Shader::Name() const
 {

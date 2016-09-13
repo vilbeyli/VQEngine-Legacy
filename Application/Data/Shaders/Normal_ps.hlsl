@@ -18,9 +18,10 @@
 
 struct PSIn
 {
-	float4 position : SV_POSITION;
-	float3 normal	: NORMAL;
-	float2 texCoord : TEXCOORD0;
+    float4 position : SV_POSITION;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float2 texCoord : TEXCOORD4;
 };
 
 cbuffer renderConsts
@@ -28,10 +29,46 @@ cbuffer renderConsts
 	float gammaCorrection;
 };
 
-cbuffer perObject
+cbuffer perObj
 {
-	float3 color;
+    float isNormalMap;
 };
+
+
+Texture2D gNormalMap;
+SamplerState samAnisotropic
+{
+    Filter = ANISOTROPIC;
+    MaxAnisotropy = 4;
+    AddressU = WRAP;
+    AddressV = WRAP;
+};
+
+inline float3 UnpackNormals(float2 uv, float3 vertNormal, float3 vertTangent)
+{
+	// uncompressed normal in tangent space
+    float3 TNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
+	TNormal = TNormal.xzy;
+	//TNormal.y *= -1.0f;
+	//TNormal.z *= -1.0f;
+
+	TNormal = normalize(TNormal * 2.0f - 1.0f);
+	float3 N = normalize(vertNormal);
+
+
+    // float3 T = WTangent;	// after interpolation, T and N might not be orthonormal
+	// make sure T is orthonormal to N by subtracting off any component of T along direction N.
+	float3 T = normalize(vertTangent - dot(vertNormal, vertTangent) * vertNormal);
+    float3 B = normalize(cross(N, T));
+	float3x3 TBN = float3x3(T, B, N);
+    //float3x3 TBN = float3x3(T, N, B);
+    
+	
+	//TBN = transpose(TBN);
+	return mul(TBN, TNormal);
+    //return TNormal;
+    //return T;
+}
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
@@ -39,8 +76,10 @@ float4 PSMain(PSIn In) : SV_TARGET
 	bool gammaCorrect = gammaCorrection > 0.99f;
 	float gamma = 1.0/2.2;
 
-
-	float3 n = normalize(In.normal);
+    float3 N = normalize(In.normal);
+    float3 T = normalize(In.tangent);
+    float3 n = (isNormalMap)        * UnpackNormals(In.texCoord, N, T) +
+               (1.0f - isNormalMap) * N;
 	float4 outColor = float4(n,1);
 	
 

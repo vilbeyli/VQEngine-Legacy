@@ -18,7 +18,6 @@
 
 cbuffer perFrame
 {
-	//matrix world;
 	matrix view;
 	matrix	proj;
 }
@@ -26,11 +25,6 @@ cbuffer perModel
 {
     matrix world;
 }
-
-//cbuffer MatrixBuffer3
-//{
-//    matrix proj;
-//}
 
 struct VSIn
 {

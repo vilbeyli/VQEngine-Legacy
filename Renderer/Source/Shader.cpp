@@ -206,7 +206,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 
 	unsigned texSlot = 0;
 	unsigned smpSlot = 0;
-	for (int i = 0; i < desc.BoundResources; ++i)
+	for (unsigned i = 0; i < desc.BoundResources; ++i)
 	{
 		D3D11_SHADER_INPUT_BIND_DESC shdInpDesc;
 		sRefl->GetResourceBindingDesc(i, &shdInpDesc);

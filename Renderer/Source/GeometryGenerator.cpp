@@ -404,8 +404,8 @@ BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsign
 
 	//------------------------------------------------
 	BufferObject* bufferObj = new BufferObject();
-	bufferObj->m_vertexCount = Vertices.size();
-	bufferObj->m_indexCount = Indices.size();
+	bufferObj->m_vertexCount = static_cast<unsigned>(Vertices.size());
+	bufferObj->m_indexCount  = static_cast<unsigned>(Indices.size());
 	bufferObj->m_vertices = new Vertex[bufferObj->m_vertexCount];		// deleted in dtor
 	bufferObj->m_indices = new unsigned[bufferObj->m_indexCount];	// deleted in dtor
 	memcpy(bufferObj->m_vertices, Vertices.data(), Vertices.size() * sizeof(Vertex));
@@ -704,8 +704,8 @@ BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float b
 
 	//------------------------------------------------
 	BufferObject* bufferObj		= new BufferObject();
-	bufferObj->m_vertexCount	= Vertices.size();
-	bufferObj->m_indexCount		= Indices.size();
+	bufferObj->m_vertexCount	= static_cast<unsigned>(Vertices.size());
+	bufferObj->m_indexCount		= static_cast<unsigned>(Indices.size());
 	bufferObj->m_vertices		= new Vertex[bufferObj->m_vertexCount];		// deleted in dtor
 	bufferObj->m_indices		= new unsigned[bufferObj->m_indexCount];	// deleted in dtor
 	memcpy(bufferObj->m_vertices, Vertices.data(), Vertices.size() * sizeof(Vertex));

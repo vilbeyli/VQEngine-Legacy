@@ -31,34 +31,35 @@ using std::string;
 using std::cout;
 using std::endl;
 
+
+
 vector<string> split(const char* s, char c)
 {
 	vector<string> result;
-
 	do
 	{
 		const char* begin = s;
 		while (*s != c && *s) s++;			// iterate until delimiter is found
 		result.push_back(string(begin, s));
 	} while (*s++);
-
 	return result;
 }
 
 vector<string> split(const string& str, char c)
 {
-	return split(str.c_str());
+	return split(str.c_str(), c);
 }
 
-float RandF(float l, float h){
+float RandF(float l, float h)
+{
 	float n = (float)rand() / RAND_MAX;
 	return l + n*(h - l);
 }
 
 // [)
-int RandI(int l, int h){
-	int offset = rand() % (h-l);
-
+int RandI(int l, int h) 
+{
+	int offset = rand() % (h - l);
 	return l + offset;
 }
 

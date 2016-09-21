@@ -310,7 +310,7 @@ void BaseSystem::InitRawInputDevices()
 		if (device.dwType == RIM_TYPEMOUSE)
 		{
 			char info[1024];
-			sprintf_s(info, "Mouse: Handle=0x%08X\n", (unsigned)device.hDevice);
+			sprintf_s(info, "Mouse: Handle=0x%08p\n", device.hDevice);
 			OutputDebugString(info);
 
 			UINT dataSize;

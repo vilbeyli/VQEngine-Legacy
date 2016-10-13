@@ -33,6 +33,9 @@ struct RenderData
 	ShaderID unlitShader;
 	ShaderID texCoordShader;
 	ShaderID normalShader;
+	ShaderID tangentShader;
+	ShaderID binormalShader;
+	ShaderID lineShader;
 	TextureID exampleTex;
 	TextureID exampleNormMap;
 };

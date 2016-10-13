@@ -22,8 +22,6 @@
 #include "SystemDefs.h"
 #include "PerfTimer.h"
 
-#include "Components/Transform.h"
-
 #include "SceneManager.h"
 
 class Renderer;
@@ -58,6 +56,10 @@ private:
 
 	void TogglePause();
 	void CalcFrameStats();
+//--------------------------------------------------------------
+public:
+	RenderData		m_renderData;
+
 private:
 	Input*			m_input;
 	Renderer*		m_renderer;
@@ -70,7 +72,6 @@ private:
 
 	// Scene
 	SceneManager	m_sceneMan;
-	RenderData		m_renderData;
 };
 
 #define ENGINE Engine::GetEngine()

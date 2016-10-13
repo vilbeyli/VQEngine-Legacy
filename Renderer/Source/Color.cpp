@@ -18,6 +18,7 @@
 
 
 #include "Color.h"
+#include "utils.h"
 
 using std::make_pair;
 
@@ -56,6 +57,24 @@ const std::vector<Color> Color::Palette()
 		colorPalette.push_back(Color::purple);
 	}
 	return colorPalette;
+}
+
+XMFLOAT3 Color::RandColorF3()
+{
+	size_t i = RandU(0, Palette().size());
+	return colorPalette[i].Value();
+}
+
+XMVECTOR Color::RandColorV()
+{
+	size_t i = RandU(0, Palette().size());
+	XMVECTOR v = XMLoadFloat3(&colorPalette[i].Value());
+	return v;
+}
+
+Color Color::RandColor()
+{
+	return colorPalette[RandU(0, Palette().size())];
 }
 
 Color::~Color(){}

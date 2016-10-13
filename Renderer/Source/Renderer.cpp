@@ -26,8 +26,12 @@
 #include "Camera.h"
 #include "DirectXTex.h"
 
+#include "Engine.h" // temp
+
 #include <mutex>
 #include <cassert>
+
+bool Renderer::ENABLE_VQS = false;
 
 #define SHADER_HOTSWAP 0
 
@@ -348,13 +352,14 @@ void Renderer::InitRasterizerStates()
 
 ShaderID Renderer::AddShader(const std::string& shdFileName, 
 							 const std::string& fileRoot,
-							 const std::vector<InputLayout>& layouts)
+							 const std::vector<InputLayout>& layouts,
+							 bool geoShader /*= false*/)
 {
 	// example params: "TextureCoord", "Data/Shaders/"
 	std::string path = fileRoot + shdFileName;
 
 	Shader* shd = new Shader(shdFileName);
-	shd->Compile(m_device, path, layouts);
+	shd->Compile(m_device, path, layouts, geoShader);
 	m_shaders.push_back(shd);
 	shd->AssignID(static_cast<int>(m_shaders.size()) - 1);
 	return shd->ID();
@@ -414,44 +419,54 @@ void Renderer::SetShader(ShaderID id)
 	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
 	if (m_activeShader != -1)	// if valid shader
 	{
-		Shader* shader = m_shaders[m_activeShader];
-
-		// nullify texture units
-		for (ShaderTexture& tex : shader->m_textures)
+		if (id != m_activeShader)
 		{
-			ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
-			switch (tex.shdType)
-			{
-			case ShaderType::VS:
-				m_deviceContext->VSSetShaderResources(tex.bufferSlot, 1, nullSRV);
-				break;
-			case ShaderType::PS:
-				m_deviceContext->PSSetShaderResources(tex.bufferSlot, 1, nullSRV);
-				break;
-			default:
-				break;
-			}
-		}
+			Shader* shader = m_shaders[m_activeShader];
 
-		// and samplers
-		//for (ShaderSampler& smp : shader->m_samplers)
-		//{
-		//	switch (smp.shdType)
-		//	{
-		//	case ShaderType::VS:
-		//		m_deviceContext->VSSetSamplers(smp.bufferSlot, 1, nullptr);
-		//		break;
-		//	case ShaderType::PS:
-		//		m_deviceContext->PSSetSamplers(smp.bufferSlot, 1, nullptr);
-		//		break;
-		//	default:
-		//		break;
-		//	}
-		//}
+			// nullify texture units
+			for (ShaderTexture& tex : shader->m_textures)
+			{
+				ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+				switch (tex.shdType)
+				{
+				case ShaderType::VS:
+					m_deviceContext->VSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					break;
+				case ShaderType::PS:
+					m_deviceContext->PSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					break;
+				default:
+					break;
+				}
+			}
+
+			// and samplers
+			//for (ShaderSampler& smp : shader->m_samplers)
+			//{
+			//	switch (smp.shdType)
+			//	{
+			//	case ShaderType::VS:
+			//		m_deviceContext->VSSetSamplers(smp.bufferSlot, 1, nullptr);
+			//		break;
+			//	case ShaderType::PS:
+			//		m_deviceContext->PSSetSamplers(smp.bufferSlot, 1, nullptr);
+			//		break;
+			//	default:
+			//		break;
+			//	}
+			//}
+		}
+	}
+	else
+	{
+		;// OutputDebugString("Warning: invalid shader is active\n");
 	}
 
-	m_activeShader = id;
-	m_shaders[id]->VoidBuffers();
+	if (id != m_activeShader)
+	{
+		m_activeShader = id;
+		m_shaders[id]->VoidBuffers();
+	}
 }
 
 void Renderer::Reset()
@@ -667,6 +682,34 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 }
 
 
+void Renderer::DrawLine(const XMMATRIX & view, const XMMATRIX & proj)
+{
+	// draw line between 2 coords
+	XMFLOAT3 pos1 = XMFLOAT3(0, 0, 0);
+	XMFLOAT3 pos2 = pos1;	pos2.x += 5.0f;
+
+	SetShader(ENGINE->m_renderData.lineShader);
+	SetConstant4x4f("view", view);
+	SetConstant4x4f("proj", proj);
+	SetConstant3f("p1", pos1);
+	SetConstant3f("p2", pos2);
+	SetConstant3f("color", Color::green.Value());
+	Apply();
+	DrawIndexed(T_POINTS);
+}
+
+void Renderer::DrawLine(const XMMATRIX & view, const XMMATRIX & proj, const XMFLOAT3& pos1, const XMFLOAT3& pos2, const XMFLOAT3& color)
+{
+	SetShader(ENGINE->m_renderData.lineShader);
+	SetConstant4x4f("view", view);
+	SetConstant4x4f("proj", proj);
+	SetConstant3f("p1", pos1);
+	SetConstant3f("p2", pos2);
+	SetConstant3f("color", color);
+	Apply();
+	DrawIndexed(T_POINTS);
+}
+
 void Renderer::Begin(const float clearColor[4])
 {
 	m_Direct3D->BeginFrame(clearColor);
@@ -690,18 +733,21 @@ void Renderer::Apply()
 	// set shaders & data layout
 	m_deviceContext->IASetInputLayout(shader->m_layout);
 	m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
-	m_deviceContext->PSSetShader(shader->m_pixelShader, nullptr, 0);
+	m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
+	if (shader->m_geoShader)	 m_deviceContext->GSSetShader(shader->m_geoShader    , nullptr, 0);
+	if (shader->m_hullShader)	 m_deviceContext->HSSetShader(shader->m_hullShader   , nullptr, 0);
+	if (shader->m_domainShader)	 m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
+	if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
 
 	// set vertex & index buffers & topology
 	unsigned stride = sizeof(Vertex);	// layout?
 	unsigned offset = 0;
 	m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_activeBuffer]->m_vertexBuffer, &stride, &offset);
 	m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-	m_deviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	// viewport
 	m_deviceContext->RSSetViewports(1, &m_viewPort);
-	m_deviceContext->RSSetState(m_rasterizerStates[CULL_NONE]);
+	m_deviceContext->RSSetState(m_rasterizerStates[CULL_NONE]);	// TODO: m_activeRS?
 
 	// test
 	D3D11_RASTERIZER_DESC rsDesc; 
@@ -752,6 +798,18 @@ void Renderer::Apply()
 			case ShaderType::PS:
 				m_deviceContext->PSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
 				break;
+			case ShaderType::GS:
+				m_deviceContext->GSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				break;
+			case ShaderType::DS:
+				m_deviceContext->DSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				break;
+			case ShaderType::HS:
+				m_deviceContext->HSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				break;
+			case ShaderType::CS:
+				m_deviceContext->CSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				break;
 			default:
 				OutputDebugString("ERROR: Renderer::Apply() - UNKOWN Shader Type\n");
 				break;
@@ -770,6 +828,18 @@ void Renderer::Apply()
 		case ShaderType::VS:
 			m_deviceContext->VSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
 			break;
+		case ShaderType::GS:
+			m_deviceContext->GSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
+			break;
+		case ShaderType::DS:
+			m_deviceContext->DSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
+			break;
+		case ShaderType::HS:
+			m_deviceContext->HSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
+			break;
+		case ShaderType::CS:
+			m_deviceContext->CSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
+			break;
 		case ShaderType::PS:
 			m_deviceContext->PSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
 			break;
@@ -783,7 +853,8 @@ void Renderer::Apply()
 	m_deviceContext->OMSetDepthStencilState(m_Direct3D->m_depthStencilState, 0);
 }
 
-void Renderer::DrawIndexed()
+void Renderer::DrawIndexed(TOPOLOGY topology)
 {
+	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->DrawIndexed(m_bufferObjects[m_activeBuffer]->m_indexCount, 0, 0);
 }

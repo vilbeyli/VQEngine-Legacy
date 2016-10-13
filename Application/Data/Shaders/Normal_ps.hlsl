@@ -44,47 +44,41 @@ SamplerState samAnisotropic
     AddressV = WRAP;
 };
 
-inline float3 UnpackNormals(float2 uv, float3 vertNormal, float3 vertTangent)
+inline float3 UnpackNormals(float2 uv, float3 WNormal, float3 WTangent)
 {
 	// uncompressed normal in tangent space
     float3 TNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
-	TNormal = TNormal.xzy;
-	//TNormal.y *= -1.0f;
-	//TNormal.z *= -1.0f;
-
 	TNormal = normalize(TNormal * 2.0f - 1.0f);
-	float3 N = normalize(vertNormal);
+	TNormal.z = -TNormal.z;
+	//TNormal = float3(0, 0, 1);
+	float3 N = normalize(WNormal);
 
 
-    // float3 T = WTangent;	// after interpolation, T and N might not be orthonormal
+    //float3 T = WTangent;	// after interpolation, T and N might not be orthonormal
 	// make sure T is orthonormal to N by subtracting off any component of T along direction N.
-	float3 T = normalize(vertTangent - dot(vertNormal, vertTangent) * vertNormal);
+	float3 T = normalize(WTangent - dot(WNormal, WTangent) * WNormal);
     float3 B = normalize(cross(N, T));
 	float3x3 TBN = float3x3(T, B, N);
+
     //float3x3 TBN = float3x3(T, N, B);
     
 	
-	//TBN = transpose(TBN);
+	TBN = transpose(TBN);
 	return mul(TBN, TNormal);
+
+	//return mul(TNormal, TBN);
     //return TNormal;
-    //return T;
+	//return T;
+	//return (T+1)/2;
+	//return B;
 }
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	// gamma correction
-	bool gammaCorrect = gammaCorrection > 0.99f;
-	float gamma = 1.0/2.2;
-
     float3 N = normalize(In.normal);
     float3 T = normalize(In.tangent);
     float3 n = (isNormalMap)        * UnpackNormals(In.texCoord, N, T) +
                (1.0f - isNormalMap) * N;
-	float4 outColor = float4(n,1);
-	
-
-	if(gammaCorrect)
-		return pow(outColor, float4(gamma,gamma,gamma,1.0f));
-	else
-		return outColor;
+	//n = (n + 1) / 2;
+	return 	float4(n, 1);
 }

@@ -24,6 +24,7 @@ Shader::Shader(const std::string& shaderFileName)
 	:
 	m_vertexShader(nullptr),
 	m_pixelShader(nullptr),
+	m_geoShader(nullptr),
 	m_layout(nullptr),
 	m_name(shaderFileName),
 	m_id(-1)
@@ -86,7 +87,7 @@ Shader::~Shader(void)
 	}
 }
 
-void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts)
+void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts, bool geoShader)
 {
 	HRESULT result;
 	ID3D10Blob* errorMessage = nullptr;
@@ -124,6 +125,24 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		HandleCompileError(errorMessage, vspath);
 	}
 
+	//compile geometry shader
+	ID3D10Blob* gsBlob = NULL;
+	if (geoShader)
+	{
+		if (FAILED(D3DCompileFromFile(
+			GSPath,
+			NULL,
+			NULL,
+			"GSMain",
+			"gs_5_0",
+			D3DCOMPILE_ENABLE_STRICTNESS,
+			0,
+			&gsBlob,
+			&errorMessage)))
+		{
+			HandleCompileError(errorMessage, gspath);
+		}
+	}
 	//compile pixel shader
 	ID3D10Blob* psBlob = NULL;
 	if (FAILED(D3DCompileFromFile(
@@ -140,8 +159,8 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		HandleCompileError(errorMessage, pspath);
 	}
 	
-	SetReflections(vsBlob, psBlob);
-	CheckSignatures();
+	SetReflections(vsBlob, psBlob, gsBlob);
+	//CheckSignatures();
 
 
 	// CREATE SHADER PROGRAMS
@@ -166,6 +185,20 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	{
 		OutputDebugString("Error creating pixel shader program");
 		assert(false);
+	}
+
+	// create geo shader buffer
+	if (geoShader)
+	{
+		result = device->CreateGeometryShader(  gsBlob->GetBufferPointer(),
+												gsBlob->GetBufferSize(),
+												NULL,
+												&m_geoShader);
+		if (FAILED(result))
+		{
+			OutputDebugString("Error creating geometry shader program");
+			assert(false);
+		}
 	}
 
 
@@ -200,7 +233,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	SetCBuffers(device);
 	
 	// SET TEXTURES & SAMPLERS
-	auto sRefl = m_psRefl;
+	auto sRefl = m_psRefl;		// vsRefl? gsRefl?
 	D3D11_SHADER_DESC desc;
 	sRefl->GetDesc(&desc);
 
@@ -226,9 +259,6 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 			tex.bufferSlot = texSlot++;
 			m_textures.push_back(tex);
 		}
-
-		int j = 5;
-		++j;
 	}
 
 	//release shader buffers
@@ -237,10 +267,16 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 
 	psBlob->Release();
 	psBlob = 0;
+
+	if (gsBlob)
+	{
+		gsBlob->Release();
+		gsBlob = 0;
+	}
 	OutputDebugString(" - Done.\n");
 }
 
-void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob)
+void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob)
 {
 	// Vertex Shader
 	if (FAILED(D3DReflect(
@@ -264,6 +300,19 @@ void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob)
 		assert(false);
 	}
 
+	// Geometry Shader
+	if (gsBlob)
+	{
+		if (FAILED(D3DReflect(
+			gsBlob->GetBufferPointer(),
+			gsBlob->GetBufferSize(),
+			IID_ID3D11ShaderReflection,
+			(void**)&m_gsRefl)))
+		{
+			OutputDebugString("Error getting pixel shader reflection\n");
+			assert(false);
+		}
+	}
 }
 
 void Shader::CheckSignatures()
@@ -328,7 +377,7 @@ void Shader::SetCBuffers(ID3D11Device* device)
 	//---------------------------------------------------------------------------------------
 	RegisterCBufferLayout(m_vsRefl, ShaderType::VS);
 	RegisterCBufferLayout(m_psRefl, ShaderType::PS);
-	
+	if(m_gsRefl) RegisterCBufferLayout(m_gsRefl, ShaderType::GS);
 
 	// CREATE CPU & GPU CONSTANT BUFFERS
 	//---------------------------------------------------------------------------------------

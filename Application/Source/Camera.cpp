@@ -22,7 +22,11 @@
 #include <string>
 #include "SystemDefs.h"
 
+#ifdef ENABLE_RAW_INPUT
 #define CAM_ANGULAR_SPEED_DEG 60.0f
+#else
+#define CAM_ANGULAR_SPEED_DEG 60.0f
+#endif
 #define CAM_MOVE_SPEED 20.0f
 #define DEG2RAD XM_PI / 180.0f
 

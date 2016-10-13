@@ -208,6 +208,8 @@ void SceneManager::Update(float dt)
 	// F1-F4 | Debug Shaders
 	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = m_renderData.texCoordShader;
 	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = m_renderData.normalShader;
+	if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = m_renderData.tangentShader;
+	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = m_renderData.binormalShader;
 	
 	// F5-F8 | Lighting Shaders
 	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = m_renderData.unlitShader;

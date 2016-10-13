@@ -62,14 +62,16 @@ void BaseSystem::Run()
 			TranslateMessage(&msg);		// Translates virtual-key messages into character messages
 			DispatchMessage(&msg);		// indirectly causes Windows to invoke WndProc
 		}
-
-		if (msg.message == WM_QUIT)
-		{
-			done = true;
-		}
 		else
 		{
-			done = !ENGINE->Run();
+			if (msg.message == WM_QUIT)
+			{
+				done = true;
+			}
+			else
+			{
+				done = !ENGINE->Run();
+			}
 		}
 	}
 
@@ -87,6 +89,40 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 	switch (umsg)
 	{
 	
+	// application active/inactive
+	case WM_ACTIVATE:
+		if (LOWORD(wparam) == WA_INACTIVE)
+		{
+			// paused = true
+			// timer stop
+		}
+		else
+		{
+			// paused = false
+			// timer start
+		}
+		break;
+
+	// resize bar grab-release
+	case WM_ENTERSIZEMOVE:
+		// paused = true
+		// resizing = true
+		// timer.stop()
+		break;
+
+	case WM_EXITSIZEMOVE:
+		// paused = false
+		// resizing= false
+		// timer.start()
+		// onresize()
+		break;
+
+	// prevent window from becoming too small
+	case WM_GETMINMAXINFO:
+		((MINMAXINFO*)lparam)->ptMinTrackSize.x = 200;
+		((MINMAXINFO*)lparam)->ptMinTrackSize.y = 200;
+		break;
+
 	// keyboard
 	case WM_KEYDOWN:
 	{
@@ -117,6 +153,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 		break;
 	}
 
+#ifdef ENABLE_RAW_INPUT
 	// raw input for mouse - see: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418864.aspx
 	case WM_INPUT:	
 	{
@@ -159,12 +196,14 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 		break;
 	}
 
+#else
 	// client area mouse - not good for first person camera
-	//case WM_MOUSEMOVE:
-	//{
-	//	ENGINE->m_input->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
-	//	break;
-	//}
+	case WM_MOUSEMOVE:
+	{
+		ENGINE->m_input->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+		break;
+	}
+#endif
 
 	default:
 	{
@@ -250,7 +289,13 @@ void BaseSystem::InitWindow(int& width, int& height)
 	ShowCursor(false);
 	//SetCursorPos(posX + width / 2, posY + height / 2);
 
+	RECT rcClip;
+	GetWindowRect(m_hwnd, &rcClip);
+	ClipCursor(&rcClip);
+
+#ifdef ENABLE_RAW_INPUT
 	InitRawInputDevices();
+#endif
 	return;
 }
 
@@ -286,7 +331,7 @@ void BaseSystem::InitRawInputDevices()
 	Rid[0].usUsage = (USHORT)0x02;	// HID_USAGE_GENERIC_MOUSE;
 	Rid[0].dwFlags = 0;
 	Rid[0].hwndTarget = m_hwnd;
-	if (FAILED(RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]))))
+	if (FAILED(RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]))))	// Cast between semantically different integer types : a Boolean type to HRESULT.
 	{
 		OutputDebugString("Failed to register raw input device!");
 	}

@@ -19,13 +19,14 @@
 #include "Input.h"
 #include "SystemDefs.h"
 
+#include <algorithm>
 #include <string>
 
 #ifdef _DEBUG
 #include <Windows.h>
 #endif
 
-#define LOG
+#define LOG__
 
 Input::Input()
 	:
@@ -93,14 +94,22 @@ void Input::ButtonUp(KeyCode btn)
 
 void Input::UpdateMousePos(long x, long y)
 {
+#ifdef ENABLE_RAW_INPUT
 	m_mouseDelta[0] = x;
 	m_mouseDelta[1] = y;
 
 	// unused for now
 	m_mousePos[0] = 0;
 	m_mousePos[1] = 0;
+#else
+	m_mouseDelta[0] = max(-1, min(x - m_mousePos[0], 1));
+	m_mouseDelta[1] = max(-1, min(y - m_mousePos[1], 1));
 
-#if defined(_DEBUG) && defined(N_LOG)
+	m_mousePos[0] = x;
+	m_mousePos[1] = y;
+#endif
+
+#if defined(_DEBUG) && defined(LOG)
 	char info[128];
 	sprintf_s(info, "Mouse Delta: (%d, %d)\tMouse Pos: (%d, %d)\n", 
 		m_mouseDelta[0], m_mouseDelta[1],

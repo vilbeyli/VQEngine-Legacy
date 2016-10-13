@@ -157,22 +157,19 @@ inline float3 UnpackNormals(float2 uv, float3 vertNormal, float3 vertTangent)
 {
 	// uncompressed normal in tangent space
 	float3 TNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
-	TNormal = TNormal.xzy;
-	//TNormal.y *= -1.0f;
-	//TNormal.z *= -1.0f;
-
 	TNormal = normalize(TNormal * 2.0f - 1.0f);
+	//TNormal = float3(0, 0, 1);
 	float3 N = normalize(vertNormal);
 
 
-    // float3 T = WTangent;	// after interpolation, T and N might not be orthonormal
+	// float3 T = WTangent;	// after interpolation, T and N might not be orthonormal
 	// make sure T is orthonormal to N by subtracting off any component of T along direction N.
 	float3 T = normalize(vertTangent - dot(vertNormal, vertTangent) * vertNormal);
 	float3 B = normalize(cross(N, T));
 	float3x3 TBN = float3x3(T, B, N);
-    //float3x3 TBN = float3x3(T, N, B);
-    
-	
+	//float3x3 TBN = float3x3(T, N, B);
+
+
 	//TBN = transpose(TBN);
 	return mul(TBN, TNormal);
     //return TNormal;

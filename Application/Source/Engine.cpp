@@ -73,7 +73,11 @@ bool Engine::Load()
 	m_renderData.unlitShader	= m_renderer->AddShader("UnlitTextureColor", shaderRoot, layout);
 	m_renderData.texCoordShader = m_renderer->AddShader("TextureCoord", shaderRoot, layout);
 	m_renderData.normalShader	= m_renderer->AddShader("Normal", shaderRoot, layout);
+	m_renderData.tangentShader	= m_renderer->AddShader("Tangent", shaderRoot, layout);
+	m_renderData.binormalShader	= m_renderer->AddShader("Binormal", shaderRoot, layout);
 	m_renderData.phongShader	= m_renderer->AddShader("Forward_Phong", shaderRoot, layout);
+	m_renderData.lineShader		= m_renderer->AddShader("Line", shaderRoot, layout, true);
+	
 	m_renderData.exampleTex		= m_renderer->AddTexture("bricks_d.png", textureRoot);
 	m_renderData.exampleNormMap	= m_renderer->AddTexture("bricks_n.png", textureRoot);
 	m_sceneMan.Initialize(m_renderer, m_renderData, m_camera);
@@ -101,8 +105,8 @@ void Engine::CalcFrameStats()
 		std::ostringstream stats;
 		stats.precision(6);
 		stats << "VDemo | "
-			<< "FPS: " << fps << " "
-			<< "FrameTime: " << frameTime << "ms";
+			<< "dt: " << frameTime << "ms "
+			<< "FPS: " << fps;
 		SetWindowText(m_renderer->GetWindow(), stats.str().c_str());
 		frameCount = 0;
 		timeElaped += 1.0f;

@@ -19,6 +19,7 @@
 #pragma once
 
 #define KEY_COUNT 256
+#define ENABLE_RAW_INPUT
 
 typedef unsigned int KeyCode;
 

@@ -16,29 +16,42 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+cbuffer perLine
+{
+	float3 p1;
+	float pad1;
+	float3 p2;
+	float pad2;
+};
 
+cbuffer renderConsts
+{
+	matrix view;
+	matrix proj;
+};
 
-#ifndef UTILS_CPP
-#define UTILS_CPP
+struct GSIn
+{
 
-#include <string>
-#include <vector>
+};
 
-//#include <rapidjson/document.h>
-//void PrintParsingError(rapidjson::Document* doc, const char* fileName = "FILENAME_NOT_DEFINED");
+struct PSIn
+{
+	float4 position : SV_POSITION;
+};
 
-// STRING PROCESSING
-//-----------------------------------------------------------------------------------------------
-std::vector<std::string> split(const char* s,			char c = ' ');
-std::vector<std::string> split(const std::string& s,	char c = ' ');
-std::string	GetFileNameFromPath(const std::string&);
+// Note about 'maxvertexcount(N)'
+// [NVIDIA08]:	peak perf when GS outputs 1-20 scalars
+//				50% perf if 27-40 scalars are output
+//				where scalar count = N * PSIn(scalarCount)
+[maxvertexcount(2)]
+void GSMain(point GSIn gin[1], inout LineStream<PSIn> lineStream)
+{
+	PSIn Out[2];
+	Out[0].position = mul(proj, mul(view, float4(p1, 1)));
+	Out[1].position = mul(proj, mul(view, float4(p2, 1)));
 
-bool isNormalMap(const std::string& fileName);
-std::string GetTextureNameFromDirectory(const std::string& dir);
-
-// RANDOM
-//------------------------------
-float	RandF(float l, float h);
-int		RandI(int l, int h);
-size_t	RandU(size_t l, size_t h);
-#endif
+	lineStream.RestartStrip();
+	lineStream.Append(Out[0]);
+	lineStream.Append(Out[1]);
+}

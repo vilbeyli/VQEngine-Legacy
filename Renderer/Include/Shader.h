@@ -27,7 +27,6 @@
 
 using namespace DirectX;
 
-
 enum LayoutFormat
 {
 	FLOAT32_2 = DXGI_FORMAT_R32G32_FLOAT,
@@ -53,6 +52,10 @@ enum ShaderType
 {
 	VS,
 	PS,
+	GS,
+	DS,
+	HS,
+	CS,
 
 	COUNT
 };
@@ -121,8 +124,8 @@ public:
 	ShaderID	ID() const;
 
 private:
-	void Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts);
-	void SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob);
+	void Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts, bool geoShader = false);
+	void SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob);
 	void CheckSignatures();
 	void SetCBuffers(ID3D11Device* device);
 	void RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType type);
@@ -139,9 +142,14 @@ private:
 
 	ID3D11VertexShader*			m_vertexShader;
 	ID3D11PixelShader*			m_pixelShader;
+	ID3D11GeometryShader*		m_geoShader;
+	ID3D11HullShader*			m_hullShader;
+	ID3D11DomainShader*			m_domainShader;
+	ID3D11ComputeShader*		m_computeShader;
 
 	ID3D11ShaderReflection*		m_vsRefl;	// shader reflections, temporary?
 	ID3D11ShaderReflection*		m_psRefl;	// shader reflections, temporary?
+	ID3D11ShaderReflection*		m_gsRefl;	// shader reflections, temporary?
 
 	ID3D11InputLayout*			m_layout;
 

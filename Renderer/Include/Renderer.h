@@ -38,10 +38,7 @@ class BufferObject;
 class Camera;
 class Shader;
 
-namespace DirectX
-{
-	class ScratchImage;
-}
+namespace DirectX { class ScratchImage; }
 
 // typedefs
 typedef int ShaderID;
@@ -59,6 +56,15 @@ enum RASTERIZER_STATE
 	RS_COUNT
 };
 
+enum TOPOLOGY
+{
+	T_POINTS = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
+	T_TRIANGLES = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+	T_LINES = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+
+	TOPOLOGY_COUNT
+};
+
 struct Skydome
 {
 	void Render(Renderer* renderer, const XMMATRIX& view, const XMMATRIX& proj) const;
@@ -70,11 +76,6 @@ struct Skydome
 	Renderer* renderer;
 };
 
-struct TextureSetCommand
-{
-	TextureID texID;
-	ShaderTexture shdTex;
-};
 
 class Renderer
 {
@@ -93,7 +94,7 @@ public:
 	void EnableZBuffer(bool enable);
 
 	// resource interface
-	ShaderID	AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts);
+	ShaderID AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
 	TextureID	AddTexture(const std::string& shdFileName, const std::string& fileRoot);
 
 	const Texture& GetTexture(TextureID) const;
@@ -109,12 +110,15 @@ public:
 	void SetConstantStruct(const char * cName, void* data);
 	void SetTexture(const char* texName, TextureID tex);
 	void SetRasterizerState(int stateID);
+	
+	void DrawLine(const XMMATRIX & view, const XMMATRIX & proj);
+	void DrawLine(const XMMATRIX & view, const XMMATRIX & proj, const XMFLOAT3& pos1, const XMFLOAT3& pos2, const XMFLOAT3& color = Color().Value());
 
 	void Begin(const float clearColor[4]);
 	void Reset();
 	void Apply();
 	void End();
-	void DrawIndexed();
+	void DrawIndexed(TOPOLOGY topology = T_TRIANGLES);
 	void PollShaderFiles();
 private:
 
@@ -123,12 +127,20 @@ private:
 	void OnShaderChange(LPTSTR dir);
 
 	void InitRasterizerStates();
+	void LoadAnimation();
 
 public:
 	static const bool FULL_SCREEN  = false;
 	static const bool VSYNC = false;	// insane input lag; turned off
+	static bool ENABLE_VQS;
 
 private:
+	struct TextureSetCommand
+	{
+		TextureID texID;
+		ShaderTexture shdTex;
+	};
+
 	D3DManager*						m_Direct3D;
 	HWND							m_hWnd;
 	ID3D11Device*					m_device;

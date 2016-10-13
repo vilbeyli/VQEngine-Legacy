@@ -16,29 +16,17 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+struct PSIn
+{
+    float4 position : SV_POSITION;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float2 texCoord : TEXCOORD4;
+};
 
-
-#ifndef UTILS_CPP
-#define UTILS_CPP
-
-#include <string>
-#include <vector>
-
-//#include <rapidjson/document.h>
-//void PrintParsingError(rapidjson::Document* doc, const char* fileName = "FILENAME_NOT_DEFINED");
-
-// STRING PROCESSING
-//-----------------------------------------------------------------------------------------------
-std::vector<std::string> split(const char* s,			char c = ' ');
-std::vector<std::string> split(const std::string& s,	char c = ' ');
-std::string	GetFileNameFromPath(const std::string&);
-
-bool isNormalMap(const std::string& fileName);
-std::string GetTextureNameFromDirectory(const std::string& dir);
-
-// RANDOM
-//------------------------------
-float	RandF(float l, float h);
-int		RandI(int l, int h);
-size_t	RandU(size_t l, size_t h);
-#endif
+float4 PSMain(PSIn In) : SV_TARGET
+{
+    float3 T = normalize(In.tangent);
+	T = (T + 1) / 2;
+	return 	float4(T, 1);
+}

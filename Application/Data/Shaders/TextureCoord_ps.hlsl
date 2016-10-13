@@ -44,8 +44,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 	float4 outColor = float4(uv,0,1);
 	
 
-	if(gammaCorrect)
-		return pow(outColor, float4(gamma,gamma,gamma,1.0f));
-	else
+	//if(gammaCorrect)
+	//	return pow(outColor, float4(gamma,gamma,gamma,1.0f));
+	//else
 		return outColor;
 }

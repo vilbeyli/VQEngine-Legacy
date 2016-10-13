@@ -16,29 +16,13 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+struct GSIn
+{
 
+};
 
-#ifndef UTILS_CPP
-#define UTILS_CPP
-
-#include <string>
-#include <vector>
-
-//#include <rapidjson/document.h>
-//void PrintParsingError(rapidjson::Document* doc, const char* fileName = "FILENAME_NOT_DEFINED");
-
-// STRING PROCESSING
-//-----------------------------------------------------------------------------------------------
-std::vector<std::string> split(const char* s,			char c = ' ');
-std::vector<std::string> split(const std::string& s,	char c = ' ');
-std::string	GetFileNameFromPath(const std::string&);
-
-bool isNormalMap(const std::string& fileName);
-std::string GetTextureNameFromDirectory(const std::string& dir);
-
-// RANDOM
-//------------------------------
-float	RandF(float l, float h);
-int		RandI(int l, int h);
-size_t	RandU(size_t l, size_t h);
-#endif
+GSIn VSMain()
+{
+	GSIn Out;
+	return Out;
+}

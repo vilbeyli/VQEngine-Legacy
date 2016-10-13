@@ -26,6 +26,10 @@
 #include <atlbase.h>
 #include <atlconv.h>
 
+#ifdef _DEBUG
+#include <cassert>
+#endif _DEBUG
+
 using std::vector;
 using std::string;
 using std::cout;
@@ -61,6 +65,14 @@ int RandI(int l, int h)
 {
 	int offset = rand() % (h - l);
 	return l + offset;
+}
+size_t RandU(size_t l, size_t h)
+{
+#ifdef _DEBUG
+	assert(l <= h);
+#endif
+	int offset = rand() % (h - l);
+	return l + static_cast<size_t>(offset);
 }
 
 std::string GetFileNameFromPath(const std::string& path)

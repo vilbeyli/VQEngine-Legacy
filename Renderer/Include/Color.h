@@ -37,6 +37,9 @@ public:
 
 	XMFLOAT3 Value() const { return value; }
 	static const std::vector<Color> Palette();
+	static XMFLOAT3 RandColorF3();
+	static XMVECTOR RandColorV();
+	static Color	RandColor();
 
 	//static Color GetColorByName(std::string);
 	//static std::string GetNameByColor(Color c);

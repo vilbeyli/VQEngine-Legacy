@@ -497,7 +497,8 @@ void Shader::HandleCompileError(ID3D10Blob* errorMessage, const std::string& shd
 		OutputDebugString(err.c_str());
 	}
 
-	assert(false);
+	// continue execution, make sure error is known
+	//assert(false);
 }
 
 void Shader::AssignID(ShaderID id)

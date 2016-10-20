@@ -22,23 +22,13 @@
 
 #include "Light.h"
 #include <vector>
+#include <Skydome.h>
 
 class Renderer;
 class Camera;
 
 typedef int ShaderID;
-struct RenderData
-{
-	ShaderID phongShader;
-	ShaderID unlitShader;
-	ShaderID texCoordShader;
-	ShaderID normalShader;
-	ShaderID tangentShader;
-	ShaderID binormalShader;
-	ShaderID lineShader;
-	TextureID exampleTex;
-	TextureID exampleNormMap;
-};
+struct RenderData;
 
 class SceneManager
 {
@@ -46,7 +36,7 @@ public:
 	SceneManager();
 	~SceneManager();
 
-	void Initialize(Renderer* renderer, RenderData rData, Camera* cam);
+	void Initialize(Renderer* renderer, const RenderData* rData, Camera* cam);
 	void Update(float dt);
 	void Render(const XMMATRIX& view, const XMMATRIX& proj) ;	// todo: const
 
@@ -62,11 +52,12 @@ private:
 private:
 	Renderer*	m_renderer;
 	Camera*		m_camera;
+	Skydome		m_skydome;
 
 	// render data
-	RenderData	m_renderData;
-	ShaderID	m_selectedShader;
-	bool		m_gammaCorrection;
+	const RenderData*	m_renderData;
+	ShaderID			m_selectedShader;
+	bool				m_gammaCorrection;
 	std::vector<Light> m_lights;
 
 	// scene variables

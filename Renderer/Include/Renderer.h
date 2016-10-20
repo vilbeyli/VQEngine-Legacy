@@ -65,20 +65,24 @@ enum TOPOLOGY
 	TOPOLOGY_COUNT
 };
 
-struct Skydome
+struct RenderData
 {
-	void Render(Renderer* renderer, const XMMATRIX& view, const XMMATRIX& proj) const;
-	void Init(Renderer* renderer_in, const char* tex, float scale);
+	ShaderID phongShader;
+	ShaderID unlitShader;
+	ShaderID texCoordShader;
+	ShaderID normalShader;
+	ShaderID tangentShader;
+	ShaderID binormalShader;
+	ShaderID lineShader;
+	ShaderID TNBShader;
 
-	GameObject skydomeObj;
-	TextureID skydomeTex;
-	ShaderID skydomeShader;
-	Renderer* renderer;
+	TextureID exampleTex;		// load scr
+	TextureID exampleNormMap;
 };
-
 
 class Renderer
 {
+	friend class Engine;
 public:
 	Renderer();
 	~Renderer();
@@ -94,8 +98,8 @@ public:
 	void EnableZBuffer(bool enable);
 
 	// resource interface
-	ShaderID AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
-	TextureID	AddTexture(const std::string& shdFileName, const std::string& fileRoot);
+	ShaderID	AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
+	TextureID	AddTexture(const std::string& shdFileName, const std::string& fileRoot = "");
 
 	const Texture& GetTexture(TextureID) const;
 
@@ -123,6 +127,7 @@ public:
 private:
 
 	void GeneratePrimitives();
+	void LoadShaders();
 	void PollThread();
 	void OnShaderChange(LPTSTR dir);
 
@@ -147,11 +152,11 @@ private:
 	ID3D11DeviceContext*			m_deviceContext;
 
 	GeometryGenerator				m_geom;
+	RenderData						m_renderData;
 
 	// render data
 	Camera*							m_mainCamera;
 	D3D11_VIEWPORT					m_viewPort;
-	Skydome							m_skydome;
 
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;

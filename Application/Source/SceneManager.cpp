@@ -38,11 +38,11 @@ SceneManager::SceneManager()
 SceneManager::~SceneManager()
 {}
 
-void SceneManager::Initialize(Renderer * renderer, RenderData rData, Camera* cam)
+void SceneManager::Initialize(Renderer * renderer, const RenderData* rData, Camera* cam)
 {
 	m_renderer = renderer;
 	m_renderData = rData;
-	m_selectedShader = rData.phongShader;
+	m_selectedShader = rData->phongShader;
 	m_gammaCorrection = true;
 	m_camera = cam;
 	InitializeBuilding();
@@ -54,8 +54,14 @@ void SceneManager::Initialize(Renderer * renderer, RenderData rData, Camera* cam
 	m_centralObj.m_model.m_mesh = MESH_TYPE::CUBE;
 	m_centralObj.m_model.m_material.color = Color::white;
 	m_centralObj.m_model.m_material.shininess = 90.0f;
-	m_centralObj.m_model.m_material.normalMap = m_renderer->GetTexture(rData.exampleNormMap);
-	
+	m_centralObj.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
+	m_centralObj.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+
+	// set skydome
+	//m_skydome.Init(this, "skydomeTex.png", FAR_PLANE / 3.97f);
+	//m_skydome.Init(this, "bluecloud_dn.jpg", FAR_PLANE / 3.97f);
+	//m_skydome.Init(this, "browncloud_rt.jpg", FAR_PLANE / 3.97f);
+	m_skydome.Init(m_renderer, "browncloud_lf.jpg", FAR_PLANE / 3.97f, m_renderData->unlitShader);
 	
 }
 
@@ -75,7 +81,8 @@ void SceneManager::InitializeBuilding()
 		//m_floor.m_model.m_material.shininess	= 40.0f;
 		m_floor.m_model.m_material = Material::jade;
 		//m_floor.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
-		m_floor.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
+		m_floor.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
+	m_centralObj.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	}
 	// CEILING
 	{
@@ -86,8 +93,10 @@ void SceneManager::InitializeBuilding()
 		//m_ceiling.m_model.m_material.color		= Color::purple;
 		//m_ceiling.m_model.m_material.shininess	= 10.0f;
 		m_ceiling.m_model.m_material = Material::jade;
-		m_ceiling.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
-		m_ceiling.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
+		m_ceiling.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
+		m_ceiling.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+		m_ceiling.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
+		m_ceiling.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	}
 
 	// RIGHT WALL
@@ -99,8 +108,10 @@ void SceneManager::InitializeBuilding()
 		//m_wallR.m_model.m_material.color		= Color::gray;
 		//m_wallR.m_model.m_material.shininess	= 120.0f;
 		m_wallR.m_model.m_material = Material::bronze;
-		m_wallR.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
-		m_wallR.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
+		m_wallR.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
+		m_wallR.m_model.m_material.normalMap.id  = m_renderer->AddTexture("bricks_n.png");
+		m_wallR.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
+		m_wallR.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
 
 	// LEFT WALL
@@ -112,8 +123,10 @@ void SceneManager::InitializeBuilding()
 		//m_wallL.m_model.m_material.color		= Color::gray;
 		//m_wallL.m_model.m_material.shininess	= 60.0f;
 		m_wallL.m_model.m_material = Material::bronze;
-		m_wallL.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
-		m_wallL.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
+		m_wallL.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
+		m_wallL.m_model.m_material.normalMap.id  = m_renderer->AddTexture("bricks_n.png");
+		m_wallL.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
+		m_wallL.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
 	// WALL
 	{
@@ -124,8 +137,10 @@ void SceneManager::InitializeBuilding()
 		//m_wallF.m_model.m_material.color		= Color::gray;
 		//m_wallF.m_model.m_material.shininess	= 90.0f;
 		m_wallF.m_model.m_material = Material::gold;
-		m_wallF.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
-		m_wallF.m_model.m_material.normalMap = m_renderer->GetTexture(m_renderData.exampleNormMap);
+		m_wallF.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
+		m_wallF.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
+		m_wallF.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+		m_wallF.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
 }
 
@@ -206,14 +221,14 @@ void SceneManager::Update(float dt)
 	// SHADER CONFIGURATION
 	//--------------------------------------------------------------------------------
 	// F1-F4 | Debug Shaders
-	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = m_renderData.texCoordShader;
-	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = m_renderData.normalShader;
-	if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = m_renderData.tangentShader;
-	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = m_renderData.binormalShader;
+	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = m_renderData->texCoordShader;
+	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = m_renderData->normalShader;
+	if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = m_renderData->tangentShader;
+	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = m_renderData->binormalShader;
 	
 	// F5-F8 | Lighting Shaders
-	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = m_renderData.unlitShader;
-	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = m_renderData.phongShader;
+	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = m_renderData->unlitShader;
+	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = m_renderData->phongShader;
 
 	// F9-F12 | Shader Parameters
 	if (ENGINE->INP()->IsKeyTriggered(120)) m_gammaCorrection = !m_gammaCorrection;
@@ -259,9 +274,10 @@ void SceneManager::Update(float dt)
 
 void SceneManager::Render(const XMMATRIX& view, const XMMATRIX& proj) 
 {
+	//m_skydome.Render(m_renderer, view, proj);
 	RenderLights(view, proj);
 	RenderBuilding(view, proj);
-	RenderCentralObjects(view, proj);
+	//RenderCentralObjects(view, proj);
 }
 
 void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const
@@ -339,7 +355,7 @@ void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) co
 void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const
 {
 	m_renderer->Reset();
-	m_renderer->SetShader(m_renderData.unlitShader);
+	m_renderer->SetShader(m_renderData->unlitShader);
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
 	for (const Light& light : m_lights)
@@ -387,7 +403,7 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	// grid
 	m_centralObj.m_transform.Translate(XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
 	m_renderer->SetBufferObj(m_centralObj.m_model.m_mesh);
-	m_renderer->SetShader(m_renderData.texCoordShader);
+	m_renderer->SetShader(m_renderData->texCoordShader);
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
 

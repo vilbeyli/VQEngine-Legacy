@@ -58,7 +58,7 @@ private:
 	void CalcFrameStats();
 //--------------------------------------------------------------
 public:
-	RenderData		m_renderData;
+	RenderData*		m_renderData;
 
 private:
 	Input*			m_input;

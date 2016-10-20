@@ -51,6 +51,7 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 	m_input->Init();
 	if(!m_renderer->Init(scr_width, scr_height, hWnd)) 
 		return false;
+	m_renderData = &(m_renderer->m_renderData);
 
 	m_camera->SetOthoMatrix(m_renderer->WindowWidth(), m_renderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
 	m_camera->SetProjectionMatrix((float)XM_PIDIV4, m_renderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
@@ -62,26 +63,7 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 
 bool Engine::Load()
 {
-	const char* shaderRoot	= "Data/Shaders/";
-	const char* textureRoot	= "Data/Textures/";
-	std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 },
-	};
-	m_renderData.unlitShader	= m_renderer->AddShader("UnlitTextureColor", shaderRoot, layout);
-	m_renderData.texCoordShader = m_renderer->AddShader("TextureCoord", shaderRoot, layout);
-	m_renderData.normalShader	= m_renderer->AddShader("Normal", shaderRoot, layout);
-	m_renderData.tangentShader	= m_renderer->AddShader("Tangent", shaderRoot, layout);
-	m_renderData.binormalShader	= m_renderer->AddShader("Binormal", shaderRoot, layout);
-	m_renderData.phongShader	= m_renderer->AddShader("Forward_Phong", shaderRoot, layout);
-	m_renderData.lineShader		= m_renderer->AddShader("Line", shaderRoot, layout, true);
-	
-	m_renderData.exampleTex		= m_renderer->AddTexture("bricks_d.png", textureRoot);
-	m_renderData.exampleNormMap	= m_renderer->AddTexture("bricks_n.png", textureRoot);
 	m_sceneMan.Initialize(m_renderer, m_renderData, m_camera);
-
 	m_timer.Reset();
 	return true;
 }
@@ -103,7 +85,7 @@ void Engine::CalcFrameStats()
 		float frameTime = 1000.0f / fps;	// milliseconds
 
 		std::ostringstream stats;
-		stats.precision(6);
+		stats.precision(2);
 		stats << "VDemo | "
 			<< "dt: " << frameTime << "ms "
 			<< "FPS: " << fps;

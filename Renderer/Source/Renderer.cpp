@@ -34,32 +34,8 @@
 bool Renderer::ENABLE_VQS = false;
 
 #define SHADER_HOTSWAP 0
-
-void Skydome::Render(Renderer* renderer, const XMMATRIX& view, const XMMATRIX& proj) const
-{
-	renderer->Reset();
-	renderer->SetShader(0);
-
-	XMMATRIX world = skydomeObj.m_transform.WorldTransformationMatrix();
-	renderer->SetConstant4x4f("world", world);
-	renderer->SetConstant4x4f("view", view);
-	renderer->SetConstant4x4f("proj", proj);
-	renderer->SetConstant1f("isDiffuseMap", 1.0f);
-	renderer->SetTexture("gDiffuseMap", skydomeTex);
-	renderer->SetConstant3f("diffuse", XMFLOAT3(1.0f, 1.0f, 1.0f));	// must set this or yellow?
-	renderer->SetBufferObj(MESH_TYPE::SPHERE);
-	renderer->Apply();
-	renderer->DrawIndexed();
-}
-
-
-void Skydome::Init(Renderer* renderer_in, const char* tex, float scale)
-{
-	renderer = renderer_in;
-	skydomeObj.m_transform.SetScaleUniform(scale);
-	skydomeTex = renderer->AddTexture(tex, "Data/Textures/");
-	skydomeShader = 0;	// hack: first shader added is unlitTextureColor in Engine.cpp
-}
+const char* shaderRoot	= "Data/Shaders/";
+const char* textureRoot = "Data/Textures/";
 
 Renderer::Renderer()
 	:
@@ -99,8 +75,8 @@ bool Renderer::Init(int width, int height, HWND hwnd)
 	m_deviceContext = m_Direct3D->GetDeviceContext();
 
 	InitRasterizerStates();
-
 	GeneratePrimitives();
+	LoadShaders();
 	return true;
 }
 
@@ -182,12 +158,28 @@ void Renderer::GeneratePrimitives()
 	m_bufferObjects[GRID]		= m_geom.Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV);
 	m_bufferObjects[CYLINDER]	= m_geom.Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount);
 	m_bufferObjects[SPHERE]		= m_geom.Sphere(sphRadius, sphRingCount, sphSliceCount);
+	//m_bufferObjects[BONE]		= m_geom.Sphere(sphRadius/40, 10, 10);
+}
 
-	// set skydome
-	//m_skydome.Init(this, "skydomeTex.png", FAR_PLANE / 3.97f);
-	//m_skydome.Init(this, "bluecloud_dn.jpg", FAR_PLANE / 3.97f);
-	//m_skydome.Init(this, "browncloud_rt.jpg", FAR_PLANE / 3.97f);
-	m_skydome.Init(this, "browncloud_lf.jpg", FAR_PLANE / 3.97f);
+void Renderer::LoadShaders()
+{
+	std::vector<InputLayout> layout = {
+		{ "POSITION",	FLOAT32_3 },
+		{ "NORMAL",		FLOAT32_3 },
+		{ "TANGENT",	FLOAT32_3 },
+		{ "TEXCOORD",	FLOAT32_2 },
+	};
+	m_renderData.unlitShader	= AddShader("UnlitTextureColor", shaderRoot, layout);
+	m_renderData.texCoordShader = AddShader("TextureCoord", shaderRoot, layout);
+	m_renderData.normalShader	= AddShader("Normal", shaderRoot, layout);
+	m_renderData.tangentShader	= AddShader("Tangent", shaderRoot, layout);
+	m_renderData.binormalShader	= AddShader("Binormal", shaderRoot, layout);
+	m_renderData.phongShader	= AddShader("Forward_Phong", shaderRoot, layout);
+	m_renderData.lineShader		= AddShader("Line", shaderRoot, layout, true);
+	m_renderData.TNBShader		= AddShader("TNB", shaderRoot, layout, true);
+	
+	m_renderData.exampleTex		= AddTexture("bricks_d.png", textureRoot);
+	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", textureRoot);
 }
 
 void Renderer::PollThread()
@@ -365,14 +357,18 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 	return shd->ID();
 }
 
-TextureID Renderer::AddTexture(const std::string& textureFileName, const std::string& fileRoot)
+// assumes unique shader file names (even in different folders)
+TextureID Renderer::AddTexture(const std::string& shdFileName, const std::string& fileRoot /*= ""*/)
 {
 	// example params: "bricks_d.png", "Data/Textures/"
-	std::string path = fileRoot + textureFileName;
+	std::string path = fileRoot + shdFileName;
 	std::wstring wpath(path.begin(), path.end());
 
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [shdFileName](auto& tex) { return tex.name == shdFileName; });
+	if (found != m_textures.end()) return found->id;
+
 	Texture tex;
-	tex.name = textureFileName;
+	tex.name = shdFileName;
 
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
@@ -484,11 +480,6 @@ void Renderer::SetViewport(const unsigned width, const unsigned height)
 	m_viewPort.Height	= static_cast<float>(height);
 	m_viewPort.MinDepth = NEAR_PLANE;
 	m_viewPort.MaxDepth = FAR_PLANE;
-
-	// ?
-	XMMATRIX view = m_mainCamera->GetViewMatrix();
-	XMMATRIX proj = m_mainCamera->GetProjectionMatrix();
-	m_skydome.Render(this, view, proj);
 }
 
 void Renderer::SetBufferObj(int BufferID)
@@ -688,7 +679,7 @@ void Renderer::DrawLine(const XMMATRIX & view, const XMMATRIX & proj)
 	XMFLOAT3 pos1 = XMFLOAT3(0, 0, 0);
 	XMFLOAT3 pos2 = pos1;	pos2.x += 5.0f;
 
-	SetShader(ENGINE->m_renderData.lineShader);
+	SetShader(m_renderData.lineShader);
 	SetConstant4x4f("view", view);
 	SetConstant4x4f("proj", proj);
 	SetConstant3f("p1", pos1);
@@ -700,7 +691,7 @@ void Renderer::DrawLine(const XMMATRIX & view, const XMMATRIX & proj)
 
 void Renderer::DrawLine(const XMMATRIX & view, const XMMATRIX & proj, const XMFLOAT3& pos1, const XMFLOAT3& pos2, const XMFLOAT3& color)
 {
-	SetShader(ENGINE->m_renderData.lineShader);
+	SetShader(m_renderData.lineShader);
 	SetConstant4x4f("view", view);
 	SetConstant4x4f("proj", proj);
 	SetConstant3f("p1", pos1);

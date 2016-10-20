@@ -276,8 +276,6 @@ void Renderer::OnShaderChange(LPTSTR dir)
 	// works		: create file, delete file
 	// doesnt work	: modify file
 	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
-
-
 }
 
 void Renderer::PollShaderFiles()
@@ -358,17 +356,21 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 }
 
 // assumes unique shader file names (even in different folders)
-TextureID Renderer::AddTexture(const std::string& shdFileName, const std::string& fileRoot /*= ""*/)
+TextureID Renderer::AddTexture(const std::string& textureFileName, const std::string& fileRoot /*= ""*/)
 {
 	// example params: "bricks_d.png", "Data/Textures/"
-	std::string path = fileRoot + shdFileName;
+	std::string path = fileRoot + textureFileName;
 	std::wstring wpath(path.begin(), path.end());
 
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [shdFileName](auto& tex) { return tex.name == shdFileName; });
-	if (found != m_textures.end()) return found->id;
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [textureFileName](auto& tex) { return tex.name == textureFileName; });
+	if (found != m_textures.end())
+	{
+		OutputDebugString("found\n\n");
+		return found->id;
+	}
 
 	Texture tex;
-	tex.name = shdFileName;
+	tex.name = textureFileName;
 
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
@@ -406,6 +408,7 @@ TextureID Renderer::AddTexture(const std::string& shdFileName, const std::string
 
 const Texture& Renderer::GetTexture(TextureID id) const
 {
+	assert(id < m_textures.size() && id >= 0);
 	return m_textures[id];
 }
 
@@ -428,29 +431,25 @@ void Renderer::SetShader(ShaderID id)
 				case ShaderType::VS:
 					m_deviceContext->VSSetShaderResources(tex.bufferSlot, 1, nullSRV);
 					break;
+				case ShaderType::GS:
+					m_deviceContext->GSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					break;
+				case ShaderType::HS:
+					m_deviceContext->HSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					break;
+				case ShaderType::DS:
+					m_deviceContext->DSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					break;
 				case ShaderType::PS:
 					m_deviceContext->PSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					break;
+				case ShaderType::CS:
+					m_deviceContext->CSSetShaderResources(tex.bufferSlot, 1, nullSRV);
 					break;
 				default:
 					break;
 				}
 			}
-
-			// and samplers
-			//for (ShaderSampler& smp : shader->m_samplers)
-			//{
-			//	switch (smp.shdType)
-			//	{
-			//	case ShaderType::VS:
-			//		m_deviceContext->VSSetSamplers(smp.bufferSlot, 1, nullptr);
-			//		break;
-			//	case ShaderType::PS:
-			//		m_deviceContext->PSSetSamplers(smp.bufferSlot, 1, nullptr);
-			//		break;
-			//	default:
-			//		break;
-			//	}
-			//}
 		}
 	}
 	else
@@ -686,19 +685,16 @@ void Renderer::DrawLine(const XMMATRIX & view, const XMMATRIX & proj)
 	SetConstant3f("p2", pos2);
 	SetConstant3f("color", Color::green.Value());
 	Apply();
-	DrawIndexed(T_POINTS);
+	Draw(T_POINTS);
 }
 
 void Renderer::DrawLine(const XMMATRIX & view, const XMMATRIX & proj, const XMFLOAT3& pos1, const XMFLOAT3& pos2, const XMFLOAT3& color)
 {
-	SetShader(m_renderData.lineShader);
-	SetConstant4x4f("view", view);
-	SetConstant4x4f("proj", proj);
 	SetConstant3f("p1", pos1);
 	SetConstant3f("p2", pos2);
 	SetConstant3f("color", color);
 	Apply();
-	DrawIndexed(T_POINTS);
+	Draw(T_POINTS);
 }
 
 void Renderer::Begin(const float clearColor[4])
@@ -725,7 +721,7 @@ void Renderer::Apply()
 	m_deviceContext->IASetInputLayout(shader->m_layout);
 	m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
 	m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
-	if (shader->m_geoShader)	 m_deviceContext->GSSetShader(shader->m_geoShader    , nullptr, 0);
+	/*if (shader->m_geoShader)*/	 m_deviceContext->GSSetShader(shader->m_geoShader    , nullptr, 0);
 	if (shader->m_hullShader)	 m_deviceContext->HSSetShader(shader->m_hullShader   , nullptr, 0);
 	if (shader->m_domainShader)	 m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
 	if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
@@ -733,8 +729,11 @@ void Renderer::Apply()
 	// set vertex & index buffers & topology
 	unsigned stride = sizeof(Vertex);	// layout?
 	unsigned offset = 0;
-	m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_activeBuffer]->m_vertexBuffer, &stride, &offset);
-	m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+	if (m_activeBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_activeBuffer]->m_vertexBuffer, &stride, &offset);
+	//else OutputDebugString("Warning: no active buffer object (-1)\n");
+	if (m_activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	//else OutputDebugString("Warning: no active buffer object (-1)\n");
 
 	// viewport
 	m_deviceContext->RSSetViewports(1, &m_viewPort);
@@ -848,4 +847,10 @@ void Renderer::DrawIndexed(TOPOLOGY topology)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->DrawIndexed(m_bufferObjects[m_activeBuffer]->m_indexCount, 0, 0);
+}
+
+void Renderer::Draw(TOPOLOGY topology)
+{
+	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
+	m_deviceContext->Draw(1, 0);
 }

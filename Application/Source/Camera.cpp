@@ -136,8 +136,8 @@ void Camera::Move(const float dt)
 	if (m_input->IsKeyDown(0x44))		translation += XMVector3TransformCoord(Transform::Right,	MRotation);
 	if (m_input->IsKeyDown(0x57))		translation += XMVector3TransformCoord(Transform::Forward,	MRotation);
 	if (m_input->IsKeyDown(0x53))		translation += XMVector3TransformCoord(Transform::Backward,	MRotation);
-	if (m_input->IsKeyDown(VK_SPACE))	translation += XMVector3TransformCoord(Transform::Up,		MRotation);
-	if (m_input->IsKeyDown(VK_CONTROL))	translation += XMVector3TransformCoord(Transform::Down,		MRotation);
+	if (m_input->IsKeyDown('E'))		translation += XMVector3TransformCoord(Transform::Up,		MRotation);
+	if (m_input->IsKeyDown('Q'))		translation += XMVector3TransformCoord(Transform::Down,		MRotation);
 	if (m_input->IsKeyDown(VK_SHIFT))	translation *= 5.0f;
 	m_transform.Translate(translation * CAM_MOVE_SPEED * dt);
 }

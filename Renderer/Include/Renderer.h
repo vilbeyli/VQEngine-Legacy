@@ -115,6 +115,8 @@ public:
 	void SetTexture(const char* texName, TextureID tex);
 	void SetRasterizerState(int stateID);
 	
+	void DrawIndexed(TOPOLOGY topology = T_TRIANGLES);
+	void Draw(TOPOLOGY topology = T_POINTS);
 	void DrawLine(const XMMATRIX & view, const XMMATRIX & proj);
 	void DrawLine(const XMMATRIX & view, const XMMATRIX & proj, const XMFLOAT3& pos1, const XMFLOAT3& pos2, const XMFLOAT3& color = Color().Value());
 
@@ -122,7 +124,7 @@ public:
 	void Reset();
 	void Apply();
 	void End();
-	void DrawIndexed(TOPOLOGY topology = T_TRIANGLES);
+	
 	void PollShaderFiles();
 private:
 

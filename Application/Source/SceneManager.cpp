@@ -67,34 +67,35 @@ void SceneManager::Initialize(Renderer * renderer, const RenderData* rData, Came
 
 void SceneManager::InitializeBuilding()
 {
-	const float floorWidth = 19.0f;
-	const float floorDepth = 30.0f;
+	const float floorWidth = 20.0f;
+	const float floorDepth = 20.0f;
 	const float wallHieght = 15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
+	const float YOffset = wallHieght - 3;
 
 	// FLOOR
 	{
 		Transform& tf = m_floor.m_transform;
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
-		tf.SetPosition(0, -wallHieght, 0);
+		tf.SetPosition(0, -wallHieght + YOffset, 0);
 		tf.SetRotationDeg(0.0f, 0.0f, 0.0f);
 		//m_floor.m_model.m_material.color		= Color::green;
 		//m_floor.m_model.m_material.shininess	= 40.0f;
 		m_floor.m_model.m_material = Material::jade;
 		//m_floor.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
 		m_floor.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
-	m_centralObj.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+		m_floor.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	}
 	// CEILING
 	{
 		Transform& tf = m_ceiling.m_transform;
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
-		tf.SetPosition(0, wallHieght, 0);
+		tf.SetPosition(0, wallHieght + YOffset, 0);
 		tf.SetRotationDeg(0.0f, 0.0f, 0.0f);
 		//m_ceiling.m_model.m_material.color		= Color::purple;
 		//m_ceiling.m_model.m_material.shininess	= 10.0f;
 		m_ceiling.m_model.m_material = Material::jade;
 		m_ceiling.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
-		m_ceiling.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+		m_ceiling.m_model.m_material.diffuseMap.name = "bricks_n.png";	// todo: rethink this
 		m_ceiling.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
 		m_ceiling.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	}
@@ -102,9 +103,9 @@ void SceneManager::InitializeBuilding()
 	// RIGHT WALL
 	{
 		Transform& tf = m_wallR.m_transform;
-		tf.SetScale(wallHieght, 0.1f, floorDepth);
-		tf.SetPosition(floorWidth, 0, 0);
-		tf.SetRotationDeg(0.0f, 0.0f, 90.0f);
+		tf.SetScale(floorDepth, 0.1f, wallHieght);
+		tf.SetPosition(floorWidth, YOffset, 0);
+		tf.SetRotationDeg(90.0f, 0.0f, 90.0f);
 		//m_wallR.m_model.m_material.color		= Color::gray;
 		//m_wallR.m_model.m_material.shininess	= 120.0f;
 		m_wallR.m_model.m_material = Material::bronze;
@@ -117,9 +118,9 @@ void SceneManager::InitializeBuilding()
 	// LEFT WALL
 	{
 		Transform& tf = m_wallL.m_transform;
-		tf.SetScale(wallHieght, 0.1f, floorDepth);
-		tf.SetPosition(-floorWidth, 0, 0);
-		tf.SetRotationDeg(0.0f, 0.0f, -90.0f);
+		tf.SetScale(floorDepth, 0.1f, wallHieght);
+		tf.SetPosition(-floorWidth, YOffset, 0);
+		tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
 		//m_wallL.m_model.m_material.color		= Color::gray;
 		//m_wallL.m_model.m_material.shininess	= 60.0f;
 		m_wallL.m_model.m_material = Material::bronze;
@@ -132,8 +133,8 @@ void SceneManager::InitializeBuilding()
 	{
 		Transform& tf = m_wallF.m_transform;
 		tf.SetScale(floorWidth, 0.1f, wallHieght);
-		tf.SetPosition(0, 0, floorDepth);
-		tf.SetRotationDeg(90.0f, 0.0f, 0.0f);
+		tf.SetPosition(0, YOffset, floorDepth);
+		tf.SetRotationDeg(-90.0f, 0.0f, 0.0f);
 		//m_wallF.m_model.m_material.color		= Color::gray;
 		//m_wallF.m_model.m_material.shininess	= 90.0f;
 		m_wallF.m_model.m_material = Material::gold;
@@ -174,7 +175,7 @@ void SceneManager::InitializeLights()
 	}
 	{
 		Light l;
-		l.tf.SetPosition(8.0f, -8.0f, 17.0f);
+		l.tf.SetPosition(8.0f, 3.0f, 17.0f);
 		l.tf.SetScaleUniform(0.1f);
 		l.model.m_mesh = MESH_TYPE::SPHERE;
 		l.model.m_material.color = Color::yellow;
@@ -274,44 +275,20 @@ void SceneManager::Update(float dt)
 
 void SceneManager::Render(const XMMATRIX& view, const XMMATRIX& proj) 
 {
-	//m_skydome.Render(m_renderer, view, proj);
+	m_skydome.Render(m_renderer, view, proj);
 	RenderLights(view, proj);
 	RenderBuilding(view, proj);
-	//RenderCentralObjects(view, proj);
+	RenderCentralObjects(view, proj);
 }
 
 void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const
 {
-	//XMFLOAT4 camPos  = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-	//XMFLOAT4 camPos2 = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-	//XMFLOAT4 camPos3 = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-	//XMFLOAT4 camPos4 = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-	//XMStoreFloat4(&camPos, -view.r[0]);
-	//XMStoreFloat4(&camPos2, -view.r[1]);
-	//XMStoreFloat4(&camPos3, -view.r[2]);
-	//XMStoreFloat4(&camPos4, -view.r[3]);
-
-	//char info[128];
-	//sprintf_s(info, "camPos: (%f, %f, %f, %f)\n", camPos.x, camPos.y, camPos.z, camPos.w);
-	//OutputDebugString(info);
-	//sprintf_s(info, "camPos2: (%f, %f, %f, %f)\n", camPos2.x, camPos2.y, camPos2.z, camPos2.w);
-	//OutputDebugString(info);
-	//sprintf_s(info, "camPos3: (%f, %f, %f, %f)\n", camPos3.x, camPos3.y, camPos3.z, camPos3.w);
-	//OutputDebugString(info);
-	//sprintf_s(info, "camPos4: (%f, %f, %f, %f)\n", camPos4.x, camPos4.y, camPos4.z, camPos4.w);
-	//OutputDebugString(info);
-	
-
-	XMFLOAT3 camPos_real = m_camera->GetPositionF();
-	//sprintf_s(info, "camPos_real: (%f, %f, %f)\n\n", camPos_real.x, camPos_real.y, camPos_real.z);
-	//OutputDebugString(info);
-
-	m_renderer->SetShader(m_selectedShader); 
+	m_renderer->SetShader(m_selectedShader);
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
-	m_renderer->SetBufferObj(MESH_TYPE::CUBE);	
+	m_renderer->SetBufferObj(MESH_TYPE::CUBE);
 	m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
-	m_renderer->SetConstant3f("cameraPos", camPos_real);
+	m_renderer->SetConstant3f("cameraPos", m_camera->GetPositionF());
 
 	SendLightData();
 	{
@@ -351,6 +328,7 @@ void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) co
 		m_renderer->DrawIndexed();
 	}
 }
+
 
 void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const
 {

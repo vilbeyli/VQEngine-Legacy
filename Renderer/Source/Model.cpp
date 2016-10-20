@@ -61,8 +61,8 @@ void Material::SetMaterialConstants(Renderer * renderer) const
 	renderer->SetConstant1f("alpha", alpha);
 	renderer->SetConstant3f("specular", specular);
 	renderer->SetConstant1f("isDiffuseMap", diffuseMap.id == -1 ? 0.0f : 1.0f);
-	if (diffuseMap.id>0) renderer->SetTexture("gDiffuseMap", diffuseMap.id);
+	if (diffuseMap.id>=0) renderer->SetTexture("gDiffuseMap", diffuseMap.id);
 	renderer->SetConstant1f("isNormalMap", normalMap.id == -1 ? 0.0f : 1.0f);
-	if (normalMap.id>0) renderer->SetTexture("gNormalMap", normalMap.id);
+	if (normalMap.id>=0) renderer->SetTexture("gNormalMap", normalMap.id);
 	
 }

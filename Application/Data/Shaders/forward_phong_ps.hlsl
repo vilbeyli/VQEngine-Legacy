@@ -158,22 +158,24 @@ inline float3 UnpackNormals(float2 uv, float3 vertNormal, float3 vertTangent)
 	// uncompressed normal in tangent space
 	float3 TNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
 	TNormal = normalize(TNormal * 2.0f - 1.0f);
-	//TNormal = float3(0, 0, 1);
+	//TNormal.y *= -1.0f;
+	//TNormal.z *= -1.0f;
 	float3 N = normalize(vertNormal);
 
 
-	// float3 T = WTangent;	// after interpolation, T and N might not be orthonormal
-	// make sure T is orthonormal to N by subtracting off any component of T along direction N.
-	float3 T = normalize(vertTangent - dot(vertNormal, vertTangent) * vertNormal);
-	float3 B = normalize(cross(N, T));
+	float3 T = normalize(vertTangent);	// after interpolation, T and N might not be orthonormal
+										// make sure T is orthonormal to N by subtracting off any component of T along direction N.
+										//float3 T = normalize(vertTangent - dot(vertNormal, vertTangent) * vertNormal);
+	float3 B = normalize(cross(T, N));
 	float3x3 TBN = float3x3(T, B, N);
 	//float3x3 TBN = float3x3(T, N, B);
+	//float3x3 TBN = float3x3(-T, -B, -N);
+	//float3x3 TBN = float3x3(float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1));
 
-
-	//TBN = transpose(TBN);
 	return mul(TBN, TNormal);
-    //return TNormal;
-    //return T;
+	//return mul(TNormal, TBN);
+	//return TNormal;
+	//return T;
 }
 
 float4 PSMain(PSIn In) : SV_TARGET

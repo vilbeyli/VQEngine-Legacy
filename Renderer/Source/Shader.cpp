@@ -123,6 +123,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		&errorMessage)))
 	{
 		HandleCompileError(errorMessage, vspath);
+		return;
 	}
 
 	//compile geometry shader

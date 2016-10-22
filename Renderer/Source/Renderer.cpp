@@ -365,7 +365,7 @@ TextureID Renderer::AddTexture(const std::string& textureFileName, const std::st
 	auto found = std::find_if(m_textures.begin(), m_textures.end(), [textureFileName](auto& tex) { return tex.name == textureFileName; });
 	if (found != m_textures.end())
 	{
-		OutputDebugString("found\n\n");
+		//OutputDebugString("found\n\n");
 		return found->id;
 	}
 

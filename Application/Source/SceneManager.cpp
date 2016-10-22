@@ -42,7 +42,7 @@ void SceneManager::Initialize(Renderer * renderer, const RenderData* rData, Came
 {
 	m_renderer = renderer;
 	m_renderData = rData;
-	m_selectedShader = rData->phongShader;
+	m_selectedShader = m_renderData->phongShader;
 	m_gammaCorrection = true;
 	m_camera = cam;
 	InitializeBuilding();
@@ -279,6 +279,9 @@ void SceneManager::Render(const XMMATRIX& view, const XMMATRIX& proj)
 	RenderLights(view, proj);
 	RenderBuilding(view, proj);
 	RenderCentralObjects(view, proj);
+
+	m_selectedShader = m_renderData->TNBShader;
+	RenderCentralObjects(view, proj);
 }
 
 void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const
@@ -356,12 +359,12 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	m_centralObj.m_transform.SetScale(XMFLOAT3(1, 1, 1));
 
 	m_renderer->SetShader(m_selectedShader);
-	SendLightData();
+	if(m_selectedShader == m_renderData->phongShader) SendLightData();
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
-	m_centralObj.m_model.m_material.shininess /= 3.0;
-	m_centralObj.m_model.m_material.SetMaterialConstants(m_renderer);
-	m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
+	if(m_selectedShader == m_renderData->phongShader) m_centralObj.m_model.m_material.shininess /= 3.0;
+	if(m_selectedShader == m_renderData->phongShader) m_centralObj.m_model.m_material.SetMaterialConstants(m_renderer);
+	if(m_selectedShader == m_renderData->phongShader) m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
 
 	m_centralObj.m_transform.Translate(XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
 	XMMATRIX world = m_centralObj.m_transform.WorldTransformationMatrix();
@@ -370,8 +373,8 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	m_renderer->DrawIndexed();
 
 	m_renderer->SetBufferObj(MESH_TYPE::CUBE);
-	m_centralObj.m_model.m_material.shininess *= 3.0;
-	m_centralObj.m_model.m_material.SetMaterialConstants(m_renderer);
+	if(m_selectedShader == m_renderData->phongShader) m_centralObj.m_model.m_material.shininess *= 3.0;
+	if(m_selectedShader == m_renderData->phongShader) m_centralObj.m_model.m_material.SetMaterialConstants(m_renderer);
 	m_centralObj.m_transform.Translate(XMVectorSet(-20.0f, 0.0f, 0.0f, 0.0f));
 	world = m_centralObj.m_transform.WorldTransformationMatrix();
 	m_renderer->SetConstant4x4f("world", world);

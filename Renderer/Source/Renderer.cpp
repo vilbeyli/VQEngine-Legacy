@@ -477,8 +477,8 @@ void Renderer::SetViewport(const unsigned width, const unsigned height)
 	m_viewPort.TopLeftY = 0;
 	m_viewPort.Width	= static_cast<float>(width);
 	m_viewPort.Height	= static_cast<float>(height);
-	m_viewPort.MinDepth = NEAR_PLANE;
-	m_viewPort.MaxDepth = FAR_PLANE;
+	m_viewPort.MinDepth = 0;
+	m_viewPort.MaxDepth = 1;
 }
 
 void Renderer::SetBufferObj(int BufferID)
@@ -714,6 +714,7 @@ void Renderer::Apply()
 	// Here, we make all the API calls for GPU data
 
 	Shader* shader = m_shaders[m_activeShader];
+	m_deviceContext->RSSetViewports(1, &m_viewPort);
 
 	// TODO: check if state is changed
 
@@ -736,7 +737,6 @@ void Renderer::Apply()
 	//else OutputDebugString("Warning: no active buffer object (-1)\n");
 
 	// viewport
-	m_deviceContext->RSSetViewports(1, &m_viewPort);
 	m_deviceContext->RSSetState(m_rasterizerStates[CULL_NONE]);	// TODO: m_activeRS?
 
 	// test

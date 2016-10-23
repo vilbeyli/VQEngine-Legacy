@@ -117,7 +117,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		NULL,
 		"VSMain",
 		"vs_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS,
+		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0,
 		&vsBlob,
 		&errorMessage)))
@@ -136,7 +136,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 			NULL,
 			"GSMain",
 			"gs_5_0",
-			D3DCOMPILE_ENABLE_STRICTNESS,
+			D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 			0,
 			&gsBlob,
 			&errorMessage)))
@@ -152,7 +152,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		NULL,
 		"PSMain",
 		"ps_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS,
+		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
 		0,
 		&psBlob,
 		&errorMessage)))

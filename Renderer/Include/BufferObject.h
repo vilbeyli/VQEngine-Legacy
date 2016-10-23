@@ -30,7 +30,7 @@ struct Vertex
 	XMFLOAT3 position;
 	XMFLOAT3 normal;
 	XMFLOAT3 tangent;
-	XMFLOAT3 texCoords;
+	XMFLOAT2 texCoords;
 };
 
 class BufferObject

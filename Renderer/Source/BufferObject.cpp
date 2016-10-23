@@ -55,7 +55,7 @@ BufferObject::~BufferObject()
 
 bool BufferObject::FillGPUBuffers(ID3D11Device* device, bool writable)
 {
-		// vertex buffer
+	// vertex buffer
 	D3D11_BUFFER_DESC vertexBufferDesc;
 	vertexBufferDesc.Usage					= writable ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
 	vertexBufferDesc.ByteWidth				= sizeof(Vertex) * m_vertexCount;

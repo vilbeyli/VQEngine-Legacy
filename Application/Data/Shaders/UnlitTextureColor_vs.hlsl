@@ -37,7 +37,7 @@ struct PSIn
 {
 	float4 position : SV_POSITION;
 	float3 normal	: NORMAL;
-	float2 texCoord : TEXCOORD4;
+	float2 texCoord : TEXCOORD0;
 };
 
 PSIn VSMain(VSIn In)

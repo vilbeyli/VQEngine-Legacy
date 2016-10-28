@@ -40,46 +40,49 @@ struct PSIn
 // [NVIDIA08]:	peak perf when GS outputs 1-20 scalars
 //				50% perf if 27-40 scalars are output
 //				where scalar count = N * PSIn(scalarCount)
-[maxvertexcount(6)]
-void GSMain(point GSIn gin[1], inout LineStream<PSIn> lineStream)
+[maxvertexcount(6 * 3)]
+void GSMain(triangle GSIn gin[3], inout LineStream<PSIn> lineStream)
 {
 	const matrix vp = mul(proj, view);
-	const float4 VertPos = mul(vp, float4(gin[0].wPos, 1));
-	const float4 TPos = mul(vp, float4(gin[0].wPos + gin[0].T, 1));
-	const float4 NPos = mul(vp, float4(gin[0].wPos + gin[0].N, 1));
-	const float4 BPos = mul(vp, float4(gin[0].wPos + gin[0].B, 1));
+	PSIn Out[18];
 
-	const float3 red	= float3(1, 0, 0);
-	const float3 blue	= float3(0, 0, 1);
-	const float3 green	= float3(0, 1, 0);
+	for (int i = 0; i < 3; ++i)
+	{
+		const float scale = 0.1f;
+		const float4 VertPos = mul(vp, float4(gin[i].wPos, 1));
+		const float4 TPos = mul(vp, float4(gin[i].wPos + gin[i].T*scale, 1));
+		const float4 NPos = mul(vp, float4(gin[i].wPos + gin[i].N*scale, 1));
+		const float4 BPos = mul(vp, float4(gin[i].wPos + gin[i].B*scale, 1));
 
-	PSIn Out[6];
+		const float3 red	= float3(1, 0, 0);
+		const float3 blue	= float3(0, 0, 1);
+		const float3 green	= float3(0, 1, 0);
 
-	// T
-	Out[0].position = VertPos;
-	Out[1].position = TPos;
-	Out[0].color = red;
-	Out[1].color = red;
-	lineStream.RestartStrip();
-	lineStream.Append(Out[0]);
-	lineStream.Append(Out[1]);
+		// T
+		Out[i * 6 + 0].position = VertPos;
+		Out[i * 6 + 1].position = TPos;
+		Out[i * 6 + 0].color = red;
+		Out[i * 6 + 1].color = red;
+		lineStream.RestartStrip();
+		lineStream.Append(Out[i * 6 + 0]);
+		lineStream.Append(Out[i * 6 + 1]);
 
-	// N
-	Out[2].position = VertPos;
-	Out[3].position = NPos;
-	Out[2].color = blue;
-	Out[3].color = blue;
-	lineStream.RestartStrip();
-	lineStream.Append(Out[2]);
-	lineStream.Append(Out[3]);
+		// N
+		Out[i * 6 + 2].position = VertPos;
+		Out[i * 6 + 3].position = NPos;
+		Out[i * 6 + 2].color = blue;
+		Out[i * 6 + 3].color = blue;
+		lineStream.RestartStrip();
+		lineStream.Append(Out[i * 6 + 2]);
+		lineStream.Append(Out[i * 6 + 3]);
 
-	// B
-	Out[4].position = VertPos;
-	Out[5].position = BPos;
-	Out[4].color = green;
-	Out[5].color = green;
-	lineStream.RestartStrip();
-	lineStream.Append(Out[4]);
-	lineStream.Append(Out[5]);
-
+		// B
+		Out[i * 6 + 4].position = VertPos;
+		Out[i * 6 + 5].position = BPos;
+		Out[i * 6 + 4].color = green;
+		Out[i * 6 + 5].color = green;
+		lineStream.RestartStrip();
+		lineStream.Append(Out[i * 6 + 4]);
+		lineStream.Append(Out[i * 6 + 5]);
+	}
 }

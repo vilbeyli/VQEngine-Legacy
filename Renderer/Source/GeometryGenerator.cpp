@@ -371,7 +371,7 @@ BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsign
 			// dz/dv = (r0-r1)*sin(t)
 
 			// TangentU us unit length.
-			//vertex.tangent = XMFLOAT3(-z, 0.0f, x);
+			vertex.tangent = XMFLOAT3(-z, 0.0f, x);
 			//float dr = bottomRadius - topRadius;
 			//XMFLOAT3 bitangent(dr*x, -, dr*z);
 			//XMVECTOR T = XMLoadFloat3(&vertex.tangent);

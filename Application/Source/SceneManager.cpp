@@ -280,8 +280,11 @@ void SceneManager::Render(const XMMATRIX& view, const XMMATRIX& proj)
 	RenderBuilding(view, proj);
 	RenderCentralObjects(view, proj);
 
+	// TBN test
+	auto prevShader = m_selectedShader;
 	m_selectedShader = m_renderData->TNBShader;
 	RenderCentralObjects(view, proj);
+	m_selectedShader = prevShader;
 }
 
 void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const

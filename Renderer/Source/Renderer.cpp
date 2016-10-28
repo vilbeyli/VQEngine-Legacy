@@ -739,7 +739,7 @@ void Renderer::Apply()
 	// viewport
 	m_deviceContext->RSSetState(m_rasterizerStates[CULL_NONE]);	// TODO: m_activeRS?
 
-	// test
+	// test: TODO remove later
 	D3D11_RASTERIZER_DESC rsDesc; 
 	m_rasterizerStates[CULL_NONE]->GetDesc(&rsDesc);
 

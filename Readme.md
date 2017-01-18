@@ -1,7 +1,14 @@
 # DX11Renderer
 
-A DirectX11 Windows renderer demo.
+This is the open source part of the Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc).
+
+Features:
+ - Phong Lighting
+ - Diffuse Textures
+ - Built In Geometry: Cube, Sphere, Cylinder, Grid
  
+Will be updated soon.
+
 ![](Screenshots/spot.PNG)
  
 ## Controls

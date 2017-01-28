@@ -24,16 +24,17 @@ struct GSIn
 	float3 wPos : POSITION;
 };
 
-cbuffer renderConsts
-{
-	matrix view;
-	matrix proj;
-};
-
 struct PSIn
 {
 	float4 position : SV_POSITION;
 	float3 color : COLOR;
+};
+
+cbuffer renderConsts
+{
+	matrix view;
+	matrix proj;
+	int mode;
 };
 
 // Note about 'maxvertexcount(N)'
@@ -49,40 +50,89 @@ void GSMain(triangle GSIn gin[3], inout LineStream<PSIn> lineStream)
 	for (int i = 0; i < 3; ++i)
 	{
 		const float scale = 0.1f;
-		const float4 VertPos = mul(vp, float4(gin[i].wPos, 1));
-		const float4 TPos = mul(vp, float4(gin[i].wPos + gin[i].T*scale, 1));
-		const float4 NPos = mul(vp, float4(gin[i].wPos + gin[i].N*scale, 1));
-		const float4 BPos = mul(vp, float4(gin[i].wPos + gin[i].B*scale, 1));
+		const float4 VertPos = mul(vp, float4(gin[i].wPos + gin[i].N*0.001f, 1));
+		const float4 TPos    = mul(vp, float4(gin[i].wPos + gin[i].N*0.001f + gin[i].T*scale, 1));
+		const float4 NPos    = mul(vp, float4(gin[i].wPos + gin[i].N*0.001f + gin[i].N*scale, 1));
+		const float4 BPos    = mul(vp, float4(gin[i].wPos + gin[i].N*0.001f + gin[i].B*scale, 1));
 
 		const float3 red	= float3(1, 0, 0);
 		const float3 blue	= float3(0, 0, 1);
 		const float3 green	= float3(0, 1, 0);
 
-		// T
-		Out[i * 6 + 0].position = VertPos;
-		Out[i * 6 + 1].position = TPos;
-		Out[i * 6 + 0].color = red;
-		Out[i * 6 + 1].color = red;
-		lineStream.RestartStrip();
-		lineStream.Append(Out[i * 6 + 0]);
-		lineStream.Append(Out[i * 6 + 1]);
+		switch (mode)
+		{
+		case 0:
+		{
+			// T
+			Out[i * 6 + 0].position = VertPos;
+			Out[i * 6 + 1].position = TPos;
+			Out[i * 6 + 0].color = red;
+			Out[i * 6 + 1].color = red;
+			lineStream.RestartStrip();
+			lineStream.Append(Out[i * 6 + 0]);
+			lineStream.Append(Out[i * 6 + 1]);
 
-		// N
-		Out[i * 6 + 2].position = VertPos;
-		Out[i * 6 + 3].position = NPos;
-		Out[i * 6 + 2].color = blue;
-		Out[i * 6 + 3].color = blue;
-		lineStream.RestartStrip();
-		lineStream.Append(Out[i * 6 + 2]);
-		lineStream.Append(Out[i * 6 + 3]);
+		}
+			break;
 
-		// B
-		Out[i * 6 + 4].position = VertPos;
-		Out[i * 6 + 5].position = BPos;
-		Out[i * 6 + 4].color = green;
-		Out[i * 6 + 5].color = green;
-		lineStream.RestartStrip();
-		lineStream.Append(Out[i * 6 + 4]);
-		lineStream.Append(Out[i * 6 + 5]);
+		case 1:
+		{
+			// B
+			Out[i * 6 + 4].position = VertPos;
+			Out[i * 6 + 5].position = BPos;
+			Out[i * 6 + 4].color = green;
+			Out[i * 6 + 5].color = green;
+			lineStream.RestartStrip();
+			lineStream.Append(Out[i * 6 + 4]);
+			lineStream.Append(Out[i * 6 + 5]);
+		}
+			break;
+
+		case 2:
+		{
+			// N
+			Out[i * 6 + 2].position = VertPos;
+			Out[i * 6 + 3].position = NPos;
+			Out[i * 6 + 2].color = blue;
+			Out[i * 6 + 3].color = blue;
+			lineStream.RestartStrip();
+			lineStream.Append(Out[i * 6 + 2]);
+			lineStream.Append(Out[i * 6 + 3]);
+		}
+			break;
+
+		case 3:
+		{
+			// T
+			Out[i * 6 + 0].position = VertPos;
+			Out[i * 6 + 1].position = TPos;
+			Out[i * 6 + 0].color = red;
+			Out[i * 6 + 1].color = red;
+			lineStream.RestartStrip();
+			lineStream.Append(Out[i * 6 + 0]);
+			lineStream.Append(Out[i * 6 + 1]);
+
+			// N
+			Out[i * 6 + 2].position = VertPos;
+			Out[i * 6 + 3].position = NPos;
+			Out[i * 6 + 2].color = blue;
+			Out[i * 6 + 3].color = blue;
+			lineStream.RestartStrip();
+			lineStream.Append(Out[i * 6 + 2]);
+			lineStream.Append(Out[i * 6 + 3]);
+
+			// B
+			Out[i * 6 + 4].position = VertPos;
+			Out[i * 6 + 5].position = BPos;
+			Out[i * 6 + 4].color = green;
+			Out[i * 6 + 5].color = green;
+			lineStream.RestartStrip();
+			lineStream.Append(Out[i * 6 + 4]);
+			lineStream.Append(Out[i * 6 + 5]);
+		}
+		break;
+		}
+
+
 	}
 }

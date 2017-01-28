@@ -111,6 +111,7 @@ public:
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
 	void SetConstant3f(const char* cName, const XMFLOAT3& float3);
 	void SetConstant1f(const char* cName, const float data);
+	void SetConstant1i(const char* cName, const int data);
 	void SetConstantStruct(const char * cName, void* data);
 	void SetTexture(const char* texName, TextureID tex);
 	void SetRasterizerState(int stateID);

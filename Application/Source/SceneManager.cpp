@@ -31,6 +31,7 @@
 #define RAND_LIGHT_COUNT 0
 #define DISCO_PERIOD 0.25
 
+int TBNMode = 0;
 
 SceneManager::SceneManager()
 {}
@@ -234,6 +235,10 @@ void SceneManager::Update(float dt)
 	// F9-F12 | Shader Parameters
 	if (ENGINE->INP()->IsKeyTriggered(120)) m_gammaCorrection = !m_gammaCorrection;
 
+	if (ENGINE->INP()->IsKeyTriggered(49)) TBNMode = 0;
+	if (ENGINE->INP()->IsKeyTriggered(50)) TBNMode = 1;
+	if (ENGINE->INP()->IsKeyTriggered(51)) TBNMode = 2;
+	if (ENGINE->INP()->IsKeyTriggered(52)) TBNMode = 3;
 
 	// ANIMATE LIGHTS
 	//--------------------------------------------------------------------------------
@@ -365,6 +370,7 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	if(m_selectedShader == m_renderData->phongShader) SendLightData();
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
+	if(m_selectedShader == m_renderData->TNBShader)	  m_renderer->SetConstant1i("mode", TBNMode);
 	if(m_selectedShader == m_renderData->phongShader) m_centralObj.m_model.m_material.shininess /= 3.0;
 	if(m_selectedShader == m_renderData->phongShader) m_centralObj.m_model.m_material.SetMaterialConstants(m_renderer);
 	if(m_selectedShader == m_renderData->phongShader) m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);

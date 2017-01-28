@@ -256,19 +256,19 @@ BufferObject* GeometryGenerator::Cube()
 	// BOTTOM
 	bufferObj->m_vertices[20].position	= XMFLOAT3(+1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[20].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
-	bufferObj->m_vertices[20].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[20].tangent	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[21].position	= XMFLOAT3(-1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[21].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
-	bufferObj->m_vertices[21].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[21].tangent	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
 	
 	bufferObj->m_vertices[22].position	= XMFLOAT3(-1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[22].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
-	bufferObj->m_vertices[22].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[22].tangent	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[23].position	= XMFLOAT3(+1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[23].normal	= XMFLOAT3(+0.0f, -1.0f, +0.0f);
-	bufferObj->m_vertices[23].tangent	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[23].tangent	= XMFLOAT3(-1.0f, +0.0f, +0.0f);
 
 	// texture coords
 	bufferObj->m_vertices[0].texCoords	= XMFLOAT2(+0.0f, +0.0f);

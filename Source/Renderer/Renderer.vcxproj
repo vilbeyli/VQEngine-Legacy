@@ -71,15 +71,27 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(ProjectDir)Include;$(IncludePath);$(ProjectDir)..\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
+    <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <SourcePath>$(VC_SourcePath);$(ProjectDir)Source\</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(ProjectDir)Include;$(IncludePath);$(ProjectDir)..\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex</IncludePath>
+    <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <SourcePath>$(VC_SourcePath);$(ProjectDir)Source\</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)Include;$(IncludePath);$(ProjectDir)..\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex</IncludePath>
+    <IncludePath>$(ProjectDir)Include;$(SolutionDir)Source\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(IncludePath)</IncludePath>
+    <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <SourcePath>$(VC_SourcePath);</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)Include;$(IncludePath);$(ProjectDir)..\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex</IncludePath>
+    <IncludePath>$(ProjectDir)Include;$(SolutionDir)Source\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(IncludePath)</IncludePath>
+    <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
+    <SourcePath>$(VC_SourcePath);</SourcePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

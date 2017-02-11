@@ -22,6 +22,7 @@
 #include <string>
 
 #define PI 3.141592654f
+#define FORCE_DEBUG1
 
 D3DManager::D3DManager()
 {
@@ -417,9 +418,22 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 	// Set the feature level to DirectX 11.
 	featureLevel = D3D_FEATURE_LEVEL_11_0;
 
+#if defined( _DEBUG ) && defined ( FORCE_DEBUG )
+	UINT flags = D3D11_CREATE_DEVICE_DEBUG;
+#else
+	UINT flags = 0;
+#endif
+
 	// Create the swap chain, Direct3D device, and Direct3D device context.
-	result = D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, D3D11_CREATE_DEVICE_DEBUG, &featureLevel, 1,
-											D3D11_SDK_VERSION, &swapChainDesc, &m_swapChain, 
+	result = D3D11CreateDeviceAndSwapChain(NULL, 
+											D3D_DRIVER_TYPE_HARDWARE, 
+											NULL, 
+											flags, 
+											&featureLevel, 
+											1,
+											D3D11_SDK_VERSION, 
+											&swapChainDesc, 
+											&m_swapChain, 
 											&m_device, NULL, &m_deviceContext);
 	if (FAILED(result))
 	{

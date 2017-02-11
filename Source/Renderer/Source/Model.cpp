@@ -64,5 +64,4 @@ void Material::SetMaterialConstants(Renderer * renderer) const
 	if (diffuseMap.id>=0) renderer->SetTexture("gDiffuseMap", diffuseMap.id);
 	renderer->SetConstant1f("isNormalMap", normalMap.id == -1 ? 0.0f : 1.0f);
 	if (normalMap.id>=0) renderer->SetTexture("gNormalMap", normalMap.id);
-	
 }

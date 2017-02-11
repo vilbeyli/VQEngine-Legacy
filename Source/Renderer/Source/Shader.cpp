@@ -109,6 +109,12 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
+#if defined( _DEBUG ) || defined ( FORCE_DEBUG )
+	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
+#endif
+
 	//compile vertex shader
 	ID3D10Blob* vsBlob = NULL;
 	if (FAILED(D3DCompileFromFile(
@@ -117,7 +123,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		NULL,
 		"VSMain",
 		"vs_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		flags,
 		0,
 		&vsBlob,
 		&errorMessage)))
@@ -136,7 +142,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 			NULL,
 			"GSMain",
 			"gs_5_0",
-			D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+			flags,
 			0,
 			&gsBlob,
 			&errorMessage)))
@@ -152,7 +158,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		NULL,
 		"PSMain",
 		"ps_5_0",
-		D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION,
+		flags,
 		0,
 		&psBlob,
 		&errorMessage)))

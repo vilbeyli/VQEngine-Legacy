@@ -18,7 +18,7 @@
 
 // Component header files
 //#include "PhysicsComponent.h"
-#include "Transform.h"
+#include "Components/Transform.h"
 
 
 const XMVECTOR Transform::Right		= XMVectorSet(+1.0f, +0.0f, +0.0f, 0.0f);

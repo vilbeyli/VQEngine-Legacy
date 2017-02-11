@@ -18,18 +18,28 @@
 
 #pragma once
 
-#include "../Source/Components/Transform.h"
-#include "Model.h"
+struct Vertex;
 
-class GameObject
+// refactor mesh
+class Mesh
 {
-public:
-	GameObject();
-	~GameObject();
-
-
-public:
-	Transform	m_transform;
-	Model		m_model;
+	//Mesh() : vertices(NULL), numVertices(0), indices(NULL), numIndices(0) {}
+	//~Mesh() { if (vertices) delete[] vertices; if (indices) delete[] indices; }
+	//Vertex* vertices;
+	//unsigned numVertices;
+	//unsigned* indices;
+	//unsigned numIndices;
 };
 
+enum MESH_TYPE
+{
+	TRIANGLE = 0,
+	QUAD,
+	CUBE,
+	CYLINDER,
+	SPHERE,
+	GRID,
+	BONE,
+
+	MESH_TYPE_COUNT
+};

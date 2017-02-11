@@ -20,7 +20,7 @@
 #define _CAMERA_H
 
 #include <directxmath.h>
-#include "../../Application/Source/Components/Transform.h"	// dependency. rethink this
+#include "Components/Transform.h"	// dependency. rethink this
 
 using namespace DirectX;
 

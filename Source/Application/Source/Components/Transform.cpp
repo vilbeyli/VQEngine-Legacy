@@ -20,21 +20,19 @@
 //#include "PhysicsComponent.h"
 #include "Components/Transform.h"
 
+const XMVECTOR Transform::Right = XMVectorSet(+1.0f, +0.0f, +0.0f, 0.0f);
+const XMVECTOR Transform::Left = XMVectorSet(-1.0f, +0.0f, +0.0f, 0.0f);
+const XMVECTOR Transform::Up = XMVectorSet(+0.0f, +1.0f, +0.0f, 0.0f);
+const XMVECTOR Transform::Down = XMVectorSet(+0.0f, -1.0f, +0.0f, 0.0f);
+const XMVECTOR Transform::Forward = XMVectorSet(+0.0f, +0.0f, +1.0f, 0.0f);
+const XMVECTOR Transform::Backward = XMVectorSet(+0.0f, +0.0f, -1.0f, 0.0f);
 
-const XMVECTOR Transform::Right		= XMVectorSet(+1.0f, +0.0f, +0.0f, 0.0f);
-const XMVECTOR Transform::Left		= XMVectorSet(-1.0f, +0.0f, +0.0f, 0.0f);
-const XMVECTOR Transform::Up		= XMVectorSet(+0.0f, +1.0f, +0.0f, 0.0f);
-const XMVECTOR Transform::Down		= XMVectorSet(+0.0f, -1.0f, +0.0f, 0.0f);
-const XMVECTOR Transform::Forward	= XMVectorSet(+0.0f, +0.0f, +1.0f, 0.0f);
-const XMVECTOR Transform::Backward	= XMVectorSet(+0.0f, +0.0f, -1.0f, 0.0f);
-
-Transform::Transform(const XMFLOAT3 position, const XMFLOAT3 rotation, const XMFLOAT3 scale) 
-	: 
+Transform::Transform(const XMFLOAT3 position, const XMFLOAT3 rotation, const XMFLOAT3 scale)
+	:
 	m_position(position),
-	m_rotation(rotation), 
+	m_rotation(rotation),
 	m_scale(scale),
-	//mOrientation_(glm::quat()),
-	Component(ComponentType::TRANSFORM, "Transform") 
+	Component(ComponentType::TRANSFORM, "Transform")
 {}
 
 Transform::~Transform() {}
@@ -46,12 +44,33 @@ void Transform::Translate(XMVECTOR translation)
 	XMStoreFloat3(&m_position, pos);
 }
 
-void Transform::Rotate(XMVECTOR rotation)
+void Transform::RotateEulerRad(const XMVECTOR& rotation)
 {
-	XMVECTOR rot = XMLoadFloat3(&m_rotation);
-	rot += rotation;
-	XMStoreFloat3(&m_rotation, rot);
+	XMFLOAT3 rotF3;
+	XMStoreFloat3(&rotF3, rotation);
+	RotateEulerRad(rotF3);
 }
+
+void Transform::RotateEulerRad(const XMFLOAT3& rotation)
+{
+
+#if defined(USE_QUATERNIONS)
+	Quaternion rot = Quaternion(rotation);	// todo;:
+	m_rotation = m_rotation * rot;
+#else
+	// transform uses euler angles
+	m_rotation.x += rotation.x;
+	m_rotation.y += rotation.y;
+	m_rotation.z += rotation.z;
+#endif
+}
+
+#if defined(USE_QUATERNIONS)
+void Transform::RotateQuat(const Quaternion & q)
+{
+	m_rotation = m_rotation * q;
+}
+#endif
 
 void Transform::Scale(XMVECTOR scl)
 {
@@ -62,17 +81,39 @@ XMMATRIX Transform::WorldTransformationMatrix() const
 {
 	XMVECTOR scale = GetScale();
 	XMVECTOR translation = GetPositionV();
-	XMVECTOR zeroVec = XMVectorSet(0, 0, 0, 1);
-	XMVECTOR rotation = XMQuaternionRotationRollPitchYawFromVector(GetRotationV());
-	return XMMatrixAffineTransformation(scale, zeroVec, rotation, translation);
+
+	//Quaternion Q = Quaternion(GetRotationF3());
+	Quaternion Q = m_rotation;
+	XMVECTOR rotation = XMVectorSet(Q.V.x, Q.V.y, Q.V.z, Q.S);
+	//XMVECTOR rotOrigin = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+	XMVECTOR rotOrigin = XMVectorZero();
+	return XMMatrixAffineTransformation(scale, rotOrigin, rotation, translation);
 }
+
+DirectX::XMMATRIX Transform::WorldTransformationMatrix_NoScale() const
+{
+	XMVECTOR scale = XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
+	XMVECTOR translation = GetPositionV();
+
+	//Quaternion Q = Quaternion(GetRotationF3());
+	Quaternion Q = m_rotation;
+	XMVECTOR rotation = XMVectorSet(Q.V.x, Q.V.y, Q.V.z, Q.S);
+	//XMVECTOR rotOrigin = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+	XMVECTOR rotOrigin = XMVectorZero();
+	return XMMatrixAffineTransformation(scale, rotOrigin, rotation, translation);
+}
+
 
 XMMATRIX Transform::RotationMatrix() const
 {
+#if defined(USE_QUATERNIONS)
+	return m_rotation.Matrix();
+#else
 	float pitch = m_rotation.x;
-	float yaw	= m_rotation.y;
-	float roll	= m_rotation.z;
+	float yaw = m_rotation.y;
+	float roll = m_rotation.z;
 	return  XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
+#endif
 }
 
 // transforms a vector from local to global space
@@ -86,4 +127,15 @@ XMFLOAT3 Transform::TransfromVector(XMFLOAT3 v)
 	//return XMFLOAT3(mRot * glm::vec4(v, 0.0));
 	// TODO: Implement
 	return XMFLOAT3();
+}
+
+DirectX::XMMATRIX Transform::NormalMatrix(const XMMATRIX& world)
+{
+	XMMATRIX nrm = world;
+	nrm.r[3].m128_f32[0] = nrm.r[3].m128_f32[1] = nrm.r[3].m128_f32[2] = 0;
+	nrm.r[3].m128_f32[3] = 1;
+	XMVECTOR Det = XMMatrixDeterminant(nrm);
+	nrm = XMMatrixInverse(&Det, nrm);
+	nrm = XMMatrixTranspose(nrm);
+	return nrm;
 }

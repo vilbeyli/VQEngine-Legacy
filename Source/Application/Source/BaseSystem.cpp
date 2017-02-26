@@ -24,6 +24,10 @@
 #include <vector>
 #include <new>
 
+#ifdef _DEBUG
+#include <cassert>
+#endif
+
 BaseSystem::BaseSystem()
 {
 	m_hInstance		= GetModuleHandle(NULL);	// instance of this application
@@ -57,6 +61,9 @@ void BaseSystem::Run()
 	bool done = false;
 	while (!done)
 	{
+		// todo: keep dragging main window
+		// game engine architecture
+		// http://advances.realtimerendering.com/s2016/index.html
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);		// Translates virtual-key messages into character messages
@@ -268,7 +275,7 @@ void BaseSystem::InitWindow(int& width, int& height)
 		WS_EX_APPWINDOW,			// Forces a top-level window onto the taskbar when the window is visible.
 		m_appName,					// class name
 		m_appName,					// Window name
-		WS_POPUP,					// Window style
+		WS_OVERLAPPEDWINDOW, //WS_POPUP,					// Window style
 		posX, posY, width, height,	// Window position and dimensions
 		NULL, NULL,					// parent, menu
 		m_hInstance, NULL
@@ -338,7 +345,7 @@ void BaseSystem::InitRawInputDevices()
 
 	// get devices and print info
 	//-----------------------------------------------------
-	UINT numDevices;
+	UINT numDevices = 0;
 	GetRawInputDeviceList(
 		NULL, &numDevices, sizeof(RAWINPUTDEVICELIST));
 	if (numDevices == 0) return;
@@ -384,8 +391,9 @@ void BaseSystem::InitRawInputDevices()
 				device.hDevice, RIDI_DEVICEINFO, &deviceInfo, &dataSize);
 			if (result != UINT_MAX)
 			{
+#ifdef _DEBUG
 				assert(deviceInfo.dwType == RIM_TYPEMOUSE);
-
+#endif
 				char info[1024];
 				sprintf_s(info,
 					"  Id=%u, Buttons=%u, SampleRate=%u, HorizontalWheel=%s\n",

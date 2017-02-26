@@ -22,31 +22,17 @@
 #include <string>
 #include "SystemDefs.h"
 
-#ifdef ENABLE_RAW_INPUT
-#define CAM_ANGULAR_SPEED_DEG 60.0f
-#else
-#define CAM_ANGULAR_SPEED_DEG 60.0f
-#endif
-#define CAM_MOVE_SPEED 20.0f
-#define DEG2RAD XM_PI / 180.0f
-
 Camera::Camera(Input const* inp)
 	:
-	m_input(inp)
+	m_input(inp),
+	MoveSpeed(1000.0f),
+	AngularSpeedDeg(40.0f),
+	Drag(15.0f)
 {}
 
 Camera::~Camera(void)
 {}
 
-//void * Camera::operator new(size_t sz)
-//{
-//	return _mm_malloc(sz, 16);
-//}
-//
-//void Camera::operator delete(void * p)
-//{
-//	_mm_free(p);
-//}
 
 void Camera::SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, float screenFar)
 {
@@ -66,23 +52,57 @@ void Camera::Update(float dt)
 
 	XMVECTOR up		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-	XMVECTOR pos	= m_transform.GetPositionV();
+	XMVECTOR pos	= XMLoadFloat3(&m_pos);	
+	XMMATRIX MRot	= RotMatrix();
 
 	//transform the lookat and up vector by rotation matrix
-	lookAt	= XMVector3TransformCoord(lookAt, m_transform.RotationMatrix());
-	up		= XMVector3TransformCoord(up,	  m_transform.RotationMatrix());
+	lookAt	= XMVector3TransformCoord(lookAt, MRot);
+	up		= XMVector3TransformCoord(up,	  MRot);
 
 	//translate the lookat
 	lookAt = pos + lookAt;
 
 	//create view matrix
 	XMStoreFloat4x4(&m_viewMatrix, XMMatrixLookAtLH(pos, lookAt, up));
+
+	// move based on velocity
+	auto P = XMLoadFloat3(&m_pos);
+	auto V = XMLoadFloat3(&m_velocity);
+	P += V * dt;
+	XMStoreFloat3(&m_pos, P);
+
+	//----------------------------------------------------------------------
+	// debug code 
+	//----------------------------------------------------------------------
+	//{
+	//	XMVECTOR dir	= XMVector3Normalize(lookAt - pos);
+	//	XMVECTOR wing	= XMVector3Cross(up, dir);
+	//	XMMATRIX R = XMMatrixIdentity(); 
+	//	R.r[0] = wing;
+	//	R.r[1] = up;
+	//	R.r[2] = dir;
+	//	R.r[0].m128_f32[3] = R.r[1].m128_f32[3] = R.r[2].m128_f32[3] = 0;
+	//	R = XMMatrixTranspose(R);
+	//	
+	//	XMMATRIX T = XMMatrixIdentity();
+	//	T.r[3] = -pos;
+	//	T.r[3].m128_f32[3] = 1.0;
+	//	
+	//	XMMATRIX viewMat = T * R;	// this is for ViewMatrix
+	//	//	orienting our model using this, we want the inverse of viewmat
+	//	// XMMATRIX rotMatrix = XMMatrixTranspose(R) * T.inverse();
+	//
+	//	int a = 5;
+	//}
+	//----------------------------------------------------------------------
+	// end debug code 
+	//----------------------------------------------------------------------
 }
 
 
 XMFLOAT3 Camera::GetPositionF() const
 {
-	return m_transform.GetPositionF3();
+	return m_pos;
 }
 
 XMMATRIX Camera::GetViewMatrix() const
@@ -100,19 +120,24 @@ XMMATRIX Camera::GetOrthoMatrix() const
 	return  XMLoadFloat4x4(&m_orthoMatrix);
 }
 
-void Camera::SetPosition(float x, float y, float z)
+XMMATRIX Camera::RotMatrix() const
 {
-	m_transform.SetPosition(XMFLOAT3(x, y, z));
+	return XMMatrixRotationRollPitchYaw(m_pitch, m_yaw, 0.0f);
 }
 
+void Camera::SetPosition(float x, float y, float z)
+{
+	m_pos = XMFLOAT3(x, y, z);
+}
 
 void Camera::Rotate(float yaw, float pitch, const float dt)
 {
-	float delta = CAM_ANGULAR_SPEED_DEG * DEG2RAD * dt;
-	float yaw_		= yaw   * delta;
-	float pitch_	= pitch * delta;
-	XMVECTOR rot = XMVectorSet(pitch_, yaw_, 0, 0);
-	m_transform.Rotate(rot);
+	const float delta  = AngularSpeedDeg * DEG2RAD * dt;
+	m_yaw	+= yaw   * delta;
+	m_pitch += pitch * delta;
+	
+	if (m_pitch > +90.0f * DEG2RAD) m_pitch = +90.0f * DEG2RAD;
+	if (m_pitch < -90.0f * DEG2RAD) m_pitch = -90.0f * DEG2RAD;
 }
 
 // internal update functions
@@ -126,23 +151,18 @@ void Camera::Rotate(const float dt)
 
 void Camera::Move(const float dt)
 {
-	float pitch = m_transform.GetRotationV().m128_f32[0];
-	float yaw	= m_transform.GetRotationV().m128_f32[1];
-	float roll	= m_transform.GetRotationV().m128_f32[2];
-	XMMATRIX MRotation = XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
-
+	XMMATRIX MRotation	 = RotMatrix();
 	XMVECTOR translation = XMVectorSet(0,0,0,0);
-	if (m_input->IsKeyDown(0x41))		translation += XMVector3TransformCoord(Transform::Left,		MRotation);
-	if (m_input->IsKeyDown(0x44))		translation += XMVector3TransformCoord(Transform::Right,	MRotation);
-	if (m_input->IsKeyDown(0x57))		translation += XMVector3TransformCoord(Transform::Forward,	MRotation);
-	if (m_input->IsKeyDown(0x53))		translation += XMVector3TransformCoord(Transform::Backward,	MRotation);
+	if (m_input->IsKeyDown('A'))		translation += XMVector3TransformCoord(Transform::Left,		MRotation);
+	if (m_input->IsKeyDown('D'))		translation += XMVector3TransformCoord(Transform::Right,	MRotation);
+	if (m_input->IsKeyDown('W'))		translation += XMVector3TransformCoord(Transform::Forward,	MRotation);
+	if (m_input->IsKeyDown('S'))		translation += XMVector3TransformCoord(Transform::Backward,	MRotation);
 	if (m_input->IsKeyDown('E'))		translation += XMVector3TransformCoord(Transform::Up,		MRotation);
 	if (m_input->IsKeyDown('Q'))		translation += XMVector3TransformCoord(Transform::Down,		MRotation);
 	if (m_input->IsKeyDown(VK_SHIFT))	translation *= 5.0f;
-	m_transform.Translate(translation * CAM_MOVE_SPEED * dt);
+	
+	// update velocity
+	auto V = XMLoadFloat3(&m_velocity);
+	V += (translation * MoveSpeed - V * Drag) * dt;
+	XMStoreFloat3(&m_velocity, V);
 }
-
-//void Camera::SetRotation(float x, float y, float z)
-//{
-//	m_rotation = XMFLOAT3(x * (float)XM_PI/180.0f, y * (float)XM_PI/180.0f, z * (float)XM_PI/180.0f);
-//}

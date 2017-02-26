@@ -20,6 +20,8 @@
 
 // Borrowed from Frank Luna's DirectX11 book's GameTimer class
 // https://www.amazon.com/Introduction-3D-Game-Programming-DirectX/dp/1936420228
+
+//TODO: use C++11 chrono
 class PerfTimer
 {
 public:

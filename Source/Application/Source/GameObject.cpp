@@ -18,13 +18,45 @@
 
 #include "GameObject.h"
 
-
-
 GameObject::GameObject()
+#ifdef ENABLE_PHY_CODE
+	:
+	m_rb(m_transform)
+#endif
 {
+#ifdef ENABLE_PHY_CODE
+	// these should be turned on explicitly
+	m_rb.EnableGravity = false;
+	m_rb.EnablePhysics = false;
+#endif
 }
 
 
 GameObject::~GameObject()
+{}
+
+GameObject::GameObject(const GameObject & obj)
+#ifdef ENABLE_PHY_CODE
+	:
+	m_rb(m_transform)
+#endif
 {
+	m_transform = obj.m_transform;
+	m_model = obj.m_model;
+#ifdef ENABLE_PHY_CODE
+	m_rb = obj.m_rb;
+	m_rb.UpdateVertPositions();
+#endif
 }
+
+GameObject& GameObject::operator=(const GameObject& obj)
+{
+	m_transform = obj.m_transform;
+	m_model = obj.m_model;
+#ifdef ENABLE_PHY_CODE
+	m_rb		= RigidBody(m_transform);
+#endif
+	return *this;
+}
+
+

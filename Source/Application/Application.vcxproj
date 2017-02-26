@@ -152,6 +152,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Quaternion.cpp" />
     <ClCompile Include="Source\SceneManager.cpp" />
     <ClCompile Include="Source\PerfTimer.cpp" />
     <ClCompile Include="Source\GameObject.cpp" />
@@ -165,6 +166,7 @@
     <ClCompile Include="Source\utils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Include\Quaternion.h" />
     <ClInclude Include="Include\SceneManager.h" />
     <ClInclude Include="Include\PerfTimer.h" />
     <ClInclude Include="Include\GameObject.h" />

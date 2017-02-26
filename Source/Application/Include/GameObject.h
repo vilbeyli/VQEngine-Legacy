@@ -18,18 +18,29 @@
 
 #pragma once
 
+#define xENABLE_PHY_CODE
+
 #include "Components/Transform.h"
 #include "Model.h"
+
+#ifdef ENABLE_PHY_CODE
+#include "RigidBody.h"
+#endif
 
 class GameObject
 {
 public:
 	GameObject();
 	~GameObject();
+	GameObject(const GameObject& obj);
 
+	GameObject& operator=(const GameObject& obj);
 
 public:
 	Transform	m_transform;
 	Model		m_model;
+#ifdef ENABLE_PHY_CODE
+	RigidBody	m_rb;
+#endif
 };
 

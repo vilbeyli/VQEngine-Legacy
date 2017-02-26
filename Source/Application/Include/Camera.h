@@ -33,33 +33,33 @@ public:
 	Camera(Input const*);
 	~Camera(void);
 
-	// new/delete overrides for 16-bit alignment 
-	// to be used by XMVECTORs to utilize SSE instructions
-	//void* operator new(size_t sz);
-	//void  operator delete(void* p);
-
 	void SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, float screenFar);
 	void SetProjectionMatrix(float fov, float screenAspect, float screenNear, float screenFar);
 
 	void Update(float dt);
 
-	XMVECTOR GetPositionV() const;
 	XMFLOAT3 GetPositionF() const;
-	XMVECTOR GetRotation() const;
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
 	XMMATRIX GetOrthoMatrix() const;
+	XMMATRIX RotMatrix() const;
 
 	void SetPosition(float x, float y, float z);
 	void Rotate(float yaw, float pitch, const float dt);
-	//void SetRotation(float x, float y, float z);
+
+public:
+	float Drag;				// 15.0f
+	float AngularSpeedDeg;	// 40.0f
+	float MoveSpeed;		// 1000.0f
 
 private:
 	void Move(const float dt);
 	void Rotate(const float dt);
 
 private:
-	Transform	m_transform;
+	XMFLOAT3	m_pos;
+	XMFLOAT3	m_velocity;
+	float		m_yaw, m_pitch;
 
 	XMFLOAT4X4	m_viewMatrix;
 	XMFLOAT4X4	m_projectionMatrix;

@@ -21,8 +21,11 @@
 #include "Renderer.h"
 #include "Input.h"
 #include "Camera.h"
-
+//#include "PhysicsEngine.h"
+//#include "../Animation/Include/PathManager.h"
 #include "Mesh.h"
+
+#include "SceneManager.h"
 
 #include <sstream>
 
@@ -33,7 +36,9 @@ Engine::Engine()
 	m_renderer(nullptr),
 	m_input(nullptr),
 	m_camera(nullptr),
-	m_isPaused(false)
+	m_pathMan(nullptr),
+	m_isPaused(false),
+	m_physics(nullptr)
 {}
 
 Engine::~Engine(){}
@@ -46,7 +51,13 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 	if (!m_input)	return false;
 	m_camera = new Camera(m_input);
 	if (!m_camera)	return false;
-	
+	//m_pathMan = new PathManager(m_renderer);
+	//if (!m_pathMan) return false;
+	//m_physics = new PhysicsEngine();
+	//if (!m_physics) return false;
+	m_sceneMan = new SceneManager();
+	if (!m_sceneMan) return false;
+
 	// initialize systems
 	m_input->Init();
 	if(!m_renderer->Init(scr_width, scr_height, hWnd)) 
@@ -55,7 +66,7 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 
 	m_camera->SetOthoMatrix(m_renderer->WindowWidth(), m_renderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
 	m_camera->SetProjectionMatrix((float)XM_PIDIV4, m_renderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
-	m_camera->SetPosition(0, 0, -40);
+	m_camera->SetPosition(0, 10, -100);
 	m_renderer->SetCamera(m_camera);
 
 	return true;
@@ -63,7 +74,7 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 
 bool Engine::Load()
 {
-	m_sceneMan.Initialize(m_renderer, m_renderData, m_camera);
+	m_sceneMan->Initialize(m_renderer, m_renderData, m_camera, m_pathMan);
 	m_timer.Reset();
 	return true;
 }
@@ -86,9 +97,10 @@ void Engine::CalcFrameStats()
 
 		std::ostringstream stats;
 		stats.precision(2);
-		stats << "VDemo | "
-			<< "dt: " << frameTime << "ms "
-			<< "FPS: " << fps;
+		stats	<< "VDemo | "
+				<< "dt: " << frameTime << "ms "; 
+		stats.precision(4);
+		stats	<< "FPS: " << fps;
 		SetWindowText(m_renderer->GetWindow(), stats.str().c_str());
 		frameCount = 0;
 		timeElaped += 1.0f;
@@ -131,6 +143,7 @@ Engine * Engine::GetEngine()
 	}
 
 	return s_instance;
+
 }
 
 bool Engine::Run()
@@ -180,10 +193,16 @@ void Engine::Unpause()
 	m_isPaused = false;
 }
 
+float Engine::TotalTime() const
+{
+	return m_timer.TotalTime();
+}
+
 void Engine::Update(float dt)
 {
+	//m_physics->Update(dt);
 	m_camera->Update(dt);
-	m_sceneMan.Update(dt);
+	m_sceneMan->Update(dt);
 }
 
 void Engine::Render()
@@ -193,7 +212,7 @@ void Engine::Render()
 	XMMATRIX proj = m_camera->GetProjectionMatrix();
 	m_renderer->Begin(clearColor);
 	m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
-	m_sceneMan.Render(view, proj);	// renders room
+	m_sceneMan->Render(view, proj);	// renders room
 	m_renderer->End();
 }
 

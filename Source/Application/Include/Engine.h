@@ -22,15 +22,22 @@
 #include "SystemDefs.h"
 #include "PerfTimer.h"
 
-#include "SceneManager.h"
-
 class Renderer;
 class Input;
 class Camera;
+class PathManager;
+class PhysicsEngine;
+class SceneManager;
+struct RenderData;
 
 class Engine
 {
 	friend class BaseSystem;
+
+	// todo: remove temp hacks
+	friend class IKEngine; //temp hack
+	friend class RigidBody;	// not sure...
+	friend struct SpringSystem; // not sure...
 
 public:
 	~Engine();
@@ -41,6 +48,7 @@ public:
 
 	void Pause();
 	void Unpause();
+	float TotalTime() const;
 
 	void Update(float dt);
 	void Render();
@@ -63,7 +71,9 @@ public:
 private:
 	Input*			m_input;
 	Renderer*		m_renderer;
+	PhysicsEngine*	m_physics;
 	Camera*			m_camera;
+	PathManager*	m_pathMan;
 
 	bool			m_isPaused;
 
@@ -71,7 +81,7 @@ private:
 	static Engine*	s_instance;
 
 	// Scene
-	SceneManager	m_sceneMan;
+	SceneManager*	m_sceneMan;
 };
 
 #define ENGINE Engine::GetEngine()

@@ -87,7 +87,7 @@ void Engine::TogglePause()
 void Engine::CalcFrameStats()
 {
 	static long frameCount = 0;
-	static float timeElaped = 0.0f;
+	static float timeElaped = -0.9f;
 
 	++frameCount;
 	if (m_timer.TotalTime() - timeElaped >= 1.0f)

@@ -18,10 +18,12 @@
 
 #pragma once
 
+#define xFRANK_LUNA_TIMER
+
+#ifdef FRANK_LUNA_TIMER
 // Borrowed from Frank Luna's DirectX11 book's GameTimer class
 // https://www.amazon.com/Introduction-3D-Game-Programming-DirectX/dp/1936420228
 
-//TODO: use C++11 chrono
 class PerfTimer
 {
 public:
@@ -30,7 +32,7 @@ public:
 
 	float TotalTime() const;
 	double CurrentTime();
-	float DeltaTime() const;
+	float DeltaTime() const;	// return dt
 
 	void Reset();
 	void Start();
@@ -49,4 +51,33 @@ private:
 
 	bool m_stopped;
 };
+#else	// C++11
 
+#include <chrono>
+
+using Vtime_t		= std::chrono::time_point<std::chrono::system_clock>;	// Vtime_t != std::time_t
+using duration_t	= std::chrono::duration<float>;
+
+class PerfTimer
+{
+public:
+	float TotalTime() const;
+	double CurrentTime();
+	float DeltaTime() const;
+
+	void Reset();
+	void Start();
+	void Stop();
+	void Tick();
+private:
+	Vtime_t		baseTime,		
+				prevTime,
+				currTime,
+				startTime,		// pause functionality: start/stop time stamps
+				stopTime;
+	duration_t	pausedTime,
+				dt;
+	bool		isStopped;
+};
+
+#endif

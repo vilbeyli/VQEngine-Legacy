@@ -17,6 +17,8 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "PerfTimer.h"
+
+#ifdef FRANK_LUNA_TIMER
 #include <Windows.h>
 
 #include <string>
@@ -105,7 +107,7 @@ float PerfTimer::TotalTime() const
 		//--*------------*----------*------------|
 		//				 <---------->
 		//					Paused
-		timeLength = (m_currTime - m_pausedTime) - m_baseTime;		
+		timeLength = (m_currTime - m_pausedTime) - m_baseTime;
 	}
 
 	return static_cast<float>(timeLength * m_secPerCount);
@@ -135,3 +137,82 @@ void PerfTimer::Tick()
 	m_prevTime = m_currTime;
 	m_dt = m_dt < 0.0 ? 0.0 : m_dt;		// m_dt => 0
 }
+#else
+
+
+Vtime_t GetNow() { return std::chrono::system_clock::now();}
+
+float PerfTimer::TotalTime() const
+{
+	duration_t totalTime = duration_t::zero();
+	// Base	  Stop		Start	 Stop	   Curr
+	//--*-------*----------*------*---------|
+	//			<---------->
+	//			   Paused
+	if (isStopped)	totalTime = (stopTime - baseTime) - pausedTime;
+
+	// Base			Stop	  Start			Curr
+	//--*------------*----------*------------|
+	//				 <---------->
+	//					Paused
+	else totalTime = (currTime - baseTime) - pausedTime;
+
+	return totalTime.count();
+}
+
+double PerfTimer::CurrentTime()
+{
+	return -1.0;
+}
+
+float PerfTimer::DeltaTime() const
+{
+	return dt.count();
+}
+
+void PerfTimer::Reset()
+{
+	Vtime_t now = GetNow();
+	baseTime = now;
+	prevTime = now;
+
+	isStopped = false;
+}
+
+void PerfTimer::Start()
+{
+	if (isStopped)
+	{
+		Vtime_t now = GetNow();
+		pausedTime = startTime - stopTime;
+		prevTime = now;
+		isStopped = false;
+	}
+}
+
+void PerfTimer::Stop()
+{
+	if (!isStopped)
+	{
+		Vtime_t now = GetNow();
+		stopTime = now;
+		isStopped = true;
+	}
+}
+
+void PerfTimer::Tick()
+{
+	if (isStopped)
+	{
+		dt = duration_t::zero();
+		return;
+	}
+	Vtime_t now = GetNow();
+	currTime = now;
+	dt = currTime - prevTime;
+
+	prevTime = currTime;
+	dt = dt.count() < 0.0f ? dt.zero() : dt;	// make sure dt >= 0 (is this necessary?)
+}
+
+#endif;

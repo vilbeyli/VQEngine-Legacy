@@ -160,10 +160,6 @@ float PerfTimer::TotalTime() const
 	return totalTime.count();
 }
 
-double PerfTimer::CurrentTime()
-{
-	return -1.0;
-}
 
 float PerfTimer::DeltaTime() const
 {

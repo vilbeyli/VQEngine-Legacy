@@ -38,6 +38,17 @@ const Material Material::gold = Material(	XMFLOAT3(0.75164f, 0.60648f, 0.22648f)
 											XMFLOAT3(0.628281f, 0.555802f, 0.366065f),	// specular
 											51.2f);										// shininess
 
+
+Material Material::RandomMaterial()
+{
+	float r = RandF(0.0f, 1.0f);
+	if (r >= 0.0000f && r < 0.1999f) return ruby;
+	if (r >= 0.2000f && r < 0.3999f) return gold;
+	if (r >= 0.4000f && r < 0.5999f) return bronze;
+	if (r >= 0.6000f && r < 0.7999f) return jade;
+	else return Material();
+}
+
 Material::Material(const XMFLOAT3 & diffuse_in, const XMFLOAT3 & specular_in, float shininess_in)
 {
 	color = diffuse_in;

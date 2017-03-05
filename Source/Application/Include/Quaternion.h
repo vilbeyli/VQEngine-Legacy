@@ -18,6 +18,7 @@
 
 #pragma once
 #include <DirectXMath.h>
+#include "utils.h"
 
 using namespace DirectX;
 
@@ -46,6 +47,8 @@ public:
 	Quaternion  Conjugate() const;
 	XMMATRIX	Matrix() const;
 	Quaternion&	Normalize();
+
+	vec3 TransformVector(const vec3& v) const;
 	
 private:	// used by operator()s
 	Quaternion(float s, const XMFLOAT3& v);

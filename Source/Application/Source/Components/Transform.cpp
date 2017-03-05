@@ -70,6 +70,14 @@ void Transform::RotateQuat(const Quaternion & q)
 {
 	m_rotation = m_rotation * q;
 }
+void Transform::RotateAroundPointAndAxis(const vec3& axis, float angle, vec3& point)
+{
+	vec3 pos(m_position); vec3 R(pos - point);
+	Quaternion rot = Quaternion::FromAxisAngle(axis, angle);
+	R = rot.TransformVector(R);
+	vec3 rotatedPos = point + R;
+	m_position = rotatedPos.v;
+}
 #endif
 
 void Transform::Scale(XMVECTOR scl)
@@ -129,6 +137,8 @@ XMFLOAT3 Transform::TransfromVector(XMFLOAT3 v)
 	return XMFLOAT3();
 }
 
+// builds normal matrix from world matrix, ignoring translation
+// and using inverse-transpose of rotation/scale matrix
 DirectX::XMMATRIX Transform::NormalMatrix(const XMMATRIX& world)
 {
 	XMMATRIX nrm = world;

@@ -34,11 +34,6 @@ class Engine
 {
 	friend class BaseSystem;
 
-	// todo: remove temp hacks
-	friend class IKEngine; //temp hack
-	friend class RigidBody;	// not sure...
-	friend struct SpringSystem; // not sure...
-
 public:
 	~Engine();
 
@@ -56,6 +51,7 @@ public:
 	void Exit();
 
 	const Input* INP() const;
+	const PerfTimer TIMER() const;
 
 	static Engine* GetEngine();
 
@@ -69,11 +65,11 @@ public:
 	RenderData*		m_renderData;
 
 private:
-	Input*			m_input;
-	Renderer*		m_renderer;
-	PhysicsEngine*	m_physics;
-	Camera*			m_camera;
-	PathManager*	m_pathMan;
+	Input*			m_input;		// ownership
+	Renderer*		m_renderer;		// ownership
+	PhysicsEngine*	m_physics;		// ownership
+	Camera*			m_camera;		// ownership
+	PathManager*	m_pathMan;		// ownership
 
 	bool			m_isPaused;
 

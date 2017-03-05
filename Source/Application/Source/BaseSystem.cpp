@@ -17,9 +17,9 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "BaseSystem.h"
-#include "SystemDefs.h"
+#include "Engine.h"
 #include "Input.h"
-#include "Windowsx.h"
+
 #include <strsafe.h>
 #include <vector>
 #include <new>
@@ -71,14 +71,8 @@ void BaseSystem::Run()
 		}
 		else
 		{
-			if (msg.message == WM_QUIT)
-			{
-				done = true;
-			}
-			else
-			{
-				done = !ENGINE->Run();
-			}
+			if (msg.message == WM_QUIT)	done = true;
+			else						done = !ENGINE->Run();
 		}
 	}
 
@@ -95,7 +89,6 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 {
 	switch (umsg)
 	{
-	
 	// application active/inactive
 	case WM_ACTIVATE:
 		if (LOWORD(wparam) == WA_INACTIVE)
@@ -214,7 +207,6 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 
 	default:
 	{
-
 		return DefWindowProc(hwnd, umsg, wparam, lparam);
 	}
 	}

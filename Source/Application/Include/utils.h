@@ -33,15 +33,33 @@ using VecPair = std::pair<XMVECTOR, XMVECTOR>;
 
 // consts
 const XMFLOAT3 ZeroF3 = XMFLOAT3(0.0f, 0.0f, 0.0f);
+const XMVECTOR global_L = XMVectorSet(-1.0f, +0.0f, +0.0f, +0.0f);
+const XMVECTOR global_R = XMVectorSet(+1.0f, +0.0f, +0.0f, +0.0f);
+const XMVECTOR global_F = XMVectorSet(+0.0f, +0.0f, +1.0f, +0.0f);
+const XMVECTOR global_B = XMVectorSet(+0.0f, +0.0f, -1.0f, +0.0f);
+const XMVECTOR global_U = XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
+const XMVECTOR global_D = XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);
+
+/// MATH WRAPPER
+//===============================================================================================
+struct vec3
+{
+	vec3();
+	vec3(const vec3& v_in);
+	vec3(float, float, float);
+	vec3(float);
+	vec3(const XMFLOAT3& f3);
+	vec3(const XMVECTOR& v_in);
+	operator XMVECTOR() const;
+	
+	XMFLOAT3 v;
+};
 
 /// STRING PROCESSING
 //===============================================================================================
 std::vector<std::string> split(const char* s,			char c = ' ');
 std::vector<std::string> split(const std::string& s,	char c = ' ');
 std::string	GetFileNameFromPath(const std::string&);
-
-bool isNormalMap(const std::string& fileName);
-std::string GetTextureNameFromDirectory(const std::string& dir);
 
 /// RANDOM
 //===============================================================================================

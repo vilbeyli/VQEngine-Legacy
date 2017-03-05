@@ -17,11 +17,15 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "BaseSystem.h"
+#include <ctime>
+#include <cstdlib>
 
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdShow)
 {
 	BaseSystem* sys = new BaseSystem();
 	if (!sys)	return -1;
+
+	srand(static_cast<unsigned>(time(NULL)));
 
 	if (sys->Init())
 		sys->Run();

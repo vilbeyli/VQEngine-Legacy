@@ -420,7 +420,7 @@ void Renderer::SetShader(ShaderID id)
 	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
 	if (m_activeShader != -1)		// if valid shader
 	{
-		if (id != m_activeShader)	// if not the same shader
+		//if (id != m_activeShader)	// if not the same shader
 		{
 			Shader* shader = m_shaders[m_activeShader];
 
@@ -452,8 +452,8 @@ void Renderer::SetShader(ShaderID id)
 					break;
 				}
 			}
-		}
-	}
+		} // if not same shader
+	}	// if valid shader
 	else
 	{
 		;// OutputDebugString("Warning: invalid shader is active\n");

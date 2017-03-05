@@ -135,6 +135,11 @@ const Input* Engine::INP() const
 	return m_input;
 }
 
+const PerfTimer Engine::TIMER() const
+{
+	return m_timer;
+}
+
 Engine * Engine::GetEngine()
 {
 	if (s_instance == nullptr)

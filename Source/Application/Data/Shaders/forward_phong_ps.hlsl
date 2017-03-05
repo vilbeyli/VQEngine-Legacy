@@ -83,7 +83,6 @@ cbuffer perObject
 
     float isDiffuseMap;
     float isNormalMap;
-
 };
 
 // TEXTURES & SAMPLERS
@@ -184,7 +183,7 @@ float4 PSMain(PSIn In) : SV_TARGET
     float3 N = normalize(In.normal);
     float3 T = normalize(In.tangent);
     float3 V = normalize(cameraPos - In.worldPos);
-    const float ambient = 0.005f;
+    const float ambient = 0.00075f;
     Surface s;
     s.N             =   (isNormalMap       ) * UnpackNormals(In.texCoord, N, T) + 
                         (1.0f - isNormalMap) * N;

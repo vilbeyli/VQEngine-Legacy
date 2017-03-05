@@ -62,7 +62,7 @@ class PerfTimer
 {
 public:
 	float TotalTime() const;
-	double CurrentTime();
+	//double CurrentTime();
 	float DeltaTime() const;
 
 	void Reset();

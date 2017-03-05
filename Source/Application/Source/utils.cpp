@@ -103,3 +103,18 @@ std::string GetFileNameFromPath(const std::string& path)
 //	std::transform(texName.begin(), texName.end(), texName.begin(), ::tolower);
 //	return texName;
 //}
+
+vec3::vec3() : v(XMFLOAT3(0.0f, 0.0f, 0.0f)){}
+vec3::vec3(const vec3& v_in) : v(v_in.v) {}
+vec3::vec3(float x, float y, float z) : v(x, y, z) {}
+vec3::vec3(float x) : v(x, x, x) {}
+vec3::vec3(const XMFLOAT3 & f3) : v(f3) {}
+vec3::vec3(const XMVECTOR & v_in)
+{
+	XMStoreFloat3(&v, v_in);
+}
+
+vec3::operator XMVECTOR() const
+{
+	return XMLoadFloat3(&v);
+}

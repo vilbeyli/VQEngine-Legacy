@@ -38,9 +38,11 @@ struct Material
 	Texture		normalMap;
 
 	static const Material jade, ruby, bronze, gold;
+	static Material RandomMaterial();
 	Material(const XMFLOAT3& diffuse, const XMFLOAT3& specular, float shininess);
 	Material();
 	void SetMaterialConstants(Renderer* renderer) const;
+	
 };
 
 class Model

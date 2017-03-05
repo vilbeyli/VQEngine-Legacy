@@ -304,3 +304,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# EXCEPTIONS
+!Data/Models/*.obj

@@ -66,7 +66,11 @@ void SceneManager::Initialize(Renderer * renderer, const RenderData* rData, Came
 	m_camera			= cam;
 	InitializeBuilding();
 	InitializeLights();
-	
+	InitializeObjectArrays();
+
+	// set skydome
+	m_skydome.Init(m_renderer, "browncloud_lf.jpg", FAR_PLANE / 2.2f, m_renderData->unlitShader);
+
 	//m_centralObj.m_model.m_mesh = MESH_TYPE::GRID;
 	//m_centralObj.m_model.m_material.color = Color::blue;
 	//m_centralObj.m_model.m_material.shininess = 40.0f;
@@ -74,10 +78,6 @@ void SceneManager::Initialize(Renderer * renderer, const RenderData* rData, Came
 #ifdef ENABLE_VPHYSICS
 	InitializePhysicsObjects();
 #endif
-
-	// set skydome
-	m_skydome.Init(m_renderer, "browncloud_lf.jpg", FAR_PLANE/2.2f, m_renderData->unlitShader);
-
 
 #if defined( ENABLE_ANIMATION ) && defined( LOAD_ANIMS )
 	m_pathMan->Init();
@@ -207,11 +207,12 @@ void SceneManager::InitializeBuilding()
 
 void SceneManager::InitializeLights()
 {
+	// todo: read from file
 	// spot lights
 	{
 		Light l;
 		l.lightType_ = Light::LightType::SPOT;
-		l.tf.SetPosition(0.0f, 2.6f*13.0f, 0.0f);
+		l.tf.SetPosition(0.0f, 3.6f*13.0f, 0.0f);
 		l.tf.RotateEulerRad(XMVectorSet(180.0f*DEG2RAD, 0.0f, 0.0f, 0.0f));
 		l.tf.SetScaleUniform(0.3f);
 		l.model.m_mesh = MESH_TYPE::CYLINDER;
@@ -239,7 +240,7 @@ void SceneManager::InitializeLights()
 		l.model.m_mesh = MESH_TYPE::SPHERE;
 		l.model.m_material.color = Color::yellow;
 		l.color_ = Color::yellow;
-		l.SetLightRange(60);
+		l.SetLightRange(30);
 		m_lights.push_back(l);
 	}
 	{
@@ -249,7 +250,7 @@ void SceneManager::InitializeLights()
 		l.model.m_mesh				= MESH_TYPE::SPHERE;
 		l.model.m_material.color	= Color::white;
 		l.color_					= Color::white;
-		l.SetLightRange(160);
+		l.SetLightRange(20);
 		m_lights.push_back(l);
 	}
 
@@ -267,6 +268,79 @@ void SceneManager::InitializeLights()
 		l.model.m_material.color = l.color_ = rndColor;
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
 		m_lights.push_back(l);
+	}
+}
+
+void SceneManager::InitializeObjectArrays()
+{
+	{	// grid arrangement ( (row * col) cubes that are 'r' apart from each other )
+		const int	row = 5,
+					col = 5;
+		const float r = 3.5f;
+
+		for (int i = 0; i < row; ++i)
+		{
+			for (int j = 0; j < col; ++j)
+			{
+				GameObject cube;
+
+				// set transform
+				float x, y, z;	// position
+				x = i * r;		y = 5.0f;	z = j * r;
+				cube.m_transform.SetPosition(x, y, z);
+
+				// set material
+				cube.m_model.m_mesh = MESH_TYPE::CUBE;
+				cube.m_model.m_material = Material::RandomMaterial();
+
+				cubes.push_back(cube);
+			}
+		}
+	}
+	{	// circle arrangement
+		const float r = 30.0f;
+		const size_t numSph = 12;
+
+		const float rot = 2.0f * XM_PI / numSph;
+		const vec3 radius(r, 10.0f, 0.0f);
+		//const auto axis = XMVector3Normalize(global_U + global_F);
+		const auto axis = global_U;
+		for (size_t i = 0; i < numSph; i++)
+		{
+			// calc position
+			Quaternion rotQ = Quaternion::FromAxisAngle(axis, rot * i);
+			vec3 pos = rotQ.TransformVector(radius);
+			
+			GameObject sph;
+			sph.m_transform.SetPosition(pos);
+			sph.m_model.m_mesh = MESH_TYPE::SPHERE;
+			sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * 50.0f).v : vec3((static_cast<float>(numSph-i) / numSph) * 50.0f).v;
+			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;
+			
+			spheres.push_back(sph);
+		}
+	}
+	{	// circle arrangement
+		const float r = 15.0f;
+		const size_t numSph = 5;
+
+		const float rot = 2.0f * XM_PI / numSph;
+		const vec3 radius(r, 15.0f, 0.0f);
+		//const auto axis = XMVector3Normalize(global_U + global_F);
+		const auto axis = global_U;
+		for (size_t i = 0; i < numSph; i++)
+		{
+			// calc position
+			Quaternion rotQ = Quaternion::FromAxisAngle(axis, rot * i);
+			vec3 pos = rotQ.TransformVector(radius);
+
+			GameObject sph;
+			sph.m_transform.SetPosition(pos);
+			sph.m_model.m_mesh = MESH_TYPE::SPHERE;
+			sph.m_model.m_material = Material::RandomMaterial();
+
+			spheres.push_back(sph);
+		}
 	}
 }
 
@@ -335,14 +409,6 @@ void SceneManager::InitializePhysicsObjects()
 //-----------------------------------------------------------------------------------------------------------------------------------------
 void SceneManager::UpdateCentralObj(const float dt)
 {
-	// TODO: move these to somewhere (utils.h maybe?)
-	static const XMVECTOR global_L = XMVectorSet(-1.0f, +0.0f, +0.0f, +0.0f);
-	static const XMVECTOR global_R = XMVectorSet(+1.0f, +0.0f, +0.0f, +0.0f);
-	static const XMVECTOR global_F = XMVectorSet(+0.0f, +0.0f, +1.0f, +0.0f);
-	static const XMVECTOR global_B = XMVectorSet(+0.0f, +0.0f, -1.0f, +0.0f);
-	static const XMVECTOR global_U = XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
-	static const XMVECTOR global_D = XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);
-
 	const float moveSpeed	= 15.0f;
 	const float rotSpeed	= XM_PI;
 
@@ -370,6 +436,21 @@ void SceneManager::UpdateCentralObj(const float dt)
 
 	m_springSys.Update();
 #endif
+
+	float t = ENGINE->TIMER().TotalTime();
+	float angle = (dt * XM_PI * 0.08f) + (sinf(t) * sinf(dt * XM_PI * 0.03f));
+	//const auto axis = XMVector3Normalize(global_U + global_F);
+	const auto axis = global_U;
+	for (auto& sph : spheres)
+	{
+		sph.m_transform.RotateAroundPointAndAxis(axis, angle, vec3());
+		vec3 pos = sph.m_transform.GetPositionF3();
+		const float sinx = sinf(pos.v.x / 3.5f);
+		const float y = 10.0f + 2.5f * sinx;
+	
+		//pos.v.y = y;
+		sph.m_transform.SetPosition(pos.v);
+	}
 
 	// temp
 	//if (!m_lights.empty()) m_lights[0].tf.Translate(tr * dt * 0.2f);
@@ -588,8 +669,35 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	if(m_selectedShader == m_renderData->phongShader) SendLightData();
 	m_renderer->SetConstant4x4f("view", view);
 	m_renderer->SetConstant4x4f("proj", proj);
+	m_renderer->SetConstant3f("cameraPos", m_camera->GetPositionF());
 	if(m_selectedShader == m_renderData->TNBShader)	  m_renderer->SetConstant1i("mode", TBNMode);
 	if(m_selectedShader == m_renderData->phongShader) m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
+
+	for (const auto& cube : cubes)
+	{
+		cube.m_model.m_material.SetMaterialConstants(m_renderer);
+		m_renderer->SetBufferObj(cube.m_model.m_mesh);
+		XMMATRIX world = cube.m_transform.WorldTransformationMatrix();
+		XMMATRIX nrm   = cube.m_transform.NormalMatrix(world);
+		m_renderer->SetConstant4x4f("world", world);
+		m_renderer->SetConstant4x4f("nrmMatrix", nrm);
+		m_renderer->Apply();
+		m_renderer->DrawIndexed();
+	}
+
+	for (const auto& sph : spheres)
+	{
+		sph.m_model.m_material.SetMaterialConstants(m_renderer);
+		m_renderer->SetBufferObj(sph.m_model.m_mesh);
+		XMMATRIX world = sph.m_transform.WorldTransformationMatrix();
+		XMMATRIX nrm   = sph.m_transform.NormalMatrix(world);
+		m_renderer->SetConstant4x4f("world", world);
+		m_renderer->SetConstant4x4f("nrmMatrix", nrm);
+		m_renderer->Apply();
+		m_renderer->DrawIndexed();
+	}
+
+
 
 #ifdef ENABLE_VPHYSICS
 	// draw anchor 1 sphere

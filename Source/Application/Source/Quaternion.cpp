@@ -20,9 +20,6 @@
 #include <cmath>
 #include <algorithm>	// min, max
 
-#define DEG2RAD (XM_PI / 180.0f)
-#define RAD2DEG (180.0f / XM_PI);
-
 // private ctors : used by operator()s
 Quaternion::Quaternion(float s, const XMFLOAT3& v)
 	:
@@ -286,4 +283,11 @@ Quaternion& Quaternion::Normalize()
 		V.z = V.z / len;
 	}
 	return *this;
+}
+
+vec3 Quaternion::TransformVector(const vec3 & v) const
+{
+	Quaternion pure(0.0f, v);
+	Quaternion rotated = *this * pure * this->Conjugate();
+	return vec3(rotated.V);
 }

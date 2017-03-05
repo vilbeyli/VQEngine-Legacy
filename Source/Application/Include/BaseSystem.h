@@ -21,7 +21,7 @@
 
 #define WIN32_LEAN_AND_MEAN		// speeds up build process
 
-#include "Engine.h"
+#include <windows.h>
 
 class BaseSystem
 {

@@ -42,11 +42,11 @@ public:
 	static const XMVECTOR Forward;//= XMVectorSet(+0.0f, +0.0f, +1.0f, 0.0f);
 	static const XMVECTOR Backward;//= XMVectorSet(+0.0f, +0.0f, -1.0f, 0.0f);
 
-								   // CONSTRUCTOR / DESTRUCTOR
-								   //-----------------------------------------------------------------------------------
+	// CONSTRUCTOR / DESTRUCTOR
+	//-----------------------------------------------------------------------------------
 	Transform(const XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f),
-		const XMFLOAT3 rotation = XMFLOAT3(0.0f, 0.0f, 0.0f),
-		const XMFLOAT3 scale = XMFLOAT3(1.0f, 1.0f, 1.0f));
+				const XMFLOAT3 rotation = XMFLOAT3(0.0f, 0.0f, 0.0f),
+				const XMFLOAT3 scale = XMFLOAT3(1.0f, 1.0f, 1.0f));
 	~Transform();
 
 	// GETTERS & SETTERS
@@ -86,6 +86,7 @@ public:
 	void RotateEulerRad(const XMVECTOR& rotation);
 	void RotateEulerRad(const XMFLOAT3& rotation);
 	void RotateQuat(const Quaternion& q);
+	void RotateAroundPointAndAxis(const vec3& axis, float angle, vec3& point);
 
 	void Scale(XMVECTOR scl);
 

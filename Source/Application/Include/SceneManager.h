@@ -56,6 +56,7 @@ public:
 private:
 	void InitializeBuilding();
 	void InitializeLights();
+	void InitializeObjectArrays();
 #ifdef ENABLE_VPHYSICS
 	void InitializePhysicsObjects();
 #endif
@@ -94,6 +95,9 @@ private:
 		GameObject wallF;
 		GameObject ceiling;
 	} m_building;
+
+	std::vector<GameObject> spheres;
+	std::vector<GameObject> cubes;
 
 #ifdef ENABLE_ANIMATION
 	// hierarchical model

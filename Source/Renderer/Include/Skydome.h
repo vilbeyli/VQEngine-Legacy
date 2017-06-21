@@ -18,9 +18,11 @@
 
 #pragma once
 #include <GameObject.h>
+#include <memory>
 
 // forward decl
 class Renderer;
+using pRenderer = std::shared_ptr<Renderer>;
 
 class Skydome
 {
@@ -30,12 +32,12 @@ public:
 	Skydome();
 	~Skydome();
 
-	void Render(Renderer* renderer, const XMMATRIX& view, const XMMATRIX& proj) const;
-	void Init(Renderer* renderer_in, const char* tex, float scale, int shader);
+	void Render(const XMMATRIX& view, const XMMATRIX& proj) const;
+	void Init(std::shared_ptr<Renderer> renderer_in, const char* tex, float scale, int shader);
 private:
 	GameObject	skydomeObj;
 	TextureID	skydomeTex;
 	ShaderID	skydomeShader;
-	Renderer*	renderer;
+	pRenderer	renderer;
 };
 

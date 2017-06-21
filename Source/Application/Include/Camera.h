@@ -20,17 +20,15 @@
 #define _CAMERA_H
 
 #include <directxmath.h>
-#include "Components/Transform.h"	// dependency. rethink this
+//#include "Components/Transform.h"	// dependency. rethink this
 
 using namespace DirectX;
 
 class Input;
-
-//__declspec(align(16)) class Camera
 class Camera
 {
 public:
-	Camera(Input const*);
+	Camera();
 	~Camera(void);
 
 	void SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, float screenFar);
@@ -64,8 +62,6 @@ private:
 	XMFLOAT4X4	m_viewMatrix;
 	XMFLOAT4X4	m_projectionMatrix;
 	XMFLOAT4X4	m_orthoMatrix;
-
-	Input const* m_input;
 };
 
 #endif

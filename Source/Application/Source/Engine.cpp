@@ -20,12 +20,15 @@
 
 #include "Renderer.h"
 #include "Input.h"
+#include "PerfTimer.h"
+#include "SceneParser.h"
+#include "SceneManager.h"
+
+#include "Mesh.h"
 #include "Camera.h"
+
 //#include "PhysicsEngine.h"
 //#include "../Animation/Include/PathManager.h"
-#include "Mesh.h"
-
-#include "SceneManager.h"
 
 #include <sstream>
 
@@ -33,49 +36,38 @@ Engine* Engine::s_instance = nullptr;
 
 Engine::Engine()
 	:
-	m_renderer(nullptr),
-	m_input(nullptr),
-	m_camera(nullptr),
-	m_pathMan(nullptr),
-	m_isPaused(false),
-	m_physics(nullptr)
+	m_renderer(new Renderer()),
+	m_input(new Input()),
+	m_scene_manager(new SceneManager()),
+	m_timer(new PerfTimer())
 {}
 
 Engine::~Engine(){}
 
 bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 {
-	m_renderer = new Renderer();
-	if (!m_renderer) return false;
-	m_input = new Input();
-	if (!m_input)	return false;
-	m_camera = new Camera(m_input);
-	if (!m_camera)	return false;
+	if (!m_renderer || !m_input || !m_scene_manager || !m_timer) 
+		return false;
+
+	/// OLD CODE
 	//m_pathMan = new PathManager(m_renderer);
 	//if (!m_pathMan) return false;
 	//m_physics = new PhysicsEngine();
 	//if (!m_physics) return false;
-	m_sceneMan = new SceneManager();
-	if (!m_sceneMan) return false;
 
-	// initialize systems
 	m_input->Init();
 	if(!m_renderer->Init(scr_width, scr_height, hWnd)) 
 		return false;
-	m_renderData = &(m_renderer->m_renderData);
-
-	m_camera->SetOthoMatrix(m_renderer->WindowWidth(), m_renderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
-	m_camera->SetProjectionMatrix((float)XM_PIDIV4, m_renderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
-	m_camera->SetPosition(0, 10, -100);
-	m_renderer->SetCamera(m_camera);
+	m_pRenderData = &(m_renderer->m_renderData);
+	m_scene_manager->Initialize(m_renderer, m_pRenderData, nullptr);
 
 	return true;
 }
 
 bool Engine::Load()
 {
-	m_sceneMan->Initialize(m_renderer, m_renderData, m_camera, m_pathMan);
-	m_timer.Reset();
+	s_SceneParser.ReadScene(m_scene_manager);
+	m_timer->Reset();
 	return true;
 }
 
@@ -86,14 +78,15 @@ void Engine::TogglePause()
 
 void Engine::CalcFrameStats()
 {
-	static long frameCount = 0;
+	static long  frameCount = 0;
 	static float timeElaped = -0.9f;
+	constexpr float UpdateInterval = 0.5f;
 
 	++frameCount;
-	if (m_timer.TotalTime() - timeElaped >= 1.0f)
+	if (m_timer->TotalTime() - timeElaped >= UpdateInterval)
 	{
 		float fps = static_cast<float>(frameCount);	// #frames / 1.0f
-		float frameTime = 1000.0f / fps;	// milliseconds
+		float frameTime = 1000.0f / fps;			// milliseconds
 
 		std::ostringstream stats;
 		stats.precision(2);
@@ -103,25 +96,14 @@ void Engine::CalcFrameStats()
 		stats	<< "FPS: " << fps;
 		SetWindowText(m_renderer->GetWindow(), stats.str().c_str());
 		frameCount = 0;
-		timeElaped += 1.0f;
+		timeElaped += UpdateInterval;
 	}
 }
 
 
 void Engine::Exit()
 {
-	if (m_input)
-	{
-		delete m_input;
-		m_input = nullptr;
-	}
-
-	if (m_renderer)
-	{
-		m_renderer->Exit();
-		delete m_renderer;
-		m_renderer = nullptr;
-	}
+	m_renderer->Exit();
 
 	if (s_instance)
 	{
@@ -130,12 +112,12 @@ void Engine::Exit()
 	}
 }
 
-const Input* Engine::INP() const
+shared_ptr<const Input> Engine::INP() const
 {
 	return m_input;
 }
 
-const PerfTimer Engine::TIMER() const
+shared_ptr<const PerfTimer>  Engine::TIMER() const
 {
 	return m_timer;
 }
@@ -154,7 +136,7 @@ Engine * Engine::GetEngine()
 bool Engine::Run()
 {
 	//float begin = m_timer.CurrentTime();	// fps lock
-	m_timer.Tick();
+	m_timer->Tick();
 	if (m_input->IsKeyDown(VK_ESCAPE))
 	{
 		return false;
@@ -166,7 +148,7 @@ bool Engine::Run()
 	if (!m_isPaused)
 	{
 		CalcFrameStats();
-		Update(m_timer.DeltaTime());
+		Update(m_timer->DeltaTime());
 		Render();
 		
 		// 70 fps block - won't work because of input lag
@@ -200,24 +182,21 @@ void Engine::Unpause()
 
 float Engine::TotalTime() const
 {
-	return m_timer.TotalTime();
+	return m_timer->TotalTime();
 }
 
 void Engine::Update(float dt)
 {
 	//m_physics->Update(dt);
-	m_camera->Update(dt);
-	m_sceneMan->Update(dt);
+	m_scene_manager->Update(dt);
 }
 
 void Engine::Render()
 {
-	const float clearColor[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
-	XMMATRIX view = m_camera->GetViewMatrix();
-	XMMATRIX proj = m_camera->GetProjectionMatrix();
+	const float clearColor[4] = { 0.5f, 0.8f, 0.5f, 1.0f };
 	m_renderer->Begin(clearColor);
 	m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
-	m_sceneMan->Render(view, proj);	// renders room
+	m_scene_manager->Render();
 	m_renderer->End();
 }
 

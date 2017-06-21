@@ -19,6 +19,7 @@
 #include "BaseSystem.h"
 #include "Engine.h"
 #include "Input.h"
+#include "SceneParser.h"
 
 #include <strsafe.h>
 #include <vector>
@@ -41,6 +42,8 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
+	m_settings = s_SceneParser.ReadSettings();
+
 	int width, height;
 	InitWindow(width, height);
 
@@ -176,7 +179,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 			long xPosRelative = raw->data.mouse.lLastX;
 			long yPosRelative = raw->data.mouse.lLastY;
 			ENGINE->m_input->UpdateMousePos(xPosRelative, yPosRelative);
-			SetCursorPos(SCREEN_WIDTH/2, SCREEN_HEIGHT/2);
+			SetCursorPos(m_settings.width/2, m_settings.height/2);
 			
 #ifdef LOG
 			char szTempOutput[1024];
@@ -240,7 +243,7 @@ void BaseSystem::InitWindow(int& width, int& height)
 	height	= GetSystemMetrics(SM_CYSCREEN);
 
 	// set screen settings
-	if (FULL_SCREEN)
+	if (m_settings.fullscreen)
 	{
 		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
@@ -255,8 +258,8 @@ void BaseSystem::InitWindow(int& width, int& height)
 	}
 	else
 	{
-		width  = SCREEN_WIDTH;
-		height = SCREEN_HEIGHT;
+		width  = m_settings.width;
+		height = m_settings.height;
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
 		posY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
@@ -302,7 +305,7 @@ void BaseSystem::ShutdownWindows()
 {
 	ShowCursor(true);
 
-	if (FULL_SCREEN)
+	if (m_settings.fullscreen)
 	{
 		ChangeDisplaySettings(NULL, 0);
 	}

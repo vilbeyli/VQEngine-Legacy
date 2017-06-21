@@ -18,16 +18,18 @@
 
 #include "Camera.h"
 #include "Input.h"
-#include <windows.h>
-#include <string>
-#include "SystemDefs.h"
+#include "Engine.h"
 
-Camera::Camera(Input const* inp)
+#include "utils.h"
+
+Camera::Camera()
 	:
-	m_input(inp),
 	MoveSpeed(1000.0f),
 	AngularSpeedDeg(40.0f),
 	Drag(15.0f)
+
+	// todo:	1- default init rest
+	//			2- read pos/rot/scl from scene file
 {}
 
 Camera::~Camera(void)
@@ -143,6 +145,7 @@ void Camera::Rotate(float yaw, float pitch, const float dt)
 // internal update functions
 void Camera::Rotate(const float dt)
 {
+	auto m_input = ENGINE->INP();
 	const long* dxdy = m_input->GetDelta();
 	float dy = static_cast<float>(dxdy[1]);
 	float dx = static_cast<float>(dxdy[0]);
@@ -151,17 +154,19 @@ void Camera::Rotate(const float dt)
 
 void Camera::Move(const float dt)
 {
+	auto m_input = ENGINE->INP();
 	XMMATRIX MRotation	 = RotMatrix();
 	XMVECTOR translation = XMVectorSet(0,0,0,0);
-	if (m_input->IsKeyDown('A'))		translation += XMVector3TransformCoord(Transform::Left,		MRotation);
-	if (m_input->IsKeyDown('D'))		translation += XMVector3TransformCoord(Transform::Right,	MRotation);
-	if (m_input->IsKeyDown('W'))		translation += XMVector3TransformCoord(Transform::Forward,	MRotation);
-	if (m_input->IsKeyDown('S'))		translation += XMVector3TransformCoord(Transform::Backward,	MRotation);
-	if (m_input->IsKeyDown('E'))		translation += XMVector3TransformCoord(Transform::Up,		MRotation);
-	if (m_input->IsKeyDown('Q'))		translation += XMVector3TransformCoord(Transform::Down,		MRotation);
+	if (m_input->IsKeyDown('A'))		translation += XMVector3TransformCoord(vec3::Left,		MRotation);
+	if (m_input->IsKeyDown('D'))		translation += XMVector3TransformCoord(vec3::Right,		MRotation);
+	if (m_input->IsKeyDown('W'))		translation += XMVector3TransformCoord(vec3::Forward,	MRotation);
+	if (m_input->IsKeyDown('S'))		translation += XMVector3TransformCoord(vec3::Back,		MRotation);
+	if (m_input->IsKeyDown('E'))		translation += XMVector3TransformCoord(vec3::Up,		MRotation);
+	if (m_input->IsKeyDown('Q'))		translation += XMVector3TransformCoord(vec3::Down,		MRotation);
 	if (m_input->IsKeyDown(VK_SHIFT))	translation *= 5.0f;
 	
 	// update velocity
+	// todo: test vec3 here
 	auto V = XMLoadFloat3(&m_velocity);
 	V += (translation * MoveSpeed - V * Drag) * dt;
 	XMStoreFloat3(&m_velocity, V);

@@ -17,13 +17,6 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
-// config file
 
-const unsigned SCREEN_WIDTH = 1440;
-const unsigned SCREEN_HEIGHT = 900;
-const bool FULL_SCREEN = false;
-
-// temp
-const float NEAR_PLANE = 1.0f;
-const float FAR_PLANE  = 3500.0f;
+// system wide defines go here
 

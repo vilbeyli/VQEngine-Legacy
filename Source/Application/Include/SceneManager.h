@@ -20,20 +20,24 @@
 
 #define xENABLE_ANIMATION	
 #define xENABLE_VPHYSICS
-
-#include "GameObject.h"
-
 #ifdef ENABLE_ANIMATION
 #include "../Animation/Include/AnimatedModel.h"
 #endif
-
-#include "Light.h"
-#include <vector>
-#include <Skydome.h>
-
 #ifdef ENABLE_VPHYSICS
 #include "PhysicsEngine.h"
 #endif
+
+#include "GameObject.h"
+#include "Light.h"
+#include "Skydome.h"
+
+#include "Settings.h"
+
+#include <vector>
+#include <memory>
+
+using std::shared_ptr;
+using std::unique_ptr;
 
 class Renderer;
 class Camera;
@@ -43,25 +47,31 @@ struct Path;
 typedef int ShaderID;
 struct RenderData;
 
+
 class SceneManager
 {
+	using pRenderer = std::shared_ptr<Renderer>;	// ?
+
 public:
 	SceneManager();
 	~SceneManager();
 
-	void Initialize(Renderer* renderer, const RenderData* rData, Camera* cam, PathManager* pathMan);
+	void Initialize(pRenderer renderer, const RenderData* rData, PathManager* pathMan);
+	void SetCameraSettings(const Settings::Camera& cameraSettings);
 	void Update(float dt);
-	void Render(const XMMATRIX& view, const XMMATRIX& proj) ;	// todo: const
+	void Render();	// todo: const
 
 private:
 	void InitializeBuilding();
 	void InitializeLights();
 	void InitializeObjectArrays();
-#ifdef ENABLE_VPHYSICS
-	void InitializePhysicsObjects();
-#endif
 
 	void UpdateCentralObj(const float dt);
+
+#ifdef ENABLE_VPHYSICS
+	void InitializePhysicsObjects();
+	void UpdateAnchors(float dt);
+#endif
 #ifdef ENABLE_ANIMATION
 	void UpdateAnimatedModel(const float dt);
 #endif
@@ -72,13 +82,11 @@ private:
 	void RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj); // todo: const
 
 	void SendLightData() const;
-#ifdef ENABLE_VPHYSICS
-	void UpdateAnchors(float dt);
-#endif
+
 private:
-	Renderer*			m_renderer;
-	Camera*				m_camera;
-	PathManager*		m_pathMan;
+	pRenderer			m_pRenderer;
+	shared_ptr<Camera>	m_pCamera;
+	PathManager*		m_pPathManager; // unused
 	Skydome				m_skydome;
 
 	// render data

@@ -22,6 +22,7 @@
 #include "Renderer.h"
 #include "Camera.h"
 #include "utils.h"
+#include "PerfTimer.h"
 
 #ifdef ENABLE_VPHYSICS
 #include "PhysicsEngine.h"
@@ -42,34 +43,35 @@
 #define DISCO_PERIOD 0.25
 
 #define LOAD_ANIMS
-//#undef LOAD_ANIMS	// disable
 
 int TBNMode = 0;
 
 SceneManager::SceneManager()
 #ifdef ENABLE_VPHYSICS
 	:
-	m_springSys(m_anchor1, m_anchor2, &m_anchor2)
+	m_springSys(m_anchor1, m_anchor2, &m_anchor2)	// test
 #endif
+	:
+	m_pCamera(new Camera())
 {}
 
 SceneManager::~SceneManager()
 {}
 
-void SceneManager::Initialize(Renderer * renderer, const RenderData* rData, Camera* cam, PathManager* pathMan)
+void SceneManager::Initialize(shared_ptr<Renderer> renderer, const RenderData* rData, PathManager* pathMan)
 {
-	m_pathMan			= pathMan;
-	m_renderer			= renderer;
-	m_renderData		= rData;
+	m_pPathManager		= pathMan;
+
+	m_pRenderer			= renderer;
+	m_renderData		= rData;	// ?
 	m_selectedShader	= m_renderData->phongShader;
 	m_gammaCorrection	= true;
-	m_camera			= cam;
 	InitializeBuilding();
 	InitializeLights();
 	InitializeObjectArrays();
 
 	// set skydome
-	m_skydome.Init(m_renderer, "browncloud_lf.jpg", FAR_PLANE / 2.2f, m_renderData->unlitShader);
+	m_skydome.Init(m_pRenderer, "browncloud_lf.jpg", 1000.0f / 2.2f, m_renderData->unlitShader);
 
 	//m_centralObj.m_model.m_mesh = MESH_TYPE::GRID;
 	//m_centralObj.m_model.m_material.color = Color::blue;
@@ -80,7 +82,7 @@ void SceneManager::Initialize(Renderer * renderer, const RenderData* rData, Came
 #endif
 
 #if defined( ENABLE_ANIMATION ) && defined( LOAD_ANIMS )
-	m_pathMan->Init();
+	m_pPathManager->Init();
 	// load animated model, set IK effector bones
 	// 	- from left hand to spine:
 	//		47 - 40 - 32 - 21 - 15 - 8
@@ -93,7 +95,7 @@ void SceneManager::Initialize(Renderer * renderer, const RenderData* rData, Came
 	m_model.SetQuaternionSlerp(false);
 	m_model.m_animMode = ANIM_MODE_IK;	// looping / path_looping / IK
 
-	m_model.SetPath(m_pathMan->m_paths[0]);
+	m_model.SetPath(m_pPathManager->m_paths[0]);
 	m_model.m_pathLapTime = 12.8f;
 
 	AnimatedModel::renderer = renderer;
@@ -129,8 +131,6 @@ void SceneManager::InitializeBuilding()
 
 	//	}
 	//}
-	
-
 
 	// FLOOR
 	{
@@ -156,7 +156,7 @@ void SceneManager::InitializeBuilding()
 		m_building.ceiling.m_model.m_material = Material::gold;
 		//m_building.ceiling.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
 		//m_building.ceiling.m_model.m_material.diffuseMap.name = "bricks_n.png";	// todo: rethink this
-		m_building.ceiling.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
+		m_building.ceiling.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
 		m_building.ceiling.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	}
 
@@ -169,8 +169,8 @@ void SceneManager::InitializeBuilding()
 		//m_building.wallR.m_model.m_material.color		= Color::gray;
 		//m_building.wallR.m_model.m_material.shininess	= 120.0f;
 		m_building.wallR.m_model.m_material = Material::bronze;
-		m_building.wallR.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
-		m_building.wallR.m_model.m_material.normalMap.id  = m_renderer->AddTexture("bricks_n.png");
+		m_building.wallR.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
+		m_building.wallR.m_model.m_material.normalMap.id  = m_pRenderer->AddTexture("bricks_n.png");
 		m_building.wallR.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
 		m_building.wallR.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
@@ -184,8 +184,8 @@ void SceneManager::InitializeBuilding()
 		//m_building.wallL.m_model.m_material.color		= Color::gray;
 		//m_building.wallL.m_model.m_material.shininess	= 60.0f;
 		m_building.wallL.m_model.m_material = Material::bronze;
-		m_building.wallL.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
-		m_building.wallL.m_model.m_material.normalMap.id  = m_renderer->AddTexture("bricks_n.png");
+		m_building.wallL.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
+		m_building.wallL.m_model.m_material.normalMap.id  = m_pRenderer->AddTexture("bricks_n.png");
 		m_building.wallL.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
 		m_building.wallL.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
@@ -198,8 +198,8 @@ void SceneManager::InitializeBuilding()
 		//m_building.wallF.m_model.m_material.color		= Color::gray;
 		//m_building.wallF.m_model.m_material.shininess	= 90.0f;
 		m_building.wallF.m_model.m_material = Material::gold;
-		m_building.wallF.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
-		m_building.wallF.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
+		m_building.wallF.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
+		m_building.wallF.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
 		m_building.wallF.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 		m_building.wallF.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
@@ -304,7 +304,7 @@ void SceneManager::InitializeObjectArrays()
 		const float rot = 2.0f * XM_PI / numSph;
 		const vec3 radius(r, 10.0f, 0.0f);
 		//const auto axis = XMVector3Normalize(global_U + global_F);
-		const auto axis = global_U;
+		const vec3 axis = vec3::Up;
 		for (size_t i = 0; i < numSph; i++)
 		{
 			// calc position
@@ -327,7 +327,7 @@ void SceneManager::InitializeObjectArrays()
 		const float rot = 2.0f * XM_PI / numSph;
 		const vec3 radius(r, 15.0f, 0.0f);
 		//const auto axis = XMVector3Normalize(global_U + global_F);
-		const auto axis = global_U;
+		const auto axis = vec3::Up;
 		for (size_t i = 0; i < numSph; i++)
 		{
 			// calc position
@@ -353,7 +353,7 @@ void SceneManager::InitializePhysicsObjects()
 	m_anchor1.m_model.m_mesh = MESH_TYPE::SPHERE;
 	m_anchor1.m_model.m_material.color = Color::white;
 	m_anchor1.m_model.m_material.shininess = 90.0f;
-	m_anchor1.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
+	m_anchor1.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
 	m_anchor1.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	m_anchor1.m_transform.SetRotationDeg(15.0f, .0f, .0f);
 	m_anchor1.m_transform.SetPosition(-20.0f, 25.0f, 2.0f);
@@ -366,7 +366,7 @@ void SceneManager::InitializePhysicsObjects()
 	m_anchor2.m_model.m_material.color = Color::white;
 	m_anchor2.m_model.m_material.shininess = 90.0f;
 	//m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
-	m_anchor2.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
+	m_anchor2.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
 	m_anchor2.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	m_anchor2.m_transform.SetRotationDeg(15.0f, .0f, .0f);
 	m_anchor2.m_transform.SetPosition(20.0f, 25.0f, 2.0f);
@@ -379,7 +379,7 @@ void SceneManager::InitializePhysicsObjects()
 	msh					= MESH_TYPE::CUBE;
 	mat.color			= Color::white;
 	//mat.normalMap.id	= m_renderer->AddTexture("bricks_n.png");
-	mat.diffuseMap.id	= m_renderer->AddTexture("bricks_d.png");
+	mat.diffuseMap.id	= m_pRenderer->AddTexture("bricks_d.png");
 	mat.normalMap.name	= "bricks_n.png";	// todo: rethink this
 	mat.shininess		= 65.0f;
 	tfm.SetPosition(0.0f, 10.0f, 0.0f);
@@ -414,12 +414,12 @@ void SceneManager::UpdateCentralObj(const float dt)
 
 	XMVECTOR rot = XMVectorZero();
 	XMVECTOR tr  = XMVectorZero();
-	if (ENGINE->INP()->IsKeyDown(102)) tr += global_R;	// Key: Numpad6
-	if (ENGINE->INP()->IsKeyDown(100)) tr += global_L;	// Key: Numpad4
-	if (ENGINE->INP()->IsKeyDown(104)) tr += global_F;	// Key: Numpad8
-	if (ENGINE->INP()->IsKeyDown(98))  tr += global_B; 	// Key: Numpad2
-	if (ENGINE->INP()->IsKeyDown(105)) tr += global_U; 	// Key: Numpad9
-	if (ENGINE->INP()->IsKeyDown(99))  tr += global_D; 	// Key: Numpad3
+	if (ENGINE->INP()->IsKeyDown(102)) tr += vec3::Right;	// Key: Numpad6
+	if (ENGINE->INP()->IsKeyDown(100)) tr += vec3::Left;	// Key: Numpad4
+	if (ENGINE->INP()->IsKeyDown(104)) tr += vec3::Forward;	// Key: Numpad8
+	if (ENGINE->INP()->IsKeyDown(98))  tr += vec3::Back; 	// Key: Numpad2
+	if (ENGINE->INP()->IsKeyDown(105)) tr += vec3::Up; 		// Key: Numpad9
+	if (ENGINE->INP()->IsKeyDown(99))  tr += vec3::Down; 	// Key: Numpad3
 	
 #ifdef ENABLE_VPHYSICS
 	// ANCHOR MOVEMENT
@@ -437,10 +437,10 @@ void SceneManager::UpdateCentralObj(const float dt)
 	m_springSys.Update();
 #endif
 
-	float t = ENGINE->TIMER().TotalTime();
+	float t = ENGINE->TIMER()->TotalTime();
 	float angle = (dt * XM_PI * 0.08f) + (sinf(t) * sinf(dt * XM_PI * 0.03f));
 	//const auto axis = XMVector3Normalize(global_U + global_F);
-	const auto axis = global_U;
+	const auto axis = vec3::Up;
 	for (auto& sph : spheres)
 	{
 		sph.m_transform.RotateAroundPointAndAxis(axis, angle, vec3());
@@ -498,20 +498,31 @@ void SceneManager::UpdateAnchors(float dt)
 }
 #endif
 
+void SceneManager::SetCameraSettings(const Settings::Camera & cameraSettings)
+{
+	const auto& NEAR_PLANE = cameraSettings.nearPlane;
+	const auto& FAR_PLANE = cameraSettings.farPlane;
+	m_pCamera->SetOthoMatrix(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, m_pRenderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetPosition(0, 10, -100);
+	m_pRenderer->SetCamera(m_pCamera.get());
+}
+
 void SceneManager::Update(float dt)
 {
+	m_pCamera->Update(dt);
 	//-------------------------------------------------------------------------------- MOVE OBJECTS ------------------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
 #ifdef ENABLE_ANIMATION
 	m_model.Update(dt);
 	UpdateAnimatedModel(dt);
 #endif
-
-	UpdateCentralObj(dt);
-
 #ifdef ENABLE_VPHYSICS
 	UpdateAnchors(dt);
 #endif
+
+	UpdateCentralObj(dt);
+
 
 	//-------------------------------------------------------------------------------- SHADER CONFIGURATION ----------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -570,9 +581,11 @@ void SceneManager::Update(float dt)
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
-void SceneManager::Render(const XMMATRIX& view, const XMMATRIX& proj) 
+void SceneManager::Render() 
 {
-	m_skydome.Render(m_renderer, view, proj);
+	XMMATRIX view = m_pCamera->GetViewMatrix();
+	XMMATRIX proj = m_pCamera->GetProjectionMatrix();
+	m_skydome.Render(view, proj);
 	RenderLights(view, proj);
 	RenderAnimated(view, proj);
 	RenderBuilding(view, proj);
@@ -587,159 +600,159 @@ void SceneManager::Render(const XMMATRIX& view, const XMMATRIX& proj)
 
 void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const
 {
-	m_renderer->SetShader(m_selectedShader);
-	m_renderer->SetConstant4x4f("view", view);
-	m_renderer->SetConstant4x4f("proj", proj);
-	m_renderer->SetBufferObj(MESH_TYPE::CUBE);
-	m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
-	m_renderer->SetConstant3f("cameraPos", m_camera->GetPositionF());
+	m_pRenderer->SetShader(m_selectedShader);
+	m_pRenderer->SetConstant4x4f("view", view);
+	m_pRenderer->SetConstant4x4f("proj", proj);
+	m_pRenderer->SetBufferObj(MESH_TYPE::CUBE);
+	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
+	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 
 	SendLightData();
 	{
-		m_building.floor.m_model.m_material.SetMaterialConstants(m_renderer);
+		m_building.floor.m_model.m_material.SetMaterialConstants(m_pRenderer);
 		XMMATRIX world		= m_building.floor.m_transform.WorldTransformationMatrix();
 		XMMATRIX nrmMatrix	= m_building.floor.m_transform.NormalMatrix(world);
-		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_renderer->Apply();
-		m_renderer->DrawIndexed();
+		m_pRenderer->SetConstant4x4f("world", world);
+		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
 	}
 	{
-		m_building.ceiling.m_model.m_material.SetMaterialConstants(m_renderer);
+		m_building.ceiling.m_model.m_material.SetMaterialConstants(m_pRenderer);
 		XMMATRIX world		= m_building.ceiling.m_transform.WorldTransformationMatrix();
 		XMMATRIX nrmMatrix	= m_building.ceiling.m_transform.NormalMatrix(world);
-		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_renderer->Apply();
-		m_renderer->DrawIndexed();
+		m_pRenderer->SetConstant4x4f("world", world);
+		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
 	}
 	{
-		m_building.wallR.m_model.m_material.SetMaterialConstants(m_renderer);
+		m_building.wallR.m_model.m_material.SetMaterialConstants(m_pRenderer);
 		XMMATRIX world		= m_building.wallR.m_transform.WorldTransformationMatrix();
 		XMFLOAT3 color		= m_building.wallR.m_model.m_material.color.Value();
 		XMMATRIX nrmMatrix	= m_building.wallR.m_transform.NormalMatrix(world);
-		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_renderer->Apply();
-		m_renderer->DrawIndexed();
+		m_pRenderer->SetConstant4x4f("world", world);
+		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
 	}
 	{
-		m_building.wallL.m_model.m_material.SetMaterialConstants(m_renderer);
+		m_building.wallL.m_model.m_material.SetMaterialConstants(m_pRenderer);
 		XMMATRIX world		= m_building.wallL.m_transform.WorldTransformationMatrix();
 		XMMATRIX nrmMatrix	= m_building.wallL.m_transform.NormalMatrix(world);
-		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_renderer->Apply();
-		m_renderer->DrawIndexed();
+		m_pRenderer->SetConstant4x4f("world", world);
+		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
 	}
 	{
-		m_building.wallF.m_model.m_material.SetMaterialConstants(m_renderer);
+		m_building.wallF.m_model.m_material.SetMaterialConstants(m_pRenderer);
 		XMMATRIX world		= m_building.wallF.m_transform.WorldTransformationMatrix();
 		XMMATRIX nrmMatrix	= m_building.wallF.m_transform.NormalMatrix(world);
-		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_renderer->Apply();
-		m_renderer->DrawIndexed();
+		m_pRenderer->SetConstant4x4f("world", world);
+		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
 	}
 }
 
 void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const
 {
-	m_renderer->Reset();
-	m_renderer->SetShader(m_renderData->unlitShader);
-	m_renderer->SetConstant4x4f("view", view);
-	m_renderer->SetConstant4x4f("proj", proj);
+	m_pRenderer->Reset();
+	m_pRenderer->SetShader(m_renderData->unlitShader);
+	m_pRenderer->SetConstant4x4f("view", view);
+	m_pRenderer->SetConstant4x4f("proj", proj);
 	for (const Light& light : m_lights)
 	{
-		m_renderer->SetBufferObj(light.model.m_mesh);
+		m_pRenderer->SetBufferObj(light.model.m_mesh);
 		XMMATRIX world = light.tf.WorldTransformationMatrix();
 		XMFLOAT3 color = light.model.m_material.color.Value();
-		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant3f("diffuse", color);
-		m_renderer->SetConstant1f("isDiffuseMap", 0.0f);
-		m_renderer->Apply();
-		m_renderer->DrawIndexed();
+		m_pRenderer->SetConstant4x4f("world", world);
+		m_pRenderer->SetConstant3f("diffuse", color);
+		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
 	}
 }
 
 void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj) 
 {
 	// set shader and send constants
-	m_renderer->SetShader(m_selectedShader);	
+	m_pRenderer->SetShader(m_selectedShader);	
 	if(m_selectedShader == m_renderData->phongShader) SendLightData();
-	m_renderer->SetConstant4x4f("view", view);
-	m_renderer->SetConstant4x4f("proj", proj);
-	m_renderer->SetConstant3f("cameraPos", m_camera->GetPositionF());
-	if(m_selectedShader == m_renderData->TNBShader)	  m_renderer->SetConstant1i("mode", TBNMode);
-	if(m_selectedShader == m_renderData->phongShader) m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
+	m_pRenderer->SetConstant4x4f("view", view);
+	m_pRenderer->SetConstant4x4f("proj", proj);
+	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+	if(m_selectedShader == m_renderData->TNBShader)	  m_pRenderer->SetConstant1i("mode", TBNMode);
+	if(m_selectedShader == m_renderData->phongShader) m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
 
 	for (const auto& cube : cubes)
 	{
-		cube.m_model.m_material.SetMaterialConstants(m_renderer);
-		m_renderer->SetBufferObj(cube.m_model.m_mesh);
+		cube.m_model.m_material.SetMaterialConstants(m_pRenderer);
+		m_pRenderer->SetBufferObj(cube.m_model.m_mesh);
 		XMMATRIX world = cube.m_transform.WorldTransformationMatrix();
 		XMMATRIX nrm   = cube.m_transform.NormalMatrix(world);
-		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant4x4f("nrmMatrix", nrm);
-		m_renderer->Apply();
-		m_renderer->DrawIndexed();
+		m_pRenderer->SetConstant4x4f("world", world);
+		m_pRenderer->SetConstant4x4f("nrmMatrix", nrm);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
 	}
 
 	for (const auto& sph : spheres)
 	{
-		sph.m_model.m_material.SetMaterialConstants(m_renderer);
-		m_renderer->SetBufferObj(sph.m_model.m_mesh);
+		sph.m_model.m_material.SetMaterialConstants(m_pRenderer);
+		m_pRenderer->SetBufferObj(sph.m_model.m_mesh);
 		XMMATRIX world = sph.m_transform.WorldTransformationMatrix();
 		XMMATRIX nrm   = sph.m_transform.NormalMatrix(world);
-		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->SetConstant4x4f("nrmMatrix", nrm);
-		m_renderer->Apply();
-		m_renderer->DrawIndexed();
+		m_pRenderer->SetConstant4x4f("world", world);
+		m_pRenderer->SetConstant4x4f("nrmMatrix", nrm);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
 	}
 
 
 
 #ifdef ENABLE_VPHYSICS
 	// draw anchor 1 sphere
-	m_renderer->SetBufferObj(m_anchor1.m_model.m_mesh);
+	m_pRenderer->SetBufferObj(m_anchor1.m_model.m_mesh);
 	if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
-		m_anchor1.m_model.m_material.SetMaterialConstants(m_renderer);
+		m_anchor1.m_model.m_material.SetMaterialConstants(m_pRenderer);
 	XMMATRIX world		= m_anchor1.m_transform.WorldTransformationMatrix();
 	XMMATRIX nrmMatrix	= m_anchor1.m_transform.NormalMatrix(world);
-	m_renderer->SetConstant4x4f("world", world);
-	m_renderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-	m_renderer->Apply();
-	m_renderer->DrawIndexed();
+	m_pRenderer->SetConstant4x4f("world", world);
+	m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+	m_pRenderer->Apply();
+	m_pRenderer->DrawIndexed();
 
 	// draw anchor 2 sphere
-	m_renderer->SetBufferObj(m_anchor2.m_model.m_mesh);
+	m_pRenderer->SetBufferObj(m_anchor2.m_model.m_mesh);
 	if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
-		m_anchor2.m_model.m_material.SetMaterialConstants(m_renderer);
+		m_anchor2.m_model.m_material.SetMaterialConstants(m_pRenderer);
 	world	  = m_anchor2.m_transform.WorldTransformationMatrix();
 	nrmMatrix = m_anchor2.m_transform.NormalMatrix(world);
-	m_renderer->SetConstant4x4f("world", world);
-	m_renderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-	m_renderer->Apply();
-	m_renderer->DrawIndexed();
+	m_pRenderer->SetConstant4x4f("world", world);
+	m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+	m_pRenderer->Apply();
+	m_pRenderer->DrawIndexed();
 
 	// DRAW GRAVITY TEST OBJ
 	//----------------------
 	// materials
-	m_renderer->SetBufferObj(m_physObj.m_model.m_mesh);
-	m_physObj.m_model.m_material.SetMaterialConstants(m_renderer);
+	m_pRenderer->SetBufferObj(m_physObj.m_model.m_mesh);
+	m_physObj.m_model.m_material.SetMaterialConstants(m_pRenderer);
 
 	// render bricks
 	for (const auto& pObj : m_vPhysObj)
 	{
 		world	  = pObj.m_transform.WorldTransformationMatrix();
 		nrmMatrix = pObj.m_transform.NormalMatrix(world);
-		m_renderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_renderer->SetConstant4x4f("world", world);
-		m_renderer->Apply();
-		m_renderer->DrawIndexed();
+		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+		m_pRenderer->SetConstant4x4f("world", world);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
 	}
 
-	m_springSys.RenderSprings(m_renderer, view, proj);
+	m_springSys.RenderSprings(m_pRenderer, view, proj);
 #endif
 }
 
@@ -755,20 +768,20 @@ void SceneManager::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) co
 	//	SendLightData();
 	// ----------------------------------
 	const float time = ENGINE->TotalTime();
-	const XMFLOAT3 camPos = m_camera->GetPositionF();
+	const XMFLOAT3 camPos = m_pCamera->GetPositionF();
 
 	//m_renderer->SetShader(m_selectedShader);
 	//m_renderer->SetConstant3f("cameraPos", camPos);
 	//SendLightData();
 	//m_animationLerp.Render(m_renderer, view, proj, time);
 
-	m_renderer->Reset();
-	m_renderer->SetShader(m_selectedShader);
-	m_renderer->SetConstant3f("cameraPos", camPos);
+	m_pRenderer->Reset();
+	m_pRenderer->SetShader(m_selectedShader);
+	m_pRenderer->SetConstant3f("cameraPos", camPos);
 	SendLightData();
 
 #ifdef ENABLE_ANIMATION
-	m_model.Render(m_renderer, view, proj);
+	m_model.Render(m_pRenderer, view, proj);
 #endif
 }
 
@@ -783,11 +796,11 @@ void SceneManager::SendLightData() const
 	{
 		switch (l.lightType_)
 		{
-		case Light::POINT:
+		case Light::LightType::POINT:
 			lights[lightCount] = l.ShaderLightStruct();
 			++lightCount;
 			break;
-		case Light::SPOT:
+		case Light::LightType::SPOT:
 			spots[spotCount] = l.ShaderLightStruct();
 			++spotCount;
 			break;
@@ -796,10 +809,10 @@ void SceneManager::SendLightData() const
 			break;
 		}
 	}
-	m_renderer->SetConstant1f("lightCount", static_cast<float>(lightCount));
-	m_renderer->SetConstant1f("spotCount", static_cast<float>(spotCount));
-	m_renderer->SetConstantStruct("lights", static_cast<void*>(lights.data()));
-	m_renderer->SetConstantStruct("spots", static_cast<void*>(spots.data()));
+	m_pRenderer->SetConstant1f("lightCount", static_cast<float>(lightCount));
+	m_pRenderer->SetConstant1f("spotCount", static_cast<float>(spotCount));
+	m_pRenderer->SetConstantStruct("lights", static_cast<void*>(lights.data()));
+	m_pRenderer->SetConstantStruct("spots", static_cast<void*>(spots.data()));
 
 #ifdef _DEBUG
 	if (lights.size() > MAX_LIGHTS)	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");

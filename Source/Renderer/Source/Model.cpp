@@ -65,7 +65,7 @@ Material::Material()
 	shininess(90.0f)
 {}
 
-void Material::SetMaterialConstants(Renderer * renderer) const
+void Material::SetMaterialConstants(std::shared_ptr<Renderer> renderer) const
 {
 	renderer->SetConstant3f("diffuse", color.Value());
 	renderer->SetConstant1f("shininess", shininess);

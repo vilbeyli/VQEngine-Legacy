@@ -45,7 +45,7 @@ D3DManager::~D3DManager()
 {
 }
 
-bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const bool FULL_SCREEN, const float nearPlane, const float farPlane)
+bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const bool isFullscreen)
 {
 	HRESULT result;
 	IDXGIFactory* factory;
@@ -169,7 +169,7 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 
 	//----------------------------------------------------------------------------------
 	// D3D Initialization
-	if (!InitSwapChain(hWnd, FULL_SCREEN, width, height, numerator, denominator))
+	if (!InitSwapChain(hWnd, isFullscreen, width, height, numerator, denominator))
 	{
 		return false;
 	}

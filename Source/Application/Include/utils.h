@@ -27,18 +27,10 @@ using namespace DirectX;
 // macros
 #define DEG2RAD (XM_PI / 180.0f)
 #define RAD2DEG (180.0f / XM_PI)
+#define PI		XM_PI
 
 // typedefs
 using VecPair = std::pair<XMVECTOR, XMVECTOR>;
-
-// consts
-const XMFLOAT3 ZeroF3 = XMFLOAT3(0.0f, 0.0f, 0.0f);
-const XMVECTOR global_L = XMVectorSet(-1.0f, +0.0f, +0.0f, +0.0f);
-const XMVECTOR global_R = XMVectorSet(+1.0f, +0.0f, +0.0f, +0.0f);
-const XMVECTOR global_F = XMVectorSet(+0.0f, +0.0f, +1.0f, +0.0f);
-const XMVECTOR global_B = XMVectorSet(+0.0f, +0.0f, -1.0f, +0.0f);
-const XMVECTOR global_U = XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
-const XMVECTOR global_D = XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);
 
 /// MATH WRAPPER
 //===============================================================================================
@@ -50,8 +42,26 @@ struct vec3
 	vec3(float);
 	vec3(const XMFLOAT3& f3);
 	vec3(const XMVECTOR& v_in);
+
 	operator XMVECTOR() const;
-	
+
+	static const XMVECTOR Zero;
+	static const XMVECTOR Up;
+	static const XMVECTOR Down;
+	static const XMVECTOR Left;
+	static const XMVECTOR Right;
+	static const XMVECTOR Forward;
+	static const XMVECTOR Back;
+
+	static const XMFLOAT3 ZeroF3;
+	static const XMFLOAT3 UpF3;
+	static const XMFLOAT3 DownF3;
+	static const XMFLOAT3 LeftF3;
+	static const XMFLOAT3 RightF3;
+	static const XMFLOAT3 ForwardF3;
+	static const XMFLOAT3 BackF3;
+
+
 	XMFLOAT3 v;
 };
 

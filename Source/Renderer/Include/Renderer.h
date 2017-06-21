@@ -179,6 +179,4 @@ private:
 	friend class AnimatedModel;
 	//std::vector<Point>				m_debugLines;
 };
-
-
  

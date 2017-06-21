@@ -22,6 +22,7 @@
 #include "Texture.h"
 
 #include <string>
+#include <memory>
 
 typedef int BufferID;
 
@@ -39,10 +40,10 @@ struct Material
 
 	static const Material jade, ruby, bronze, gold;
 	static Material RandomMaterial();
+
 	Material(const XMFLOAT3& diffuse, const XMFLOAT3& specular, float shininess);
 	Material();
-	void SetMaterialConstants(Renderer* renderer) const;
-	
+	void SetMaterialConstants(std::shared_ptr<Renderer> renderer) const;
 };
 
 class Model

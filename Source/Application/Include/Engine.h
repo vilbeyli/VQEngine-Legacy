@@ -19,15 +19,20 @@
 #pragma once
 
 #include <windows.h>
-#include "SystemDefs.h"
-#include "PerfTimer.h"
+#include <memory>
+using std::shared_ptr;
+using std::unique_ptr;
 
+// forward decl
 class Renderer;
 class Input;
-class Camera;
-class PathManager;
-class PhysicsEngine;
+class PerfTimer;
+class SceneParser;
 class SceneManager;
+
+class PathManager;		// unused
+class PhysicsEngine;	// unused
+
 struct RenderData;
 
 class Engine
@@ -50,8 +55,8 @@ public:
 
 	void Exit();
 
-	const Input* INP() const;
-	const PerfTimer TIMER() const;
+	shared_ptr<const Input>		 INP() const;
+	shared_ptr<const PerfTimer>  TIMER() const;
 
 	static Engine* GetEngine();
 
@@ -60,24 +65,24 @@ private:
 
 	void TogglePause();
 	void CalcFrameStats();
+
 //--------------------------------------------------------------
+
 public:
-	RenderData*		m_renderData;
+	RenderData*						m_pRenderData;
 
 private:
-	Input*			m_input;		// ownership
-	Renderer*		m_renderer;		// ownership
-	PhysicsEngine*	m_physics;		// ownership
-	Camera*			m_camera;		// ownership
-	PathManager*	m_pathMan;		// ownership
+	static Engine*					s_instance;
+	// TODO : TYEPDEF POINTER TYPES...
+	
+	std::shared_ptr<Input>			m_input;
+	std::shared_ptr<Renderer>		m_renderer;
+//	std::unique_ptr<PhysicsEngine>	m_physics;
+//	std::unique_ptr<PathManager>	m_pathMan;
+	std::shared_ptr<SceneManager>	m_scene_manager;
+	std::shared_ptr<PerfTimer>		m_timer;
 
-	bool			m_isPaused;
-
-	PerfTimer		m_timer;
-	static Engine*	s_instance;
-
-	// Scene
-	SceneManager*	m_sceneMan;
+	bool							m_isPaused;
 };
 
 #define ENGINE Engine::GetEngine()

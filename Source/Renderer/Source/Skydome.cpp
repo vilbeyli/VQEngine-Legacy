@@ -22,7 +22,7 @@
 Skydome::Skydome(){}
 Skydome::~Skydome(){}
 
-void Skydome::Render(Renderer* renderer, const XMMATRIX& view, const XMMATRIX& proj) const
+void Skydome::Render(const XMMATRIX& view, const XMMATRIX& proj) const
 {
 	renderer->Reset();
 	renderer->SetShader(0);
@@ -40,7 +40,7 @@ void Skydome::Render(Renderer* renderer, const XMMATRIX& view, const XMMATRIX& p
 }
 
 
-void Skydome::Init(Renderer* renderer_in, const char* tex, float scale, int shader)
+void Skydome::Init(pRenderer renderer_in, const char* tex, float scale, int shader)
 {
 	renderer = renderer_in;
 	skydomeObj.m_transform.SetScaleUniform(scale);

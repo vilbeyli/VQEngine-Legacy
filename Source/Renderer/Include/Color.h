@@ -22,21 +22,42 @@
 
 #include <map>
 #include <vector>
+#include <array>
 
 using namespace DirectX;
 
-class Color
+enum class COLOR_VLAUE
 {
+	BLACK = 0,
+	WHITE,
+	RED,
+	GREEN,
+	BLUE,
+	YELLOW,
+	MAGENTA,
+	CYAN,
+	GRAY,
+	LIGHT_GRAY,
+	ORANGE,
+	PURPLE,
+
+	COUNT
+};
+
+
+struct Color
+{
+	using ColorPalette = std::array < const Color, static_cast<int>(COLOR_VLAUE::COUNT)>;
+
 public:
 	Color();
-	~Color();
-	Color(const XMFLOAT3);
+	Color(const XMFLOAT3&);
 	Color(float r, float g, float b);
 	Color& operator=(const Color&);
 	Color& operator=(const XMFLOAT3&);
 
 	XMFLOAT3 Value() const { return value; }
-	static const std::vector<Color> Palette();
+	static const ColorPalette Palette();
 	static XMFLOAT3 RandColorF3();
 	static XMVECTOR RandColorV();
 	static Color	RandColor();
@@ -47,12 +68,9 @@ public:
 	//static std::string GetNameByColor(Color c);
 
 public:
-	static const Color black, white, red, green, blue, magenta, yellow, cyan, gray, orange, purple;
+	static const Color black, white, red, green, blue, magenta, yellow, cyan, gray, light_gray, orange, purple;
+	static const ColorPalette s_palette;
 private:
-	//typedef std::map<const std::string, Color> ColorMap;
-	//static ColorMap colorRefTable;//created for easier deserialization in Mesh
-	
-	static std::vector<Color> colorPalette;
 	XMFLOAT3 value;
 };
 

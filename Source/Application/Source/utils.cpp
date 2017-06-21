@@ -35,7 +35,22 @@ using std::string;
 using std::cout;
 using std::endl;
 
+const XMVECTOR vec3::Zero		= XMVectorZero();
+const XMVECTOR vec3::Up			= XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
+const XMVECTOR vec3::Down		= XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);
+const XMVECTOR vec3::Left		= XMVectorSet(-1.0f, +0.0f, +0.0f, +0.0f);
+const XMVECTOR vec3::Right		= XMVectorSet(+1.0f, +0.0f, +0.0f, +0.0f);
+const XMVECTOR vec3::Forward	= XMVectorSet(+0.0f, +0.0f, +1.0f, +0.0f);
+const XMVECTOR vec3::Back		= XMVectorSet(+0.0f, +0.0f, -1.0f, +0.0f);
 
+
+const XMFLOAT3 vec3::ZeroF3		= XMFLOAT3();
+const XMFLOAT3 vec3::UpF3		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
+const XMFLOAT3 vec3::DownF3		= XMFLOAT3(+0.0f, -1.0f, +0.0f);
+const XMFLOAT3 vec3::LeftF3		= XMFLOAT3(-1.0f, +0.0f, +0.0f);
+const XMFLOAT3 vec3::RightF3	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
+const XMFLOAT3 vec3::ForwardF3	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
+const XMFLOAT3 vec3::BackF3		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
 
 vector<string> split(const char* s, char c)
 {

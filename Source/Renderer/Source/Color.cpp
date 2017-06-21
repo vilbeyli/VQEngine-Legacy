@@ -22,19 +22,29 @@
 
 using std::make_pair;
 
-const Color Color::black	= XMFLOAT3(0.0f, 0.0f, 0.0f);
-const Color Color::white	= XMFLOAT3(1.0f, 1.0f, 1.0f);
-const Color Color::red		= XMFLOAT3(1.0f, 0.0f, 0.0f);
-const Color Color::green	= XMFLOAT3(0.0f, 1.0f, 0.0f);
-const Color Color::blue		= XMFLOAT3(0.0f, 0.0f, 1.0f);
-const Color Color::yellow	= XMFLOAT3(1.0f, 1.0f, 0.0f);
-const Color Color::magenta	= XMFLOAT3(1.0f, 0.0f, 1.0f);
-const Color Color::cyan		= XMFLOAT3(0.0f, 1.0f, 1.0f);
-const Color Color::gray		= XMFLOAT3(0.3f, 0.3f, 0.3f);
-const Color Color::orange	= XMFLOAT3(1.0f, 0.5f, 0.0f);
-const Color Color::purple	= XMFLOAT3(0.31f, 0.149f, 0.513f);
+const Color Color::black		= XMFLOAT3(0.0f, 0.0f, 0.0f);
+const Color Color::white		= XMFLOAT3(1.0f, 1.0f, 1.0f);
+const Color Color::red			= XMFLOAT3(1.0f, 0.0f, 0.0f);
+const Color Color::green		= XMFLOAT3(0.0f, 1.0f, 0.0f);
+const Color Color::blue			= XMFLOAT3(0.0f, 0.0f, 1.0f);
+const Color Color::yellow		= XMFLOAT3(1.0f, 1.0f, 0.0f);
+const Color Color::magenta		= XMFLOAT3(1.0f, 0.0f, 1.0f);
+const Color Color::cyan			= XMFLOAT3(0.0f, 1.0f, 1.0f);
+const Color Color::gray			= XMFLOAT3(0.3f, 0.3f, 0.3f);
+const Color Color::light_gray	= XMFLOAT3(0.45f, 0.45f, 0.45f);
+const Color Color::orange		= XMFLOAT3(1.0f, 0.5f, 0.0f);
+const Color Color::purple		= XMFLOAT3(0.31f, 0.149f, 0.513f);
 
-std::vector<Color> Color::colorPalette;
+const Color::ColorPalette Color::s_palette = {
+	Color::black,	Color::white,
+	Color::red,		Color::green,		Color::blue,
+	Color::yellow,	Color::magenta,		Color::cyan,
+	Color::gray,	Color::light_gray,
+	Color::orange,	Color::purple
+};
+
+
+;
 
 Color::Color() 
 	: 
@@ -42,44 +52,37 @@ Color::Color()
 {}
 
 
-const std::vector<Color> Color::Palette()
+//const ColorPalette Color::Palette()
+//{
+//	return s_palette;
+//}
+
+const Color::ColorPalette Color::Palette()
 {
-	if (colorPalette.size() == 0)
-	{
-		colorPalette.push_back(Color::red);
-		colorPalette.push_back(Color::blue);
-		colorPalette.push_back(Color::green);
-		colorPalette.push_back(Color::yellow);
-		colorPalette.push_back(Color::magenta);
-		colorPalette.push_back(Color::cyan);
-		colorPalette.push_back(Color::white);
-		colorPalette.push_back(Color::orange);
-		colorPalette.push_back(Color::purple);
-	}
-	return colorPalette;
+	return s_palette;
 }
 
 XMFLOAT3 Color::RandColorF3()
 {
 	size_t i = RandU(0, Palette().size());
-	return colorPalette[i].Value();
+	return s_palette[i].Value();
 }
 
 XMVECTOR Color::RandColorV()
 {
 	size_t i = RandU(0, Palette().size());
-	XMVECTOR v = XMLoadFloat3(&colorPalette[i].Value());
+	XMVECTOR v = XMLoadFloat3(&s_palette[i].Value());
 	return v;
 }
 
 Color Color::RandColor()
 {
-	return colorPalette[RandU(0, Palette().size())];
+	return s_palette[RandU(0, Palette().size())];
 }
 
-Color::~Color(){}
 
-Color::Color(const XMFLOAT3 val)
+
+Color::Color(const XMFLOAT3& val)
 	: 
 	value(val)
 {}
@@ -100,20 +103,6 @@ Color & Color::operator=(const XMFLOAT3& flt)
 	this->value = flt;
 	return *this;
 }
-
-//Color::ColorMap Color::colorRefTable
-//{
-//	{ "red", Color::red },
-//	{ "blue", Color::blue },
-//	{ "green", Color::green },
-//	{ "yellow", Color::yellow },
-//	{ "magenta", Color::magenta },
-//	{ "cyan", Color::cyan },
-//	{ "white", Color::white },
-//	{ "orange", Color::orange },
-//	{ "purple", Color::purple },
-//	{ "black", Color::black }
-//};
 
 //Color Color::GetColorByName(std::string colorName)
 //{

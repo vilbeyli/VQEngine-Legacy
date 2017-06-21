@@ -37,7 +37,7 @@ public:
 	D3DManager();
 	~D3DManager();
 
-	bool Init(int width, int height, const bool VSYNC, HWND m_hwnd, const bool FULL_SCREEN, const float g_nearPlane, const float g_farPlane);
+	bool Init(int width, int height, const bool VSYNC, HWND m_hwnd, const bool FULL_SCREEN);
 	void Shutdown();
 
 	void BeginFrame(const float* clearColor);

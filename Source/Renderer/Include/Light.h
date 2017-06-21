@@ -43,7 +43,7 @@ struct Light// : public Component
 {
 	friend class Graphics;
 
-	enum LightType
+	enum class LightType
 	{
 		POINT = 0,
 		SPOT,
@@ -66,6 +66,8 @@ struct Light// : public Component
 	ShaderLight ShaderLightStruct() const;
 
 	//---------------------------------------------------------------------------------
+	
+	// TODO: name consistency | members: m_varName, statics: s_varName
 	Transform tf;
 	Model model;
 	

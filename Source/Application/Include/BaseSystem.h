@@ -22,6 +22,7 @@
 #define WIN32_LEAN_AND_MEAN		// speeds up build process
 
 #include <windows.h>
+#include "Settings.h"
 
 class BaseSystem
 {
@@ -42,9 +43,10 @@ private:
 	void InitRawInputDevices();
 
 private:
-	LPCSTR		m_appName;
-	HINSTANCE	m_hInstance;
-	HWND		m_hwnd;
+	LPCSTR				m_appName;
+	HINSTANCE			m_hInstance;
+	HWND				m_hwnd;
+	Settings::Window	m_settings;
 };
 
 // The WndProc function and ApplicationHandle pointer are also included in this class file so we can redirect 

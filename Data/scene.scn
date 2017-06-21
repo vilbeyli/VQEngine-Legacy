@@ -1,0 +1,7 @@
+camera 1 1000 45
+
+// light: color, [p]oint/[s]pot range/angle, pos(3),  rot(3), scale, 
+light white  s 70	  0 4 6.8 0	  180 0		0		0.3 
+light white  p 50	 -8.0f 10 0 	  0	0		0  		0.1 
+light yellow p 30	  8 30 -17  	  0	0		0		0.1 
+light white  s 70	 -140 100 140  0	0		0		0.3 

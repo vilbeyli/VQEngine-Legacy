@@ -20,13 +20,6 @@
 //#include "PhysicsComponent.h"
 #include "Components/Transform.h"
 
-const XMVECTOR Transform::Right = XMVectorSet(+1.0f, +0.0f, +0.0f, 0.0f);
-const XMVECTOR Transform::Left = XMVectorSet(-1.0f, +0.0f, +0.0f, 0.0f);
-const XMVECTOR Transform::Up = XMVectorSet(+0.0f, +1.0f, +0.0f, 0.0f);
-const XMVECTOR Transform::Down = XMVectorSet(+0.0f, -1.0f, +0.0f, 0.0f);
-const XMVECTOR Transform::Forward = XMVectorSet(+0.0f, +0.0f, +1.0f, 0.0f);
-const XMVECTOR Transform::Backward = XMVectorSet(+0.0f, +0.0f, -1.0f, 0.0f);
-
 Transform::Transform(const XMFLOAT3 position, const XMFLOAT3 rotation, const XMFLOAT3 scale)
 	:
 	m_position(position),

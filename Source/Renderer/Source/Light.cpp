@@ -95,9 +95,9 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 	XMMATRIX LSpaceMat = XMMatrixIdentity();
 	switch (lightType_)
 	{
-	case Light::POINT:
+	case LightType::POINT:
 		break;
-	case Light::SPOT:
+	case LightType::SPOT:
 	{
 		XMVECTOR pos = tf.GetPositionV();
 		XMMATRIX view = GetViewMatrix();
@@ -119,9 +119,9 @@ XMMATRIX Light::GetViewMatrix() const
 	XMMATRIX ViewMatarix = XMMatrixIdentity();
 	switch (lightType_)
 	{
-	case Light::POINT:
+	case LightType::POINT:
 		break;
-	case Light::SPOT:
+	case LightType::SPOT:
 	{
 		XMVECTOR up		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
@@ -146,9 +146,9 @@ XMMATRIX Light::GetProjectionMatrix() const
 	XMMATRIX proj = XMMatrixIdentity();
 	switch (lightType_)
 	{
-	case Light::POINT:
+	case LightType::POINT:
 		break;
-	case Light::SPOT:
+	case LightType::SPOT:
 	{
 		//proj = glm::perspective(glm::radians(spotAngle_* 1.25f), 1.0f, 0.1f, 100.0f);
 	}	break;
@@ -166,7 +166,7 @@ XMMATRIX Light::GetProjectionMatrix() const
 ShaderLight Light::ShaderLightStruct() const
 {
 	XMFLOAT3 spotDirection = XMFLOAT3();
-	if (lightType_ == SPOT)
+	if (lightType_ == LightType::SPOT)
 	{
 		XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 		up = XMVector3TransformCoord(up, tf.RotationMatrix());

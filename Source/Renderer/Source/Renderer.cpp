@@ -61,7 +61,7 @@ bool Renderer::Init(int width, int height, HWND hwnd)
 	}
 
 	// Initialize the Direct3D object.
-	bool result = m_Direct3D->Init(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN, NEAR_PLANE, FAR_PLANE);
+	bool result = m_Direct3D->Init(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN);
 	if (!result)
 	{
 		MessageBox(m_hWnd, "Could not initialize Direct3D", "Error", MB_OK);

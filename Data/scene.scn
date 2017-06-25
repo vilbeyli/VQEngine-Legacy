@@ -1,4 +1,4 @@
-camera 1 1000 45
+camera 10 3500 45
 
 // light: color, [p]oint/[s]pot range/angle, pos(3),  rot(3), scale, 
 light white  s 70	  0 4 6.8 0	  180 0		0		0.3 

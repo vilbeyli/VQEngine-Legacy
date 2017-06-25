@@ -26,11 +26,15 @@ Camera::Camera()
 	:
 	MoveSpeed(1000.0f),
 	AngularSpeedDeg(40.0f),
-	Drag(15.0f)
-
-	// todo:	1- default init rest
-	//			2- read pos/rot/scl from scene file
-{}
+	Drag(15.0f),
+	m_pitch(0.0f),
+	m_yaw(0.0f),
+	m_pos(vec3::ZeroF3),
+	m_velocity(vec3::ZeroF3)
+{
+	XMStoreFloat4x4(&m_projectionMatrix, XMMatrixIdentity());
+	XMStoreFloat4x4(&m_orthoMatrix, XMMatrixIdentity());
+}
 
 Camera::~Camera(void)
 {}

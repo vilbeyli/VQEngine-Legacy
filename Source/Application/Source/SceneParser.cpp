@@ -87,7 +87,7 @@ void SceneParser::ReadScene(shared_ptr<SceneManager> scene_man)
 	}
 	else
 	{
-		OutputDebugString("Error : Unknown setting command");
+		OutputDebugString( "Parser Error : Unknown setting command\n");
 	}
 
 	sceneFile.close();
@@ -132,11 +132,11 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, shared_ptr
 		//mSceneSettings.light.color = Color::white;				// todo read color
 		//mSceneSettings.light.type = Light::LightType::POINT;	// todo
 		//mSceneSettings.light
-		OutputDebugString("TODO: parse light info to build scene from file");
+		OutputDebugString("TODO: parse light info to build scene from file\n");
 	}
 	
 	else
 	{
-		OutputDebugString("Error : Unknown command");
+		OutputDebugString("Parser Error : Unknown command\n");
 	}
 }

@@ -585,9 +585,9 @@ void SceneManager::Render()
 {
 	XMMATRIX view = m_pCamera->GetViewMatrix();
 	XMMATRIX proj = m_pCamera->GetProjectionMatrix();
-	m_skydome.Render(view, proj);
+	//m_skydome.Render(view, proj);
 	RenderLights(view, proj);
-	RenderAnimated(view, proj);
+	//RenderAnimated(view, proj);
 	RenderBuilding(view, proj);
 	RenderCentralObjects(view, proj);
 

@@ -49,18 +49,11 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 	if (!m_renderer || !m_input || !m_scene_manager || !m_timer) 
 		return false;
 
-	/// OLD CODE
-	//m_pathMan = new PathManager(m_renderer);
-	//if (!m_pathMan) return false;
-	//m_physics = new PhysicsEngine();
-	//if (!m_physics) return false;
-
 	m_input->Init();
 	if(!m_renderer->Init(scr_width, scr_height, hWnd)) 
 		return false;
 	m_pRenderData = &(m_renderer->m_renderData);
 	m_scene_manager->Initialize(m_renderer, m_pRenderData, nullptr);
-
 	return true;
 }
 

@@ -213,18 +213,20 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	//---------------------------------------------------------------------------
 	//setup the layout of the data that goes into the shader
 	std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(layouts.size());
+	UINT sz = layouts.size();
 	for (unsigned i = 0; i < layouts.size(); ++i)
 	{
 		inputLayout[i].SemanticName			= layouts[i].semanticName.c_str();
 		inputLayout[i].SemanticIndex		= 0;	// TODO: process string for semantic index
 		inputLayout[i].Format				= static_cast<DXGI_FORMAT>(layouts[i].format);
 		inputLayout[i].InputSlot			= 0;
+		//inputLayout[i].AlignedByteOffset	= i == layouts.size() - 1 ? 8 : 12;
 		inputLayout[i].AlignedByteOffset	= i == 0 ? 0 : D3D11_APPEND_ALIGNED_ELEMENT;
 		inputLayout[i].InputSlotClass		= D3D11_INPUT_PER_VERTEX_DATA;
 		inputLayout[i].InstanceDataStepRate	= 0;
 	}
 	result = device->CreateInputLayout(	inputLayout.data(), 
-										static_cast<UINT>(inputLayout.size()), 
+										sz, 
 										vsBlob->GetBufferPointer(),
 										vsBlob->GetBufferSize(), 
 										&m_layout);

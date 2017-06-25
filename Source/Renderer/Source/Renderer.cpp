@@ -41,7 +41,13 @@ Renderer::Renderer()
 	m_mainCamera(nullptr),
 	m_bufferObjects(std::vector<BufferObject*>(MESH_TYPE::MESH_TYPE_COUNT)),
 	m_rasterizerStates(std::vector<RasterizerState*>(RASTERIZER_STATE::RS_COUNT))
-{}
+{
+	for (int i=0; i<RASTERIZER_STATE::RS_COUNT; ++i)
+	{
+		m_rasterizerStates[i] = (RasterizerState*)malloc(sizeof(*m_rasterizerStates[i]));
+		memset(&*m_rasterizerStates[i], 0, sizeof(*m_rasterizerStates[i]));
+	}
+}
 
 
 Renderer::~Renderer()
@@ -293,13 +299,13 @@ void Renderer::InitRasterizerStates()
 {
 	HRESULT hr;
 	char info[129];
-	ID3D11RasterizerState*& cullNone = m_rasterizerStates[CULL_NONE];
-	//ID3D11RasterizerState* cullBack;
-	//ID3D11RasterizerState* cullFront;
+	ID3D11RasterizerState*& cullNone  = m_rasterizerStates[CULL_NONE];
+	ID3D11RasterizerState*& cullBack  = m_rasterizerStates[CULL_BACK];
+	ID3D11RasterizerState*& cullFront = m_rasterizerStates[CULL_FRONT];
 	
 	// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
 	D3D11_RASTERIZER_DESC rsDesc;
-	//ZeroMemory(&rsDesc, sizeof(D3D11_RASTERIZER_DESC));
+	ZeroMemory(&rsDesc, sizeof(D3D11_RASTERIZER_DESC));
 
 	rsDesc.FillMode					= D3D11_FILL_SOLID;
 	rsDesc.FrontCounterClockwise	= false;
@@ -309,19 +315,21 @@ void Renderer::InitRasterizerStates()
 	rsDesc.SlopeScaledDepthBias		= 0.0f;
 
 	
-	//rsDesc.CullMode					= D3D11_CULL_BACK;
-	//if (!m_device->CreateRasterizerState(&rsDesc, &cullBack))
-	//{
-	//	sprintf_s(info, "Error creating Rasterizer State: Cull Back\n");
-	//	OutputDebugString(info);
-	//}
+	rsDesc.CullMode					= D3D11_CULL_BACK;
+	hr = m_device->CreateRasterizerState(&rsDesc, &cullBack);
+	if (FAILED(hr))
+	{
+		sprintf_s(info, "Error creating Rasterizer State: Cull Back\n");
+		OutputDebugString(info);
+	}
 
-	//rsDesc.CullMode = D3D11_CULL_FRONT;
-	//if (!m_device->CreateRasterizerState(&rsDesc, &cullFront))
-	//{
-	//	sprintf_s(info, "Error creating Rasterizer State: Cull Front\n");
-	//	OutputDebugString(info);
-	//}
+	rsDesc.CullMode = D3D11_CULL_FRONT;
+	hr = m_device->CreateRasterizerState(&rsDesc, &cullFront);
+	if (FAILED(hr))
+	{
+		sprintf_s(info, "Error creating Rasterizer State: Cull Front\n");
+		OutputDebugString(info);
+	}
 
 	rsDesc.CullMode = D3D11_CULL_NONE;
 	hr = m_device->CreateRasterizerState(&rsDesc, &cullNone);
@@ -330,10 +338,6 @@ void Renderer::InitRasterizerStates()
 		sprintf_s(info, "Error creating Rasterizer State: Cull None\n");
 		OutputDebugString(info);
 	}
-
-	//m_rasterizerStates[CULL_NONE] = cullNone;
-	//m_rasterizerStates[CULL_FRONT] = cullFront;
-	//m_rasterizerStates[CULL_BACK] = cullBack;
 }
 
 ShaderID Renderer::AddShader(const std::string& shdFileName, 
@@ -773,7 +777,7 @@ void Renderer::Apply()
 	m_deviceContext->RSSetState(m_rasterizerStates[CULL_NONE]);	// TODO: m_activeRS?
 
 	// test: TODO remove later
-	D3D11_RASTERIZER_DESC rsDesc; 
+	D3D11_RASTERIZER_DESC rsDesc;
 	m_rasterizerStates[CULL_NONE]->GetDesc(&rsDesc);
 
 	// set shader constants

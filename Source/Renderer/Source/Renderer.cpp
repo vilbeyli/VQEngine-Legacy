@@ -313,9 +313,10 @@ void Renderer::InitRasterizerStates()
 	rsDesc.ScissorEnable			= false;
 	rsDesc.DepthBiasClamp			= 0;
 	rsDesc.SlopeScaledDepthBias		= 0.0f;
+	rsDesc.DepthClipEnable			= true;
 
 	
-	rsDesc.CullMode					= D3D11_CULL_BACK;
+	rsDesc.CullMode = D3D11_CULL_BACK;
 	hr = m_device->CreateRasterizerState(&rsDesc, &cullBack);
 	if (FAILED(hr))
 	{
@@ -424,7 +425,7 @@ void Renderer::SetShader(ShaderID id)
 	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
 	if (m_activeShader != -1)		// if valid shader
 	{
-		//if (id != m_activeShader)	// if not the same shader
+		if (id != m_activeShader)	// if not the same shader
 		{
 			Shader* shader = m_shaders[m_activeShader];
 

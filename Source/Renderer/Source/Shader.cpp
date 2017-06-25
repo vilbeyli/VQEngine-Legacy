@@ -104,7 +104,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	const WCHAR* GSPath = gspath_w.c_str();
 	const WCHAR* PSPath = pspath_w.c_str();
 
-	std::string info("\tCompiling  \""); info += m_name; info += "\"\n";
+	std::string info("\tCompiling  \""); info += m_name; info += "\"...\t";
 	OutputDebugString(info.c_str());
 
 	// COMPILE SHADERS

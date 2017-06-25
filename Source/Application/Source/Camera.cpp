@@ -34,6 +34,7 @@ Camera::Camera()
 {
 	XMStoreFloat4x4(&m_projectionMatrix, XMMatrixIdentity());
 	XMStoreFloat4x4(&m_orthoMatrix, XMMatrixIdentity());
+	XMStoreFloat4x4(&m_viewMatrix, XMMatrixIdentity());
 }
 
 Camera::~Camera(void)

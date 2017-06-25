@@ -114,11 +114,11 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, shared_ptr
 
 		// Parameters
 		//--------------------------------------------------------------
-		// | Field of View	|  Near Plane	| Far Plane	
+		// |  Near Plane	| Far Plane	|	Field of View	
 		//--------------------------------------------------------------
-		cameraSettings.fov			= stof(command[1]);
-		cameraSettings.nearPlane	= stof(command[2]);
-		cameraSettings.farPlane		= stof(command[3]);
+		cameraSettings.nearPlane	= stof(command[1]);
+		cameraSettings.farPlane		= stof(command[2]);
+		cameraSettings.fov			= stof(command[3]);
 		
 		scene_man->SetCameraSettings(cameraSettings);	// return in tuple?
 	}

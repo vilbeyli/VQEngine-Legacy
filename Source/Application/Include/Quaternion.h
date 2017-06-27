@@ -29,11 +29,11 @@ public:
 	static Quaternion FromAxisAngle(const XMVECTOR& axis, const float angle);
 	static Quaternion Lerp (const Quaternion& from, const Quaternion& to, float t);
 	static Quaternion Slerp(const Quaternion& from, const Quaternion& to, float t);
-	static XMFLOAT3 ToEulerRad(const Quaternion& Q);
-	static XMFLOAT3 ToEulerDeg(const Quaternion& Q);
+	static vec3 ToEulerRad(const Quaternion& Q);
+	static vec3 ToEulerDeg(const Quaternion& Q);
 	//-----------------------------------------------
 	Quaternion(float roll, float pitch, float yaw);
-	Quaternion(const XMFLOAT3& rollPitchYaw);
+	Quaternion(const vec3& rollPitchYaw);
 	Quaternion(const XMMATRIX& rotMatrix);
 	Quaternion(float s, const XMVECTOR& v);
 	//-----------------------------------------------
@@ -51,12 +51,12 @@ public:
 	vec3 TransformVector(const vec3& v) const;
 	
 private:	// used by operator()s
-	Quaternion(float s, const XMFLOAT3& v);
+	Quaternion(float s, const vec3& v);
 	Quaternion();
 
 public:
 	// Q = [S, <V>]
-	XMFLOAT3 V;
+	vec3 V;
 	float S;
 };
 

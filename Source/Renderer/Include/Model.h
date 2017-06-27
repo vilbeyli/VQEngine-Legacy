@@ -32,7 +32,7 @@ struct Material
 {
 	Color		color;
 	float		alpha;	
-	XMFLOAT3	specular;
+	vec3	specular;
 	float		shininess;
 
 	Texture		diffuseMap;
@@ -41,7 +41,7 @@ struct Material
 	static const Material jade, ruby, bronze, gold;
 	static Material RandomMaterial();
 
-	Material(const XMFLOAT3& diffuse, const XMFLOAT3& specular, float shininess);
+	Material(const vec3& diffuse, const vec3& specular, float shininess);
 	Material();
 	void SetMaterialConstants(std::shared_ptr<Renderer> renderer) const;
 };

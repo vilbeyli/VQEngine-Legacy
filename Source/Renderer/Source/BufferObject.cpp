@@ -18,13 +18,6 @@
 
 #include "BufferObject.h"
 
-
-
-BufferObject::BufferObject()
-{
-}
-
-
 BufferObject::~BufferObject()
 {
 	if(m_vertices)

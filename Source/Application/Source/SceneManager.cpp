@@ -66,7 +66,7 @@ void SceneManager::Initialize(shared_ptr<Renderer> renderer, const RenderData* r
 	m_renderData		= rData;	// ?
 	m_selectedShader	= m_renderData->phongShader;
 	m_gammaCorrection	= true;
-	InitializeBuilding();
+	InitializeRoom();
 	InitializeLights();
 	InitializeObjectArrays();
 
@@ -112,7 +112,7 @@ enum WALLS
 	CEILING
 };
 
-void SceneManager::InitializeBuilding()
+void SceneManager::InitializeRoom()
 {
 	const float floorWidth = 5*30.0f;
 	const float floorDepth = 5*30.0f;
@@ -292,6 +292,8 @@ void SceneManager::InitializeObjectArrays()
 				// set material
 				cube.m_model.m_mesh = MESH_TYPE::CUBE;
 				cube.m_model.m_material = Material::RandomMaterial();
+				cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
+				cube.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 
 				cubes.push_back(cube);
 			}
@@ -629,7 +631,7 @@ void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) co
 	{
 		m_building.wallR.m_model.m_material.SetMaterialConstants(m_pRenderer);
 		XMMATRIX world		= m_building.wallR.m_transform.WorldTransformationMatrix();
-		XMFLOAT3 color		= m_building.wallR.m_model.m_material.color.Value();
+		vec3 color		= m_building.wallR.m_model.m_material.color.Value();
 		XMMATRIX nrmMatrix	= m_building.wallR.m_transform.NormalMatrix(world);
 		m_pRenderer->SetConstant4x4f("world", world);
 		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
@@ -666,7 +668,7 @@ void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) cons
 	{
 		m_pRenderer->SetBufferObj(light.model.m_mesh);
 		XMMATRIX world = light.tf.WorldTransformationMatrix();
-		XMFLOAT3 color = light.model.m_material.color.Value();
+		vec3 color = light.model.m_material.color.Value();
 		m_pRenderer->SetConstant4x4f("world", world);
 		m_pRenderer->SetConstant3f("diffuse", color);
 		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
@@ -768,7 +770,7 @@ void SceneManager::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) co
 	//	SendLightData();
 	// ----------------------------------
 	const float time = ENGINE->TotalTime();
-	const XMFLOAT3 camPos = m_pCamera->GetPositionF();
+	const vec3 camPos = m_pCamera->GetPositionF();
 
 	//m_renderer->SetShader(m_selectedShader);
 	//m_renderer->SetConstant3f("cameraPos", camPos);

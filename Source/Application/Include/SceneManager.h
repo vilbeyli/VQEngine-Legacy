@@ -62,7 +62,7 @@ public:
 	void Render();	// todo: const
 
 private:
-	void InitializeBuilding();
+	void InitializeRoom();
 	void InitializeLights();
 	void InitializeObjectArrays();
 

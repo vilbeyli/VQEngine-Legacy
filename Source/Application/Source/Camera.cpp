@@ -59,7 +59,7 @@ void Camera::Update(float dt)
 
 	XMVECTOR up		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-	XMVECTOR pos	= XMLoadFloat3(&m_pos);	
+	XMVECTOR pos	= m_pos;	
 	XMMATRIX MRot	= RotMatrix();
 
 	//transform the lookat and up vector by rotation matrix
@@ -73,10 +73,10 @@ void Camera::Update(float dt)
 	XMStoreFloat4x4(&m_viewMatrix, XMMatrixLookAtLH(pos, lookAt, up));
 
 	// move based on velocity
-	auto P = XMLoadFloat3(&m_pos);
-	auto V = XMLoadFloat3(&m_velocity);
+	XMVECTOR P = m_pos;
+	XMVECTOR V = m_velocity;
 	P += V * dt;
-	XMStoreFloat3(&m_pos, P);
+	m_pos = P;
 
 	//----------------------------------------------------------------------
 	// debug code 
@@ -107,7 +107,7 @@ void Camera::Update(float dt)
 }
 
 
-XMFLOAT3 Camera::GetPositionF() const
+vec3 Camera::GetPositionF() const
 {
 	return m_pos;
 }
@@ -134,7 +134,7 @@ XMMATRIX Camera::RotMatrix() const
 
 void Camera::SetPosition(float x, float y, float z)
 {
-	m_pos = XMFLOAT3(x, y, z);
+	m_pos = vec3(x, y, z);
 }
 
 void Camera::Rotate(float yaw, float pitch, const float dt)
@@ -170,9 +170,7 @@ void Camera::Move(const float dt)
 	if (m_input->IsKeyDown('Q'))		translation += XMVector3TransformCoord(vec3::Down,		MRotation);
 	if (m_input->IsKeyDown(VK_SHIFT))	translation *= 5.0f;
 	
-	// update velocity
-	// todo: test vec3 here
-	auto V = XMLoadFloat3(&m_velocity);
+	XMVECTOR V = m_velocity;
 	V += (translation * MoveSpeed - V * Drag) * dt;
-	XMStoreFloat3(&m_velocity, V);
+	m_velocity = V;
 }

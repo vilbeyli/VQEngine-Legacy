@@ -19,23 +19,23 @@
 #include "Model.h"
 #include "Renderer.h"
 
-const Material Material::ruby = Material(	XMFLOAT3(0.61424f, 0.04136f, 0.04136f),		// diffuse
-											XMFLOAT3(0.727811f, 0.626959f, 0.626959f),	// specular
+const Material Material::ruby = Material(	vec3(0.61424f, 0.04136f, 0.04136f),		// diffuse
+											vec3(0.727811f, 0.626959f, 0.626959f),	// specular
 											76.8f);										// shininess
 
 
-const Material Material::jade = Material(	XMFLOAT3(0.54f, 0.89f, 0.63f),				// diffuse
-											XMFLOAT3(0.316228f, 0.316228f, 0.316228f),	// specular
+const Material Material::jade = Material(	vec3(0.54f, 0.89f, 0.63f),				// diffuse
+											vec3(0.316228f, 0.316228f, 0.316228f),	// specular
 											12.8f);										// shininess
 
 
-const Material Material::bronze = Material(	XMFLOAT3(0.714f, 0.4284f, 0.18144f),		// diffuse
-											XMFLOAT3(0.393548f, 0.271906f, 0.166721f),	// specular
+const Material Material::bronze = Material(	vec3(0.714f, 0.4284f, 0.18144f),		// diffuse
+											vec3(0.393548f, 0.271906f, 0.166721f),	// specular
 											25.6f);										// shininess
 
 
-const Material Material::gold = Material(	XMFLOAT3(0.75164f, 0.60648f, 0.22648f),		// diffuse
-											XMFLOAT3(0.628281f, 0.555802f, 0.366065f),	// specular
+const Material Material::gold = Material(	vec3(0.75164f, 0.60648f, 0.22648f),		// diffuse
+											vec3(0.628281f, 0.555802f, 0.366065f),	// specular
 											51.2f);										// shininess
 
 
@@ -49,7 +49,7 @@ Material Material::RandomMaterial()
 	else return Material();
 }
 
-Material::Material(const XMFLOAT3 & diffuse_in, const XMFLOAT3 & specular_in, float shininess_in)
+Material::Material(const vec3 & diffuse_in, const vec3 & specular_in, float shininess_in)
 {
 	color = diffuse_in;
 	alpha = 1.0f;

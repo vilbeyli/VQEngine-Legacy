@@ -165,12 +165,12 @@ XMMATRIX Light::GetProjectionMatrix() const
 
 ShaderLight Light::ShaderLightStruct() const
 {
-	XMFLOAT3 spotDirection = XMFLOAT3();
+	vec3 spotDirection = vec3();
 	if (lightType_ == LightType::SPOT)
 	{
 		XMVECTOR up = XMVectorSet(0, 1, 0, 0);
 		up = XMVector3TransformCoord(up, tf.RotationMatrix());
-		XMStoreFloat3(&spotDirection, up);
+		spotDirection = up;
 	}
 
 	ShaderLight sl;

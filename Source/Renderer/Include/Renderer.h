@@ -111,7 +111,7 @@ public:
 	void SetShader(ShaderID);
 	void SetBufferObj(int BufferID);
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
-	void SetConstant3f(const char* cName, const XMFLOAT3& float3);
+	void SetConstant3f(const char* cName, const vec3& float3);
 	void SetConstant1f(const char* cName, const float data);
 	void SetConstant1i(const char* cName, const int data);
 	void SetConstantStruct(const char * cName, void* data);
@@ -121,7 +121,7 @@ public:
 	void DrawIndexed(TOPOLOGY topology = T_TRIANGLES);
 	void Draw(TOPOLOGY topology = T_POINTS);
 	void DrawLine();
-	void DrawLine(const XMFLOAT3& pos1, const XMFLOAT3& pos2, const XMFLOAT3& color = Color().Value());
+	void DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
 
 	void Begin(const float clearColor[4]);
 	void Reset();

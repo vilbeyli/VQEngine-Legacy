@@ -20,7 +20,7 @@
 //#include "PhysicsComponent.h"
 #include "Components/Transform.h"
 
-Transform::Transform(const XMFLOAT3 position, const XMFLOAT3 rotation, const XMFLOAT3 scale)
+Transform::Transform(const vec3& position, const vec3& rotation, const vec3& scale)
 	:
 	m_position(position),
 	m_rotation(rotation),
@@ -39,12 +39,12 @@ void Transform::Translate(XMVECTOR translation)
 
 void Transform::RotateEulerRad(const XMVECTOR& rotation)
 {
-	XMFLOAT3 rotF3;
-	XMStoreFloat3(&rotF3, rotation);
-	RotateEulerRad(rotF3);
+	vec3 rotF3;
+	XMStoreFloat3(&rotF3.v, rotation);
+	RotateEulerRad(rotF3.v);
 }
 
-void Transform::RotateEulerRad(const XMFLOAT3& rotation)
+void Transform::RotateEulerRad(const vec3& rotation)
 {
 
 #if defined(USE_QUATERNIONS)
@@ -85,7 +85,7 @@ XMMATRIX Transform::WorldTransformationMatrix() const
 
 	//Quaternion Q = Quaternion(GetRotationF3());
 	Quaternion Q = m_rotation;
-	XMVECTOR rotation = XMVectorSet(Q.V.x, Q.V.y, Q.V.z, Q.S);
+	XMVECTOR rotation = XMVectorSet(Q.V.x(), Q.V.y(), Q.V.z(), Q.S);
 	//XMVECTOR rotOrigin = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
 	XMVECTOR rotOrigin = XMVectorZero();
 	return XMMatrixAffineTransformation(scale, rotOrigin, rotation, translation);
@@ -98,7 +98,7 @@ DirectX::XMMATRIX Transform::WorldTransformationMatrix_NoScale() const
 
 	//Quaternion Q = Quaternion(GetRotationF3());
 	Quaternion Q = m_rotation;
-	XMVECTOR rotation = XMVectorSet(Q.V.x, Q.V.y, Q.V.z, Q.S);
+	XMVECTOR rotation = XMVectorSet(Q.V.x(), Q.V.y(), Q.V.z(), Q.S);
 	//XMVECTOR rotOrigin = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
 	XMVECTOR rotOrigin = XMVectorZero();
 	return XMMatrixAffineTransformation(scale, rotOrigin, rotation, translation);
@@ -118,17 +118,17 @@ XMMATRIX Transform::RotationMatrix() const
 }
 
 // transforms a vector from local to global space
-XMFLOAT3 Transform::TransfromVector(XMFLOAT3 v)
-{
-	//XMMATRIX rotateX = glm::rotate(mRotation_.x*3.1415f / 180.0f, XMFLOAT3(1, 0, 0));
-	//XMMATRIX rotateY = glm::rotate(mRotation_.y*3.1415f / 180.0f, XMFLOAT3(0, 1, 0));
-	//XMMATRIX rotateZ = glm::rotate(mRotation_.z*3.1415f / 180.0f, XMFLOAT3(0, 0, 1));
-	//XMMATRIX mRot = rotateX * rotateY * rotateZ;
-
-	//return XMFLOAT3(mRot * glm::vec4(v, 0.0));
-	// TODO: Implement
-	return XMFLOAT3();
-}
+//vec3 Transform::TransfromVector(const vec3& v)
+//{
+//	//XMMATRIX rotateX = glm::rotate(mRotation_.x*3.1415f / 180.0f, vec3(1, 0, 0));
+//	//XMMATRIX rotateY = glm::rotate(mRotation_.y*3.1415f / 180.0f, vec3(0, 1, 0));
+//	//XMMATRIX rotateZ = glm::rotate(mRotation_.z*3.1415f / 180.0f, vec3(0, 0, 1));
+//	//XMMATRIX mRot = rotateX * rotateY * rotateZ;
+//
+//	//return vec3(mRot * glm::vec4(v, 0.0));
+//	// TODO: Implement
+//	return vec3();
+//}
 
 // builds normal matrix from world matrix, ignoring translation
 // and using inverse-transpose of rotation/scale matrix

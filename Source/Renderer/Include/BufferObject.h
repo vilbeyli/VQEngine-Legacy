@@ -20,6 +20,7 @@
 
 #include <DirectXMath.h>
 #include <d3d11_1.h>
+#include "utils.h"
 
 using namespace DirectX;
 
@@ -27,16 +28,16 @@ typedef int BufferID;
 
 struct Vertex
 {
-	XMFLOAT3 position;
-	XMFLOAT3 normal;
-	XMFLOAT3 tangent;
+	vec3 position;
+	vec3 normal;
+	vec3 tangent;
 	XMFLOAT2 texCoords;
 };
 
 class BufferObject
 {
 public:
-	BufferObject();
+	BufferObject() = default;
 	~BufferObject();
 
 	bool FillGPUBuffers(ID3D11Device* device, bool writable);

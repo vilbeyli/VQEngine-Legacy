@@ -22,18 +22,18 @@
 
 using std::make_pair;
 
-const Color Color::black		= XMFLOAT3(0.0f, 0.0f, 0.0f);
-const Color Color::white		= XMFLOAT3(1.0f, 1.0f, 1.0f);
-const Color Color::red			= XMFLOAT3(1.0f, 0.0f, 0.0f);
-const Color Color::green		= XMFLOAT3(0.0f, 1.0f, 0.0f);
-const Color Color::blue			= XMFLOAT3(0.0f, 0.0f, 1.0f);
-const Color Color::yellow		= XMFLOAT3(1.0f, 1.0f, 0.0f);
-const Color Color::magenta		= XMFLOAT3(1.0f, 0.0f, 1.0f);
-const Color Color::cyan			= XMFLOAT3(0.0f, 1.0f, 1.0f);
-const Color Color::gray			= XMFLOAT3(0.3f, 0.3f, 0.3f);
-const Color Color::light_gray	= XMFLOAT3(0.45f, 0.45f, 0.45f);
-const Color Color::orange		= XMFLOAT3(1.0f, 0.5f, 0.0f);
-const Color Color::purple		= XMFLOAT3(0.31f, 0.149f, 0.513f);
+const Color Color::black		= vec3(0.0f, 0.0f, 0.0f);
+const Color Color::white		= vec3(1.0f, 1.0f, 1.0f);
+const Color Color::red			= vec3(1.0f, 0.0f, 0.0f);
+const Color Color::green		= vec3(0.0f, 1.0f, 0.0f);
+const Color Color::blue			= vec3(0.0f, 0.0f, 1.0f);
+const Color Color::yellow		= vec3(1.0f, 1.0f, 0.0f);
+const Color Color::magenta		= vec3(1.0f, 0.0f, 1.0f);
+const Color Color::cyan			= vec3(0.0f, 1.0f, 1.0f);
+const Color Color::gray			= vec3(0.3f, 0.3f, 0.3f);
+const Color Color::light_gray	= vec3(0.45f, 0.45f, 0.45f);
+const Color Color::orange		= vec3(1.0f, 0.5f, 0.0f);
+const Color Color::purple		= vec3(0.31f, 0.149f, 0.513f);
 
 const Color::ColorPalette Color::s_palette = {
 	Color::black,	Color::white,
@@ -62,7 +62,7 @@ const Color::ColorPalette Color::Palette()
 	return s_palette;
 }
 
-XMFLOAT3 Color::RandColorF3()
+vec3 Color::RandColorF3()
 {
 	size_t i = RandU(0, Palette().size());
 	return s_palette[i].Value();
@@ -71,8 +71,7 @@ XMFLOAT3 Color::RandColorF3()
 XMVECTOR Color::RandColorV()
 {
 	size_t i = RandU(0, Palette().size());
-	XMVECTOR v = XMLoadFloat3(&s_palette[i].Value());
-	return v;
+	return s_palette[i].Value();
 }
 
 Color Color::RandColor()
@@ -82,14 +81,14 @@ Color Color::RandColor()
 
 
 
-Color::Color(const XMFLOAT3& val)
+Color::Color(const vec3& val)
 	: 
 	value(val)
 {}
 
 Color::Color(float r, float g, float b)
 	:
-	value(XMFLOAT3(r, g, b))
+	value(vec3(r, g, b))
 {}
 
 Color & Color::operator=(const Color & rhs)
@@ -98,7 +97,7 @@ Color & Color::operator=(const Color & rhs)
 	return *this;
 }
 
-Color & Color::operator=(const XMFLOAT3& flt)
+Color & Color::operator=(const vec3& flt)
 {
 	this->value = flt;
 	return *this;

@@ -19,8 +19,7 @@
 #ifndef _CAMERA_H
 #define _CAMERA_H
 
-#include <directxmath.h>
-//#include "Components/Transform.h"	// dependency. rethink this
+#include "utils.h"
 
 using namespace DirectX;
 
@@ -36,7 +35,7 @@ public:
 
 	void Update(float dt);
 
-	XMFLOAT3 GetPositionF() const;
+	vec3 GetPositionF() const;
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
 	XMMATRIX GetOrthoMatrix() const;
@@ -55,8 +54,8 @@ private:
 	void Rotate(const float dt);
 
 private:
-	XMFLOAT3	m_pos;
-	XMFLOAT3	m_velocity;
+	vec3		m_pos;
+	vec3		m_velocity;
 	float		m_yaw, m_pitch;
 
 	XMFLOAT4X4	m_viewMatrix;

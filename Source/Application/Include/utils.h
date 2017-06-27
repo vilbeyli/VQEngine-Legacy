@@ -32,19 +32,11 @@ using namespace DirectX;
 // typedefs
 using VecPair = std::pair<XMVECTOR, XMVECTOR>;
 
-/// MATH WRAPPER
+/// MATH WRAPPERS
 //===============================================================================================
+
 struct vec3
 {
-	vec3();
-	vec3(const vec3& v_in);
-	vec3(float, float, float);
-	vec3(float);
-	vec3(const XMFLOAT3& f3);
-	vec3(const XMVECTOR& v_in);
-
-	operator XMVECTOR() const;
-
 	static const XMVECTOR Zero;
 	static const XMVECTOR Up;
 	static const XMVECTOR Down;
@@ -53,15 +45,33 @@ struct vec3
 	static const XMVECTOR Forward;
 	static const XMVECTOR Back;
 
-	static const XMFLOAT3 ZeroF3;
-	static const XMFLOAT3 UpF3;
-	static const XMFLOAT3 DownF3;
-	static const XMFLOAT3 LeftF3;
-	static const XMFLOAT3 RightF3;
-	static const XMFLOAT3 ForwardF3;
-	static const XMFLOAT3 BackF3;
+	static const vec3 ZeroF3;
+	static const vec3 UpF3;
+	static const vec3 DownF3;
+	static const vec3 LeftF3;
+	static const vec3 RightF3;
+	static const vec3 ForwardF3;
+	static const vec3 BackF3;
 
+	vec3();
+	vec3(const vec3& v_in);
+	vec3(float, float, float);
+	vec3(float);
+	vec3(const XMFLOAT3 & f3);
+	vec3(const XMVECTOR& v_in);
 
+	operator XMVECTOR() const;
+	operator XMFLOAT3() const;
+
+	float& x();
+	float& y();
+	float& z();
+
+	float& x() const;
+	float& y() const;
+	float& z() const;
+
+	
 	XMFLOAT3 v;
 };
 

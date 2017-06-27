@@ -34,19 +34,12 @@ public:
 	//static Transform* Deserialize(Document & params);
 	//virtual void		Serialize(Value& val, Document::AllocatorType& allocator) override;
 	static const ComponentType ComponentId = Component::TRANSFORM;
-
-	static const XMVECTOR Right;//= XMVectorSet(+1.0f, +0.0f, +0.0f, 0.0f);
-	static const XMVECTOR Left;//= XMVectorSet(-1.0f, +0.0f, +0.0f, 0.0f);
-	static const XMVECTOR Up;//= XMVectorSet(+0.0f, +1.0f, +0.0f, 0.0f);
-	static const XMVECTOR Down;//= XMVectorSet(+0.0f, -1.0f, +0.0f, 0.0f);
-	static const XMVECTOR Forward;//= XMVectorSet(+0.0f, +0.0f, +1.0f, 0.0f);
-	static const XMVECTOR Backward;//= XMVectorSet(+0.0f, +0.0f, -1.0f, 0.0f);
-
+	
 	// CONSTRUCTOR / DESTRUCTOR
 	//-----------------------------------------------------------------------------------
-	Transform(const XMFLOAT3 position = XMFLOAT3(0.0f, 0.0f, 0.0f),
-				const XMFLOAT3 rotation = XMFLOAT3(0.0f, 0.0f, 0.0f),
-				const XMFLOAT3 scale = XMFLOAT3(1.0f, 1.0f, 1.0f));
+	Transform(  const vec3& position = vec3(0.0f, 0.0f, 0.0f),
+				const vec3& rotation = vec3(0.0f, 0.0f, 0.0f),
+				const vec3& scale    = vec3(1.0f, 1.0f, 1.0f));
 	~Transform();
 
 	// GETTERS & SETTERS
@@ -68,14 +61,13 @@ public:
 #else
 	inline void SetRotationQ(const Quaternion& Q) { m_rotation = Q; }
 #endif
-	inline void SetRotationDeg(float x, float y, float z) { m_rotation = XMFLOAT3(x * DEG2RAD, y * DEG2RAD, z * DEG2RAD); }
-	inline void SetScale(XMFLOAT3 scale) { m_scale = scale; }
-	inline void SetScale(float x, float y, float z) { m_scale = XMFLOAT3(x, y, z); }
-	inline void SetScaleUniform(float scl) { m_scale = XMFLOAT3(scl, scl, scl); }
-	inline void SetPosition(XMFLOAT3 val) { m_position = val; }
-	inline void SetPosition(const XMVECTOR& val) { XMStoreFloat3(&m_position, val); }
-	inline void SetPosition(float x, float y, float z) { m_position = XMFLOAT3(x, y, z); }
-	//inline void SetOrientation(glm::quat orient) { mOrientation_ = orient; }
+	inline void SetRotationDeg(float x, float y, float z)	{ m_rotation = vec3(x * DEG2RAD, y * DEG2RAD, z * DEG2RAD); }
+	inline void SetScale(XMFLOAT3 scale)					{ m_scale = scale; }
+	inline void SetScale(float x, float y, float z)			{ m_scale = XMFLOAT3(x, y, z); }
+	inline void SetScaleUniform(float scl)					{ m_scale = XMFLOAT3(scl, scl, scl); }
+	inline void SetPosition(const vec3& val)				{ m_position = val; }
+	inline void SetPosition(const XMVECTOR& val)			{ XMStoreFloat3(&m_position, val); }
+	inline void SetPosition(float x, float y, float z)		{ m_position = XMFLOAT3(x, y, z); }
 
 	// MOVEMENT
 	//-----------------------------------------------------------------------------------
@@ -84,7 +76,7 @@ public:
 
 	// Rotates the transform by provided vector (adds x,y,z radian angles)
 	void RotateEulerRad(const XMVECTOR& rotation);
-	void RotateEulerRad(const XMFLOAT3& rotation);
+	void RotateEulerRad(const vec3& rotation);
 	void RotateQuat(const Quaternion& q);
 	void RotateAroundPointAndAxis(const vec3& axis, float angle, vec3& point);
 
@@ -97,7 +89,7 @@ public:
 	XMMATRIX RotationMatrix() const;
 
 	// transforms a vector from local to global space
-	XMFLOAT3 TransfromVector(XMFLOAT3 v);
+	//XMFLOAT3 TransfromVector(XMFLOAT3 v);
 
 private:
 	// TRANSLATION

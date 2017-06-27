@@ -549,9 +549,9 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 }
 
 // TODO: this is the same as 4x4. rethink set constant function
-void Renderer::SetConstant3f(const char * cName, const XMFLOAT3 & float3)
+void Renderer::SetConstant3f(const char * cName, const vec3 & float3)
 {
-	const float* data = &float3.x;
+	const float* data = &float3.x();
 	// find data in CPUConstantBuffer array of shader
 	Shader* shader = m_shaders[m_activeShader];
 	bool found = false;
@@ -716,8 +716,8 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 void Renderer::DrawLine()
 {
 	// draw line between 2 coords
-	XMFLOAT3 pos1 = XMFLOAT3(0, 0, 0);
-	XMFLOAT3 pos2 = pos1;	pos2.x += 5.0f;
+	vec3 pos1 = vec3(0, 0, 0);
+	vec3 pos2 = pos1;	pos2.x() += 5.0f;
 
 	SetConstant3f("p1", pos1);
 	SetConstant3f("p2", pos2);
@@ -726,7 +726,7 @@ void Renderer::DrawLine()
 	Draw(T_POINTS);
 }
 
-void Renderer::DrawLine(const XMFLOAT3& pos1, const XMFLOAT3& pos2, const XMFLOAT3& color)
+void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 {
 	SetConstant3f("p1", pos1);
 	SetConstant3f("p2", pos2);
@@ -778,8 +778,8 @@ void Renderer::Apply()
 	m_deviceContext->RSSetState(m_rasterizerStates[CULL_NONE]);	// TODO: m_activeRS?
 
 	// test: TODO remove later
-	D3D11_RASTERIZER_DESC rsDesc;
-	m_rasterizerStates[CULL_NONE]->GetDesc(&rsDesc);
+	//D3D11_RASTERIZER_DESC rsDesc;
+	//m_rasterizerStates[CULL_NONE]->GetDesc(&rsDesc);
 
 	// set shader constants
 	for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)

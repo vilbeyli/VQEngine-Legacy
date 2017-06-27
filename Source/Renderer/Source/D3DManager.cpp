@@ -21,8 +21,7 @@
 #include <windows.h>
 #include <string>
 
-#define PI 3.141592654f
-#define FORCE_DEBUG1
+#define xFORCE_DEBUG
 
 D3DManager::D3DManager()
 {

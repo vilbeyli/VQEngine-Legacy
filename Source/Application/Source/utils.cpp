@@ -35,23 +35,6 @@ using std::string;
 using std::cout;
 using std::endl;
 
-const XMVECTOR vec3::Zero		= XMVectorZero();
-const XMVECTOR vec3::Up			= XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
-const XMVECTOR vec3::Down		= XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);
-const XMVECTOR vec3::Left		= XMVectorSet(-1.0f, +0.0f, +0.0f, +0.0f);
-const XMVECTOR vec3::Right		= XMVectorSet(+1.0f, +0.0f, +0.0f, +0.0f);
-const XMVECTOR vec3::Forward	= XMVectorSet(+0.0f, +0.0f, +1.0f, +0.0f);
-const XMVECTOR vec3::Back		= XMVectorSet(+0.0f, +0.0f, -1.0f, +0.0f);
-
-
-const XMFLOAT3 vec3::ZeroF3		= XMFLOAT3();
-const XMFLOAT3 vec3::UpF3		= XMFLOAT3(+0.0f, +1.0f, +0.0f);
-const XMFLOAT3 vec3::DownF3		= XMFLOAT3(+0.0f, -1.0f, +0.0f);
-const XMFLOAT3 vec3::LeftF3		= XMFLOAT3(-1.0f, +0.0f, +0.0f);
-const XMFLOAT3 vec3::RightF3	= XMFLOAT3(+1.0f, +0.0f, +0.0f);
-const XMFLOAT3 vec3::ForwardF3	= XMFLOAT3(+0.0f, +0.0f, +1.0f);
-const XMFLOAT3 vec3::BackF3		= XMFLOAT3(+0.0f, +0.0f, -1.0f);
-
 vector<string> split(const char* s, char c)
 {
 	vector<string> result;
@@ -119,17 +102,48 @@ std::string GetFileNameFromPath(const std::string& path)
 //	return texName;
 //}
 
-vec3::vec3() : v(XMFLOAT3(0.0f, 0.0f, 0.0f)){}
-vec3::vec3(const vec3& v_in) : v(v_in.v) {}
+//---------------------------------------------------------------------------------
+
+
+const XMVECTOR vec3::Zero		= XMVectorZero();
+const XMVECTOR vec3::Up			= XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
+const XMVECTOR vec3::Down		= XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);
+const XMVECTOR vec3::Left		= XMVectorSet(-1.0f, +0.0f, +0.0f, +0.0f);
+const XMVECTOR vec3::Right		= XMVectorSet(+1.0f, +0.0f, +0.0f, +0.0f);
+const XMVECTOR vec3::Forward	= XMVectorSet(+0.0f, +0.0f, +1.0f, +0.0f);
+const XMVECTOR vec3::Back		= XMVectorSet(+0.0f, +0.0f, -1.0f, +0.0f);
+
+const vec3 vec3::ZeroF3		= vec3();
+const vec3 vec3::UpF3		= vec3(+0.0f, +1.0f, +0.0f);
+const vec3 vec3::DownF3		= vec3(+0.0f, -1.0f, +0.0f);
+const vec3 vec3::LeftF3		= vec3(-1.0f, +0.0f, +0.0f);
+const vec3 vec3::RightF3	= vec3(+1.0f, +0.0f, +0.0f);
+const vec3 vec3::ForwardF3	= vec3(+0.0f, +0.0f, +1.0f);
+const vec3 vec3::BackF3		= vec3(+0.0f, +0.0f, -1.0f);
+
+vec3::vec3()					: v(XMFLOAT3(0.0f, 0.0f, 0.0f)){}
+
+vec3::vec3(const vec3& v_in)	: v(v_in.v) {}
+vec3::vec3(const XMFLOAT3& f3)	: v(f3) {}
+vec3::vec3(const XMVECTOR& v_in){ XMStoreFloat3(&v, v_in); }
+
 vec3::vec3(float x, float y, float z) : v(x, y, z) {}
 vec3::vec3(float x) : v(x, x, x) {}
-vec3::vec3(const XMFLOAT3 & f3) : v(f3) {}
-vec3::vec3(const XMVECTOR & v_in)
-{
-	XMStoreFloat3(&v, v_in);
-}
+
 
 vec3::operator XMVECTOR() const
 {
 	return XMLoadFloat3(&v);
 }
+
+vec3::operator XMFLOAT3() const
+{
+	return v;
+}
+
+float& vec3::x() { return v.x; }
+float& vec3::y() { return v.y; }
+float& vec3::z() { return v.z; }
+float& vec3::x() const { return const_cast<float&>(v.x); }
+float& vec3::y() const { return const_cast<float&>(v.y); }
+float& vec3::z() const { return const_cast<float&>(v.z); }

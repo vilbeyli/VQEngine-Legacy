@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <DirectXMath.h>
+#include "utils.h"
 
 #include <map>
 #include <vector>
@@ -51,18 +51,18 @@ struct Color
 
 public:
 	Color();
-	Color(const XMFLOAT3&);
+	Color(const vec3&);
 	Color(float r, float g, float b);
 	Color& operator=(const Color&);
-	Color& operator=(const XMFLOAT3&);
+	Color& operator=(const vec3&);
 
-	XMFLOAT3 Value() const { return value; }
+	vec3 Value() const { return value; }
 	static const ColorPalette Palette();
-	static XMFLOAT3 RandColorF3();
+	static vec3 RandColorF3();
 	static XMVECTOR RandColorV();
 	static Color	RandColor();
 
-	operator XMFLOAT3() const { return value; }
+	operator vec3() const { return value; }
 
 	//static Color GetColorByName(std::string);
 	//static std::string GetNameByColor(Color c);
@@ -71,6 +71,6 @@ public:
 	static const Color black, white, red, green, blue, magenta, yellow, cyan, gray, light_gray, orange, purple;
 	static const ColorPalette s_palette;
 private:
-	XMFLOAT3 value;
+	vec3 value;
 };
 

@@ -53,7 +53,7 @@ bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 	if(!m_renderer->Init(scr_width, scr_height, hWnd)) 
 		return false;
 	m_pRenderData = &(m_renderer->m_renderData);
-	m_scene_manager->Initialize(m_renderer, m_pRenderData, nullptr);
+	m_scene_manager->Initialize(m_renderer.get(), m_pRenderData, nullptr);
 	return true;
 }
 

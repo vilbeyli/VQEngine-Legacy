@@ -17,6 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "GameObject.h"
+#include "Renderer.h"
 
 GameObject::GameObject()
 #ifdef ENABLE_PHY_CODE
@@ -57,6 +58,17 @@ GameObject& GameObject::operator=(const GameObject& obj)
 	m_rb		= RigidBody(m_transform);
 #endif
 	return *this;
+}
+
+void GameObject::Render(Renderer * pRenderer) const
+{
+	m_model.m_material.SetMaterialConstants(pRenderer);
+	pRenderer->SetBufferObj(m_model.m_mesh);
+	XMMATRIX world = m_transform.WorldTransformationMatrix();
+	pRenderer->SetConstant4x4f("world", world);
+	pRenderer->SetConstant4x4f("normal", m_transform.NormalMatrix(world));
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
 }
 
 

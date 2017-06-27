@@ -32,7 +32,7 @@ struct Material
 {
 	Color		color;
 	float		alpha;	
-	vec3	specular;
+	vec3		specular;
 	float		shininess;
 
 	Texture		diffuseMap;
@@ -43,7 +43,7 @@ struct Material
 
 	Material(const vec3& diffuse, const vec3& specular, float shininess);
 	Material();
-	void SetMaterialConstants(std::shared_ptr<Renderer> renderer) const;
+	void SetMaterialConstants(Renderer* renderer) const;
 };
 
 class Model

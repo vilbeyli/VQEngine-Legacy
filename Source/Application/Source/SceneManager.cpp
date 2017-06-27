@@ -58,7 +58,7 @@ SceneManager::SceneManager()
 SceneManager::~SceneManager()
 {}
 
-void SceneManager::Initialize(shared_ptr<Renderer> renderer, const RenderData* rData, PathManager* pathMan)
+void SceneManager::Initialize(Renderer* renderer, const RenderData* rData, PathManager* pathMan)
 {
 	m_pPathManager		= pathMan;
 
@@ -203,6 +203,12 @@ void SceneManager::InitializeRoom()
 		m_building.wallF.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 		m_building.wallF.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
+
+	m_building.floor.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_building.wallL.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_building.wallR.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_building.wallF.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_building.ceiling.m_model.m_mesh = MESH_TYPE::CUBE;
 }
 
 void SceneManager::InitializeLights()
@@ -292,8 +298,8 @@ void SceneManager::InitializeObjectArrays()
 				// set material
 				cube.m_model.m_mesh = MESH_TYPE::CUBE;
 				cube.m_model.m_material = Material::RandomMaterial();
-				cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
-				cube.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+				//cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
+				//cube.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 
 				cubes.push_back(cube);
 			}
@@ -344,6 +350,29 @@ void SceneManager::InitializeObjectArrays()
 			spheres.push_back(sph);
 		}
 	}
+
+	int i = 2;
+	grid.m_transform.SetPosition(30.0f, 5.0f, -4.0f * i * 2);
+	grid.m_transform.SetScaleUniform(8);
+	--i;
+	cylinder.m_transform.SetPosition(30.0f, 5.0f, -4.0f * i);
+	--i;
+	triangle.m_transform.SetPosition(30.0f, 5.0f, -4.0f * i);
+	triangle.m_transform.SetRotationDeg(30, 0, 30.0f);
+	--i;
+	quad.m_transform.SetPosition(30.0f, 5.0f, -4.0f * i);
+	quad.m_transform.SetRotationDeg(30, 0, 0);
+
+	    grid.m_model.m_mesh = MESH_TYPE::GRID;
+	cylinder.m_model.m_mesh = MESH_TYPE::CYLINDER;
+	triangle.m_model.m_mesh = MESH_TYPE::TRIANGLE;
+	    quad.m_model.m_mesh = MESH_TYPE::QUAD;
+	
+	    grid.m_model.m_material = Material();
+	cylinder.m_model.m_material = Material();
+	triangle.m_model.m_material = Material();
+	    quad.m_model.m_material = Material();
+	
 }
 
 #ifdef ENABLE_VPHYSICS
@@ -605,57 +634,10 @@ void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) co
 	m_pRenderer->SetShader(m_selectedShader);
 	m_pRenderer->SetConstant4x4f("view", view);
 	m_pRenderer->SetConstant4x4f("proj", proj);
-	m_pRenderer->SetBufferObj(MESH_TYPE::CUBE);
 	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-
 	SendLightData();
-	{
-		m_building.floor.m_model.m_material.SetMaterialConstants(m_pRenderer);
-		XMMATRIX world		= m_building.floor.m_transform.WorldTransformationMatrix();
-		XMMATRIX nrmMatrix	= m_building.floor.m_transform.NormalMatrix(world);
-		m_pRenderer->SetConstant4x4f("world", world);
-		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
-	{
-		m_building.ceiling.m_model.m_material.SetMaterialConstants(m_pRenderer);
-		XMMATRIX world		= m_building.ceiling.m_transform.WorldTransformationMatrix();
-		XMMATRIX nrmMatrix	= m_building.ceiling.m_transform.NormalMatrix(world);
-		m_pRenderer->SetConstant4x4f("world", world);
-		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
-	{
-		m_building.wallR.m_model.m_material.SetMaterialConstants(m_pRenderer);
-		XMMATRIX world		= m_building.wallR.m_transform.WorldTransformationMatrix();
-		vec3 color		= m_building.wallR.m_model.m_material.color.Value();
-		XMMATRIX nrmMatrix	= m_building.wallR.m_transform.NormalMatrix(world);
-		m_pRenderer->SetConstant4x4f("world", world);
-		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
-	{
-		m_building.wallL.m_model.m_material.SetMaterialConstants(m_pRenderer);
-		XMMATRIX world		= m_building.wallL.m_transform.WorldTransformationMatrix();
-		XMMATRIX nrmMatrix	= m_building.wallL.m_transform.NormalMatrix(world);
-		m_pRenderer->SetConstant4x4f("world", world);
-		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
-	{
-		m_building.wallF.m_model.m_material.SetMaterialConstants(m_pRenderer);
-		XMMATRIX world		= m_building.wallF.m_transform.WorldTransformationMatrix();
-		XMMATRIX nrmMatrix	= m_building.wallF.m_transform.NormalMatrix(world);
-		m_pRenderer->SetConstant4x4f("world", world);
-		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
+	m_building.Render(m_pRenderer);
 }
 
 void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const
@@ -687,32 +669,14 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 	if(m_selectedShader == m_renderData->TNBShader)	  m_pRenderer->SetConstant1i("mode", TBNMode);
 	if(m_selectedShader == m_renderData->phongShader) m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
-
-	for (const auto& cube : cubes)
-	{
-		cube.m_model.m_material.SetMaterialConstants(m_pRenderer);
-		m_pRenderer->SetBufferObj(cube.m_model.m_mesh);
-		XMMATRIX world = cube.m_transform.WorldTransformationMatrix();
-		XMMATRIX nrm   = cube.m_transform.NormalMatrix(world);
-		m_pRenderer->SetConstant4x4f("world", world);
-		m_pRenderer->SetConstant4x4f("nrmMatrix", nrm);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
-
-	for (const auto& sph : spheres)
-	{
-		sph.m_model.m_material.SetMaterialConstants(m_pRenderer);
-		m_pRenderer->SetBufferObj(sph.m_model.m_mesh);
-		XMMATRIX world = sph.m_transform.WorldTransformationMatrix();
-		XMMATRIX nrm   = sph.m_transform.NormalMatrix(world);
-		m_pRenderer->SetConstant4x4f("world", world);
-		m_pRenderer->SetConstant4x4f("nrmMatrix", nrm);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
-
-
+	for (const auto& cube : cubes) cube.Render(m_pRenderer);
+	for (const auto& sph : spheres) sph.Render(m_pRenderer);
+	
+	//m_pRenderer->SetShader(m_renderData->unlitShader);
+	grid.Render(m_pRenderer);
+	quad.Render(m_pRenderer);
+	triangle.Render(m_pRenderer);
+	cylinder.Render(m_pRenderer);
 
 #ifdef ENABLE_VPHYSICS
 	// draw anchor 1 sphere
@@ -820,4 +784,13 @@ void SceneManager::SendLightData() const
 	if (lights.size() > MAX_LIGHTS)	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
 	if (spots.size() > MAX_SPOTS)	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif
+}
+
+void SceneManager::Building::Render(Renderer * pRenderer) const
+{
+	floor.Render(pRenderer);
+	wallL.Render(pRenderer);
+	wallR.Render(pRenderer);
+	wallF.Render(pRenderer);
+	ceiling.Render(pRenderer);
 }

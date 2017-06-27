@@ -50,13 +50,12 @@ struct RenderData;
 
 class SceneManager
 {
-	using pRenderer = std::shared_ptr<Renderer>;	// ?
 
 public:
 	SceneManager();
 	~SceneManager();
 
-	void Initialize(pRenderer renderer, const RenderData* rData, PathManager* pathMan);
+	void Initialize(Renderer* renderer, const RenderData* rData, PathManager* pathMan);
 	void SetCameraSettings(const Settings::Camera& cameraSettings);
 	void Update(float dt);
 	void Render();	// todo: const
@@ -84,7 +83,7 @@ private:
 	void SendLightData() const;
 
 private:
-	pRenderer			m_pRenderer;
+	Renderer*			m_pRenderer;
 	shared_ptr<Camera>	m_pCamera;
 	PathManager*		m_pPathManager; // unused
 	Skydome				m_skydome;
@@ -102,10 +101,17 @@ private:
 		GameObject wallR;
 		GameObject wallF;
 		GameObject ceiling;
+		void Render(Renderer* pRenderer) const;
 	} m_building;
 
 	std::vector<GameObject> spheres;
 	std::vector<GameObject> cubes;
+
+	GameObject triangle;
+	GameObject quad;
+	GameObject grid;
+	GameObject cylinder;
+
 
 #ifdef ENABLE_ANIMATION
 	// hierarchical model

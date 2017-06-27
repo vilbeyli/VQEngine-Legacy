@@ -490,7 +490,7 @@ void Renderer::SetViewport(const unsigned width, const unsigned height)
 
 void Renderer::SetBufferObj(int BufferID)
 {
-	assert(BufferID > 0);
+	assert(BufferID >= 0);
 	m_activeBuffer = BufferID;
 }
 
@@ -723,7 +723,7 @@ void Renderer::DrawLine()
 	SetConstant3f("p2", pos2);
 	SetConstant3f("color", Color::green.Value());
 	Apply();
-	Draw(T_POINTS);
+	Draw(TOPOLOGY::POINT_LIST);
 }
 
 void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
@@ -732,7 +732,7 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 	SetConstant3f("p2", pos2);
 	SetConstant3f("color", color);
 	Apply();
-	Draw(T_POINTS);
+	Draw(TOPOLOGY::POINT_LIST);
 }
 
 void Renderer::Begin(const float clearColor[4])

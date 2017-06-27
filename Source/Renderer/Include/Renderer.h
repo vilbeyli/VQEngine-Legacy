@@ -56,11 +56,11 @@ enum RASTERIZER_STATE
 	RS_COUNT
 };
 
-enum TOPOLOGY
+enum class TOPOLOGY
 {
-	T_POINTS = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
-	T_TRIANGLES = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-	T_LINES = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+	POINT_LIST = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
+	TRIANGLE_LIST = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+	LINE_LIST = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
 
 	TOPOLOGY_COUNT
 };
@@ -118,8 +118,8 @@ public:
 	void SetTexture(const char* texName, TextureID tex);
 	void SetRasterizerState(int stateID);
 	
-	void DrawIndexed(TOPOLOGY topology = T_TRIANGLES);
-	void Draw(TOPOLOGY topology = T_POINTS);
+	void DrawIndexed(TOPOLOGY topology = TOPOLOGY::TRIANGLE_LIST);
+	void Draw(TOPOLOGY topology = TOPOLOGY::POINT_LIST);
 	void DrawLine();
 	void DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
 

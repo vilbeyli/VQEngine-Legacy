@@ -27,6 +27,8 @@
 #include "RigidBody.h"
 #endif
 
+class Renderer;
+
 class GameObject
 {
 public:
@@ -35,6 +37,8 @@ public:
 	GameObject(const GameObject& obj);
 
 	GameObject& operator=(const GameObject& obj);
+
+	void Render(Renderer* pRenderer) const;
 
 public:
 	Transform	m_transform;

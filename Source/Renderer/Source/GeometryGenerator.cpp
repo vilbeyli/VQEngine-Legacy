@@ -26,14 +26,9 @@ using std::vector;
 // Direct3D Transformation Pipeline: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418867(v=vs.85).aspx
 
 
-std::pair<vector<vec3>, vector<vec3>> CalculateTangentsAndBitangents(std::vector<vec3>& vertices)
+void CalculateTangentsAndBitangents(BufferObject* obj)
 {
-	vector<vec3> tangents(vertices.size());
-	vector<vec3> bitangents(vertices.size());
-
-
-
-	return std::make_pair(tangents, bitangents);
+	
 }
 
 GeometryGenerator::GeometryGenerator()
@@ -71,6 +66,8 @@ BufferObject* GeometryGenerator::Triangle()
 	bufferObj->m_vertices[2].position	= vec3(size, -size, 0.0f);
 	bufferObj->m_vertices[2].normal		= vec3(0.0f, 1.0f, 0.0f);
 	bufferObj->m_vertices[2].texCoords	= XMFLOAT2(1.0f, 1.0f);
+
+	CalculateTangentsAndBitangents(bufferObj);
 
 	// indices
 	bufferObj->m_indices[0] = 0;

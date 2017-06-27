@@ -1,12 +1,13 @@
 # DX11Renderer
 
-![](Screenshots/spot.PNG)
+![](Screenshots/spheres.PNG)
 
 This is the open source part of the Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc).
 
 I plan to keep adding features to this Renderer module to tinker with rendering algorithms and some special effects.
 
 **Features**:
+ - Shader Reflection
  - Phong Lighting
  - Diffuse Textures
  - Generated Geometry: Cube, Sphere, Cylinder, Grid

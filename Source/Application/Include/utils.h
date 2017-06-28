@@ -71,9 +71,51 @@ struct vec3
 	float& y() const;
 	float& z() const;
 
+	void normalize();
+	const vec3 normalized() const;
 	
-	XMFLOAT3 v;
+	XMFLOAT3 _v;
 };
+
+// todo vec.h
+struct vec2
+{
+	static const XMVECTOR Zero;
+	static const XMVECTOR Up;
+	static const XMVECTOR Down;
+	static const XMVECTOR Left;
+	static const XMVECTOR Right;
+
+	static const vec2 ZeroF2;
+	static const vec2 UpF2;
+	static const vec2 DownF2;
+	static const vec2 LeftF2;
+	static const vec2 RightF2;
+
+	vec2();
+	vec2(const vec3& v_in);
+	vec2(const vec2& v_in);
+	vec2(float, float);
+	vec2(float);
+	vec2(const XMFLOAT3& f3);
+	vec2(const XMFLOAT2& f2);
+	vec2(const XMVECTOR& v_in);
+
+	operator XMVECTOR() const;
+	operator XMFLOAT2() const;
+
+	float& x();
+	float& y();
+
+	float& x() const;
+	float& y() const;
+
+	void normalize();
+	const vec2 normalized() const;
+
+	XMFLOAT2 _v;
+};
+
 
 /// STRING PROCESSING
 //===============================================================================================

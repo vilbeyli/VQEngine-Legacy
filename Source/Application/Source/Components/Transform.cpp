@@ -40,8 +40,8 @@ void Transform::Translate(XMVECTOR translation)
 void Transform::RotateEulerRad(const XMVECTOR& rotation)
 {
 	vec3 rotF3;
-	XMStoreFloat3(&rotF3.v, rotation);
-	RotateEulerRad(rotF3.v);
+	XMStoreFloat3(&rotF3._v, rotation);
+	RotateEulerRad(rotF3._v);
 }
 
 void Transform::RotateEulerRad(const vec3& rotation)
@@ -69,7 +69,7 @@ void Transform::RotateAroundPointAndAxis(const vec3& axis, float angle, vec3& po
 	Quaternion rot = Quaternion::FromAxisAngle(axis, angle);
 	R = rot.TransformVector(R);
 	vec3 rotatedPos = point + R;
-	m_position = rotatedPos.v;
+	m_position = rotatedPos._v;
 }
 #endif
 

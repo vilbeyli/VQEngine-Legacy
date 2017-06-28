@@ -113,37 +113,80 @@ const XMVECTOR vec3::Right		= XMVectorSet(+1.0f, +0.0f, +0.0f, +0.0f);
 const XMVECTOR vec3::Forward	= XMVectorSet(+0.0f, +0.0f, +1.0f, +0.0f);
 const XMVECTOR vec3::Back		= XMVectorSet(+0.0f, +0.0f, -1.0f, +0.0f);
 
-const vec3 vec3::ZeroF3		= vec3();
-const vec3 vec3::UpF3		= vec3(+0.0f, +1.0f, +0.0f);
-const vec3 vec3::DownF3		= vec3(+0.0f, -1.0f, +0.0f);
-const vec3 vec3::LeftF3		= vec3(-1.0f, +0.0f, +0.0f);
-const vec3 vec3::RightF3	= vec3(+1.0f, +0.0f, +0.0f);
-const vec3 vec3::ForwardF3	= vec3(+0.0f, +0.0f, +1.0f);
-const vec3 vec3::BackF3		= vec3(+0.0f, +0.0f, -1.0f);
+const vec3 vec3::ZeroF3			= vec3();
+const vec3 vec3::UpF3			= vec3(+0.0f, +1.0f, +0.0f);
+const vec3 vec3::DownF3			= vec3(+0.0f, -1.0f, +0.0f);
+const vec3 vec3::LeftF3			= vec3(-1.0f, +0.0f, +0.0f);
+const vec3 vec3::RightF3		= vec3(+1.0f, +0.0f, +0.0f);
+const vec3 vec3::ForwardF3		= vec3(+0.0f, +0.0f, +1.0f);
+const vec3 vec3::BackF3			= vec3(+0.0f, +0.0f, -1.0f);
 
-vec3::vec3()					: v(XMFLOAT3(0.0f, 0.0f, 0.0f)){}
+const XMVECTOR vec2::Zero		= XMVectorZero();
+const XMVECTOR vec2::Up			= XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
+const XMVECTOR vec2::Down		= XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);
+const XMVECTOR vec2::Left		= XMVectorSet(-1.0f, +0.0f, +0.0f, +0.0f);
+const XMVECTOR vec2::Right		= XMVectorSet(+1.0f, +0.0f, +0.0f, +0.0f);
 
-vec3::vec3(const vec3& v_in)	: v(v_in.v) {}
-vec3::vec3(const XMFLOAT3& f3)	: v(f3) {}
-vec3::vec3(const XMVECTOR& v_in){ XMStoreFloat3(&v, v_in); }
+const vec2 vec2::ZeroF2			= vec2();
+const vec2 vec2::UpF2			= vec2(+0.0f, +1.0f);
+const vec2 vec2::DownF2			= vec2(+0.0f, -1.0f);
+const vec2 vec2::LeftF2			= vec2(-1.0f, +0.0f);
+const vec2 vec2::RightF2		= vec2(+1.0f, +0.0f);
 
-vec3::vec3(float x, float y, float z) : v(x, y, z) {}
-vec3::vec3(float x) : v(x, x, x) {}
 
+vec3::vec3()					: _v(XMFLOAT3(0.0f, 0.0f, 0.0f)){}
+vec3::vec3(const vec3& v_in)	: _v(v_in._v) {}
+vec3::vec3(const XMFLOAT3& f3)	: _v(f3) {}
+vec3::vec3(const XMVECTOR& v_in){ XMStoreFloat3(&_v, v_in); }
+vec3::vec3(float x, float y, float z) : _v(x, y, z) {}
+vec3::vec3(float x) : _v(x, x, x) {}
 
-vec3::operator XMVECTOR() const
+vec2::vec2()					: _v(XMFLOAT2(0.0f, 0.0f)) {}
+vec2::vec2(const vec3& v3)		: _v(v3.x(), v3.y()){}
+vec2::vec2(const vec2& v_in)	: _v(v_in._v) {}
+vec2::vec2(float x, float y)	: _v(x, y) {}
+vec2::vec2(float f)				: _v(f, f) {}
+vec2::vec2(const XMFLOAT2& f2)	: _v(f2) {}
+vec2::vec2(const XMFLOAT3& f3)	: _v(f3.x, f3.y) {}
+vec2::vec2(const XMVECTOR& v_in) { XMStoreFloat2(&_v, v_in); }
+
+vec3::operator XMVECTOR() const	{	return XMLoadFloat3(&_v);	}
+vec3::operator XMFLOAT3() const	{	return _v;					}
+vec2::operator XMVECTOR() const {	return XMLoadFloat2(&_v); }
+vec2::operator XMFLOAT2() const {	return _v; }
+
+float& vec3::x() { return _v.x; }
+float& vec3::y() { return _v.y; }
+float& vec3::z() { return _v.z; }
+float& vec3::x() const { return const_cast<float&>(_v.x); }
+float& vec3::y() const { return const_cast<float&>(_v.y); }
+float& vec3::z() const { return const_cast<float&>(_v.z); }
+
+float& vec2::x() { return _v.x; }
+float& vec2::y() { return _v.y; }
+float& vec2::x() const { return const_cast<float&>(_v.x); }
+float& vec2::y() const { return const_cast<float&>(_v.y); }
+
+void vec3::normalize()
 {
-	return XMLoadFloat3(&v);
+	XMVECTOR v = XMLoadFloat3(&_v);
+	_v = vec3(XMVector3Normalize(v));
 }
 
-vec3::operator XMFLOAT3() const
+const vec3 vec3::normalized() const
 {
-	return v;
+	XMVECTOR v = XMLoadFloat3(&_v);
+	return vec3(XMVector3Normalize(v));
 }
 
-float& vec3::x() { return v.x; }
-float& vec3::y() { return v.y; }
-float& vec3::z() { return v.z; }
-float& vec3::x() const { return const_cast<float&>(v.x); }
-float& vec3::y() const { return const_cast<float&>(v.y); }
-float& vec3::z() const { return const_cast<float&>(v.z); }
+void vec2::normalize()
+{
+	XMVECTOR v = XMLoadFloat2(&_v);
+	_v = vec2(XMVector2Normalize(v));
+}
+
+const vec2 vec2::normalized() const
+{
+	XMVECTOR v = XMLoadFloat2(&_v);
+	return vec2(XMVector2Normalize(v));
+}

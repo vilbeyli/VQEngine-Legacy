@@ -322,7 +322,7 @@ void SceneManager::InitializeObjectArrays()
 			GameObject sph;
 			sph.m_transform.SetPosition(pos);
 			sph.m_model.m_mesh = MESH_TYPE::SPHERE;
-			sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * 50.0f).v : vec3((static_cast<float>(numSph-i) / numSph) * 50.0f).v;
+			sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * 50.0f)._v : vec3((static_cast<float>(numSph-i) / numSph) * 50.0f)._v;
 			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;
 			
 			spheres.push_back(sph);
@@ -476,11 +476,11 @@ void SceneManager::UpdateCentralObj(const float dt)
 	{
 		sph.m_transform.RotateAroundPointAndAxis(axis, angle, vec3());
 		vec3 pos = sph.m_transform.GetPositionF3();
-		const float sinx = sinf(pos.v.x / 3.5f);
+		const float sinx = sinf(pos._v.x / 3.5f);
 		const float y = 10.0f + 2.5f * sinx;
 	
 		//pos.v.y = y;
-		sph.m_transform.SetPosition(pos.v);
+		sph.m_transform.SetPosition(pos._v);
 	}
 
 	// temp

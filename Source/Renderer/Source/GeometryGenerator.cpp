@@ -28,7 +28,60 @@ using std::vector;
 
 void CalculateTangentsAndBitangents(BufferObject* obj)
 {
-	
+	//  Bitangent
+	//	
+	//	^  (uv1)
+	//	|	 V1   ___________________ V2 (uv2)
+	//	|		  \                 /
+	//	|		   \               /
+	//	|		    \             /
+	//	|			 \           /
+	//	|			  \         /
+	//	|  dUV1 | E1   \       /  E2 | dUV2
+	//	|			    \     /
+	//	|			     \   /
+	//	|			      \ /	
+	//	|				   V
+	//	|				   V0 (uv0)
+	//	|				   
+	// ----------------------------------------->  Tangent
+
+	Vertex* verts = obj->m_vertices;
+	const size_t countVerts = obj->m_vertexCount;
+	const size_t countIndices = obj->m_indexCount;
+	assert(countIndices % 3 == 0);
+
+	const vec3 N = vec3::Forward;	//  (0, 0, 1
+
+	for (int i = 0; i < countIndices; i += 3)
+	{
+		Vertex& v0 = verts[i];
+		Vertex& v1 = verts[i + 1];
+		Vertex& v2 = verts[i + 2];
+
+		const vec3 E1 = v1.position - v0.position;
+		const vec3 E2 = v2.position - v0.position;
+
+		const vec2 dUV1 = vec2(v1.texCoords - v0.texCoords);
+		const vec2 dUV2 = vec2(v2.texCoords - v0.texCoords);
+		
+		const float f = 1.0 / (dUV1.x() * dUV2.y()) - (dUV2.y() * dUV1.x());
+		
+		vec3 T1( f * (dUV2.y() * E1.x() - dUV1.y() * E2.x()), 
+				f * (dUV2.y() * E1.y() - dUV1.y() * E2.y()), 
+				f * (dUV2.y() * E1.z() - dUV1.y() * E2.z()));
+		T1.normalize();
+		
+		vec3 B1(	f * (-dUV2.x() * E1.x() + dUV1.x() * E2.x()), 
+				f * (-dUV2.x() * E1.y() + dUV1.x() * E2.y()), 
+				f * (-dUV2.x() * E1.z() + dUV1.x() * E2.z()));
+		B1.normalize();
+
+		v1.tangent = T1;
+		//v1.bitangent = B1;
+
+		// todo: continue...
+	}
 }
 
 GeometryGenerator::GeometryGenerator()

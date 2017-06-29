@@ -26,7 +26,7 @@ using std::vector;
 // Direct3D Transformation Pipeline: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418867(v=vs.85).aspx
 
 
-void CalculateTangentsAndBitangents(BufferObject* obj)
+void CalculateTangentsAndBitangents(BufferObject*& obj)
 {
 	//  Bitangent
 	//	
@@ -51,13 +51,13 @@ void CalculateTangentsAndBitangents(BufferObject* obj)
 	const size_t countIndices = obj->m_indexCount;
 	assert(countIndices % 3 == 0);
 
-	const vec3 N = vec3::Forward;	//  (0, 0, 1
+	const vec3 N = vec3::Forward;	//  (0, 0, 1)
 
 	for (int i = 0; i < countIndices; i += 3)
 	{
-		Vertex& v0 = verts[i];
-		Vertex& v1 = verts[i + 1];
-		Vertex& v2 = verts[i + 2];
+		Vertex& v0 = verts[obj->m_indices[i]];
+		Vertex& v1 = verts[obj->m_indices[i + 1]];
+		Vertex& v2 = verts[obj->m_indices[i + 2]];
 
 		const vec3 E1 = v1.position - v0.position;
 		const vec3 E2 = v2.position - v0.position;
@@ -65,22 +65,40 @@ void CalculateTangentsAndBitangents(BufferObject* obj)
 		const vec2 dUV1 = vec2(v1.texCoords - v0.texCoords);
 		const vec2 dUV2 = vec2(v2.texCoords - v0.texCoords);
 		
-		const float f = 1.0 / (dUV1.x() * dUV2.y()) - (dUV2.y() * dUV1.x());
-		
-		vec3 T1( f * (dUV2.y() * E1.x() - dUV1.y() * E2.x()), 
+		const float f = 1.0f / ( dUV1.x() * dUV2.y() - dUV1.y() * dUV2.x() );
+		assert(!std::isinf(f));
+
+		vec3 T( f * (dUV2.y() * E1.x() - dUV1.y() * E2.x()), 
 				f * (dUV2.y() * E1.y() - dUV1.y() * E2.y()), 
 				f * (dUV2.y() * E1.z() - dUV1.y() * E2.z()));
-		T1.normalize();
+		T.normalize();
 		
-		vec3 B1(	f * (-dUV2.x() * E1.x() + dUV1.x() * E2.x()), 
+		vec3 B(	f * (-dUV2.x() * E1.x() + dUV1.x() * E2.x()), 
 				f * (-dUV2.x() * E1.y() + dUV1.x() * E2.y()), 
 				f * (-dUV2.x() * E1.z() + dUV1.x() * E2.z()));
-		B1.normalize();
+		B.normalize();
 
-		v1.tangent = T1;
-		//v1.bitangent = B1;
+		v0.tangent = T;
+		v1.tangent = T;
+		v2.tangent = T;
 
-		// todo: continue...
+		// todo
+		//v0.bitangent = B;
+		//v1.bitangent = B;
+		//v2.bitangent = B;
+
+		if (v0.normal == vec3::Zero)
+		{
+			v0.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
+		}
+		if (v1.normal == vec3::Zero)
+		{
+			v1.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
+		}
+		if (v2.normal == vec3::Zero)
+		{
+			v2.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
+		}
 	}
 }
 
@@ -119,13 +137,13 @@ BufferObject* GeometryGenerator::Triangle()
 	bufferObj->m_vertices[2].position	= vec3(size, -size, 0.0f);
 	bufferObj->m_vertices[2].normal		= vec3(0.0f, 1.0f, 0.0f);
 	bufferObj->m_vertices[2].texCoords	= XMFLOAT2(1.0f, 1.0f);
-
-	CalculateTangentsAndBitangents(bufferObj);
-
+	
 	// indices
 	bufferObj->m_indices[0] = 0;
 	bufferObj->m_indices[1] = 1;
 	bufferObj->m_indices[2] = 2;
+
+	CalculateTangentsAndBitangents(bufferObj);
 
 	// initialize GPU buffers
 	//------------------------------------------------------------------
@@ -174,12 +192,13 @@ BufferObject* GeometryGenerator::Quad()
 	bufferObj->m_vertices[3].normal		= vec3(0.0f, 1.0f, 0.0f);
 	bufferObj->m_vertices[3].texCoords	= XMFLOAT2(1.0f, 0.0f);
 
-	// indices
 	unsigned indices[] = {
 		0, 1, 2,
 		2, 3, 0
 	};
 	memcpy(bufferObj->m_indices, indices, bufferObj->m_indexCount * sizeof(unsigned));
+
+	CalculateTangentsAndBitangents(bufferObj);
 
 	// initialize GPU buffers
 	//------------------------------------------------------------------
@@ -333,7 +352,8 @@ BufferObject* GeometryGenerator::Cube()
 	bufferObj->m_vertices[23].normal	= vec3(+0.0f, -1.0f, +0.0f);
 	bufferObj->m_vertices[23].tangent	= vec3(-1.0f, +0.0f, +0.0f);
 
-	// texture coords
+	//--------------------------------------------------------------
+
 	bufferObj->m_vertices[0].texCoords	= XMFLOAT2(+0.0f, +0.0f);
 	bufferObj->m_vertices[1].texCoords	= XMFLOAT2(+1.0f, +0.0f);
 	bufferObj->m_vertices[2].texCoords	= XMFLOAT2(+1.0f, +1.0f);
@@ -359,9 +379,6 @@ BufferObject* GeometryGenerator::Cube()
 	bufferObj->m_vertices[22].texCoords = XMFLOAT2(+0.0f, +0.0f);
 	bufferObj->m_vertices[23].texCoords = XMFLOAT2(+1.0f, +0.0f);
 
-
-
-	// Create the index buffer
 	unsigned indices[] = {
 		0, 1, 2, 0, 2, 3,		// Top
 		4, 5, 6, 4, 6, 7,		// back
@@ -372,6 +389,7 @@ BufferObject* GeometryGenerator::Cube()
 	};
 	memcpy(bufferObj->m_indices, indices, bufferObj->m_indexCount * sizeof(unsigned));
 	
+	CalculateTangentsAndBitangents(bufferObj);
 
 	// initialize GPU buffers
 	//------------------------------------------------------------------
@@ -544,7 +562,7 @@ BufferObject* GeometryGenerator::Grid(float width, float depth, unsigned m, unsi
 			float u = j * du;
 			float v = i * dv;
 			bufferObj->m_vertices[i*n + j].position		= vec3( x  , 0.0f,  z  );
-			bufferObj->m_vertices[i*n + j].normal		= vec3(0.0f, 1.0f, 0.0f);
+			bufferObj->m_vertices[i*n + j].normal		= vec3(0.0f, 0.0f, 0.0f);
 			bufferObj->m_vertices[i*n + j].texCoords	= XMFLOAT2( u  ,  v  );
 			bufferObj->m_vertices[i*n + j].tangent		= vec3(1.0f, 0.0f, 0.0f);
 		}
@@ -568,7 +586,6 @@ BufferObject* GeometryGenerator::Grid(float width, float depth, unsigned m, unsi
 	//	ABC	: (i*n +j    , i*n + j+1, (i+1)*n + j  )
 	//	CBD : ((i+1)*n +j, i*n + j+1, (i+1)*n + j+1)
 
-	//	generate indices
 	unsigned k = 0;
 	for (unsigned i = 0; i < m-1; ++i)
 	{
@@ -591,7 +608,10 @@ BufferObject* GeometryGenerator::Grid(float width, float depth, unsigned m, unsi
 		pos.y() = 0.2f * (pos.z() * sinf(20.0f * pos.x()) + pos.x() * cosf(10.0f * pos.z()));
 	}
 
-	// fill gpu buffers
+	CalculateTangentsAndBitangents(bufferObj);
+	
+
+
 	bool writable = true;
 	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{

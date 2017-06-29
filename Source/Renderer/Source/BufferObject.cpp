@@ -62,12 +62,10 @@ bool BufferObject::FillGPUBuffers(ID3D11Device* device, bool writable)
 	vertData.SysMemPitch		= 0;
 	vertData.SysMemSlicePitch	= 0;
 
-	if (FAILED(device->CreateBuffer(
-		&vertexBufferDesc, 
-		&vertData, 
-		&m_vertexBuffer)))
+	int hr = device->CreateBuffer(&vertexBufferDesc, &vertData, &m_vertexBuffer);
+	if (FAILED(hr))
 	{
-		OutputDebugString("Error: Failed to create vertex buffer!");
+		OutputDebugString("Error: Failed to create vertex buffer!\n");
 		return false;
 	}
 

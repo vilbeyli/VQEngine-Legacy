@@ -62,6 +62,7 @@ struct vec3
 
 	operator XMVECTOR() const;
 	operator XMFLOAT3() const;
+	bool operator ==(const vec3&) const;
 
 	float& x();
 	float& y();

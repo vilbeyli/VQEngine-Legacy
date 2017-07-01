@@ -20,71 +20,51 @@
 //#include "PhysicsComponent.h"
 #include "Components/Transform.h"
 
-Transform::Transform(const vec3& position, const vec3& rotation, const vec3& scale)
+Transform::Transform(const vec3& position, const Quaternion& rotation, const vec3& scale)
 	:
-	m_position(position),
-	m_rotation(rotation),
-	m_scale(scale),
+	_position(position),
+	_rotation(rotation),
+	_originalPosition(position),
+	_originalRotation(rotation),
+	_scale(scale),
 	Component(ComponentType::TRANSFORM, "Transform")
 {}
 
 Transform::~Transform() {}
 
-void Transform::Translate(XMVECTOR translation)
+Transform & Transform::operator=(const Transform & t)
 {
-	XMVECTOR pos = XMLoadFloat3(&m_position);
-	pos += translation;
-	XMStoreFloat3(&m_position, pos);
+	this->_position = t._position;
+	this->_rotation = t._rotation;
+	this->_scale    = t._scale;
+	return *this;
 }
 
-void Transform::RotateEulerRad(const XMVECTOR& rotation)
+void Transform::Translate(const vec3& translation)
 {
-	vec3 rotF3;
-	XMStoreFloat3(&rotF3._v, rotation);
-	RotateEulerRad(rotF3._v);
+	_position = _position + translation;
 }
 
-void Transform::RotateEulerRad(const vec3& rotation)
+void Transform::Scale(const vec3& scl)
 {
-
-#if defined(USE_QUATERNIONS)
-	Quaternion rot = Quaternion(rotation);	// todo;:
-	m_rotation = m_rotation * rot;
-#else
-	// transform uses euler angles
-	m_rotation.x += rotation.x;
-	m_rotation.y += rotation.y;
-	m_rotation.z += rotation.z;
-#endif
+	_scale = scl;
 }
 
-#if defined(USE_QUATERNIONS)
-void Transform::RotateQuat(const Quaternion & q)
-{
-	m_rotation = m_rotation * q;
-}
 void Transform::RotateAroundPointAndAxis(const vec3& axis, float angle, vec3& point)
-{
-	vec3 pos(m_position); vec3 R(pos - point);
-	Quaternion rot = Quaternion::FromAxisAngle(axis, angle);
+{ 
+	vec3 R(_position - point);
+	const Quaternion rot = Quaternion::FromAxisAngle(axis, angle);
 	R = rot.TransformVector(R);
-	vec3 rotatedPos = point + R;
-	m_position = rotatedPos._v;
-}
-#endif
-
-void Transform::Scale(XMVECTOR scl)
-{
-	XMStoreFloat3(&m_scale, scl);
+	_position = point + R;
 }
 
 XMMATRIX Transform::WorldTransformationMatrix() const
 {
-	XMVECTOR scale = GetScale();
-	XMVECTOR translation = GetPositionV();
+	XMVECTOR scale = _scale;
+	XMVECTOR translation = _position;
 
 	//Quaternion Q = Quaternion(GetRotationF3());
-	Quaternion Q = m_rotation;
+	Quaternion Q = _rotation;
 	XMVECTOR rotation = XMVectorSet(Q.V.x(), Q.V.y(), Q.V.z(), Q.S);
 	//XMVECTOR rotOrigin = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
 	XMVECTOR rotOrigin = XMVectorZero();
@@ -94,41 +74,17 @@ XMMATRIX Transform::WorldTransformationMatrix() const
 DirectX::XMMATRIX Transform::WorldTransformationMatrix_NoScale() const
 {
 	XMVECTOR scale = XMVectorSet(1.0f, 1.0f, 1.0f, 0.0f);
-	XMVECTOR translation = GetPositionV();
-
-	//Quaternion Q = Quaternion(GetRotationF3());
-	Quaternion Q = m_rotation;
+	XMVECTOR translation = _position;
+	Quaternion Q = _rotation;
 	XMVECTOR rotation = XMVectorSet(Q.V.x(), Q.V.y(), Q.V.z(), Q.S);
-	//XMVECTOR rotOrigin = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
 	XMVECTOR rotOrigin = XMVectorZero();
 	return XMMatrixAffineTransformation(scale, rotOrigin, rotation, translation);
 }
 
-
 XMMATRIX Transform::RotationMatrix() const
 {
-#if defined(USE_QUATERNIONS)
-	return m_rotation.Matrix();
-#else
-	float pitch = m_rotation.x;
-	float yaw = m_rotation.y;
-	float roll = m_rotation.z;
-	return  XMMatrixRotationRollPitchYaw(pitch, yaw, roll);
-#endif
+	return _rotation.Matrix();
 }
-
-// transforms a vector from local to global space
-//vec3 Transform::TransfromVector(const vec3& v)
-//{
-//	//XMMATRIX rotateX = glm::rotate(mRotation_.x*3.1415f / 180.0f, vec3(1, 0, 0));
-//	//XMMATRIX rotateY = glm::rotate(mRotation_.y*3.1415f / 180.0f, vec3(0, 1, 0));
-//	//XMMATRIX rotateZ = glm::rotate(mRotation_.z*3.1415f / 180.0f, vec3(0, 0, 1));
-//	//XMMATRIX mRot = rotateX * rotateY * rotateZ;
-//
-//	//return vec3(mRot * glm::vec4(v, 0.0));
-//	// TODO: Implement
-//	return vec3();
-//}
 
 // builds normal matrix from world matrix, ignoring translation
 // and using inverse-transpose of rotation/scale matrix

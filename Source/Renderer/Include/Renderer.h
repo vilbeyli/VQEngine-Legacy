@@ -100,7 +100,7 @@ public:
 
 	// resource interface
 	ShaderID	AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
-	TextureID	AddTexture(const std::string& shdFileName, const std::string& fileRoot = "");
+	TextureID	AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
 
 	const Texture& GetTexture(TextureID) const;
 	const ShaderID GetLineShader() const;
@@ -142,6 +142,9 @@ private:
 public:
 	static const bool FULL_SCREEN  = false;
 	static const bool VSYNC = true;	
+
+	static const char* s_shaderRoot;
+	static const char* s_textureRoot;
 
 	RenderData						m_renderData;
 

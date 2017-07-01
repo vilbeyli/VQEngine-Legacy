@@ -121,6 +121,10 @@ const vec3 vec3::RightF3		= vec3(+1.0f, +0.0f, +0.0f);
 const vec3 vec3::ForwardF3		= vec3(+0.0f, +0.0f, +1.0f);
 const vec3 vec3::BackF3			= vec3(+0.0f, +0.0f, -1.0f);
 
+const vec3 vec3::XAxis			= vec3(1.0f, 0.0f, 0.0f);
+const vec3 vec3::YAxis			= vec3(0.0f, 1.0f, 0.0f);
+const vec3 vec3::ZAxis			= vec3(0.0f, 0.0f, 1.0f);
+
 const XMVECTOR vec2::Zero		= XMVectorZero();
 const XMVECTOR vec2::Up			= XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
 const XMVECTOR vec2::Down		= XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);
@@ -150,15 +154,11 @@ vec2::vec2(const XMFLOAT2& f2)	: _v(f2) {}
 vec2::vec2(const XMFLOAT3& f3)	: _v(f3.x, f3.y) {}
 vec2::vec2(const XMVECTOR& v_in) { XMStoreFloat2(&_v, v_in); }
 
-vec3::operator XMVECTOR() const	{	return XMLoadFloat3(&_v);	}
-vec3::operator XMFLOAT3() const	{	return _v;					}
-bool vec3::operator==(const vec3 &v) const
-{
-
-	return v._v.x == _v.x && v._v.y == _v.y && v._v.z == _v.z;
-}
-vec2::operator XMVECTOR() const {	return XMLoadFloat2(&_v); }
-vec2::operator XMFLOAT2() const {	return _v; }
+vec3::operator XMVECTOR() const				{	return XMLoadFloat3(&_v);	}
+vec3::operator XMFLOAT3() const				{	return _v;					}
+bool vec3::operator==(const vec3 &v) const	{ return v._v.x == _v.x && v._v.y == _v.y && v._v.z == _v.z; }
+vec2::operator XMVECTOR() const				{	return XMLoadFloat2(&_v); }
+vec2::operator XMFLOAT2() const				{	return _v; }
 
 float& vec3::x() { return _v.x; }
 float& vec3::y() { return _v.y; }

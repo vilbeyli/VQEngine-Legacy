@@ -213,7 +213,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	//---------------------------------------------------------------------------
 	//setup the layout of the data that goes into the shader
 	std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(layouts.size());
-	UINT sz = layouts.size();
+	UINT sz = static_cast<UINT>(layouts.size());
 	for (unsigned i = 0; i < layouts.size(); ++i)
 	{
 		inputLayout[i].SemanticName			= layouts[i].semanticName.c_str();

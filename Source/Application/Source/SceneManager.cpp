@@ -132,12 +132,13 @@ void SceneManager::InitializeRoom()
 	//	}
 	//}
 
+	// TODO: redo floor init
 	// FLOOR
 	{
 		Transform& tf = m_building.floor.m_transform;
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
 		tf.SetPosition(0, -wallHieght + YOffset, 0);
-		tf.SetRotationDeg(0.0f, 0.0f, 0.0f);
+
 		//m_building.floor.m_model.m_material.color		= Color::green;
 		//m_building.floor.m_model.m_material.shininess	= 40.0f;
 		m_building.floor.m_model.m_material = Material::gold;
@@ -150,7 +151,7 @@ void SceneManager::InitializeRoom()
 		Transform& tf = m_building.ceiling.m_transform;
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
 		tf.SetPosition(0, wallHieght + YOffset, 0);
-		tf.SetRotationDeg(0.0f, 0.0f, 0.0f);
+
 		//m_building.ceiling.m_model.m_material.color		= Color::purple;
 		//m_building.ceiling.m_model.m_material.shininess	= 10.0f;
 		m_building.ceiling.m_model.m_material = Material::gold;
@@ -165,7 +166,9 @@ void SceneManager::InitializeRoom()
 		Transform& tf = m_building.wallR.m_transform;
 		tf.SetScale(floorDepth, 0.1f, wallHieght);
 		tf.SetPosition(floorWidth, YOffset, 0);
-		tf.SetRotationDeg(90.0f, 0.0f, 90.0f);
+		tf.SetXRotationDeg(-90.0f);
+		tf.RotateAroundGlobalYAxisDegrees(90.0f);
+
 		//m_building.wallR.m_model.m_material.color		= Color::gray;
 		//m_building.wallR.m_model.m_material.shininess	= 120.0f;
 		m_building.wallR.m_model.m_material = Material::bronze;
@@ -180,7 +183,9 @@ void SceneManager::InitializeRoom()
 		Transform& tf = m_building.wallL.m_transform;
 		tf.SetScale(floorDepth, 0.1f, wallHieght);
 		tf.SetPosition(-floorWidth, YOffset, 0);
-		tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
+		tf.SetXRotationDeg(-90.0f);
+		tf.RotateAroundGlobalYAxisDegrees(-90.0f);
+		//tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
 		//m_building.wallL.m_model.m_material.color		= Color::gray;
 		//m_building.wallL.m_model.m_material.shininess	= 60.0f;
 		m_building.wallL.m_model.m_material = Material::bronze;
@@ -194,7 +199,7 @@ void SceneManager::InitializeRoom()
 		Transform& tf = m_building.wallF.m_transform;
 		tf.SetScale(floorWidth, 0.1f, wallHieght);
 		tf.SetPosition(0, YOffset, floorDepth);
-		tf.SetRotationDeg(-90.0f, 0.0f, 0.0f);
+		tf.SetXRotationDeg(-90.0f);
 		//m_building.wallF.m_model.m_material.color		= Color::gray;
 		//m_building.wallF.m_model.m_material.shininess	= 90.0f;
 		m_building.wallF.m_model.m_material = Material::gold;
@@ -219,8 +224,8 @@ void SceneManager::InitializeLights()
 		Light l;
 		l.lightType_ = Light::LightType::SPOT;
 		l.tf.SetPosition(0.0f, 3.6f*13.0f, 0.0f);
-		l.tf.RotateEulerRad(XMVectorSet(180.0f*DEG2RAD, 0.0f, 0.0f, 0.0f));
-		l.tf.SetScaleUniform(0.3f);
+		l.tf.RotateAroundGlobalXAxisDegrees(180.0f);
+		l.tf.SetUniformScale(0.3f);
 		l.model.m_mesh = MESH_TYPE::CYLINDER;
 		l.model.m_material.color = Color::white;
 		l.color_ = Color::white;
@@ -233,7 +238,7 @@ void SceneManager::InitializeLights()
 	{
 		Light l;
 		l.tf.SetPosition(-8.0f, 10.0f, 0);
-		l.tf.SetScaleUniform(0.1f);
+		l.tf.SetUniformScale(0.1f);
 		l.model.m_mesh = MESH_TYPE::SPHERE;
 		l.model.m_material.color = l.color_ = Color::red;
 		l.SetLightRange(50);
@@ -242,7 +247,7 @@ void SceneManager::InitializeLights()
 	{
 		Light l;
 		l.tf.SetPosition(8.0f, 30.0f, -17.0f);
-		l.tf.SetScaleUniform(0.1f);
+		l.tf.SetUniformScale(0.1f);
 		l.model.m_mesh = MESH_TYPE::SPHERE;
 		l.model.m_material.color = Color::yellow;
 		l.color_ = Color::yellow;
@@ -252,7 +257,7 @@ void SceneManager::InitializeLights()
 	{
 		Light l;
 		l.tf.SetPosition(-140.0f, 100.0f, 140.0f);
-		l.tf.SetScaleUniform(0.5f);
+		l.tf.SetUniformScale(0.5f);
 		l.model.m_mesh				= MESH_TYPE::SPHERE;
 		l.model.m_material.color	= Color::white;
 		l.color_					= Color::white;
@@ -269,7 +274,7 @@ void SceneManager::InitializeLights()
 		float y = RandF(-15.0f, 15.0f);
 		float z = RandF(-10.0f, 20.0f);
 		l.tf.SetPosition(x, y, z);
-		l.tf.SetScaleUniform(0.1f);
+		l.tf.SetUniformScale(0.1f);
 		l.model.m_mesh = MESH_TYPE::SPHERE;
 		l.model.m_material.color = l.color_ = rndColor;
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
@@ -280,10 +285,11 @@ void SceneManager::InitializeLights()
 void SceneManager::InitializeObjectArrays()
 {
 	{	// grid arrangement ( (row * col) cubes that are 'r' apart from each other )
-		const int	row = 5,
-					col = 5;
-		const float r = 3.5f;
+		const int	row = 6,
+					col = 6;
+		const float r = 4.0f;
 
+		const std::vector<vec3> c_rowRotations = { vec3::Zero, vec3::Up, vec3::Right, vec3::Forward };
 		for (int i = 0; i < row; ++i)
 		{
 			for (int j = 0; j < col; ++j)
@@ -294,12 +300,21 @@ void SceneManager::InitializeObjectArrays()
 				float x, y, z;	// position
 				x = i * r;		y = 5.0f;	z = j * r;
 				cube.m_transform.SetPosition(x, y, z);
+				//if (i == j) cube.m_transform.SetRotationDeg(90.0f / 4 * sqrt(i*j), 0, 0);
+				if (i == j) cube.m_transform.RotateAroundAxisDegrees(c_rowRotations[1], 90.0f);
+
+				//if(i != c_rowRotations.size()) && i != j)
+				//	cube.m_transform.Rotate(c_rowRotations[i] * 90.0f * DEG2RAD);
+				//cube.m_transform.RotateDegrees(c_rowRotations[1], -90.0f);
+
 
 				// set material
-				cube.m_model.m_mesh = MESH_TYPE::CUBE;
-				cube.m_model.m_material = Material::RandomMaterial();
+				cube.m_model.m_mesh = MESH_TYPE::QUAD;
+				//cube.m_model.m_material = Material::RandomMaterial();
 				//cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
 				//cube.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+				cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("simple_normalmap.png");
+				cube.m_model.m_material.normalMap.name = "simple_normalmap.png";	// todo: rethink this
 
 				cubes.push_back(cube);
 			}
@@ -320,7 +335,7 @@ void SceneManager::InitializeObjectArrays()
 			vec3 pos = rotQ.TransformVector(radius);
 			
 			GameObject sph;
-			sph.m_transform.SetPosition(pos);
+			sph.m_transform = pos;
 			sph.m_model.m_mesh = MESH_TYPE::SPHERE;
 			sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * 50.0f)._v : vec3((static_cast<float>(numSph-i) / numSph) * 50.0f)._v;
 			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;
@@ -343,7 +358,7 @@ void SceneManager::InitializeObjectArrays()
 			vec3 pos = rotQ.TransformVector(radius);
 
 			GameObject sph;
-			sph.m_transform.SetPosition(pos);
+			sph.m_transform = pos;
 			sph.m_model.m_mesh = MESH_TYPE::SPHERE;
 			sph.m_model.m_material = Material::RandomMaterial();
 
@@ -353,15 +368,16 @@ void SceneManager::InitializeObjectArrays()
 
 	int i = 2;
 	grid.m_transform.SetPosition(30.0f, 5.0f, -4.0f * i * 2);
-	grid.m_transform.SetScaleUniform(8);
+	grid.m_transform.SetUniformScale(8);
 	--i;
 	cylinder.m_transform.SetPosition(30.0f, 5.0f, -4.0f * i);
 	--i;
 	triangle.m_transform.SetPosition(30.0f, 5.0f, -4.0f * i);
-	triangle.m_transform.SetRotationDeg(30, 0, 30.0f);
+	triangle.m_transform.SetXRotationDeg(30.0f);
+	
 	--i;
 	quad.m_transform.SetPosition(30.0f, 5.0f, -4.0f * i);
-	quad.m_transform.SetRotationDeg(30, 0, 0);
+	quad.m_transform.SetXRotationDeg(30);
 
 	    grid.m_model.m_mesh = MESH_TYPE::GRID;
 	cylinder.m_model.m_mesh = MESH_TYPE::CYLINDER;
@@ -388,7 +404,7 @@ void SceneManager::InitializePhysicsObjects()
 	m_anchor1.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	m_anchor1.m_transform.SetRotationDeg(15.0f, .0f, .0f);
 	m_anchor1.m_transform.SetPosition(-20.0f, 25.0f, 2.0f);
-	m_anchor1.m_transform.SetScaleUniform(anchorScale);
+	m_anchor1.m_transform.SetUniformScale(anchorScale);
 	//m_anchor2 = m_anchor1;
 	//m_anchor2.m_model.m_material.color = Color::orange;
 	//m_anchor2.m_transform.SetPosition(-10.0f, 4.0f, +4.0f);
@@ -401,7 +417,7 @@ void SceneManager::InitializePhysicsObjects()
 	m_anchor2.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	m_anchor2.m_transform.SetRotationDeg(15.0f, .0f, .0f);
 	m_anchor2.m_transform.SetPosition(20.0f, 25.0f, 2.0f);
-	m_anchor2.m_transform.SetScaleUniform(anchorScale);
+	m_anchor2.m_transform.SetUniformScale(anchorScale);
 
 	// PHYSICS OBJECT REFERENCE
 	auto& mat = m_physObj.m_model.m_material;
@@ -475,17 +491,32 @@ void SceneManager::UpdateCentralObj(const float dt)
 	for (auto& sph : spheres)
 	{
 		sph.m_transform.RotateAroundPointAndAxis(axis, angle, vec3());
-		vec3 pos = sph.m_transform.GetPositionF3();
+		vec3 pos = sph.m_transform._position;
 		const float sinx = sinf(pos._v.x / 3.5f);
 		const float y = 10.0f + 2.5f * sinx;
-	
-		//pos.v.y = y;
-		sph.m_transform.SetPosition(pos._v);
+
+		sph.m_transform._position = pos;
 	}
 
-	// temp
-	//if (!m_lights.empty()) m_lights[0].tf.Translate(tr * dt * 0.2f);
+	// rotate cubes
+	const int	row = 6, col = 6;
+	const float cubeRotSpeed = 100.0f; // degs/s
+	for (int i = 0; i < row; ++i)
+	{
+		for (int j = 0; j < col; ++j)
+		{
+			if (i != j)
+			{	// exclude diagonal
+
+				// rotate first row and col
+				//vec3 rotAxis = i == 0 ? vec3::Right : j == 0 ? vec3::Up : vec3();
+				vec3 rotAxis = vec3::Right;
+				cubes[i*row + j].m_transform.RotateAroundAxisDegrees(rotAxis, dt * cubeRotSpeed);
+			}
+		}
+	}
 }
+
 
 #ifdef ENABLE_ANIMATION
 void SceneManager::UpdateAnimatedModel(const float dt)
@@ -544,6 +575,7 @@ void SceneManager::Update(float dt)
 	m_pCamera->Update(dt);
 	//-------------------------------------------------------------------------------- MOVE OBJECTS ------------------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 #ifdef ENABLE_ANIMATION
 	m_model.Update(dt);
 	UpdateAnimatedModel(dt);
@@ -616,11 +648,21 @@ void SceneManager::Render()
 {
 	XMMATRIX view = m_pCamera->GetViewMatrix();
 	XMMATRIX proj = m_pCamera->GetProjectionMatrix();
+	m_pRenderer->SetConstant4x4f("view", view);
+	m_pRenderer->SetConstant4x4f("proj", proj);
+
 	m_skydome.Render(view, proj);
-	RenderLights(view, proj);
-	//RenderAnimated(view, proj);
-	RenderBuilding(view, proj);
+
+	m_pRenderer->SetShader(m_selectedShader);
+	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
+	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+	SendLightData();
+
+
+	RenderRoom();
 	RenderCentralObjects(view, proj);
+
+	RenderLights(view, proj);
 
 	// TBN test
 	//auto prevShader = m_selectedShader;
@@ -629,14 +671,8 @@ void SceneManager::Render()
 	//m_selectedShader = prevShader;
 }
 
-void SceneManager::RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const
+void SceneManager::RenderRoom() const
 {
-	m_pRenderer->SetShader(m_selectedShader);
-	m_pRenderer->SetConstant4x4f("view", view);
-	m_pRenderer->SetConstant4x4f("proj", proj);
-	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
-	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-	SendLightData();
 	m_building.Render(m_pRenderer);
 }
 
@@ -776,9 +812,9 @@ void SceneManager::SendLightData() const
 		}
 	}
 	m_pRenderer->SetConstant1f("lightCount", static_cast<float>(lightCount));
-	m_pRenderer->SetConstant1f("spotCount", static_cast<float>(spotCount));
+	m_pRenderer->SetConstant1f("spotCount" , static_cast<float>(spotCount));
 	m_pRenderer->SetConstantStruct("lights", static_cast<void*>(lights.data()));
-	m_pRenderer->SetConstantStruct("spots", static_cast<void*>(spots.data()));
+	m_pRenderer->SetConstantStruct("spots" , static_cast<void*>(spots.data()));
 
 #ifdef _DEBUG
 	if (lights.size() > MAX_LIGHTS)	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
@@ -786,7 +822,7 @@ void SceneManager::SendLightData() const
 #endif
 }
 
-void SceneManager::Building::Render(Renderer * pRenderer) const
+void SceneManager::Room::Render(Renderer * pRenderer) const
 {
 	floor.Render(pRenderer);
 	wallL.Render(pRenderer);

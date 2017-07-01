@@ -20,16 +20,11 @@
 #include "Component.h"
 #include <DirectXMath.h>
 #include "Quaternion.h"
-
-using namespace DirectX;
-
 #include "utils.h"
 
-#define USE_QUATERNIONS
-
-class Transform : public Component
+struct Transform : public Component
 {
-	friend class RigidBody; // hack
+	friend class RigidBody;
 public:
 	//static Transform* Deserialize(Document & params);
 	//virtual void		Serialize(Value& val, Document::AllocatorType& allocator) override;
@@ -37,73 +32,50 @@ public:
 	
 	// CONSTRUCTOR / DESTRUCTOR
 	//-----------------------------------------------------------------------------------
-	Transform(  const vec3& position = vec3(0.0f, 0.0f, 0.0f),
-				const vec3& rotation = vec3(0.0f, 0.0f, 0.0f),
-				const vec3& scale    = vec3(1.0f, 1.0f, 1.0f));
+	Transform(  const vec3&			position = vec3(0.0f, 0.0f, 0.0f),
+				const Quaternion&	rotation = Quaternion::Identity(),
+				const vec3&			scale    = vec3(1.0f, 1.0f, 1.0f));
 	~Transform();
+	Transform& operator=(const Transform&);
 
 	// GETTERS & SETTERS
 	//-----------------------------------------------------------------------------------
-	inline XMVECTOR GetPositionV()  const { return XMLoadFloat3(&m_position); }
-	inline XMFLOAT3 GetPositionF3() const { return m_position; }
-#if !defined(USE_QUATERNIONS)
-	inline XMVECTOR GetRotationV()  const { return XMLoadFloat3(&m_rotation); }
-	inline XMFLOAT3 GetRotationF3() const { return m_rotation; }
-#else
-	inline Quaternion GetRotationQ() const { return m_rotation; }
-#endif
-	inline XMVECTOR GetScale()		const { return XMLoadFloat3(&m_scale); }
-	inline XMFLOAT3 GetScaleF3()	const { return m_scale; }
+	inline void SetXRotationDeg(float xDeg)            { _rotation = Quaternion::FromAxisAngle(vec3::Right  , xDeg * DEG2RAD); }
+	inline void SetYRotationDeg(float yDeg)            { _rotation = Quaternion::FromAxisAngle(vec3::Up     , yDeg * DEG2RAD); }
+	inline void SetZRotationDeg(float zDeg)            { _rotation = Quaternion::FromAxisAngle(vec3::Forward, zDeg * DEG2RAD); }
+	inline void SetScale(float x, float y, float z)    { _scale	= vec3(x, y, z); }
+	inline void SetUniformScale(float s)		       { _scale	= vec3(s, s, s); }
+	inline void SetPosition(float x, float y, float z) { _position = vec3(x, y, z); }
 
-#if !defined(USE_QUATERNIONS)
-	inline void SetRotation(XMFLOAT3 rot) { m_rotation = rot; }
-	inline void SetRotation(float x, float y, float z) { m_rotation = XMFLOAT3(x, y, z); }
-#else
-	inline void SetRotationQ(const Quaternion& Q) { m_rotation = Q; }
-#endif
-	inline void SetRotationDeg(float x, float y, float z)	{ m_rotation = vec3(x * DEG2RAD, y * DEG2RAD, z * DEG2RAD); }
-	inline void SetScale(XMFLOAT3 scale)					{ m_scale = scale; }
-	inline void SetScale(float x, float y, float z)			{ m_scale = XMFLOAT3(x, y, z); }
-	inline void SetScaleUniform(float scl)					{ m_scale = XMFLOAT3(scl, scl, scl); }
-	inline void SetPosition(const vec3& val)				{ m_position = val; }
-	inline void SetPosition(const XMVECTOR& val)			{ XMStoreFloat3(&m_position, val); }
-	inline void SetPosition(float x, float y, float z)		{ m_position = XMFLOAT3(x, y, z); }
-
-	// MOVEMENT
+	// TRANSFORMATIONS
 	//-----------------------------------------------------------------------------------
-	// Translates the position by the provided vector
-	void Translate(XMVECTOR translation);
-
-	// Rotates the transform by provided vector (adds x,y,z radian angles)
-	void RotateEulerRad(const XMVECTOR& rotation);
-	void RotateEulerRad(const vec3& rotation);
-	void RotateQuat(const Quaternion& q);
+	void Translate(const vec3& translation);
+	void Scale(const vec3& scl);
+	
 	void RotateAroundPointAndAxis(const vec3& axis, float angle, vec3& point);
+	inline void RotateAroundAxisRadians(const vec3& axis, float angle) { RotateInWorldSpace(Quaternion::FromAxisAngle(axis, angle)); }
+	inline void RotateAroundAxisDegrees(const vec3& axis, float angle) { RotateInWorldSpace(Quaternion::FromAxisAngle(axis, angle * DEG2RAD)); }
 
-	void Scale(XMVECTOR scl);
+	inline void RotateAroundLocalXAxisDegrees(float angle)	{ RotateInLocalSpace(Quaternion::FromAxisAngle(vec3::XAxis, std::forward<float>(angle * DEG2RAD))); }
+	inline void RotateAroundLocalYAxisDegrees(float angle)	{ RotateInLocalSpace(Quaternion::FromAxisAngle(vec3::YAxis, std::forward<float>(angle * DEG2RAD))); }
+	inline void RotateAroundLocalZAxisDegrees(float angle)	{ RotateInLocalSpace(Quaternion::FromAxisAngle(vec3::ZAxis, std::forward<float>(angle * DEG2RAD))); }
+	inline void RotateAroundGlobalXAxisDegrees(float angle)	{ RotateAroundAxisDegrees(vec3::XAxis, std::forward<float>(angle)); }
+	inline void RotateAroundGlobalYAxisDegrees(float angle)	{ RotateAroundAxisDegrees(vec3::YAxis, std::forward<float>(angle)); }
+	inline void RotateAroundGlobalZAxisDegrees(float angle)	{ RotateAroundAxisDegrees(vec3::ZAxis, std::forward<float>(angle)); }
 
-	// Returns the Model Transformation Matrix
+	inline void RotateInWorldSpace(const Quaternion& q)	{ _rotation = q * _rotation;	}
+	inline void RotateInLocalSpace(const Quaternion& q)	{ _rotation = _rotation * q;	}
+
+
 	XMMATRIX WorldTransformationMatrix() const;
 	XMMATRIX WorldTransformationMatrix_NoScale() const;
 	static XMMATRIX NormalMatrix(const XMMATRIX& world);
 	XMMATRIX RotationMatrix() const;
 
-	// transforms a vector from local to global space
-	//XMFLOAT3 TransfromVector(XMFLOAT3 v);
-
-private:
-	// TRANSLATION
-	XMFLOAT3	m_position;
-
-	// ROTATION
-#if !defined(USE_QUATERNIONS)
-	XMFLOAT3	m_rotation;	// radians		
-#else
-	Quaternion	m_rotation;
-#endif
-
-	// SCALE
-	XMFLOAT3 m_scale;
-
+	vec3				_position;
+	Quaternion			_rotation;
+	vec3				_scale;
+	const vec3			_originalPosition;
+	const Quaternion	_originalRotation;
 };
 

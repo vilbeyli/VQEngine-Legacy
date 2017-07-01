@@ -53,6 +53,10 @@ struct vec3
 	static const vec3 ForwardF3;
 	static const vec3 BackF3;
 
+	static const vec3 XAxis;
+	static const vec3 YAxis;
+	static const vec3 ZAxis;
+
 	vec3();
 	vec3(const vec3& v_in);
 	vec3(float, float, float);

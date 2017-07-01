@@ -32,8 +32,8 @@ public:
 	static vec3 ToEulerRad(const Quaternion& Q);
 	static vec3 ToEulerDeg(const Quaternion& Q);
 	//-----------------------------------------------
-	Quaternion(float roll, float pitch, float yaw);
-	Quaternion(const vec3& rollPitchYaw);
+	//Quaternion(float roll, float pitch, float yaw);
+	//Quaternion(const vec3& rollPitchYaw);
 	Quaternion(const XMMATRIX& rotMatrix);
 	Quaternion(float s, const XMVECTOR& v);
 	//-----------------------------------------------

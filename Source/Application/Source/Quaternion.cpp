@@ -20,7 +20,6 @@
 #include <cmath>
 #include <algorithm>	// min, max
 
-// private ctors : used by operator()s
 Quaternion::Quaternion(float s, const vec3& v)
 	:
 	S(s),
@@ -29,43 +28,38 @@ Quaternion::Quaternion(float s, const vec3& v)
 
 Quaternion::Quaternion() : S(0), V() {}
 
-// public ctors
-Quaternion::Quaternion(float pitch, float yaw, float roll)
-{
-	// source: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
-	float t0 = std::cosf(yaw * 0.5f);
-	float t1 = std::sinf(yaw * 0.5f);
-	float t2 = std::cosf(roll * 0.5f);
-	float t3 = std::sinf(roll * 0.5f);
-	float t4 = std::cosf(pitch * 0.5f);
-	float t5 = std::sinf(pitch * 0.5f);
-
-	float w = t0 * t2 * t4 + t1 * t3 * t5;
-	float x = t0 * t3 * t4 - t1 * t2 * t5;
-	float y = t0 * t2 * t5 + t1 * t3 * t4;
-	float z = t1 * t2 * t4 - t0 * t3 * t5;
-
-	S = w;
-	//V = vec3(y, x, z);
-	V = vec3(y, z, x);	// i need an explanation why this works and not others:( 
-							// read: euler vs yawpitchroll
-	//V = vec3(z, x, y);
-}
-
 // Pitch:	X
 // Yaw:		Y
 // Roll:	Z
-Quaternion::Quaternion(const vec3& pitchYawRoll)
-	:
-	Quaternion(pitchYawRoll.x(), pitchYawRoll.y(), pitchYawRoll.z())
-{}
+//Quaternion::Quaternion(float pitch, float yaw, float roll)
+//{
+//	// source: https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+//	float t0 = std::cosf(yaw * 0.5f);
+//	float t1 = std::sinf(yaw * 0.5f);
+//	float t2 = std::cosf(roll * 0.5f);
+//	float t3 = std::sinf(roll * 0.5f);
+//	float t4 = std::cosf(pitch * 0.5f);
+//	float t5 = std::sinf(pitch * 0.5f);
+//
+//	float w = t0 * t2 * t4 + t1 * t3 * t5;
+//	float x = t0 * t3 * t4 - t1 * t2 * t5;
+//	float y = t0 * t2 * t5 + t1 * t3 * t4;
+//	float z = t1 * t2 * t4 - t0 * t3 * t5;
+//
+//	S = w;
+//	//V = vec3(y, x, z);
+//	V = vec3(y, z, x);	// i need an explanation why this works and not others:( 
+//							// read: euler vs yawpitchroll
+//	//V = vec3(z, x, y);
+//}
 
-// Creates a quaternion from a rotation matrix
+//Quaternion::Quaternion(const vec3& pitchYawRoll)
+//	:
+//	Quaternion(pitchYawRoll.x(), pitchYawRoll.y(), pitchYawRoll.z())
+//{}
+
 Quaternion::Quaternion(const XMMATRIX& rotMatrix)
 {
-	// THIS CODE BELOW WONT WORK:	directly taken from the PDFs, probably right-left hand issue,
-	//								and I don't know how to fix it
-	// TODO: figure this part out later
 	//const XMMATRIX & m = rotMatrix;
 	//S = 0.5f * sqrt(m.r[0].m128_f32[0] + m.r[1].m128_f32[1] + m.r[2].m128_f32[2] + 1);
 	//V.x = (m.r[2].m128_f32[1] - m.r[1].m128_f32[2]) / (4.0f * S);

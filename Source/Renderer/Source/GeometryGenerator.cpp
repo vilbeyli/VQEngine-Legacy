@@ -177,20 +177,20 @@ BufferObject* GeometryGenerator::Quad()
 
 	// vertices - CW
 	bufferObj->m_vertices[0].position	= vec3(-size, -size, 0.0f);
-	bufferObj->m_vertices[0].normal		= vec3(0.0f, 1.0f, 0.0f);
-	bufferObj->m_vertices[0].texCoords	= XMFLOAT2(0.0f, 0.0f);
+	bufferObj->m_vertices[0].normal		= vec3(0.0f, 0.0f, -1.0f);
+	bufferObj->m_vertices[0].texCoords	= XMFLOAT2(0.0f, 1.0f);
 
 	bufferObj->m_vertices[1].position	= vec3(-size, +size, 0.0f);
-	bufferObj->m_vertices[1].normal		= vec3(0.0f, 1.0f, 0.0f);
-	bufferObj->m_vertices[1].texCoords	= XMFLOAT2(0.0f, 1.0f);
+	bufferObj->m_vertices[1].normal		= vec3(0.0f, 0.0f, -1.0f);
+	bufferObj->m_vertices[1].texCoords	= XMFLOAT2(0.0f, 0.0f);
 
 	bufferObj->m_vertices[2].position	= vec3(+size, +size, 0.0f);
-	bufferObj->m_vertices[2].normal		= vec3(0.0f, 1.0f, 0.0f);
-	bufferObj->m_vertices[2].texCoords	= XMFLOAT2(1.0f, 1.0f);
+	bufferObj->m_vertices[2].normal		= vec3(0.0f, 0.0f, -1.0f);
+	bufferObj->m_vertices[2].texCoords	= XMFLOAT2(1.0f, 0.0f);
 
 	bufferObj->m_vertices[3].position	= vec3(+size, -size, 0.0f);
-	bufferObj->m_vertices[3].normal		= vec3(0.0f, 1.0f, 0.0f);
-	bufferObj->m_vertices[3].texCoords	= XMFLOAT2(1.0f, 0.0f);
+	bufferObj->m_vertices[3].normal		= vec3(0.0f, 0.0f, -1.0f);
+	bufferObj->m_vertices[3].texCoords	= XMFLOAT2(1.0f, 1.0f);
 
 	unsigned indices[] = {
 		0, 1, 2,
@@ -248,6 +248,34 @@ BufferObject* GeometryGenerator::Cube()
 //		|________________________|/6			
 //		7
 
+	bufferObj->m_vertices[0].texCoords	= XMFLOAT2(+0.0f, +0.0f);
+	bufferObj->m_vertices[1].texCoords	= XMFLOAT2(+1.0f, +0.0f);
+	bufferObj->m_vertices[2].texCoords	= XMFLOAT2(+1.0f, +1.0f);
+
+	bufferObj->m_vertices[3].texCoords	= XMFLOAT2(+0.0f, +1.0f);
+	bufferObj->m_vertices[4].texCoords	= XMFLOAT2(+0.0f, +0.0f);
+	bufferObj->m_vertices[5].texCoords	= XMFLOAT2(+1.0f, +0.0f);
+
+	bufferObj->m_vertices[6].texCoords	= XMFLOAT2(+1.0f, +1.0f);
+	bufferObj->m_vertices[7].texCoords	= XMFLOAT2(+0.0f, +1.0f);
+	bufferObj->m_vertices[8].texCoords	= XMFLOAT2(+0.0f, +0.0f);
+
+	bufferObj->m_vertices[9].texCoords	= XMFLOAT2(+1.0f, +0.0f);
+	bufferObj->m_vertices[10].texCoords = XMFLOAT2(+1.0f, +1.0f);
+	bufferObj->m_vertices[11].texCoords = XMFLOAT2(+0.0f, +1.0f);
+
+	bufferObj->m_vertices[12].texCoords = XMFLOAT2(+0.0f, +0.0f);
+	bufferObj->m_vertices[13].texCoords = XMFLOAT2(+1.0f, +0.0f);
+	bufferObj->m_vertices[14].texCoords = XMFLOAT2(+1.0f, +1.0f);
+	bufferObj->m_vertices[15].texCoords = XMFLOAT2(+0.0f, +1.0f);
+	bufferObj->m_vertices[16].texCoords = XMFLOAT2(+0.0f, +0.0f);
+	bufferObj->m_vertices[17].texCoords = XMFLOAT2(+1.0f, +0.0f);
+	bufferObj->m_vertices[18].texCoords = XMFLOAT2(+1.0f, +1.0f);
+	bufferObj->m_vertices[19].texCoords = XMFLOAT2(+0.0f, +1.0f);
+	bufferObj->m_vertices[20].texCoords = XMFLOAT2(+1.0f, +1.0f);
+	bufferObj->m_vertices[21].texCoords = XMFLOAT2(+0.0f, +1.0f);
+	bufferObj->m_vertices[22].texCoords = XMFLOAT2(+0.0f, +0.0f);
+	bufferObj->m_vertices[23].texCoords = XMFLOAT2(+1.0f, +0.0f);
 	// vertices - CW 
 	// TOP
 	bufferObj->m_vertices[0].position	= vec3(-1.0f, +1.0f, +1.0f);
@@ -354,38 +382,14 @@ BufferObject* GeometryGenerator::Cube()
 
 	//--------------------------------------------------------------
 
-	bufferObj->m_vertices[0].texCoords	= XMFLOAT2(+0.0f, +0.0f);
-	bufferObj->m_vertices[1].texCoords	= XMFLOAT2(+1.0f, +0.0f);
-	bufferObj->m_vertices[2].texCoords	= XMFLOAT2(+1.0f, +1.0f);
-	bufferObj->m_vertices[3].texCoords	= XMFLOAT2(+0.0f, +1.0f);
-	bufferObj->m_vertices[4].texCoords	= XMFLOAT2(+0.0f, +0.0f);
-	bufferObj->m_vertices[5].texCoords	= XMFLOAT2(+1.0f, +0.0f);
-	bufferObj->m_vertices[6].texCoords	= XMFLOAT2(+1.0f, +1.0f);
-	bufferObj->m_vertices[7].texCoords	= XMFLOAT2(+0.0f, +1.0f);
-	bufferObj->m_vertices[8].texCoords	= XMFLOAT2(+0.0f, +0.0f);
-	bufferObj->m_vertices[9].texCoords	= XMFLOAT2(+1.0f, +0.0f);
-	bufferObj->m_vertices[10].texCoords = XMFLOAT2(+1.0f, +1.0f);
-	bufferObj->m_vertices[11].texCoords = XMFLOAT2(+0.0f, +1.0f);
-	bufferObj->m_vertices[12].texCoords = XMFLOAT2(+0.0f, +0.0f);
-	bufferObj->m_vertices[13].texCoords = XMFLOAT2(+1.0f, +0.0f);
-	bufferObj->m_vertices[14].texCoords = XMFLOAT2(+1.0f, +1.0f);
-	bufferObj->m_vertices[15].texCoords = XMFLOAT2(+0.0f, +1.0f);
-	bufferObj->m_vertices[16].texCoords = XMFLOAT2(+1.0f, +1.0f);
-	bufferObj->m_vertices[17].texCoords = XMFLOAT2(+0.0f, +1.0f);
-	bufferObj->m_vertices[18].texCoords = XMFLOAT2(+0.0f, +0.0f);
-	bufferObj->m_vertices[19].texCoords = XMFLOAT2(+1.0f, +0.0f);
-	bufferObj->m_vertices[20].texCoords = XMFLOAT2(+1.0f, +1.0f);
-	bufferObj->m_vertices[21].texCoords = XMFLOAT2(+0.0f, +1.0f);
-	bufferObj->m_vertices[22].texCoords = XMFLOAT2(+0.0f, +0.0f);
-	bufferObj->m_vertices[23].texCoords = XMFLOAT2(+1.0f, +0.0f);
 
 	unsigned indices[] = {
 		0, 1, 2, 0, 2, 3,		// Top
 		4, 5, 6, 4, 6, 7,		// back
 		8, 9, 10, 8, 10, 11,	// Right
-		12, 13, 14, 12, 14, 15, // Left
-		16, 17, 18, 16, 18, 19, // Back
-		20, 21, 22, 20, 22, 23, // Bottom
+		12, 13, 14, 12, 14, 15, // Back
+		16, 17, 18, 16, 18, 19, // Left
+		20, 22, 21, 20, 23, 22, // Bottom
 	};
 	memcpy(bufferObj->m_indices, indices, bufferObj->m_indexCount * sizeof(unsigned));
 	
@@ -396,7 +400,7 @@ BufferObject* GeometryGenerator::Cube()
 	bool writable = false;	
 	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{
-		OutputDebugString("Error Quad creation failed");
+		OutputDebugString("Error cube creation failed");
 		delete bufferObj;
 		bufferObj = nullptr;
 	}

@@ -99,7 +99,7 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 		break;
 	case LightType::SPOT:
 	{
-		XMVECTOR pos = tf.GetPositionV();
+		XMVECTOR pos = tf._position;
 		XMMATRIX view = GetViewMatrix();
 		XMMATRIX proj = XMMatrixPerspectiveFovLH((spotAngle_* 1.25f) * DEG2RAD, 1.0f, 0.1f, 100.0f);
 		LSpaceMat = proj * view;
@@ -127,7 +127,7 @@ XMMATRIX Light::GetViewMatrix() const
 		XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
 		lookAt	= XMVector3TransformCoord(lookAt, tf.RotationMatrix());
 		up		= XMVector3TransformCoord(up,	  tf.RotationMatrix());
-		XMVECTOR pos = tf.GetPositionV();
+		XMVECTOR pos = tf._position;
 		XMVECTOR taraget = pos + lookAt;
 		ViewMatarix = XMMatrixLookAtLH(pos, taraget, up);
 		break;
@@ -174,7 +174,7 @@ ShaderLight Light::ShaderLightStruct() const
 	}
 
 	ShaderLight sl;
-	sl.position = tf.GetPositionF3();
+	sl.position = tf._position;
 	sl.color = color_.Value();
 	sl.brightness = brightness_;
 	sl.halfAngle = spotAngle_ * DEG2RAD / 2;

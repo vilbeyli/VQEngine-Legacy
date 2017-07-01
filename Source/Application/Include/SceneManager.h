@@ -75,7 +75,7 @@ private:
 	void UpdateAnimatedModel(const float dt);
 #endif
 
-	void RenderBuilding(const XMMATRIX& view, const XMMATRIX& proj) const;
+	void RenderRoom() const;
 	void RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const;
 	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
 	void RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj); // todo: const
@@ -95,7 +95,7 @@ private:
 	std::vector<Light>	m_lights;
 
 	// scene variables
-	struct Building {
+	struct Room {
 		GameObject floor;
 		GameObject wallL;
 		GameObject wallR;

@@ -30,8 +30,9 @@
 #include <cassert>
 
 #define SHADER_HOTSWAP 0
-const char* shaderRoot	= "Data/Shaders/";
-const char* textureRoot = "Data/Textures/";
+
+const char* Renderer::s_shaderRoot = "Data/Shaders/";
+const char* Renderer::s_textureRoot = "Data/Textures/";
 
 Renderer::Renderer()
 	:
@@ -48,7 +49,6 @@ Renderer::Renderer()
 		memset(&*m_rasterizerStates[i], 0, sizeof(*m_rasterizerStates[i]));
 	}
 }
-
 
 Renderer::~Renderer()
 {
@@ -171,17 +171,17 @@ void Renderer::LoadShaders()
 		{ "TANGENT",	FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 },
 	};
-	m_renderData.unlitShader	= AddShader("UnlitTextureColor", shaderRoot, layout);
-	m_renderData.texCoordShader = AddShader("TextureCoord", shaderRoot, layout);
-	m_renderData.normalShader	= AddShader("Normal", shaderRoot, layout);
-	m_renderData.tangentShader	= AddShader("Tangent", shaderRoot, layout);
-	m_renderData.binormalShader	= AddShader("Binormal", shaderRoot, layout);
-	m_renderData.phongShader	= AddShader("Forward_Phong", shaderRoot, layout);
-	m_renderData.lineShader		= AddShader("Line", shaderRoot, layout, true);
-	m_renderData.TNBShader		= AddShader("TNB", shaderRoot, layout, true);
+	m_renderData.unlitShader	= AddShader("UnlitTextureColor", s_shaderRoot, layout);
+	m_renderData.texCoordShader = AddShader("TextureCoord", s_shaderRoot, layout);
+	m_renderData.normalShader	= AddShader("Normal", s_shaderRoot, layout);
+	m_renderData.tangentShader	= AddShader("Tangent", s_shaderRoot, layout);
+	m_renderData.binormalShader	= AddShader("Binormal", s_shaderRoot, layout);
+	m_renderData.phongShader	= AddShader("Forward_Phong", s_shaderRoot, layout);
+	m_renderData.lineShader		= AddShader("Line", s_shaderRoot, layout, true);
+	m_renderData.TNBShader		= AddShader("TNB", s_shaderRoot, layout, true);
 	
-	m_renderData.exampleTex		= AddTexture("bricks_d.png", textureRoot);
-	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", textureRoot);
+	m_renderData.exampleTex		= AddTexture("bricks_d.png", s_textureRoot);
+	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", s_textureRoot);
 }
 
 void Renderer::PollThread()
@@ -357,7 +357,7 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 }
 
 // assumes unique shader file names (even in different folders)
-TextureID Renderer::AddTexture(const std::string& textureFileName, const std::string& fileRoot /*= ""*/)
+TextureID Renderer::AddTexture(const std::string& textureFileName, const std::string& fileRoot)
 {
 	// example params: "bricks_d.png", "Data/Textures/"
 	std::string path = fileRoot + textureFileName;
@@ -401,7 +401,7 @@ TextureID Renderer::AddTexture(const std::string& textureFileName, const std::st
 	}
 	else
 	{
-		OutputDebugString("Error loading texture file");
+		OutputDebugString("Error loading texture file\n");
 		return -1;
 	}
 
@@ -775,7 +775,7 @@ void Renderer::Apply()
 	//else OutputDebugString("Warning: no active buffer object (-1)\n");
 
 	// viewport
-	m_deviceContext->RSSetState(m_rasterizerStates[CULL_NONE]);	// TODO: m_activeRS?
+	m_deviceContext->RSSetState(m_rasterizerStates[CULL_BACK]);	// TODO: m_activeRS?
 
 	// test: TODO remove later
 	//D3D11_RASTERIZER_DESC rsDesc;

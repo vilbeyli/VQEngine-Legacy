@@ -121,10 +121,8 @@ void SceneManager::InitializeRoom()
 		//m_building.ceiling.m_model.m_material.color		= Color::purple;
 		//m_building.ceiling.m_model.m_material.shininess	= 10.0f;
 		m_room.ceiling.m_model.m_material = Material::gold;
-		//m_building.ceiling.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
-		//m_building.ceiling.m_model.m_material.diffuseMap.name = "bricks_n.png";	// todo: rethink this
-		m_room.ceiling.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
-		m_room.ceiling.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+		//m_building.ceiling.m_model.m_material.diffuseMap = m_renderer->AddTexture("bricks_d.png");
+		m_room.ceiling.m_model.m_material.normalMap = m_pRenderer->AddTexture("metal2.png");
 	}
 
 	// RIGHT WALL
@@ -139,10 +137,9 @@ void SceneManager::InitializeRoom()
 		//m_building.wallR.m_model.m_material.color		= Color::gray;
 		//m_building.wallR.m_model.m_material.shininess	= 120.0f;
 		m_room.wallR.m_model.m_material = Material::bronze;
-		m_room.wallR.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
-		m_room.wallR.m_model.m_material.normalMap.id  = m_pRenderer->AddTexture("bricks_n.png");
-		m_room.wallR.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
-		m_room.wallR.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
+
+		m_room.wallR.m_model.m_material.diffuseMap = m_pRenderer->AddTexture("metal2.png");
+		m_room.wallR.m_model.m_material.normalMap  = m_pRenderer->AddTexture("nrm_metal2.png");
 	}
 
 	// LEFT WALL
@@ -156,10 +153,8 @@ void SceneManager::InitializeRoom()
 		//m_building.wallL.m_model.m_material.color		= Color::gray;
 		//m_building.wallL.m_model.m_material.shininess	= 60.0f;
 		m_room.wallL.m_model.m_material = Material::bronze;
-		m_room.wallL.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
-		m_room.wallL.m_model.m_material.normalMap.id  = m_pRenderer->AddTexture("bricks_n.png");
-		m_room.wallL.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
-		m_room.wallL.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
+		m_room.wallL.m_model.m_material.diffuseMap = m_pRenderer->AddTexture("metal2.png");;
+		m_room.wallL.m_model.m_material.normalMap  = m_pRenderer->AddTexture("nrm_metal2.png");;
 	}
 	// WALL
 	{
@@ -170,10 +165,8 @@ void SceneManager::InitializeRoom()
 		//m_building.wallF.m_model.m_material.color		= Color::gray;
 		//m_building.wallF.m_model.m_material.shininess	= 90.0f;
 		m_room.wallF.m_model.m_material = Material::gold;
-		m_room.wallF.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
-		m_room.wallF.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
-		m_room.wallF.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
-		m_room.wallF.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
+		m_room.wallF.m_model.m_material.diffuseMap = m_pRenderer->AddTexture("metal2.png");
+		m_room.wallF.m_model.m_material.normalMap  = m_pRenderer->AddTexture("nrm_metal2.png");
 	}
 
 	m_room.floor.m_model.m_mesh = MESH_TYPE::CUBE;
@@ -277,24 +270,20 @@ void SceneManager::InitializeObjectArrays()
 				if (j == 3) cube.m_transform.RotateAroundAxisDegrees(vec3::ZAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
 
 				cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, -90.0f);
-				//if(i != c_rowRotations.size()) && i != j)
-				//	cube.m_transform.Rotate(c_rowRotations[i] * 90.0f * DEG2RAD);
-				//cube.m_transform.RotateDegrees(c_rowRotations[1], -90.0f);
+
 
 
 				// set material
 				cube.m_model.m_mesh = MESH_TYPE::CUBE;
 				//cube.m_model.m_material = Material::RandomMaterial();
 				//cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
-				//cube.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
-				cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("simple_normalmap.png");
-				cube.m_model.m_material.normalMap.name = "simple_normalmap.png";	// todo: rethink this
+				cube.m_model.m_material.normalMap = m_pRenderer->AddTexture("simple_normalmap.png");
 
 				cubes.push_back(cube);
 			}
 		}
 
-		// initial direction for spot lightt
+		// initial direction for spot light
 		m_lights[0].tf.RotateAroundGlobalZAxisDegrees(30.0f);
 
 	}
@@ -303,7 +292,7 @@ void SceneManager::InitializeObjectArrays()
 		const size_t numSph = 12;
 
 		const float rot = 2.0f * XM_PI / numSph;
-		const vec3 radius(r, 10.0f, 0.0f);
+		const vec3 radius(r, 20.0f, 0.0f);
 		//const auto axis = XMVector3Normalize(global_U + global_F);
 		const vec3 axis = vec3::Up;
 		for (size_t i = 0; i < numSph; i++)
@@ -451,44 +440,6 @@ void SceneManager::Update(float dt)
 	// F9-F12 | Shader Parameters
 	if (ENGINE->INP()->IsKeyTriggered(120)) m_gammaCorrection = !m_gammaCorrection;
 	//if (ENGINE->INP()->IsKeyTriggered(52)) TBNMode = 3;
-
-
-	//-------------------------------------------------------------------------------- ANIMATE LIGHTS ----------------------------------------------------------------
-	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
-	//static double accumulator = 0;
-	//accumulator += dt;
-	//if (RAND_LIGHT_COUNT > 0 && accumulator > DISCO_PERIOD)
-	//{
-	//	//// shuffling won't rearrange data, just the means of indexing.
-	//	//char info[256];
-	//	//sprintf_s(info, "Shuffle(L1:(%f, %f, %f)\tL2:(%f, %f, %f)\n",
-	//	//	m_lights[0].tf.GetPositionF3().x, m_lights[0].tf.GetPositionF3().y,	m_lights[0].tf.GetPositionF3().z,
-	//	//	m_lights[1].tf.GetPositionF3().x, m_lights[1].tf.GetPositionF3().y, m_lights[1].tf.GetPositionF3().z);
-	//	//OutputDebugString(info);
-	//	//static auto engine = std::default_random_engine{};
-	//	//std::shuffle(std::begin(m_lights), std::end(m_lights), engine);
-
-	//	//// randomize all lights
-	//	//for (Light& l : m_lights)
-	//	//{
-	//	//	size_t i = rand() % Color::Palette().size();
-	//	//	Color c = Color::Color::Palette()[i];
-	//	//	l.color_ = c;
-	//	//	l.model.m_material.color = c;
-	//	//}
-
-	//	// randomize all lights except 1 and 2
-	//	for (unsigned j = 3; j<m_lights.size(); ++j)
-	//	{
-	//		Light& l = m_lights[j];
-	//		size_t i = rand() % Color::Palette().size();
-	//		Color c = Color::Color::Palette()[i];
-	//		l.color_ = c;
-	//		l.model.m_material.color = c;
-	//	}
-
-	//	accumulator = 0;
-	//}
 
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
@@ -835,3 +786,42 @@ for (const auto& pObj : m_vPhysObj)
 
 m_springSys.RenderSprings(m_pRenderer, view, proj);
 #endif
+
+
+//-------------------------------------------------------------------------------- ANIMATE LIGHTS ----------------------------------------------------------------
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------
+//static double accumulator = 0;
+//accumulator += dt;
+//if (RAND_LIGHT_COUNT > 0 && accumulator > DISCO_PERIOD)
+//{
+//	//// shuffling won't rearrange data, just the means of indexing.
+//	//char info[256];
+//	//sprintf_s(info, "Shuffle(L1:(%f, %f, %f)\tL2:(%f, %f, %f)\n",
+//	//	m_lights[0].tf.GetPositionF3().x, m_lights[0].tf.GetPositionF3().y,	m_lights[0].tf.GetPositionF3().z,
+//	//	m_lights[1].tf.GetPositionF3().x, m_lights[1].tf.GetPositionF3().y, m_lights[1].tf.GetPositionF3().z);
+//	//OutputDebugString(info);
+//	//static auto engine = std::default_random_engine{};
+//	//std::shuffle(std::begin(m_lights), std::end(m_lights), engine);
+
+//	//// randomize all lights
+//	//for (Light& l : m_lights)
+//	//{
+//	//	size_t i = rand() % Color::Palette().size();
+//	//	Color c = Color::Color::Palette()[i];
+//	//	l.color_ = c;
+//	//	l.model.m_material.color = c;
+//	//}
+
+//	// randomize all lights except 1 and 2
+//	for (unsigned j = 3; j<m_lights.size(); ++j)
+//	{
+//		Light& l = m_lights[j];
+//		size_t i = rand() % Color::Palette().size();
+//		Color c = Color::Color::Palette()[i];
+//		l.color_ = c;
+//		l.model.m_material.color = c;
+//	}
+
+//	accumulator = 0;
+//}
+

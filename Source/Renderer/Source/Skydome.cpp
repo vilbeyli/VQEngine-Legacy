@@ -44,6 +44,6 @@ void Skydome::Init(Renderer* renderer, const char* tex, float scale, int shader)
 {
 	pRenderer = renderer;
 	skydomeObj.m_transform.SetUniformScale(scale);
-	skydomeTex = renderer->AddTexture(tex, "Data/Textures/");
+	skydomeTex = renderer->AddTexture(tex, "Data/Textures/").id;
 	skydomeShader = shader;	
 }

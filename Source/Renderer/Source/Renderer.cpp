@@ -150,8 +150,8 @@ void Renderer::GeneratePrimitives()
 
 	// sphere parameters
 	const float sphRadius = 2.0f;
-	const unsigned sphRingCount = 90;
-	const unsigned sphSliceCount = 120;
+	const unsigned sphRingCount = 40;
+	const unsigned sphSliceCount = 40;
 
 	m_geom.SetDevice(m_device);
 	m_bufferObjects[TRIANGLE]	= m_geom.Triangle();
@@ -180,8 +180,9 @@ void Renderer::LoadShaders()
 	m_renderData.lineShader		= AddShader("Line", s_shaderRoot, layout, true);
 	m_renderData.TNBShader		= AddShader("TNB", s_shaderRoot, layout, true);
 	
-	m_renderData.exampleTex		= AddTexture("bricks_d.png", s_textureRoot);
-	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", s_textureRoot);
+	m_renderData.errorTexture	= AddTexture("errTexture.png", s_textureRoot).id;
+	m_renderData.exampleTex		= AddTexture("bricks_d.png", s_textureRoot).id;
+	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", s_textureRoot).id;
 }
 
 void Renderer::PollThread()
@@ -357,21 +358,22 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 }
 
 // assumes unique shader file names (even in different folders)
-TextureID Renderer::AddTexture(const std::string& textureFileName, const std::string& fileRoot)
+const Texture& Renderer::AddTexture(const std::string& shdFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
 	// example params: "bricks_d.png", "Data/Textures/"
-	std::string path = fileRoot + textureFileName;
+	std::string path = fileRoot + shdFileName;
 	std::wstring wpath(path.begin(), path.end());
 
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [textureFileName](auto& tex) { return tex.name == textureFileName; });
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [shdFileName](auto& tex) { return tex.name == shdFileName; });
 	if (found != m_textures.end())
 	{
 		//OutputDebugString("found\n\n");
-		return found->id;
+		//return found->id;
+		return *found;
 	}
 
 	Texture tex;
-	tex.name = textureFileName;
+	tex.name = shdFileName;
 
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
@@ -397,12 +399,12 @@ TextureID Renderer::AddTexture(const std::string& textureFileName, const std::st
 
 		tex.id = static_cast<int>(m_textures.size());
 		m_textures.push_back(tex);
-		return tex.id;
+		return m_textures.back();
 	}
 	else
 	{
 		OutputDebugString("Error loading texture file\n");
-		return -1;
+		return m_textures[0];
 	}
 
 }

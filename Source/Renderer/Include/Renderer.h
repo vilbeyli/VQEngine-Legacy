@@ -76,6 +76,7 @@ struct RenderData
 	ShaderID lineShader;
 	ShaderID TNBShader;
 
+	TextureID errorTexture;
 	TextureID loadingScrTex;
 	TextureID exampleTex;		// load scr
 	TextureID exampleNormMap;
@@ -100,7 +101,7 @@ public:
 
 	// resource interface
 	ShaderID	AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
-	TextureID	AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
+	const Texture& AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
 
 	const Texture& GetTexture(TextureID) const;
 	const ShaderID GetLineShader() const;

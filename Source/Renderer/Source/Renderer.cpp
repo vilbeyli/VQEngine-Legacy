@@ -48,6 +48,11 @@ void DepthPass::Initialize(Renderer* pRenderer)
 	shadowMapDesc.Height = static_cast<UINT>(m_shadowMapDimension);
 	shadowMapDesc.Width = static_cast<UINT>(m_shadowMapDimension);
 
+//	HRESULT hr = pD3DDevice->CreateTexture2D(
+//		&shadowMapDesc,
+//		nullptr,
+//		&m_shadowMap.srv
+//	);
 
 }
 

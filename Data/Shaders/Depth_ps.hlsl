@@ -16,18 +16,47 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "Texture.h"
+cbuffer perFrame
+{
+	matrix view;
+	matrix	proj;
+}
+cbuffer perModel
+{
+    matrix world;
+	matrix normalMatrix;
+}
 
-Texture::Texture()
-	:
-	name(""),
-	id(-1),
-	srv(nullptr),	// assigned and deleted by renderer
-	width(0),
-	height(0)
-{}
+struct VSIn
+{
+	float3 position : POSITION;
+	float3 normal	: NORMAL;
+	float3 tangent	: TANGENT0;
+	float2 texCoord : TEXCOORD0;
+};
 
-Texture::~Texture()
-{}
+struct PSIn
+{
+	float4 position : SV_POSITION;
+	float3 normal	: NORMAL;
+    float3 tangent	: TANGENT;
+	float2 texCoord : TEXCOORD0;
+};
 
+PSIn VSMain(VSIn In)
+{
+	matrix wvp = mul(proj, mul(view, world));
+    float3x3 rotMatrix =
+    {
+        world._11_12_13,
+		world._21_22_23,
+		world._31_32_33
+    };
 
+	PSIn Out;
+    Out.position = mul(wvp, float4(In.position, 1));
+    Out.normal   = normalize(mul(rotMatrix, In.normal));
+    Out.tangent  = normalize(mul(rotMatrix, In.tangent));
+    Out.texCoord = In.texCoord;
+	return Out;
+}

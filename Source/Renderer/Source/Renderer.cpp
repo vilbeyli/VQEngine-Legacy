@@ -34,6 +34,23 @@
 const char* Renderer::s_shaderRoot = "Data/Shaders/";
 const char* Renderer::s_textureRoot = "Data/Textures/";
 
+void DepthPass::Initialize(Renderer* pRenderer)
+{
+	m_shadowMapDimension = 512;
+
+	D3D11_TEXTURE2D_DESC shadowMapDesc;
+	ZeroMemory(&shadowMapDesc, sizeof(D3D11_TEXTURE2D_DESC));
+	shadowMapDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	shadowMapDesc.MipLevels = 1;
+	shadowMapDesc.ArraySize = 1;
+	shadowMapDesc.SampleDesc.Count = 1;
+	shadowMapDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+	shadowMapDesc.Height = static_cast<UINT>(m_shadowMapDimension);
+	shadowMapDesc.Width = static_cast<UINT>(m_shadowMapDimension);
+
+
+}
+
 Renderer::Renderer()
 	:
 	m_Direct3D(nullptr),
@@ -183,6 +200,7 @@ void Renderer::LoadShaders()
 	m_renderData.errorTexture	= AddTexture("errTexture.png", s_textureRoot).id;
 	m_renderData.exampleTex		= AddTexture("bricks_d.png", s_textureRoot).id;
 	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", s_textureRoot).id;
+	m_renderData.depthPass.Initialize(this);
 }
 
 void Renderer::PollThread()
@@ -315,7 +333,8 @@ void Renderer::InitRasterizerStates()
 	rsDesc.DepthBiasClamp			= 0;
 	rsDesc.SlopeScaledDepthBias		= 0.0f;
 	rsDesc.DepthClipEnable			= true;
-
+	rsDesc.AntialiasedLineEnable	= true;
+	rsDesc.MultisampleEnable		= true;
 	
 	rsDesc.CullMode = D3D11_CULL_BACK;
 	hr = m_device->CreateRasterizerState(&rsDesc, &cullBack);

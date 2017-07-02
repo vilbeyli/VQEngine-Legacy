@@ -127,5 +127,6 @@ private:
 
 	SpringSystem m_springSys;
 #endif
+	void RenderDepth();
 };
 

@@ -65,6 +65,14 @@ enum class TOPOLOGY
 	TOPOLOGY_COUNT
 };
 
+struct DepthPass
+{
+	unsigned m_shadowMapDimension;
+	Texture m_shadowMap;
+
+	void Initialize(Renderer* pRenderer);
+};
+
 struct RenderData
 {
 	ShaderID phongShader;
@@ -76,6 +84,7 @@ struct RenderData
 	ShaderID lineShader;
 	ShaderID TNBShader;
 
+	DepthPass depthPass;
 	TextureID errorTexture;
 	TextureID loadingScrTex;
 	TextureID exampleTex;		// load scr
@@ -157,7 +166,7 @@ private:
 	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;
 
-	GeometryGenerator				m_geom;			// maybe static functions?
+	GeometryGenerator				m_geom;			// maybe static functions? yes... definitely static functions. todo:
 
 	// render data
 	Camera*							m_mainCamera;

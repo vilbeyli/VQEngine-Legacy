@@ -42,4 +42,3 @@ public:
 	unsigned width;
 	unsigned height;
 };
-

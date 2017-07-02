@@ -152,29 +152,19 @@ float3 Phong(Light light, Surface s, float3 V, float3 worldPos)
     return Id + Is;
 }
 
-inline float3 UnpackNormals(float2 uv, float3 vertNormal, float3 vertTangent)
+inline float3 UnpackNormals(float2 uv, float3 worldNormal, float3 worldTangent)
 {
 	// uncompressed normal in tangent space
-	float3 TNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
-	TNormal = normalize(TNormal * 2.0f - 1.0f);
-	//TNormal.y *= -1.0f;
-	//TNormal.z *= -1.0f;
-	float3 N = normalize(vertNormal);
+	float3 SampledNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
+	SampledNormal = normalize(SampledNormal * 2.0f - 1.0f);
 
-
-	float3 T = normalize(vertTangent);	// after interpolation, T and N might not be orthonormal
-										// make sure T is orthonormal to N by subtracting off any component of T along direction N.
-										//float3 T = normalize(vertTangent - dot(vertNormal, vertTangent) * vertNormal);
-	float3 B = normalize(cross(T, N));
-	float3x3 TBN = float3x3(T, B, N);
-	//float3x3 TBN = float3x3(T, N, B);
-	//float3x3 TBN = float3x3(-T, -B, -N);
-	//float3x3 TBN = float3x3(float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1));
-
-	return mul(TBN, TNormal);
-	//return mul(TNormal, TBN);
-	//return TNormal;
-	//return T;
+	//float3 T = normalize(worldTangent);	// after interpolation, T and N might not be orthonormal
+ 	// make sure T is orthonormal to N by subtracting off any component of T along direction N.
+	const float3 T = normalize(worldTangent - dot(worldNormal, worldTangent) * worldNormal);
+	const float3 N = normalize(worldNormal);
+	const float3 B = normalize(cross(T, N));
+	const float3x3 TBN = float3x3(T, B, N);
+	return mul(SampledNormal, TBN);
 }
 
 float4 PSMain(PSIn In) : SV_TARGET

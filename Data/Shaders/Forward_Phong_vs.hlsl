@@ -18,19 +18,14 @@
 
 cbuffer perFrame
 {
-	//matrix world;
 	matrix view;
 	matrix	proj;
 }
 cbuffer perModel
 {
     matrix world;
+	matrix normalMatrix;
 }
-
-//cbuffer MatrixBuffer3
-//{
-//    matrix proj;
-//}
 
 struct VSIn
 {
@@ -52,18 +47,12 @@ struct PSIn
 PSIn VSMain(VSIn In)
 {
 	matrix wvp = mul(proj, mul(view, world));
-	float3x3 rotMatrix = 
-	{
-		world._11_12_13,
-		world._21_22_23,
-		world._31_32_33
-	};
 
 	PSIn Out;
 	Out.position	= mul(wvp  , float4(In.position, 1));
 	Out.worldPos	= mul(world, float4(In.position, 1)).xyz;
-    Out.normal		= normalize(mul(rotMatrix, In.normal));
-    Out.tangent		= normalize(mul(rotMatrix, In.tangent));
+    Out.normal		= normalize(mul(normalMatrix, In.normal));
+    Out.tangent		= normalize(mul(normalMatrix, In.tangent));
 	Out.texCoord	= In.texCoord;
 	return Out;
 }

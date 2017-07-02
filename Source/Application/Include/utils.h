@@ -28,6 +28,7 @@ using namespace DirectX;
 #define DEG2RAD (XM_PI / 180.0f)
 #define RAD2DEG (180.0f / XM_PI)
 #define PI		XM_PI
+#define PI_DIV2 XM_PIDIV2
 
 // typedefs
 using VecPair = std::pair<XMVECTOR, XMVECTOR>;

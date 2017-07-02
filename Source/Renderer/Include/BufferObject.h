@@ -28,10 +28,11 @@ typedef int BufferID;
 
 struct Vertex
 {
-	vec3 position;
-	vec3 normal;
-	vec3 tangent;
-	vec2 texCoords;
+	vec3 position;		//12
+	vec3 normal;		//12 
+	vec3 tangent;		//12
+	vec2 texCoords;		// 8
+	//44
 };
 
 class BufferObject

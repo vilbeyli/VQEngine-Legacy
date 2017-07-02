@@ -87,18 +87,18 @@ void CalculateTangentsAndBitangents(BufferObject*& obj)
 		//v1.bitangent = B;
 		//v2.bitangent = B;
 
-		if (v0.normal == vec3::Zero)
-		{
-			v0.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
-		}
-		if (v1.normal == vec3::Zero)
-		{
-			v1.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
-		}
-		if (v2.normal == vec3::Zero)
-		{
-			v2.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
-		}
+		//if (v0.normal == vec3::Zero)
+		//{
+		//	v0.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
+		//}
+		//if (v1.normal == vec3::Zero)
+		//{
+		//	v1.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
+		//}
+		//if (v2.normal == vec3::Zero)
+		//{
+		//	v2.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
+		//}
 	}
 }
 

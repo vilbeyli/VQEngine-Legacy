@@ -24,13 +24,6 @@
 #include "utils.h"
 #include "PerfTimer.h"
 
-#ifdef ENABLE_VPHYSICS
-#include "PhysicsEngine.h"
-#endif
-
-#ifdef ENABLE_ANIMATION
-#include "../Animation/Include/PathManager.h"
-#endif
 
 //#include <algorithm>
 //#include <random>
@@ -66,40 +59,13 @@ void SceneManager::Initialize(Renderer* renderer, const RenderData* rData, PathM
 	m_renderData		= rData;	// ?
 	m_selectedShader	= m_renderData->phongShader;
 	m_gammaCorrection	= true;
+
 	InitializeRoom();
 	InitializeLights();
 	InitializeObjectArrays();
 
-	// set skydome
 	m_skydome.Init(m_pRenderer, "browncloud_lf.jpg", 1000.0f / 2.2f, m_renderData->unlitShader);
 
-	//m_centralObj.m_model.m_mesh = MESH_TYPE::GRID;
-	//m_centralObj.m_model.m_material.color = Color::blue;
-	//m_centralObj.m_model.m_material.shininess = 40.0f;
-
-#ifdef ENABLE_VPHYSICS
-	InitializePhysicsObjects();
-#endif
-
-#if defined( ENABLE_ANIMATION ) && defined( LOAD_ANIMS )
-	m_pPathManager->Init();
-	// load animated model, set IK effector bones
-	// 	- from left hand to spine:
-	//		47 - 40 - 32 - 21 - 15 - 8
-	std::vector<std::string>	anims = { "Data/Animation/sylvanas_run.fbx", "Data/Animation/sylvanas_idle.fbx" };
-	std::vector<size_t>			effectorBones = { 60, 47 + 1, 40 + 1, 32 + 1, 21 + 1, 15 + 1, 8 + 1, 4 + 1 };
-	m_model.Load(anims, effectorBones, IKEngine::SylvanasConstraints());
-	m_model.SetScale(0.1f);	// scale actor down
-	
-	// set animation properties
-	m_model.SetQuaternionSlerp(false);
-	m_model.m_animMode = ANIM_MODE_IK;	// looping / path_looping / IK
-
-	m_model.SetPath(m_pPathManager->m_paths[0]);
-	m_model.m_pathLapTime = 12.8f;
-
-	AnimatedModel::renderer = renderer;
-#endif
 }
 
 enum WALLS
@@ -135,52 +101,53 @@ void SceneManager::InitializeRoom()
 	// TODO: redo floor init
 	// FLOOR
 	{
-		Transform& tf = m_building.floor.m_transform;
+		Transform& tf = m_room.floor.m_transform;
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
 		tf.SetPosition(0, -wallHieght + YOffset, 0);
 
 		//m_building.floor.m_model.m_material.color		= Color::green;
 		//m_building.floor.m_model.m_material.shininess	= 40.0f;
-		m_building.floor.m_model.m_material = Material::gold;
+		m_room.floor.m_model.m_material = Material::gold;
 		//m_building.floor.m_model.m_material.diffuseMap = m_renderer->GetTexture(m_renderData.exampleTex);
 		//m_building.floor.m_model.m_material.normalMap.id = m_renderer->AddTexture("bricks_n.png");
 		//m_building.floor.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	}
 	// CEILING
 	{
-		Transform& tf = m_building.ceiling.m_transform;
+		Transform& tf = m_room.ceiling.m_transform;
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
 		tf.SetPosition(0, wallHieght + YOffset, 0);
 
 		//m_building.ceiling.m_model.m_material.color		= Color::purple;
 		//m_building.ceiling.m_model.m_material.shininess	= 10.0f;
-		m_building.ceiling.m_model.m_material = Material::gold;
+		m_room.ceiling.m_model.m_material = Material::gold;
 		//m_building.ceiling.m_model.m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
 		//m_building.ceiling.m_model.m_material.diffuseMap.name = "bricks_n.png";	// todo: rethink this
-		m_building.ceiling.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
-		m_building.ceiling.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+		m_room.ceiling.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
+		m_room.ceiling.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
 	}
 
 	// RIGHT WALL
 	{
-		Transform& tf = m_building.wallR.m_transform;
+		Transform& tf = m_room.wallR.m_transform;
 		tf.SetScale(floorDepth, 0.1f, wallHieght);
 		tf.SetPosition(floorWidth, YOffset, 0);
-		tf.SetXRotationDeg(-90.0f);
+		tf.SetXRotationDeg(90.0f);
 		tf.RotateAroundGlobalYAxisDegrees(90.0f);
+		tf.RotateAroundGlobalXAxisDegrees(180.0f);
 
 		//m_building.wallR.m_model.m_material.color		= Color::gray;
 		//m_building.wallR.m_model.m_material.shininess	= 120.0f;
-		m_building.wallR.m_model.m_material = Material::bronze;
-		m_building.wallR.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
-		m_building.wallR.m_model.m_material.normalMap.id  = m_pRenderer->AddTexture("bricks_n.png");
-		m_building.wallR.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
-		m_building.wallR.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
+		m_room.wallR.m_model.m_material = Material::bronze;
+		m_room.wallR.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
+		m_room.wallR.m_model.m_material.normalMap.id  = m_pRenderer->AddTexture("bricks_n.png");
+		m_room.wallR.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
+		m_room.wallR.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
 
 	// LEFT WALL
 	{
-		Transform& tf = m_building.wallL.m_transform;
+		Transform& tf = m_room.wallL.m_transform;
 		tf.SetScale(floorDepth, 0.1f, wallHieght);
 		tf.SetPosition(-floorWidth, YOffset, 0);
 		tf.SetXRotationDeg(-90.0f);
@@ -188,32 +155,32 @@ void SceneManager::InitializeRoom()
 		//tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
 		//m_building.wallL.m_model.m_material.color		= Color::gray;
 		//m_building.wallL.m_model.m_material.shininess	= 60.0f;
-		m_building.wallL.m_model.m_material = Material::bronze;
-		m_building.wallL.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
-		m_building.wallL.m_model.m_material.normalMap.id  = m_pRenderer->AddTexture("bricks_n.png");
-		m_building.wallL.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
-		m_building.wallL.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
+		m_room.wallL.m_model.m_material = Material::bronze;
+		m_room.wallL.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
+		m_room.wallL.m_model.m_material.normalMap.id  = m_pRenderer->AddTexture("bricks_n.png");
+		m_room.wallL.m_model.m_material.normalMap.name  = "bricks_n.png";	// todo: rethink this
+		m_room.wallL.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
 	// WALL
 	{
-		Transform& tf = m_building.wallF.m_transform;
+		Transform& tf = m_room.wallF.m_transform;
 		tf.SetScale(floorWidth, 0.1f, wallHieght);
 		tf.SetPosition(0, YOffset, floorDepth);
 		tf.SetXRotationDeg(-90.0f);
 		//m_building.wallF.m_model.m_material.color		= Color::gray;
 		//m_building.wallF.m_model.m_material.shininess	= 90.0f;
-		m_building.wallF.m_model.m_material = Material::gold;
-		m_building.wallF.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
-		m_building.wallF.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
-		m_building.wallF.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
-		m_building.wallF.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
+		m_room.wallF.m_model.m_material = Material::gold;
+		m_room.wallF.m_model.m_material.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
+		m_room.wallF.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
+		m_room.wallF.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+		m_room.wallF.m_model.m_material.diffuseMap.name = "bricks_d.png";	// todo: rethink this
 	}
 
-	m_building.floor.m_model.m_mesh = MESH_TYPE::CUBE;
-	m_building.wallL.m_model.m_mesh = MESH_TYPE::CUBE;
-	m_building.wallR.m_model.m_mesh = MESH_TYPE::CUBE;
-	m_building.wallF.m_model.m_mesh = MESH_TYPE::CUBE;
-	m_building.ceiling.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_room.floor.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_room.wallL.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_room.wallR.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_room.wallF.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_room.ceiling.m_model.m_mesh = MESH_TYPE::CUBE;
 }
 
 void SceneManager::InitializeLights()
@@ -287,9 +254,10 @@ void SceneManager::InitializeObjectArrays()
 	{	// grid arrangement ( (row * col) cubes that are 'r' apart from each other )
 		const int	row = 6,
 					col = 6;
-		const float r = 4.0f;
+		const float r = 4.0f* 6;
 
 		const std::vector<vec3> c_rowRotations = { vec3::Zero, vec3::Up, vec3::Right, vec3::Forward };
+		static std::vector<float> s_cubeDelays = std::vector<float>(row*col, 0.0f);
 		for (int i = 0; i < row; ++i)
 		{
 			for (int j = 0; j < col; ++j)
@@ -298,18 +266,24 @@ void SceneManager::InitializeObjectArrays()
 
 				// set transform
 				float x, y, z;	// position
-				x = i * r;		y = 5.0f;	z = j * r;
+				x = i * r - row * r / 2;		y = 5.0f;	z = j * r - col * r / 2;
 				cube.m_transform.SetPosition(x, y, z);
+				cube.m_transform.SetScale(1, 6, 3);
 				//if (i == j) cube.m_transform.SetRotationDeg(90.0f / 4 * sqrt(i*j), 0, 0);
-				if (i == j) cube.m_transform.RotateAroundAxisDegrees(c_rowRotations[1], 90.0f);
+				//if (i == j) cube.m_transform.RotateAroundAxisDegrees(c_rowRotations[1], 90.0f);
+				if (j == 0) cube.m_transform.RotateAroundAxisDegrees(vec3::XAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
+				if (j == 1) cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
 
+				if (j == 3) cube.m_transform.RotateAroundAxisDegrees(vec3::ZAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
+
+				cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, -90.0f);
 				//if(i != c_rowRotations.size()) && i != j)
 				//	cube.m_transform.Rotate(c_rowRotations[i] * 90.0f * DEG2RAD);
 				//cube.m_transform.RotateDegrees(c_rowRotations[1], -90.0f);
 
 
 				// set material
-				cube.m_model.m_mesh = MESH_TYPE::QUAD;
+				cube.m_model.m_mesh = MESH_TYPE::CUBE;
 				//cube.m_model.m_material = Material::RandomMaterial();
 				//cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
 				//cube.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
@@ -319,6 +293,10 @@ void SceneManager::InitializeObjectArrays()
 				cubes.push_back(cube);
 			}
 		}
+
+		// initial direction for spot lightt
+		m_lights[0].tf.RotateAroundGlobalZAxisDegrees(30.0f);
+
 	}
 	{	// circle arrangement
 		const float r = 30.0f;
@@ -391,71 +369,22 @@ void SceneManager::InitializeObjectArrays()
 	
 }
 
-#ifdef ENABLE_VPHYSICS
-void SceneManager::InitializePhysicsObjects()
+
+void SceneManager::SetCameraSettings(const Settings::Camera & cameraSettings)
 {
-	// ANCHOR POINTS
-	const float anchorScale = 0.3f;
-
-	m_anchor1.m_model.m_mesh = MESH_TYPE::SPHERE;
-	m_anchor1.m_model.m_material.color = Color::white;
-	m_anchor1.m_model.m_material.shininess = 90.0f;
-	m_anchor1.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
-	m_anchor1.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
-	m_anchor1.m_transform.SetRotationDeg(15.0f, .0f, .0f);
-	m_anchor1.m_transform.SetPosition(-20.0f, 25.0f, 2.0f);
-	m_anchor1.m_transform.SetUniformScale(anchorScale);
-	//m_anchor2 = m_anchor1;
-	//m_anchor2.m_model.m_material.color = Color::orange;
-	//m_anchor2.m_transform.SetPosition(-10.0f, 4.0f, +4.0f);
-
-	m_anchor2.m_model.m_mesh = MESH_TYPE::SPHERE;
-	m_anchor2.m_model.m_material.color = Color::white;
-	m_anchor2.m_model.m_material.shininess = 90.0f;
-	//m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
-	m_anchor2.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
-	m_anchor2.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
-	m_anchor2.m_transform.SetRotationDeg(15.0f, .0f, .0f);
-	m_anchor2.m_transform.SetPosition(20.0f, 25.0f, 2.0f);
-	m_anchor2.m_transform.SetUniformScale(anchorScale);
-
-	// PHYSICS OBJECT REFERENCE
-	auto& mat = m_physObj.m_model.m_material;
-	auto& msh = m_physObj.m_model.m_mesh;
-	auto& tfm = m_physObj.m_transform;
-	msh					= MESH_TYPE::CUBE;
-	mat.color			= Color::white;
-	//mat.normalMap.id	= m_renderer->AddTexture("bricks_n.png");
-	mat.diffuseMap.id	= m_pRenderer->AddTexture("bricks_d.png");
-	mat.normalMap.name	= "bricks_n.png";	// todo: rethink this
-	mat.shininess		= 65.0f;
-	tfm.SetPosition(0.0f, 10.0f, 0.0f);
-	tfm.SetRotationDeg(15.0f, 0.0f, 0.0f);
-	tfm.SetScale(1.5f, 0.5f, 0.5f);
-	m_physObj.m_rb.InitPhysicsVertices(MESH_TYPE::CUBE, m_physObj.m_transform.GetScaleF3());
-	m_physObj.m_rb.SetMassUniform(1.0f);
-	m_physObj.m_rb.EnablePhysics = m_physObj.m_rb.EnableGravity = true;
-
-	// instantiate bricks
-	const size_t numBricks = 6;
-	const float height = 10.0f;
-	const float brickOffset = 5.0f;
-	for (size_t i = 0; i < numBricks; i++)
-	{
-		m_physObj.m_transform.SetPosition(i * brickOffset - (numBricks / 2) * brickOffset, height, 0.0f);
-		m_vPhysObj.push_back(m_physObj);
-	}
-
-	std::vector<RigidBody*> rbs;
-	for (auto& obj : m_vPhysObj)	rbs.push_back(&obj.m_rb);
-
-	m_springSys.SetBricks(rbs);
+	const auto& NEAR_PLANE = cameraSettings.nearPlane;
+	const auto& FAR_PLANE = cameraSettings.farPlane;
+	m_pCamera->SetOthoMatrix(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, m_pRenderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetPosition(0, 10, -100);
+	m_pRenderer->SetCamera(m_pCamera.get());
 }
-#endif
+
 
 //-----------------------------------------------------------------------------------------------------------------------------------------
 void SceneManager::UpdateCentralObj(const float dt)
 {
+	float t = ENGINE->TIMER()->TotalTime();
 	const float moveSpeed	= 15.0f;
 	const float rotSpeed	= XM_PI;
 
@@ -468,30 +397,12 @@ void SceneManager::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown(105)) tr += vec3::Up; 		// Key: Numpad9
 	if (ENGINE->INP()->IsKeyDown(99))  tr += vec3::Down; 	// Key: Numpad3
 	
-#ifdef ENABLE_VPHYSICS
-	// ANCHOR MOVEMENT
-	if(!ENGINE->INP()->IsKeyDown(17))	m_anchor1.m_transform.Translate(tr * dt * moveSpeed); // Key: Ctrl
-	else								m_anchor2.m_transform.Translate(tr * dt * moveSpeed);
-	//m_anchor1.m_transform.Rotate(global_U * dt * rotSpeed);
 
-	// ANCHOR TOGGLE
-	if (ENGINE->INP()->IsKeyTriggered(101)) // Key: Numpad5
-	{
-		if (ENGINE->INP()->IsKeyDown(17))	m_springSys.ToggleAnchor(0);// ctrl
-		else								m_springSys.ToggleAnchor(1);
-	}
-
-	m_springSys.Update();
-#endif
-
-	float t = ENGINE->TIMER()->TotalTime();
 	float angle = (dt * XM_PI * 0.08f) + (sinf(t) * sinf(dt * XM_PI * 0.03f));
-	//const auto axis = XMVector3Normalize(global_U + global_F);
-	const auto axis = vec3::Up;
 	for (auto& sph : spheres)
 	{
-		sph.m_transform.RotateAroundPointAndAxis(axis, angle, vec3());
-		vec3 pos = sph.m_transform._position;
+		sph.m_transform.RotateAroundPointAndAxis(vec3::Up, angle, vec3());
+		const vec3 pos = sph.m_transform._position;
 		const float sinx = sinf(pos._v.x / 3.5f);
 		const float y = 10.0f + 2.5f * sinx;
 
@@ -505,70 +416,17 @@ void SceneManager::UpdateCentralObj(const float dt)
 	{
 		for (int j = 0; j < col; ++j)
 		{
-			if (i != j)
+			//if (j > 4)
 			{	// exclude diagonal
 
-				// rotate first row and col
-				//vec3 rotAxis = i == 0 ? vec3::Right : j == 0 ? vec3::Up : vec3();
-				vec3 rotAxis = vec3::Right;
-				cubes[i*row + j].m_transform.RotateAroundAxisDegrees(rotAxis, dt * cubeRotSpeed);
+				cubes[i*row + j].m_transform.RotateAroundAxisDegrees(vec3::XAxis, dt * cubeRotSpeed);
 			}
 		}
 	}
+
+	m_lights[0].tf.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);
 }
 
-
-#ifdef ENABLE_ANIMATION
-void SceneManager::UpdateAnimatedModel(const float dt)
-{
-	if (ENGINE->INP()->IsKeyDown(16))	// Key: shift
-	{
-		if (ENGINE->INP()->IsKeyTriggered(49)) AnimatedModel::DISTANCE_FUNCTION = 0;	// Key:	1 + shift
-		if (ENGINE->INP()->IsKeyTriggered(50)) AnimatedModel::DISTANCE_FUNCTION = 1;	// Key:	2 + shift
-		if (ENGINE->INP()->IsKeyTriggered(51)) AnimatedModel::DISTANCE_FUNCTION = 2;	// Key:	3 + shift
-	}
-	else
-	{
-		if (ENGINE->INP()->IsKeyTriggered(49)) m_model.m_animMode = ANIM_MODE_LOOPING_PATH;								// Key:	1 
-		if (ENGINE->INP()->IsKeyTriggered(50)) m_model.m_animMode = ANIM_MODE_LOOPING;									// Key:	2 
-		if (ENGINE->INP()->IsKeyTriggered(51)) m_model.m_animMode = ANIM_MODE_IK;										// Key:	3 (default)
-
-		//if (ENGINE->INP()->IsKeyTriggered(13)) AnimatedModel::ENABLE_VQS = !AnimatedModel::ENABLE_VQS;				// Key: Enter
-		if (ENGINE->INP()->IsKeyTriggered(13)) m_model.m_isAnimPlaying = !m_model.m_isAnimPlaying;						// Key: Enter
-		if (ENGINE->INP()->IsKeyTriggered(32)) m_model.GoReachTheObject();												// Key: Space
-		m_model.m_IKEngine.UpdateTargetPosition(m_anchor1.m_transform.GetPositionF3());
-		if (ENGINE->INP()->IsKeyTriggered(107)) m_model.m_animSpeed += 0.1f;											// +
-		if (ENGINE->INP()->IsKeyTriggered(109)) m_model.m_animSpeed -= 0.1f;											// -
-	
-		if (ENGINE->INP()->IsKeyDown(101))		IKEngine::inp = true;
-	}
-}
-#endif
-
-#ifdef ENABLE_VPHYSICS
-void SceneManager::UpdateAnchors(float dt)
-{
-	// reset bricks velocities
-	if (ENGINE->INP()->IsKeyTriggered('R'))
-	{
-		for (auto& brick : m_springSys.bricks)
-		{
-			brick->SetLinearVelocity(0.0f, 0.0f, 0.0f);
-			brick->SetAngularVelocity(0.0f, 0.0f, 0.0f);
-		}
-	}
-}
-#endif
-
-void SceneManager::SetCameraSettings(const Settings::Camera & cameraSettings)
-{
-	const auto& NEAR_PLANE = cameraSettings.nearPlane;
-	const auto& FAR_PLANE = cameraSettings.farPlane;
-	m_pCamera->SetOthoMatrix(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
-	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, m_pRenderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
-	m_pCamera->SetPosition(0, 10, -100);
-	m_pRenderer->SetCamera(m_pCamera.get());
-}
 
 void SceneManager::Update(float dt)
 {
@@ -576,17 +434,8 @@ void SceneManager::Update(float dt)
 	//-------------------------------------------------------------------------------- MOVE OBJECTS ------------------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-#ifdef ENABLE_ANIMATION
-	m_model.Update(dt);
-	UpdateAnimatedModel(dt);
-#endif
-#ifdef ENABLE_VPHYSICS
-	UpdateAnchors(dt);
-#endif
-
 	UpdateCentralObj(dt);
-
-
+	
 	//-------------------------------------------------------------------------------- SHADER CONFIGURATION ----------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
 	// F1-F4 | Debug Shaders
@@ -646,20 +495,25 @@ void SceneManager::Update(float dt)
 
 void SceneManager::Render() 
 {
-	XMMATRIX view = m_pCamera->GetViewMatrix();
-	XMMATRIX proj = m_pCamera->GetProjectionMatrix();
-	m_pRenderer->SetConstant4x4f("view", view);
-	m_pRenderer->SetConstant4x4f("proj", proj);
+	const XMMATRIX view = m_pCamera->GetViewMatrix();
+	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
 
 	m_skydome.Render(view, proj);
 
 	m_pRenderer->SetShader(m_selectedShader);
+	m_pRenderer->SetConstant4x4f("view", view);
+	m_pRenderer->SetConstant4x4f("proj", proj);
 	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-	SendLightData();
+	if (m_selectedShader == m_renderData->phongShader)
+	{
+		SendLightData();
+	}
+
+	if (m_selectedShader == m_renderData->TNBShader)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
 
-	RenderRoom();
+	m_room.Render(m_pRenderer);
 	RenderCentralObjects(view, proj);
 
 	RenderLights(view, proj);
@@ -671,14 +525,10 @@ void SceneManager::Render()
 	//m_selectedShader = prevShader;
 }
 
-void SceneManager::RenderRoom() const
-{
-	m_building.Render(m_pRenderer);
-}
 
 void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const
 {
-	m_pRenderer->Reset();
+	m_pRenderer->Reset();	// is reset necessary?
 	m_pRenderer->SetShader(m_renderData->unlitShader);
 	m_pRenderer->SetConstant4x4f("view", view);
 	m_pRenderer->SetConstant4x4f("proj", proj);
@@ -697,14 +547,6 @@ void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) cons
 
 void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj) 
 {
-	// set shader and send constants
-	m_pRenderer->SetShader(m_selectedShader);	
-	if(m_selectedShader == m_renderData->phongShader) SendLightData();
-	m_pRenderer->SetConstant4x4f("view", view);
-	m_pRenderer->SetConstant4x4f("proj", proj);
-	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-	if(m_selectedShader == m_renderData->TNBShader)	  m_pRenderer->SetConstant1i("mode", TBNMode);
-	if(m_selectedShader == m_renderData->phongShader) m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection == true ? 1.0f : 0.0f);
 	for (const auto& cube : cubes) cube.Render(m_pRenderer);
 	for (const auto& sph : spheres) sph.Render(m_pRenderer);
 	
@@ -714,48 +556,6 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	triangle.Render(m_pRenderer);
 	cylinder.Render(m_pRenderer);
 
-#ifdef ENABLE_VPHYSICS
-	// draw anchor 1 sphere
-	m_pRenderer->SetBufferObj(m_anchor1.m_model.m_mesh);
-	if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
-		m_anchor1.m_model.m_material.SetMaterialConstants(m_pRenderer);
-	XMMATRIX world		= m_anchor1.m_transform.WorldTransformationMatrix();
-	XMMATRIX nrmMatrix	= m_anchor1.m_transform.NormalMatrix(world);
-	m_pRenderer->SetConstant4x4f("world", world);
-	m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-	m_pRenderer->Apply();
-	m_pRenderer->DrawIndexed();
-
-	// draw anchor 2 sphere
-	m_pRenderer->SetBufferObj(m_anchor2.m_model.m_mesh);
-	if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
-		m_anchor2.m_model.m_material.SetMaterialConstants(m_pRenderer);
-	world	  = m_anchor2.m_transform.WorldTransformationMatrix();
-	nrmMatrix = m_anchor2.m_transform.NormalMatrix(world);
-	m_pRenderer->SetConstant4x4f("world", world);
-	m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-	m_pRenderer->Apply();
-	m_pRenderer->DrawIndexed();
-
-	// DRAW GRAVITY TEST OBJ
-	//----------------------
-	// materials
-	m_pRenderer->SetBufferObj(m_physObj.m_model.m_mesh);
-	m_physObj.m_model.m_material.SetMaterialConstants(m_pRenderer);
-
-	// render bricks
-	for (const auto& pObj : m_vPhysObj)
-	{
-		world	  = pObj.m_transform.WorldTransformationMatrix();
-		nrmMatrix = pObj.m_transform.NormalMatrix(world);
-		m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-		m_pRenderer->SetConstant4x4f("world", world);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
-
-	m_springSys.RenderSprings(m_pRenderer, view, proj);
-#endif
 }
 
 void SceneManager::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const
@@ -830,3 +630,208 @@ void SceneManager::Room::Render(Renderer * pRenderer) const
 	wallF.Render(pRenderer);
 	ceiling.Render(pRenderer);
 }
+
+//======= JUNKYARD
+
+#ifdef ENABLE_ANIMATION
+void SceneManager::UpdateAnimatedModel(const float dt)
+{
+	if (ENGINE->INP()->IsKeyDown(16))	// Key: shift
+	{
+		if (ENGINE->INP()->IsKeyTriggered(49)) AnimatedModel::DISTANCE_FUNCTION = 0;	// Key:	1 + shift
+		if (ENGINE->INP()->IsKeyTriggered(50)) AnimatedModel::DISTANCE_FUNCTION = 1;	// Key:	2 + shift
+		if (ENGINE->INP()->IsKeyTriggered(51)) AnimatedModel::DISTANCE_FUNCTION = 2;	// Key:	3 + shift
+	}
+	else
+	{
+		if (ENGINE->INP()->IsKeyTriggered(49)) m_model.m_animMode = ANIM_MODE_LOOPING_PATH;								// Key:	1 
+		if (ENGINE->INP()->IsKeyTriggered(50)) m_model.m_animMode = ANIM_MODE_LOOPING;									// Key:	2 
+		if (ENGINE->INP()->IsKeyTriggered(51)) m_model.m_animMode = ANIM_MODE_IK;										// Key:	3 (default)
+
+																														//if (ENGINE->INP()->IsKeyTriggered(13)) AnimatedModel::ENABLE_VQS = !AnimatedModel::ENABLE_VQS;				// Key: Enter
+		if (ENGINE->INP()->IsKeyTriggered(13)) m_model.m_isAnimPlaying = !m_model.m_isAnimPlaying;						// Key: Enter
+		if (ENGINE->INP()->IsKeyTriggered(32)) m_model.GoReachTheObject();												// Key: Space
+		m_model.m_IKEngine.UpdateTargetPosition(m_anchor1.m_transform.GetPositionF3());
+		if (ENGINE->INP()->IsKeyTriggered(107)) m_model.m_animSpeed += 0.1f;											// +
+		if (ENGINE->INP()->IsKeyTriggered(109)) m_model.m_animSpeed -= 0.1f;											// -
+
+		if (ENGINE->INP()->IsKeyDown(101))		IKEngine::inp = true;
+	}
+}
+#endif
+
+#ifdef ENABLE_VPHYSICS
+void SceneManager::UpdateAnchors(float dt)
+{
+	// reset bricks velocities
+	if (ENGINE->INP()->IsKeyTriggered('R'))
+	{
+		for (auto& brick : m_springSys.bricks)
+		{
+			brick->SetLinearVelocity(0.0f, 0.0f, 0.0f);
+			brick->SetAngularVelocity(0.0f, 0.0f, 0.0f);
+		}
+	}
+}
+#endif
+
+
+#ifdef ENABLE_VPHYSICS
+void SceneManager::InitializePhysicsObjects()
+{
+	// ANCHOR POINTS
+	const float anchorScale = 0.3f;
+
+	m_anchor1.m_model.m_mesh = MESH_TYPE::SPHERE;
+	m_anchor1.m_model.m_material.color = Color::white;
+	m_anchor1.m_model.m_material.shininess = 90.0f;
+	m_anchor1.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
+	m_anchor1.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+	m_anchor1.m_transform.SetRotationDeg(15.0f, .0f, .0f);
+	m_anchor1.m_transform.SetPosition(-20.0f, 25.0f, 2.0f);
+	m_anchor1.m_transform.SetUniformScale(anchorScale);
+	//m_anchor2 = m_anchor1;
+	//m_anchor2.m_model.m_material.color = Color::orange;
+	//m_anchor2.m_transform.SetPosition(-10.0f, 4.0f, +4.0f);
+
+	m_anchor2.m_model.m_mesh = MESH_TYPE::SPHERE;
+	m_anchor2.m_model.m_material.color = Color::white;
+	m_anchor2.m_model.m_material.shininess = 90.0f;
+	//m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
+	m_anchor2.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
+	m_anchor2.m_model.m_material.normalMap.name = "bricks_n.png";	// todo: rethink this
+	m_anchor2.m_transform.SetRotationDeg(15.0f, .0f, .0f);
+	m_anchor2.m_transform.SetPosition(20.0f, 25.0f, 2.0f);
+	m_anchor2.m_transform.SetUniformScale(anchorScale);
+
+	// PHYSICS OBJECT REFERENCE
+	auto& mat = m_physObj.m_model.m_material;
+	auto& msh = m_physObj.m_model.m_mesh;
+	auto& tfm = m_physObj.m_transform;
+	msh = MESH_TYPE::CUBE;
+	mat.color = Color::white;
+	//mat.normalMap.id	= m_renderer->AddTexture("bricks_n.png");
+	mat.diffuseMap.id = m_pRenderer->AddTexture("bricks_d.png");
+	mat.normalMap.name = "bricks_n.png";	// todo: rethink this
+	mat.shininess = 65.0f;
+	tfm.SetPosition(0.0f, 10.0f, 0.0f);
+	tfm.SetRotationDeg(15.0f, 0.0f, 0.0f);
+	tfm.SetScale(1.5f, 0.5f, 0.5f);
+	m_physObj.m_rb.InitPhysicsVertices(MESH_TYPE::CUBE, m_physObj.m_transform.GetScaleF3());
+	m_physObj.m_rb.SetMassUniform(1.0f);
+	m_physObj.m_rb.EnablePhysics = m_physObj.m_rb.EnableGravity = true;
+
+	// instantiate bricks
+	const size_t numBricks = 6;
+	const float height = 10.0f;
+	const float brickOffset = 5.0f;
+	for (size_t i = 0; i < numBricks; i++)
+	{
+		m_physObj.m_transform.SetPosition(i * brickOffset - (numBricks / 2) * brickOffset, height, 0.0f);
+		m_vPhysObj.push_back(m_physObj);
+	}
+
+	std::vector<RigidBody*> rbs;
+	for (auto& obj : m_vPhysObj)	rbs.push_back(&obj.m_rb);
+
+	m_springSys.SetBricks(rbs);
+}
+#endif
+
+#ifdef ENABLE_VPHYSICS
+// ANCHOR MOVEMENT
+if (!ENGINE->INP()->IsKeyDown(17))	m_anchor1.m_transform.Translate(tr * dt * moveSpeed); // Key: Ctrl
+else								m_anchor2.m_transform.Translate(tr * dt * moveSpeed);
+//m_anchor1.m_transform.Rotate(global_U * dt * rotSpeed);
+
+// ANCHOR TOGGLE
+if (ENGINE->INP()->IsKeyTriggered(101)) // Key: Numpad5
+{
+	if (ENGINE->INP()->IsKeyDown(17))	m_springSys.ToggleAnchor(0);// ctrl
+	else								m_springSys.ToggleAnchor(1);
+}
+
+m_springSys.Update();
+#endif
+
+#ifdef ENABLE_VPHYSICS
+#include "PhysicsEngine.h"
+#endif
+
+#ifdef ENABLE_ANIMATION
+#include "../Animation/Include/PathManager.h"
+#endif
+
+
+#ifdef ENABLE_VPHYSICS
+InitializePhysicsObjects();
+#endif
+
+#if defined( ENABLE_ANIMATION ) && defined( LOAD_ANIMS )
+m_pPathManager->Init();
+// load animated model, set IK effector bones
+// 	- from left hand to spine:
+//		47 - 40 - 32 - 21 - 15 - 8
+std::vector<std::string>	anims = { "Data/Animation/sylvanas_run.fbx", "Data/Animation/sylvanas_idle.fbx" };
+std::vector<size_t>			effectorBones = { 60, 47 + 1, 40 + 1, 32 + 1, 21 + 1, 15 + 1, 8 + 1, 4 + 1 };
+m_model.Load(anims, effectorBones, IKEngine::SylvanasConstraints());
+m_model.SetScale(0.1f);	// scale actor down
+
+						// set animation properties
+m_model.SetQuaternionSlerp(false);
+m_model.m_animMode = ANIM_MODE_IK;	// looping / path_looping / IK
+
+m_model.SetPath(m_pPathManager->m_paths[0]);
+m_model.m_pathLapTime = 12.8f;
+
+AnimatedModel::renderer = renderer;
+#endif
+#ifdef ENABLE_ANIMATION
+m_model.Update(dt);
+UpdateAnimatedModel(dt);
+#endif
+#ifdef ENABLE_VPHYSICS
+UpdateAnchors(dt);
+#endif
+#ifdef ENABLE_VPHYSICS
+// draw anchor 1 sphere
+m_pRenderer->SetBufferObj(m_anchor1.m_model.m_mesh);
+if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
+m_anchor1.m_model.m_material.SetMaterialConstants(m_pRenderer);
+XMMATRIX world = m_anchor1.m_transform.WorldTransformationMatrix();
+XMMATRIX nrmMatrix = m_anchor1.m_transform.NormalMatrix(world);
+m_pRenderer->SetConstant4x4f("world", world);
+m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+m_pRenderer->Apply();
+m_pRenderer->DrawIndexed();
+
+// draw anchor 2 sphere
+m_pRenderer->SetBufferObj(m_anchor2.m_model.m_mesh);
+if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
+m_anchor2.m_model.m_material.SetMaterialConstants(m_pRenderer);
+world = m_anchor2.m_transform.WorldTransformationMatrix();
+nrmMatrix = m_anchor2.m_transform.NormalMatrix(world);
+m_pRenderer->SetConstant4x4f("world", world);
+m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+m_pRenderer->Apply();
+m_pRenderer->DrawIndexed();
+
+// DRAW GRAVITY TEST OBJ
+//----------------------
+// materials
+m_pRenderer->SetBufferObj(m_physObj.m_model.m_mesh);
+m_physObj.m_model.m_material.SetMaterialConstants(m_pRenderer);
+
+// render bricks
+for (const auto& pObj : m_vPhysObj)
+{
+	world = pObj.m_transform.WorldTransformationMatrix();
+	nrmMatrix = pObj.m_transform.NormalMatrix(world);
+	m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+	m_pRenderer->SetConstant4x4f("world", world);
+	m_pRenderer->Apply();
+	m_pRenderer->DrawIndexed();
+}
+
+m_springSys.RenderSprings(m_pRenderer, view, proj);
+#endif

@@ -66,7 +66,7 @@ void GameObject::Render(Renderer * pRenderer) const
 	pRenderer->SetBufferObj(m_model.m_mesh);
 	XMMATRIX world = m_transform.WorldTransformationMatrix();
 	pRenderer->SetConstant4x4f("world", world);
-	pRenderer->SetConstant4x4f("normal", m_transform.NormalMatrix(world));
+	pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 }

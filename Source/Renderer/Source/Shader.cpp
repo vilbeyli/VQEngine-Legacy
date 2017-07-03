@@ -33,7 +33,7 @@ Shader::Shader(const std::string& shaderFileName)
 Shader::~Shader(void)
 {
 	// release constants
-	for (CBuffer& cbuf : m_cBuffers)
+	for (D3DCBuffer& cbuf : m_cBuffers)
 	{
 		if (cbuf.data)
 		{
@@ -417,7 +417,7 @@ void Shader::SetCBuffers(ID3D11Device* device)
 	// GPU CBuffers
 	for (const cBufferLayout& cbLayout : m_cBufferLayouts)
 	{
-		CBuffer cBuffer;
+		D3DCBuffer cBuffer;
 		cBufferDesc.ByteWidth = cbLayout.desc.Size;
 		if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &cBuffer.data)))
 		{
@@ -470,7 +470,7 @@ void Shader::RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType typ
 
 void Shader::VoidBuffers()
 {
-	for (CBuffer& cBuf : m_cBuffers)
+	for (D3DCBuffer& cBuf : m_cBuffers)
 	{
 		cBuf.dirty = true;
 	}
@@ -515,7 +515,7 @@ void Shader::AssignID(ShaderID id)
 	m_id = id;
 }
 
-std::string Shader::Name() const
+const std::string& Shader::Name() const
 {
 	return m_name;
 }
@@ -523,4 +523,14 @@ std::string Shader::Name() const
 ShaderID Shader::ID() const
 {
 	return m_id;
+}
+
+const std::vector<cBufferLayout>& Shader::GetConstantBufferLayouts() const
+{
+	return m_cBufferLayouts;
+}
+
+const std::vector<D3DCBuffer>& Shader::GetConstantBuffers() const
+{
+	return m_cBuffers;
 }

@@ -65,12 +65,16 @@ enum class TOPOLOGY
 	TOPOLOGY_COUNT
 };
 
+
 struct DepthPass
 {
-	unsigned m_shadowMapDimension;
-	Texture m_shadowMap;
-
-	void Initialize(Renderer* pRenderer);
+	unsigned				m_shadowMapDimension;
+	Texture					m_shadowMap;
+	const Shader*			m_shadowShader;
+	ID3D11RasterizerState*	m_drawRenderState;
+	ID3D11RasterizerState*	m_shadowRenderState;
+	D3D11_VIEWPORT			m_shadowViewport;
+	void Initialize(Renderer* pRenderer, ID3D11Device* device);
 };
 
 struct RenderData
@@ -95,10 +99,12 @@ class Renderer
 {
 	friend class Engine;
 public:
+
+
 	Renderer();
 	~Renderer();
 
-	bool		Init(int width, int height, HWND hwnd);
+	bool		Initialize(int width, int height, HWND hwnd);
 	void		Exit();
 	HWND		GetWindow() const;
 	float		AspectRatio() const;
@@ -109,11 +115,12 @@ public:
 	void		EnableZBuffer(bool enable);
 
 	// resource interface
-	ShaderID	AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
-	const Texture& AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
+	ShaderID		AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
+	const Texture&	AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
 
-	const Texture& GetTexture(TextureID) const;
-	const ShaderID GetLineShader() const;
+	const Shader*	GetShader(ShaderID shader_id) const;
+	const Texture&	GetTexture(TextureID) const;
+	const ShaderID	GetLineShader() const;
 
 	// state management
 	void SetViewport(const unsigned width, const unsigned height);
@@ -156,14 +163,14 @@ public:
 	static const char* s_shaderRoot;
 	static const char* s_textureRoot;
 
-	RenderData						m_renderData;
+	RenderData	m_renderData;
 
 private:
 	struct TextureSetCommand		{ TextureID texID; ShaderTexture shdTex; };
 
 	D3DManager*						m_Direct3D;
 	HWND							m_hWnd;
-	ID3D11Device*					m_device;
+	ID3D11Device*					m_device;	// ?
 	ID3D11DeviceContext*			m_deviceContext;
 
 	GeometryGenerator				m_geom;			// maybe static functions? yes... definitely static functions. todo:

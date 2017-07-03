@@ -154,6 +154,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Log.cpp" />
     <ClCompile Include="Source\SceneParser.cpp" />
     <ClCompile Include="Source\Quaternion.cpp" />
     <ClCompile Include="Source\SceneManager.cpp" />
@@ -178,6 +179,7 @@
     <ClInclude Include="Include\Camera.h" />
     <ClInclude Include="Include\SceneParser.h" />
     <ClInclude Include="Include\Settings.h" />
+    <ClInclude Include="Log.h" />
     <ClInclude Include="Source\Components\Component.h" />
     <ClInclude Include="Source\Components\Transform.h" />
     <ClInclude Include="Include\Engine.h" />

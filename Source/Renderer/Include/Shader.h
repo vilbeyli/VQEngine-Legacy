@@ -81,7 +81,7 @@ struct CPUConstant
 };
 
 // GPU side constant buffer
-struct CBuffer
+struct D3DCBuffer
 {
 	ShaderType shdType;
 	unsigned	bufferSlot;
@@ -120,8 +120,11 @@ public:
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
-	std::string	Name() const;
-	ShaderID	ID() const;
+	const std::string&					Name() const;
+	ShaderID							ID() const;
+	const std::vector<cBufferLayout>&	GetConstantBufferLayouts() const;
+	const std::vector<D3DCBuffer>&		GetConstantBuffers() const;
+
 
 private:
 	void Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts, bool geoShader = false);
@@ -137,28 +140,27 @@ private:
 	void AssignID(ShaderID id);
 
 private:
-	const std::string			m_name;
-	ShaderID					m_id;
+	const std::string						m_name;
+	ShaderID								m_id;
 
-	ID3D11VertexShader*			m_vertexShader;
-	ID3D11PixelShader*			m_pixelShader;
-	ID3D11GeometryShader*		m_geoShader;
-	ID3D11HullShader*			m_hullShader;
-	ID3D11DomainShader*			m_domainShader;
-	ID3D11ComputeShader*		m_computeShader;
+	ID3D11VertexShader*						m_vertexShader;
+	ID3D11PixelShader*						m_pixelShader;
+	ID3D11GeometryShader*					m_geoShader;
+	ID3D11HullShader*						m_hullShader;
+	ID3D11DomainShader*						m_domainShader;
+	ID3D11ComputeShader*					m_computeShader;
 
-	ID3D11ShaderReflection*		m_vsRefl;	// shader reflections, temporary?
-	ID3D11ShaderReflection*		m_psRefl;	// shader reflections, temporary?
-	ID3D11ShaderReflection*		m_gsRefl;	// shader reflections, temporary?
+	ID3D11ShaderReflection*					m_vsRefl;	// shader reflections, temporary?
+	ID3D11ShaderReflection*					m_psRefl;	// shader reflections, temporary?
+	ID3D11ShaderReflection*					m_gsRefl;	// shader reflections, temporary?
 
-	ID3D11InputLayout*			m_layout;
+	ID3D11InputLayout*						m_layout;
 
-	std::vector<CBuffer>					m_cBuffers;
+	std::vector<cBufferLayout>				m_cBufferLayouts;
+	std::vector<D3DCBuffer>					m_cBuffers;
 	std::vector<std::vector<CPUConstant>>	m_constants;
+
 	std::vector<ShaderTexture>				m_textures;
 	std::vector<ShaderSampler>				m_samplers;
-
-	std::vector<cBufferLayout>	m_cBufferLayouts;
-
 };
 

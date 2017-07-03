@@ -34,10 +34,14 @@
 const char* Renderer::s_shaderRoot = "Data/Shaders/";
 const char* Renderer::s_textureRoot = "Data/Textures/";
 
-void DepthPass::Initialize(Renderer* pRenderer)
+void DepthPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 {
 	m_shadowMapDimension = 512;
 
+	// check feature support & error handle:
+	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
+
+	// create shadow map texture for the pixel shader stage
 	D3D11_TEXTURE2D_DESC shadowMapDesc;
 	ZeroMemory(&shadowMapDesc, sizeof(D3D11_TEXTURE2D_DESC));
 	shadowMapDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
@@ -48,12 +52,86 @@ void DepthPass::Initialize(Renderer* pRenderer)
 	shadowMapDesc.Height = static_cast<UINT>(m_shadowMapDimension);
 	shadowMapDesc.Width = static_cast<UINT>(m_shadowMapDimension);
 
-//	HRESULT hr = pD3DDevice->CreateTexture2D(
-//		&shadowMapDesc,
-//		nullptr,
-//		&m_shadowMap.srv
-//	);
+	Texture& tex = m_shadowMap;
+	device->CreateTexture2D(
+		&shadowMapDesc,
+		nullptr,
+		&m_shadowMap.tex2D
+	);
 
+	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.Texture2D.MipSlice = 0;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	ZeroMemory(&srvDesc, sizeof(srvDesc));
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	HRESULT hr = device->CreateDepthStencilView(
+		tex.tex2D,
+		&dsvDesc,
+		&tex.dsv
+	);	// succeed hr ?
+
+	hr = device->CreateShaderResourceView(
+		tex.tex2D,
+		&srvDesc,
+		&tex.srv
+	);	// succeed hr? 
+
+	// comparison
+	D3D11_SAMPLER_DESC comparisonSamplerDesc;
+	ZeroMemory(&comparisonSamplerDesc, sizeof(D3D11_SAMPLER_DESC));
+	comparisonSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
+	comparisonSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
+	comparisonSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
+	comparisonSamplerDesc.BorderColor[0] = 1.0f;
+	comparisonSamplerDesc.BorderColor[1] = 1.0f;
+	comparisonSamplerDesc.BorderColor[2] = 1.0f;
+	comparisonSamplerDesc.BorderColor[3] = 1.0f;
+	comparisonSamplerDesc.MinLOD = 0.f;
+	comparisonSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	comparisonSamplerDesc.MipLODBias = 0.f;
+	comparisonSamplerDesc.MaxAnisotropy = 0;
+	comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+
+	hr = device->CreateSamplerState(&comparisonSamplerDesc, &tex.samplerState);
+	// succeed hr?
+
+	// render states for front face culling 
+	D3D11_RASTERIZER_DESC shadowRenderStateDesc;
+	ZeroMemory(&shadowRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
+	shadowRenderStateDesc.CullMode = D3D11_CULL_FRONT;
+	shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
+	shadowRenderStateDesc.DepthClipEnable = true;
+	device->CreateRasterizerState(&shadowRenderStateDesc, &m_shadowRenderState);
+	
+	D3D11_RASTERIZER_DESC drawingRenderStateDesc;
+	ZeroMemory(&drawingRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
+	drawingRenderStateDesc.CullMode = D3D11_CULL_BACK;
+	drawingRenderStateDesc.FillMode = D3D11_FILL_SOLID;
+	drawingRenderStateDesc.DepthClipEnable = true; // Feature level 9_1 requires DepthClipEnable == true
+	device->CreateRasterizerState(&drawingRenderStateDesc, &m_drawRenderState);
+
+	// shader
+	std::vector<InputLayout> layout = {
+		{ "POSITION",	FLOAT32_3 },
+		{ "NORMAL",		FLOAT32_3 },
+		{ "TANGENT",	FLOAT32_3 },
+		{ "TEXCOORD",	FLOAT32_2 }};
+	m_shadowShader = pRenderer->GetShader(pRenderer->AddShader("ShadowShader", pRenderer->s_shaderRoot, layout, false));
+	
+	ZeroMemory(&m_shadowViewport, sizeof(D3D11_VIEWPORT));
+	m_shadowViewport.Height = static_cast<float>(m_shadowMapDimension);
+	m_shadowViewport.Width  = static_cast<float>(m_shadowMapDimension);
+	m_shadowViewport.MinDepth = 0.f;
+	m_shadowViewport.MaxDepth = 1.f;
 }
 
 Renderer::Renderer()
@@ -72,37 +150,7 @@ Renderer::Renderer()
 	}
 }
 
-Renderer::~Renderer()
-{
-}
-
-bool Renderer::Init(int width, int height, HWND hwnd)
-{
-	m_hWnd = hwnd;
-
-	// Create the Direct3D object.
-	m_Direct3D = new D3DManager();
-	if (!m_Direct3D)
-	{
-		assert(false);
-		return false;
-	}
-
-	// Initialize the Direct3D object.
-	bool result = m_Direct3D->Init(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN);
-	if (!result)
-	{
-		MessageBox(m_hWnd, "Could not initialize Direct3D", "Error", MB_OK);
-		return false;
-	}
-	m_device		= m_Direct3D->GetDevice();
-	m_deviceContext = m_Direct3D->GetDeviceContext();
-
-	InitRasterizerStates();
-	GeneratePrimitives();
-	LoadShaders();
-	return true;
-}
+Renderer::~Renderer(){}
 
 void Renderer::Exit()
 {
@@ -155,6 +203,38 @@ unsigned Renderer::WindowWidth() const
 	return m_Direct3D->WindowWidth();
 }
 
+const Shader* Renderer::GetShader(ShaderID shader_id) const
+{
+	return m_shaders[shader_id];
+}
+
+
+bool Renderer::Initialize(int width, int height, HWND hwnd)
+{
+	m_hWnd = hwnd;
+
+	m_Direct3D = new D3DManager();
+	if (!m_Direct3D)
+	{
+		assert(false);
+		return false;
+	}
+
+	bool result = m_Direct3D->Init(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN);
+	if (!result)
+	{
+		MessageBox(m_hWnd, "Could not initialize Direct3D", "Error", MB_OK);
+		return false;
+	}
+	m_device		= m_Direct3D->GetDevice();
+	m_deviceContext = m_Direct3D->GetDeviceContext();
+
+	InitRasterizerStates();
+	GeneratePrimitives();
+	LoadShaders();
+	return true;
+}
+
 void Renderer::GeneratePrimitives()
 {
 	// cylinder parameters
@@ -205,7 +285,7 @@ void Renderer::LoadShaders()
 	m_renderData.errorTexture	= AddTexture("errTexture.png", s_textureRoot).id;
 	m_renderData.exampleTex		= AddTexture("bricks_d.png", s_textureRoot).id;
 	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", s_textureRoot).id;
-	m_renderData.depthPass.Initialize(this);
+	m_renderData.depthPass.Initialize(this, m_device);
 }
 
 void Renderer::PollThread()
@@ -374,21 +454,21 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 	// example params: "TextureCoord", "Data/Shaders/"
 	std::string path = fileRoot + shdFileName;
 
-	Shader* shd = new Shader(shdFileName);
-	shd->Compile(m_device, path, layouts, geoShader);
-	m_shaders.push_back(shd);
-	shd->AssignID(static_cast<int>(m_shaders.size()) - 1);
-	return shd->ID();
+	Shader* shader = new Shader(shdFileName);
+	shader->Compile(m_device, path, layouts, geoShader);
+	m_shaders.push_back(shader);
+	shader->AssignID(static_cast<int>(m_shaders.size()) - 1);
+	return shader->ID();
 }
 
 // assumes unique shader file names (even in different folders)
-const Texture& Renderer::AddTexture(const std::string& shdFileName, const std::string& fileRoot /*= s_textureRoot*/)
+const Texture& Renderer::AddTexture(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
 	// example params: "bricks_d.png", "Data/Textures/"
-	std::string path = fileRoot + shdFileName;
+	std::string path = fileRoot + texFileName;
 	std::wstring wpath(path.begin(), path.end());
 
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [shdFileName](auto& tex) { return tex.name == shdFileName; });
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [texFileName](auto& tex) { return tex.name == texFileName; });
 	if (found != m_textures.end())
 	{
 		//OutputDebugString("found\n\n");
@@ -397,29 +477,33 @@ const Texture& Renderer::AddTexture(const std::string& shdFileName, const std::s
 	}
 
 	Texture tex;
-	tex.name = shdFileName;
+	tex.name = texFileName;
 
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
 	{
 		CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), img->GetMetadata(), &tex.srv);
-		
+
+		// get srv from img
 		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 		ZeroMemory(&srvDesc, sizeof(srvDesc));
 		tex.srv->GetDesc(&srvDesc);
-
+		
+		// read width & height
 		ID3D11Resource* resource = nullptr;
 		tex.srv->GetResource(&resource);
-
 		ID3D11Texture2D* tex2D = nullptr;
 		if (SUCCEEDED(resource->QueryInterface(&tex2D)))
 		{
 			D3D11_TEXTURE2D_DESC desc;
 			tex2D->GetDesc(&desc);
-
 			tex.width = desc.Width;
 			tex.height = desc.Height;
+			tex.tex2D = tex2D;
 		}
+
+		tex.dsv = nullptr;				// no depth stencil view 
+		tex.samplerState = nullptr;		// default? todo
 
 		tex.id = static_cast<int>(m_textures.size());
 		m_textures.push_back(tex);
@@ -810,7 +894,7 @@ void Renderer::Apply()
 	// set shader constants
 	for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
 	{
-		CBuffer& cbuf = shader->m_cBuffers[i];
+		D3DCBuffer& cbuf = shader->m_cBuffers[i];
 		if (cbuf.dirty)	// if the CPU-side buffer is updated
 		{
 			ID3D11Buffer* bufferData = cbuf.data;

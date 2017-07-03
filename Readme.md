@@ -2,13 +2,14 @@
 
 ![](Screenshots/spheres.PNG)
 
-This project used be the Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc) at [DigiPen Institute of Technology](https://www.digipen.edu/).
-Now, the project will serve as a DX11 framework for stuyding and practicing various rendering techniques and real-time techniques. 
+This project started as the Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc) at [DigiPen Institute of Technology](https://www.digipen.edu/).
+Now, this project will serve as a DX11 framework for stuyding and practicing various rendering techniques and real-time techniques. 
 
 **Features**:
  - Shader Reflection
  - Phong Lighting
  - Diffuse Textures
+ - Normal Maps
  - Generated Geometry: Cube, Sphere, Cylinder, Grid
  
 ## Compiling Instructions & Dependencies (to be automated)

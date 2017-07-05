@@ -19,10 +19,9 @@
 
 #include <windows.h>
 #include "GeometryGenerator.h"
+#include "D3DManager.h"
 #include "Shader.h"
 #include "Texture.h"
-//#include <string>
-//#include <vector>
 
 #include "Mesh.h"
 #include "GameObject.h"
@@ -33,10 +32,10 @@
 class D3DManager;
 struct ID3D11Device;
 struct ID3D11DeviceContext;
-
 class BufferObject;
 class Camera;
 class Shader;
+struct Light;
 
 namespace DirectX { class ScratchImage; }
 
@@ -45,9 +44,14 @@ typedef int ShaderID;
 typedef int BufferID;
 typedef int TextureID;
 typedef int RasterizerStateID;
-typedef ID3D11RasterizerState RasterizerState;
+typedef int DepthStencilStateID;
 
-enum RASTERIZER_STATE
+
+using RasterizerState   = ID3D11RasterizerState;
+using DepthStencilState = ID3D11DepthStencilState;
+
+
+enum class DEFAULT_RS_STATE
 {
 	CULL_NONE = 0,
 	CULL_FRONT,
@@ -56,25 +60,16 @@ enum RASTERIZER_STATE
 	RS_COUNT
 };
 
-enum class TOPOLOGY
-{
-	POINT_LIST = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
-	TRIANGLE_LIST = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-	LINE_LIST = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
-
-	TOPOLOGY_COUNT
-};
-
-
-struct DepthPass
+struct DepthShadowPass
 {
 	unsigned				m_shadowMapDimension;
 	Texture					m_shadowMap;
 	const Shader*			m_shadowShader;
-	ID3D11RasterizerState*	m_drawRenderState;
-	ID3D11RasterizerState*	m_shadowRenderState;
+	RasterizerStateID		m_drawRenderState;
+	RasterizerStateID		m_shadowRenderState;
 	D3D11_VIEWPORT			m_shadowViewport;
 	void Initialize(Renderer* pRenderer, ID3D11Device* device);
+	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights) const;
 };
 
 struct RenderData
@@ -88,7 +83,7 @@ struct RenderData
 	ShaderID lineShader;
 	ShaderID TNBShader;
 
-	DepthPass depthPass;
+	DepthShadowPass depthPass;
 	TextureID errorTexture;
 	TextureID loadingScrTex;
 	TextureID exampleTex;		// load scr
@@ -111,12 +106,13 @@ public:
 	unsigned	WindowHeight() const;
 	unsigned	WindowWidth() const;
 
-	void		EnableAlphaBlending(bool enable);
-	void		EnableZBuffer(bool enable);
 
 	// resource interface
-	ShaderID		AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
-	const Texture&	AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
+	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
+	RasterizerStateID	AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip);
+	const Texture&		AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
+	DepthStencilStateID AddDepthStencilState();	// todo params
+	DepthStencilStateID AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
 
 	const Shader*	GetShader(ShaderID shader_id) const;
 	const Texture&	GetTexture(TextureID) const;
@@ -124,6 +120,7 @@ public:
 
 	// state management
 	void SetViewport(const unsigned width, const unsigned height);
+	void SetViewport(const D3D11_VIEWPORT& viewport);
 	void SetCamera(Camera* m_camera);
 	void SetShader(ShaderID);
 	void SetBufferObj(int BufferID);
@@ -133,7 +130,8 @@ public:
 	void SetConstant1i(const char* cName, const int data);
 	void SetConstantStruct(const char * cName, void* data);
 	void SetTexture(const char* texName, TextureID tex);
-	void SetRasterizerState(int stateID);
+	void SetRasterizerState(RasterizerStateID rsStateID);
+	void SetDepthStencilState(DepthStencilStateID depthStencilStateID);
 	
 	void DrawIndexed(TOPOLOGY topology = TOPOLOGY::TRIANGLE_LIST);
 	void Draw(TOPOLOGY topology = TOPOLOGY::POINT_LIST);
@@ -141,19 +139,20 @@ public:
 	void DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
 
 	void Begin(const float clearColor[4]);
-	void Reset();
-	void Apply();
 	void End();
+	void Reset();
+
+	void Apply();
 	
-	void PollShaderFiles();
 private:
+	void PollShaderFiles();
 
 	void GeneratePrimitives();
 	void LoadShaders();
 	void PollThread();
 	void OnShaderChange(LPTSTR dir);
 
-	void InitRasterizerStates();
+	void InitializeDefaultRasterizerStates();
 	void LoadAnimation();
 	//=======================================================================================================================================================
 public:
@@ -164,14 +163,14 @@ public:
 	static const char* s_textureRoot;
 
 	RenderData	m_renderData;
+	ID3D11Device*					m_device;	// ?
+	ID3D11DeviceContext*			m_deviceContext;
 
 private:
 	struct TextureSetCommand		{ TextureID texID; ShaderTexture shdTex; };
 
 	D3DManager*						m_Direct3D;
 	HWND							m_hWnd;
-	ID3D11Device*					m_device;	// ?
-	ID3D11DeviceContext*			m_deviceContext;
 
 	GeometryGenerator				m_geom;			// maybe static functions? yes... definitely static functions. todo:
 
@@ -183,14 +182,16 @@ private:
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
 	std::vector<Texture>			m_textures;
-
 	std::queue<TextureSetCommand>	m_texSetCommands;
+
+	std::vector<RasterizerState*>	m_rasterizerStates;
+	std::vector<DepthStencilState*> m_depthStencilStates;
 
 	// state variables
 	ShaderID						m_activeShader;
 	BufferID						m_activeBuffer;
-	
-	std::vector<RasterizerState*>	m_rasterizerStates;
+	RasterizerStateID				m_activeRSState;
+	DepthStencilStateID				m_activeDepthStencilState;
 	
 	// performance counters
 	unsigned long long				m_frameCount;

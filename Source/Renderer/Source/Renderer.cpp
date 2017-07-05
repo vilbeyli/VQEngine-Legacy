@@ -20,6 +20,7 @@
 #include "D3DManager.h"
 #include "BufferObject.h"
 #include "Shader.h"
+#include "Light.h"
 
 #include "SystemDefs.h"
 #include "utils.h"
@@ -34,7 +35,7 @@
 const char* Renderer::s_shaderRoot = "Data/Shaders/";
 const char* Renderer::s_textureRoot = "Data/Textures/";
 
-void DepthPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
+void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 {
 	m_shadowMapDimension = 512;
 
@@ -105,19 +106,8 @@ void DepthPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	// succeed hr?
 
 	// render states for front face culling 
-	D3D11_RASTERIZER_DESC shadowRenderStateDesc;
-	ZeroMemory(&shadowRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
-	shadowRenderStateDesc.CullMode = D3D11_CULL_FRONT;
-	shadowRenderStateDesc.FillMode = D3D11_FILL_SOLID;
-	shadowRenderStateDesc.DepthClipEnable = true;
-	device->CreateRasterizerState(&shadowRenderStateDesc, &m_shadowRenderState);
-	
-	D3D11_RASTERIZER_DESC drawingRenderStateDesc;
-	ZeroMemory(&drawingRenderStateDesc, sizeof(D3D11_RASTERIZER_DESC));
-	drawingRenderStateDesc.CullMode = D3D11_CULL_BACK;
-	drawingRenderStateDesc.FillMode = D3D11_FILL_SOLID;
-	drawingRenderStateDesc.DepthClipEnable = true; // Feature level 9_1 requires DepthClipEnable == true
-	device->CreateRasterizerState(&drawingRenderStateDesc, &m_drawRenderState);
+	m_shadowRenderState = pRenderer->AddRSState(RS_CULL_MODE::FRONT, RS_FILL_MODE::SOLID, true);
+	m_drawRenderState   = pRenderer->AddRSState(RS_CULL_MODE::BACK , RS_FILL_MODE::SOLID, true);
 
 	// shader
 	std::vector<InputLayout> layout = {
@@ -125,7 +115,8 @@ void DepthPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 		{ "NORMAL",		FLOAT32_3 },
 		{ "TANGENT",	FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 }};
-	m_shadowShader = pRenderer->GetShader(pRenderer->AddShader("ShadowShader", pRenderer->s_shaderRoot, layout, false));
+	m_shadowShader = pRenderer->GetShader(pRenderer->AddShader("Shadow"     , pRenderer->s_shaderRoot, layout, false));
+	m_shadowShader = pRenderer->GetShader(pRenderer->AddShader("DepthShader", pRenderer->s_shaderRoot, layout, false));
 	
 	ZeroMemory(&m_shadowViewport, sizeof(D3D11_VIEWPORT));
 	m_shadowViewport.Height = static_cast<float>(m_shadowMapDimension);
@@ -134,19 +125,42 @@ void DepthPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	m_shadowViewport.MaxDepth = 1.f;
 }
 
+void DepthShadowPass::RenderDepth(Renderer * pRenderer, const std::vector<const Light*> shadowLights) const
+{
+	return;	// remove when done.
+	pRenderer->m_deviceContext->ClearDepthStencilView(m_shadowMap.dsv, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0 );
+
+	// no render targets, only depth-stencil for shadowMap
+	pRenderer->m_deviceContext->OMSetRenderTargets(0, nullptr, m_shadowMap.dsv);
+	
+	// shadow render state: cull front faces, fill solid, clip dep
+	pRenderer->SetRasterizerState(m_shadowRenderState);
+
+	// lights viewport 512x512
+	pRenderer->SetViewport(m_shadowViewport);
+	pRenderer->SetShader(m_shadowShader->ID());
+
+	// --- in progress ---
+	// set output merger - shadow depth view
+	//pRenderer->
+	pRenderer->SetConstant4x4f("", shadowLights.front()->GetLightSpaceMatrix());
+}
+
+
 Renderer::Renderer()
 	:
 	m_Direct3D(nullptr),
 	m_device(nullptr),
 	m_deviceContext(nullptr),
 	m_mainCamera(nullptr),
-	m_bufferObjects(std::vector<BufferObject*>(MESH_TYPE::MESH_TYPE_COUNT)),
-	m_rasterizerStates(std::vector<RasterizerState*>(RASTERIZER_STATE::RS_COUNT))
+	   m_bufferObjects(std::vector<BufferObject*>   (MESH_TYPE::MESH_TYPE_COUNT)),
+	m_rasterizerStates(std::vector<RasterizerState*>((int)DEFAULT_RS_STATE::RS_COUNT)),
+	m_depthStencilStates(std::vector<DepthStencilState*>())
 {
-	for (int i=0; i<RASTERIZER_STATE::RS_COUNT; ++i)
+	for (int i=0; i<(int)DEFAULT_RS_STATE::RS_COUNT; ++i)
 	{
 		m_rasterizerStates[i] = (RasterizerState*)malloc(sizeof(*m_rasterizerStates[i]));
-		memset(&*m_rasterizerStates[i], 0, sizeof(*m_rasterizerStates[i]));
+		memset(m_rasterizerStates[i], 0, sizeof(*m_rasterizerStates[i]));
 	}
 }
 
@@ -229,7 +243,7 @@ bool Renderer::Initialize(int width, int height, HWND hwnd)
 	m_device		= m_Direct3D->GetDevice();
 	m_deviceContext = m_Direct3D->GetDeviceContext();
 
-	InitRasterizerStates();
+	InitializeDefaultRasterizerStates();
 	GeneratePrimitives();
 	LoadShaders();
 	return true;
@@ -399,13 +413,13 @@ void Renderer::PollShaderFiles()
 #endif
 }
 
-void Renderer::InitRasterizerStates()
+void Renderer::InitializeDefaultRasterizerStates()
 {
 	HRESULT hr;
 	char info[129];
-	ID3D11RasterizerState*& cullNone  = m_rasterizerStates[CULL_NONE];
-	ID3D11RasterizerState*& cullBack  = m_rasterizerStates[CULL_BACK];
-	ID3D11RasterizerState*& cullFront = m_rasterizerStates[CULL_FRONT];
+	ID3D11RasterizerState*& cullNone  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_NONE];
+	ID3D11RasterizerState*& cullBack  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_BACK];
+	ID3D11RasterizerState*& cullFront = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_FRONT];
 	
 	// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
 	D3D11_RASTERIZER_DESC rsDesc;
@@ -459,6 +473,29 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 	m_shaders.push_back(shader);
 	shader->AssignID(static_cast<int>(m_shaders.size()) - 1);
 	return shader->ID();
+}
+
+RasterizerStateID Renderer::AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip)
+{
+	D3D11_RASTERIZER_DESC RSDesc;
+	ZeroMemory(&RSDesc, sizeof(D3D11_RASTERIZER_DESC));
+
+	RSDesc.CullMode = static_cast<D3D11_CULL_MODE>(cullMode);
+	RSDesc.FillMode = static_cast<D3D11_FILL_MODE>(fillMode);
+	RSDesc.DepthClipEnable = enableDepthClip;
+	// todo: add params, scissors, multisample, antialiased line
+	
+
+	ID3D11RasterizerState* newRS;
+	int hr = m_device->CreateRasterizerState(&RSDesc, &newRS);
+	if (!SUCCEEDED(hr))
+	{
+		assert(false);
+		// todo
+	}
+
+	m_rasterizerStates.push_back(newRS);
+	return static_cast<RasterizerStateID>(m_rasterizerStates.size() - 1);
 }
 
 // assumes unique shader file names (even in different folders)
@@ -515,6 +552,61 @@ const Texture& Renderer::AddTexture(const std::string& texFileName, const std::s
 		return m_textures[0];
 	}
 
+}
+
+DepthStencilStateID Renderer::AddDepthStencilState()
+{
+	DepthStencilState* newDSState = (DepthStencilState*)malloc(sizeof(DepthStencilState));
+
+	HRESULT result;
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+
+	// Set up the description of the stencil state.
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+	depthStencilDesc.StencilEnable = false;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
+
+	// Stencil operations if pixel is front-facing.
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Stencil operations if pixel is back-facing.
+	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Create the depth stencil state.
+	result = m_device->CreateDepthStencilState(&depthStencilDesc, &newDSState);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	m_depthStencilStates.push_back(newDSState);
+	return static_cast<DepthStencilStateID>(m_depthStencilStates.size() - 1);
+}
+
+DepthStencilStateID Renderer::AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC & dsDesc)
+{
+	DepthStencilState* newDSState = (DepthStencilState*)malloc(sizeof(DepthStencilState));
+	HRESULT result;
+
+	result = m_device->CreateDepthStencilState(&dsDesc, &newDSState);
+	if (FAILED(result))
+	{
+		return false;
+	}
+
+	m_depthStencilStates.push_back(newDSState);
+	return static_cast<DepthStencilStateID>(m_depthStencilStates.size() - 1);
 }
 
 const Texture& Renderer::GetTexture(TextureID id) const
@@ -577,7 +669,7 @@ void Renderer::SetShader(ShaderID id)
 	if (id != m_activeShader)
 	{
 		m_activeShader = id;
-		m_shaders[id]->VoidBuffers();
+		m_shaders[id]->ClearConstantBuffers();
 	}
 }
 
@@ -596,6 +688,11 @@ void Renderer::SetViewport(const unsigned width, const unsigned height)
 	m_viewPort.Height	= static_cast<float>(height);
 	m_viewPort.MinDepth = 0;
 	m_viewPort.MaxDepth = 1;
+}
+
+void Renderer::SetViewport(const D3D11_VIEWPORT & viewport)
+{
+	m_viewPort = viewport;
 }
 
 void Renderer::SetBufferObj(int BufferID)
@@ -822,6 +919,18 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 #endif
 }
 
+void Renderer::SetRasterizerState(RasterizerStateID rsStateID)
+{
+	assert(rsStateID > -1 && static_cast<size_t>(rsStateID) < m_rasterizerStates.size());
+	m_activeRSState = rsStateID;
+}
+
+void Renderer::SetDepthStencilState(DepthStencilStateID depthStencilStateID)
+{
+	assert(depthStencilStateID > -1 && static_cast<size_t>(depthStencilStateID) < m_depthStencilStates.size());
+	m_activeDepthStencilState = depthStencilStateID;
+}
+
 // temp
 void Renderer::DrawLine()
 {
@@ -858,15 +967,23 @@ void Renderer::End()
 
 
 void Renderer::Apply()
-{
-	// Here, we make all the API calls for GPU data
+{	// Here, we make all the API calls for GPU data
 
 	Shader* shader = m_shaders[m_activeShader];
-	m_deviceContext->RSSetViewports(1, &m_viewPort);
 
 	// TODO: check if state is changed
 
+	// set vertex & index buffers & topology
+	// ----------------------------------------
+	unsigned stride = sizeof(Vertex);	// layout?
+	unsigned offset = 0;
+	if (m_activeBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_activeBuffer]->m_vertexBuffer, &stride, &offset);
+	//else OutputDebugString("Warning: no active buffer object (-1)\n");
+	if (m_activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	//else OutputDebugString("Warning: no active buffer object (-1)\n");
+
 	// set shaders & data layout
+	// ----------------------------------------
 	m_deviceContext->IASetInputLayout(shader->m_layout);
 	m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
 	m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
@@ -875,23 +992,13 @@ void Renderer::Apply()
 	if (shader->m_domainShader)	 m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
 	if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
 
-	// set vertex & index buffers & topology
-	unsigned stride = sizeof(Vertex);	// layout?
-	unsigned offset = 0;
-
-	if (m_activeBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_activeBuffer]->m_vertexBuffer, &stride, &offset);
-	//else OutputDebugString("Warning: no active buffer object (-1)\n");
-	if (m_activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-	//else OutputDebugString("Warning: no active buffer object (-1)\n");
-
-	// viewport
-	m_deviceContext->RSSetState(m_rasterizerStates[CULL_BACK]);	// TODO: m_activeRS?
-
-	// test: TODO remove later
-	//D3D11_RASTERIZER_DESC rsDesc;
-	//m_rasterizerStates[CULL_NONE]->GetDesc(&rsDesc);
+	// viewport & rasterizer state
+	// ----------------------------------------
+	m_deviceContext->RSSetViewports(1, &m_viewPort);
+	m_deviceContext->RSSetState(m_rasterizerStates[m_activeRSState]);
 
 	// set shader constants
+	// ----------------------------------------
 	for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
 	{
 		D3DCBuffer& cbuf = shader->m_cBuffers[i];
@@ -959,6 +1066,7 @@ void Renderer::Apply()
 	}
 
 	// set textures and sampler states
+	// ----------------------------------------
 	while (m_texSetCommands.size() > 0)
 	{
 		TextureSetCommand& cmd = m_texSetCommands.front();
@@ -989,7 +1097,10 @@ void Renderer::Apply()
 		m_texSetCommands.pop();
 	}
 
-	m_deviceContext->OMSetDepthStencilState(m_Direct3D->m_depthStencilState, 0);
+	// output merger, depthStencilState
+	// ----------------------------------------
+	m_deviceContext->OMSetDepthStencilState(m_Direct3D->m_depthStencilState, 0); // todo: 
+	
 }
 
 void Renderer::DrawIndexed(TOPOLOGY topology)

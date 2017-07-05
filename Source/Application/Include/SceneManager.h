@@ -85,15 +85,16 @@ private:
 	Renderer*			m_pRenderer;
 	shared_ptr<Camera>	m_pCamera;
 	PathManager*		m_pPathManager; // unused
-	Skydome				m_skydome;
 
 	// render data
 	const RenderData*	m_renderData;
 	ShaderID			m_selectedShader;
 	bool				m_gammaCorrection;
-	std::vector<Light>	m_lights;
 
 	// scene variables
+	Skydome				m_skydome;
+	std::vector<Light>	m_lights;
+
 	struct Room {
 		friend class SceneManager;
 		GameObject floor;
@@ -127,6 +128,5 @@ private:
 
 	SpringSystem m_springSys;
 #endif
-	void RenderDepth();
 };
 

@@ -24,7 +24,7 @@
 #include "Color.h"
 #include <DirectXMath.h>
 
-struct ShaderLight
+struct LightShaderSignature
 {
 	vec3 position;
 	float pad1;
@@ -34,7 +34,7 @@ struct ShaderLight
 	vec3 spotDir;
 	float halfAngle;
 
-	XMFLOAT2 attenuation;
+	vec2 attenuation;
 	float range;
 	float pad3;
 };
@@ -57,31 +57,32 @@ struct Light// : public Component
 			float range,
 			float brightness,
 			float spotAngle);
+	Light(const Light& l);
 	~Light();
 
 	void SetLightRange(float range);
 	XMMATRIX GetLightSpaceMatrix() const;
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
-	ShaderLight ShaderLightStruct() const;
+	LightShaderSignature ShaderLightStruct() const;
 
 	//---------------------------------------------------------------------------------
 	
-	// TODO: name consistency | members: m_varName, statics: s_varName
-	Transform tf;
-	Model model;
+	LightType _type;
+	Color _color;
+	float _range;
+	float _brightness;
 	
-	LightType lightType_;
-	Color color_;
-	float range_;
-	float brightness_;
-	bool shadows_;			// not used yet
+	bool _castsShadow;
 
 	// point light attributes
-	XMFLOAT2 attenuation_;
+	union {
+		vec2 _attenuation;
+		vec2 _spotAngle;	// uses only X channel
+	};	
 
-	// spot light attributes
-	float spotAngle_;		
+	Transform _transform;
+	Model _model;
 };
 
 

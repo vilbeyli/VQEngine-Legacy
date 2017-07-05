@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}</ProjectGuid>
     <RootNamespace>DX11Renderer</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
     <ProjectName>Application</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -154,7 +154,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Log.cpp" />
+    <ClCompile Include="Source\Log.cpp" />
     <ClCompile Include="Source\SceneParser.cpp" />
     <ClCompile Include="Source\Quaternion.cpp" />
     <ClCompile Include="Source\SceneManager.cpp" />
@@ -179,7 +179,7 @@
     <ClInclude Include="Include\Camera.h" />
     <ClInclude Include="Include\SceneParser.h" />
     <ClInclude Include="Include\Settings.h" />
-    <ClInclude Include="Log.h" />
+    <ClInclude Include="Include\Log.h" />
     <ClInclude Include="Source\Components\Component.h" />
     <ClInclude Include="Source\Components\Transform.h" />
     <ClInclude Include="Include\Engine.h" />

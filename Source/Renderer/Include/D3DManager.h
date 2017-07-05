@@ -28,6 +28,34 @@
 
 using namespace DirectX;
 
+// auto convert for enum classes: https://stackoverflow.com/questions/8357240/how-to-automatically-convert-strongly-typed-enum-into-int/8357462#8357462
+template<typename E>
+constexpr auto to_underlying(E e) noexcept
+{
+	return static_cast<typename std::underlying_type_t<E>>(e);
+}
+
+enum class RS_CULL_MODE 
+{
+	FRONT = D3D11_CULL_FRONT,
+	NONE = D3D11_CULL_NONE,
+	BACK = D3D11_CULL_BACK
+};
+
+enum class RS_FILL_MODE
+{
+	SOLID     = D3D11_FILL_SOLID,
+	WIREFRAME = D3D11_FILL_WIREFRAME,
+};
+
+enum class TOPOLOGY
+{
+	POINT_LIST     = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
+	TRIANGLE_LIST  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+	LINE_LIST      = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+
+	TOPOLOGY_COUNT
+};
 
 class D3DManager
 {

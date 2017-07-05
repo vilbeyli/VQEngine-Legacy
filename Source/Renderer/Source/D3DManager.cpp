@@ -510,9 +510,6 @@ bool D3DManager::InitDepthStencilBuffer()
 		return false;
 	}
 
-	// Set the depth stencil state.
-	m_deviceContext->OMSetDepthStencilState(m_depthStencilState, 1);
-
 	return true;
 }
 
@@ -585,9 +582,6 @@ void D3DManager::InitViewport(int scrWidth, int scrHeight)
 	viewport.MaxDepth = 1.0f;
 	viewport.TopLeftX = 0.0f;
 	viewport.TopLeftY = 0.0f;
-
-	// Create the viewport.
-	m_deviceContext->RSSetViewports(1, &viewport);
 }
 
 bool D3DManager::InitAlphaBlending()

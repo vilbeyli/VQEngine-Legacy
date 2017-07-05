@@ -46,24 +46,37 @@ const std::map<unsigned, std::pair<float, float>> rangeAttenuationMap_ =
 
 Light::Light()
 	:
-	lightType_(LightType::POINT),
-	color_(Color::white),
-	range_(50),
-	brightness_(1.0f),
-	spotAngle_(0.0f)
+	_type(LightType::POINT),
+	_color(Color::white),
+	_range(50),
+	_brightness(1.0f),
+	_castsShadow(false),
+	_spotAngle(vec2()),
+	_attenuation(vec2())
 {
-	SetLightRange(range_);
+	SetLightRange(_range);
 }
+
+Light::Light(const Light& l)
+	:
+	_type(l._type),
+	_color(l._color),
+	_range(l._range),
+	_brightness(l._brightness),
+	_castsShadow(l._castsShadow),
+	_spotAngle(l._spotAngle),
+	_transform(l._transform),
+	_model(l._model)
+{}
 
 Light::Light(LightType type, Color color, float range, float brightness, float spotAngle) 
 	:
-	lightType_(type),
-	color_(color),
-	range_(range),
-	brightness_(brightness),
-	spotAngle_(spotAngle)
+	_type(type),
+	_color(color),
+	_range(range),
+	_brightness(brightness)
 {
-	SetLightRange(range_);
+	SetLightRange(_range);
 }
 
 Light::~Light()
@@ -71,7 +84,7 @@ Light::~Light()
 
 void Light::SetLightRange(float range)
 {	
-	range_ = range;
+	_range = range;
 	// ATTENUATION LOOKUP FOR POINT LIGHTS
 	// find the first greater or equal range value (rangeIndex) 
 	// to look up with in the attenuation map
@@ -79,7 +92,7 @@ void Light::SetLightRange(float range)
 	unsigned rangeIndex = static_cast<unsigned>(ranges[rangeAttenuationMap_.size() - 1]);	// default case = largest range
 	for (size_t i = 0; i < rangeAttenuationMap_.size(); i++)
 	{
-		if (ranges[i] >= range_)
+		if (ranges[i] >= _range)
 		{
 			rangeIndex = static_cast<unsigned>(ranges[i]);
 			break;
@@ -87,21 +100,21 @@ void Light::SetLightRange(float range)
 	}
 
 	std::pair<float, float> attn = rangeAttenuationMap_.at(rangeIndex);
-	attenuation_ = XMFLOAT2(attn.first, attn.second);
+	_attenuation = vec2(attn.first, attn.second);
 }
 
 XMMATRIX Light::GetLightSpaceMatrix() const
 {
 	XMMATRIX LSpaceMat = XMMatrixIdentity();
-	switch (lightType_)
+	switch (_type)
 	{
 	case LightType::POINT:
 		break;
 	case LightType::SPOT:
 	{
-		XMVECTOR pos = tf._position;
+		XMVECTOR pos = _transform._position;
 		XMMATRIX view = GetViewMatrix();
-		XMMATRIX proj = XMMatrixPerspectiveFovLH((spotAngle_* 1.25f) * DEG2RAD, 1.0f, 0.1f, 100.0f);
+		XMMATRIX proj = XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 100.0f);
 		LSpaceMat = proj * view;
 		break;
 	}	
@@ -117,7 +130,7 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 XMMATRIX Light::GetViewMatrix() const
 {
 	XMMATRIX ViewMatarix = XMMatrixIdentity();
-	switch (lightType_)
+	switch (_type)
 	{
 	case LightType::POINT:
 		break;
@@ -125,9 +138,9 @@ XMMATRIX Light::GetViewMatrix() const
 	{
 		XMVECTOR up		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-		lookAt	= XMVector3TransformCoord(lookAt, tf.RotationMatrix());
-		up		= XMVector3TransformCoord(up,	  tf.RotationMatrix());
-		XMVECTOR pos = tf._position;
+		lookAt	= XMVector3TransformCoord(lookAt, _transform.RotationMatrix());
+		up		= XMVector3TransformCoord(up,	  _transform.RotationMatrix());
+		XMVECTOR pos = _transform._position;
 		XMVECTOR taraget = pos + lookAt;
 		ViewMatarix = XMMatrixLookAtLH(pos, taraget, up);
 		break;
@@ -144,7 +157,7 @@ XMMATRIX Light::GetViewMatrix() const
 XMMATRIX Light::GetProjectionMatrix() const
 {
 	XMMATRIX proj = XMMatrixIdentity();
-	switch (lightType_)
+	switch (_type)
 	{
 	case LightType::POINT:
 		break;
@@ -163,23 +176,24 @@ XMMATRIX Light::GetProjectionMatrix() const
 
 
 
-ShaderLight Light::ShaderLightStruct() const
+LightShaderSignature Light::ShaderLightStruct() const
 {
-	vec3 spotDirection = vec3();
-	if (lightType_ == LightType::SPOT)
-	{
-		XMVECTOR up = XMVectorSet(0, 1, 0, 0);
-		up = XMVector3TransformCoord(up, tf.RotationMatrix());
-		spotDirection = up;
-	}
+	vec3 spotDirection = [&]() -> vec3 {
+		if (_type == LightType::SPOT)
+		{
+			XMVECTOR up = XMVectorSet(0, 1, 0, 0);
+			return XMVector3TransformCoord(up, _transform.RotationMatrix());
+		}
+		return vec3();
+	}();
 
-	ShaderLight sl;
-	sl.position = tf._position;
-	sl.color = color_.Value();
-	sl.brightness = brightness_;
-	sl.halfAngle = spotAngle_ * DEG2RAD / 2;
-	sl.spotDir = spotDirection;
-	sl.attenuation = attenuation_;
-	sl.range = range_;
+	LightShaderSignature sl;
+	sl.position    = _transform._position;
+	sl.color       = _color.Value();
+	sl.brightness  = _brightness;
+	sl.halfAngle   = _spotAngle.x() * DEG2RAD / 2;
+	sl.spotDir     = spotDirection;
+	sl.attenuation = _attenuation;
+	sl.range       = _range;
 	return sl;
 }

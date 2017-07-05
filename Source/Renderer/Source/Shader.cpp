@@ -468,11 +468,11 @@ void Shader::RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType typ
 	}
 }
 
-void Shader::VoidBuffers()
+void Shader::ClearConstantBuffers()
 {
-	for (D3DCBuffer& cBuf : m_cBuffers)
+	for (D3DCBuffer& cBuffer : m_cBuffers)
 	{
-		cBuf.dirty = true;
+		cBuffer.dirty = true;
 	}
 }
 

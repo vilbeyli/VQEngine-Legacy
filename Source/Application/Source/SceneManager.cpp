@@ -57,10 +57,9 @@ void SceneManager::Initialize(Renderer* renderer, const RenderData* rData, PathM
 	InitializeObjectArrays();
 
 	m_skydome.Init(m_pRenderer, "browncloud_lf.jpg", 1000.0f / 2.2f, m_renderData->unlitShader);
-
 }
 
-enum WALLS
+enum class WALLS
 {
 	FLOOR = 0,
 	LEFT,
@@ -158,44 +157,44 @@ void SceneManager::InitializeLights()
 	// spot lights
 	{
 		Light l;
-		l.lightType_ = Light::LightType::SPOT;
-		l.tf.SetPosition(0.0f, 3.6f*19.0f, 0.0f);
-		l.tf.RotateAroundGlobalXAxisDegrees(180.0f);
-		l.tf.SetUniformScale(0.8f);
-		l.model.m_mesh = MESH_TYPE::CYLINDER;
-		l.model.m_material.color = Color::white;
-		l.color_ = Color::white;
+		l._type = Light::LightType::SPOT;
+		l._transform.SetPosition(0.0f, 3.6f*19.0f, 0.0f);
+		l._transform.RotateAroundGlobalXAxisDegrees(180.0f);
+		l._transform.SetUniformScale(0.8f);
+		l._model.m_mesh = MESH_TYPE::CYLINDER;
+		l._model.m_material.color = Color::white;
+		l._color = Color::white;
 		//l.SetLightRange(30);
-		l.spotAngle_ = 70.0f;
+		l._spotAngle = 70.0f;
 		m_lights.push_back(l);
 	}
 
 	// point lights
 	{
 		Light l;
-		l.tf.SetPosition(-8.0f, 22.0f, 0);
-		l.tf.SetUniformScale(0.3f);
-		l.model.m_mesh = MESH_TYPE::SPHERE;
-		l.model.m_material.color = l.color_ = Color::blue;
+		l._transform.SetPosition(-8.0f, 22.0f, 0);
+		l._transform.SetUniformScale(0.3f);
+		l._model.m_mesh = MESH_TYPE::SPHERE;
+		l._model.m_material.color = l._color = Color::blue;
 		l.SetLightRange(180);
 		m_lights.push_back(l);
 	}
 	{
 		Light l;
-		l.tf.SetPosition(28.0f, 15.0f, -17.0f);
-		l.tf.SetUniformScale(0.4f);
-		l.model.m_mesh = MESH_TYPE::SPHERE;
-		l.model.m_material.color = Color::orange;
-		l.color_ = l.model.m_material.color;
+		l._transform.SetPosition(28.0f, 15.0f, -17.0f);
+		l._transform.SetUniformScale(0.4f);
+		l._model.m_mesh = MESH_TYPE::SPHERE;
+		l._model.m_material.color = Color::orange;
+		l._color = l._model.m_material.color;
 		l.SetLightRange(250);
 		m_lights.push_back(l);
 	}
 	{
 		Light l;
-		l.tf.SetPosition(-140.0f, 100.0f, 140.0f);
-		l.tf.SetUniformScale(0.5f);
-		l.model.m_mesh				= MESH_TYPE::SPHERE;
-		l.model.m_material.color	= l.color_ = Color::red;
+		l._transform.SetPosition(-140.0f, 100.0f, 140.0f);
+		l._transform.SetUniformScale(0.5f);
+		l._model.m_mesh				= MESH_TYPE::SPHERE;
+		l._model.m_material.color	= l._color = Color::red;
 		l.SetLightRange(40);
 		m_lights.push_back(l);
 	}
@@ -208,10 +207,10 @@ void SceneManager::InitializeLights()
 		float x = RandF(-20.0f, 20.0f);
 		float y = RandF(-15.0f, 15.0f);
 		float z = RandF(-10.0f, 20.0f);
-		l.tf.SetPosition(x, y, z);
-		l.tf.SetUniformScale(0.1f);
-		l.model.m_mesh = MESH_TYPE::SPHERE;
-		l.model.m_material.color = l.color_ = rndColor;
+		l._transform.SetPosition(x, y, z);
+		l._transform.SetUniformScale(0.1f);
+		l._model.m_mesh = MESH_TYPE::SPHERE;
+		l._model.m_material.color = l._color = rndColor;
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
 		m_lights.push_back(l);
 	}
@@ -263,7 +262,7 @@ void SceneManager::InitializeObjectArrays()
 		}
 
 		// initial direction for spot light
-		m_lights[0].tf.RotateAroundGlobalZAxisDegrees(30.0f);
+		m_lights[0]._transform.RotateAroundGlobalZAxisDegrees(30.0f);
 
 	}
 	{	// circle arrangement
@@ -402,7 +401,7 @@ void SceneManager::UpdateCentralObj(const float dt)
 		}
 	}
 
-	m_lights[0].tf.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);
+	m_lights[0]._transform.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);
 }
 
 
@@ -435,9 +434,19 @@ void SceneManager::Update(float dt)
 
 void SceneManager::Render() 
 {
+	// dynamic shadow casters
+	std::vector<const Light*> _shadowCasters(m_lights.size());
+	for (const auto& light : m_lights)
+	{
+		if (light._castsShadow)
+			_shadowCasters.push_back(&light);
+	}
+
 	const XMMATRIX view = m_pCamera->GetViewMatrix();
 	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
 
+	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters);
+	
 	m_skydome.Render(view, proj);
 
 	m_pRenderer->SetShader(m_selectedShader);
@@ -449,7 +458,6 @@ void SceneManager::Render()
 	if (m_selectedShader == m_renderData->phongShader)	{	SendLightData();}
 	if (m_selectedShader == m_renderData->TNBShader)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
-	RenderDepth();
 	m_room.Render(m_pRenderer);
 	RenderCentralObjects(view, proj);
 
@@ -475,9 +483,9 @@ void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) cons
 	m_pRenderer->SetConstant4x4f("proj", proj);
 	for (const Light& light : m_lights)
 	{
-		m_pRenderer->SetBufferObj(light.model.m_mesh);
-		XMMATRIX world = light.tf.WorldTransformationMatrix();
-		vec3 color = light.model.m_material.color.Value();
+		m_pRenderer->SetBufferObj(light._model.m_mesh);
+		XMMATRIX world = light._transform.WorldTransformationMatrix();
+		vec3 color = light._model.m_material.color.Value();
 		m_pRenderer->SetConstant4x4f("world", world);
 		m_pRenderer->SetConstant3f("diffuse", color);
 		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
@@ -496,7 +504,6 @@ void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& pr
 	quad.Render(m_pRenderer);
 	triangle.Render(m_pRenderer);
 	cylinder.Render(m_pRenderer);
-
 }
 
 void SceneManager::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const
@@ -530,14 +537,14 @@ void SceneManager::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) co
 
 void SceneManager::SendLightData() const
 {
-	const ShaderLight defaultLight = ShaderLight();
-	std::vector<ShaderLight> lights(MAX_LIGHTS, defaultLight);
-	std::vector<ShaderLight> spots(MAX_SPOTS, defaultLight);
+	const LightShaderSignature defaultLight = LightShaderSignature();
+	std::vector<LightShaderSignature> lights(MAX_LIGHTS, defaultLight);
+	std::vector<LightShaderSignature> spots(MAX_SPOTS, defaultLight);
 	unsigned spotCount = 0;
 	unsigned lightCount = 0;
 	for (const Light& l : m_lights)
 	{
-		switch (l.lightType_)
+		switch (l._type)
 		{
 		case Light::LightType::POINT:
 			lights[lightCount] = l.ShaderLightStruct();
@@ -563,10 +570,6 @@ void SceneManager::SendLightData() const
 #endif
 }
 
-void SceneManager::RenderDepth()
-{
-	
-}
 
 void SceneManager::Room::Render(Renderer * pRenderer) const
 {
@@ -792,8 +795,8 @@ m_springSys.RenderSprings(m_pRenderer, view, proj);
 //	//// shuffling won't rearrange data, just the means of indexing.
 //	//char info[256];
 //	//sprintf_s(info, "Shuffle(L1:(%f, %f, %f)\tL2:(%f, %f, %f)\n",
-//	//	m_lights[0].tf.GetPositionF3().x, m_lights[0].tf.GetPositionF3().y,	m_lights[0].tf.GetPositionF3().z,
-//	//	m_lights[1].tf.GetPositionF3().x, m_lights[1].tf.GetPositionF3().y, m_lights[1].tf.GetPositionF3().z);
+//	//	m_lights[0]._transform.GetPositionF3().x, m_lights[0]._transform.GetPositionF3().y,	m_lights[0]._transform.GetPositionF3().z,
+//	//	m_lights[1]._transform.GetPositionF3().x, m_lights[1]._transform.GetPositionF3().y, m_lights[1]._transform.GetPositionF3().z);
 //	//OutputDebugString(info);
 //	//static auto engine = std::default_random_engine{};
 //	//std::shuffle(std::begin(m_lights), std::end(m_lights), engine);
@@ -804,7 +807,7 @@ m_springSys.RenderSprings(m_pRenderer, view, proj);
 //	//	size_t i = rand() % Color::Palette().size();
 //	//	Color c = Color::Color::Palette()[i];
 //	//	l.color_ = c;
-//	//	l.model.m_material.color = c;
+//	//	l._model.m_material.color = c;
 //	//}
 
 //	// randomize all lights except 1 and 2
@@ -814,7 +817,7 @@ m_springSys.RenderSprings(m_pRenderer, view, proj);
 //		size_t i = rand() % Color::Palette().size();
 //		Color c = Color::Color::Palette()[i];
 //		l.color_ = c;
-//		l.model.m_material.color = c;
+//		l._model.m_material.color = c;
 //	}
 
 //	accumulator = 0;

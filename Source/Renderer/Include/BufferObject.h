@@ -35,7 +35,7 @@ struct Vertex
 	//44
 };
 
-class BufferObject
+class BufferObject	// todo: rename to PrimitiveAssembly?
 {
 public:
 	BufferObject() = default;

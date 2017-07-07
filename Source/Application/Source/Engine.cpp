@@ -186,10 +186,6 @@ void Engine::Update(float dt)
 
 void Engine::Render()
 {
-	const float clearColor[4] = { 0.5f, 0.8f, 0.5f, 1.0f };
-	m_renderer->Begin(clearColor);
-	m_renderer->SetViewport(m_renderer->WindowWidth(), m_renderer->WindowHeight());
 	m_scene_manager->Render();
-	m_renderer->End();
 }
 

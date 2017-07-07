@@ -65,10 +65,9 @@ public:
 	D3DManager();
 	~D3DManager();
 
-	bool Init(int width, int height, const bool VSYNC, HWND m_hwnd, const bool FULL_SCREEN);
+	bool Initialize(int width, int height, const bool VSYNC, HWND m_hwnd, const bool FULL_SCREEN);
 	void Shutdown();
 
-	void BeginFrame(const float* clearColor);
 	void EndFrame();
 
 	void EnableAlphaBlending(bool enable);
@@ -84,11 +83,11 @@ public:
 
 private:
 	bool InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator);
-	bool InitDepthBuffer(int scrWidth, int scrHeight);
+	bool InitializeDepthBuffer(int scrWidth, int scrHeight, ID3D11Texture2D* depthStencilBuffer);
 	bool InitDepthStencilBuffer();
 	bool InitRasterizerState();
-	bool InitStencilView();
-	void InitViewport(int scrWidth, int scrHeight);
+	bool InitStencilView(D3D11_TEXTURE2D_DESC tex2DDesc);
+	D3D11_VIEWPORT InitializeViewport(int scrWidth, int scrHeight);
 	bool InitAlphaBlending();
 	bool InitZBuffer();
 
@@ -99,17 +98,16 @@ private:
 	IDXGISwapChain*				m_swapChain;
 	ID3D11Device*				m_device;
 	ID3D11DeviceContext*		m_deviceContext;
-	ID3D11RenderTargetView*		m_RTV;
-	ID3D11Texture2D*			m_depthStencilBuffer;
-	ID3D11DepthStencilView*		m_depthStencilView;
+	
+	
 	unsigned					m_wndWidth, m_wndHeight;
 	
 	//-----------------------------------------------
-	// State Management
+	// State Management (todo move to renderer)
 	ID3D11RasterizerState*		m_rasterState;
 	ID3D11DepthStencilState*	m_depthStencilState;
+	ID3D11DepthStencilState*	m_depthDisabledStencilState;
 	ID3D11BlendState*			m_alphaEnableBlendState;
 	ID3D11BlendState*			m_alphaDisableBlendState;
-	ID3D11DepthStencilState*	m_depthDisabledStencilState;
 };
 

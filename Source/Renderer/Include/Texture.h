@@ -23,13 +23,12 @@
 
 typedef int TextureID;
 
-struct Texture
+class Texture
 {
 public:
 	Texture();
 	~Texture();
 
-	//bool InitializeTexture2D(const D3D11_TEXTURE2D_DESC& textureDescriptor);
 
 	// shader resource view does 2 things
 	// - tell d3d how the resource will be used: at what stage if the pipeline it will be bound etc.
@@ -38,6 +37,8 @@ public:
 	// note: typed resources are optimized for access. use typeless if you really need.
 	ID3D11ShaderResourceView*	srv;
 
+	// same for the depth and stencil view of thte bound texture
+	ID3D11DepthStencilView*		dsv;
 	ID3D11Texture2D*			tex2D;
 	ID3D11SamplerState*			samplerState;
 	unsigned					width;

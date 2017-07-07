@@ -39,22 +39,16 @@ struct Light;
 
 namespace DirectX { class ScratchImage; }
 
-using Viewport = D3D11_VIEWPORT;
-
 // typedefs
-using ShaderID            = int;
-using BufferID            = int;
-using TextureID           = int;
-using RasterizerStateID   = int;
-using DepthStencilStateID = int;
-using RenderTargetID	  = int;
-using DepthStencilID	  = int;
-						  
+typedef int ShaderID;
+typedef int BufferID;
+typedef int TextureID;
+typedef int RasterizerStateID;
+typedef int DepthStencilStateID;
+
 
 using RasterizerState   = ID3D11RasterizerState;
 using DepthStencilState = ID3D11DepthStencilState;
-using RenderTarget		= ID3D11RenderTargetView;
-using DepthStencil		= ID3D11DepthStencilView;
 
 
 enum class DEFAULT_RS_STATE
@@ -68,13 +62,12 @@ enum class DEFAULT_RS_STATE
 
 struct DepthShadowPass
 {
-	unsigned				_shadowMapDimension;
-	Texture					_shadowMap;
-	const Shader*			_shadowShader;
-	RasterizerStateID		_drawRenderState;
-	RasterizerStateID		_shadowRenderState;
-	D3D11_VIEWPORT			_shadowViewport;	
-	DepthStencilID			_dsv;
+	unsigned				m_shadowMapDimension;
+	Texture					m_shadowMap;
+	const Shader*			m_shadowShader;
+	RasterizerStateID		m_drawRenderState;
+	RasterizerStateID		m_shadowRenderState;
+	D3D11_VIEWPORT			m_shadowViewport;
 	void Initialize(Renderer* pRenderer, ID3D11Device* device);
 	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights) const;
 };
@@ -100,8 +93,9 @@ struct RenderData
 class Renderer
 {
 	friend class Engine;
-
 public:
+
+
 	Renderer();
 	~Renderer();
 
@@ -112,18 +106,17 @@ public:
 	unsigned	WindowHeight() const;
 	unsigned	WindowWidth() const;
 
+
 	// resource interface
 	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
 	RasterizerStateID	AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip);
 	const Texture&		AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
 	DepthStencilStateID AddDepthStencilState();	// todo params
 	DepthStencilStateID AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
-	RenderTargetID		AddRenderTarget();
-	DepthStencilID		AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D* surface);
 
-	const Shader*		GetShader(ShaderID shader_id) const;
-	const Texture&		GetTexture(TextureID) const;
-	const ShaderID		GetLineShader() const;
+	const Shader*	GetShader(ShaderID shader_id) const;
+	const Texture&	GetTexture(TextureID) const;
+	const ShaderID	GetLineShader() const;
 
 	// state management
 	void SetViewport(const unsigned width, const unsigned height);
@@ -131,26 +124,21 @@ public:
 	void SetCamera(Camera* m_camera);
 	void SetShader(ShaderID);
 	void SetBufferObj(int BufferID);
-	void SetTexture(const char* texName, TextureID tex);
-	void SetRasterizerState(RasterizerStateID rsStateID);
-	void SetDepthStencilState(DepthStencilStateID depthStencilStateID);
-	void BindRenderTarget(RenderTargetID rtvID);
-	void BindSetDepthStencil(DepthStencilID dsvID);
-	
-
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
 	void SetConstant3f(const char* cName, const vec3& float3);
 	void SetConstant1f(const char* cName, const float data);
 	void SetConstant1i(const char* cName, const int data);
 	void SetConstantStruct(const char * cName, void* data);
-
-	// draw functions
+	void SetTexture(const char* texName, TextureID tex);
+	void SetRasterizerState(RasterizerStateID rsStateID);
+	void SetDepthStencilState(DepthStencilStateID depthStencilStateID);
+	
 	void DrawIndexed(TOPOLOGY topology = TOPOLOGY::TRIANGLE_LIST);
 	void Draw(TOPOLOGY topology = TOPOLOGY::POINT_LIST);
 	void DrawLine();
 	void DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
 
-	void Begin(const float clearColor[4], const float depthValue);
+	void Begin(const float clearColor[4]);
 	void End();
 	void Reset();
 
@@ -174,7 +162,7 @@ public:
 	static const char* s_shaderRoot;
 	static const char* s_textureRoot;
 
-	RenderData	                    m_renderData;
+	RenderData	m_renderData;
 	ID3D11Device*					m_device;	// ?
 	ID3D11DeviceContext*			m_deviceContext;
 
@@ -188,8 +176,9 @@ private:
 
 	// render data
 	Camera*							m_mainCamera;
-	Viewport						m_viewPort;
+	D3D11_VIEWPORT					m_viewPort;
 
+	friend class RigidBody;		// access to m_bufferObjs
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
 	std::vector<Texture>			m_textures;
@@ -198,26 +187,17 @@ private:
 	std::vector<RasterizerState*>	m_rasterizerStates;
 	std::vector<DepthStencilState*> m_depthStencilStates;
 
-	std::vector<RenderTarget*>		m_renderTargets;
-	std::vector<DepthStencil*>		m_depthStencils;
-
-	// state objects
-	struct StateObject
-	{
-		ShaderID			_activeShader;
-		BufferID			_activeBuffer;
-		RasterizerStateID	_activeRSState;
-		DepthStencilStateID	_activeDepthStencilState;
-		RenderTargetID		_boundRenderTarget;
-		DepthStencilID		_boundDepthStencil;
-	}								m_stateObjects;
+	// state variables
+	ShaderID						m_activeShader;
+	BufferID						m_activeBuffer;
+	RasterizerStateID				m_activeRSState;
+	DepthStencilStateID				m_activeDepthStencilState;
 	
 	// performance counters
 	unsigned long long				m_frameCount;
 
-	//friend class RigidBody;		// access to constant buffers
-	//friend class IKEngine;	// temp hack
-	//friend class AnimatedModel;
+	friend class IKEngine;	// temp hack
+	friend class AnimatedModel;
 	//std::vector<Point>				m_debugLines;
 };
  

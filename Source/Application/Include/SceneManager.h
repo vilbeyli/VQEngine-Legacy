@@ -17,13 +17,27 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
+
+#define xENABLE_ANIMATION	
+#define xENABLE_VPHYSICS
+#ifdef ENABLE_ANIMATION
+#include "../Animation/Include/AnimatedModel.h"
+#endif
+#ifdef ENABLE_VPHYSICS
+#include "PhysicsEngine.h"
+#endif
+
 #include "GameObject.h"
 #include "Light.h"
 #include "Skydome.h"
+
 #include "Settings.h"
 
 #include <vector>
 #include <memory>
+
+using std::shared_ptr;
+using std::unique_ptr;
 
 class Renderer;
 class Camera;
@@ -33,7 +47,6 @@ struct Path;
 typedef int ShaderID;
 struct RenderData;
 
-using std::shared_ptr;
 
 class SceneManager
 {
@@ -53,6 +66,14 @@ private:
 	void InitializeObjectArrays();
 
 	void UpdateCentralObj(const float dt);
+
+#ifdef ENABLE_VPHYSICS
+	void InitializePhysicsObjects();
+	void UpdateAnchors(float dt);
+#endif
+#ifdef ENABLE_ANIMATION
+	void UpdateAnimatedModel(const float dt);
+#endif
 
 	void RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const;
 	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
@@ -109,20 +130,3 @@ private:
 #endif
 };
 
-// junkyard
-
-#ifdef ENABLE_VPHYSICS
-void InitializePhysicsObjects();
-void UpdateAnchors(float dt);
-#endif
-#ifdef ENABLE_ANIMATION
-void UpdateAnimatedModel(const float dt);
-#endif
-#define xENABLE_ANIMATION	
-#define xENABLE_VPHYSICS
-#ifdef ENABLE_ANIMATION
-#include "../Animation/Include/AnimatedModel.h"
-#endif
-#ifdef ENABLE_VPHYSICS
-#include "PhysicsEngine.h"
-#endif

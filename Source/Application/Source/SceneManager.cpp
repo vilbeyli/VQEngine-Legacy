@@ -73,8 +73,8 @@ void SceneManager::InitializeRoom()
 {
 	const float floorWidth = 5*30.0f;
 	const float floorDepth = 5*30.0f;
-	const float wallHieght = 3.8*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
-	const float YOffset = wallHieght - 2.0f;
+	const float wallHieght = 3.5*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
+	const float YOffset = wallHieght - 0.2f;
 
 	// FLOOR
 	{
@@ -434,16 +434,7 @@ void SceneManager::Update(float dt)
 
 void SceneManager::Render() 
 {
-	m_pRenderer->Reset();	// is necessary?
-	m_pRenderer->BindSetDepthStencil(m_renderData->depthPass._dsv);
-	m_pRenderer->BindRenderTarget(0);
-
-	const float clearColor[4] = { 0.6f, 0.4f, 0.7f, 1.0f };
-	m_pRenderer->Begin(clearColor, 1.0f);
-
-	// DEPTH PASS
-	//------------------------------------------------------------------------
-	// get shadow casters (todo: static/dynamic lights)
+	// dynamic shadow casters
 	std::vector<const Light*> _shadowCasters(m_lights.size());
 	for (const auto& light : m_lights)
 	{
@@ -453,13 +444,11 @@ void SceneManager::Render()
 
 	const XMMATRIX view = m_pCamera->GetViewMatrix();
 	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
+
 	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters);
 	
-	
-	// MAIN PASS
-	//------------------------------------------------------------------------
-	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
 	m_skydome.Render(view, proj);
+
 	m_pRenderer->SetShader(m_selectedShader);
 	m_pRenderer->SetConstant4x4f("view", view);
 	m_pRenderer->SetConstant4x4f("proj", proj);
@@ -476,13 +465,6 @@ void SceneManager::Render()
 
 
 
-	// POST PROCESS PASS
-	//------------------------------------------------------------------------
-
-
-
-	// DEBUG PASS
-	//------------------------------------------------------------------------
 
 
 	// TBN test
@@ -490,8 +472,6 @@ void SceneManager::Render()
 	//m_selectedShader = m_renderData->TNBShader;
 	//RenderCentralObjects(view, proj);
 	//m_selectedShader = prevShader;
-
-	m_pRenderer->End();
 }
 
 

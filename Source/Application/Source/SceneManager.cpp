@@ -434,12 +434,11 @@ void SceneManager::Update(float dt)
 
 void SceneManager::Render() 
 {
-	m_pRenderer->Reset();	// is necessary?
-	m_pRenderer->BindSetDepthStencil(m_renderData->depthPass._dsv);
-	m_pRenderer->BindRenderTarget(0);
+	const float clearColor[4] = { 0.2f, 0.4f, 0.7f, 1.0f };
+	const XMMATRIX view = m_pCamera->GetViewMatrix();
+	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
+	
 
-	const float clearColor[4] = { 0.6f, 0.4f, 0.7f, 1.0f };
-	m_pRenderer->Begin(clearColor, 1.0f);
 
 	// DEPTH PASS
 	//------------------------------------------------------------------------
@@ -451,14 +450,20 @@ void SceneManager::Render()
 			_shadowCasters.push_back(&light);
 	}
 
-	const XMMATRIX view = m_pCamera->GetViewMatrix();
-	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
+	//m_pRenderer->Begin(clearColor, 1.0f);	//moved in render depth
 	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters);
 	
 	
 	// MAIN PASS
 	//------------------------------------------------------------------------
+	m_pRenderer->Reset();	// is necessary?
+	m_pRenderer->BindDepthStencil(0); //todo, variable names or enums
+	m_pRenderer->BindRenderTarget(0);
+	m_pRenderer->SetDepthStencilState(0); 
+	m_pRenderer->Apply();
+	m_pRenderer->Begin(clearColor, 1.0f);
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
+
 	m_skydome.Render(view, proj);
 	m_pRenderer->SetShader(m_selectedShader);
 	m_pRenderer->SetConstant4x4f("view", view);
@@ -466,12 +471,11 @@ void SceneManager::Render()
 	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 	
-	if (m_selectedShader == m_renderData->phongShader)	{	SendLightData();}
+	if (m_selectedShader == m_renderData->phongShader)	{	SendLightData(); }
 	if (m_selectedShader == m_renderData->TNBShader)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
 	m_room.Render(m_pRenderer);
 	RenderCentralObjects(view, proj);
-
 	RenderLights(view, proj);
 
 

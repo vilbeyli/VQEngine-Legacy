@@ -170,18 +170,6 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hWnd, 
 		return false;
 	}
 
-	// Get the pointer to the back buffer.
-	ID3D11Texture2D* backBufferPtr;
-	result = m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
-	if (FAILED(result))
-	{
-		return false;
-	}
-	
-	// Release pointer to the back buffer as we no longer need it.
-	backBufferPtr->Release();
-	backBufferPtr = 0;
-
 	if (!InitDepthStencilBuffer())
 	{
 		return false;
@@ -498,7 +486,7 @@ bool D3DManager::InitRasterizerState()
 
 bool D3DManager::InitStencilView(D3D11_TEXTURE2D_DESC tex2DDesc)
 {
-
+#if 0
 	HRESULT result;
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
 
@@ -511,12 +499,12 @@ bool D3DManager::InitStencilView(D3D11_TEXTURE2D_DESC tex2DDesc)
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
 
 	// Create the depth stencil view.
-	//result = m_device->CreateDepthStencilView(m_depthStencilBuffer, &depthStencilViewDesc, &m_depthStencilView);
-	//if (FAILED(result))
-	//{
-	//	return false;
-	//}
-
+	result = m_device->CreateDepthStencilView(m_depthStencilBuffer, &depthStencilViewDesc, &m_depthStencilView);
+	if (FAILED(result))
+	{
+		return false;
+	}
+#endif
 	return true;
 }
 

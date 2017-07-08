@@ -118,8 +118,8 @@ public:
 	const Texture&		AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
 	DepthStencilStateID AddDepthStencilState();	// todo params
 	DepthStencilStateID AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
-	RenderTargetID		AddRenderTarget();
-	DepthStencilID		AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D* surface);
+	RenderTargetID		AddRenderTarget(ID3D11Texture2D*& surface);
+	DepthStencilID		AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface);
 
 	const Shader*		GetShader(ShaderID shader_id) const;
 	const Texture&		GetTexture(TextureID) const;
@@ -134,9 +134,12 @@ public:
 	void SetTexture(const char* texName, TextureID tex);
 	void SetRasterizerState(RasterizerStateID rsStateID);
 	void SetDepthStencilState(DepthStencilStateID depthStencilStateID);
+
 	void BindRenderTarget(RenderTargetID rtvID);
-	void BindSetDepthStencil(DepthStencilID dsvID);
-	
+	void BindDepthStencil(DepthStencilID dsvID);
+	void UnbindRenderTarget();
+	void UnbindDepthStencil();
+
 
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
 	void SetConstant3f(const char* cName, const vec3& float3);
@@ -202,7 +205,7 @@ private:
 	std::vector<DepthStencil*>		m_depthStencils;
 
 	// state objects
-	struct StateObject
+	struct StateObjects
 	{
 		ShaderID			_activeShader;
 		BufferID			_activeBuffer;
@@ -210,6 +213,8 @@ private:
 		DepthStencilStateID	_activeDepthStencilState;
 		RenderTargetID		_boundRenderTarget;
 		DepthStencilID		_boundDepthStencil;
+		Texture				_mainRenderTargetTexture;
+		Texture				_depthBufferTexture;
 	}								m_stateObjects;
 	
 	// performance counters

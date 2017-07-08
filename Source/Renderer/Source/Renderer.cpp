@@ -123,22 +123,18 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 
 void DepthShadowPass::RenderDepth(Renderer * pRenderer, const std::vector<const Light*> shadowLights) const
 {
-	return;	// work in progress
+	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	return;
 
-	// no render targets, only depth-stencil for shadowMap
-	//pRenderer->m_deviceContext->OMSetRenderTargets(0, nullptr, _dsv);
-	
-	// shadow render state: cull front faces, fill solid, clip dep
-	pRenderer->SetRasterizerState(_shadowRenderState);
-
-	// lights viewport 512x512
-	pRenderer->SetViewport(_shadowViewport);
-	pRenderer->SetShader(_shadowShader->ID());
-
-	// --- in progress ---
-	// set output merger - shadow depth view
-	//pRenderer->
+	pRenderer->UnbindRenderTarget();						// no render target
+	pRenderer->BindDepthStencil(_dsv);					// only depth stencil buffer
+	pRenderer->SetRasterizerState(_shadowRenderState);		// shadow render state: cull front faces, fill solid, clip dep
+	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
+	pRenderer->SetShader(_shadowShader->ID());				// shader for rendering z buffer
 	pRenderer->SetConstant4x4f("", shadowLights.front()->GetLightSpaceMatrix());
+	pRenderer->Apply();
+	pRenderer->Begin(clearColor, 1.0f);
+	pRenderer->Draw();	// secne objects
 }
 
 
@@ -238,8 +234,72 @@ bool Renderer::Initialize(int width, int height, HWND hwnd)
 	m_device		= m_Direct3D->GetDevice();
 	m_deviceContext = m_Direct3D->GetDeviceContext();
 
-	// TODO: continue creating render target
-	AddRenderTarget();	// default render target
+	ID3D11Texture2D* backBufferPtr;
+	result = m_Direct3D->m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
+	if (FAILED(result))
+	{
+		return false;
+	}
+	AddRenderTarget(backBufferPtr);	// default render target
+
+	// TODO: abstract d3d11 away....
+
+	D3D11_TEXTURE2D_DESC depthBufferDesc;
+
+	// Initialize the description of the depth buffer.
+	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
+
+	// Set up the description of the depth buffer.
+	depthBufferDesc.Width = m_Direct3D->m_wndWidth;
+	depthBufferDesc.Height = m_Direct3D->m_wndHeight;
+	depthBufferDesc.MipLevels = 1;
+	depthBufferDesc.ArraySize = 1;
+	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.SampleDesc.Count = 1;
+	depthBufferDesc.SampleDesc.Quality = 0;
+	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthBufferDesc.CPUAccessFlags = 0;
+	depthBufferDesc.MiscFlags = 0;
+	
+	// Create the texture for the depth buffer using the filled out description.
+	result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_stateObjects._depthBufferTexture.tex2D);
+
+	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.Texture2D.MipSlice = 0;
+	AddDepthStencil(dsvDesc, m_stateObjects._depthBufferTexture.tex2D);
+	
+
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+
+	// Set up the description of the stencil state.
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+	depthStencilDesc.StencilEnable = false;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
+
+	// Stencil operations if pixel is front-facing.
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Stencil operations if pixel is back-facing.
+	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	AddDepthStencilState(depthStencilDesc);
+	
+
 
 	InitializeDefaultRasterizerStates();
 	GeneratePrimitives();
@@ -606,13 +666,23 @@ DepthStencilStateID Renderer::AddDepthStencilState(const D3D11_DEPTH_STENCIL_DES
 	return static_cast<DepthStencilStateID>(m_depthStencilStates.size() - 1);
 }
 
-RenderTargetID Renderer::AddRenderTarget()
+RenderTargetID Renderer::AddRenderTarget(ID3D11Texture2D*& surface)
 {
+	RenderTarget* newRTV;	// is malloc necessary?
+	newRTV = (RenderTarget*)malloc(sizeof(RenderTarget));
+	memset(newRTV, 0, sizeof(*newRTV));
 
+	HRESULT hr = m_device->CreateRenderTargetView(
+		surface,
+		nullptr,
+		&newRTV
+	);	// succeed hr ?
+
+	m_renderTargets.push_back(newRTV);
 	return static_cast<int>(m_renderTargets.size() - 1);
 }
 
-DepthStencilID Renderer::AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D* surface)
+DepthStencilID Renderer::AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface)
 {
 	DepthStencil* newDSV; 
 	newDSV =  (DepthStencil*)malloc(sizeof(DepthStencil));
@@ -956,10 +1026,20 @@ void Renderer::BindRenderTarget(RenderTargetID rtvID)
 	m_stateObjects._boundRenderTarget = rtvID;
 }
 
-void Renderer::BindSetDepthStencil(DepthStencilID dsvID)
+void Renderer::BindDepthStencil(DepthStencilID dsvID)
 {
 	assert(dsvID > -1 && static_cast<size_t>(dsvID) < m_depthStencils.size());
 	m_stateObjects._boundDepthStencil = dsvID;
+}
+
+void Renderer::UnbindRenderTarget()
+{
+	m_stateObjects._boundRenderTarget = -1;
+}
+
+void Renderer::UnbindDepthStencil()
+{
+	m_stateObjects._boundDepthStencil = -1;
 }
 
 // temp
@@ -1002,13 +1082,12 @@ void Renderer::End()
 
 
 void Renderer::Apply()
-{	// Here, we make all the API calls for GPU data
-
-	Shader* shader = m_shaders[m_stateObjects._activeShader];
-
+{	// Here, we make all the API calls
+	Shader* shader = m_stateObjects._activeShader >= 0 ? m_shaders[m_stateObjects._activeShader] : nullptr;
+	
 	// TODO: check if state is changed
 
-	// set vertex & index buffers & topology
+	// INPUT ASSEMBLY
 	// ----------------------------------------
 	unsigned stride = sizeof(Vertex);	// layout?
 	unsigned offset = 0;
@@ -1016,126 +1095,138 @@ void Renderer::Apply()
 	//else OutputDebugString("Warning: no active buffer object (-1)\n");
 	if (m_stateObjects._activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_stateObjects._activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	//else OutputDebugString("Warning: no active buffer object (-1)\n");
+	if(shader) m_deviceContext->IASetInputLayout(shader->m_layout);
 
-	// set shaders & data layout
-	// ----------------------------------------
-	m_deviceContext->IASetInputLayout(shader->m_layout);
-	m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
-	m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
-	/*if (shader->m_geoShader)*/	 m_deviceContext->GSSetShader(shader->m_geoShader    , nullptr, 0);
-	if (shader->m_hullShader)	 m_deviceContext->HSSetShader(shader->m_hullShader   , nullptr, 0);
-	if (shader->m_domainShader)	 m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
-	if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
 
-	// viewport & rasterizer state
+	// RASTERIZER
 	// ----------------------------------------
 	m_deviceContext->RSSetViewports(1, &m_viewPort);
 	m_deviceContext->RSSetState(m_rasterizerStates[m_stateObjects._activeRSState]);
 
-	// set shader constants
+
+	// OUTPUT MERGER
 	// ----------------------------------------
-	for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
+	const auto indexDSState = m_stateObjects._activeDepthStencilState;
+	const auto indexRTV = m_stateObjects._boundRenderTarget;
+	const auto indexDSV = m_stateObjects._boundDepthStencil;
+	auto** RTV = indexRTV == -1 ? nullptr : &m_renderTargets[indexRTV];
+	auto*  DSV = indexDSV == -1 ? nullptr :  m_depthStencils[indexDSV];
+	auto*  DSSTATE = m_depthStencilStates[indexDSV];
+	m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
+	m_deviceContext->OMSetRenderTargets(1, RTV, DSV);
+
+
+	// SHADER STAGES
+	// ----------------------------------------
+	if (shader)
 	{
-		D3DCBuffer& cbuf = shader->m_cBuffers[i];
-		if (cbuf.dirty)	// if the CPU-side buffer is updated
+		m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
+		m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
+		/*if (shader->m_geoShader)*/	 m_deviceContext->GSSetShader(shader->m_geoShader    , nullptr, 0);
+		if (shader->m_hullShader)	 m_deviceContext->HSSetShader(shader->m_hullShader   , nullptr, 0);
+		if (shader->m_domainShader)	 m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
+		if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
+
+
+		// CONSTANT BUFFERRS & SHADER RESOURCES
+		// ----------------------------------------
+		for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
 		{
-			ID3D11Buffer* bufferData = cbuf.data;
-			D3D11_MAPPED_SUBRESOURCE mappedResource;
-
-			// Map sub-resource to GPU - update contends - discard the sub-resource
-			m_deviceContext->Map(bufferData, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-			char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
-			std::vector<CPUConstant>& cpuConsts = shader->m_constants[i];
-			for (CPUConstant& c : cpuConsts)
+			D3DCBuffer& cbuf = shader->m_cBuffers[i];
+			if (cbuf.dirty)	// if the CPU-side buffer is updated
 			{
-				memcpy(bufferPos, c.data, c.size);
-				bufferPos += c.size;
+				ID3D11Buffer* bufferData = cbuf.data;
+				D3D11_MAPPED_SUBRESOURCE mappedResource;
+
+				// Map sub-resource to GPU - update contends - discard the sub-resource
+				m_deviceContext->Map(bufferData, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+				char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
+				std::vector<CPUConstant>& cpuConsts = shader->m_constants[i];
+				for (CPUConstant& c : cpuConsts)
+				{
+					memcpy(bufferPos, c.data, c.size);
+					bufferPos += c.size;
+				}
+
+				// rethink packing;
+				//size_t prevSize = 0;
+				//for (int i = 0; i < cpuConsts.size(); ++i)
+				//{
+				//	CPUConstant& c = cpuConsts[i];
+				//	memcpy(bufferPos, c.data, c.size);
+				//	bufferPos += c.size;
+
+				//	if (i > 0)
+				//	{
+				//		if ((prevSize + c.size) % 16);
+				//	}
+
+				//	prevSize = c.size;
+				//}
+
+				m_deviceContext->Unmap(bufferData, 0);
+
+				// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader, see it)
+				switch (cbuf.shdType)
+				{
+				case ShaderType::VS:
+					m_deviceContext->VSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					break;
+				case ShaderType::PS:
+					m_deviceContext->PSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					break;
+				case ShaderType::GS:
+					m_deviceContext->GSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					break;
+				case ShaderType::DS:
+					m_deviceContext->DSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					break;
+				case ShaderType::HS:
+					m_deviceContext->HSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					break;
+				case ShaderType::CS:
+					m_deviceContext->CSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					break;
+				default:
+					OutputDebugString("ERROR: Renderer::Apply() - UNKOWN Shader Type\n");
+					break;
+				}
+
+				cbuf.dirty = false;
 			}
+		}
 
-			// rethink packing;
-			//size_t prevSize = 0;
-			//for (int i = 0; i < cpuConsts.size(); ++i)
-			//{
-			//	CPUConstant& c = cpuConsts[i];
-			//	memcpy(bufferPos, c.data, c.size);
-			//	bufferPos += c.size;
 
-			//	if (i > 0)
-			//	{
-			//		if ((prevSize + c.size) % 16);
-			//	}
-
-			//	prevSize = c.size;
-			//}
-
-			m_deviceContext->Unmap(bufferData, 0);
-
-			// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader, see it)
-			switch (cbuf.shdType)
+		while (m_texSetCommands.size() > 0)
+		{
+			TextureSetCommand& cmd = m_texSetCommands.front();
+			switch (cmd.shdTex.shdType)
 			{
 			case ShaderType::VS:
-				m_deviceContext->VSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
-				break;
-			case ShaderType::PS:
-				m_deviceContext->PSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				m_deviceContext->VSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
 				break;
 			case ShaderType::GS:
-				m_deviceContext->GSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				m_deviceContext->GSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
 				break;
 			case ShaderType::DS:
-				m_deviceContext->DSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				m_deviceContext->DSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
 				break;
 			case ShaderType::HS:
-				m_deviceContext->HSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				m_deviceContext->HSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
 				break;
 			case ShaderType::CS:
-				m_deviceContext->CSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+				m_deviceContext->CSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
+				break;
+			case ShaderType::PS:
+				m_deviceContext->PSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
 				break;
 			default:
-				OutputDebugString("ERROR: Renderer::Apply() - UNKOWN Shader Type\n");
 				break;
 			}
 
-			cbuf.dirty = false;
+			m_texSetCommands.pop();
 		}
 	}
-
-	// set textures and sampler states
-	// ----------------------------------------
-	while (m_texSetCommands.size() > 0)
-	{
-		TextureSetCommand& cmd = m_texSetCommands.front();
-		switch (cmd.shdTex.shdType)
-		{
-		case ShaderType::VS:
-			m_deviceContext->VSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-			break;
-		case ShaderType::GS:
-			m_deviceContext->GSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-			break;
-		case ShaderType::DS:
-			m_deviceContext->DSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-			break;
-		case ShaderType::HS:
-			m_deviceContext->HSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-			break;
-		case ShaderType::CS:
-			m_deviceContext->CSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-			break;
-		case ShaderType::PS:
-			m_deviceContext->PSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-			break;
-		default:
-			break;
-		}
-
-		m_texSetCommands.pop();
-	}
-
-	// output merger, depthStencilState
-	// ----------------------------------------
-	m_deviceContext->OMSetDepthStencilState(m_Direct3D->m_depthStencilState, 0); // todo: 
-	
 }
 
 void Renderer::DrawIndexed(TOPOLOGY topology)

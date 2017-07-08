@@ -39,7 +39,7 @@ public:
 	GameObject& operator=(const GameObject& obj);
 
 	void Render(Renderer* pRenderer) const;
-
+	void RenderZ(Renderer* pRenderer) const;
 public:
 	Transform	m_transform;
 	Model		m_model;

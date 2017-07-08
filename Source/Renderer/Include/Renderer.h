@@ -76,7 +76,7 @@ struct DepthShadowPass
 	D3D11_VIEWPORT			_shadowViewport;	
 	DepthStencilID			_dsv;
 	void Initialize(Renderer* pRenderer, ID3D11Device* device);
-	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights) const;
+	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
 };
 
 struct RenderData

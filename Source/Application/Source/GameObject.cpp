@@ -71,4 +71,15 @@ void GameObject::Render(Renderer * pRenderer) const
 	pRenderer->DrawIndexed();
 }
 
+void GameObject::RenderZ(Renderer * pRenderer) const
+{
+	//m_model.m_material.SetMaterialConstants(pRenderer);
+	pRenderer->SetBufferObj(m_model.m_mesh);
+	XMMATRIX world = m_transform.WorldTransformationMatrix();
+	pRenderer->SetConstant4x4f("world", world);
+	pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+}
+
 

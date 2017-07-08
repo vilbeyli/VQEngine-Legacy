@@ -149,6 +149,13 @@ void SceneManager::InitializeRoom()
 	m_room.wallR.m_model.m_mesh = MESH_TYPE::CUBE;
 	m_room.wallF.m_model.m_mesh = MESH_TYPE::CUBE;
 	m_room.ceiling.m_model.m_mesh = MESH_TYPE::CUBE;
+
+	
+	m_ZPassObjects.push_back(&m_room.floor	);
+	m_ZPassObjects.push_back(&m_room.wallL	);
+	m_ZPassObjects.push_back(&m_room.wallR	);
+	m_ZPassObjects.push_back(&m_room.wallF	);
+	m_ZPassObjects.push_back(&m_room.ceiling);
 }
 
 void SceneManager::InitializeLights()
@@ -166,6 +173,7 @@ void SceneManager::InitializeLights()
 		l._color = Color::white;
 		//l.SetLightRange(30);
 		l._spotAngle = 70.0f;
+		l._castsShadow = true;
 		m_lights.push_back(l);
 	}
 
@@ -339,7 +347,13 @@ void SceneManager::InitializeObjectArrays()
 	cylinder.m_model.m_material = Material();
 	triangle.m_model.m_material = Material();
 	    quad.m_model.m_material = Material();
-	
+
+	m_ZPassObjects.push_back(&quad);
+	m_ZPassObjects.push_back(&grid);
+	m_ZPassObjects.push_back(&cylinder);
+	m_ZPassObjects.push_back(&triangle);
+	//for (GameObject& obj : cubes)	m_ZPassObjects.push_back(&obj);
+	//for (GameObject& obj : spheres)	m_ZPassObjects.push_back(&obj);
 }
 
 
@@ -443,15 +457,15 @@ void SceneManager::Render()
 	// DEPTH PASS
 	//------------------------------------------------------------------------
 	// get shadow casters (todo: static/dynamic lights)
-	std::vector<const Light*> _shadowCasters(m_lights.size());
-	for (const auto& light : m_lights)
+	std::vector<const Light*> _shadowCasters;	// warning: dynamic memory alloc. put in paramStruct { array start end } or C++11 equiv
+	for (const Light& light : m_lights)
 	{
 		if (light._castsShadow)
 			_shadowCasters.push_back(&light);
 	}
 
 	//m_pRenderer->Begin(clearColor, 1.0f);	//moved in render depth
-	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters);
+	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters, m_ZPassObjects);
 	
 	
 	// MAIN PASS
@@ -460,17 +474,18 @@ void SceneManager::Render()
 	m_pRenderer->BindDepthStencil(0); //todo, variable names or enums
 	m_pRenderer->BindRenderTarget(0);
 	m_pRenderer->SetDepthStencilState(0); 
-	m_pRenderer->Apply();
+	m_pRenderer->SetRasterizerState(static_cast<int>(DEFAULT_RS_STATE::CULL_NONE));
 	m_pRenderer->Begin(clearColor, 1.0f);
+	
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
-
 	m_skydome.Render(view, proj);
+
 	m_pRenderer->SetShader(m_selectedShader);
 	m_pRenderer->SetConstant4x4f("view", view);
 	m_pRenderer->SetConstant4x4f("proj", proj);
 	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-	
+
 	if (m_selectedShader == m_renderData->phongShader)	{	SendLightData(); }
 	if (m_selectedShader == m_renderData->TNBShader)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
@@ -520,8 +535,8 @@ void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) cons
 
 void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj) 
 {
-	for (const auto& cube : cubes) cube.Render(m_pRenderer);
-	for (const auto& sph : spheres) sph.Render(m_pRenderer);
+	//for (const auto& cube : cubes) cube.Render(m_pRenderer);
+	//for (const auto& sph : spheres) sph.Render(m_pRenderer);
 	
 	//m_pRenderer->SetShader(m_renderData->unlitShader);
 	grid.Render(m_pRenderer);

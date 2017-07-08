@@ -64,7 +64,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
 	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;			// check format
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2D.MipSlice = 0;
 	pRenderer->AddDepthStencil(dsvDesc, tex.tex2D);
@@ -102,8 +102,8 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	// succeed hr?
 
 	// render states for front face culling 
-	_shadowRenderState = pRenderer->AddRSState(RS_CULL_MODE::FRONT, RS_FILL_MODE::SOLID, true);
-	_drawRenderState   = pRenderer->AddRSState(RS_CULL_MODE::BACK , RS_FILL_MODE::SOLID, true);
+	_shadowRenderState = pRenderer->AddRSState(RS_CULL_MODE::FRONT, RS_FILL_MODE::SOLID, false);
+	_drawRenderState   = pRenderer->AddRSState(RS_CULL_MODE::BACK , RS_FILL_MODE::SOLID, false);
 
 	// shader
 	std::vector<InputLayout> layout = {
@@ -111,7 +111,6 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 		{ "NORMAL",		FLOAT32_3 },
 		{ "TANGENT",	FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 }};
-	_shadowShader = pRenderer->GetShader(pRenderer->AddShader("Shadow"     , pRenderer->s_shaderRoot, layout, false));
 	_shadowShader = pRenderer->GetShader(pRenderer->AddShader("DepthShader", pRenderer->s_shaderRoot, layout, false));
 	
 	ZeroMemory(&_shadowViewport, sizeof(D3D11_VIEWPORT));
@@ -121,20 +120,25 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	_shadowViewport.MaxDepth = 1.f;
 }
 
-void DepthShadowPass::RenderDepth(Renderer * pRenderer, const std::vector<const Light*> shadowLights) const
+void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const
 {
+	//return;
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	return;
 
 	pRenderer->UnbindRenderTarget();						// no render target
-	pRenderer->BindDepthStencil(_dsv);					// only depth stencil buffer
+	pRenderer->BindDepthStencil(_dsv);						// only depth stencil buffer
 	pRenderer->SetRasterizerState(_shadowRenderState);		// shadow render state: cull front faces, fill solid, clip dep
 	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
 	pRenderer->SetShader(_shadowShader->ID());				// shader for rendering z buffer
-	pRenderer->SetConstant4x4f("", shadowLights.front()->GetLightSpaceMatrix());
+	pRenderer->SetConstant4x4f("viewProj", shadowLights.front()->GetLightSpaceMatrix());
 	pRenderer->Apply();
 	pRenderer->Begin(clearColor, 1.0f);
-	pRenderer->Draw();	// secne objects
+	size_t idx = 0;
+	for (const GameObject* obj : ZPassObjects)
+	{
+		obj->RenderZ(pRenderer);
+		++idx;
+	}
 }
 
 
@@ -244,9 +248,8 @@ bool Renderer::Initialize(int width, int height, HWND hwnd)
 
 	// TODO: abstract d3d11 away....
 
-	D3D11_TEXTURE2D_DESC depthBufferDesc;
-
 	// Initialize the description of the depth buffer.
+	D3D11_TEXTURE2D_DESC depthBufferDesc;
 	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
 
 	// Set up the description of the depth buffer.
@@ -1109,11 +1112,11 @@ void Renderer::Apply()
 	const auto indexDSState = m_stateObjects._activeDepthStencilState;
 	const auto indexRTV = m_stateObjects._boundRenderTarget;
 	const auto indexDSV = m_stateObjects._boundDepthStencil;
-	auto** RTV = indexRTV == -1 ? nullptr : &m_renderTargets[indexRTV];
-	auto*  DSV = indexDSV == -1 ? nullptr :  m_depthStencils[indexDSV];
-	auto*  DSSTATE = m_depthStencilStates[indexDSV];
+	RenderTarget** RTV = indexRTV == -1 ? nullptr : &m_renderTargets[indexRTV];
+	DepthStencil*  DSV = indexDSV == -1 ? nullptr :  m_depthStencils[indexDSV];
+	auto*  DSSTATE = m_depthStencilStates[indexDSState];
 	m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
-	m_deviceContext->OMSetRenderTargets(1, RTV, DSV);
+	m_deviceContext->OMSetRenderTargets(RTV ? 1 : 0, RTV, DSV);
 
 
 	// SHADER STAGES
@@ -1223,9 +1226,14 @@ void Renderer::Apply()
 			default:
 				break;
 			}
+			
 
 			m_texSetCommands.pop();
 		}
+	}
+	else
+	{
+		OutputDebugString(" Error: Shader null...\n");
 	}
 }
 

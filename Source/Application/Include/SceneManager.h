@@ -76,12 +76,12 @@ private:
 
 	struct Room {
 		friend class SceneManager;
+		void Render(Renderer* pRenderer) const;
 		GameObject floor;
 		GameObject wallL;
 		GameObject wallR;
 		GameObject wallF;
 		GameObject ceiling;
-		void Render(Renderer* pRenderer) const;
 	} m_room;
 
 	std::vector<GameObject> spheres;
@@ -92,6 +92,7 @@ private:
 	GameObject grid;
 	GameObject cylinder;
 
+	std::vector<GameObject*> m_ZPassObjects;
 
 #ifdef ENABLE_ANIMATION
 	// hierarchical model

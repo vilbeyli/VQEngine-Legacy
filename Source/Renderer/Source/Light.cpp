@@ -115,7 +115,9 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 		XMVECTOR pos = _transform._position;
 		XMMATRIX view = GetViewMatrix();
 		XMMATRIX proj = XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 100.0f);
-		LSpaceMat = proj * view;
+		// todo: figure out row-column major
+		LSpaceMat = XMMatrixTranspose(proj * view);
+		//LSpaceMat = proj * view;
 		break;
 	}	
 

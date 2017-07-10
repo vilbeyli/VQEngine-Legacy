@@ -61,6 +61,7 @@ struct Light
 
 cbuffer renderConsts
 {
+	matrix lightSpaceMat;
 	float gammaCorrection;
 	float3 cameraPos;
 
@@ -89,6 +90,8 @@ cbuffer perObject
 //---------------------------------------------------------
 Texture2D gDiffuseMap;
 Texture2D gNormalMap;
+Texture2D gShadowMap;
+
 SamplerState samAnisotropic
 {
     Filter = ANISOTROPIC;
@@ -191,8 +194,11 @@ float4 PSMain(PSIn In) : SV_TARGET
     for (int j = 0; j < spotCount; ++j)		// SPOT Lights
         IdIs += Phong(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos);
 
+	// shadow
+	float z = gShadowMap.Sample(samAnisotropic, In.texCoord).x;
 
-    float4 outColor = float4(Ia + IdIs, 1);
+	z *= 0.001f;
+	float4 outColor = float4(Ia + IdIs, 1) + float4(z, z, z, z);
     
     // gamma correction
     const bool gammaCorrect = gammaCorrection > 0.99f;

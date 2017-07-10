@@ -69,14 +69,14 @@ enum class DEFAULT_RS_STATE
 struct DepthShadowPass
 {
 	unsigned				_shadowMapDimension;
-	Texture					_shadowMap;
+	TextureID				_shadowMap;
 	const Shader*			_shadowShader;
 	RasterizerStateID		_drawRenderState;
 	RasterizerStateID		_shadowRenderState;
 	D3D11_VIEWPORT			_shadowViewport;	
 	DepthStencilID			_dsv;
 	void Initialize(Renderer* pRenderer, ID3D11Device* device);
-	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects, const Camera* cam) const;
+	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
 };
 
 struct RenderData
@@ -116,6 +116,8 @@ public:
 	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
 	RasterizerStateID	AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip);
 	const Texture&		AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
+	const Texture&		CreateTexture(int widht, int height);
+	TextureID			CreateTexture(D3D11_TEXTURE2D_DESC& textureDesc);
 	DepthStencilStateID AddDepthStencilState();	// todo params
 	DepthStencilStateID AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
 	RenderTargetID		AddRenderTarget(ID3D11Texture2D*& surface);

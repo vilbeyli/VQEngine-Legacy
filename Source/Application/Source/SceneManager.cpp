@@ -461,7 +461,7 @@ void SceneManager::Render()
 			_shadowCasters.push_back(&light);
 	}
 
-	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters, m_ZPassObjects, m_pCamera.get());
+	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters, m_ZPassObjects);
 	
 	// MAIN PASS
 	//------------------------------------------------------------------------
@@ -485,7 +485,6 @@ void SceneManager::Render()
 	m_room.Render(m_pRenderer, viewProj);
 	RenderCentralObjects(viewProj);
 	RenderLights(viewProj);
-
 
 
 	// POST PROCESS PASS
@@ -569,6 +568,8 @@ void SceneManager::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) co
 
 void SceneManager::SendLightData() const
 {
+	// SPOT & POINT LIGHTS
+	//--------------------------------------------------------------
 	const LightShaderSignature defaultLight = LightShaderSignature();
 	std::vector<LightShaderSignature> lights(MAX_LIGHTS, defaultLight);
 	std::vector<LightShaderSignature> spots(MAX_SPOTS, defaultLight);
@@ -595,6 +596,15 @@ void SceneManager::SendLightData() const
 	m_pRenderer->SetConstant1f("spotCount" , static_cast<float>(spotCount));
 	m_pRenderer->SetConstantStruct("lights", static_cast<void*>(lights.data()));
 	m_pRenderer->SetConstantStruct("spots" , static_cast<void*>(spots.data()));
+
+	// SHADOW MAPS
+	//--------------------------------------------------------------
+	// first light is spot: single shadaw map support for now
+	const Light& caster = m_lights[0];	
+	TextureID shadowMap = m_renderData->depthPass._shadowMap;
+
+	m_pRenderer->SetConstant4x4f("lightSpaceMat", caster.GetLightSpaceMatrix());
+	m_pRenderer->SetTexture("gShadowMap", shadowMap);
 
 #ifdef _DEBUG
 	if (lights.size() > MAX_LIGHTS)	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");

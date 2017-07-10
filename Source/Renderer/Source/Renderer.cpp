@@ -52,14 +52,8 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	shadowMapDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
 	shadowMapDesc.Height = static_cast<UINT>(_shadowMapDimension);
 	shadowMapDesc.Width  = static_cast<UINT>(_shadowMapDimension);
-
-	// todo, use add texture or something
-	Texture& tex = _shadowMap;
-	device->CreateTexture2D(
-		&shadowMapDesc,
-		nullptr,
-		&_shadowMap.tex2D
-	);
+	_shadowMap = pRenderer->CreateTexture(shadowMapDesc);
+	Texture& shadowMap = const_cast<Texture&>(pRenderer->GetTexture(_shadowMap));
 
 	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
@@ -67,7 +61,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;			// check format
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2D.MipSlice = 0;
-	_dsv = pRenderer->AddDepthStencil(dsvDesc, tex.tex2D);
+	_dsv = pRenderer->AddDepthStencil(dsvDesc, shadowMap.tex2D);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
@@ -76,9 +70,9 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	srvDesc.Texture2D.MipLevels = 1;
 
 	HRESULT hr = device->CreateShaderResourceView(
-		tex.tex2D,
+		shadowMap.tex2D,
 		&srvDesc,
-		&tex.srv
+		&shadowMap.srv
 	);	// succeed hr? 
 
 	// comparison
@@ -98,7 +92,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
 	comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
 
-	hr = device->CreateSamplerState(&comparisonSamplerDesc, &tex.samplerState);
+	hr = device->CreateSamplerState(&comparisonSamplerDesc, &shadowMap.samplerState);
 	// succeed hr?
 
 	// render states for front face culling 
@@ -120,7 +114,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	_shadowViewport.MaxDepth = 1.f;
 }
 
-void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects, const Camera* cam) const
+void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const
 {
 	//return;
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -133,8 +127,6 @@ void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const L
 	pRenderer->SetConstant4x4f("viewProj", shadowLights.front()->GetLightSpaceMatrix());
 	pRenderer->SetConstant4x4f("view"    , shadowLights.front()->GetViewMatrix());
 	pRenderer->SetConstant4x4f("proj"    , shadowLights.front()->GetProjectionMatrix());
-	//pRenderer->SetConstant4x4f("view", cam->GetViewMatrix());
-	//pRenderer->SetConstant4x4f("proj", cam->GetProjectionMatrix());
 	pRenderer->Apply();
 	pRenderer->Begin(clearColor, 1.0f);
 	size_t idx = 0;
@@ -620,6 +612,33 @@ const Texture& Renderer::AddTexture(const std::string& texFileName, const std::s
 		return m_textures[0];
 	}
 
+}
+
+const Texture & Renderer::CreateTexture(int widht, int height)
+{
+	Texture tex;
+	assert(false); // todo
+	//m_device->CreateTexture2D(
+	//	&DESC,
+	//	nullptr,
+	//	&tex.tex2D
+	//);
+
+	m_textures.push_back(tex);
+	return m_textures.back();
+}
+
+TextureID Renderer::CreateTexture(D3D11_TEXTURE2D_DESC & textureDesc)
+{
+	Texture tex;
+	m_device->CreateTexture2D(
+		&textureDesc,
+		nullptr,
+		&tex.tex2D
+	);
+	tex.id = static_cast<int>(m_textures.size());
+	m_textures.push_back(tex);
+	return m_textures.back().id;
 }
 
 DepthStencilStateID Renderer::AddDepthStencilState()

@@ -167,6 +167,7 @@ void SceneManager::InitializeLights()
 		l._type = Light::LightType::SPOT;
 		l._transform.SetPosition(0.0f, 3.6f*19.0f, 0.0f);
 		l._transform.RotateAroundGlobalXAxisDegrees(180.0f);
+		l._transform.RotateAroundGlobalZAxisDegrees(30.0f);
 		l._transform.SetUniformScale(0.8f);
 		l._model.m_mesh = MESH_TYPE::CYLINDER;
 		l._model.m_material.color = Color::white;
@@ -268,10 +269,6 @@ void SceneManager::InitializeObjectArrays()
 				cubes.push_back(cube);
 			}
 		}
-
-		// initial direction for spot light
-		m_lights[0]._transform.RotateAroundGlobalZAxisDegrees(30.0f);
-
 	}
 	{	// circle arrangement
 		const float r = 30.0f;
@@ -352,8 +349,8 @@ void SceneManager::InitializeObjectArrays()
 	m_ZPassObjects.push_back(&grid);
 	m_ZPassObjects.push_back(&cylinder);
 	m_ZPassObjects.push_back(&triangle);
-	//for (GameObject& obj : cubes)	m_ZPassObjects.push_back(&obj);
-	//for (GameObject& obj : spheres)	m_ZPassObjects.push_back(&obj);
+	for (GameObject& obj : cubes)	m_ZPassObjects.push_back(&obj);
+	for (GameObject& obj : spheres)	m_ZPassObjects.push_back(&obj);
 }
 
 
@@ -451,7 +448,7 @@ void SceneManager::Render()
 	const float clearColor[4] = { 0.2f, 0.4f, 0.7f, 1.0f };
 	const XMMATRIX view = m_pCamera->GetViewMatrix();
 	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
-	
+	const XMMATRIX viewProj = view * proj;
 
 
 	// DEPTH PASS
@@ -464,9 +461,7 @@ void SceneManager::Render()
 			_shadowCasters.push_back(&light);
 	}
 
-	//m_pRenderer->Begin(clearColor, 1.0f);	//moved in render depth
-	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters, m_ZPassObjects);
-	
+	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters, m_ZPassObjects, m_pCamera.get());
 	
 	// MAIN PASS
 	//------------------------------------------------------------------------
@@ -478,20 +473,18 @@ void SceneManager::Render()
 	m_pRenderer->Begin(clearColor, 1.0f);
 	
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
-	m_skydome.Render(view, proj);
+	//m_skydome.Render(view, proj);	// todo: fix texcoords
 
 	m_pRenderer->SetShader(m_selectedShader);
-	m_pRenderer->SetConstant4x4f("view", view);
-	m_pRenderer->SetConstant4x4f("proj", proj);
 	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 
 	if (m_selectedShader == m_renderData->phongShader)	{	SendLightData(); }
 	if (m_selectedShader == m_renderData->TNBShader)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
-	m_room.Render(m_pRenderer);
-	RenderCentralObjects(view, proj);
-	RenderLights(view, proj);
+	m_room.Render(m_pRenderer, viewProj);
+	RenderCentralObjects(viewProj);
+	RenderLights(viewProj);
 
 
 
@@ -514,17 +507,17 @@ void SceneManager::Render()
 }
 
 
-void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const
+void SceneManager::RenderLights(const XMMATRIX& viewProj) const
 {
 	m_pRenderer->Reset();	// is reset necessary?
 	m_pRenderer->SetShader(m_renderData->unlitShader);
-	m_pRenderer->SetConstant4x4f("view", view);
-	m_pRenderer->SetConstant4x4f("proj", proj);
 	for (const Light& light : m_lights)
 	{
 		m_pRenderer->SetBufferObj(light._model.m_mesh);
-		XMMATRIX world = light._transform.WorldTransformationMatrix();
-		vec3 color = light._model.m_material.color.Value();
+		const XMMATRIX world = light._transform.WorldTransformationMatrix();
+		const XMMATRIX worldViewProj = world  * viewProj;
+		const vec3 color = light._model.m_material.color.Value();
+		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
 		m_pRenderer->SetConstant4x4f("world", world);
 		m_pRenderer->SetConstant3f("diffuse", color);
 		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
@@ -533,16 +526,16 @@ void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) cons
 	}
 }
 
-void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj) 
+void SceneManager::RenderCentralObjects(const XMMATRIX& viewProj) 
 {
-	//for (const auto& cube : cubes) cube.Render(m_pRenderer);
-	//for (const auto& sph : spheres) sph.Render(m_pRenderer);
+	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj);
+	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj);
 	
 	//m_pRenderer->SetShader(m_renderData->unlitShader);
-	grid.Render(m_pRenderer);
-	quad.Render(m_pRenderer);
-	triangle.Render(m_pRenderer);
-	cylinder.Render(m_pRenderer);
+	grid.Render(m_pRenderer, viewProj);
+	quad.Render(m_pRenderer, viewProj);
+	triangle.Render(m_pRenderer, viewProj);
+	cylinder.Render(m_pRenderer, viewProj);
 }
 
 void SceneManager::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const
@@ -610,13 +603,13 @@ void SceneManager::SendLightData() const
 }
 
 
-void SceneManager::Room::Render(Renderer * pRenderer) const
+void SceneManager::Room::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
-	floor.Render(pRenderer);
-	wallL.Render(pRenderer);
-	wallR.Render(pRenderer);
-	wallF.Render(pRenderer);
-	ceiling.Render(pRenderer);
+	floor.Render(pRenderer, viewProj);
+	wallL.Render(pRenderer, viewProj);
+	wallR.Render(pRenderer, viewProj);
+	wallF.Render(pRenderer, viewProj);
+	ceiling.Render(pRenderer, viewProj);
 }
 
 //======= JUNKYARD

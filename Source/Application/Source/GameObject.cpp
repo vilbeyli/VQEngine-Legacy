@@ -60,20 +60,21 @@ GameObject& GameObject::operator=(const GameObject& obj)
 	return *this;
 }
 
-void GameObject::Render(Renderer * pRenderer) const
+void GameObject::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
 	m_model.m_material.SetMaterialConstants(pRenderer);
 	pRenderer->SetBufferObj(m_model.m_mesh);
 	XMMATRIX world = m_transform.WorldTransformationMatrix();
+	XMMATRIX wvp = world * viewProj;
 	pRenderer->SetConstant4x4f("world", world);
 	pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
+	pRenderer->SetConstant4x4f("worldViewProj", wvp);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 }
 
 void GameObject::RenderZ(Renderer * pRenderer) const
 {
-	//m_model.m_material.SetMaterialConstants(pRenderer);
 	pRenderer->SetBufferObj(m_model.m_mesh);
 	XMMATRIX world = m_transform.WorldTransformationMatrix();
 	pRenderer->SetConstant4x4f("world", world);

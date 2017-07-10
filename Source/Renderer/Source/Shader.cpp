@@ -115,7 +115,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #endif
 
-	//compile vertex shader
+	// vertex shader
 	ID3D10Blob* vsBlob = NULL;
 	if (FAILED(D3DCompileFromFile(
 		VSPath,
@@ -132,7 +132,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		return;
 	}
 
-	//compile geometry shader
+	// geometry shader
 	ID3D10Blob* gsBlob = NULL;
 	if (geoShader)
 	{
@@ -150,7 +150,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 			HandleCompileError(errorMessage, gspath);
 		}
 	}
-	//compile pixel shader
+	// pixel shader
 	ID3D10Blob* psBlob = NULL;
 	if (FAILED(D3DCompileFromFile(
 		PSPath,
@@ -173,6 +173,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	// CREATE SHADER PROGRAMS
 	//---------------------------------------------------------------------------
 	//create vertex shader buffer
+	// TODO: specify which shaders to compile. some might not need pixel shader
 	result = device->CreateVertexShader(vsBlob->GetBufferPointer(), 
 										vsBlob->GetBufferSize(), 
 										NULL, 

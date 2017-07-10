@@ -24,6 +24,5 @@ struct PSIn
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	discard;
 	return(0.0f, 0.0f, 0.0f, 0.0f);
 }

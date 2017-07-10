@@ -51,7 +51,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	shadowMapDesc.SampleDesc.Count = 1;
 	shadowMapDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
 	shadowMapDesc.Height = static_cast<UINT>(_shadowMapDimension);
-	shadowMapDesc.Width = static_cast<UINT>(_shadowMapDimension);
+	shadowMapDesc.Width  = static_cast<UINT>(_shadowMapDimension);
 
 	// todo, use add texture or something
 	Texture& tex = _shadowMap;
@@ -67,7 +67,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;			// check format
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2D.MipSlice = 0;
-	pRenderer->AddDepthStencil(dsvDesc, tex.tex2D);
+	_dsv = pRenderer->AddDepthStencil(dsvDesc, tex.tex2D);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
@@ -102,8 +102,8 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	// succeed hr?
 
 	// render states for front face culling 
-	_shadowRenderState = pRenderer->AddRSState(RS_CULL_MODE::FRONT, RS_FILL_MODE::SOLID, false);
-	_drawRenderState   = pRenderer->AddRSState(RS_CULL_MODE::BACK , RS_FILL_MODE::SOLID, false);
+	_shadowRenderState = pRenderer->AddRSState(RS_CULL_MODE::FRONT, RS_FILL_MODE::SOLID, true);
+	_drawRenderState   = pRenderer->AddRSState(RS_CULL_MODE::BACK , RS_FILL_MODE::SOLID, true);
 
 	// shader
 	std::vector<InputLayout> layout = {
@@ -120,7 +120,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	_shadowViewport.MaxDepth = 1.f;
 }
 
-void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const
+void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects, const Camera* cam) const
 {
 	//return;
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -131,6 +131,10 @@ void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const L
 	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
 	pRenderer->SetShader(_shadowShader->ID());				// shader for rendering z buffer
 	pRenderer->SetConstant4x4f("viewProj", shadowLights.front()->GetLightSpaceMatrix());
+	pRenderer->SetConstant4x4f("view"    , shadowLights.front()->GetViewMatrix());
+	pRenderer->SetConstant4x4f("proj"    , shadowLights.front()->GetProjectionMatrix());
+	//pRenderer->SetConstant4x4f("view", cam->GetViewMatrix());
+	//pRenderer->SetConstant4x4f("proj", cam->GetProjectionMatrix());
 	pRenderer->Apply();
 	pRenderer->Begin(clearColor, 1.0f);
 	size_t idx = 0;
@@ -148,7 +152,7 @@ Renderer::Renderer()
 	m_device(nullptr),
 	m_deviceContext(nullptr),
 	m_mainCamera(nullptr),
-	   m_bufferObjects(std::vector<BufferObject*>   (MESH_TYPE::MESH_TYPE_COUNT)),
+	m_bufferObjects(std::vector<BufferObject*>   (MESH_TYPE::MESH_TYPE_COUNT)),
 	m_rasterizerStates(std::vector<RasterizerState*>((int)DEFAULT_RS_STATE::RS_COUNT)),
 	m_depthStencilStates(std::vector<DepthStencilState*>())
 {
@@ -342,6 +346,8 @@ void Renderer::GeneratePrimitives()
 
 void Renderer::LoadShaders()
 {
+	OutputDebugString("\n    ------------------------ COMPILING SHADERS ------------------------ \n");
+
 	std::vector<InputLayout> layout = {
 		{ "POSITION",	FLOAT32_3 },
 		{ "NORMAL",		FLOAT32_3 },
@@ -361,6 +367,8 @@ void Renderer::LoadShaders()
 	m_renderData.exampleTex		= AddTexture("bricks_d.png", s_textureRoot).id;
 	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", s_textureRoot).id;
 	m_renderData.depthPass.Initialize(this, m_device);
+
+	OutputDebugString("\n    ---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
 
 void Renderer::PollThread()
@@ -526,11 +534,11 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 							 const std::vector<InputLayout>& layouts,
 							 bool geoShader /*= false*/)
 {
-	// example params: "TextureCoord", "Data/Shaders/"
-	std::string path = fileRoot + shdFileName;
+	const std::string path = fileRoot + shdFileName;
 
 	Shader* shader = new Shader(shdFileName);
 	shader->Compile(m_device, path, layouts, geoShader);
+	
 	m_shaders.push_back(shader);
 	shader->AssignID(static_cast<int>(m_shaders.size()) - 1);
 	return shader->ID();

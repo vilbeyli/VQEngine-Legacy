@@ -16,9 +16,12 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+//todo: worldViewProj
 cbuffer perFrame
 {
 	matrix viewProj;
+	matrix view;
+	matrix proj;
 }
 
 cbuffer perModel
@@ -42,7 +45,7 @@ struct PSIn
 
 PSIn VSMain(VSIn In)
 {
-	matrix wvp = mul(viewProj, world);
+	matrix wvp = mul(proj, mul(view, world));
 
 	PSIn Out;
 	Out.position	= mul(wvp  , float4(In.position, 1));

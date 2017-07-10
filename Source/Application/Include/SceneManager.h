@@ -37,7 +37,7 @@ using std::shared_ptr;
 
 class SceneManager
 {
-
+	friend struct DepthShadowPass;
 public:
 	SceneManager();
 	~SceneManager();
@@ -54,9 +54,9 @@ private:
 
 	void UpdateCentralObj(const float dt);
 
-	void RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const;
+	void RenderLights(const XMMATRIX& viewProj) const;
 	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
-	void RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj); // todo: const
+	void RenderCentralObjects(const XMMATRIX& viewProj); // todo: const
 
 	void SendLightData() const;
 
@@ -76,7 +76,7 @@ private:
 
 	struct Room {
 		friend class SceneManager;
-		void Render(Renderer* pRenderer) const;
+		void Render(Renderer* pRenderer, const XMMATRIX& viewPrroj) const;
 		GameObject floor;
 		GameObject wallL;
 		GameObject wallR;

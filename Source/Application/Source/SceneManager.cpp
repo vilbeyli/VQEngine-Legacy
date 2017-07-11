@@ -26,8 +26,12 @@
 
 #define KEY_TRIG(k) ENGINE->INP()->IsKeyTriggered(k)
 
+#define xENABLE_POINT_LIGHTS
 #define MAX_LIGHTS 20
 #define MAX_SPOTS 10
+
+#define xROTATE_SHADOW_LIGHT
+
 #define RAND_LIGHT_COUNT 0
 #define DISCO_PERIOD 0.25
 
@@ -59,6 +63,20 @@ void SceneManager::Initialize(Renderer* renderer, const RenderData* rData, PathM
 	m_skydome.Init(m_pRenderer, "browncloud_lf.jpg", 1000.0f / 2.2f, m_renderData->unlitShader);
 }
 
+
+void SceneManager::SetCameraSettings(const Settings::Camera & cameraSettings)
+{
+	const auto& NEAR_PLANE = cameraSettings.nearPlane;
+	const auto& FAR_PLANE = cameraSettings.farPlane;
+	m_pCamera->SetOthoMatrix(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, m_pRenderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetPosition(0, 50, -190);
+	m_pCamera->Rotate(0.0f, 15.0f * DEG2RAD, 1.0f);
+	m_pRenderer->SetCamera(m_pCamera.get());
+}
+
+
+
 enum class WALLS
 {
 	FLOOR = 0,
@@ -80,12 +98,12 @@ void SceneManager::InitializeRoom()
 	{
 		Transform& tf = m_room.floor.m_transform;
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
-		tf.SetPosition(0, -wallHieght + YOffset, 0);
+		tf.SetPosition(0, -wallHieght*2 + YOffset, 0);
 
 		//m_room.floor.m_model.m_material.shininess	= 40.0f;
 		m_room.floor.m_model.m_material = Material::bronze;
 		m_room.floor.m_model.m_material.diffuseMap = m_pRenderer->AddTexture("metal3.png");
-		m_room.floor.m_model.m_material.normalMap  = m_pRenderer->AddTexture("nrm_metal3.png");
+		//m_room.floor.m_model.m_material.normalMap  = m_pRenderer->AddTexture("nrm_metal3.png");
 	}
 	// CEILING
 	{
@@ -165,9 +183,9 @@ void SceneManager::InitializeLights()
 	{
 		Light l;
 		l._type = Light::LightType::SPOT;
-		l._transform.SetPosition(0.0f, 3.6f*19.0f, 0.0f);
+		l._transform.SetPosition(0.0f, 3.6f*25.0f, 0.0f);
 		l._transform.RotateAroundGlobalXAxisDegrees(180.0f);
-		l._transform.RotateAroundGlobalZAxisDegrees(30.0f);
+		//l._transform.RotateAroundGlobalZAxisDegrees(30.0f);
 		l._transform.SetUniformScale(0.8f);
 		l._model.m_mesh = MESH_TYPE::CYLINDER;
 		l._model.m_material.color = Color::white;
@@ -178,6 +196,7 @@ void SceneManager::InitializeLights()
 		m_lights.push_back(l);
 	}
 
+#ifdef ENABLE_POINT_LIGHTS
 	// point lights
 	{
 		Light l;
@@ -223,6 +242,7 @@ void SceneManager::InitializeLights()
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
 		m_lights.push_back(l);
 	}
+#endif
 }
 
 void SceneManager::InitializeObjectArrays()
@@ -354,18 +374,6 @@ void SceneManager::InitializeObjectArrays()
 }
 
 
-void SceneManager::SetCameraSettings(const Settings::Camera & cameraSettings)
-{
-	const auto& NEAR_PLANE = cameraSettings.nearPlane;
-	const auto& FAR_PLANE = cameraSettings.farPlane;
-	m_pCamera->SetOthoMatrix(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
-	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, m_pRenderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
-	m_pCamera->SetPosition(0, 50, -190);
-	m_pCamera->Rotate(0.0f, 15.0f * DEG2RAD, 1.0f);
-	m_pRenderer->SetCamera(m_pCamera.get());
-}
-
-
 //-----------------------------------------------------------------------------------------------------------------------------------------
 void SceneManager::UpdateCentralObj(const float dt)
 {
@@ -412,7 +420,9 @@ void SceneManager::UpdateCentralObj(const float dt)
 		}
 	}
 
+#ifdef ROTATE_SHADOW_LIGHT
 	m_lights[0]._transform.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);
+#endif
 }
 
 

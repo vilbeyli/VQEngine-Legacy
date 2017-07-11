@@ -29,6 +29,12 @@ cbuffer perModel
 	matrix worldViewProj;
 }
 
+cbuffer frame
+{
+	matrix lightSpaceMat;	// array?
+};
+
+
 struct VSIn
 {
 	float3 position : POSITION;
@@ -39,20 +45,24 @@ struct VSIn
 
 struct PSIn 
 {
-	float4 position : SV_POSITION;
-	float3 worldPos : POSITION;
-	float3 normal	: NORMAL;
-    float3 tangent  : TANGENT;
-    float2 texCoord : TEXCOORD4;
+	float4 position		 : SV_POSITION;
+	float3 worldPos		 : POSITION;
+	float4 lightSpacePos : POSITION1;	// array?
+	float3 normal		 : NORMAL;
+    float3 tangent		 : TANGENT;
+    float2 texCoord		 : TEXCOORD4;
 };
 
 PSIn VSMain(VSIn In)
 {
+	const float4 pos = float4(In.position, 1);
+
 	PSIn Out;
-	Out.position	= mul(worldViewProj, float4(In.position, 1));
-	Out.worldPos	= mul(world        , float4(In.position, 1)).xyz;
-    Out.normal		= normalize(mul(normalMatrix, In.normal));
-    Out.tangent		= normalize(mul(normalMatrix, In.tangent));
-	Out.texCoord	= In.texCoord;
+	Out.position		= mul(worldViewProj, pos);
+	Out.worldPos		= mul(world        , pos).xyz;
+    Out.normal			= normalize(mul(normalMatrix, In.normal));
+	Out.lightSpacePos	= mul(lightSpaceMat, pos);
+    Out.tangent			= normalize(mul(normalMatrix, In.tangent));
+	Out.texCoord		= In.texCoord;
 	return Out;
 }

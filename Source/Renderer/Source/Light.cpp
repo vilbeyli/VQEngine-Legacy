@@ -143,8 +143,8 @@ XMMATRIX Light::GetViewMatrix() const
 		
 		case LightType::SPOT:
 		{
-			XMVECTOR up		= vec3::Up;
-			XMVECTOR lookAt = vec3::Down;
+			XMVECTOR up		= vec3::Back;
+			XMVECTOR lookAt = vec3::Up;
 			lookAt	= XMVector3TransformCoord(lookAt, _transform.RotationMatrix());
 			up		= XMVector3TransformCoord(up,	  _transform.RotationMatrix());
 			XMVECTOR pos = _transform._position;

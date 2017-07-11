@@ -18,11 +18,12 @@
 
 struct PSIn
 {
-	float4 position : SV_POSITION;
-	float3 worldPos : POSITION;
-	float3 normal	: NORMAL;
-    float3 tangent	: TANGENT;
-    float2 texCoord : TEXCOORD4;
+	float4 position		 : SV_POSITION;
+	float3 worldPos		 : POSITION;
+	float4 lightSpacePos : POSITION1;	// array?
+	float3 normal		 : NORMAL;
+    float3 tangent		 : TANGENT;
+    float2 texCoord		 : TEXCOORD4;
 };
 
 struct Surface
@@ -61,7 +62,6 @@ struct Light
 
 cbuffer renderConsts
 {
-	matrix lightSpaceMat;
 	float gammaCorrection;
 	float3 cameraPos;
 
@@ -170,6 +170,35 @@ inline float3 UnpackNormals(float2 uv, float3 worldNormal, float3 worldTangent)
 	return mul(SampledNormal, TBN);
 }
 
+float ShadowTest(float3 worldPos, float4 lightSpacePos)
+{
+	// homogeneous position after interpolation
+	float3 projLSpaceCoords = lightSpacePos.xyz / lightSpacePos.w;
+
+	// clip space [-1, 1] --> texture space [0, 1]
+	float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
+	
+	float pxDepthInLSpace = projLSpaceCoords.z;
+	float closestDepthInLSpace = gShadowMap.Sample(samAnisotropic, shadowTexCoords).x;
+
+	// frustum check
+	if ( projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
+		 projLSpaceCoords.y < -1.0f || projLSpaceCoords.y > 1.0f ||
+		 projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
+		)
+	{
+		return -10.0f;
+	}
+
+	if (pxDepthInLSpace > closestDepthInLSpace)
+	{
+		return 0.0f;
+	}
+
+	return 1.0f;
+	
+}
+
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	// lighting & surface parameters
@@ -194,12 +223,9 @@ float4 PSMain(PSIn In) : SV_TARGET
     for (int j = 0; j < spotCount; ++j)		// SPOT Lights
         IdIs += Phong(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos);
 
-	// shadow
-	float z = gShadowMap.Sample(samAnisotropic, In.texCoord).x;
+	float3 illumination = Ia + IdIs * ShadowTest(In.worldPos, In.lightSpacePos);
+	float4 outColor = float4(illumination, 1);	// alpha
 
-	z *= 0.001f;
-	float4 outColor = float4(Ia + IdIs, 1) + float4(z, z, z, z);
-    
     // gamma correction
     const bool gammaCorrect = gammaCorrection > 0.99f;
     const float gamma = 1.0 / 2.2;

@@ -53,6 +53,8 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	shadowMapDesc.Height = static_cast<UINT>(_shadowMapDimension);
 	shadowMapDesc.Width  = static_cast<UINT>(_shadowMapDimension);
 	_shadowMap = pRenderer->CreateTexture(shadowMapDesc);
+
+	// careful: removing const qualified from texture. rethink this
 	Texture& shadowMap = const_cast<Texture&>(pRenderer->GetTexture(_shadowMap));
 
 	// depth stencil view and shader resource view for the shadow map (^ BindFlags)

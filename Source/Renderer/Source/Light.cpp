@@ -88,7 +88,7 @@ void Light::SetLightRange(float range)
 	// ATTENUATION LOOKUP FOR POINT LIGHTS
 	// find the first greater or equal range value (rangeIndex) 
 	// to look up with in the attenuation map
-	float ranges[] = { 7, 13, 20, 32, 50, 65, 100, 160, 200, 325, 600, 3250 };
+	constexpr float ranges[] = { 7, 13, 20, 32, 50, 65, 100, 160, 200, 325, 600, 3250 };
 	unsigned rangeIndex = static_cast<unsigned>(ranges[rangeAttenuationMap_.size() - 1]);	// default case = largest range
 	for (size_t i = 0; i < rangeAttenuationMap_.size(); i++)
 	{
@@ -114,7 +114,7 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 	{
 		XMVECTOR pos = _transform._position;
 		XMMATRIX view = GetViewMatrix();
-		XMMATRIX proj = XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 500.0f);
+		XMMATRIX proj = XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 500);
 		
 		// remember:
 		//	when we're sending	 world * view * projection

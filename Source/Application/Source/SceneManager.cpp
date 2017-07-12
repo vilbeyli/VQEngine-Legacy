@@ -104,7 +104,7 @@ void SceneManager::InitializeRoom()
 		//m_room.floor.m_model.m_material.shininess	= 40.0f;
 		m_room.floor.m_model.m_material = Material::bronze;
 		m_room.floor.m_model.m_material.diffuseMap = m_pRenderer->AddTexture("metal3.png");
-		//m_room.floor.m_model.m_material.normalMap  = m_pRenderer->AddTexture("nrm_metal3.png");
+		m_room.floor.m_model.m_material.normalMap  = m_pRenderer->AddTexture("nrm_metal3.png");
 	}
 	// CEILING
 	{
@@ -190,7 +190,7 @@ void SceneManager::InitializeLights()
 		l._model.m_mesh = MESH_TYPE::CYLINDER;
 		l._model.m_material.color = Color::white;
 		l._color = Color::white;
-		//l.SetLightRange(30);
+		//l._range = 200.f;
 		l._spotAngle = 70.0f;
 		l._castsShadow = true;
 		m_lights.push_back(l);

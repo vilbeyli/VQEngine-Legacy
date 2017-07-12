@@ -37,7 +37,7 @@ const char* Renderer::s_textureRoot = "Data/Textures/";
 
 void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 {
-	_shadowMapDimension = 512;
+	_shadowMapDimension = 1024;
 
 	// check feature support & error handle:
 	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
@@ -118,7 +118,6 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 
 void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const
 {
-	//return;
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	pRenderer->UnbindRenderTarget();						// no render target

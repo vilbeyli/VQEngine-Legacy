@@ -191,7 +191,7 @@ float ShadowTest(float3 worldPos, float4 lightSpacePos)
 	}
 
 	// depth check
-	if (pxDepthInLSpace > closestDepthInLSpace)
+	if (pxDepthInLSpace - 0.000001 > closestDepthInLSpace)
 	{
 		return 0.0f;
 	}
@@ -261,7 +261,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	// gamma correction
 	const bool gammaCorrect = gammaCorrection > 0.99f;
-	const float gamma = 1.0 / 1.7;
+	const float gamma = 1.0 / 2.2;
 	if (gammaCorrect)	return pow(outColor, float4(gamma, gamma, gamma, 1.0f));
 	else        		return outColor;
 }

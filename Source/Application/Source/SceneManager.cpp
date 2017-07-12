@@ -438,6 +438,14 @@ void SceneManager::Update(float dt)
 	//-------------------------------------------------------------------------------- SHADER CONFIGURATION ----------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
 	// F1-F4 | Debug Shaders
+	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
+	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = SHADERS::NORMAL;
+	if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = SHADERS::TANGENT;
+	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = SHADERS::BINORMAL;
+															   
+	// F5-F8 | Lighting Shaders								   
+	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = SHADERS::UNLIT;
+	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = SHADERS::FORWARD_PHONG;
 	if (ENGINE->INP()->IsKeyTriggered(118)) m_debugRender = !m_debugRender;
 
 	// F9-F12 | Shader Parameters
@@ -483,6 +491,8 @@ void SceneManager::Render() const
 	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 
+	if (m_selectedShader == SHADERS::FORWARD_PHONG) {	SendLightData(); }
+	if (m_selectedShader == SHADERS::TBN)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
 	m_room.Render(m_pRenderer, viewProj);
 	RenderCentralObjects(viewProj);
@@ -504,6 +514,7 @@ void SceneManager::Render() const
 		//RenderCentralObjects(view, proj);
 		//m_selectedShader = prevShader;
 
+		m_pRenderer->SetShader(SHADERS::DEBUG);
 		m_pRenderer->SetTexture("t_shadowMap", m_renderData->depthPass._shadowMap);	// todo: decide shader naming 
 		m_pRenderer->SetBufferObj(quad.m_model.m_mesh);
 		m_pRenderer->Apply();

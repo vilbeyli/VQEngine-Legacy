@@ -26,11 +26,11 @@
 
 #define KEY_TRIG(k) ENGINE->INP()->IsKeyTriggered(k)
 
-#define xENABLE_POINT_LIGHTS
+#define ENABLE_POINT_LIGHTS
 #define MAX_LIGHTS 20
 #define MAX_SPOTS 10
 
-#define xROTATE_SHADOW_LIGHT
+#define xROTATE_SHADOW_LIGHT	// todo: fix frustum for shadow
 
 #define RAND_LIGHT_COUNT 0
 #define DISCO_PERIOD 0.25
@@ -93,13 +93,13 @@ void SceneManager::InitializeRoom()
 	const float floorWidth = 5*30.0f;
 	const float floorDepth = 5*30.0f;
 	const float wallHieght = 3.8*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
-	const float YOffset = wallHieght - 2.0f;
+	const float YOffset = wallHieght - 9.0f;
 
 	// FLOOR
 	{
 		Transform& tf = m_room.floor.m_transform;
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
-		tf.SetPosition(0, -wallHieght*2 + YOffset, 0);
+		tf.SetPosition(0, -wallHieght + YOffset, 0);
 
 		//m_room.floor.m_model.m_material.shininess	= 40.0f;
 		m_room.floor.m_model.m_material = Material::bronze;
@@ -185,8 +185,7 @@ void SceneManager::InitializeLights()
 		Light l;
 		l._type = Light::LightType::SPOT;
 		l._transform.SetPosition(0.0f, 3.6f*25.0f, 0.0f);
-		l._transform.RotateAroundGlobalXAxisDegrees(180.0f);
-		//l._transform.RotateAroundGlobalZAxisDegrees(30.0f);
+		l._transform.RotateAroundGlobalXAxisDegrees(200.0f);
 		l._transform.SetUniformScale(0.8f);
 		l._model.m_mesh = MESH_TYPE::CYLINDER;
 		l._model.m_material.color = Color::white;
@@ -268,14 +267,16 @@ void SceneManager::InitializeObjectArrays()
 				float x, y, z;	// position
 				x = i * r - row * r / 2;		y = 5.0f;	z = j * r - col * r / 2;
 				cube.m_transform.SetPosition(x, y, z);
-				cube.m_transform.SetScale(1, 6, 3);
+				if(RandF(0, 1) < 0.5f)	cube.m_transform.SetScale(1, 6, 3);
+				else					cube.m_transform.SetUniformScale(RandF(3.0f, 5.0f));
+				if(j == 3)	cube.m_transform.SetUniformScale(RandF(6.0f, 9.0f));
 				cube.m_model.m_material.color = color;
 				//if (i == j) cube.m_transform.SetRotationDeg(90.0f / 4 * sqrt(i*j), 0, 0);
 				//if (i == j) cube.m_transform.RotateAroundAxisDegrees(c_rowRotations[1], 90.0f);
-				if (j == 0) cube.m_transform.RotateAroundAxisDegrees(vec3::XAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
-				if (j == 1) cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
+				if (j == 0 && col != 1) cube.m_transform.RotateAroundAxisDegrees(vec3::XAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
+				if (j == 1 && col != 1) cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
 
-				if (j == 3) cube.m_transform.RotateAroundAxisDegrees(vec3::ZAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
+				if (j == 3 && col != 1) cube.m_transform.RotateAroundAxisDegrees(vec3::ZAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
 
 				cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, -90.0f);
 
@@ -291,13 +292,15 @@ void SceneManager::InitializeObjectArrays()
 			}
 		}
 	}
-	{	// circle arrangement
-		const float r = 30.0f;
-		const size_t numSph = 12;
 
-		const float rot = 2.0f * XM_PI / numSph;
-		const vec3 radius(r, 40.0f, 0.0f);
-		//const auto axis = XMVector3Normalize(global_U + global_F);
+	// circle arrangement
+	const float sphHeight[2] = { 60.0f, 45.0f };
+	{	// large circle
+		const float r = 30.0f;
+		const size_t numSph = 15;
+
+		const vec3 radius(r, sphHeight[0], 0.0f);
+		const float rot = 2.0f * XM_PI / numSph == 0 ? 1.0f : numSph;
 		const vec3 axis = vec3::Up;
 		for (size_t i = 0; i < numSph; i++)
 		{
@@ -314,13 +317,12 @@ void SceneManager::InitializeObjectArrays()
 			spheres.push_back(sph);
 		}
 	}
-	{	// circle arrangement
+	{	// small circle
 		const float r = 15.0f;
 		const size_t numSph = 5;
 
-		const float rot = 2.0f * XM_PI / numSph;
-		const vec3 radius(r, 35.0f, 0.0f);
-		//const auto axis = XMVector3Normalize(global_U + global_F);
+		const float rot = 2.0f * XM_PI / numSph == 0 ? 1.0f : numSph;
+		const vec3 radius(r, sphHeight[1], 0.0f);
 		const auto axis = vec3::Up;
 		for (size_t i = 0; i < numSph; i++)
 		{
@@ -379,7 +381,7 @@ void SceneManager::InitializeObjectArrays()
 void SceneManager::UpdateCentralObj(const float dt)
 {
 	float t = ENGINE->TIMER()->TotalTime();
-	const float moveSpeed	= 15.0f;
+	const float moveSpeed	= 45.0f;
 	const float rotSpeed	= XM_PI;
 
 	XMVECTOR rot = XMVectorZero();
@@ -390,14 +392,19 @@ void SceneManager::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown(98))  tr += vec3::Back; 	// Key: Numpad2
 	if (ENGINE->INP()->IsKeyDown(105)) tr += vec3::Up; 		// Key: Numpad9
 	if (ENGINE->INP()->IsKeyDown(99))  tr += vec3::Down; 	// Key: Numpad3
+	m_lights[0]._transform.Translate(dt * tr * moveSpeed);
 	
 
 	float angle = (dt * XM_PI * 0.08f) + (sinf(t) * sinf(dt * XM_PI * 0.03f));
 	size_t sphIndx = 0;
 	for (auto& sph : spheres)
 	{
-		const vec3 rotAxis = sphIndx < 12 ? vec3::Up : vec3::Down;
-		sph.m_transform.RotateAroundPointAndAxis(rotAxis, angle, vec3());
+		//const vec3 largeSphereRotAxis = (vec3::Down + vec3::Back * 0.3f);
+		//const vec3 rotPoint = sphIndx < 12 ? vec3() : vec3(0, 35, 0);
+		//const vec3 rotAxis = sphIndx < 12 ? vec3::Up : largeSphereRotAxis.normalized();
+		const vec3 rotAxis  = vec3::Up;
+		const vec3 rotPoint = vec3::Zero;
+		sph.m_transform.RotateAroundPointAndAxis(rotAxis, angle, rotPoint);
 		const vec3 pos = sph.m_transform._position;
 		const float sinx = sinf(pos._v.x / 3.5f);
 		const float y = 10.0f + 2.5f * sinx;
@@ -407,7 +414,8 @@ void SceneManager::UpdateCentralObj(const float dt)
 	}
 
 	// rotate cubes
-	const int	row = 6, col = 6;
+	const int	row = 6, 
+				col = 6;
 	const float cubeRotSpeed = 100.0f; // degs/s
 	for (int i = 0; i < row; ++i)
 	{

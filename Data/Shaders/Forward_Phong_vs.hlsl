@@ -61,7 +61,7 @@ PSIn VSMain(VSIn In)
 	Out.position		= mul(worldViewProj, pos);
 	Out.worldPos		= mul(world        , pos).xyz;
     Out.normal			= normalize(mul(normalMatrix, In.normal));
-	Out.lightSpacePos	= mul(lightSpaceMat, pos);
+	Out.lightSpacePos	= mul(lightSpaceMat, float4(Out.worldPos, 1));
     Out.tangent			= normalize(mul(normalMatrix, In.tangent));
 	Out.texCoord		= In.texCoord;
 	return Out;

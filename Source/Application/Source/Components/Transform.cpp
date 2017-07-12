@@ -50,7 +50,7 @@ void Transform::Scale(const vec3& scl)
 	_scale = scl;
 }
 
-void Transform::RotateAroundPointAndAxis(const vec3& axis, float angle, vec3& point)
+void Transform::RotateAroundPointAndAxis(const vec3& axis, float angle, const vec3& point)
 { 
 	vec3 R(_position - point);
 	const Quaternion rot = Quaternion::FromAxisAngle(axis, angle);

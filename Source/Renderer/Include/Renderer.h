@@ -39,16 +39,22 @@ struct Light;
 
 namespace DirectX { class ScratchImage; }
 
-// typedefs
-typedef int ShaderID;
-typedef int BufferID;
-typedef int TextureID;
-typedef int RasterizerStateID;
-typedef int DepthStencilStateID;
+using Viewport = D3D11_VIEWPORT;
 
+// typedefs
+using ShaderID            = int;
+using BufferID            = int;
+using TextureID           = int;
+using RasterizerStateID   = int;
+using DepthStencilStateID = int;
+using RenderTargetID	  = int;
+using DepthStencilID	  = int;
+						  
 
 using RasterizerState   = ID3D11RasterizerState;
 using DepthStencilState = ID3D11DepthStencilState;
+using RenderTarget		= ID3D11RenderTargetView;
+using DepthStencil		= ID3D11DepthStencilView;
 
 
 enum class DEFAULT_RS_STATE
@@ -85,9 +91,8 @@ struct RenderData
 class Renderer
 {
 	friend class Engine;
+
 public:
-
-
 	Renderer();
 	~Renderer();
 
@@ -97,7 +102,6 @@ public:
 	float		AspectRatio() const;
 	unsigned	WindowHeight() const;
 	unsigned	WindowWidth() const;
-
 
 	// resource interface
 	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
@@ -134,16 +138,14 @@ public:
 	void SetConstant1f(const char* cName, const float data);
 	void SetConstant1i(const char* cName, const int data);
 	void SetConstantStruct(const char * cName, void* data);
-	void SetTexture(const char* texName, TextureID tex);
-	void SetRasterizerState(RasterizerStateID rsStateID);
-	void SetDepthStencilState(DepthStencilStateID depthStencilStateID);
-	
+
+	// draw functions
 	void DrawIndexed(TOPOLOGY topology = TOPOLOGY::TRIANGLE_LIST);
 	void Draw(TOPOLOGY topology = TOPOLOGY::POINT_LIST);
 	void DrawLine();
 	void DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
 
-	void Begin(const float clearColor[4]);
+	void Begin(const float clearColor[4], const float depthValue);
 	void End();
 	void Reset();
 
@@ -167,7 +169,7 @@ public:
 	static const char* s_shaderRoot;
 	static const char* s_textureRoot;
 
-	RenderData	m_renderData;
+	RenderData	                    m_renderData;
 	ID3D11Device*					m_device;	// ?
 	ID3D11DeviceContext*			m_deviceContext;
 
@@ -181,9 +183,8 @@ private:
 
 	// render data
 	Camera*							m_mainCamera;
-	D3D11_VIEWPORT					m_viewPort;
+	Viewport						m_viewPort;
 
-	friend class RigidBody;		// access to m_bufferObjs
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
 	std::vector<Texture>			m_textures;
@@ -211,8 +212,9 @@ private:
 	// performance counters
 	unsigned long long				m_frameCount;
 
-	friend class IKEngine;	// temp hack
-	friend class AnimatedModel;
+	//friend class RigidBody;		// access to constant buffers
+	//friend class IKEngine;	// temp hack
+	//friend class AnimatedModel;
 	//std::vector<Point>				m_debugLines;
 };
  

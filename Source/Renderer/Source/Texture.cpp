@@ -21,7 +21,6 @@
 Texture::Texture()
 	:
 	srv(nullptr),	// assigned and deleted by renderer
-	dsv(nullptr),
 	tex2D(nullptr),
 	samplerState(nullptr),
 	width(0),
@@ -33,5 +32,12 @@ Texture::Texture()
 
 Texture::~Texture()
 {}
+
+// todo: take params
+//bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC & textureDescriptor)
+//{
+//
+//	return false;
+//}
 
 

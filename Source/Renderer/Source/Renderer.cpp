@@ -37,7 +37,7 @@ const char* Renderer::s_textureRoot = "Data/Textures/";
 
 void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 {
-	m_shadowMapDimension = 512;
+	_shadowMapDimension = 512;
 
 	// check feature support & error handle:
 	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
@@ -98,8 +98,8 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	// succeed hr?
 
 	// render states for front face culling 
-	m_shadowRenderState = pRenderer->AddRSState(RS_CULL_MODE::FRONT, RS_FILL_MODE::SOLID, true);
-	m_drawRenderState   = pRenderer->AddRSState(RS_CULL_MODE::BACK , RS_FILL_MODE::SOLID, true);
+	_shadowRenderState = pRenderer->AddRSState(RS_CULL_MODE::FRONT, RS_FILL_MODE::SOLID, true);
+	_drawRenderState   = pRenderer->AddRSState(RS_CULL_MODE::BACK , RS_FILL_MODE::SOLID, true);
 
 	// shader
 	std::vector<InputLayout> layout = {
@@ -109,11 +109,11 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 		{ "TEXCOORD",	FLOAT32_2 }};
 	_shadowShader = pRenderer->GetShader(pRenderer->AddShader("DepthShader", pRenderer->s_shaderRoot, layout, false));
 	
-	ZeroMemory(&m_shadowViewport, sizeof(D3D11_VIEWPORT));
-	m_shadowViewport.Height = static_cast<float>(m_shadowMapDimension);
-	m_shadowViewport.Width  = static_cast<float>(m_shadowMapDimension);
-	m_shadowViewport.MinDepth = 0.f;
-	m_shadowViewport.MaxDepth = 1.f;
+	ZeroMemory(&_shadowViewport, sizeof(D3D11_VIEWPORT));
+	_shadowViewport.Height = static_cast<float>(_shadowMapDimension);
+	_shadowViewport.Width  = static_cast<float>(_shadowMapDimension);
+	_shadowViewport.MinDepth = 0.f;
+	_shadowViewport.MaxDepth = 1.f;
 }
 
 void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const
@@ -227,7 +227,7 @@ bool Renderer::Initialize(int width, int height, HWND hwnd)
 		return false;
 	}
 
-	bool result = m_Direct3D->Init(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN);
+	bool result = m_Direct3D->Initialize(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN);
 	if (!result)
 	{
 		MessageBox(m_hWnd, "Could not initialize Direct3D", "Error", MB_OK);
@@ -604,7 +604,6 @@ const Texture& Renderer::AddTexture(const std::string& texFileName, const std::s
 			tex.tex2D = tex2D;
 		}
 
-		tex.dsv = nullptr;				// no depth stencil view 
 		tex.samplerState = nullptr;		// default? todo
 
 		tex.id = static_cast<int>(m_textures.size());
@@ -744,11 +743,11 @@ void Renderer::SetShader(ShaderID id)
 {
 	// boundary check
 	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
-	if (m_activeShader != -1)		// if valid shader
+	if (m_stateObjects._activeShader != -1)		// if valid shader
 	{
-		if (id != m_activeShader)	// if not the same shader
+		if (id != m_stateObjects._activeShader)	// if not the same shader
 		{
-			Shader* shader = m_shaders[m_activeShader];
+			Shader* shader = m_shaders[m_stateObjects._activeShader];
 
 			// nullify texture units
 			for (ShaderTexture& tex : shader->m_textures)
@@ -785,17 +784,17 @@ void Renderer::SetShader(ShaderID id)
 		;// OutputDebugString("Warning: invalid shader is active\n");
 	}
 
-	if (id != m_activeShader)
+	if (id != m_stateObjects._activeShader)
 	{
-		m_activeShader = id;
+		m_stateObjects._activeShader = id;
 		m_shaders[id]->ClearConstantBuffers();
 	}
 }
 
 void Renderer::Reset()
 {
-	m_activeShader = -1;
-	m_activeBuffer = -1;
+	m_stateObjects._activeShader = -1;
+	m_stateObjects._activeBuffer = -1;
 }
 
 
@@ -817,7 +816,7 @@ void Renderer::SetViewport(const D3D11_VIEWPORT & viewport)
 void Renderer::SetBufferObj(int BufferID)
 {
 	assert(BufferID >= 0);
-	m_activeBuffer = BufferID;
+	m_stateObjects._activeBuffer = BufferID;
 }
 
 
@@ -845,7 +844,7 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 	float* data = &m.m[0][0];
 
 	// find data in CPUConstantBuffer array of shader
-	Shader* shader = m_shaders[m_activeShader];
+	Shader* shader = m_shaders[m_stateObjects._activeShader];
 	bool found = false;
 	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)
 	{
@@ -879,7 +878,7 @@ void Renderer::SetConstant3f(const char * cName, const vec3 & float3)
 {
 	const float* data = &float3.x();
 	// find data in CPUConstantBuffer array of shader
-	Shader* shader = m_shaders[m_activeShader];
+	Shader* shader = m_shaders[m_stateObjects._activeShader];
 	bool found = false;
 	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
 	{
@@ -902,7 +901,7 @@ void Renderer::SetConstant3f(const char * cName, const vec3 & float3)
 	if (!found)
 	{
 		char err[256];
-		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
+		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
 #endif
@@ -912,7 +911,7 @@ void Renderer::SetConstant1f(const char* cName, const float f)
 {
 	const float* data = &f;
 	// find data in CPUConstantBuffer array of shader
-	Shader* shader = m_shaders[m_activeShader];
+	Shader* shader = m_shaders[m_stateObjects._activeShader];
 	bool found = false;
 	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
 	{
@@ -936,7 +935,7 @@ void Renderer::SetConstant1f(const char* cName, const float f)
 	if (!found)
 	{
 		char err[256];
-		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
+		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
 #endif
@@ -946,7 +945,7 @@ void Renderer::SetConstant1i(const char* cName, const int i)
 {
 	const int* data = &i;
 	// find data in CPUConstantBuffer array of shader
-	Shader* shader = m_shaders[m_activeShader];
+	Shader* shader = m_shaders[m_stateObjects._activeShader];
 	bool found = false;
 	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
 	{
@@ -970,7 +969,7 @@ void Renderer::SetConstant1i(const char* cName, const int i)
 	if (!found)
 	{
 		char err[256];
-		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
+		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
 #endif
@@ -980,7 +979,7 @@ void Renderer::SetConstant1i(const char* cName, const int i)
 void Renderer::SetConstantStruct(const char * cName, void* data)
 {
 	// find data in CPUConstantBuffer array of shader
-	Shader* shader = m_shaders[m_activeShader];
+	Shader* shader = m_shaders[m_stateObjects._activeShader];
 	bool found = false;
 	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
 	{
@@ -1004,7 +1003,7 @@ void Renderer::SetConstantStruct(const char * cName, void* data)
 	if (!found)
 	{
 		char err[256];
-		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_activeShader, shader->Name().c_str());
+		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
 #endif
@@ -1012,7 +1011,7 @@ void Renderer::SetConstantStruct(const char * cName, void* data)
 
 void Renderer::SetTexture(const char * texName, TextureID tex)
 {
-	Shader* shader = m_shaders[m_activeShader];
+	Shader* shader = m_shaders[m_stateObjects._activeShader];
 	bool found = false;
 
 	for (size_t i = 0; i < shader->m_textures.size(); ++i)
@@ -1032,7 +1031,7 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 	if (!found)
 	{
 		char err[256];
-		sprintf_s(err, "Error: Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_activeShader, shader->Name().c_str());
+		sprintf_s(err, "Error: Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_stateObjects._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
 #endif
@@ -1041,7 +1040,7 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 void Renderer::SetRasterizerState(RasterizerStateID rsStateID)
 {
 	assert(rsStateID > -1 && static_cast<size_t>(rsStateID) < m_rasterizerStates.size());
-	m_activeRSState = rsStateID;
+	m_stateObjects._activeRSState = rsStateID;
 }
 
 void Renderer::SetDepthStencilState(DepthStencilStateID depthStencilStateID)
@@ -1095,9 +1094,13 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 	Draw(TOPOLOGY::POINT_LIST);
 }
 
-void Renderer::Begin(const float clearColor[4])
+// todo: add stencil view params
+void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
-	m_Direct3D->BeginFrame(clearColor);
+	const RenderTargetID rtv = m_stateObjects._boundRenderTarget;
+	const DepthStencilID dsv = m_stateObjects._boundDepthStencil;
+	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv], clearColor);
+	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthStencils[dsv], D3D11_CLEAR_DEPTH, depthValue, 0);
 }
 
 void Renderer::End()
@@ -1117,9 +1120,9 @@ void Renderer::Apply()
 	// ----------------------------------------
 	unsigned stride = sizeof(Vertex);	// layout?
 	unsigned offset = 0;
-	if (m_activeBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_activeBuffer]->m_vertexBuffer, &stride, &offset);
+	if (m_stateObjects._activeBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_stateObjects._activeBuffer]->m_vertexBuffer, &stride, &offset);
 	//else OutputDebugString("Warning: no active buffer object (-1)\n");
-	if (m_activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	if (m_stateObjects._activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_stateObjects._activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	//else OutputDebugString("Warning: no active buffer object (-1)\n");
 	if(shader) m_deviceContext->IASetInputLayout(shader->m_layout);
 
@@ -1127,7 +1130,7 @@ void Renderer::Apply()
 	// RASTERIZER
 	// ----------------------------------------
 	m_deviceContext->RSSetViewports(1, &m_viewPort);
-	m_deviceContext->RSSetState(m_rasterizerStates[m_activeRSState]);
+	m_deviceContext->RSSetState(m_rasterizerStates[m_stateObjects._activeRSState]);
 
 
 	// OUTPUT MERGER
@@ -1263,7 +1266,7 @@ void Renderer::Apply()
 void Renderer::DrawIndexed(TOPOLOGY topology)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
-	m_deviceContext->DrawIndexed(m_bufferObjects[m_activeBuffer]->m_indexCount, 0, 0);
+	m_deviceContext->DrawIndexed(m_bufferObjects[m_stateObjects._activeBuffer]->m_indexCount, 0, 0);
 }
 
 void Renderer::Draw(TOPOLOGY topology)

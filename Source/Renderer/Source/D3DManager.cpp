@@ -28,10 +28,7 @@ D3DManager::D3DManager()
 	m_swapChain					= nullptr;
 	m_device					= nullptr;
 	m_deviceContext				= nullptr;
-	m_RTV						= nullptr;
-	m_depthStencilBuffer		= nullptr;
 	m_depthStencilState			= nullptr;
-	m_depthStencilView			= nullptr;
 	m_rasterState				= nullptr;
 	m_alphaEnableBlendState		= nullptr;
 	m_alphaDisableBlendState	= nullptr;
@@ -44,7 +41,7 @@ D3DManager::~D3DManager()
 {
 }
 
-bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const bool isFullscreen)
+bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hWnd, const bool isFullscreen)
 {
 	HRESULT result;
 	IDXGIFactory* factory;
@@ -55,8 +52,8 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 	// Store the vsync setting.
 	m_vsync_enabled = VSYNC;
 
-	//----------------------------------------------------------------------------------
 	// Get System Information
+	//----------------------------------------------------------------------------------
 
 	// Create a DirectX graphics interface factory.
 	result = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory);
@@ -166,8 +163,8 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 	factory->Release();
 	factory = 0;
 
-	//----------------------------------------------------------------------------------
 	// D3D Initialization
+	//----------------------------------------------------------------------------------
 	if (!InitSwapChain(hWnd, isFullscreen, width, height, numerator, denominator))
 	{
 		return false;
@@ -178,21 +175,10 @@ bool D3DManager::Init(int width, int height, const bool VSYNC, HWND hWnd, const 
 		return false;
 	}
 
-	if (!InitStencilView())
-	{
-		return false;
-	}
-
-
-	// Bind the render target view and depth stencil buffer to the output render pipeline.
-	m_deviceContext->OMSetRenderTargets(1, &m_RTV, m_depthStencilView);
-
 	if (!InitRasterizerState())
 	{
 		return false;
 	}
-
-	InitViewport(width, height);
 
 	if (!InitAlphaBlending())
 	{
@@ -223,28 +209,10 @@ void D3DManager::Shutdown()
 		m_rasterState = 0;
 	}
 
-	if (m_depthStencilView)
-	{
-		m_depthStencilView->Release();
-		m_depthStencilView = 0;
-	}
-
 	if (m_depthStencilState)
 	{
 		m_depthStencilState->Release();
 		m_depthStencilState = 0;
-	}
-
-	if (m_depthStencilBuffer)
-	{
-		m_depthStencilBuffer->Release();
-		m_depthStencilBuffer = 0;
-	}
-
-	if (m_RTV)
-	{
-		m_RTV->Release();
-		m_RTV = 0;
 	}
 
 	if (m_deviceContext)
@@ -268,11 +236,7 @@ void D3DManager::Shutdown()
 	return;
 }
 
-void D3DManager::BeginFrame(const float* clearColor)
-{
-	m_deviceContext->ClearRenderTargetView(m_RTV, clearColor);
-	m_deviceContext->ClearDepthStencilView(m_depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0);
-}
+
 
 void D3DManager::EndFrame()
 {
@@ -418,7 +382,7 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 	return true;
 }
 
-bool D3DManager::InitDepthBuffer(int scrWidth, int scrHeight)
+bool D3DManager::InitializeDepthBuffer(int scrWidth, int scrHeight, ID3D11Texture2D* depthStencilBuffer)
 {
 
 	HRESULT result;
@@ -441,7 +405,7 @@ bool D3DManager::InitDepthBuffer(int scrWidth, int scrHeight)
 	depthBufferDesc.MiscFlags = 0;
 
 	// Create the texture for the depth buffer using the filled out description.
-	result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_depthStencilBuffer);
+	result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &depthStencilBuffer);
 	if (FAILED(result))
 	{
 		return false;
@@ -520,19 +484,17 @@ bool D3DManager::InitRasterizerState()
 	return true;
 }
 
-bool D3DManager::InitStencilView()
+bool D3DManager::InitStencilView(D3D11_TEXTURE2D_DESC tex2DDesc)
 {
 #if 0
 	HRESULT result;
 	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-	D3D11_TEXTURE2D_DESC txDesc;
-	m_depthStencilBuffer->GetDesc(&txDesc);
 
 	// Initialize the depth stencil view.
 	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
 
 	// Set up the depth stencil view description.
-	depthStencilViewDesc.Format = txDesc.Format;
+	depthStencilViewDesc.Format = tex2DDesc.Format;
 	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	depthStencilViewDesc.Texture2D.MipSlice = 0;
 
@@ -546,18 +508,16 @@ bool D3DManager::InitStencilView()
 	return true;
 }
 
-void D3DManager::InitViewport(int scrWidth, int scrHeight)
+D3D11_VIEWPORT D3DManager::InitializeViewport(int scrWidth, int scrHeight)
 {
-
 	D3D11_VIEWPORT viewport;
-
-	// Setup the viewport for rendering.
 	viewport.Width = (float)scrWidth;
 	viewport.Height = (float)scrHeight;
 	viewport.MinDepth = 0.0f;
 	viewport.MaxDepth = 1.0f;
 	viewport.TopLeftX = 0.0f;
 	viewport.TopLeftY = 0.0f;
+	return viewport;
 }
 
 bool D3DManager::InitAlphaBlending()

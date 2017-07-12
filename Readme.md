@@ -8,7 +8,7 @@ Now, this repo serves as a DX11 framework for stuyding and practicing various re
 **Features**:
  - Shader Reflection
  - Phong Lighting
- - Simple ShadowMaps
+ - Simple Shadow Maps
  - Normal Maps
  - Diffuse Textures
  - Generated Geometry: Cube, Sphere, Cylinder, Grid
@@ -28,8 +28,7 @@ You will get the following error message on build unless you have already copmil
 | Key | Control |
 | :---: | :--- |
 | **WASD** |	Camera Movement |
-| **IJKL** |	Central Object Movement |
-| **UOP** |	Central Object Rotation  |
+| **numpad::468239** |	Central Object Movement |
 | **F1** |	TexCoord Shader |
 | **F2** |	Normals Shader |
 | **F3** |	Tangents Shader |

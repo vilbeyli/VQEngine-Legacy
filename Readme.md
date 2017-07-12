@@ -28,7 +28,7 @@ You will get the following error message on build unless you have already copmil
 | Key | Control |
 | :---: | :--- |
 | **WASD** |	Camera Movement |
-| **numpad::468239** |	Central Object Movement |
+| **numpad::468239** |	Shadow Caster Light Movement |
 | **F1** |	TexCoord Shader |
 | **F2** |	Normals Shader |
 | **F3** |	Tangents Shader |

@@ -16,11 +16,14 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+//todo: worldViewProj
 cbuffer perFrame
 {
+	matrix viewProj;
 	matrix view;
-	matrix	proj;
+	matrix proj;
 }
+
 cbuffer perModel
 {
     matrix world;
@@ -38,10 +41,6 @@ struct VSIn
 struct PSIn
 {
 	float4 position : SV_POSITION;
-	float3 worldPos : POSITION;
-	float3 normal	: NORMAL;
-    float3 tangent  : TANGENT;
-    float2 texCoord : TEXCOORD4;
 };
 
 PSIn VSMain(VSIn In)
@@ -50,9 +49,5 @@ PSIn VSMain(VSIn In)
 
 	PSIn Out;
 	Out.position	= mul(wvp  , float4(In.position, 1));
-	Out.worldPos	= mul(world, float4(In.position, 1)).xyz;
-    Out.normal		= normalize(mul(normalMatrix, In.normal));
-    Out.tangent		= normalize(mul(normalMatrix, In.tangent));
-	Out.texCoord	= In.texCoord;
 	return Out;
 }

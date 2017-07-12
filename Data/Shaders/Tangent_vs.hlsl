@@ -16,14 +16,17 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-cbuffer perFrame
-{
-	matrix view;
-	matrix	proj;
-}
+//cbuffer perFrame
+//{
+//	matrix view;
+//	matrix	proj;
+//}
+
 cbuffer perModel
 {
     matrix world;
+	matrix normalMatrix;
+	matrix worldViewProj;
 }
 
 struct VSIn
@@ -44,18 +47,10 @@ struct PSIn
 
 PSIn VSMain(VSIn In)
 {
-	matrix wvp = mul(proj, mul(view, world));
-    float3x3 rotMatrix =
-    {
-        world._11_12_13,
-		world._21_22_23,
-		world._31_32_33
-    };
-
 	PSIn Out;
-    Out.position = mul(wvp, float4(In.position, 1));
-    Out.normal   = mul(rotMatrix, In.normal);
-    Out.tangent  = mul(rotMatrix, In.tangent);
+    Out.position = mul(worldViewProj, float4(In.position, 1));
+    Out.normal   = mul(normalMatrix, In.normal);
+    Out.tangent  = mul(normalMatrix, In.tangent);
     Out.texCoord = In.texCoord;
 	
 	return Out;

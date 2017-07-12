@@ -50,7 +50,7 @@ struct RenderData;
 
 class SceneManager
 {
-
+	friend struct DepthShadowPass;
 public:
 	SceneManager();
 	~SceneManager();
@@ -58,7 +58,7 @@ public:
 	void Initialize(Renderer* renderer, const RenderData* rData, PathManager* pathMan);
 	void SetCameraSettings(const Settings::Camera& cameraSettings);
 	void Update(float dt);
-	void Render();	// todo: const
+	void Render() const;
 
 private:
 	void InitializeRoom();
@@ -67,17 +67,9 @@ private:
 
 	void UpdateCentralObj(const float dt);
 
-#ifdef ENABLE_VPHYSICS
-	void InitializePhysicsObjects();
-	void UpdateAnchors(float dt);
-#endif
-#ifdef ENABLE_ANIMATION
-	void UpdateAnimatedModel(const float dt);
-#endif
-
-	void RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const;
+	void RenderLights(const XMMATRIX& viewProj) const;
 	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
-	void RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj); // todo: const
+	void RenderCentralObjects(const XMMATRIX& viewProj)  const;
 
 	void SendLightData() const;
 
@@ -90,6 +82,7 @@ private:
 	const RenderData*	m_renderData;
 	ShaderID			m_selectedShader;
 	bool				m_gammaCorrection;
+	bool				m_debugRender;
 
 	// scene variables
 	Skydome				m_skydome;
@@ -97,12 +90,12 @@ private:
 
 	struct Room {
 		friend class SceneManager;
+		void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
 		GameObject floor;
 		GameObject wallL;
 		GameObject wallR;
 		GameObject wallF;
 		GameObject ceiling;
-		void Render(Renderer* pRenderer) const;
 	} m_room;
 
 	std::vector<GameObject> spheres;
@@ -113,6 +106,7 @@ private:
 	GameObject grid;
 	GameObject cylinder;
 
+	std::vector<GameObject*> m_ZPassObjects;
 
 #ifdef ENABLE_ANIMATION
 	// hierarchical model

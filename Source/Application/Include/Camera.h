@@ -56,6 +56,7 @@ private:
 private:
 	vec3		m_pos;
 	vec3		m_velocity;
+	friend class SceneManager;
 	float		m_yaw, m_pitch;
 
 	XMFLOAT4X4	m_viewMatrix;

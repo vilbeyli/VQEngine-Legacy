@@ -83,7 +83,7 @@ Light::~Light()
 {}
 
 void Light::SetLightRange(float range)
-{	
+{
 	_range = range;
 	// ATTENUATION LOOKUP FOR POINT LIGHTS
 	// find the first greater or equal range value (rangeIndex) 
@@ -114,10 +114,14 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 	{
 		XMVECTOR pos = _transform._position;
 		XMMATRIX view = GetViewMatrix();
-		XMMATRIX proj = XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 100.0f);
-		LSpaceMat = proj * view;
+		XMMATRIX proj = XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 500.0f);
+		
+		// remember:
+		//	when we're sending	 world * view * projection
+		//		in shader		 projection * view * world;
+		LSpaceMat =  view * proj;	// same as: XMMatrixTranspose(proj)  * XMMatrixTranspose(view);
 		break;
-	}	
+	}
 
 	default:
 		//OutputDebugString("INVALID LIGHT TYPE for GetLightSpaceMatrix()\n");
@@ -129,60 +133,63 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 
 XMMATRIX Light::GetViewMatrix() const
 {
-	XMMATRIX ViewMatarix = XMMatrixIdentity();
-	switch (_type)
-	{
-	case LightType::POINT:
-		break;
-	case LightType::SPOT:
-	{
-		XMVECTOR up		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-		lookAt	= XMVector3TransformCoord(lookAt, _transform.RotationMatrix());
-		up		= XMVector3TransformCoord(up,	  _transform.RotationMatrix());
-		XMVECTOR pos = _transform._position;
-		XMVECTOR taraget = pos + lookAt;
-		ViewMatarix = XMMatrixLookAtLH(pos, taraget, up);
-		break;
-	}	
+	XMMATRIX ViewMatarix = [&]() -> XMMATRIX {
+		switch (_type)
+		{
+		case LightType::POINT:
+		{
+			return XMMatrixIdentity();
+		}
+		
+		case LightType::SPOT:
+		{
+			XMVECTOR up		= vec3::Back;
+			XMVECTOR lookAt = vec3::Up;
+			lookAt	= XMVector3TransformCoord(lookAt, _transform.RotationMatrix());
+			up		= XMVector3TransformCoord(up,	  _transform.RotationMatrix());
+			XMVECTOR pos = _transform._position;
+			XMVECTOR taraget = pos + lookAt;
+			return XMMatrixLookAtLH(pos, taraget, up);
+		}	
 
-	default:
-		std::cout << "INVALID LIGHT TYPE for GetViewMatrix()" << std::endl;
-		break;
-	}
-
+		default:
+			std::cout << "INVALID LIGHT TYPE for GetViewMatrix()" << std::endl;
+			return XMMatrixIdentity();
+		}
+	}();
 	return ViewMatarix;
 }
 
 XMMATRIX Light::GetProjectionMatrix() const
 {
-	XMMATRIX proj = XMMatrixIdentity();
-	switch (_type)
-	{
-	case LightType::POINT:
-		break;
-	case LightType::SPOT:
-	{
-		//proj = glm::perspective(glm::radians(spotAngle_* 1.25f), 1.0f, 0.1f, 100.0f);
-	}	break;
+	const XMMATRIX proj = [&]() -> const XMMATRIX{
+		switch (_type)
+		{
+		case LightType::POINT:
+		{
+			return XMMatrixIdentity();
+		}
+			
+		case LightType::SPOT:
+		{
+			return XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 500.0f);
+		}	
 
-	default:
-		std::cout << "INVALID LIGHT TYPE for GetProjectionMatrix()" << std::endl;
-		break;
-	}
+		default:
+			std::cout << "INVALID LIGHT TYPE for GetProjectionMatrix()" << std::endl;
+			return XMMatrixIdentity();
 
+		}
+	}();
 	return proj;
 }
 
-
-
 LightShaderSignature Light::ShaderLightStruct() const
 {
-	vec3 spotDirection = [&]() -> vec3 {
+	const vec3 spotDirection = [&]() -> const vec3 {
 		if (_type == LightType::SPOT)
 		{
-			XMVECTOR up = XMVectorSet(0, 1, 0, 0);
-			return XMVector3TransformCoord(up, _transform.RotationMatrix());
+			return XMVector3TransformCoord(vec3::Up, _transform.RotationMatrix());
 		}
 		return vec3();
 	}();

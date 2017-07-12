@@ -38,8 +38,8 @@ public:
 
 	GameObject& operator=(const GameObject& obj);
 
-	void Render(Renderer* pRenderer) const;
-
+	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
+	void RenderZ(Renderer* pRenderer) const;
 public:
 	Transform	m_transform;
 	Model		m_model;

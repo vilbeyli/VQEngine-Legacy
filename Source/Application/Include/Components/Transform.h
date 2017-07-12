@@ -52,7 +52,7 @@ public:
 	void Translate(const vec3& translation);
 	void Scale(const vec3& scl);
 	
-	void RotateAroundPointAndAxis(const vec3& axis, float angle, vec3& point);
+	void RotateAroundPointAndAxis(const vec3& axis, float angle, const vec3& point);
 	inline void RotateAroundAxisRadians(const vec3& axis, float angle) { RotateInWorldSpace(Quaternion::FromAxisAngle(axis, angle)); }
 	inline void RotateAroundAxisDegrees(const vec3& axis, float angle) { RotateInWorldSpace(Quaternion::FromAxisAngle(axis, angle * DEG2RAD)); }
 

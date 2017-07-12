@@ -26,8 +26,12 @@
 
 #define KEY_TRIG(k) ENGINE->INP()->IsKeyTriggered(k)
 
+#define ENABLE_POINT_LIGHTS
 #define MAX_LIGHTS 20
 #define MAX_SPOTS 10
+
+#define xROTATE_SHADOW_LIGHT	// todo: fix frustum for shadow
+
 #define RAND_LIGHT_COUNT 0
 #define DISCO_PERIOD 0.25
 
@@ -49,15 +53,30 @@ void SceneManager::Initialize(Renderer* renderer, const RenderData* rData, PathM
 
 	m_pRenderer			= renderer;
 	m_renderData		= rData;	// ?
-	m_selectedShader	= m_renderData->phongShader;
+	m_selectedShader	= SHADERS::FORWARD_PHONG;
 	m_gammaCorrection	= true;
+	m_debugRender		= true;
 
 	InitializeRoom();
 	InitializeLights();
 	InitializeObjectArrays();
 
-	m_skydome.Init(m_pRenderer, "browncloud_lf.jpg", 1000.0f / 2.2f, m_renderData->unlitShader);
+	m_skydome.Init(m_pRenderer, "browncloud_lf.jpg", 1000.0f / 2.2f, SHADERS::UNLIT);
 }
+
+
+void SceneManager::SetCameraSettings(const Settings::Camera & cameraSettings)
+{
+	const auto& NEAR_PLANE = cameraSettings.nearPlane;
+	const auto& FAR_PLANE = cameraSettings.farPlane;
+	m_pCamera->SetOthoMatrix(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, m_pRenderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetPosition(0, 50, -190);
+	m_pCamera->Rotate(0.0f, 15.0f * DEG2RAD, 1.0f);
+	m_pRenderer->SetCamera(m_pCamera.get());
+}
+
+
 
 enum class WALLS
 {
@@ -73,8 +92,8 @@ void SceneManager::InitializeRoom()
 {
 	const float floorWidth = 5*30.0f;
 	const float floorDepth = 5*30.0f;
-	const float wallHieght = 3.5*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
-	const float YOffset = wallHieght - 0.2f;
+	const float wallHieght = 3.8*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
+	const float YOffset = wallHieght - 9.0f;
 
 	// FLOOR
 	{
@@ -85,7 +104,7 @@ void SceneManager::InitializeRoom()
 		//m_room.floor.m_model.m_material.shininess	= 40.0f;
 		m_room.floor.m_model.m_material = Material::bronze;
 		m_room.floor.m_model.m_material.diffuseMap = m_pRenderer->AddTexture("metal3.png");
-		m_room.floor.m_model.m_material.normalMap  = m_pRenderer->AddTexture("nrm_metal3.png");
+		//m_room.floor.m_model.m_material.normalMap  = m_pRenderer->AddTexture("nrm_metal3.png");
 	}
 	// CEILING
 	{
@@ -149,6 +168,13 @@ void SceneManager::InitializeRoom()
 	m_room.wallR.m_model.m_mesh = MESH_TYPE::CUBE;
 	m_room.wallF.m_model.m_mesh = MESH_TYPE::CUBE;
 	m_room.ceiling.m_model.m_mesh = MESH_TYPE::CUBE;
+
+	
+	m_ZPassObjects.push_back(&m_room.floor	);
+	m_ZPassObjects.push_back(&m_room.wallL	);
+	m_ZPassObjects.push_back(&m_room.wallR	);
+	m_ZPassObjects.push_back(&m_room.wallF	);
+	m_ZPassObjects.push_back(&m_room.ceiling);
 }
 
 void SceneManager::InitializeLights()
@@ -158,17 +184,19 @@ void SceneManager::InitializeLights()
 	{
 		Light l;
 		l._type = Light::LightType::SPOT;
-		l._transform.SetPosition(0.0f, 3.6f*19.0f, 0.0f);
-		l._transform.RotateAroundGlobalXAxisDegrees(180.0f);
+		l._transform.SetPosition(0.0f, 3.6f*25.0f, 0.0f);
+		l._transform.RotateAroundGlobalXAxisDegrees(200.0f);
 		l._transform.SetUniformScale(0.8f);
 		l._model.m_mesh = MESH_TYPE::CYLINDER;
 		l._model.m_material.color = Color::white;
 		l._color = Color::white;
 		//l.SetLightRange(30);
 		l._spotAngle = 70.0f;
+		l._castsShadow = true;
 		m_lights.push_back(l);
 	}
 
+#ifdef ENABLE_POINT_LIGHTS
 	// point lights
 	{
 		Light l;
@@ -214,6 +242,7 @@ void SceneManager::InitializeLights()
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
 		m_lights.push_back(l);
 	}
+#endif
 }
 
 void SceneManager::InitializeObjectArrays()
@@ -238,14 +267,16 @@ void SceneManager::InitializeObjectArrays()
 				float x, y, z;	// position
 				x = i * r - row * r / 2;		y = 5.0f;	z = j * r - col * r / 2;
 				cube.m_transform.SetPosition(x, y, z);
-				cube.m_transform.SetScale(1, 6, 3);
+				if(RandF(0, 1) < 0.5f)	cube.m_transform.SetScale(1, 6, 3);
+				else					cube.m_transform.SetUniformScale(RandF(3.0f, 5.0f));
+				if(j == 3)	cube.m_transform.SetUniformScale(RandF(6.0f, 9.0f));
 				cube.m_model.m_material.color = color;
 				//if (i == j) cube.m_transform.SetRotationDeg(90.0f / 4 * sqrt(i*j), 0, 0);
 				//if (i == j) cube.m_transform.RotateAroundAxisDegrees(c_rowRotations[1], 90.0f);
-				if (j == 0) cube.m_transform.RotateAroundAxisDegrees(vec3::XAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
-				if (j == 1) cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
+				if (j == 0 && col != 1) cube.m_transform.RotateAroundAxisDegrees(vec3::XAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
+				if (j == 1 && col != 1) cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
 
-				if (j == 3) cube.m_transform.RotateAroundAxisDegrees(vec3::ZAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
+				if (j == 3 && col != 1) cube.m_transform.RotateAroundAxisDegrees(vec3::ZAxis, (static_cast<float>(i) / (col - 1)) * 90.0f);
 
 				cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, -90.0f);
 
@@ -260,18 +291,16 @@ void SceneManager::InitializeObjectArrays()
 				cubes.push_back(cube);
 			}
 		}
-
-		// initial direction for spot light
-		m_lights[0]._transform.RotateAroundGlobalZAxisDegrees(30.0f);
-
 	}
-	{	// circle arrangement
-		const float r = 30.0f;
-		const size_t numSph = 12;
 
-		const float rot = 2.0f * XM_PI / numSph;
-		const vec3 radius(r, 40.0f, 0.0f);
-		//const auto axis = XMVector3Normalize(global_U + global_F);
+	// circle arrangement
+	const float sphHeight[2] = { 60.0f, 45.0f };
+	{	// large circle
+		const float r = 30.0f;
+		const size_t numSph = 15;
+
+		const vec3 radius(r, sphHeight[0], 0.0f);
+		const float rot = 2.0f * XM_PI / numSph == 0 ? 1.0f : numSph;
 		const vec3 axis = vec3::Up;
 		for (size_t i = 0; i < numSph; i++)
 		{
@@ -288,13 +317,12 @@ void SceneManager::InitializeObjectArrays()
 			spheres.push_back(sph);
 		}
 	}
-	{	// circle arrangement
+	{	// small circle
 		const float r = 15.0f;
 		const size_t numSph = 5;
 
-		const float rot = 2.0f * XM_PI / numSph;
-		const vec3 radius(r, 35.0f, 0.0f);
-		//const auto axis = XMVector3Normalize(global_U + global_F);
+		const float rot = 2.0f * XM_PI / numSph == 0 ? 1.0f : numSph;
+		const vec3 radius(r, sphHeight[1], 0.0f);
 		const auto axis = vec3::Up;
 		for (size_t i = 0; i < numSph; i++)
 		{
@@ -339,19 +367,13 @@ void SceneManager::InitializeObjectArrays()
 	cylinder.m_model.m_material = Material();
 	triangle.m_model.m_material = Material();
 	    quad.m_model.m_material = Material();
-	
-}
 
-
-void SceneManager::SetCameraSettings(const Settings::Camera & cameraSettings)
-{
-	const auto& NEAR_PLANE = cameraSettings.nearPlane;
-	const auto& FAR_PLANE = cameraSettings.farPlane;
-	m_pCamera->SetOthoMatrix(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
-	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, m_pRenderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
-	m_pCamera->SetPosition(0, 50, -190);
-	m_pCamera->Rotate(0.0f, 15.0f * DEG2RAD, 1.0f);
-	m_pRenderer->SetCamera(m_pCamera.get());
+	m_ZPassObjects.push_back(&quad);
+	m_ZPassObjects.push_back(&grid);
+	m_ZPassObjects.push_back(&cylinder);
+	m_ZPassObjects.push_back(&triangle);
+	for (GameObject& obj : cubes)	m_ZPassObjects.push_back(&obj);
+	for (GameObject& obj : spheres)	m_ZPassObjects.push_back(&obj);
 }
 
 
@@ -359,7 +381,7 @@ void SceneManager::SetCameraSettings(const Settings::Camera & cameraSettings)
 void SceneManager::UpdateCentralObj(const float dt)
 {
 	float t = ENGINE->TIMER()->TotalTime();
-	const float moveSpeed	= 15.0f;
+	const float moveSpeed	= 45.0f;
 	const float rotSpeed	= XM_PI;
 
 	XMVECTOR rot = XMVectorZero();
@@ -370,14 +392,19 @@ void SceneManager::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown(98))  tr += vec3::Back; 	// Key: Numpad2
 	if (ENGINE->INP()->IsKeyDown(105)) tr += vec3::Up; 		// Key: Numpad9
 	if (ENGINE->INP()->IsKeyDown(99))  tr += vec3::Down; 	// Key: Numpad3
+	m_lights[0]._transform.Translate(dt * tr * moveSpeed);
 	
 
 	float angle = (dt * XM_PI * 0.08f) + (sinf(t) * sinf(dt * XM_PI * 0.03f));
 	size_t sphIndx = 0;
 	for (auto& sph : spheres)
 	{
-		const vec3 rotAxis = sphIndx < 12 ? vec3::Up : vec3::Down;
-		sph.m_transform.RotateAroundPointAndAxis(rotAxis, angle, vec3());
+		//const vec3 largeSphereRotAxis = (vec3::Down + vec3::Back * 0.3f);
+		//const vec3 rotPoint = sphIndx < 12 ? vec3() : vec3(0, 35, 0);
+		//const vec3 rotAxis = sphIndx < 12 ? vec3::Up : largeSphereRotAxis.normalized();
+		const vec3 rotAxis  = vec3::Up;
+		const vec3 rotPoint = vec3::Zero;
+		sph.m_transform.RotateAroundPointAndAxis(rotAxis, angle, rotPoint);
 		const vec3 pos = sph.m_transform._position;
 		const float sinx = sinf(pos._v.x / 3.5f);
 		const float y = 10.0f + 2.5f * sinx;
@@ -387,7 +414,8 @@ void SceneManager::UpdateCentralObj(const float dt)
 	}
 
 	// rotate cubes
-	const int	row = 6, col = 6;
+	const int	row = 6, 
+				col = 6;
 	const float cubeRotSpeed = 100.0f; // degs/s
 	for (int i = 0; i < row; ++i)
 	{
@@ -401,7 +429,9 @@ void SceneManager::UpdateCentralObj(const float dt)
 		}
 	}
 
+#ifdef ROTATE_SHADOW_LIGHT
 	m_lights[0]._transform.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);
+#endif
 }
 
 
@@ -416,14 +446,15 @@ void SceneManager::Update(float dt)
 	//-------------------------------------------------------------------------------- SHADER CONFIGURATION ----------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
 	// F1-F4 | Debug Shaders
-	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = m_renderData->texCoordShader;
-	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = m_renderData->normalShader;
-	if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = m_renderData->tangentShader;
-	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = m_renderData->binormalShader;
-	
-	// F5-F8 | Lighting Shaders
-	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = m_renderData->unlitShader;
-	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = m_renderData->phongShader;
+	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
+	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = SHADERS::NORMAL;
+	if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = SHADERS::TANGENT;
+	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = SHADERS::BINORMAL;
+															   
+	// F5-F8 | Lighting Shaders								   
+	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = SHADERS::UNLIT;
+	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = SHADERS::FORWARD_PHONG;
+	if (ENGINE->INP()->IsKeyTriggered(118)) m_debugRender = !m_debugRender;
 
 	// F9-F12 | Shader Parameters
 	if (ENGINE->INP()->IsKeyTriggered(120)) m_gammaCorrection = !m_gammaCorrection;
@@ -432,60 +463,88 @@ void SceneManager::Update(float dt)
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
-void SceneManager::Render() 
+void SceneManager::Render() const
 {
-	// dynamic shadow casters
-	std::vector<const Light*> _shadowCasters(m_lights.size());
-	for (const auto& light : m_lights)
+	const float clearColor[4] = { 0.2f, 0.4f, 0.7f, 1.0f };
+	const XMMATRIX view = m_pCamera->GetViewMatrix();
+	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
+	const XMMATRIX viewProj = view * proj;
+
+
+	// DEPTH PASS
+	//------------------------------------------------------------------------
+	// get shadow casters (todo: static/dynamic lights)
+	std::vector<const Light*> _shadowCasters;	// warning: dynamic memory alloc. put in paramStruct { array start end } or C++11 equiv
+	for (const Light& light : m_lights)
 	{
 		if (light._castsShadow)
 			_shadowCasters.push_back(&light);
 	}
 
-	const XMMATRIX view = m_pCamera->GetViewMatrix();
-	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
-
-	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters);
+	m_renderData->depthPass.RenderDepth(m_pRenderer, _shadowCasters, m_ZPassObjects);
 	
-	m_skydome.Render(view, proj);
+	// MAIN PASS
+	//------------------------------------------------------------------------
+	m_pRenderer->Reset();	// is necessary?
+	m_pRenderer->BindDepthStencil(0); //todo, variable names or enums
+	m_pRenderer->BindRenderTarget(0);
+	m_pRenderer->SetDepthStencilState(0); 
+	m_pRenderer->SetRasterizerState(static_cast<int>(DEFAULT_RS_STATE::CULL_NONE));
+	m_pRenderer->Begin(clearColor, 1.0f);
+	
+	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
+	//m_skydome.Render(view, proj);	// todo: fix texcoords
 
 	m_pRenderer->SetShader(m_selectedShader);
-	m_pRenderer->SetConstant4x4f("view", view);
-	m_pRenderer->SetConstant4x4f("proj", proj);
 	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-	
-	if (m_selectedShader == m_renderData->phongShader)	{	SendLightData();}
-	if (m_selectedShader == m_renderData->TNBShader)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
-	m_room.Render(m_pRenderer);
-	RenderCentralObjects(view, proj);
+	if (m_selectedShader == SHADERS::FORWARD_PHONG) {	SendLightData(); }
+	if (m_selectedShader == SHADERS::TBN)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
-	RenderLights(view, proj);
-
+	m_room.Render(m_pRenderer, viewProj);
+	RenderCentralObjects(viewProj);
+	RenderLights(viewProj);
 
 
+	// POST PROCESS PASS
+	//------------------------------------------------------------------------
 
 
-	// TBN test
-	//auto prevShader = m_selectedShader;
-	//m_selectedShader = m_renderData->TNBShader;
-	//RenderCentralObjects(view, proj);
-	//m_selectedShader = prevShader;
+
+	// DEBUG PASS
+	//------------------------------------------------------------------------
+	if (m_debugRender)
+	{
+		// TBN test
+		//auto prevShader = m_selectedShader;
+		//m_selectedShader = m_renderData->TNBShader;
+		//RenderCentralObjects(view, proj);
+		//m_selectedShader = prevShader;
+
+		m_pRenderer->SetShader(SHADERS::DEBUG);
+		m_pRenderer->SetTexture("t_shadowMap", m_renderData->depthPass._shadowMap);	// todo: decide shader naming 
+		m_pRenderer->SetBufferObj(quad.m_model.m_mesh);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
+	}
+
+
+	m_pRenderer->End();
 }
 
 
-void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) const
+void SceneManager::RenderLights(const XMMATRIX& viewProj) const
 {
 	m_pRenderer->Reset();	// is reset necessary?
-	m_pRenderer->SetShader(m_renderData->unlitShader);
-	m_pRenderer->SetConstant4x4f("view", view);
-	m_pRenderer->SetConstant4x4f("proj", proj);
+	m_pRenderer->SetShader(SHADERS::UNLIT);
 	for (const Light& light : m_lights)
 	{
 		m_pRenderer->SetBufferObj(light._model.m_mesh);
-		XMMATRIX world = light._transform.WorldTransformationMatrix();
-		vec3 color = light._model.m_material.color.Value();
+		const XMMATRIX world = light._transform.WorldTransformationMatrix();
+		const XMMATRIX worldViewProj = world  * viewProj;
+		const vec3 color = light._model.m_material.color.Value();
+		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
 		m_pRenderer->SetConstant4x4f("world", world);
 		m_pRenderer->SetConstant3f("diffuse", color);
 		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
@@ -494,16 +553,16 @@ void SceneManager::RenderLights(const XMMATRIX& view, const XMMATRIX& proj) cons
 	}
 }
 
-void SceneManager::RenderCentralObjects(const XMMATRIX& view, const XMMATRIX& proj) 
+void SceneManager::RenderCentralObjects(const XMMATRIX& viewProj) const
 {
-	for (const auto& cube : cubes) cube.Render(m_pRenderer);
-	for (const auto& sph : spheres) sph.Render(m_pRenderer);
+	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj);
+	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj);
 	
 	//m_pRenderer->SetShader(m_renderData->unlitShader);
-	grid.Render(m_pRenderer);
-	quad.Render(m_pRenderer);
-	triangle.Render(m_pRenderer);
-	cylinder.Render(m_pRenderer);
+	grid.Render(m_pRenderer, viewProj);
+	quad.Render(m_pRenderer, viewProj);
+	triangle.Render(m_pRenderer, viewProj);
+	cylinder.Render(m_pRenderer, viewProj);
 }
 
 void SceneManager::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const
@@ -537,6 +596,8 @@ void SceneManager::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) co
 
 void SceneManager::SendLightData() const
 {
+	// SPOT & POINT LIGHTS
+	//--------------------------------------------------------------
 	const LightShaderSignature defaultLight = LightShaderSignature();
 	std::vector<LightShaderSignature> lights(MAX_LIGHTS, defaultLight);
 	std::vector<LightShaderSignature> spots(MAX_SPOTS, defaultLight);
@@ -564,6 +625,15 @@ void SceneManager::SendLightData() const
 	m_pRenderer->SetConstantStruct("lights", static_cast<void*>(lights.data()));
 	m_pRenderer->SetConstantStruct("spots" , static_cast<void*>(spots.data()));
 
+	// SHADOW MAPS
+	//--------------------------------------------------------------
+	// first light is spot: single shadaw map support for now
+	const Light& caster = m_lights[0];	
+	TextureID shadowMap = m_renderData->depthPass._shadowMap;
+
+	m_pRenderer->SetConstant4x4f("lightSpaceMat", caster.GetLightSpaceMatrix());
+	m_pRenderer->SetTexture("gShadowMap", shadowMap);
+
 #ifdef _DEBUG
 	if (lights.size() > MAX_LIGHTS)	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
 	if (spots.size() > MAX_SPOTS)	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
@@ -571,13 +641,13 @@ void SceneManager::SendLightData() const
 }
 
 
-void SceneManager::Room::Render(Renderer * pRenderer) const
+void SceneManager::Room::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
-	floor.Render(pRenderer);
-	wallL.Render(pRenderer);
-	wallR.Render(pRenderer);
-	wallF.Render(pRenderer);
-	ceiling.Render(pRenderer);
+	floor.Render(pRenderer, viewProj);
+	wallL.Render(pRenderer, viewProj);
+	wallR.Render(pRenderer, viewProj);
+	wallF.Render(pRenderer, viewProj);
+	ceiling.Render(pRenderer, viewProj);
 }
 
 //======= JUNKYARD

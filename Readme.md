@@ -1,15 +1,16 @@
 # DX11Renderer
 
-![](Screenshots/spheres.PNG)
+![](Screenshots/shadows.PNG)
 
 This project started as the Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc) at [DigiPen Institute of Technology](https://www.digipen.edu/).
-Now, this project will serve as a DX11 framework for stuyding and practicing various rendering techniques and real-time techniques. 
+Now, this repo serve as a DX11 framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
 **Features**:
  - Shader Reflection
  - Phong Lighting
- - Diffuse Textures
+ - Simple ShadowMaps
  - Normal Maps
+ - Diffuse Textures
  - Generated Geometry: Cube, Sphere, Cylinder, Grid
  
 ## Compiling Instructions & Dependencies (to be automated)
@@ -31,11 +32,11 @@ You will get the following error message on build unless you have already copmil
 | **UOP** |	Central Object Rotation  |
 | **F1** |	TexCoord Shader |
 | **F2** |	Normals Shader |
-| **F3** |	Toggle Mesh Draw (Inactive) |
-| **F4** |	Toggle Normal Draw (Inactive) |
+| **F3** |	Tangents Shader |
+| **F4** |	Bitangents Shader |
 | **F5** |	Unlit Shader |
 | **F6** |	Phong Shader |
-| **F7** |	BRDF Shader (Inactive) |
+| **F7** |	Debug Shader |
 | **F9** |	Toggle Gamma Correction |
 | **Backspace** | Pause App |
 | **ESC** |	Exit App |

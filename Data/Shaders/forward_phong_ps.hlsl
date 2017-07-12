@@ -187,7 +187,7 @@ float ShadowTest(float3 worldPos, float4 lightSpacePos)
 		 projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
 		)
 	{
-		return -10.0f;
+		return -1.0f;
 	}
 
 	if (pxDepthInLSpace > closestDepthInLSpace)

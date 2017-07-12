@@ -53,14 +53,15 @@ void SceneManager::Initialize(Renderer* renderer, const RenderData* rData, PathM
 
 	m_pRenderer			= renderer;
 	m_renderData		= rData;	// ?
-	m_selectedShader	= m_renderData->phongShader;
+	m_selectedShader	= SHADERS::FORWARD_PHONG;
 	m_gammaCorrection	= true;
+	m_debugRender		= true;
 
 	InitializeRoom();
 	InitializeLights();
 	InitializeObjectArrays();
 
-	m_skydome.Init(m_pRenderer, "browncloud_lf.jpg", 1000.0f / 2.2f, m_renderData->unlitShader);
+	m_skydome.Init(m_pRenderer, "browncloud_lf.jpg", 1000.0f / 2.2f, SHADERS::UNLIT);
 }
 
 
@@ -437,14 +438,7 @@ void SceneManager::Update(float dt)
 	//-------------------------------------------------------------------------------- SHADER CONFIGURATION ----------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
 	// F1-F4 | Debug Shaders
-	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = m_renderData->texCoordShader;
-	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = m_renderData->normalShader;
-	if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = m_renderData->tangentShader;
-	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = m_renderData->binormalShader;
-	
-	// F5-F8 | Lighting Shaders
-	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = m_renderData->unlitShader;
-	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = m_renderData->phongShader;
+	if (ENGINE->INP()->IsKeyTriggered(118)) m_debugRender = !m_debugRender;
 
 	// F9-F12 | Shader Parameters
 	if (ENGINE->INP()->IsKeyTriggered(120)) m_gammaCorrection = !m_gammaCorrection;
@@ -453,7 +447,7 @@ void SceneManager::Update(float dt)
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
-void SceneManager::Render() 
+void SceneManager::Render() const
 {
 	const float clearColor[4] = { 0.2f, 0.4f, 0.7f, 1.0f };
 	const XMMATRIX view = m_pCamera->GetViewMatrix();
@@ -489,8 +483,6 @@ void SceneManager::Render()
 	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 
-	if (m_selectedShader == m_renderData->phongShader)	{	SendLightData(); }
-	if (m_selectedShader == m_renderData->TNBShader)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
 	m_room.Render(m_pRenderer, viewProj);
 	RenderCentralObjects(viewProj);
@@ -504,13 +496,20 @@ void SceneManager::Render()
 
 	// DEBUG PASS
 	//------------------------------------------------------------------------
+	if (m_debugRender)
+	{
+		// TBN test
+		//auto prevShader = m_selectedShader;
+		//m_selectedShader = m_renderData->TNBShader;
+		//RenderCentralObjects(view, proj);
+		//m_selectedShader = prevShader;
 
+		m_pRenderer->SetTexture("t_shadowMap", m_renderData->depthPass._shadowMap);	// todo: decide shader naming 
+		m_pRenderer->SetBufferObj(quad.m_model.m_mesh);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
+	}
 
-	// TBN test
-	//auto prevShader = m_selectedShader;
-	//m_selectedShader = m_renderData->TNBShader;
-	//RenderCentralObjects(view, proj);
-	//m_selectedShader = prevShader;
 
 	m_pRenderer->End();
 }
@@ -519,7 +518,7 @@ void SceneManager::Render()
 void SceneManager::RenderLights(const XMMATRIX& viewProj) const
 {
 	m_pRenderer->Reset();	// is reset necessary?
-	m_pRenderer->SetShader(m_renderData->unlitShader);
+	m_pRenderer->SetShader(SHADERS::UNLIT);
 	for (const Light& light : m_lights)
 	{
 		m_pRenderer->SetBufferObj(light._model.m_mesh);
@@ -535,7 +534,7 @@ void SceneManager::RenderLights(const XMMATRIX& viewProj) const
 	}
 }
 
-void SceneManager::RenderCentralObjects(const XMMATRIX& viewProj) 
+void SceneManager::RenderCentralObjects(const XMMATRIX& viewProj) const
 {
 	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj);
 	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj);

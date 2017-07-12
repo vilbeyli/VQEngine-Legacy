@@ -189,8 +189,7 @@ LightShaderSignature Light::ShaderLightStruct() const
 	const vec3 spotDirection = [&]() -> const vec3 {
 		if (_type == LightType::SPOT)
 		{
-			XMVECTOR up = XMVectorSet(0, 1, 0, 0);
-			return XMVector3TransformCoord(up, _transform.RotationMatrix());
+			return XMVector3TransformCoord(vec3::Up, _transform.RotationMatrix());
 		}
 		return vec3();
 	}();

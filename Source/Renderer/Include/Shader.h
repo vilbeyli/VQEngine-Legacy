@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 #include <queue>
+#include <array>
 
 using namespace DirectX;
 
@@ -50,7 +51,7 @@ struct InputLayout
 // used to map **SetShaderConstant(); function in Renderer::Apply()
 enum ShaderType
 {
-	VS,
+	VS = 0,
 	PS,
 	GS,
 	DS,
@@ -60,8 +61,8 @@ enum ShaderType
 	COUNT
 };
 
-// information used to create GPU/CPU cbuffers
-struct cBufferLayout
+// information used to create GPU/CPU constant buffers
+struct ConstantBufferLayout
 {
 	D3D11_SHADER_BUFFER_DESC					desc;
 	std::vector<D3D11_SHADER_VARIABLE_DESC>		variables;
@@ -81,7 +82,7 @@ struct CPUConstant
 };
 
 // GPU side constant buffer
-struct D3DCBuffer
+struct ConstantBuffer
 {
 	ShaderType shdType;
 	unsigned	bufferSlot;
@@ -109,8 +110,23 @@ struct ShaderSampler
 
 //-------------------------------------------------------------
 
-// typedefs
-typedef int ShaderID;
+enum SHADERS	// good enough for global namespace
+{
+	FORWARD_PHONG,
+	UNLIT,
+	TEXTURE_COORDINATES,
+	NORMAL,
+	TANGENT,
+	BINORMAL,
+	LINE,
+	TBN,
+	DEBUG,
+
+	SHADER_COUNT
+};
+
+
+using ShaderID = int;
 
 class Shader
 {
@@ -120,47 +136,43 @@ public:
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
-	const std::string&					Name() const;
-	ShaderID							ID() const;
-	const std::vector<cBufferLayout>&	GetConstantBufferLayouts() const;
-	const std::vector<D3DCBuffer>&		GetConstantBuffers() const;
-
-
-private:
-	void Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts, bool geoShader = false);
-	void SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob);
-	void CheckSignatures();
-	void SetCBuffers(ID3D11Device* device);
-	void RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType type);
-	
+	void SetConstantBuffers(ID3D11Device* device);
 	void ClearConstantBuffers();
 
-	void OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName);
-	void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath);
-	void AssignID(ShaderID id);
+	const std::string&	Name() const;
+	ShaderID ID() const;
+	const std::vector<ConstantBufferLayout>&	GetConstantBufferLayouts() const;
+	const std::vector<ConstantBuffer>&			GetConstantBuffers() const;
 
 private:
-	const std::string						m_name;
-	ShaderID								m_id;
+	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, ShaderType type);
+	void Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts, bool geoShader);
+	void SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob);
+	void CheckSignatures();
 
-	ID3D11VertexShader*						m_vertexShader;
-	ID3D11PixelShader*						m_pixelShader;
-	ID3D11GeometryShader*					m_geoShader;
-	ID3D11HullShader*						m_hullShader;
-	ID3D11DomainShader*						m_domainShader;
-	ID3D11ComputeShader*					m_computeShader;
+private:
+	static std::array<ShaderID, SHADERS::SHADER_COUNT>	s_shaders;
+	const std::string									m_name;
+	ShaderID											m_id;
 
-	ID3D11ShaderReflection*					m_vsRefl;	// shader reflections, temporary?
-	ID3D11ShaderReflection*					m_psRefl;	// shader reflections, temporary?
-	ID3D11ShaderReflection*					m_gsRefl;	// shader reflections, temporary?
+	ID3D11VertexShader*									m_vertexShader;
+	ID3D11PixelShader*									m_pixelShader;
+	ID3D11GeometryShader*								m_geoShader;
+	ID3D11HullShader*									m_hullShader;
+	ID3D11DomainShader*									m_domainShader;
+	ID3D11ComputeShader*								m_computeShader;
 
-	ID3D11InputLayout*						m_layout;
+	ID3D11ShaderReflection*								m_vsRefl;	// shader reflections, temporary?
+	ID3D11ShaderReflection*								m_psRefl;	// shader reflections, temporary?
+	ID3D11ShaderReflection*								m_gsRefl;	// shader reflections, temporary?
 
-	std::vector<cBufferLayout>				m_cBufferLayouts;
-	std::vector<D3DCBuffer>					m_cBuffers;
-	std::vector<std::vector<CPUConstant>>	m_constants;
+	ID3D11InputLayout*									m_layout;
 
-	std::vector<ShaderTexture>				m_textures;
-	std::vector<ShaderSampler>				m_samplers;
+	std::vector<ConstantBufferLayout>					m_CBLayouts;
+	std::vector<ConstantBuffer>							m_cBuffers;
+	std::vector<std::vector<CPUConstant>>				m_constants;
+
+	std::vector<ShaderTexture>							m_textures;
+	std::vector<ShaderSampler>							m_samplers;
 };
 

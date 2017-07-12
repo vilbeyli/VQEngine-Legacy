@@ -45,7 +45,7 @@ public:
 	void Initialize(Renderer* renderer, const RenderData* rData, PathManager* pathMan);
 	void SetCameraSettings(const Settings::Camera& cameraSettings);
 	void Update(float dt);
-	void Render();	// todo: const
+	void Render() const;
 
 private:
 	void InitializeRoom();
@@ -56,7 +56,7 @@ private:
 
 	void RenderLights(const XMMATRIX& viewProj) const;
 	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
-	void RenderCentralObjects(const XMMATRIX& viewProj); // todo: const
+	void RenderCentralObjects(const XMMATRIX& viewProj)  const;
 
 	void SendLightData() const;
 
@@ -69,6 +69,7 @@ private:
 	const RenderData*	m_renderData;
 	ShaderID			m_selectedShader;
 	bool				m_gammaCorrection;
+	bool				m_debugRender;
 
 	// scene variables
 	Skydome				m_skydome;
@@ -76,7 +77,7 @@ private:
 
 	struct Room {
 		friend class SceneManager;
-		void Render(Renderer* pRenderer, const XMMATRIX& viewPrroj) const;
+		void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
 		GameObject floor;
 		GameObject wallL;
 		GameObject wallR;

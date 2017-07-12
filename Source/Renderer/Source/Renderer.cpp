@@ -342,20 +342,22 @@ void Renderer::LoadShaders()
 {
 	OutputDebugString("\n    ------------------------ COMPILING SHADERS ------------------------ \n");
 
+	// todo: initalize this in Shader:: and in order so that SHADERS::FORWARD_PHONG would get the right shader
 	std::vector<InputLayout> layout = {
 		{ "POSITION",	FLOAT32_3 },
 		{ "NORMAL",		FLOAT32_3 },
 		{ "TANGENT",	FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 },
 	};
-	m_renderData.unlitShader	= AddShader("UnlitTextureColor", s_shaderRoot, layout);
-	m_renderData.texCoordShader = AddShader("TextureCoord", s_shaderRoot, layout);
-	m_renderData.normalShader	= AddShader("Normal", s_shaderRoot, layout);
-	m_renderData.tangentShader	= AddShader("Tangent", s_shaderRoot, layout);
-	m_renderData.binormalShader	= AddShader("Binormal", s_shaderRoot, layout);
-	m_renderData.phongShader	= AddShader("Forward_Phong", s_shaderRoot, layout);
-	m_renderData.lineShader		= AddShader("Line", s_shaderRoot, layout, true);
-	m_renderData.TNBShader		= AddShader("TNB", s_shaderRoot, layout, true);
+	Shader::s_shaders[SHADERS::FORWARD_PHONG      ] = AddShader("Forward_Phong"    , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::UNLIT              ] = AddShader("UnlitTextureColor", s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::TEXTURE_COORDINATES] = AddShader("TextureCoord"     , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::NORMAL             ]	= AddShader("Normal"           , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::TANGENT            ] = AddShader("Tangent"          , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::BINORMAL           ]	= AddShader("Binormal"         , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::LINE               ]	= AddShader("Line"             , s_shaderRoot, layout, true);
+	Shader::s_shaders[SHADERS::TBN                ]	= AddShader("TNB"              , s_shaderRoot, layout, true);
+	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"            , s_shaderRoot, layout);
 	
 	m_renderData.errorTexture	= AddTexture("errTexture.png", s_textureRoot).id;
 	m_renderData.exampleTex		= AddTexture("bricks_d.png", s_textureRoot).id;
@@ -534,7 +536,7 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 	shader->Compile(m_device, path, layouts, geoShader);
 	
 	m_shaders.push_back(shader);
-	shader->AssignID(static_cast<int>(m_shaders.size()) - 1);
+	shader->m_id = (static_cast<int>(m_shaders.size()) - 1);
 	return shader->ID();
 }
 
@@ -736,11 +738,6 @@ const Texture& Renderer::GetTexture(TextureID id) const
 	return m_textures[id];
 }
 
-
-const ShaderID Renderer::GetLineShader() const
-{
-	return m_renderData.lineShader;
-}
 
 void Renderer::SetShader(ShaderID id)
 {
@@ -1164,14 +1161,14 @@ void Renderer::Apply()
 		// ----------------------------------------
 		for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
 		{
-			D3DCBuffer& cbuf = shader->m_cBuffers[i];
-			if (cbuf.dirty)	// if the CPU-side buffer is updated
+			ConstantBuffer& CB = shader->m_cBuffers[i];
+			if (CB.dirty)	// if the CPU-side buffer is updated
 			{
-				ID3D11Buffer* bufferData = cbuf.data;
+				ID3D11Buffer* data = CB.data;
 				D3D11_MAPPED_SUBRESOURCE mappedResource;
 
 				// Map sub-resource to GPU - update contends - discard the sub-resource
-				m_deviceContext->Map(bufferData, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+				m_deviceContext->Map(data, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 				char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
 				std::vector<CPUConstant>& cpuConsts = shader->m_constants[i];
 				for (CPUConstant& c : cpuConsts)
@@ -1196,35 +1193,35 @@ void Renderer::Apply()
 				//	prevSize = c.size;
 				//}
 
-				m_deviceContext->Unmap(bufferData, 0);
+				m_deviceContext->Unmap(data, 0);
 
 				// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader, see it)
-				switch (cbuf.shdType)
+				switch (CB.shdType)
 				{
 				case ShaderType::VS:
-					m_deviceContext->VSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					m_deviceContext->VSSetConstantBuffers(CB.bufferSlot, 1, &data);
 					break;
 				case ShaderType::PS:
-					m_deviceContext->PSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					m_deviceContext->PSSetConstantBuffers(CB.bufferSlot, 1, &data);
 					break;
 				case ShaderType::GS:
-					m_deviceContext->GSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					m_deviceContext->GSSetConstantBuffers(CB.bufferSlot, 1, &data);
 					break;
 				case ShaderType::DS:
-					m_deviceContext->DSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					m_deviceContext->DSSetConstantBuffers(CB.bufferSlot, 1, &data);
 					break;
 				case ShaderType::HS:
-					m_deviceContext->HSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					m_deviceContext->HSSetConstantBuffers(CB.bufferSlot, 1, &data);
 					break;
 				case ShaderType::CS:
-					m_deviceContext->CSSetConstantBuffers(cbuf.bufferSlot, 1, &bufferData);
+					m_deviceContext->CSSetConstantBuffers(CB.bufferSlot, 1, &data);
 					break;
 				default:
 					OutputDebugString("ERROR: Renderer::Apply() - UNKOWN Shader Type\n");
 					break;
 				}
 
-				cbuf.dirty = false;
+				CB.dirty = false;
 			}
 		}
 

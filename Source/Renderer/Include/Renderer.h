@@ -81,15 +81,6 @@ struct DepthShadowPass
 
 struct RenderData
 {
-	ShaderID phongShader;
-	ShaderID unlitShader;
-	ShaderID texCoordShader;
-	ShaderID normalShader;
-	ShaderID tangentShader;
-	ShaderID binormalShader;
-	ShaderID lineShader;
-	ShaderID TNBShader;
-
 	DepthShadowPass depthPass;
 	TextureID errorTexture;
 	TextureID loadingScrTex;
@@ -125,7 +116,6 @@ public:
 
 	const Shader*		GetShader(ShaderID shader_id) const;
 	const Texture&		GetTexture(TextureID) const;
-	const ShaderID		GetLineShader() const;
 
 	// state management
 	void SetViewport(const unsigned width, const unsigned height);

@@ -20,6 +20,43 @@
 #include <fstream>
 #include <sstream>
 
+std::array<ShaderID, SHADERS::SHADER_COUNT> Shader::s_shaders;
+
+void OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName)
+{
+	char* compileErrors = (char*)errorMessage->GetBufferPointer();
+	size_t bufferSize = errorMessage->GetBufferSize();
+
+	std::stringstream ss;
+	for (unsigned int i = 0; i < bufferSize; ++i)
+	{
+		ss << compileErrors[i];
+	}
+	OutputDebugString(ss.str().c_str());
+
+	//release
+	errorMessage->Release();
+	errorMessage = 0;
+	return;
+}
+
+
+void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath)
+{
+	if (errorMessage)
+	{
+		OutputShaderErrorMessage(errorMessage, shdPath.c_str());
+	}
+	else
+	{
+		std::string err("Error: Can't find shader file: "); err += shdPath;
+		OutputDebugString(err.c_str());
+	}
+
+	// continue execution, make sure error is known
+	//assert(false);
+}
+
 Shader::Shader(const std::string& shaderFileName)
 	:
 	m_vertexShader(nullptr),
@@ -33,7 +70,7 @@ Shader::Shader(const std::string& shaderFileName)
 Shader::~Shader(void)
 {
 	// release constants
-	for (D3DCBuffer& cbuf : m_cBuffers)
+	for (ConstantBuffer& cbuf : m_cBuffers)
 	{
 		if (cbuf.data)
 		{
@@ -240,7 +277,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 
 	// CBUFFERS & SHADER RESOURCES
 	//---------------------------------------------------------------------------
-	SetCBuffers(device);
+	SetConstantBuffers(device);
 	
 	// SET TEXTURES & SAMPLERS
 	auto sRefl = m_psRefl;		// vsRefl? gsRefl?
@@ -379,20 +416,20 @@ void Shader::CheckSignatures()
 	}
 }
 
-void Shader::SetCBuffers(ID3D11Device* device)
+void Shader::SetConstantBuffers(ID3D11Device* device)
 {
 	// example: http://gamedev.stackexchange.com/a/62395/39920
 
 	// OBTAIN CBUFFER LAYOUT INFORMATION
 	//---------------------------------------------------------------------------------------
-	RegisterCBufferLayout(m_vsRefl, ShaderType::VS);
-	RegisterCBufferLayout(m_psRefl, ShaderType::PS);
-	if(m_gsRefl) RegisterCBufferLayout(m_gsRefl, ShaderType::GS);
+	RegisterConstantBufferLayout(m_vsRefl, ShaderType::VS);
+	RegisterConstantBufferLayout(m_psRefl, ShaderType::PS);
+	if(m_gsRefl) RegisterConstantBufferLayout(m_gsRefl, ShaderType::GS);
 
 	// CREATE CPU & GPU CONSTANT BUFFERS
 	//---------------------------------------------------------------------------------------
 	// CPU CBuffers
-	for (const cBufferLayout& cbLayout : m_cBufferLayouts)
+	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
 	{
 		std::vector<CPUConstant> cpuBuffers;
 		for (D3D11_SHADER_VARIABLE_DESC varDesc : cbLayout.variables)
@@ -416,9 +453,9 @@ void Shader::SetCBuffers(ID3D11Device* device)
 	cBufferDesc.StructureByteStride = 0;
 
 	// GPU CBuffers
-	for (const cBufferLayout& cbLayout : m_cBufferLayouts)
+	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
 	{
-		D3DCBuffer cBuffer;
+		ConstantBuffer cBuffer;
 		cBufferDesc.ByteWidth = cbLayout.desc.Size;
 		if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &cBuffer.data)))
 		{
@@ -432,7 +469,7 @@ void Shader::SetCBuffers(ID3D11Device* device)
 	}
 }
 
-void Shader::RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType type)
+void Shader::RegisterConstantBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType type)
 {
 	D3D11_SHADER_DESC desc;
 	sRefl->GetDesc(&desc);
@@ -440,7 +477,7 @@ void Shader::RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType typ
 	unsigned bufSlot = 0;
 	for (unsigned i = 0; i < desc.ConstantBuffers; ++i)
 	{
-		cBufferLayout bufferLayout;
+		ConstantBufferLayout bufferLayout;
 		bufferLayout.buffSize = 0;
 		ID3D11ShaderReflectionConstantBuffer* pCBuffer = sRefl->GetConstantBufferByIndex(i);
 		pCBuffer->GetDesc(&bufferLayout.desc);
@@ -465,55 +502,16 @@ void Shader::RegisterCBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType typ
 		bufferLayout.shdType = type;
 		bufferLayout.bufSlot = bufSlot;
 		++bufSlot;
-		m_cBufferLayouts.push_back(bufferLayout);
+		m_CBLayouts.push_back(bufferLayout);
 	}
 }
 
 void Shader::ClearConstantBuffers()
 {
-	for (D3DCBuffer& cBuffer : m_cBuffers)
+	for (ConstantBuffer& cBuffer : m_cBuffers)
 	{
 		cBuffer.dirty = true;
 	}
-}
-
-void Shader::OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName)
-{
-	char* compileErrors = (char*)errorMessage->GetBufferPointer();
-	size_t bufferSize = errorMessage->GetBufferSize();
-
-	std::stringstream ss;
-	for (unsigned int i = 0; i < bufferSize; ++i)
-	{
-		ss << compileErrors[i];
-	}
-	OutputDebugString(ss.str().c_str());
-
-	//release
-	errorMessage->Release();
-	errorMessage = 0;
-	return;
-}
-
-void Shader::HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath)
-{
-	if (errorMessage)
-	{
-		OutputShaderErrorMessage(errorMessage, shdPath.c_str());
-	}
-	else
-	{
-		std::string err("Error: Can't find shader file: "); err += shdPath;
-		OutputDebugString(err.c_str());
-	}
-
-	// continue execution, make sure error is known
-	//assert(false);
-}
-
-void Shader::AssignID(ShaderID id)
-{
-	m_id = id;
 }
 
 const std::string& Shader::Name() const
@@ -526,12 +524,12 @@ ShaderID Shader::ID() const
 	return m_id;
 }
 
-const std::vector<cBufferLayout>& Shader::GetConstantBufferLayouts() const
+const std::vector<ConstantBufferLayout>& Shader::GetConstantBufferLayouts() const
 {
-	return m_cBufferLayouts;
+	return m_CBLayouts;
 }
 
-const std::vector<D3DCBuffer>& Shader::GetConstantBuffers() const
+const std::vector<ConstantBuffer>& Shader::GetConstantBuffers() const
 {
 	return m_cBuffers;
 }

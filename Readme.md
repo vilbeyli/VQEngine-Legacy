@@ -3,7 +3,7 @@
 ![](Screenshots/shadows.PNG)
 
 This project started as the Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc) at [DigiPen Institute of Technology](https://www.digipen.edu/).
-Now, this repo serve as a DX11 framework for stuyding and practicing various rendering techniques and real-time algorithms. 
+Now, this repo serves as a DX11 framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
 **Features**:
  - Shader Reflection

@@ -115,8 +115,8 @@ void SceneManager::InitializeRoom()
 		//m_room.ceiling.m_model.m_material.color		= Color::purple;
 		//m_room.ceiling.m_model.m_material.shininess	= 10.0f;
 		m_room.ceiling.m_model.m_material = Material::gold;
-		//m_room.ceiling.m_model.m_material.diffuseMap = m_renderer->AddTexture("bricks_d.png");
-		//m_room.ceiling.m_model.m_material.normalMap = m_pRenderer->AddTexture("metal2.png");
+		m_room.ceiling.m_model.m_material.diffuseMap = m_pRenderer->AddTexture("metal2.png");
+		m_room.ceiling.m_model.m_material.normalMap = m_pRenderer->AddTexture("nrm_metal2.png");
 	}
 
 	// RIGHT WALL
@@ -125,8 +125,8 @@ void SceneManager::InitializeRoom()
 		tf.SetScale(floorDepth, 0.1f, wallHieght);
 		tf.SetPosition(floorWidth, YOffset, 0);
 		tf.SetXRotationDeg(90.0f);
-		tf.RotateAroundGlobalYAxisDegrees(90.0f);
-		tf.RotateAroundGlobalXAxisDegrees(180.0f);
+		tf.RotateAroundGlobalYAxisDegrees(-90);
+		//tf.RotateAroundGlobalXAxisDegrees(-180.0f);
 
 		//m_room.wallR.m_model.m_material.color		= Color::gray;
 		//m_room.wallR.m_model.m_material.shininess	= 120.0f;
@@ -292,6 +292,9 @@ void SceneManager::InitializeObjectArrays()
 			}
 		}
 	}
+	cubes.front().m_transform.Translate(0, 10, 0);
+	cubes.front().m_transform.SetXRotationDeg(90);
+	cubes.front().m_transform.RotateAroundGlobalYAxisDegrees(-90);
 
 	// circle arrangement
 	const float sphHeight[2] = { 60.0f, 45.0f };
@@ -421,6 +424,7 @@ void SceneManager::UpdateCentralObj(const float dt)
 	{
 		for (int j = 0; j < col; ++j)
 		{
+			if (i == 0 && j == 0) continue;
 			//if (j > 4)
 			{	// exclude diagonal
 
@@ -503,6 +507,7 @@ void SceneManager::Render() const
 	if (m_selectedShader == SHADERS::TBN)	m_pRenderer->SetConstant1i("mode", TBNMode);
 
 	m_room.Render(m_pRenderer, viewProj);
+	if (m_selectedShader == SHADERS::NORMAL) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
 	RenderCentralObjects(viewProj);
 	RenderLights(viewProj);
 

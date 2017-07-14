@@ -271,10 +271,11 @@ BufferObject* GeometryGenerator::Cube()
 	bufferObj->m_vertices[17].texCoords = XMFLOAT2(+1.0f, +0.0f);
 	bufferObj->m_vertices[18].texCoords = XMFLOAT2(+1.0f, +1.0f);
 	bufferObj->m_vertices[19].texCoords = XMFLOAT2(+0.0f, +1.0f);
-	bufferObj->m_vertices[20].texCoords = XMFLOAT2(+1.0f, +1.0f);
-	bufferObj->m_vertices[21].texCoords = XMFLOAT2(+0.0f, +1.0f);
-	bufferObj->m_vertices[22].texCoords = XMFLOAT2(+0.0f, +0.0f);
-	bufferObj->m_vertices[23].texCoords = XMFLOAT2(+1.0f, +0.0f);
+
+	bufferObj->m_vertices[20].texCoords = XMFLOAT2(+1.0f, +0.0f);
+	bufferObj->m_vertices[21].texCoords = XMFLOAT2(+0.0f, +0.0f);
+	bufferObj->m_vertices[22].texCoords = XMFLOAT2(+0.0f, +1.0f);
+	bufferObj->m_vertices[23].texCoords = XMFLOAT2(+1.0f, +1.0f);
 	// vertices - CW 
 	// TOP
 	bufferObj->m_vertices[0].position	= vec3(-1.0f, +1.0f, +1.0f);
@@ -365,19 +366,19 @@ BufferObject* GeometryGenerator::Cube()
 	// BOTTOM
 	bufferObj->m_vertices[20].position	= vec3(+1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[20].normal	= vec3(+0.0f, -1.0f, +0.0f);
-	bufferObj->m_vertices[20].tangent	= vec3(-1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[20].tangent	= vec3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[21].position	= vec3(-1.0f, -1.0f, -1.0f);
 	bufferObj->m_vertices[21].normal	= vec3(+0.0f, -1.0f, +0.0f);
-	bufferObj->m_vertices[21].tangent	= vec3(-1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[21].tangent	= vec3(+1.0f, +0.0f, +0.0f);
 	
 	bufferObj->m_vertices[22].position	= vec3(-1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[22].normal	= vec3(+0.0f, -1.0f, +0.0f);
-	bufferObj->m_vertices[22].tangent	= vec3(-1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[22].tangent	= vec3(+1.0f, +0.0f, +0.0f);
 
 	bufferObj->m_vertices[23].position	= vec3(+1.0f, -1.0f, +1.0f);
 	bufferObj->m_vertices[23].normal	= vec3(+0.0f, -1.0f, +0.0f);
-	bufferObj->m_vertices[23].tangent	= vec3(-1.0f, +0.0f, +0.0f);
+	bufferObj->m_vertices[23].tangent	= vec3(+1.0f, +0.0f, +0.0f);
 
 	//--------------------------------------------------------------
 

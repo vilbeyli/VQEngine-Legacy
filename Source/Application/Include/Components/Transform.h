@@ -50,6 +50,7 @@ public:
 	// TRANSFORMATIONS
 	//-----------------------------------------------------------------------------------
 	void Translate(const vec3& translation);
+	void Translate(float x, float y, float z);
 	void Scale(const vec3& scl);
 	
 	void RotateAroundPointAndAxis(const vec3& axis, float angle, const vec3& point);

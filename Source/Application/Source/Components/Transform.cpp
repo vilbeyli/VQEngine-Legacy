@@ -45,6 +45,11 @@ void Transform::Translate(const vec3& translation)
 	_position = _position + translation;
 }
 
+void Transform::Translate(float x, float y, float z)
+{
+	_position = _position + vec3(x, y, z);
+}
+
 void Transform::Scale(const vec3& scl)
 {
 	_scale = scl;

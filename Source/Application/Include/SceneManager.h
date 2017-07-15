@@ -17,20 +17,21 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
-#include "GameObject.h"
-#include "Light.h"
-#include "Skydome.h"
 #include "Settings.h"
-
 #include <vector>
 #include <memory>
+
+// scenes
+#include "RoomScene.h"
+
 
 class Renderer;
 class Camera;
 class PathManager;
-struct Path;
 
-typedef int ShaderID;
+using ShaderID = int;
+
+struct Path;
 struct RenderData;
 
 using std::shared_ptr;
@@ -42,89 +43,30 @@ public:
 	SceneManager();
 	~SceneManager();
 
-	void Initialize(Renderer* renderer, const RenderData* rData, PathManager* pathMan);
+	void Initialize(Renderer* renderer, PathManager* pathMan);
+
 	void SetCameraSettings(const Settings::Camera& cameraSettings);
+
 	void Update(float dt);
 	void Render() const;
 
+	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
+
 private:
-	void InitializeRoom();
-	void InitializeLights();
-	void InitializeObjectArrays();
-
-	void UpdateCentralObj(const float dt);
-
-	void RenderLights(const XMMATRIX& viewProj) const;
-	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
-	void RenderCentralObjects(const XMMATRIX& viewProj)  const;
-
 	void SendLightData() const;
 
 private:
+	RoomScene			m_roomScene;	// todo: rethink scene management
+
 	Renderer*			m_pRenderer;
 	shared_ptr<Camera>	m_pCamera;
-	PathManager*		m_pPathManager; // unused
+	//PathManager*		m_pPathManager; // unused
 
-	// render data
+	// pipeline state data
 	const RenderData*	m_renderData;
 	ShaderID			m_selectedShader;
 	bool				m_gammaCorrection;
 	bool				m_debugRender;
 
-	// scene variables
-	Skydome				m_skydome;
-	std::vector<Light>	m_lights;
-
-	struct Room {
-		friend class SceneManager;
-		void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
-		GameObject floor;
-		GameObject wallL;
-		GameObject wallR;
-		GameObject wallF;
-		GameObject ceiling;
-	} m_room;
-
-	std::vector<GameObject> spheres;
-	std::vector<GameObject> cubes;
-
-	GameObject triangle;
-	GameObject quad;
-	GameObject grid;
-	GameObject cylinder;
-
 	std::vector<GameObject*> m_ZPassObjects;
-
-#ifdef ENABLE_ANIMATION
-	// hierarchical model
-	AnimatedModel m_model;
-#endif
-
-#ifdef ENABLE_VPHYSICS
-	// physics simulation
-	GameObject				m_anchor1;
-	GameObject				m_anchor2;
-	GameObject				m_physObj;
-	std::vector<GameObject> m_vPhysObj;
-
-	SpringSystem m_springSys;
-#endif
 };
-
-// junkyard
-
-#ifdef ENABLE_VPHYSICS
-void InitializePhysicsObjects();
-void UpdateAnchors(float dt);
-#endif
-#ifdef ENABLE_ANIMATION
-void UpdateAnimatedModel(const float dt);
-#endif
-#define xENABLE_ANIMATION	
-#define xENABLE_VPHYSICS
-#ifdef ENABLE_ANIMATION
-#include "../Animation/Include/AnimatedModel.h"
-#endif
-#ifdef ENABLE_VPHYSICS
-#include "PhysicsEngine.h"
-#endif

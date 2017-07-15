@@ -19,6 +19,8 @@
 #pragma once
 
 #include <windows.h>
+#include "PerfTimer.h"
+
 #include <memory>
 using std::shared_ptr;
 using std::unique_ptr;
@@ -32,8 +34,6 @@ class SceneManager;
 
 class PathManager;		// unused
 class PhysicsEngine;	// unused
-
-struct RenderData;
 
 class Engine
 {
@@ -56,7 +56,7 @@ public:
 	void Exit();
 
 	shared_ptr<const Input>		 INP() const;
-	shared_ptr<const PerfTimer>  TIMER() const;
+	inline float GetTotalTime() const { return m_timer->TotalTime(); }
 
 	static Engine* GetEngine();
 
@@ -68,18 +68,13 @@ private:
 
 //--------------------------------------------------------------
 
-public:
-	RenderData*						m_pRenderData;
-
 private:
 	static Engine*					s_instance;
 	// TODO : TYEPDEF POINTER TYPES...
 	
 	std::shared_ptr<Input>			m_input;
 	std::shared_ptr<Renderer>		m_renderer;
-//	std::unique_ptr<PhysicsEngine>	m_physics;
-//	std::unique_ptr<PathManager>	m_pathMan;
-	std::shared_ptr<SceneManager>	m_scene_manager;
+	std::shared_ptr<SceneManager>	m_sceneManager;
 	std::shared_ptr<PerfTimer>		m_timer;
 
 	bool							m_isPaused;

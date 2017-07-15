@@ -27,9 +27,6 @@
 #include "Mesh.h"
 #include "Camera.h"
 
-//#include "PhysicsEngine.h"
-//#include "../Animation/Include/PathManager.h"
-
 #include <sstream>
 
 Engine* Engine::s_instance = nullptr;
@@ -38,7 +35,7 @@ Engine::Engine()
 	:
 	m_renderer(new Renderer()),
 	m_input(new Input()),
-	m_scene_manager(new SceneManager()),
+	m_sceneManager(new SceneManager()),
 	m_timer(new PerfTimer())
 {}
 
@@ -46,20 +43,21 @@ Engine::~Engine(){}
 
 bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
 {
-	if (!m_renderer || !m_input || !m_scene_manager || !m_timer) 
+	if (!m_renderer || !m_input || !m_sceneManager || !m_timer) 
 		return false;
 
 	m_input->Init();
 	if(!m_renderer->Initialize(scr_width, scr_height, hWnd)) 
 		return false;
-	m_pRenderData = &(m_renderer->m_renderData);
-	m_scene_manager->Initialize(m_renderer.get(), m_pRenderData, nullptr);
+
+	m_sceneManager->Initialize(m_renderer.get(), nullptr);
+
 	return true;
 }
 
 bool Engine::Load()
 {
-	s_SceneParser.ReadScene(m_scene_manager);
+	s_SceneParser.ReadScene(m_sceneManager);
 	m_timer->Reset();
 	return true;
 }
@@ -108,11 +106,6 @@ void Engine::Exit()
 shared_ptr<const Input> Engine::INP() const
 {
 	return m_input;
-}
-
-shared_ptr<const PerfTimer>  Engine::TIMER() const
-{
-	return m_timer;
 }
 
 Engine * Engine::GetEngine()
@@ -181,11 +174,11 @@ float Engine::TotalTime() const
 void Engine::Update(float dt)
 {
 	//m_physics->Update(dt);
-	m_scene_manager->Update(dt);
+	m_sceneManager->Update(dt);
 }
 
 void Engine::Render()
 {
-	m_scene_manager->Render();
+	m_sceneManager->Render();
 }
 

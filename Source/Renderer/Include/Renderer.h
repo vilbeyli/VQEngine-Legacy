@@ -66,6 +66,7 @@ enum class DEFAULT_RS_STATE
 	RS_COUNT
 };
 
+// move to scene manager maybe?
 struct DepthShadowPass
 {
 	unsigned				_shadowMapDimension;
@@ -160,7 +161,6 @@ private:
 	void OnShaderChange(LPTSTR dir);
 
 	void InitializeDefaultRasterizerStates();
-	void LoadAnimation();
 	//=======================================================================================================================================================
 public:
 	static const bool FULL_SCREEN  = false;
@@ -170,7 +170,7 @@ public:
 	static const char* s_textureRoot;
 
 	RenderData	                    m_renderData;
-	ID3D11Device*					m_device;	// ?
+	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;
 
 private:
@@ -212,9 +212,6 @@ private:
 	// performance counters
 	unsigned long long				m_frameCount;
 
-	//friend class RigidBody;		// access to constant buffers
-	//friend class IKEngine;	// temp hack
-	//friend class AnimatedModel;
 	//std::vector<Point>				m_debugLines;
 };
  

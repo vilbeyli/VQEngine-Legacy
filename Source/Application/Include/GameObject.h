@@ -18,12 +18,12 @@
 
 #pragma once
 
-#define xENABLE_PHY_CODE
+#define xENABLE_PHYSICS
 
 #include "Components/Transform.h"
 #include "Model.h"
 
-#ifdef ENABLE_PHY_CODE
+#ifdef ENABLE_PHYSICS
 #include "RigidBody.h"
 #endif
 
@@ -40,10 +40,13 @@ public:
 
 	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
 	void RenderZ(Renderer* pRenderer) const;
+
 public:
 	Transform	m_transform;
 	Model		m_model;
-#ifdef ENABLE_PHY_CODE
+
+
+#ifdef ENABLE_PHYSICS
 	RigidBody	m_rb;
 #endif
 };

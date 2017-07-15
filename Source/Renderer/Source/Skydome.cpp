@@ -39,7 +39,7 @@ void Skydome::Render(const XMMATRIX& view, const XMMATRIX& proj) const
 }
 
 
-void Skydome::Init(Renderer* renderer, const char* tex, float scale, int shader)
+void Skydome::Initialize(Renderer* renderer, const char* tex, float scale, int shader)
 {
 	pRenderer = renderer;
 	skydomeObj.m_transform.SetUniformScale(scale);

@@ -1,21 +1,40 @@
-# DX11Renderer
-
-![](Screenshots/shadows.PNG)
+# DX11Renderer - VDemo
 
 This project started as the Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc) at [DigiPen Institute of Technology](https://www.digipen.edu/).
 Now, this repo serves as a DX11 framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
-**Features**:
- - Shader Reflection
+![](Screenshots/shadows.PNG)
+
+## Milestones
+
+See [all Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones).
+ 
+ ***Completed***
+
+*v0.1 : July15-2017*
+ - Vertex-Geometry-Pixel Shader Pipeline
+ - Simple Shader Reflection
  - Phong Lighting
  - Simple Shadow Maps
  - Normal Maps
  - Diffuse Textures
- - Generated Geometry: Cube, Sphere, Cylinder, Grid
+ - Procedural Geometry: Cube, Sphere, Cylinder, Grid
  
+ ***In Development***
+ 
+ *v0.2*
+ - BRDF
+ - Bloom
+ - Cubemap - skybox
+ - Image-Based Lighting
+ - Deferred Rendering
+ - AO
+ - Improved Shadow Map
+
+
 ## Compiling Instructions & Dependencies (to be automated)
 
-Navigate to `Source\3rdParty\DirectXTex` and compile the solution `DirectXTex_Desktop_2015.sln` with the platform settings that match the DX11Renderer's.
+Navigate to `Source\3rdParty\DirectXTex` and compile the solution `DirectXTex_Desktop_2015.sln` with the *platform settings that match that of this project's*. 
 This will generate the lib file that is required to compile the DX11Renderer project.
 
  - The project uses [DirectXTex](https://github.com/Microsoft/DirectXTex) for textures. Current project settings

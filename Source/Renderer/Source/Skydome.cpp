@@ -24,7 +24,7 @@ Skydome::~Skydome(){}
 
 void Skydome::Render(const XMMATRIX& view, const XMMATRIX& proj) const
 {
-	pRenderer->SetShader(0);
+	pRenderer->SetShader(SHADERS::UNLIT);
 
 	XMMATRIX world = skydomeObj.m_transform.WorldTransformationMatrix();
 	pRenderer->SetConstant4x4f("world", world);

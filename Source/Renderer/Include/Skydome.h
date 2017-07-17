@@ -25,8 +25,6 @@ class Renderer;
 
 class Skydome
 {
-	typedef int ShaderID;
-
 public:
 	Skydome();
 	~Skydome();

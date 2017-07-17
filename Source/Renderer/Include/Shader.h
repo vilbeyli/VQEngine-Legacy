@@ -121,6 +121,7 @@ enum SHADERS	// good enough for global namespace
 	LINE,
 	TBN,
 	DEBUG,
+	SKYBOX,
 
 	SHADER_COUNT
 };

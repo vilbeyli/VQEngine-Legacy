@@ -154,6 +154,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Skybox.cpp" />
     <ClCompile Include="Source\RoomScene.cpp" />
     <ClCompile Include="Source\Log.cpp" />
     <ClCompile Include="Source\SceneParser.cpp" />
@@ -182,6 +183,7 @@
     <ClInclude Include="Include\Settings.h" />
     <ClInclude Include="Include\Log.h" />
     <ClInclude Include="Include\RoomScene.h" />
+    <ClInclude Include="Include\Skybox.h" />
     <ClInclude Include="Source\Components\Component.h" />
     <ClInclude Include="Source\Components\Transform.h" />
     <ClInclude Include="Include\Engine.h" />

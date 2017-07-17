@@ -1,4 +1,3 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -17,38 +16,31 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
+#include <GameObject.h>
+#include <memory>
 
-#define xENABLE_PHYSICS
-
-#include "Components/Transform.h"
-#include "Model.h"
-
-#ifdef ENABLE_PHYSICS
-#include "RigidBody.h"
-#endif
-
+// forward decl
 class Renderer;
-using ShaderID = int;
 
-class GameObject
+enum SKYBOX_PRESETS
+{
+	NIGHT_SKY = 0,
+
+	SKYBOX_PRESET_COUNT
+};
+
+class Skybox
 {
 public:
-	GameObject();
-	~GameObject();
-	GameObject(const GameObject& obj);
+	static std::vector<Skybox> s_Presets;
+	static void InitializePresets(Renderer* pRenderer);
+	
+	void Render(const XMMATRIX& view, const XMMATRIX& proj) const;
 
-	GameObject& operator=(const GameObject& obj);
-
-	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
-	void RenderZ(Renderer* pRenderer) const;
-
-public:
-	Transform	m_transform;
-	Model		m_model;
-
-
-#ifdef ENABLE_PHYSICS
-	RigidBody	m_rb;
-#endif
+private:
+	GameObject	skydomeObj;
+	TextureID	skydomeTex;
+	ShaderID	skydomeShader;
+	Renderer*	pRenderer;
 };
 

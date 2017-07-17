@@ -1,4 +1,3 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -16,39 +15,25 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#pragma once
+// source: http://richardssoftware.net/Home/Post/25
 
-#define xENABLE_PHYSICS
-
-#include "Components/Transform.h"
-#include "Model.h"
-
-#ifdef ENABLE_PHYSICS
-#include "RigidBody.h"
-#endif
-
-class Renderer;
-using ShaderID = int;
-
-class GameObject
+struct PSIn
 {
-public:
-	GameObject();
-	~GameObject();
-	GameObject(const GameObject& obj);
-
-	GameObject& operator=(const GameObject& obj);
-
-	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
-	void RenderZ(Renderer* pRenderer) const;
-
-public:
-	Transform	m_transform;
-	Model		m_model;
-
-
-#ifdef ENABLE_PHYSICS
-	RigidBody	m_rb;
-#endif
+	float4 HPos : SV_POSITION;	// homogeneous position xyww for sampling cubemap
+	float4 LPos : POSITION;
 };
 
+Texture3D skyboxTexture;
+
+SamplerState samTriLinearSam
+{
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Wrap;
+	AddressV = Wrap;
+};
+
+
+float4 PSMain(PSIn In)
+{
+	return skyboxTexture.Sample(samTriLinearSam, In.LPos);
+}

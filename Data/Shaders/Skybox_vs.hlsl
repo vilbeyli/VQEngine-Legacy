@@ -1,4 +1,3 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -16,39 +15,32 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#pragma once
+// source: http://richardssoftware.net/Home/Post/25
 
-#define xENABLE_PHYSICS
-
-#include "Components/Transform.h"
-#include "Model.h"
-
-#ifdef ENABLE_PHYSICS
-#include "RigidBody.h"
-#endif
-
-class Renderer;
-using ShaderID = int;
-
-class GameObject
+struct VSIn
 {
-public:
-	GameObject();
-	~GameObject();
-	GameObject(const GameObject& obj);
-
-	GameObject& operator=(const GameObject& obj);
-
-	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
-	void RenderZ(Renderer* pRenderer) const;
-
-public:
-	Transform	m_transform;
-	Model		m_model;
-
-
-#ifdef ENABLE_PHYSICS
-	RigidBody	m_rb;
-#endif
+	float3 position : POSITION;
+	float3 normal	: NORMAL;
+	float3 tangent	: TANGENT0;
+	float2 texCoord : TEXCOORD0;
 };
 
+struct PSIn
+{
+	float4 HPos : SV_POSITION;	// homogeneous position xyww for sampling cubemap
+	float4 LPos : POSITION;
+};
+
+cbuffer matrices {
+	matrix world;
+	matrix view;
+};
+
+PSIn VSMain(VSIn In)
+{
+	PSIn Out;
+
+	Out.LPos = In.position;
+	Out.HPos = mul(mul(world, view), In.position).xyww;
+	return Out;
+}

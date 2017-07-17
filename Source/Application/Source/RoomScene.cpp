@@ -52,6 +52,7 @@ void RoomScene::Load(Renderer* pRenderer)
 	InitializeLights();
 	InitializeObjectArrays();
 
+	m_skybox = Skybox::s_Presets[SKYBOX_PRESETS::NIGHT_SKY];
 	m_skydome.Initialize(m_pRenderer, "skydomeTex.png", 1000.0f / 2.2f, SHADERS::UNLIT);
 }
 

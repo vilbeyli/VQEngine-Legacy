@@ -357,7 +357,8 @@ void Renderer::LoadShaders()
 	Shader::s_shaders[SHADERS::LINE               ]	= AddShader("Line"             , s_shaderRoot, layout, true);
 	Shader::s_shaders[SHADERS::TBN                ]	= AddShader("TNB"              , s_shaderRoot, layout, true);
 	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"            , s_shaderRoot, layout);
-	
+	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"           , s_shaderRoot, layout);
+
 	m_renderData.errorTexture	= AddTexture("errTexture.png", s_textureRoot).id;
 	m_renderData.exampleTex		= AddTexture("bricks_d.png", s_textureRoot).id;
 	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", s_textureRoot).id;
@@ -563,23 +564,20 @@ RasterizerStateID Renderer::AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillM
 }
 
 // assumes unique shader file names (even in different folders)
+// example params: "bricks_d.png", "Data/Textures/"
 const Texture& Renderer::AddTexture(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
-	// example params: "bricks_d.png", "Data/Textures/"
-	std::string path = fileRoot + texFileName;
-	std::wstring wpath(path.begin(), path.end());
-
 	auto found = std::find_if(m_textures.begin(), m_textures.end(), [texFileName](auto& tex) { return tex.name == texFileName; });
 	if (found != m_textures.end())
 	{
-		//OutputDebugString("found\n\n");
-		//return found->id;
 		return *found;
 	}
 
 	Texture tex;
 	tex.name = texFileName;
 
+	std::string path = fileRoot + texFileName;
+	std::wstring wpath(path.begin(), path.end());
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
 	{
@@ -642,6 +640,44 @@ TextureID Renderer::CreateTexture(D3D11_TEXTURE2D_DESC & textureDesc)
 	tex.id = static_cast<int>(m_textures.size());
 	m_textures.push_back(tex);
 	return m_textures.back().id;
+}
+
+TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFiles)
+{
+	// loads cubemaps faces as textures
+	std::vector<Texture> _cubeMapTextures = [textureFiles, this]() {
+		std::vector<Texture> v;
+		for (int i = 0; i < 6; ++i)	v.push_back(AddTexture(textureFiles[i], s_textureRoot));
+		return v;
+	}();
+	const int h = _cubeMapTextures[0].height;
+	const int w = _cubeMapTextures[0].width;
+	
+
+	D3D11_TEXTURE2D_DESC texDesc;
+	texDesc.Width = w;
+	texDesc.Height = h;
+	texDesc.MipLevels = 1;
+	texDesc.ArraySize = 6;
+	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texDesc.CPUAccessFlags = 0;
+	texDesc.SampleDesc.Count = 1;
+	texDesc.SampleDesc.Quality = 0;
+	texDesc.Usage = D3D11_USAGE_DEFAULT;
+	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	texDesc.CPUAccessFlags = 0;
+	texDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SMViewDesc;
+	SMViewDesc.Format = texDesc.Format;
+	SMViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	SMViewDesc.TextureCube.MipLevels = texDesc.MipLevels;
+	SMViewDesc.TextureCube.MostDetailedMip = 0;
+
+	D3D11_SUBRESOURCE_DATA pData[6];
+	
+
+	return TextureID();
 }
 
 DepthStencilStateID Renderer::AddDepthStencilState()

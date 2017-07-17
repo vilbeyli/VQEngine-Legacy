@@ -20,6 +20,7 @@
 
 #include "GameObject.h"
 #include "Skydome.h"
+#include "Skybox.h"
 #include "Light.h"
 
 class SceneManager;
@@ -51,6 +52,7 @@ private:
 	SceneManager&		m_sceneManager;
 	Renderer*			m_pRenderer;
 	Skydome				m_skydome;
+	Skybox				m_skybox;
 	std::vector<Light>	m_lights;
 
 	struct Room {

@@ -110,6 +110,7 @@ public:
 	const Texture&		AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
 	const Texture&		CreateTexture(int widht, int height);
 	TextureID			CreateTexture(D3D11_TEXTURE2D_DESC& textureDesc);
+	TextureID			CreateTexture3D(const std::vector<std::string>& textureFiles);
 	DepthStencilStateID AddDepthStencilState();	// todo params
 	DepthStencilStateID AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
 	RenderTargetID		AddRenderTarget(ID3D11Texture2D*& surface);

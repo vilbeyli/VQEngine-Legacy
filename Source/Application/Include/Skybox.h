@@ -37,6 +37,7 @@ public:
 	
 	void Render(const XMMATRIX& view, const XMMATRIX& proj) const;
 
+	Skybox& Initialize(Renderer* renderer, const Texture& cubemapTexture, float scale, int shader);
 private:
 	GameObject	skydomeObj;
 	TextureID	skydomeTex;

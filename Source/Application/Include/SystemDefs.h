@@ -20,3 +20,4 @@
 
 // system wide defines go here
 
+#include "Log.h"

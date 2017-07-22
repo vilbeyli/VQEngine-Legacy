@@ -20,7 +20,7 @@
 struct PSIn
 {
 	float4 HPos : SV_POSITION;	// homogeneous position xyww for sampling cubemap
-	float4 LPos : POSITION;
+	float3 LPos : POSITION;
 };
 
 Texture3D skyboxTexture;
@@ -33,7 +33,7 @@ SamplerState samTriLinearSam
 };
 
 
-float4 PSMain(PSIn In)
+float4 PSMain(PSIn In) : SV_TARGET
 {
 	return skyboxTexture.Sample(samTriLinearSam, In.LPos);
 }

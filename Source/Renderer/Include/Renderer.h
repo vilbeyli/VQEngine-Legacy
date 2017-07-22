@@ -17,7 +17,6 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
-#include <windows.h>
 #include "GeometryGenerator.h"
 #include "D3DManager.h"
 #include "Shader.h"

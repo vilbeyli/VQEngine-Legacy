@@ -18,7 +18,6 @@
 
 #include "D3DManager.h"
 
-#include <windows.h>
 #include <string>
 
 #define xFORCE_DEBUG

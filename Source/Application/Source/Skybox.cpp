@@ -42,23 +42,18 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 		
 		const auto offsetIter = s_filePaths.begin() + SKYBOX_PRESETS::NIGHT_SKY;
 		const FilePaths filePaths = FilePaths(offsetIter, offsetIter + 6);
+		
 		Texture skydomeTex = pRenderer->GetTexture(pRenderer->CreateTexture3D(filePaths));
-
-		s_Presets[SKYBOX_PRESETS::NIGHT_SKY] = skybox.Initialize(pRenderer, skydomeTex, 1.0f, SHADERS::UNLIT);
+		s_Presets[SKYBOX_PRESETS::NIGHT_SKY] = skybox.Initialize(pRenderer, skydomeTex, 1.0f, SHADERS::SKYBOX);
 	}
 }
 
-void Skybox::Render(const XMMATRIX& view, const XMMATRIX& proj) const
+void Skybox::Render(const XMMATRIX& viewProj) const
 {
-	pRenderer->SetShader(SHADERS::SKYBOX);
-
-	XMMATRIX world = skydomeObj.m_transform.WorldTransformationMatrix();
-	pRenderer->SetConstant4x4f("world", world);
-	pRenderer->SetConstant4x4f("view", view);
-	pRenderer->SetConstant4x4f("proj", proj);
-	pRenderer->SetConstant1f("isDiffuseMap", 1.0f);
-	pRenderer->SetTexture("gDiffuseMap", skydomeTex);
-	pRenderer->SetConstant3f("diffuse", vec3(1.0f, 1.0f, 1.0f));
+	const XMMATRIX wvp = skydomeObj.m_transform.WorldTransformationMatrix() * viewProj;
+	pRenderer->SetShader(skydomeShader);
+	pRenderer->SetConstant4x4f("worldViewProj", wvp);
+	pRenderer->SetTexture("gSkybox", skydomeTex);
 	pRenderer->SetBufferObj(MESH_TYPE::CUBE);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();

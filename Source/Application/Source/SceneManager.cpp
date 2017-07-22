@@ -49,7 +49,7 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 	m_gammaCorrection	= true;
 	m_debugRender		= true;
 
-	Skybox::InitializePresets(m_pRenderer);
+	//Skybox::InitializePresets(m_pRenderer);
 
 	m_roomScene.Load(m_pRenderer);
 
@@ -136,8 +136,7 @@ void SceneManager::Render() const
 	m_pRenderer->Begin(clearColor, 1.0f);
 	
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
-	//m_skydome.Render(view, proj);	// todo: fix texcoords
-
+	
 	m_pRenderer->SetShader(m_selectedShader);
 	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());

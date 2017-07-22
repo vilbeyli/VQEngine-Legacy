@@ -31,6 +31,7 @@
 #include <cassert>
 
 #define SHADER_HOTSWAP 0
+#define USE_DXTEX
 
 const char* Renderer::s_shaderRoot = "Data/Shaders/";
 const char* Renderer::s_textureRoot = "Data/Textures/";
@@ -339,7 +340,7 @@ void Renderer::GeneratePrimitives()
 
 void Renderer::LoadShaders()
 {
-	OutputDebugString("\n    ------------------------ COMPILING SHADERS ------------------------ \n");
+	Log::Info("\n    ------------------------ COMPILING SHADERS ------------------------ \n");
 
 	// todo: initalize this in Shader:: and in order so that SHADERS::FORWARD_PHONG would get the right shader
 	std::vector<InputLayout> layout = {
@@ -364,7 +365,7 @@ void Renderer::LoadShaders()
 	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", s_textureRoot).id;
 	m_renderData.depthPass.Initialize(this, m_device);
 
-	OutputDebugString("\n    ---------------------- COMPILING SHADERS DONE ---------------------\n");
+	Log::Info("\n    ---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
 
 void Renderer::PollThread()
@@ -374,10 +375,7 @@ void Renderer::PollThread()
 	// might not perform as expected
 	// link: https://www.opengl.org/discussion_boards/showthread.php/185980-recompile-the-shader-on-runtime-like-hot-plug-the-new-compiled-shader
 	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
-
-	char info[129];
-	sprintf_s(info, "Thread here : PollStarted.\n");
-	OutputDebugString(info);
+	Log::Info("Thread here : PollStarted.\n");
 	Sleep(800);
 
 
@@ -392,14 +390,14 @@ void Renderer::PollThread()
 
 	if (dwChangeHandle == INVALID_HANDLE_VALUE)
 	{
-		OutputDebugString("\n ERROR: FindFirstChangeNotification function failed.\n");
+		Log::Error("FindFirstChangeNotification function failed.\n");
 		;// ExitProcess(GetLastError());
 	}
 
 	while (TRUE)
 	{
 		//	Wait for notification.
-		OutputDebugString("\nWaiting for notification...\n");
+		Log::Info("\nWaiting for notification...\n");
 
 		dwWaitStatus = WaitForSingleObject(dwChangeHandle,
 			INFINITE);
@@ -414,7 +412,7 @@ void Renderer::PollThread()
 			OnShaderChange(lpDir);
 			if (FindNextChangeNotification(dwChangeHandle) == FALSE)
 			{
-				OutputDebugString("\n ERROR: FindNextChangeNotification function failed.\n");
+				Log::Error("FindNextChangeNotification function failed.\n");
 				ExitProcess(GetLastError());
 			}
 			break;
@@ -481,7 +479,8 @@ void Renderer::PollShaderFiles()
 void Renderer::InitializeDefaultRasterizerStates()
 {
 	HRESULT hr;
-	char info[129];
+	const std::string err("Unable to create Rrasterizer State: Cull ");
+
 	ID3D11RasterizerState*& cullNone  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_NONE];
 	ID3D11RasterizerState*& cullBack  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_BACK];
 	ID3D11RasterizerState*& cullFront = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_FRONT];
@@ -504,24 +503,21 @@ void Renderer::InitializeDefaultRasterizerStates()
 	hr = m_device->CreateRasterizerState(&rsDesc, &cullBack);
 	if (FAILED(hr))
 	{
-		sprintf_s(info, "Error creating Rasterizer State: Cull Back\n");
-		OutputDebugString(info);
+		Log::Error(err + "Back\n");
 	}
 
 	rsDesc.CullMode = D3D11_CULL_FRONT;
 	hr = m_device->CreateRasterizerState(&rsDesc, &cullFront);
 	if (FAILED(hr))
 	{
-		sprintf_s(info, "Error creating Rasterizer State: Cull Front\n");
-		OutputDebugString(info);
+		Log::Error(err + "Front\n");
 	}
 
 	rsDesc.CullMode = D3D11_CULL_NONE;
 	hr = m_device->CreateRasterizerState(&rsDesc, &cullNone);
 	if (FAILED(hr))
 	{
-		sprintf_s(info, "Error creating Rasterizer State: Cull None\n");
-		OutputDebugString(info);
+		Log::Error(err + "None\n");
 	}
 }
 
@@ -567,7 +563,7 @@ RasterizerStateID Renderer::AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillM
 // example params: "bricks_d.png", "Data/Textures/"
 const Texture& Renderer::AddTexture(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [texFileName](auto& tex) { return tex.name == texFileName; });
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex.name == texFileName; });
 	if (found != m_textures.end())
 	{
 		return *found;
@@ -645,21 +641,30 @@ TextureID Renderer::CreateTexture(D3D11_TEXTURE2D_DESC & textureDesc)
 TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFiles)
 {
 	// loads cubemaps faces as textures
-	std::vector<Texture> _cubeMapTextures = [textureFiles, this]() {
+	std::vector<ID3D11Texture2D*> texs(6, nullptr);
+	std::vector<Texture> _cubeMapTextures = [&textureFiles, this, &texs]() {
 		std::vector<Texture> v;
-		for (int i = 0; i < 6; ++i)	v.push_back(AddTexture(textureFiles[i], s_textureRoot));
+		for (int i = 0; i < 6; ++i)
+		{
+			v.push_back(AddTexture(textureFiles[i], s_textureRoot));
+			texs[i] = v.back().tex2D;
+		}
 		return v;
 	}();
 	const int h = _cubeMapTextures[0].height;
 	const int w = _cubeMapTextures[0].width;
-	
+
+	D3D11_TEXTURE2D_DESC faceDesc;
+	_cubeMapTextures[0].tex2D->GetDesc(&faceDesc);
+
+	constexpr size_t FACE_COUNT = 6;
 
 	D3D11_TEXTURE2D_DESC texDesc;
-	texDesc.Width = w;
-	texDesc.Height = h;
-	texDesc.MipLevels = 1;
-	texDesc.ArraySize = 6;
-	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texDesc.Width = faceDesc.Width;
+	texDesc.Height = faceDesc.Height;
+	texDesc.MipLevels = faceDesc.MipLevels;
+	texDesc.ArraySize = FACE_COUNT;
+	texDesc.Format = faceDesc.Format;
 	texDesc.CPUAccessFlags = 0;
 	texDesc.SampleDesc.Count = 1;
 	texDesc.SampleDesc.Quality = 0;
@@ -668,16 +673,95 @@ TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFiles
 	texDesc.CPUAccessFlags = 0;
 	texDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
 
-	D3D11_SHADER_RESOURCE_VIEW_DESC SMViewDesc;
-	SMViewDesc.Format = texDesc.Format;
-	SMViewDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-	SMViewDesc.TextureCube.MipLevels = texDesc.MipLevels;
-	SMViewDesc.TextureCube.MostDetailedMip = 0;
+	D3D11_SHADER_RESOURCE_VIEW_DESC cubemapDesc;
+	cubemapDesc.Format = texDesc.Format;
+	cubemapDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	cubemapDesc.TextureCube.MipLevels = texDesc.MipLevels;
+	cubemapDesc.TextureCube.MostDetailedMip = 0;
 
-	D3D11_SUBRESOURCE_DATA pData[6];
+	//m_device->CreateTexture2D(&texDesc, texs[0], &cubemapTexture)
+
+	D3D11_SUBRESOURCE_DATA pData[FACE_COUNT];
+	for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < FACE_COUNT; cubeMapFaceIndex++)
+	{
+#ifdef USE_DXTEX
+		const std::string path = s_textureRoot + textureFiles[cubeMapFaceIndex];
+		const std::wstring wpath(path.begin(), path.end());
+		std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
+		if (!SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
+		{
+			Log::Error(ERROR_LOG::CANT_OPEN_FILE, textureFiles[cubeMapFaceIndex]);
+			continue;
+		}
+
+		//Pointer to the pixel data
+		pData[cubeMapFaceIndex].pSysMem = img->GetImages()->pixels;
+		//pData[cubeMapFaceIndex].pSysMem = _cubeMapTextures[cubeMapFaceIndex].tex2D;
+		//Line width in bytes
+		//pData[cubeMapFaceIndex].SysMemPitch = static_cast<UINT>(img->GetPixelsSize() / img->GetMetadata().height);
+		pData[cubeMapFaceIndex].SysMemPitch = static_cast<UINT>(img->GetImages()->rowPitch);
+		// This is only used for 3d textures.
+		pData[cubeMapFaceIndex].SysMemSlicePitch = faceDesc.Width *  faceDesc.Height * 4;
+#else
+		Texture cubemapFaceTex = AddTexture(textureFiles[cubeMapFaceIndex]);
+
+		ID3D11Resource* resource = nullptr;
+		cubemapFaceTex.srv->GetResource(&resource);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		cubemapFaceTex.srv->GetDesc(&srvDesc);
+
+		//Pointer to the pixel data
+		pData[cubeMapFaceIndex].pSysMem = resource;
+		//Line width in bytes
+		pData[cubeMapFaceIndex].SysMemPitch = cubemapFaceTex.width * 4;
+		
+		//pData[cubeMapFaceIndex].SysMemPitch = 
+		// This is only used for 3d textures.
+		pData[cubeMapFaceIndex].SysMemSlicePitch = cubemapFaceTex.width * cubemapFaceTex.height * 4;
+#endif
+	}
+
+
+	HRESULT hr;
+	ID3D11Texture2D* cubemapTexture;
+
+
+	//D3D11_UNORDERED_ACCESS_VIEW_DESC uaDesc;
+	//uaDesc.Format = texDesc.Format;
+	//uaDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+	//uaDesc.Texture2DArray.MipSlice = 0;
+	//uaDesc.Texture2DArray.FirstArraySlice = 0;
+	//uaDesc.Texture2DArray.ArraySize = 6;
+	//
+	//ID3D11UnorderedAccessView*  uav;
+	//m_device->CreateUnorderedAccessView(cubemapTexture, &uaDesc, &uav);
+
+	return -1;
+	hr = m_device->CreateTexture2D(&texDesc, &pData[0], &cubemapTexture);
+	if (hr != S_OK)
+	{
+		Log::Error(std::string("Cannot create cubemap texture: Todo:cubemaptexname"));
+	}
+
+	ID3D11ShaderResourceView* cubeMapSRV;
+	hr = m_device->CreateShaderResourceView(cubemapTexture, &cubemapDesc, &cubeMapSRV);
+
+	Texture cubemapOut;
+	cubemapOut.srv = cubeMapSRV;
+	cubemapOut.name = "todo:Skybox file name";
+	cubemapOut.tex2D = cubemapTexture;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC cmdesc;
+	cubeMapSRV->GetDesc(&cmdesc);
+	//cubemapOut.height = cmdesc.Height;
+	//cubemapOut.width = cmdesc.Width;
+	cubemapOut.id = m_textures.size();
+	m_textures.push_back(cubemapOut);
 	
 
-	return TextureID();
+
+	return cubemapOut.id;
 }
 
 DepthStencilStateID Renderer::AddDepthStencilState()

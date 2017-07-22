@@ -28,7 +28,7 @@ struct VSIn
 struct PSIn
 {
 	float4 HPos : SV_POSITION;	// homogeneous position xyww for sampling cubemap
-	float4 LPos : POSITION;
+	float3 LPos : POSITION;
 };
 
 cbuffer matrices {

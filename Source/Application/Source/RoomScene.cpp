@@ -52,7 +52,7 @@ void RoomScene::Load(Renderer* pRenderer)
 	InitializeLights();
 	InitializeObjectArrays();
 
-	m_skybox = Skybox::s_Presets[SKYBOX_PRESETS::NIGHT_SKY];
+	//m_skybox = Skybox::s_Presets[SKYBOX_PRESETS::NIGHT_SKY];
 	m_skydome.Initialize(m_pRenderer, "skydomeTex.png", 1000.0f / 2.2f, SHADERS::UNLIT);
 }
 
@@ -63,6 +63,7 @@ void RoomScene::Update(float dt)
 
 void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
+	//m_skybox.Render(viewProj);
 	m_room.Render(m_pRenderer, viewProj);
 	if (m_sceneManager.GetSelectedShader() == SHADERS::NORMAL) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
 	RenderCentralObjects(viewProj);

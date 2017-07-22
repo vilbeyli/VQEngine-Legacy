@@ -21,6 +21,7 @@
 #include "D3DManager.h"
 #include "Shader.h"
 #include "Texture.h"
+#include "Settings.h"
 
 #include "Mesh.h"
 #include "GameObject.h"
@@ -96,12 +97,12 @@ public:
 	Renderer();
 	~Renderer();
 
-	bool		Initialize(int width, int height, HWND hwnd);
+	bool Initialize(HWND hwnd, const Settings::Window& settings);
 	void		Exit();
-	HWND		GetWindow() const;
-	float		AspectRatio() const;
-	unsigned	WindowHeight() const;
-	unsigned	WindowWidth() const;
+	inline HWND		GetWindow()		const { return m_hWnd; };
+	inline float	AspectRatio()	const { return m_Direct3D->AspectRatio(); };
+	inline unsigned	WindowHeight()	const { return m_Direct3D->WindowHeight(); };
+	inline unsigned	WindowWidth()	const { return m_Direct3D->WindowWidth(); };
 
 	// resource interface
 	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
@@ -163,9 +164,6 @@ private:
 	void InitializeDefaultRasterizerStates();
 	//=======================================================================================================================================================
 public:
-	static const bool FULL_SCREEN  = false;
-	static const bool VSYNC = true;	
-
 	static const char* s_shaderRoot;
 	static const char* s_textureRoot;
 

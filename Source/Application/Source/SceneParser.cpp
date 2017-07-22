@@ -44,7 +44,7 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::W
 {
 	if (line.empty())
 	{
-		OutputDebugString("Empty Command.");
+		Log::Error("Empty Command in ParseSettings().");
 		return;
 	}
 
@@ -62,7 +62,7 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::W
 	}
 	else
 	{
-		OutputDebugString("Error Opening Scene File...");
+		Log::Error("Setting Parser: Invalid command, expected ""screen""");
 		return;
 	}
 }
@@ -87,7 +87,7 @@ void SceneParser::ReadScene(shared_ptr<SceneManager> scene_man)
 	}
 	else
 	{
-		OutputDebugString( "Parser Error : Unknown setting command\n");
+		Log::Error( "Parser: Unknown setting command\n");
 	}
 
 	sceneFile.close();
@@ -132,11 +132,11 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, shared_ptr
 		//mSceneSettings.light.color = Color::white;				// todo read color
 		//mSceneSettings.light.type = Light::LightType::POINT;	// todo
 		//mSceneSettings.light
-		OutputDebugString("TODO: parse light info to build scene from file\n");
+		Log::Error("TODO: parse light info to build scene from file\n");
 	}
 	
 	else
 	{
-		OutputDebugString("Parser Error : Unknown command\n");
+		Log::Error("Parser: Unknown command\n");
 	}
 }

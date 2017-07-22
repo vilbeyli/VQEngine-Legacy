@@ -41,13 +41,13 @@ Engine::Engine()
 
 Engine::~Engine(){}
 
-bool Engine::Initialize(HWND hWnd, int scr_width, int scr_height)
+bool Engine::Initialize(HWND hwnd, const Settings::Window& windowSettings)
 {
 	if (!m_renderer || !m_input || !m_sceneManager || !m_timer) 
 		return false;
 
 	m_input->Init();
-	if(!m_renderer->Initialize(scr_width, scr_height, hWnd)) 
+	if(!m_renderer->Initialize(hwnd, windowSettings))
 		return false;
 
 	m_sceneManager->Initialize(m_renderer.get(), nullptr);

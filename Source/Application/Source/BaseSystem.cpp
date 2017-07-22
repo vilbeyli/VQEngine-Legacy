@@ -20,6 +20,7 @@
 #include "Engine.h"
 #include "Input.h"
 #include "SceneParser.h"
+#include "Log.h"
 
 #include <strsafe.h>
 #include <vector>
@@ -28,6 +29,8 @@
 #ifdef _DEBUG
 #include <cassert>
 #endif
+
+Settings::Window BaseSystem::s_windowSettings;
 
 BaseSystem::BaseSystem()
 {
@@ -42,17 +45,24 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
-	m_settings = s_SceneParser.ReadSettings();
+	s_windowSettings = s_SceneParser.ReadSettings();
 
 	int width, height;
 	InitWindow(width, height);
 
-	// TODO: think error handling during initialization | engine/renderer separate init?
-	if(!ENGINE->Initialize(m_hwnd, width, height))
+	if (!ENGINE->Initialize(m_hwnd, s_windowSettings))
+	{
+		Log::Error("cannot initialize engine. Exiting..");
 		return false;
+	}
 
-	if (!ENGINE->Load())	return false;
+	if (!ENGINE->Load())
+	{
+		Log::Error("cannot load engine. Exiting..");
+		return false;
+	}
 
+	Log::Info("Engine initialization and asset loading successful.");
 	return true;
 }	
 
@@ -179,7 +189,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 			long xPosRelative = raw->data.mouse.lLastX;
 			long yPosRelative = raw->data.mouse.lLastY;
 			ENGINE->m_input->UpdateMousePos(xPosRelative, yPosRelative);
-			SetCursorPos(m_settings.width/2, m_settings.height/2);
+			SetCursorPos(s_windowSettings.width/2, s_windowSettings.height/2);
 			
 #ifdef LOG
 			char szTempOutput[1024];
@@ -243,7 +253,7 @@ void BaseSystem::InitWindow(int& width, int& height)
 	height	= GetSystemMetrics(SM_CYSCREEN);
 
 	// set screen settings
-	if (m_settings.fullscreen)
+	if (s_windowSettings.fullscreen)
 	{
 		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
@@ -258,8 +268,8 @@ void BaseSystem::InitWindow(int& width, int& height)
 	}
 	else
 	{
-		width  = m_settings.width;
-		height = m_settings.height;
+		width  = s_windowSettings.width;
+		height = s_windowSettings.height;
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
 		posY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
@@ -305,7 +315,7 @@ void BaseSystem::ShutdownWindows()
 {
 	ShowCursor(true);
 
-	if (m_settings.fullscreen)
+	if (s_windowSettings.fullscreen)
 	{
 		ChangeDisplaySettings(NULL, 0);
 	}

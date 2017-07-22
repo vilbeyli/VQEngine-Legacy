@@ -190,33 +190,14 @@ void Renderer::Exit()
 	return;
 }
 
-HWND Renderer::GetWindow() const
-{
-	return m_hWnd;
-}
-
-float Renderer::AspectRatio() const
-{
-	return m_Direct3D->AspectRatio();
-}
-
-unsigned Renderer::WindowHeight() const
-{
-	return m_Direct3D->WindowHeight();
-}
-
-unsigned Renderer::WindowWidth() const
-{
-	return m_Direct3D->WindowWidth();
-}
-
 const Shader* Renderer::GetShader(ShaderID shader_id) const
 {
+	assert(shader_id >= 0 && m_shaders.size() > shader_id);
 	return m_shaders[shader_id];
 }
 
 
-bool Renderer::Initialize(int width, int height, HWND hwnd)
+bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 {
 	m_hWnd = hwnd;
 
@@ -227,7 +208,8 @@ bool Renderer::Initialize(int width, int height, HWND hwnd)
 		return false;
 	}
 
-	bool result = m_Direct3D->Initialize(width, height, Renderer::VSYNC, m_hWnd, FULL_SCREEN);
+	bool result = m_Direct3D->Initialize(settings.width, settings.height, settings.vsync == 1,
+										m_hWnd, settings.fullscreen == 1);
 	if (!result)
 	{
 		MessageBox(m_hWnd, "Could not initialize Direct3D", "Error", MB_OK);
@@ -756,7 +738,7 @@ TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFiles
 	cubeMapSRV->GetDesc(&cmdesc);
 	//cubemapOut.height = cmdesc.Height;
 	//cubemapOut.width = cmdesc.Width;
-	cubemapOut.id = m_textures.size();
+	cubemapOut.id = static_cast<int>(m_textures.size());
 	m_textures.push_back(cubemapOut);
 	
 
@@ -1378,7 +1360,7 @@ void Renderer::Apply()
 	}
 	else
 	{
-		OutputDebugString(" Error: Shader null...\n");
+		Log::Error("Renderer::Apply() : Shader null...\n");
 	}
 }
 

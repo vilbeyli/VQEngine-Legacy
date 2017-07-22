@@ -27,6 +27,7 @@
 class BaseSystem
 {
 public:
+	static Settings::Window	s_windowSettings;
 	BaseSystem();
 	BaseSystem(const BaseSystem&);
 	~BaseSystem();
@@ -46,7 +47,6 @@ private:
 	LPCSTR				m_appName;
 	HINSTANCE			m_hInstance;
 	HWND				m_hwnd;
-	Settings::Window	m_settings;
 };
 
 // The WndProc function and ApplicationHandle pointer are also included in this class file so we can redirect 

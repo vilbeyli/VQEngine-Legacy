@@ -73,12 +73,18 @@ struct ConstantBufferLayout
 };
 
 
+#define OPTIMIZED
 // CPU side constant buffer
 struct CPUConstant
 {
 	std::string name;
 	size_t		size;
 	void*		data;
+
+#ifdef OPTIMIZED
+	inline bool operator==(const CPUConstant& c) const { return (((this->data == c.data) && this->size == c.size) && this->name == c.name); }
+	inline bool operator!=(const CPUConstant& c) const { return ((this->data != c.data) || this->size != c.size || this->name != c.name); }
+#endif
 };
 
 // GPU side constant buffer

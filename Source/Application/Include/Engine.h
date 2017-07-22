@@ -20,6 +20,7 @@
 
 #include <windows.h>
 #include "PerfTimer.h"
+#include "Settings.h"
 
 #include <memory>
 using std::shared_ptr;
@@ -42,7 +43,7 @@ class Engine
 public:
 	~Engine();
 
-	bool Initialize(HWND hWnd, int scr_width, int scr_height);
+	bool Initialize(HWND hwnd, const Settings::Window& windowSettings);
 	bool Load();
 	bool Run();
 

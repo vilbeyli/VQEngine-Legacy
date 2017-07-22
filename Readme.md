@@ -1,4 +1,4 @@
-# DX11Renderer - VDemo
+# DX11Renderer - VDemo | DirectX11 & C++11 Real-Time Renderer
 
 This project started as the DirectX 11 Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc) at [DigiPen Institute of Technology](https://www.digipen.edu/).
 Now, this repo serves as a DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 

@@ -1,7 +1,7 @@
 # DX11Renderer - VDemo
 
-This project started as the Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc) at [DigiPen Institute of Technology](https://www.digipen.edu/).
-Now, this repo serves as a DX11 framework for stuyding and practicing various rendering techniques and real-time algorithms. 
+This project started as the DirectX 11 Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc) at [DigiPen Institute of Technology](https://www.digipen.edu/).
+Now, this repo serves as a DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
 ![](Screenshots/shadows.PNG)
 
@@ -32,7 +32,7 @@ See [all Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones).
  - Improved Shadow Map
 
 
-## Compiling Instructions & Dependencies (to be automated)
+## Compiling Instructions & Dependencies (to be automated - in progress)
 
 Navigate to `Source\3rdParty\DirectXTex` and compile the solution `DirectXTex_Desktop_2015.sln` with the *platform settings that match that of this project's*. 
 This will generate the lib file that is required to compile the DX11Renderer project.

@@ -26,6 +26,8 @@
 #include "Mesh.h"
 #include "GameObject.h"
 
+#include "RenderCommands.h"
+
 #include <memory>
 
 // forward declarations
@@ -49,13 +51,11 @@ using RasterizerStateID   = int;
 using DepthStencilStateID = int;
 using RenderTargetID	  = int;
 using DepthStencilID	  = int;
-						  
 
 using RasterizerState   = ID3D11RasterizerState;
 using DepthStencilState = ID3D11DepthStencilState;
 using RenderTarget		= ID3D11RenderTargetView;
 using DepthStencil		= ID3D11DepthStencilView;
-
 
 enum class DEFAULT_RS_STATE
 {
@@ -92,6 +92,7 @@ struct RenderData
 class Renderer
 {
 	friend class Engine;
+	friend struct TextureSetCommand;
 
 public:
 	Renderer();
@@ -174,8 +175,6 @@ public:
 	ID3D11DeviceContext*			m_deviceContext;
 
 private:
-	struct TextureSetCommand		{ TextureID texID; ShaderTexture shdTex; };
-
 	D3DManager*						m_Direct3D;
 	HWND							m_hWnd;
 

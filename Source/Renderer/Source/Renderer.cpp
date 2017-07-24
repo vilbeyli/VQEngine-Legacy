@@ -892,6 +892,8 @@ void Renderer::SetConstant(const char * cName, const void * data)
 
 	Shader* shader = m_shaders[m_stateObjects._activeShader];
 	bool found = false;
+
+	// todo: compare with unordered_map lookup
 	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
 	{
 		std::vector<CPUConstant>& cVector = shader->m_constants[i];
@@ -1058,7 +1060,7 @@ void Renderer::Apply()
 	{
 		m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
 		m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
-		/*if (shader->m_geoShader)*/	 m_deviceContext->GSSetShader(shader->m_geoShader    , nullptr, 0);
+		if (shader->m_geoShader)	 m_deviceContext->GSSetShader(shader->m_geoShader    , nullptr, 0);
 		if (shader->m_hullShader)	 m_deviceContext->HSSetShader(shader->m_hullShader   , nullptr, 0);
 		if (shader->m_domainShader)	 m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
 		if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
@@ -1066,6 +1068,17 @@ void Renderer::Apply()
 
 		// CONSTANT BUFFERRS & SHADER RESOURCES
 		// ----------------------------------------
+		static void(__cdecl ID3D11DeviceContext:: *SetShaderConstants[6])
+			(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) =
+		{
+			&ID3D11DeviceContext::VSSetConstantBuffers,
+			&ID3D11DeviceContext::GSSetConstantBuffers,
+			&ID3D11DeviceContext::DSSetConstantBuffers,
+			&ID3D11DeviceContext::HSSetConstantBuffers,
+			&ID3D11DeviceContext::CSSetConstantBuffers,
+			&ID3D11DeviceContext::PSSetConstantBuffers
+		};
+
 		for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
 		{
 			ConstantBuffer& CB = shader->m_cBuffers[i];
@@ -1083,51 +1096,12 @@ void Renderer::Apply()
 					memcpy(bufferPos, c.data, c.size);
 					bufferPos += c.size;
 				}
-
-				// rethink packing;
-				//size_t prevSize = 0;
-				//for (int i = 0; i < cpuConsts.size(); ++i)
-				//{
-				//	CPUConstant& c = cpuConsts[i];
-				//	memcpy(bufferPos, c.data, c.size);
-				//	bufferPos += c.size;
-
-				//	if (i > 0)
-				//	{
-				//		if ((prevSize + c.size) % 16);
-				//	}
-
-				//	prevSize = c.size;
-				//}
-
 				m_deviceContext->Unmap(data, 0);
 
 				// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader, see it)
-				switch (CB.shdType)
-				{
-				case ShaderType::VS:
-					m_deviceContext->VSSetConstantBuffers(CB.bufferSlot, 1, &data);
-					break;
-				case ShaderType::PS:
-					m_deviceContext->PSSetConstantBuffers(CB.bufferSlot, 1, &data);
-					break;
-				case ShaderType::GS:
-					m_deviceContext->GSSetConstantBuffers(CB.bufferSlot, 1, &data);
-					break;
-				case ShaderType::DS:
-					m_deviceContext->DSSetConstantBuffers(CB.bufferSlot, 1, &data);
-					break;
-				case ShaderType::HS:
-					m_deviceContext->HSSetConstantBuffers(CB.bufferSlot, 1, &data);
-					break;
-				case ShaderType::CS:
-					m_deviceContext->CSSetConstantBuffers(CB.bufferSlot, 1, &data);
-					break;
-				default:
-					OutputDebugString("ERROR: Renderer::Apply() - UNKOWN Shader Type\n");
-					break;
-				}
-
+				
+				// call XSSetConstantBuffers() from array using ShaderType enum
+				(m_deviceContext->*SetShaderConstants[CB.shdType])(CB.bufferSlot, 1, &data);	
 				CB.dirty = false;
 			}
 		}
@@ -1136,31 +1110,7 @@ void Renderer::Apply()
 		while (m_texSetCommands.size() > 0)
 		{
 			TextureSetCommand& cmd = m_texSetCommands.front();
-			switch (cmd.shdTex.shdType)
-			{
-			case ShaderType::VS:
-				m_deviceContext->VSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-				break;
-			case ShaderType::GS:
-				m_deviceContext->GSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-				break;
-			case ShaderType::DS:
-				m_deviceContext->DSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-				break;
-			case ShaderType::HS:
-				m_deviceContext->HSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-				break;
-			case ShaderType::CS:
-				m_deviceContext->CSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-				break;
-			case ShaderType::PS:
-				m_deviceContext->PSSetShaderResources(cmd.shdTex.bufferSlot, 1, &m_textures[cmd.texID].srv);
-				break;
-			default:
-				break;
-			}
-			
-
+			cmd.SetResource(this);
 			m_texSetCommands.pop();
 		}
 	}

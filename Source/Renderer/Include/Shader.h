@@ -52,11 +52,11 @@ struct InputLayout
 enum ShaderType
 {
 	VS = 0,
-	PS,
 	GS,
 	DS,
 	HS,
 	CS,
+	PS,
 
 	COUNT
 };

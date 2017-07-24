@@ -142,6 +142,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\RenderCommands.cpp" />
     <ClCompile Include="Source\Skydome.cpp" />
     <ClCompile Include="Source\Light.cpp" />
     <ClCompile Include="Source\Model.cpp" />
@@ -166,6 +167,7 @@
     <ClInclude Include="Include\Shader.h" />
     <ClInclude Include="Include\Texture.h" />
     <ClInclude Include="Include\Skydome.h" />
+    <ClInclude Include="Include\RenderCommands.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

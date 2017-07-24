@@ -134,12 +134,11 @@ public:
 	void UnbindRenderTarget();
 	void UnbindDepthStencil();
 
-
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
-	void SetConstant3f(const char* cName, const vec3& float3);
-	void SetConstant1f(const char* cName, const float data);
-	void SetConstant1i(const char* cName, const int data);
-	void SetConstantStruct(const char * cName, void* data);
+	inline void SetConstant3f(const char* cName, const vec3& float3) { SetConstant(cName, static_cast<const void*>(&float3.x())); }
+	inline void SetConstant1f(const char* cName, const float& data)  { SetConstant(cName, static_cast<const void*>(&data)); }
+	inline void SetConstant1i(const char* cName, const int& data)    { SetConstant(cName, static_cast<const void*>(&data)); }
+	inline void SetConstantStruct(const char * cName, void* data)    { SetConstant(cName, data); }
 
 	// draw functions
 	void DrawIndexed(TOPOLOGY topology = TOPOLOGY::TRIANGLE_LIST);
@@ -154,14 +153,17 @@ public:
 	void Apply();
 	
 private:
+	// multithread shader hostwap
 	void PollShaderFiles();
-
-	void GeneratePrimitives();
-	void LoadShaders();
 	void PollThread();
 	void OnShaderChange(LPTSTR dir);
 
+	// init / load
+	void GeneratePrimitives();
+	void LoadShaders();
 	void InitializeDefaultRasterizerStates();
+
+	void SetConstant(const char* cName, const void* data);
 	//=======================================================================================================================================================
 public:
 	static const char* s_shaderRoot;

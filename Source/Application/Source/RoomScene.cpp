@@ -434,7 +434,6 @@ void RoomScene::RenderLights(const XMMATRIX& viewProj) const
 		const XMMATRIX worldViewProj = world  * viewProj;
 		const vec3 color = light._model.m_material.color.Value();
 		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
-		m_pRenderer->SetConstant4x4f("world", world);
 		m_pRenderer->SetConstant3f("diffuse", color);
 		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
 		m_pRenderer->Apply();

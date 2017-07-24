@@ -646,9 +646,9 @@ TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFileN
 	// initialize texture array of 6 textures for cubemap
 	TexMetadata meta = faceImages[0].GetMetadata();
 	D3D11_TEXTURE2D_DESC texDesc;
-	texDesc.Width     = meta.width;
-	texDesc.Height    = meta.height;
-	texDesc.MipLevels = meta.mipLevels;
+	texDesc.Width     = static_cast<UINT>(meta.width);
+	texDesc.Height    = static_cast<UINT>(meta.height);
+	texDesc.MipLevels = static_cast<UINT>(meta.mipLevels);
 	texDesc.ArraySize = FACE_COUNT;
 	texDesc.Format    = meta.format;
 	texDesc.CPUAccessFlags = 0;
@@ -681,12 +681,10 @@ TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFileN
 	cubemapOut.srv = cubeMapSRV;
 	cubemapOut.name = "todo:Skybox file name";
 	cubemapOut.tex2D = cubemapTexture;
-	cubemapOut.height = faceImages[0].GetMetadata().height;
-	cubemapOut.width = faceImages[0].GetMetadata().width;
+	cubemapOut.height = static_cast<unsigned>(faceImages[0].GetMetadata().height);
+	cubemapOut.width  = static_cast<unsigned>(faceImages[0].GetMetadata().width);
 	cubemapOut.id = static_cast<int>(m_textures.size());
 	m_textures.push_back(cubemapOut);
-	
-
 
 	return cubemapOut.id;
 }
@@ -874,6 +872,14 @@ void Renderer::SetCamera(Camera* cam)
 
 void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 {
+	// maybe read from SIMD registers?
+	XMFLOAT4X4 m;	XMStoreFloat4x4(&m, matrix);
+	float* data = &m.m[0][0];
+	SetConstant(cName, data);
+}
+
+void Renderer::SetConstant(const char * cName, const void * data)
+{
 	// Here, we write to the CPU version of the constant buffer -- if the contents are updated 
 	// ofc, otherwise we don't write -- and set the dirty flag of the GPU CBuffer counterpart.
 	// When all the constants are set on the CPU side, right before the draw call,
@@ -884,140 +890,6 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 	// Read more here: https://developer.nvidia.com/sites/default/files/akamai/gamedev/files/gdc12/Efficient_Buffer_Management_McDonald.pdf
 	//      and  here: https://developer.nvidia.com/content/constant-buffers-without-constant-pain-0
 
-	// prepare data to be copied
-	XMFLOAT4X4 m;
-	XMStoreFloat4x4(&m, matrix);
-	float* data = &m.m[0][0];
-
-	// find data in CPUConstantBuffer array of shader
-	Shader* shader = m_shaders[m_stateObjects._activeShader];
-	bool found = false;
-	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)
-	{
-		std::vector<CPUConstant>& cVector = shader->m_constants[i];
-		for (CPUConstant& c : cVector)
-		{
-			if (strcmp(cName, c.name.c_str()) == 0)
-			{
-				found = true;
-				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
-				{
-					memcpy(c.data, data, c.size);
-					shader->m_cBuffers[i].dirty = true;
-					break;
-				}
-			}
-		}
-	}
-
-	if (!found)
-	{
-		std::string err("Error: Constant not found: "); err += cName; err += "\n";
-		OutputDebugString(err.c_str());
-	}
-}
-
-// TODO: this is the same as 4x4. rethink set constant function
-void Renderer::SetConstant3f(const char * cName, const vec3 & float3)
-{
-	const float* data = &float3.x();
-	// find data in CPUConstantBuffer array of shader
-	Shader* shader = m_shaders[m_stateObjects._activeShader];
-	bool found = false;
-	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
-	{
-		std::vector<CPUConstant>& cVector = shader->m_constants[i];
-		for (CPUConstant& c : cVector)					// for each constant in a cbuffer
-		{
-			if (strcmp(cName, c.name.c_str()) == 0)		// if name matches
-			{
-				found = true;
-				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
-				{
-					memcpy(c.data, data, c.size);
-					shader->m_cBuffers[i].dirty = true;
-					//break;	// ensures write on first occurance
-				}
-			}
-		}
-	}
-
-	if (!found)
-	{
-		char err[256];
-		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
-		OutputDebugString(err);
-	}
-}
-
-void Renderer::SetConstant1f(const char* cName, const float f)
-{
-	const float* data = &f;
-	// find data in CPUConstantBuffer array of shader
-	Shader* shader = m_shaders[m_stateObjects._activeShader];
-	bool found = false;
-	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
-	{
-		std::vector<CPUConstant>& cVector = shader->m_constants[i];
-		for (CPUConstant& c : cVector)					// for each constant in a cbuffer
-		{
-			if (strcmp(cName, c.name.c_str()) == 0)		// if name matches
-			{
-				found = true;
-				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
-				{
-					memcpy(c.data, data, c.size);
-					shader->m_cBuffers[i].dirty = true;
-					//break;	// ensures write on first occurance
-				}
-			}
-		}
-	}
-
-	if (!found)
-	{
-		char err[256];
-		sprintf_s(err, "Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
-		OutputDebugString(err);
-	}
-}
-
-void Renderer::SetConstant1i(const char* cName, const int i)
-{
-	const int* data = &i;
-	// find data in CPUConstantBuffer array of shader
-	Shader* shader = m_shaders[m_stateObjects._activeShader];
-	bool found = false;
-	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
-	{
-		std::vector<CPUConstant>& cVector = shader->m_constants[i];
-		for (CPUConstant& c : cVector)					// for each constant in a cbuffer
-		{
-			if (strcmp(cName, c.name.c_str()) == 0)		// if name matches
-			{
-				found = true;
-				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
-				{
-					memcpy(c.data, data, c.size);
-					shader->m_cBuffers[i].dirty = true;
-					//break;	// ensures write on first occurance
-				}
-			}
-		}
-	}
-
-	if (!found)
-	{
-		char err[256];
-		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
-		OutputDebugString(err);
-	}
-}
-
-// TODO: this is the same as 4x4. rethink set constant function
-void Renderer::SetConstantStruct(const char * cName, void* data)
-{
-	// find data in CPUConstantBuffer array of shader
 	Shader* shader = m_shaders[m_stateObjects._activeShader];
 	bool found = false;
 	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer

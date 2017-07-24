@@ -78,7 +78,7 @@ void SceneParser::ReadScene(shared_ptr<SceneManager> scene_man)
 		std::string	line;
 		while (getline(sceneFile, line))
 		{
-			if (line[0] == '/' || line[0] == '#')					// skip comments
+			if (line[0] == '/' || line[0] == '#' || line[0] == '\0')	// skip comments
 				continue;
 
 			std::vector<std::string> command = split(line, ' ');	// ignore whitespace

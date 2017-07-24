@@ -27,20 +27,18 @@ struct VSIn
 
 struct PSIn
 {
-	float4 HPos : SV_POSITION;	// homogeneous position xyww for sampling cubemap
+	float4 HPos : SV_POSITION;
 	float3 LPos : POSITION;
 };
 
 cbuffer matrices {
-	matrix world;
-	matrix view;
+	matrix worldViewProj;
 };
 
 PSIn VSMain(VSIn In)
 {
 	PSIn Out;
-
-	Out.LPos = In.position;
-	Out.HPos = mul(mul(world, view), In.position).xyww;
+	Out.LPos = In.position;	// sample direction
+	Out.HPos = mul(worldViewProj, In.position).xyww;	// z=w makes depth 1 -> drawn at infinte
 	return Out;
 }

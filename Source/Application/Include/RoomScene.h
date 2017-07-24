@@ -72,6 +72,8 @@ private:
 	GameObject quad;
 	GameObject grid;
 	GameObject cylinder;
+	GameObject cube;
+	GameObject sphere;
 };
 
 

@@ -49,7 +49,7 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 	m_gammaCorrection	= true;
 	m_debugRender		= true;
 
-	//Skybox::InitializePresets(m_pRenderer);
+	Skybox::InitializePresets(m_pRenderer);
 
 	m_roomScene.Load(m_pRenderer);
 

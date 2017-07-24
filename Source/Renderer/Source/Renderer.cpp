@@ -31,7 +31,6 @@
 #include <cassert>
 
 #define SHADER_HOTSWAP 0
-#define USE_DXTEX
 
 const char* Renderer::s_shaderRoot = "Data/Shaders/";
 const char* Renderer::s_textureRoot = "Data/Textures/";
@@ -620,33 +619,38 @@ TextureID Renderer::CreateTexture(D3D11_TEXTURE2D_DESC & textureDesc)
 	return m_textures.back().id;
 }
 
-TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFiles)
+TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFileNames)
 {
-	// loads cubemaps faces as textures
-	std::vector<ID3D11Texture2D*> texs(6, nullptr);
-	std::vector<Texture> _cubeMapTextures = [&textureFiles, this, &texs]() {
-		std::vector<Texture> v;
-		for (int i = 0; i < 6; ++i)
-		{
-			v.push_back(AddTexture(textureFiles[i], s_textureRoot));
-			texs[i] = v.back().tex2D;
-		}
-		return v;
-	}();
-	const int h = _cubeMapTextures[0].height;
-	const int w = _cubeMapTextures[0].width;
-
-	D3D11_TEXTURE2D_DESC faceDesc;
-	_cubeMapTextures[0].tex2D->GetDesc(&faceDesc);
-
 	constexpr size_t FACE_COUNT = 6;
 
+	// get subresource data for each texture to initialize the cubemap
+	D3D11_SUBRESOURCE_DATA pData[FACE_COUNT];
+	std::array<DirectX::ScratchImage, FACE_COUNT> faceImages;
+	for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < FACE_COUNT; cubeMapFaceIndex++)
+	{
+		const std::string path = s_textureRoot + textureFileNames[cubeMapFaceIndex];
+		const std::wstring wpath(path.begin(), path.end());
+
+		DirectX::ScratchImage* img = &faceImages[cubeMapFaceIndex];
+		if (!SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
+		{
+			Log::Error(ERROR_LOG::CANT_OPEN_FILE, textureFileNames[cubeMapFaceIndex]);
+			continue;
+		}
+
+		pData[cubeMapFaceIndex].pSysMem          = img->GetPixels();								// Pointer to the pixel data
+		pData[cubeMapFaceIndex].SysMemPitch      = static_cast<UINT>(img->GetImages()->rowPitch);	// Line width in bytes
+		pData[cubeMapFaceIndex].SysMemSlicePitch = static_cast<UINT>(img->GetImages()->slicePitch);	// This is only used for 3d textures
+	}
+
+	// initialize texture array of 6 textures for cubemap
+	TexMetadata meta = faceImages[0].GetMetadata();
 	D3D11_TEXTURE2D_DESC texDesc;
-	texDesc.Width = faceDesc.Width;
-	texDesc.Height = faceDesc.Height;
-	texDesc.MipLevels = faceDesc.MipLevels;
+	texDesc.Width     = meta.width;
+	texDesc.Height    = meta.height;
+	texDesc.MipLevels = meta.mipLevels;
 	texDesc.ArraySize = FACE_COUNT;
-	texDesc.Format = faceDesc.Format;
+	texDesc.Format    = meta.format;
 	texDesc.CPUAccessFlags = 0;
 	texDesc.SampleDesc.Count = 1;
 	texDesc.SampleDesc.Quality = 0;
@@ -654,90 +658,31 @@ TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFiles
 	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	texDesc.CPUAccessFlags = 0;
 	texDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC cubemapDesc;
-	cubemapDesc.Format = texDesc.Format;
-	cubemapDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-	cubemapDesc.TextureCube.MipLevels = texDesc.MipLevels;
-	cubemapDesc.TextureCube.MostDetailedMip = 0;
-
-	//m_device->CreateTexture2D(&texDesc, texs[0], &cubemapTexture)
-
-	D3D11_SUBRESOURCE_DATA pData[FACE_COUNT];
-	for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < FACE_COUNT; cubeMapFaceIndex++)
-	{
-#ifdef USE_DXTEX
-		const std::string path = s_textureRoot + textureFiles[cubeMapFaceIndex];
-		const std::wstring wpath(path.begin(), path.end());
-		std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
-		if (!SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
-		{
-			Log::Error(ERROR_LOG::CANT_OPEN_FILE, textureFiles[cubeMapFaceIndex]);
-			continue;
-		}
-
-		//Pointer to the pixel data
-		pData[cubeMapFaceIndex].pSysMem = img->GetImages()->pixels;
-		//pData[cubeMapFaceIndex].pSysMem = _cubeMapTextures[cubeMapFaceIndex].tex2D;
-		//Line width in bytes
-		//pData[cubeMapFaceIndex].SysMemPitch = static_cast<UINT>(img->GetPixelsSize() / img->GetMetadata().height);
-		pData[cubeMapFaceIndex].SysMemPitch = static_cast<UINT>(img->GetImages()->rowPitch);
-		// This is only used for 3d textures.
-		pData[cubeMapFaceIndex].SysMemSlicePitch = faceDesc.Width *  faceDesc.Height * 4;
-#else
-		Texture cubemapFaceTex = AddTexture(textureFiles[cubeMapFaceIndex]);
-
-		ID3D11Resource* resource = nullptr;
-		cubemapFaceTex.srv->GetResource(&resource);
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		cubemapFaceTex.srv->GetDesc(&srvDesc);
-
-		//Pointer to the pixel data
-		pData[cubeMapFaceIndex].pSysMem = resource;
-		//Line width in bytes
-		pData[cubeMapFaceIndex].SysMemPitch = cubemapFaceTex.width * 4;
-		
-		//pData[cubeMapFaceIndex].SysMemPitch = 
-		// This is only used for 3d textures.
-		pData[cubeMapFaceIndex].SysMemSlicePitch = cubemapFaceTex.width * cubemapFaceTex.height * 4;
-#endif
-	}
-
-
-	HRESULT hr;
+	
+	// init cubemap texture from 6 textures
 	ID3D11Texture2D* cubemapTexture;
-
-
-	//D3D11_UNORDERED_ACCESS_VIEW_DESC uaDesc;
-	//uaDesc.Format = texDesc.Format;
-	//uaDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
-	//uaDesc.Texture2DArray.MipSlice = 0;
-	//uaDesc.Texture2DArray.FirstArraySlice = 0;
-	//uaDesc.Texture2DArray.ArraySize = 6;
-	//
-	//ID3D11UnorderedAccessView*  uav;
-	//m_device->CreateUnorderedAccessView(cubemapTexture, &uaDesc, &uav);
-
-	return -1;
-	hr = m_device->CreateTexture2D(&texDesc, &pData[0], &cubemapTexture);
+	HRESULT hr = m_device->CreateTexture2D(&texDesc, &pData[0], &cubemapTexture);	// access violation error here reading first image data
 	if (hr != S_OK)
 	{
 		Log::Error(std::string("Cannot create cubemap texture: Todo:cubemaptexname"));
 	}
 
+	// create cubemap srv
 	ID3D11ShaderResourceView* cubeMapSRV;
+	D3D11_SHADER_RESOURCE_VIEW_DESC cubemapDesc;
+	cubemapDesc.Format = texDesc.Format;
+	cubemapDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+	cubemapDesc.TextureCube.MipLevels = texDesc.MipLevels;
+	cubemapDesc.TextureCube.MostDetailedMip = 0;
 	hr = m_device->CreateShaderResourceView(cubemapTexture, &cubemapDesc, &cubeMapSRV);
-
+	
+	// return param
 	Texture cubemapOut;
 	cubemapOut.srv = cubeMapSRV;
 	cubemapOut.name = "todo:Skybox file name";
 	cubemapOut.tex2D = cubemapTexture;
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC cmdesc;
-	cubeMapSRV->GetDesc(&cmdesc);
-	//cubemapOut.height = cmdesc.Height;
-	//cubemapOut.width = cmdesc.Width;
+	cubemapOut.height = faceImages[0].GetMetadata().height;
+	cubemapOut.width = faceImages[0].GetMetadata().width;
 	cubemapOut.id = static_cast<int>(m_textures.size());
 	m_textures.push_back(cubemapOut);
 	
@@ -965,13 +910,11 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 		}
 	}
 
-#ifdef DEBUG_LOG
 	if (!found)
 	{
 		std::string err("Error: Constant not found: "); err += cName; err += "\n";
 		OutputDebugString(err.c_str());
 	}
-#endif
 }
 
 // TODO: this is the same as 4x4. rethink set constant function
@@ -998,14 +941,13 @@ void Renderer::SetConstant3f(const char * cName, const vec3 & float3)
 			}
 		}
 	}
-#ifdef DEBUG_LOG
+
 	if (!found)
 	{
 		char err[256];
 		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
-#endif
 }
 
 void Renderer::SetConstant1f(const char* cName, const float f)
@@ -1032,14 +974,12 @@ void Renderer::SetConstant1f(const char* cName, const float f)
 		}
 	}
 
-#ifdef DEBUG_LOG
 	if (!found)
 	{
 		char err[256];
-		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
+		sprintf_s(err, "Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
-#endif
 }
 
 void Renderer::SetConstant1i(const char* cName, const int i)
@@ -1066,14 +1006,12 @@ void Renderer::SetConstant1i(const char* cName, const int i)
 		}
 	}
 
-#ifdef DEBUG_LOG
 	if (!found)
 	{
 		char err[256];
 		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
-#endif
 }
 
 // TODO: this is the same as 4x4. rethink set constant function
@@ -1100,14 +1038,12 @@ void Renderer::SetConstantStruct(const char * cName, void* data)
 		}
 	}
 
-#ifdef DEBUG_LOG
 	if (!found)
 	{
 		char err[256];
 		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
-#endif
 }
 
 void Renderer::SetTexture(const char * texName, TextureID tex)
@@ -1115,9 +1051,9 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 	Shader* shader = m_shaders[m_stateObjects._activeShader];
 	bool found = false;
 
+	// linear name lookup
 	for (size_t i = 0; i < shader->m_textures.size(); ++i)
 	{
-		// texture found
 		if (strcmp(texName, shader->m_textures[i].name.c_str()) == 0)
 		{
 			found = true;
@@ -1128,14 +1064,12 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 		}
 	}
 
-#ifdef DEBUG_LOG
 	if (!found)
 	{
 		char err[256];
-		sprintf_s(err, "Error: Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_stateObjects._activeShader, shader->Name().c_str());
-		OutputDebugString(err);
+		sprintf_s(err, "Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_stateObjects._activeShader, shader->Name().c_str());
+		Log::Error(err);
 	}
-#endif
 }
 
 void Renderer::SetRasterizerState(RasterizerStateID rsStateID)

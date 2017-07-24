@@ -21,7 +21,15 @@
 // preset file paths (todo: read from file)
 using FilePaths = std::vector<std::string>;
 const  FilePaths s_filePaths = []{
+	// see cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
+	// 0: RIGHT	 1: LEFT
+	// 2: UP	 3: DOWN
+	// 4: FRONT	 5: BACK
+	//------------------------------------------------------------------------------------------------------
+
 	FilePaths paths(SKYBOX_PRESETS::SKYBOX_PRESET_COUNT * 6);	// use as an array to access using enum
+	
+	// night sky by: Hazel Whorley
 	paths[SKYBOX_PRESETS::NIGHT_SKY + 0] = "night_sky/nightsky_rt.png";
 	paths[SKYBOX_PRESETS::NIGHT_SKY + 1] = "night_sky/nightsky_lf.png";
 	paths[SKYBOX_PRESETS::NIGHT_SKY + 2] = "night_sky/nightsky_up.png";
@@ -29,6 +37,7 @@ const  FilePaths s_filePaths = []{
 	paths[SKYBOX_PRESETS::NIGHT_SKY + 4] = "night_sky/nightsky_ft.png";
 	paths[SKYBOX_PRESETS::NIGHT_SKY + 5] = "night_sky/nightsky_bk.png";
 
+	// other cubemap presets
 
 	return paths;
 }();

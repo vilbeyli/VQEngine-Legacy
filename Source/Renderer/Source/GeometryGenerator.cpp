@@ -382,6 +382,13 @@ BufferObject* GeometryGenerator::Cube()
 
 	//--------------------------------------------------------------
 
+	// make edges unit length
+	//for (int i = 0; i < 24; ++i)
+	//{
+	//	bufferObj->m_vertices[i].position.x() *= 0.5f;
+	//	bufferObj->m_vertices[i].position.y() *= 0.5f;
+	//	bufferObj->m_vertices[i].position.z() *= 0.5f;
+	//}
 
 	unsigned indices[] = {
 		0, 1, 2, 0, 2, 3,		// Top

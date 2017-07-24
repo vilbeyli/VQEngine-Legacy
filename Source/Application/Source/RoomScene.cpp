@@ -52,8 +52,8 @@ void RoomScene::Load(Renderer* pRenderer)
 	InitializeLights();
 	InitializeObjectArrays();
 
-	//m_skybox = Skybox::s_Presets[SKYBOX_PRESETS::NIGHT_SKY];
-	m_skydome.Initialize(m_pRenderer, "skydomeTex.png", 1000.0f / 2.2f, SHADERS::UNLIT);
+	m_skybox = Skybox::s_Presets[SKYBOX_PRESETS::NIGHT_SKY];
+	//m_skydome.Initialize(m_pRenderer, "skydomeTex.png", 1000.0f / 2.2f, SHADERS::UNLIT);
 }
 
 void RoomScene::Update(float dt)
@@ -63,9 +63,12 @@ void RoomScene::Update(float dt)
 
 void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
-	//m_skybox.Render(viewProj);
+	ShaderID selectedShader = m_sceneManager.GetSelectedShader();
+	m_skybox.Render(viewProj);
+
+	pRenderer->SetShader(selectedShader);
 	m_room.Render(m_pRenderer, viewProj);
-	if (m_sceneManager.GetSelectedShader() == SHADERS::NORMAL) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
+	if (selectedShader == SHADERS::NORMAL) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
 	RenderCentralObjects(viewProj);
 	RenderLights(viewProj);
 }
@@ -317,14 +320,16 @@ void RoomScene::InitializeObjectArrays()
 		}
 	}
 
-	int i = 2;
+	int i = 3;
 	const float xCoord = 85.0f;
 	const float distToEachOther = -30.0f;
 	grid.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
 	grid.m_transform.SetUniformScale(30);
 	--i;
+
 	cylinder.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
 	cylinder.m_transform.SetUniformScale(4.0f);
+
 	--i;
 	triangle.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
 	triangle.m_transform.SetXRotationDeg(30.0f);
@@ -335,16 +340,25 @@ void RoomScene::InitializeObjectArrays()
 	quad.m_transform.SetXRotationDeg(30);
 	quad.m_transform.SetUniformScale(4.0f);
 
+	--i;
+	cube.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
 
-	grid.m_model.m_mesh = MESH_TYPE::GRID;
+	--i;
+	sphere.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
+
+	    grid.m_model.m_mesh = MESH_TYPE::GRID;
 	cylinder.m_model.m_mesh = MESH_TYPE::CYLINDER;
 	triangle.m_model.m_mesh = MESH_TYPE::TRIANGLE;
-	quad.m_model.m_mesh = MESH_TYPE::QUAD;
+	    quad.m_model.m_mesh = MESH_TYPE::QUAD;
+		cube.m_model.m_mesh = MESH_TYPE::CUBE;
+	 sphere.m_model.m_mesh = MESH_TYPE::SPHERE;
 
-	grid.m_model.m_material = Material();
+	    grid.m_model.m_material = Material();
 	cylinder.m_model.m_material = Material();
 	triangle.m_model.m_material = Material();
-	quad.m_model.m_material = Material();
+	    quad.m_model.m_material = Material();
+		cube.m_model.m_material = Material();
+	  sphere.m_model.m_material = Material();
 }
 	 		  
 	 		  
@@ -438,6 +452,8 @@ void RoomScene::RenderCentralObjects(const XMMATRIX& viewProj) const
 	quad.Render(m_pRenderer, viewProj);
 	triangle.Render(m_pRenderer, viewProj);
 	cylinder.Render(m_pRenderer, viewProj);
+	cube.Render(m_pRenderer, viewProj);
+	sphere.Render(m_pRenderer, viewProj);
 }
 
 void RoomScene::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const

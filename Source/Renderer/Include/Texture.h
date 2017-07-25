@@ -36,14 +36,19 @@ public:
 	// - tell if the resource format was specified as typeless at creation time, then we must specify
 	//   the type right before binding by reinterpret casting.
 	// note: typed resources are optimized for access. use typeless if you really need.
-	ID3D11ShaderResourceView*	srv;
+	ID3D11ShaderResourceView*	_srv;
 
-	ID3D11Texture2D*			tex2D;
-	ID3D11SamplerState*			samplerState;
-	unsigned					width;
-	unsigned					height;
+	union
+	{
+		ID3D11Texture3D*		_tex3D;
+		ID3D11Texture2D*		_tex2D;
+	};
 
+	ID3D11SamplerState*			_samplerState;
+	unsigned					_width;
+	unsigned					_height;
+	unsigned					_depth;
 
-	std::string					name;
-	TextureID					id;
+	std::string					_name;
+	TextureID					_id;
 };

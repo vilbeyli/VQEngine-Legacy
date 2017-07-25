@@ -18,23 +18,33 @@
 
 #pragma once
 #include "Settings.h"
+#include "Renderer.h"
 #include <vector>
 #include <memory>
 
 // scenes
 #include "RoomScene.h"
 
+using std::shared_ptr;
 
-class Renderer;
 class Camera;
 class PathManager;
 
-using ShaderID = int;
-
 struct Path;
-struct RenderData;
 
-using std::shared_ptr;
+
+struct DepthShadowPass
+{
+	unsigned				_shadowMapDimension;
+	TextureID				_shadowMap;
+	const Shader*			_shadowShader;
+	RasterizerStateID		_drawRenderState;
+	RasterizerStateID		_shadowRenderState;
+	D3D11_VIEWPORT			_shadowViewport;
+	DepthStencilID			_dsv;
+	void Initialize(Renderer* pRenderer, ID3D11Device* device);
+	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
+};
 
 class SceneManager
 {
@@ -44,7 +54,6 @@ public:
 	~SceneManager();
 
 	void Initialize(Renderer* renderer, PathManager* pathMan);
-
 	void SetCameraSettings(const Settings::Camera& cameraSettings);
 
 	void Update(float dt);
@@ -63,7 +72,7 @@ private:
 	//PathManager*		m_pPathManager; // unused
 
 	// pipeline state data
-	const RenderData*	m_renderData;
+	DepthShadowPass		m_depthPass;
 	ShaderID			m_selectedShader;
 	bool				m_gammaCorrection;
 	bool				m_debugRender;

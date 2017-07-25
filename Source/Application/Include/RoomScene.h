@@ -57,7 +57,7 @@ private:
 
 	struct Room {
 		friend class RoomScene;
-		void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
+		void Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool sendMaterialData) const;
 		GameObject floor;
 		GameObject wallL;
 		GameObject wallR;

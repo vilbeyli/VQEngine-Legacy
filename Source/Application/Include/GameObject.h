@@ -39,7 +39,7 @@ public:
 
 	GameObject& operator=(const GameObject& obj);
 
-	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
+	void Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool UploadMaterialDataToGPU) const;
 	void RenderZ(Renderer* pRenderer) const;
 
 public:

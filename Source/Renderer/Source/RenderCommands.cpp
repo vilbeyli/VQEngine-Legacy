@@ -28,5 +28,5 @@ static void(__cdecl ID3D11DeviceContext:: *SetShaderResources[6])
 
 void TextureSetCommand::SetResource(Renderer * pRenderer)
 {
-	(pRenderer->m_deviceContext->*SetShaderResources[shdTex.shdType])(shdTex.bufferSlot, 1, &pRenderer->m_textures[texID].srv);
+	(pRenderer->m_deviceContext->*SetShaderResources[shdTex.shdType])(shdTex.bufferSlot, 1, &pRenderer->m_textures[texID]._srv);
 }

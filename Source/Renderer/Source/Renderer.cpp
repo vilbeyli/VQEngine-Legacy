@@ -35,117 +35,13 @@
 const char* Renderer::s_shaderRoot = "Data/Shaders/";
 const char* Renderer::s_textureRoot = "Data/Textures/";
 
-void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
-{
-	_shadowMapDimension = 1024;
-
-	// check feature support & error handle:
-	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
-
-	// create shadow map texture for the pixel shader stage
-	D3D11_TEXTURE2D_DESC shadowMapDesc;
-	ZeroMemory(&shadowMapDesc, sizeof(D3D11_TEXTURE2D_DESC));
-	shadowMapDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-	shadowMapDesc.MipLevels = 1;
-	shadowMapDesc.ArraySize = 1;
-	shadowMapDesc.SampleDesc.Count = 1;
-	shadowMapDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-	shadowMapDesc.Height = static_cast<UINT>(_shadowMapDimension);
-	shadowMapDesc.Width  = static_cast<UINT>(_shadowMapDimension);
-	_shadowMap = pRenderer->CreateTexture(shadowMapDesc);
-
-	// careful: removing const qualified from texture. rethink this
-	Texture& shadowMap = const_cast<Texture&>(pRenderer->GetTexture(_shadowMap));
-
-	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;			// check format
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Texture2D.MipSlice = 0;
-	_dsv = pRenderer->AddDepthStencil(dsvDesc, shadowMap.tex2D);
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	ZeroMemory(&srvDesc, sizeof(srvDesc));
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	srvDesc.Texture2D.MipLevels = 1;
-
-	HRESULT hr = device->CreateShaderResourceView(
-		shadowMap.tex2D,
-		&srvDesc,
-		&shadowMap.srv
-	);	// succeed hr? 
-
-	// comparison
-	D3D11_SAMPLER_DESC comparisonSamplerDesc;
-	ZeroMemory(&comparisonSamplerDesc, sizeof(D3D11_SAMPLER_DESC));
-	comparisonSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-	comparisonSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-	comparisonSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
-	comparisonSamplerDesc.BorderColor[0] = 1.0f;
-	comparisonSamplerDesc.BorderColor[1] = 1.0f;
-	comparisonSamplerDesc.BorderColor[2] = 1.0f;
-	comparisonSamplerDesc.BorderColor[3] = 1.0f;
-	comparisonSamplerDesc.MinLOD = 0.f;
-	comparisonSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	comparisonSamplerDesc.MipLODBias = 0.f;
-	comparisonSamplerDesc.MaxAnisotropy = 0;
-	comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
-	comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
-
-	hr = device->CreateSamplerState(&comparisonSamplerDesc, &shadowMap.samplerState);
-	// succeed hr?
-
-	// render states for front face culling 
-	_shadowRenderState = pRenderer->AddRSState(RS_CULL_MODE::FRONT, RS_FILL_MODE::SOLID, true);
-	_drawRenderState   = pRenderer->AddRSState(RS_CULL_MODE::BACK , RS_FILL_MODE::SOLID, true);
-
-	// shader
-	std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 }};
-	_shadowShader = pRenderer->GetShader(pRenderer->AddShader("DepthShader", pRenderer->s_shaderRoot, layout, false));
-	
-	ZeroMemory(&_shadowViewport, sizeof(D3D11_VIEWPORT));
-	_shadowViewport.Height = static_cast<float>(_shadowMapDimension);
-	_shadowViewport.Width  = static_cast<float>(_shadowMapDimension);
-	_shadowViewport.MinDepth = 0.f;
-	_shadowViewport.MaxDepth = 1.f;
-}
-
-void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const
-{
-	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-
-	pRenderer->UnbindRenderTarget();						// no render target
-	pRenderer->BindDepthStencil(_dsv);						// only depth stencil buffer
-	pRenderer->SetRasterizerState(_shadowRenderState);		// shadow render state: cull front faces, fill solid, clip dep
-	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
-	pRenderer->SetShader(_shadowShader->ID());				// shader for rendering z buffer
-	pRenderer->SetConstant4x4f("viewProj", shadowLights.front()->GetLightSpaceMatrix());
-	pRenderer->SetConstant4x4f("view"    , shadowLights.front()->GetViewMatrix());
-	pRenderer->SetConstant4x4f("proj"    , shadowLights.front()->GetProjectionMatrix());
-	pRenderer->Apply();
-	pRenderer->Begin(clearColor, 1.0f);
-	size_t idx = 0;
-	for (const GameObject* obj : ZPassObjects)
-	{
-		obj->RenderZ(pRenderer);
-		++idx;
-	}
-}
-
-
 Renderer::Renderer()
 	:
 	m_Direct3D(nullptr),
 	m_device(nullptr),
 	m_deviceContext(nullptr),
 	m_mainCamera(nullptr),
-	m_bufferObjects(std::vector<BufferObject*>   (MESH_TYPE::MESH_TYPE_COUNT)),
+	m_bufferObjects(std::vector<BufferObject*>(MESH_TYPE::MESH_TYPE_COUNT)),
 	m_rasterizerStates(std::vector<RasterizerState*>((int)DEFAULT_RS_STATE::RS_COUNT)),
 	m_depthStencilStates(std::vector<DepthStencilState*>())
 {
@@ -167,25 +63,30 @@ void Renderer::Exit()
 		delete m_Direct3D;
 	}
 
-	// cleanup buffer objects
+	// BUFFERS
+	//---------
 	for (BufferObject* bo : m_bufferObjects)
 	{
 		delete bo;
 		bo = nullptr;
 	}
-
 	CPUConstant::CleanUp();
 
+
+	// SHADERS
+	//---------
 	for (Shader* shd : m_shaders)
 	{
 		delete shd;
 		shd = nullptr;
 	}
 
+	// TEXTURES
+	//---------
 	for (Texture& tex : m_textures)
 	{
-		tex.srv->Release();
-		tex.srv = nullptr;
+		tex._srv->Release();
+		tex._srv = nullptr;
 	}
 
 	return;
@@ -227,65 +128,9 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	}
 	AddRenderTarget(backBufferPtr);	// default render target
 
-	// TODO: abstract d3d11 away....
-
-	// Initialize the description of the depth buffer.
-	D3D11_TEXTURE2D_DESC depthBufferDesc;
-	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
-
-	// Set up the description of the depth buffer.
-	depthBufferDesc.Width = m_Direct3D->m_wndWidth;
-	depthBufferDesc.Height = m_Direct3D->m_wndHeight;
-	depthBufferDesc.MipLevels = 1;
-	depthBufferDesc.ArraySize = 1;
-	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	depthBufferDesc.SampleDesc.Count = 1;
-	depthBufferDesc.SampleDesc.Quality = 0;
-	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-	depthBufferDesc.CPUAccessFlags = 0;
-	depthBufferDesc.MiscFlags = 0;
-	
-	// Create the texture for the depth buffer using the filled out description.
-	result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_stateObjects._depthBufferTexture.tex2D);
-
-	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Texture2D.MipSlice = 0;
-	AddDepthStencil(dsvDesc, m_stateObjects._depthBufferTexture.tex2D);
-	
-
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
-
-	// Set up the description of the stencil state.
-	depthStencilDesc.DepthEnable = true;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-
-	depthStencilDesc.StencilEnable = false;
-	depthStencilDesc.StencilReadMask = 0xFF;
-	depthStencilDesc.StencilWriteMask = 0xFF;
-
-	// Stencil operations if pixel is front-facing.
-	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	// Stencil operations if pixel is back-facing.
-	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	AddDepthStencilState(depthStencilDesc);
-	
-
-
+	InitializeDefaultDepthBuffer();
 	InitializeDefaultRasterizerStates();
+
 	GeneratePrimitives();
 	LoadShaders();
 	return true;
@@ -323,7 +168,7 @@ void Renderer::GeneratePrimitives()
 
 void Renderer::LoadShaders()
 {
-	Log::Info("\n    ------------------------ COMPILING SHADERS ------------------------ \n");
+	Log::Info("\r------------------------ COMPILING SHADERS ------------------------ \n");
 
 	// todo: initalize this in Shader:: and in order so that SHADERS::FORWARD_PHONG would get the right shader
 	std::vector<InputLayout> layout = {
@@ -343,12 +188,64 @@ void Renderer::LoadShaders()
 	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"            , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"           , s_shaderRoot, layout);
 
-	m_renderData.errorTexture	= AddTexture("errTexture.png", s_textureRoot).id;
-	m_renderData.exampleTex		= AddTexture("bricks_d.png", s_textureRoot).id;
-	m_renderData.exampleNormMap	= AddTexture("bricks_n.png", s_textureRoot).id;
-	m_renderData.depthPass.Initialize(this, m_device);
+	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
+}
 
-	Log::Info("\n    ---------------------- COMPILING SHADERS DONE ---------------------\n");
+void Renderer::InitializeDefaultDepthBuffer()
+{
+	// Initialize the description of the depth buffer.
+	D3D11_TEXTURE2D_DESC depthBufferDesc;
+	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
+
+	// Set up the description of the depth buffer.
+	depthBufferDesc.Width = m_Direct3D->m_wndWidth;
+	depthBufferDesc.Height = m_Direct3D->m_wndHeight;
+	depthBufferDesc.MipLevels = 1;
+	depthBufferDesc.ArraySize = 1;
+	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.SampleDesc.Count = 1;
+	depthBufferDesc.SampleDesc.Quality = 0;
+	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthBufferDesc.CPUAccessFlags = 0;
+	depthBufferDesc.MiscFlags = 0;
+
+	// Create the texture for the depth buffer using the filled out description.
+	HRESULT result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_stateObjects._depthBufferTexture._tex2D);
+
+	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
+	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.Texture2D.MipSlice = 0;
+	AddDepthStencil(dsvDesc, m_stateObjects._depthBufferTexture._tex2D);
+
+
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+
+	// Set up the description of the stencil state.
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+	depthStencilDesc.StencilEnable = false;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
+
+	// Stencil operations if pixel is front-facing.
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Stencil operations if pixel is back-facing.
+	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	AddDepthStencilState(depthStencilDesc);
 }
 
 void Renderer::PollThread()
@@ -544,45 +441,45 @@ RasterizerStateID Renderer::AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillM
 
 // assumes unique shader file names (even in different folders)
 // example params: "bricks_d.png", "Data/Textures/"
-const Texture& Renderer::AddTexture(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
+const Texture& Renderer::TextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex.name == texFileName; });
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
 	if (found != m_textures.end())
 	{
 		return *found;
 	}
 
 	Texture tex;
-	tex.name = texFileName;
+	tex._name = texFileName;
 
 	std::string path = fileRoot + texFileName;
 	std::wstring wpath(path.begin(), path.end());
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
 	{
-		CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), img->GetMetadata(), &tex.srv);
+		CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), img->GetMetadata(), &tex._srv);
 
 		// get srv from img
 		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 		ZeroMemory(&srvDesc, sizeof(srvDesc));
-		tex.srv->GetDesc(&srvDesc);
+		tex._srv->GetDesc(&srvDesc);
 		
 		// read width & height
 		ID3D11Resource* resource = nullptr;
-		tex.srv->GetResource(&resource);
+		tex._srv->GetResource(&resource);
 		ID3D11Texture2D* tex2D = nullptr;
 		if (SUCCEEDED(resource->QueryInterface(&tex2D)))
 		{
 			D3D11_TEXTURE2D_DESC desc;
 			tex2D->GetDesc(&desc);
-			tex.width = desc.Width;
-			tex.height = desc.Height;
-			tex.tex2D = tex2D;
+			tex._width = desc.Width;
+			tex._height = desc.Height;
+			tex._tex2D = tex2D;
 		}
 
-		tex.samplerState = nullptr;		// default? todo
+		tex._samplerState = nullptr;		// default? todo
 
-		tex.id = static_cast<int>(m_textures.size());
+		tex._id = static_cast<int>(m_textures.size());
 		m_textures.push_back(tex);
 		return m_textures.back();
 	}
@@ -594,7 +491,7 @@ const Texture& Renderer::AddTexture(const std::string& texFileName, const std::s
 
 }
 
-const Texture & Renderer::CreateTexture(int widht, int height)
+const Texture & Renderer::CreateTexture2D(int widht, int height)
 {
 	Texture tex;
 	assert(false); // todo
@@ -608,20 +505,20 @@ const Texture & Renderer::CreateTexture(int widht, int height)
 	return m_textures.back();
 }
 
-TextureID Renderer::CreateTexture(D3D11_TEXTURE2D_DESC & textureDesc)
+TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc)
 {
 	Texture tex;
 	m_device->CreateTexture2D(
 		&textureDesc,
 		nullptr,
-		&tex.tex2D
+		&tex._tex2D
 	);
-	tex.id = static_cast<int>(m_textures.size());
+	tex._id = static_cast<int>(m_textures.size());
 	m_textures.push_back(tex);
-	return m_textures.back().id;
+	return m_textures.back()._id;
 }
 
-TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFileNames)
+TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& textureFileNames)
 {
 	constexpr size_t FACE_COUNT = 6;
 
@@ -680,15 +577,15 @@ TextureID Renderer::CreateTexture3D(const std::vector<std::string>& textureFileN
 	
 	// return param
 	Texture cubemapOut;
-	cubemapOut.srv = cubeMapSRV;
-	cubemapOut.name = "todo:Skybox file name";
-	cubemapOut.tex2D = cubemapTexture;
-	cubemapOut.height = static_cast<unsigned>(faceImages[0].GetMetadata().height);
-	cubemapOut.width  = static_cast<unsigned>(faceImages[0].GetMetadata().width);
-	cubemapOut.id = static_cast<int>(m_textures.size());
+	cubemapOut._srv = cubeMapSRV;
+	cubemapOut._name = "todo:Skybox file name";
+	cubemapOut._tex2D = cubemapTexture;
+	cubemapOut._height = static_cast<unsigned>(faceImages[0].GetMetadata().height);
+	cubemapOut._width  = static_cast<unsigned>(faceImages[0].GetMetadata().width);
+	cubemapOut._id = static_cast<int>(m_textures.size());
 	m_textures.push_back(cubemapOut);
 
-	return cubemapOut.id;
+	return cubemapOut._id;
 }
 
 DepthStencilStateID Renderer::AddDepthStencilState()
@@ -748,17 +645,31 @@ DepthStencilStateID Renderer::AddDepthStencilState(const D3D11_DEPTH_STENCIL_DES
 
 RenderTargetID Renderer::AddRenderTarget(ID3D11Texture2D*& surface)
 {
-	RenderTarget* newRTV;	// is malloc necessary?
-	newRTV = (RenderTarget*)malloc(sizeof(RenderTarget));
-	memset(newRTV, 0, sizeof(*newRTV));
+	RenderTarget newRenderTarget;
+	newRenderTarget._texture._tex2D = surface;
+	HRESULT hr = m_device->CreateRenderTargetView(surface,	nullptr, &newRenderTarget._renderTargetView);
+	if (!SUCCEEDED(hr))
+	{
+		Log::Error("Cannot create render target view.");
+		return -1;
+	}
 
-	HRESULT hr = m_device->CreateRenderTargetView(
-		surface,
-		nullptr,
-		&newRTV
-	);	// succeed hr ?
+	m_renderTargets.push_back(newRenderTarget);
+	return static_cast<int>(m_renderTargets.size() - 1);
+}
 
-	m_renderTargets.push_back(newRTV);
+RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
+{
+	RenderTarget newRenderTarget;
+	newRenderTarget._texture = GetTexture(CreateTexture2D(RTTextureDesc));
+	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget._texture._tex2D, &RTVDesc, &newRenderTarget._renderTargetView);
+	if (!SUCCEEDED(hr))
+	{
+		Log::Error("Cannot create RenderTarget\n");
+		return -1;
+	}
+
+	m_renderTargets.push_back(newRenderTarget);
 	return static_cast<int>(m_renderTargets.size() - 1);
 }
 
@@ -1011,7 +922,7 @@ void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
 	const RenderTargetID rtv = m_stateObjects._boundRenderTarget;
 	const DepthStencilID dsv = m_stateObjects._boundDepthStencil;
-	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv], clearColor);
+	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv]._renderTargetView, clearColor);
 	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthStencils[dsv], D3D11_CLEAR_DEPTH, depthValue, 0);
 }
 
@@ -1050,7 +961,7 @@ void Renderer::Apply()
 	const auto indexDSState = m_stateObjects._activeDepthStencilState;
 	const auto indexRTV = m_stateObjects._boundRenderTarget;
 	const auto indexDSV = m_stateObjects._boundDepthStencil;
-	RenderTarget** RTV = indexRTV == -1 ? nullptr : &m_renderTargets[indexRTV];
+	ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &m_renderTargets[indexRTV]._renderTargetView;
 	DepthStencil*  DSV = indexDSV == -1 ? nullptr :  m_depthStencils[indexDSV];
 	auto*  DSSTATE = m_depthStencilStates[indexDSState];
 	m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);

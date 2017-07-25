@@ -54,7 +54,6 @@ using DepthStencilID	  = int;
 
 using RasterizerState   = ID3D11RasterizerState;
 using DepthStencilState = ID3D11DepthStencilState;
-using RenderTarget		= ID3D11RenderTargetView;
 using DepthStencil		= ID3D11DepthStencilView;
 
 enum class DEFAULT_RS_STATE
@@ -66,27 +65,11 @@ enum class DEFAULT_RS_STATE
 	RS_COUNT
 };
 
-// move to scene manager maybe?
-struct DepthShadowPass
+struct RenderTarget
 {
-	unsigned				_shadowMapDimension;
-	TextureID				_shadowMap;
-	const Shader*			_shadowShader;
-	RasterizerStateID		_drawRenderState;
-	RasterizerStateID		_shadowRenderState;
-	D3D11_VIEWPORT			_shadowViewport;	
-	DepthStencilID			_dsv;
-	void Initialize(Renderer* pRenderer, ID3D11Device* device);
-	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
-};
-
-struct RenderData
-{
-	DepthShadowPass depthPass;
-	TextureID errorTexture;
-	TextureID loadingScrTex;
-	TextureID exampleTex;		// load scr
-	TextureID exampleNormMap;
+	RenderTarget() : _renderTargetView(nullptr) {}
+	Texture						_texture;
+	ID3D11RenderTargetView*		_renderTargetView;
 };
 
 class Renderer
@@ -108,14 +91,18 @@ public:
 	// resource interface
 	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
 	RasterizerStateID	AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip);
-	const Texture&		AddTexture(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
-	const Texture&		CreateTexture(int widht, int height);
-	TextureID			CreateTexture(D3D11_TEXTURE2D_DESC& textureDesc);
-	TextureID			CreateTexture3D(const std::vector<std::string>& textureFiles);
+	
+	// todo: return textureID to outside, use Texture& private
+	const Texture&		TextureFromFile(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
+	const Texture&		CreateTexture2D(int widht, int height);
+	TextureID			CreateTexture2D(D3D11_TEXTURE2D_DESC& textureDesc);
+	TextureID			CreateCubemapTexture(const std::vector<std::string>& textureFiles);
+	
+	RenderTargetID		AddRenderTarget(ID3D11Texture2D*& surface);
+	RenderTargetID		AddRenderTarget(D3D11_TEXTURE2D_DESC& RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
+	DepthStencilID		AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface);
 	DepthStencilStateID AddDepthStencilState();	// todo params
 	DepthStencilStateID AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
-	RenderTargetID		AddRenderTarget(ID3D11Texture2D*& surface);
-	DepthStencilID		AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface);
 
 	const Shader*		GetShader(ShaderID shader_id) const;
 	const Texture&		GetTexture(TextureID) const;
@@ -162,7 +149,9 @@ private:
 	// init / load
 	void GeneratePrimitives();
 	void LoadShaders();
+	void InitializeDefaultDepthBuffer();
 	void InitializeDefaultRasterizerStates();
+	
 
 	void SetConstant(const char* cName, const void* data);
 	//=======================================================================================================================================================
@@ -170,7 +159,6 @@ public:
 	static const char* s_shaderRoot;
 	static const char* s_textureRoot;
 
-	RenderData	                    m_renderData;
 	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;
 
@@ -192,7 +180,7 @@ private:
 	std::vector<RasterizerState*>	m_rasterizerStates;
 	std::vector<DepthStencilState*> m_depthStencilStates;
 
-	std::vector<RenderTarget*>		m_renderTargets;
+	std::vector<RenderTarget>		m_renderTargets;
 	std::vector<DepthStencil*>		m_depthStencils;
 
 	// state objects

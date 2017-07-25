@@ -60,9 +60,10 @@ GameObject& GameObject::operator=(const GameObject& obj)
 	return *this;
 }
 
-void GameObject::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
+void GameObject::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool UploadMaterialDataToGPU) const
 {
-	m_model.m_material.SetMaterialConstants(pRenderer);
+	// TODO: set shader for material
+	if(UploadMaterialDataToGPU) m_model.m_material.SetMaterialConstants(pRenderer);
 	pRenderer->SetBufferObj(m_model.m_mesh);
 	XMMATRIX world = m_transform.WorldTransformationMatrix();
 	XMMATRIX wvp = world * viewProj;

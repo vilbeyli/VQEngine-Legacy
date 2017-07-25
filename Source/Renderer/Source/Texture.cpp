@@ -20,14 +20,15 @@
 
 Texture::Texture()
 	:
-	srv(nullptr),	// assigned and deleted by renderer
-	tex2D(nullptr),
-	samplerState(nullptr),
-	width(0),
-	height(0),
+	_srv(nullptr),	// assigned and deleted by renderer
+	_tex2D(nullptr),
+	_samplerState(nullptr),
+	_width(0),
+	_height(0),
+	_depth(0),
 
-	name(""),
-	id(-1)
+	_name(""),
+	_id(-1)
 {}
 
 Texture::~Texture()

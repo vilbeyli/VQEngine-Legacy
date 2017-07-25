@@ -17,10 +17,14 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Shader.h"
+#include "Log.h"
 #include <fstream>
 #include <sstream>
 
 std::array<ShaderID, SHADERS::SHADER_COUNT> Shader::s_shaders;
+
+CPUConstant::CPUConstantPool CPUConstant::s_constants;
+size_t CPUConstant::s_nextConstIndex = 0;
 
 void OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName)
 {
@@ -34,7 +38,6 @@ void OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileNa
 	}
 	OutputDebugString(ss.str().c_str());
 
-	//release
 	errorMessage->Release();
 	errorMessage = 0;
 	return;
@@ -49,8 +52,7 @@ void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath)
 	}
 	else
 	{
-		std::string err("Error: Can't find shader file: "); err += shdPath;
-		OutputDebugString(err.c_str());
+		Log::Error(ERROR_LOG::CANT_OPEN_FILE, shdPath);
 	}
 
 	// continue execution, make sure error is known
@@ -79,26 +81,12 @@ Shader::~Shader(void)
 		}
 	}
 
-	for (std::vector<CPUConstant>& consts : m_constants)
-	{
-		for (CPUConstant& c : consts)
-		{
-			if (c.data)
-			{
-				delete[] c.data;
-				c.data = nullptr;
-			}
-		}
-	}
-
-	// Release the layout.
 	if (m_layout)
 	{
 		m_layout->Release();
 		m_layout = nullptr;
 	}
 
-	// release shaders
 	if (m_pixelShader)
 	{
 		m_pixelShader->Release();
@@ -431,15 +419,18 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 	// CPU CBuffers
 	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
 	{
-		std::vector<CPUConstant> cpuBuffers;
+		std::vector<CPUConstantID> cpuBuffers;
 		for (D3D11_SHADER_VARIABLE_DESC varDesc : cbLayout.variables)
 		{
-			CPUConstant c;
-			c.name = varDesc.Name;
-			c.size = varDesc.Size;
-			c.data = new char[c.size];
-			memset(c.data, 0, c.size);
-			cpuBuffers.push_back(c);
+			auto& next = CPUConstant::GetNextAvailable();
+			CPUConstantID c_id = std::get<1>(next);
+			CPUConstant& c = std::get<0>(next);
+
+			c._name = varDesc.Name;
+			c._size = varDesc.Size;
+			c._data = new char[c._size];
+			memset(c._data, 0, c._size);
+			cpuBuffers.push_back(c_id);
 		}
 		m_constants.push_back(cpuBuffers);
 	}
@@ -532,4 +523,22 @@ const std::vector<ConstantBufferLayout>& Shader::GetConstantBufferLayouts() cons
 const std::vector<ConstantBuffer>& Shader::GetConstantBuffers() const
 {
 	return m_cBuffers;
+}
+
+std::tuple<CPUConstant&, CPUConstantID> CPUConstant::GetNextAvailable()
+{
+	const CPUConstantID id = s_nextConstIndex++;
+	return std::make_tuple(std::ref(s_constants[id]), static_cast<CPUConstantID>(id));
+}
+
+void CPUConstant::CleanUp()
+{
+	for (size_t i = 0; i < MAX_CONSTANT_BUFFERS; i++)
+	{
+		if (s_constants[i]._data)
+		{
+			delete s_constants[i]._data;
+			s_constants[i]._data = nullptr;
+		}
+	}
 }

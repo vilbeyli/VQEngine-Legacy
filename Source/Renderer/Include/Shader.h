@@ -25,6 +25,9 @@
 #include <vector>
 #include <queue>
 #include <array>
+#include <tuple>
+
+#include "Log.h"
 
 using namespace DirectX;
 
@@ -73,17 +76,33 @@ struct ConstantBufferLayout
 };
 
 
-#define OPTIMIZED
+
 // CPU side constant buffer
+// -------------------------------------------------------------------
+#define EQUALITY_OPTIMIZED
+constexpr size_t MAX_CONSTANT_BUFFERS = 512;
+using CPUConstantID = int;
 struct CPUConstant
 {
-	std::string name;
-	size_t		size;
-	void*		data;
+	using CPUConstantPool = std::array<CPUConstant, MAX_CONSTANT_BUFFERS>;
+private:
+	static CPUConstantPool s_constants;
+	static size_t s_nextConstIndex;
 
-#ifdef OPTIMIZED
-	inline bool operator==(const CPUConstant& c) const { return (((this->data == c.data) && this->size == c.size) && this->name == c.name); }
-	inline bool operator!=(const CPUConstant& c) const { return ((this->data != c.data) || this->size != c.size || this->name != c.name); }
+public:
+	inline static CPUConstant& Get(int id) { return s_constants[id]; }
+	static std::tuple<CPUConstant&, CPUConstantID> GetNextAvailable();
+	static void CleanUp();	// call once
+	
+	CPUConstant() : _name(), _size(0), _data(nullptr){}
+
+	std::string _name;
+	size_t		_size;
+	void*		_data;
+
+#ifdef EQUALITY_OPTIMIZED
+	inline bool operator==(const CPUConstant& c) const { return (((this->_data == c._data) && this->_size == c._size) && this->_name == c._name); }
+	inline bool operator!=(const CPUConstant& c) const { return ((this->_data != c._data) || this->_size != c._size || this->_name != c._name); }
 #endif
 };
 
@@ -177,7 +196,7 @@ private:
 
 	std::vector<ConstantBufferLayout>					m_CBLayouts;
 	std::vector<ConstantBuffer>							m_cBuffers;
-	std::vector<std::vector<CPUConstant>>				m_constants;
+	std::vector<std::vector<CPUConstantID>>				m_constants;
 
 	std::vector<ShaderTexture>							m_textures;
 	std::vector<ShaderSampler>							m_samplers;

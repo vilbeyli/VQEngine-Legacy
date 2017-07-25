@@ -174,6 +174,8 @@ void Renderer::Exit()
 		bo = nullptr;
 	}
 
+	CPUConstant::CleanUp();
+
 	for (Shader* shd : m_shaders)
 	{
 		delete shd;
@@ -896,15 +898,16 @@ void Renderer::SetConstant(const char * cName, const void * data)
 	// todo: compare with unordered_map lookup
 	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
 	{
-		std::vector<CPUConstant>& cVector = shader->m_constants[i];
-		for (CPUConstant& c : cVector)					// for each constant in a cbuffer
+		std::vector<CPUConstantID>& cVector = shader->m_constants[i];
+		for (const CPUConstantID& c_id : cVector)	// linear search in constant buffers -> optimization: sort & binary search || unordered_map
 		{
-			if (strcmp(cName, c.name.c_str()) == 0)		// if name matches
+			CPUConstant& c = CPUConstant::Get(c_id);
+			if (strcmp(cName, c._name.c_str()) == 0)		// if name matches
 			{
 				found = true;
-				if (memcmp(c.data, data, c.size) != 0)	// copy data if its not the same
+				if (memcmp(c._data, data, c._size) != 0)	// copy data if its not the same
 				{
-					memcpy(c.data, data, c.size);
+					memcpy(c._data, data, c._size);
 					shader->m_cBuffers[i].dirty = true;
 					//break;	// ensures write on first occurance
 				}
@@ -1090,11 +1093,12 @@ void Renderer::Apply()
 				// Map sub-resource to GPU - update contends - discard the sub-resource
 				m_deviceContext->Map(data, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 				char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
-				std::vector<CPUConstant>& cpuConsts = shader->m_constants[i];
-				for (CPUConstant& c : cpuConsts)
+				std::vector<CPUConstantID>& cpuConsts = shader->m_constants[i];
+				for (const CPUConstantID& c_id : cpuConsts)
 				{
-					memcpy(bufferPos, c.data, c.size);
-					bufferPos += c.size;
+					CPUConstant& c = CPUConstant::Get(c_id);
+					memcpy(bufferPos, c._data, c._size);
+					bufferPos += c._size;
 				}
 				m_deviceContext->Unmap(data, 0);
 

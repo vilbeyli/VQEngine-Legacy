@@ -246,7 +246,6 @@ void D3DManager::EndFrame()
 	m_deviceContext->DSSetShader(NULL, NULL, 0);
 	m_deviceContext->PSSetShader(NULL, NULL, 0);
 	m_deviceContext->CSSetShader(NULL, NULL, 0);
-
 	if (m_vsync_enabled)		m_swapChain->Present(1, 0);
 	else						m_swapChain->Present(0, 0);
 }
@@ -333,7 +332,7 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 	}
 
 	// Set the usage of the back buffer.
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
 
 	// Set the handle for the window to render to.
 	swapChainDesc.OutputWindow = hwnd;
@@ -356,7 +355,7 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 	// Set the feature level to DirectX 11.
 	featureLevel = D3D_FEATURE_LEVEL_11_0;
 
-#if defined( _DEBUG ) && defined ( FORCE_DEBUG )
+#if defined( _DEBUG )
 	UINT flags = D3D11_CREATE_DEVICE_DEBUG;
 #else
 	UINT flags = 0;

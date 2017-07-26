@@ -150,11 +150,11 @@ void RoomScene::InitializeRoom()
 		m_room.wallF.m_model.m_material.normalMap = m_pRenderer->TextureFromFile("nrm_metal2.png");
 	}
 
-	m_room.floor.m_model.m_mesh   = MESH_TYPE::CUBE;
-	m_room.wallL.m_model.m_mesh   = MESH_TYPE::CUBE;
-	m_room.wallR.m_model.m_mesh   = MESH_TYPE::CUBE;
-	m_room.wallF.m_model.m_mesh   = MESH_TYPE::CUBE;
-	m_room.ceiling.m_model.m_mesh = MESH_TYPE::CUBE;
+	m_room.floor.m_model.m_mesh   = GEOMETRY::CUBE;
+	m_room.wallL.m_model.m_mesh   = GEOMETRY::CUBE;
+	m_room.wallR.m_model.m_mesh   = GEOMETRY::CUBE;
+	m_room.wallF.m_model.m_mesh   = GEOMETRY::CUBE;
+	m_room.ceiling.m_model.m_mesh = GEOMETRY::CUBE;
 }
 	 		  
 void RoomScene::InitializeLights()
@@ -167,7 +167,7 @@ void RoomScene::InitializeLights()
 		l._transform.SetPosition(0.0f, 3.6f*25.0f, 0.0f);
 		l._transform.RotateAroundGlobalXAxisDegrees(200.0f);
 		l._transform.SetUniformScale(0.8f);
-		l._model.m_mesh = MESH_TYPE::CYLINDER;
+		l._model.m_mesh = GEOMETRY::CYLINDER;
 		l._model.m_material.color = Color::white;
 		l._color = Color::white;
 		//l._range = 200.f;
@@ -182,7 +182,7 @@ void RoomScene::InitializeLights()
 		Light l;
 		l._transform.SetPosition(-8.0f, 22.0f, 0);
 		l._transform.SetUniformScale(0.3f);
-		l._model.m_mesh = MESH_TYPE::SPHERE;
+		l._model.m_mesh = GEOMETRY::SPHERE;
 		l._model.m_material.color = l._color = Color::blue;
 		l.SetLightRange(180);
 		m_lights.push_back(l);
@@ -191,7 +191,7 @@ void RoomScene::InitializeLights()
 		Light l;
 		l._transform.SetPosition(28.0f, 15.0f, -17.0f);
 		l._transform.SetUniformScale(0.4f);
-		l._model.m_mesh = MESH_TYPE::SPHERE;
+		l._model.m_mesh = GEOMETRY::SPHERE;
 		l._model.m_material.color = Color::orange;
 		l._color = l._model.m_material.color;
 		l.SetLightRange(250);
@@ -201,7 +201,7 @@ void RoomScene::InitializeLights()
 		Light l;
 		l._transform.SetPosition(-140.0f, 100.0f, 140.0f);
 		l._transform.SetUniformScale(0.5f);
-		l._model.m_mesh = MESH_TYPE::SPHERE;
+		l._model.m_mesh = GEOMETRY::SPHERE;
 		l._model.m_material.color = l._color = Color::red;
 		l.SetLightRange(40);
 		m_lights.push_back(l);
@@ -217,7 +217,7 @@ void RoomScene::InitializeLights()
 		float z = RandF(-10.0f, 20.0f);
 		l._transform.SetPosition(x, y, z);
 		l._transform.SetUniformScale(0.1f);
-		l._model.m_mesh = MESH_TYPE::SPHERE;
+		l._model.m_mesh = GEOMETRY::SPHERE;
 		l._model.m_material.color = l._color = rndColor;
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
 		m_lights.push_back(l);
@@ -263,7 +263,7 @@ void RoomScene::InitializeObjectArrays()
 
 
 				// set material
-				cube.m_model.m_mesh = MESH_TYPE::CUBE;
+				cube.m_model.m_mesh = GEOMETRY::CUBE;
 				//cube.m_model.m_material = Material::RandomMaterial();
 				//cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
 				cube.m_model.m_material.normalMap = m_pRenderer->TextureFromFile("simple_normalmap.png");
@@ -293,7 +293,7 @@ void RoomScene::InitializeObjectArrays()
 
 			GameObject sph;
 			sph.m_transform = pos;
-			sph.m_model.m_mesh = MESH_TYPE::SPHERE;
+			sph.m_model.m_mesh = GEOMETRY::SPHERE;
 			sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * 50.0f)._v : vec3((static_cast<float>(numSph - i) / numSph) * 50.0f)._v;
 			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;
 
@@ -315,7 +315,7 @@ void RoomScene::InitializeObjectArrays()
 
 			GameObject sph;
 			sph.m_transform = pos;
-			sph.m_model.m_mesh = MESH_TYPE::SPHERE;
+			sph.m_model.m_mesh = GEOMETRY::SPHERE;
 			sph.m_model.m_material = Material::RandomMaterial();
 
 			spheres.push_back(sph);
@@ -348,12 +348,12 @@ void RoomScene::InitializeObjectArrays()
 	--i;
 	sphere.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
 
-	    grid.m_model.m_mesh = MESH_TYPE::GRID;
-	cylinder.m_model.m_mesh = MESH_TYPE::CYLINDER;
-	triangle.m_model.m_mesh = MESH_TYPE::TRIANGLE;
-	    quad.m_model.m_mesh = MESH_TYPE::QUAD;
-		cube.m_model.m_mesh = MESH_TYPE::CUBE;
-	 sphere.m_model.m_mesh = MESH_TYPE::SPHERE;
+	    grid.m_model.m_mesh = GEOMETRY::GRID;
+	cylinder.m_model.m_mesh = GEOMETRY::CYLINDER;
+	triangle.m_model.m_mesh = GEOMETRY::TRIANGLE;
+	    quad.m_model.m_mesh = GEOMETRY::QUAD;
+		cube.m_model.m_mesh = GEOMETRY::CUBE;
+	 sphere.m_model.m_mesh = GEOMETRY::SPHERE;
 
 	    grid.m_model.m_material = Material();
 	cylinder.m_model.m_material = Material();
@@ -579,7 +579,7 @@ void SceneManager::InitializePhysicsObjects()
 	// ANCHOR POINTS
 	const float anchorScale = 0.3f;
 
-	m_anchor1.m_model.m_mesh = MESH_TYPE::SPHERE;
+	m_anchor1.m_model.m_mesh = GEOMETRY::SPHERE;
 	m_anchor1.m_model.m_material.color = Color::white;
 	m_anchor1.m_model.m_material.shininess = 90.0f;
 	m_anchor1.m_model.m_material.normalMap._id = m_pRenderer->TextureFromFile("bricks_n.png");
@@ -591,7 +591,7 @@ void SceneManager::InitializePhysicsObjects()
 	//m_anchor2.m_model.m_material.color = Color::orange;
 	//m_anchor2.m_transform.SetPosition(-10.0f, 4.0f, +4.0f);
 
-	m_anchor2.m_model.m_mesh = MESH_TYPE::SPHERE;
+	m_anchor2.m_model.m_mesh = GEOMETRY::SPHERE;
 	m_anchor2.m_model.m_material.color = Color::white;
 	m_anchor2.m_model.m_material.shininess = 90.0f;
 	//m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
@@ -605,7 +605,7 @@ void SceneManager::InitializePhysicsObjects()
 	auto& mat = m_physObj.m_model.m_material;
 	auto& msh = m_physObj.m_model.m_mesh;
 	auto& tfm = m_physObj.m_transform;
-	msh = MESH_TYPE::CUBE;
+	msh = GEOMETRY::CUBE;
 	mat.color = Color::white;
 	//mat.normalMap.id	= m_renderer->AddTexture("bricks_n.png");
 	mat.diffuseMap._id = m_pRenderer->TextureFromFile("bricks_d.png");
@@ -614,7 +614,7 @@ void SceneManager::InitializePhysicsObjects()
 	tfm.SetPosition(0.0f, 10.0f, 0.0f);
 	tfm.SetRotationDeg(15.0f, 0.0f, 0.0f);
 	tfm.SetScale(1.5f, 0.5f, 0.5f);
-	m_physObj.m_rb.InitPhysicsVertices(MESH_TYPE::CUBE, m_physObj.m_transform.GetScaleF3());
+	m_physObj.m_rb.InitPhysicsVertices(GEOMETRY::CUBE, m_physObj.m_transform.GetScaleF3());
 	m_physObj.m_rb.SetMassUniform(1.0f);
 	m_physObj.m_rb.EnablePhysics = m_physObj.m_rb.EnableGravity = true;
 

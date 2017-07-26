@@ -63,7 +63,7 @@ void Skybox::Render(const XMMATRIX& viewProj) const
 	pRenderer->SetShader(skydomeShader);
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);
 	pRenderer->SetTexture("gSkybox", skydomeTex);
-	pRenderer->SetBufferObj(MESH_TYPE::CUBE);
+	pRenderer->SetBufferObj(GEOMETRY::CUBE);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 }

@@ -41,7 +41,7 @@ Renderer::Renderer()
 	m_device(nullptr),
 	m_deviceContext(nullptr),
 	m_mainCamera(nullptr),
-	m_bufferObjects(std::vector<BufferObject*>(MESH_TYPE::MESH_TYPE_COUNT)),
+	m_bufferObjects(std::vector<BufferObject*>(GEOMETRY::MESH_TYPE_COUNT)),
 	m_rasterizerStates(std::vector<RasterizerState*>((int)DEFAULT_RS_STATE::RS_COUNT)),
 	m_depthStencilStates(std::vector<DepthStencilState*>())
 {
@@ -85,7 +85,8 @@ void Renderer::Exit()
 	//---------
 	for (Texture& tex : m_textures)
 	{
-		tex._srv->Release();
+		if(tex._srv)
+			tex._srv->Release();
 		tex._srv = nullptr;
 	}
 
@@ -120,14 +121,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	m_device		= m_Direct3D->GetDevice();
 	m_deviceContext = m_Direct3D->GetDeviceContext();
 
-	ID3D11Texture2D* backBufferPtr;
-	result = m_Direct3D->m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
-	if (FAILED(result))
-	{
-		return false;
-	}
-	AddRenderTarget(backBufferPtr);	// default render target
-
+	InitializeDefaultRenderTarget();
 	InitializeDefaultDepthBuffer();
 	InitializeDefaultRasterizerStates();
 
@@ -187,6 +181,7 @@ void Renderer::LoadShaders()
 	Shader::s_shaders[SHADERS::TBN                ]	= AddShader("TNB"              , s_shaderRoot, layout, true);
 	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"            , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"           , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"            , s_shaderRoot, layout);
 
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
@@ -643,19 +638,41 @@ DepthStencilStateID Renderer::AddDepthStencilState(const D3D11_DEPTH_STENCIL_DES
 	return static_cast<DepthStencilStateID>(m_depthStencilStates.size() - 1);
 }
 
-RenderTargetID Renderer::AddRenderTarget(ID3D11Texture2D*& surface)
+void Renderer::InitializeDefaultRenderTarget()
 {
-	RenderTarget newRenderTarget;
-	newRenderTarget._texture._tex2D = surface;
-	HRESULT hr = m_device->CreateRenderTargetView(surface,	nullptr, &newRenderTarget._renderTargetView);
-	if (!SUCCEEDED(hr))
+	RenderTarget defaultRT;
+
+	ID3D11Texture2D* backBufferPtr;
+	HRESULT hr = m_Direct3D->m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
+	if (FAILED(hr))
 	{
-		Log::Error("Cannot create render target view.");
-		return -1;
+		Log::Error("Cannot get back buffer pointer in DefaultRenderTarget initialization");
+		return;
+	}
+	defaultRT._texture._tex2D = backBufferPtr;
+	
+	D3D11_TEXTURE2D_DESC texDesc;		// get back buffer description
+	backBufferPtr->GetDesc(&texDesc);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;	// create shader resource view from back buffer desc
+	srvDesc.Format = texDesc.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	m_device->CreateShaderResourceView(backBufferPtr, &srvDesc, &defaultRT._texture._srv);
+		
+	hr = m_device->CreateRenderTargetView(backBufferPtr, nullptr, &defaultRT._renderTargetView);
+	if (FAILED(hr))
+	{
+		Log::Error("Cannot create default render target view.");
+		return;
 	}
 
-	m_renderTargets.push_back(newRenderTarget);
-	return static_cast<int>(m_renderTargets.size() - 1);
+	m_textures.push_back(defaultRT._texture);	// set texture ID by adding it -- TODO: remove duplicate data - dont add texture to vector
+	defaultRT._texture._id = static_cast<int>(m_textures.size() - 1);
+
+	m_renderTargets.push_back(defaultRT);
+	m_stateObjects._mainRenderTarget = static_cast<int>(m_renderTargets.size() - 1);
 }
 
 RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
@@ -698,7 +715,6 @@ const Texture& Renderer::GetTexture(TextureID id) const
 
 void Renderer::SetShader(ShaderID id)
 {
-	// boundary check
 	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
 	if (m_stateObjects._activeShader != -1)		// if valid shader
 	{
@@ -738,7 +754,7 @@ void Renderer::SetShader(ShaderID id)
 	}	// if valid shader
 	else
 	{
-		;// OutputDebugString("Warning: invalid shader is active\n");
+		//Log::("Warning: invalid shader is active\n");
 	}
 
 	if (id != m_stateObjects._activeShader)
@@ -928,6 +944,12 @@ void Renderer::Begin(const float clearColor[4], const float depthValue)
 
 void Renderer::End()
 {
+	auto* backBuffer = m_renderTargets[m_stateObjects._mainRenderTarget]._texture._tex2D;
+	if (backBuffer != m_renderTargets[m_stateObjects._boundRenderTarget]._texture._tex2D)
+	{
+		m_deviceContext->CopyResource(backBuffer, m_renderTargets[m_stateObjects._boundRenderTarget]._texture._tex2D);
+	}
+
 	m_Direct3D->EndFrame();
 	++m_frameCount;
 }
@@ -949,29 +971,10 @@ void Renderer::Apply()
 	//else OutputDebugString("Warning: no active buffer object (-1)\n");
 	if(shader) m_deviceContext->IASetInputLayout(shader->m_layout);
 
-
-	// RASTERIZER
-	// ----------------------------------------
-	m_deviceContext->RSSetViewports(1, &m_viewPort);
-	m_deviceContext->RSSetState(m_rasterizerStates[m_stateObjects._activeRSState]);
-
-
-	// OUTPUT MERGER
-	// ----------------------------------------
-	const auto indexDSState = m_stateObjects._activeDepthStencilState;
-	const auto indexRTV = m_stateObjects._boundRenderTarget;
-	const auto indexDSV = m_stateObjects._boundDepthStencil;
-	ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &m_renderTargets[indexRTV]._renderTargetView;
-	DepthStencil*  DSV = indexDSV == -1 ? nullptr :  m_depthStencils[indexDSV];
-	auto*  DSSTATE = m_depthStencilStates[indexDSState];
-	m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
-	m_deviceContext->OMSetRenderTargets(RTV ? 1 : 0, RTV, DSV);
-
-
-	// SHADER STAGES
-	// ----------------------------------------
 	if (shader)
 	{
+		// SHADER STAGES
+		// ----------------------------------------
 		m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
 		m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
 		if (shader->m_geoShader)	 m_deviceContext->GSSetShader(shader->m_geoShader    , nullptr, 0);
@@ -980,19 +983,16 @@ void Renderer::Apply()
 		if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
 
 
-		// CONSTANT BUFFERRS & SHADER RESOURCES
-		// ----------------------------------------
+		// CONSTANT BUFFERS 
+		// ----------------
 		static void(__cdecl ID3D11DeviceContext:: *SetShaderConstants[6])
-			(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) =
-		{
+			(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) =	{
 			&ID3D11DeviceContext::VSSetConstantBuffers,
 			&ID3D11DeviceContext::GSSetConstantBuffers,
 			&ID3D11DeviceContext::DSSetConstantBuffers,
 			&ID3D11DeviceContext::HSSetConstantBuffers,
 			&ID3D11DeviceContext::CSSetConstantBuffers,
-			&ID3D11DeviceContext::PSSetConstantBuffers
-		};
-
+			&ID3D11DeviceContext::PSSetConstantBuffers};
 		for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
 		{
 			ConstantBuffer& CB = shader->m_cBuffers[i];
@@ -1021,13 +1021,32 @@ void Renderer::Apply()
 			}
 		}
 
-
+		// SHADER RESOURCES
+		// ----------------
 		while (m_texSetCommands.size() > 0)
 		{
 			TextureSetCommand& cmd = m_texSetCommands.front();
 			cmd.SetResource(this);
 			m_texSetCommands.pop();
 		}
+
+
+		// RASTERIZER
+		// ----------------------------------------
+		m_deviceContext->RSSetViewports(1, &m_viewPort);
+		m_deviceContext->RSSetState(m_rasterizerStates[m_stateObjects._activeRSState]);
+
+
+		// OUTPUT MERGER
+		// ----------------------------------------
+		const auto indexDSState = m_stateObjects._activeDepthStencilState;
+		const auto indexRTV = m_stateObjects._boundRenderTarget;
+		const auto indexDSV = m_stateObjects._boundDepthStencil;
+		ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &m_renderTargets[indexRTV]._renderTargetView;
+		DepthStencil*  DSV = indexDSV == -1 ? nullptr : m_depthStencils[indexDSV];
+		auto*  DSSTATE = m_depthStencilStates[indexDSState];
+		m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
+		m_deviceContext->OMSetRenderTargets(RTV ? 1 : 0, RTV, DSV);
 	}
 	else
 	{

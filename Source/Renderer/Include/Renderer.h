@@ -87,6 +87,8 @@ public:
 	inline float	AspectRatio()	const { return m_Direct3D->AspectRatio(); };
 	inline unsigned	WindowHeight()	const { return m_Direct3D->WindowHeight(); };
 	inline unsigned	WindowWidth()	const { return m_Direct3D->WindowWidth(); };
+	inline RenderTargetID GetDefaultRenderTarget() const		{ return m_stateObjects._mainRenderTarget; }
+	inline TextureID	  GetDefaultRenderTargetTexture() const { return m_renderTargets[m_stateObjects._mainRenderTarget]._texture._id; }
 
 	// resource interface
 	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
@@ -98,7 +100,6 @@ public:
 	TextureID			CreateTexture2D(D3D11_TEXTURE2D_DESC& textureDesc);
 	TextureID			CreateCubemapTexture(const std::vector<std::string>& textureFiles);
 	
-	RenderTargetID		AddRenderTarget(ID3D11Texture2D*& surface);
 	RenderTargetID		AddRenderTarget(D3D11_TEXTURE2D_DESC& RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
 	DepthStencilID		AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface);
 	DepthStencilStateID AddDepthStencilState();	// todo params
@@ -149,9 +150,9 @@ private:
 	// init / load
 	void GeneratePrimitives();
 	void LoadShaders();
+	void InitializeDefaultRenderTarget();
 	void InitializeDefaultDepthBuffer();
 	void InitializeDefaultRasterizerStates();
-	
 
 	void SetConstant(const char* cName, const void* data);
 	//=======================================================================================================================================================
@@ -181,7 +182,7 @@ private:
 	std::vector<DepthStencilState*> m_depthStencilStates;
 
 	std::vector<RenderTarget>		m_renderTargets;
-	std::vector<DepthStencil*>		m_depthStencils;
+	std::vector<DepthStencil*>		m_depthStencils;	// not ptrs?
 
 	// state objects
 	struct StateObjects
@@ -192,7 +193,7 @@ private:
 		DepthStencilStateID	_activeDepthStencilState;
 		RenderTargetID		_boundRenderTarget;
 		DepthStencilID		_boundDepthStencil;
-		Texture				_mainRenderTargetTexture;
+		RenderTargetID		_mainRenderTarget;
 		Texture				_depthBufferTexture;
 	} m_stateObjects;
 	

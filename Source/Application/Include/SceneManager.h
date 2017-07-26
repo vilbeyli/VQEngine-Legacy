@@ -46,6 +46,14 @@ struct DepthShadowPass
 	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
 };
 
+struct PostProcessPass
+{
+
+	void Initialize(Renderer* pRenderer, ID3D11Device* device);
+	void Render(Renderer* pRenderer) const;
+	RenderTargetID	_finalRenderTarget;
+};
+
 class SceneManager
 {
 	friend struct DepthShadowPass;
@@ -73,6 +81,9 @@ private:
 
 	// pipeline state data
 	DepthShadowPass		m_depthPass;
+	PostProcessPass		m_postProcessPass;
+
+
 	ShaderID			m_selectedShader;
 	bool				m_gammaCorrection;
 	bool				m_debugRender;

@@ -16,30 +16,28 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#pragma once
-
-struct Vertex;
-
-// refactor mesh
-class Mesh
+struct PSIn
 {
-	//Mesh() : vertices(NULL), numVertices(0), indices(NULL), numIndices(0) {}
-	//~Mesh() { if (vertices) delete[] vertices; if (indices) delete[] indices; }
-	//Vertex* vertices;
-	//unsigned numVertices;
-	//unsigned* indices;
-	//unsigned numIndices;
+	float4 position : SV_POSITION;
+	float2 texCoord : TEXCOORD0;
 };
 
-enum GEOMETRY
+Texture2D worldRenderTarget;
+SamplerState samTriLinearSam
 {
-	TRIANGLE = 0,
-	QUAD,
-	CUBE,
-	CYLINDER,
-	SPHERE,
-	GRID,
-	BONE,
-
-	MESH_TYPE_COUNT
+	Filter = MIN_MAG_MIP_LINEAR;
+	AddressU = Wrap;
+	AddressV = Wrap;
 };
+
+
+float4 PSMain(PSIn In) : SV_TARGET
+{
+	float4 color = worldRenderTarget.Sample(samTriLinearSam, In.texCoord);
+
+	//const float3 clipValue = float3(0.5, 0.5, 0.5);
+	//float4 finalColor = float4(color * float3(10, 1, 1), 1);
+	//float4 finalColor = float4(max(clipValue, color), 1);
+	//return finalColor;
+	return color;
+}

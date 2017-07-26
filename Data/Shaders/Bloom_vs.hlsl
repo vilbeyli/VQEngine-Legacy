@@ -16,30 +16,24 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#pragma once
-
-struct Vertex;
-
-// refactor mesh
-class Mesh
+struct VSIn
 {
-	//Mesh() : vertices(NULL), numVertices(0), indices(NULL), numIndices(0) {}
-	//~Mesh() { if (vertices) delete[] vertices; if (indices) delete[] indices; }
-	//Vertex* vertices;
-	//unsigned numVertices;
-	//unsigned* indices;
-	//unsigned numIndices;
+	float3 position : POSITION;
+	float3 normal	: NORMAL;
+	float2 texCoord : TEXCOORD0;
+	float3 tangent	: TANGENT0;
 };
 
-enum GEOMETRY
+struct PSIn
 {
-	TRIANGLE = 0,
-	QUAD,
-	CUBE,
-	CYLINDER,
-	SPHERE,
-	GRID,
-	BONE,
-
-	MESH_TYPE_COUNT
+	float4 position : SV_POSITION;
+	float2 texCoord : TEXCOORD0;
 };
+
+PSIn VSMain(VSIn In)
+{
+	PSIn Out;
+    Out.position = float4(In.position, 1);
+    Out.texCoord = In.texCoord;
+	return Out;
+}

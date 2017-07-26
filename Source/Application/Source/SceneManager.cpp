@@ -134,6 +134,53 @@ void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const L
 	}
 }
 
+void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
+{
+	DXGI_SAMPLE_DESC smpDesc;
+	smpDesc.Count = 1;
+	smpDesc.Quality = 0;
+
+	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	D3D11_TEXTURE2D_DESC rtDesc;
+	ZeroMemory(&rtDesc, sizeof(rtDesc));
+	rtDesc.Width = 1600;	// todo get size
+	rtDesc.Height = 900;
+	rtDesc.MipLevels = 1;
+	rtDesc.ArraySize = 1;
+	rtDesc.Format = format;
+	rtDesc.Usage = D3D11_USAGE_DEFAULT;
+	rtDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	rtDesc.CPUAccessFlags = 0;
+	rtDesc.SampleDesc = smpDesc;
+	rtDesc.MiscFlags = 0;
+
+	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc;
+	ZeroMemory(&RTVDesc, sizeof(RTVDesc));
+	RTVDesc.Format = format;
+	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	RTVDesc.Texture2D.MipSlice = 0;
+
+
+	this->_finalRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+}
+
+void PostProcessPass::Render(Renderer * pRenderer) const
+{
+	const TextureID worldTexture = pRenderer->GetDefaultRenderTargetTexture();
+
+	pRenderer->SetShader(SHADERS::BLOOM);
+	pRenderer->BindRenderTarget(_finalRenderTarget);
+	pRenderer->UnbindDepthStencil();
+	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+	pRenderer->Apply();
+	pRenderer->SetTexture("worldRenderTarget", worldTexture);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+}
+
+//=======================================================================================
+
 SceneManager::SceneManager()
 	:
 	m_pCamera(new Camera()),
@@ -168,6 +215,8 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 	m_ZPassObjects.push_back(&m_roomScene.triangle);
 	for (GameObject& obj : m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
 	for (GameObject& obj : m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
+
+	m_postProcessPass.Initialize(m_pRenderer, m_pRenderer->m_device);
 }
 
 
@@ -253,7 +302,7 @@ void SceneManager::Render() const
 
 	// POST PROCESS PASS
 	//------------------------------------------------------------------------
-
+	m_postProcessPass.Render(m_pRenderer);
 
 
 	// DEBUG PASS
@@ -268,7 +317,7 @@ void SceneManager::Render() const
 
 		m_pRenderer->SetShader(SHADERS::DEBUG);
 		m_pRenderer->SetTexture("t_shadowMap", m_depthPass._shadowMap);	// todo: decide shader naming 
-		m_pRenderer->SetBufferObj(MESH_TYPE::QUAD);
+		m_pRenderer->SetBufferObj(GEOMETRY::QUAD);
 		m_pRenderer->Apply();
 		m_pRenderer->DrawIndexed();
 	}
@@ -323,6 +372,3 @@ void SceneManager::SendLightData() const
 	if (spots.size() > MAX_SPOTS)	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif
 }
-
-
-

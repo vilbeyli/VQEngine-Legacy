@@ -56,7 +56,6 @@ struct PostProcessPass
 
 class SceneManager
 {
-	friend struct DepthShadowPass;
 public:
 	SceneManager();
 	~SceneManager();
@@ -67,10 +66,11 @@ public:
 	void Update(float dt);
 	void Render() const;
 
+	void SendLightData() const;
 	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
 
 private:
-	void SendLightData() const;
+	friend struct DepthShadowPass;
 
 private:
 	RoomScene			m_roomScene;	// todo: rethink scene management

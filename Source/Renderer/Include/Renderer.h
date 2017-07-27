@@ -87,15 +87,15 @@ public:
 	inline float	AspectRatio()	const { return m_Direct3D->AspectRatio(); };
 	inline unsigned	WindowHeight()	const { return m_Direct3D->WindowHeight(); };
 	inline unsigned	WindowWidth()	const { return m_Direct3D->WindowWidth(); };
-	inline RenderTargetID GetDefaultRenderTarget() const		{ return m_stateObjects._mainRenderTarget; }
-	inline TextureID	  GetDefaultRenderTargetTexture() const { return m_renderTargets[m_stateObjects._mainRenderTarget]._texture._id; }
+	inline RenderTargetID GetDefaultRenderTarget() const		{ return m_state._mainRenderTarget; }
+	inline TextureID	  GetDefaultRenderTargetTexture() const { return m_renderTargets[m_state._mainRenderTarget]._texture._id; }
 
 	// resource interface
 	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
 	RasterizerStateID	AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip);
 	
 	// todo: return textureID to outside, use Texture& private
-	const Texture&		TextureFromFile(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
+	const Texture&		CreateTextureFromFile(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
 	const Texture&		CreateTexture2D(int widht, int height);
 	TextureID			CreateTexture2D(D3D11_TEXTURE2D_DESC& textureDesc);
 	TextureID			CreateCubemapTexture(const std::vector<std::string>& textureFiles);
@@ -195,7 +195,7 @@ private:
 		DepthStencilID		_boundDepthStencil;
 		RenderTargetID		_mainRenderTarget;
 		Texture				_depthBufferTexture;
-	} m_stateObjects;
+	} m_state;
 	
 	// performance counters
 	unsigned long long				m_frameCount;

@@ -163,8 +163,8 @@ void Renderer::GeneratePrimitives()
 void Renderer::LoadShaders()
 {
 	Log::Info("\r------------------------ COMPILING SHADERS ------------------------ \n");
-
-	// todo: initalize this in Shader:: and in order so that SHADERS::FORWARD_PHONG would get the right shader
+	
+	// todo: layouts from reflection?
 	std::vector<InputLayout> layout = {
 		{ "POSITION",	FLOAT32_3 },
 		{ "NORMAL",		FLOAT32_3 },
@@ -182,7 +182,6 @@ void Renderer::LoadShaders()
 	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"            , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"           , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"            , s_shaderRoot, layout);
-
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
 
@@ -206,7 +205,7 @@ void Renderer::InitializeDefaultDepthBuffer()
 	depthBufferDesc.MiscFlags = 0;
 
 	// Create the texture for the depth buffer using the filled out description.
-	HRESULT result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_stateObjects._depthBufferTexture._tex2D);
+	HRESULT result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_state._depthBufferTexture._tex2D);
 
 	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
@@ -214,7 +213,7 @@ void Renderer::InitializeDefaultDepthBuffer()
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2D.MipSlice = 0;
-	AddDepthStencil(dsvDesc, m_stateObjects._depthBufferTexture._tex2D);
+	AddDepthStencil(dsvDesc, m_state._depthBufferTexture._tex2D);
 
 
 	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
@@ -426,8 +425,8 @@ RasterizerStateID Renderer::AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillM
 	int hr = m_device->CreateRasterizerState(&RSDesc, &newRS);
 	if (!SUCCEEDED(hr))
 	{
-		assert(false);
-		// todo
+		Log::Error("Cannot create Rasterizer State");
+		return -1;
 	}
 
 	m_rasterizerStates.push_back(newRS);
@@ -436,7 +435,7 @@ RasterizerStateID Renderer::AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillM
 
 // assumes unique shader file names (even in different folders)
 // example params: "bricks_d.png", "Data/Textures/"
-const Texture& Renderer::TextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
+const Texture& Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
 	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
 	if (found != m_textures.end())
@@ -480,7 +479,7 @@ const Texture& Renderer::TextureFromFile(const std::string& texFileName, const s
 	}
 	else
 	{
-		OutputDebugString("Error loading texture file\n");
+		Log::Error("Cannot load texture file\n");
 		return m_textures[0];
 	}
 
@@ -558,7 +557,8 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	HRESULT hr = m_device->CreateTexture2D(&texDesc, &pData[0], &cubemapTexture);	// access violation error here reading first image data
 	if (hr != S_OK)
 	{
-		Log::Error(std::string("Cannot create cubemap texture: Todo:cubemaptexname"));
+		Log::Error(std::string("Cannot create cubemap texture: ") + split(textureFileNames.front(), '_').front());
+		return -1;
 	}
 
 	// create cubemap srv
@@ -569,7 +569,12 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	cubemapDesc.TextureCube.MipLevels = texDesc.MipLevels;
 	cubemapDesc.TextureCube.MostDetailedMip = 0;
 	hr = m_device->CreateShaderResourceView(cubemapTexture, &cubemapDesc, &cubeMapSRV);
-	
+	if (hr != S_OK)
+	{
+		Log::Error(std::string("Cannot create Shader Resource View for ") + split(textureFileNames.front(), '_').front());
+		return -1;
+	}
+
 	// return param
 	Texture cubemapOut;
 	cubemapOut._srv = cubeMapSRV;
@@ -616,6 +621,7 @@ DepthStencilStateID Renderer::AddDepthStencilState()
 	result = m_device->CreateDepthStencilState(&depthStencilDesc, &newDSState);
 	if (FAILED(result))
 	{
+		Log::Error(CANT_CRERATE_RENDER_STATE, "Depth Stencil");
 		return false;
 	}
 
@@ -631,6 +637,7 @@ DepthStencilStateID Renderer::AddDepthStencilState(const D3D11_DEPTH_STENCIL_DES
 	result = m_device->CreateDepthStencilState(&dsDesc, &newDSState);
 	if (FAILED(result))
 	{
+		Log::Error(CANT_CRERATE_RENDER_STATE, "Depth Stencil");
 		return false;
 	}
 
@@ -672,7 +679,7 @@ void Renderer::InitializeDefaultRenderTarget()
 	defaultRT._texture._id = static_cast<int>(m_textures.size() - 1);
 
 	m_renderTargets.push_back(defaultRT);
-	m_stateObjects._mainRenderTarget = static_cast<int>(m_renderTargets.size() - 1);
+	m_state._mainRenderTarget = static_cast<int>(m_renderTargets.size() - 1);
 }
 
 RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
@@ -682,7 +689,7 @@ RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D
 	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget._texture._tex2D, &RTVDesc, &newRenderTarget._renderTargetView);
 	if (!SUCCEEDED(hr))
 	{
-		Log::Error("Cannot create RenderTarget\n");
+		Log::Error(CANT_CREATE_RESOURCE, "Render Target View");
 		return -1;
 	}
 
@@ -696,11 +703,12 @@ DepthStencilID Renderer::AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& ds
 	newDSV =  (DepthStencil*)malloc(sizeof(DepthStencil));
 	memset(newDSV, 0, sizeof(*newDSV));
 
-	HRESULT hr = m_device->CreateDepthStencilView(
-		surface,
-		&dsvDesc,
-		&newDSV
-	);	// succeed hr ?
+	HRESULT hr = m_device->CreateDepthStencilView(surface, &dsvDesc, &newDSV);
+	if (FAILED(hr))
+	{
+		Log::Error(CANT_CREATE_RESOURCE, "Depth Stencil Target View");
+		return -1;
+	}
 
 	m_depthStencils.push_back(newDSV);
 	return static_cast<int>(m_depthStencils.size() - 1);
@@ -716,11 +724,11 @@ const Texture& Renderer::GetTexture(TextureID id) const
 void Renderer::SetShader(ShaderID id)
 {
 	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
-	if (m_stateObjects._activeShader != -1)		// if valid shader
+	if (m_state._activeShader != -1)		// if valid shader
 	{
-		if (id != m_stateObjects._activeShader)	// if not the same shader
+		if (id != m_state._activeShader)	// if not the same shader
 		{
-			Shader* shader = m_shaders[m_stateObjects._activeShader];
+			Shader* shader = m_shaders[m_state._activeShader];
 
 			// nullify texture units
 			for (ShaderTexture& tex : shader->m_textures)
@@ -757,17 +765,17 @@ void Renderer::SetShader(ShaderID id)
 		//Log::("Warning: invalid shader is active\n");
 	}
 
-	if (id != m_stateObjects._activeShader)
+	if (id != m_state._activeShader)
 	{
-		m_stateObjects._activeShader = id;
+		m_state._activeShader = id;
 		m_shaders[id]->ClearConstantBuffers();
 	}
 }
 
 void Renderer::Reset()
 {
-	m_stateObjects._activeShader = -1;
-	m_stateObjects._activeBuffer = -1;
+	m_state._activeShader = -1;
+	m_state._activeBuffer = -1;
 }
 
 
@@ -789,7 +797,7 @@ void Renderer::SetViewport(const D3D11_VIEWPORT & viewport)
 void Renderer::SetBufferObj(int BufferID)
 {
 	assert(BufferID >= 0);
-	m_stateObjects._activeBuffer = BufferID;
+	m_state._activeBuffer = BufferID;
 }
 
 
@@ -819,7 +827,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 	// Read more here: https://developer.nvidia.com/sites/default/files/akamai/gamedev/files/gdc12/Efficient_Buffer_Management_McDonald.pdf
 	//      and  here: https://developer.nvidia.com/content/constant-buffers-without-constant-pain-0
 
-	Shader* shader = m_shaders[m_stateObjects._activeShader];
+	Shader* shader = m_shaders[m_state._activeShader];
 	bool found = false;
 
 	// todo: compare with unordered_map lookup
@@ -845,14 +853,14 @@ void Renderer::SetConstant(const char * cName, const void * data)
 	if (!found)
 	{
 		char err[256];
-		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_stateObjects._activeShader, shader->Name().c_str());
+		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_state._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
 }
 
 void Renderer::SetTexture(const char * texName, TextureID tex)
 {
-	Shader* shader = m_shaders[m_stateObjects._activeShader];
+	Shader* shader = m_shaders[m_state._activeShader];
 	bool found = false;
 
 	// linear name lookup
@@ -871,7 +879,7 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 	if (!found)
 	{
 		char err[256];
-		sprintf_s(err, "Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_stateObjects._activeShader, shader->Name().c_str());
+		sprintf_s(err, "Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_state._activeShader, shader->Name().c_str());
 		Log::Error(err);
 	}
 }
@@ -879,35 +887,35 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 void Renderer::SetRasterizerState(RasterizerStateID rsStateID)
 {
 	assert(rsStateID > -1 && static_cast<size_t>(rsStateID) < m_rasterizerStates.size());
-	m_stateObjects._activeRSState = rsStateID;
+	m_state._activeRSState = rsStateID;
 }
 
 void Renderer::SetDepthStencilState(DepthStencilStateID depthStencilStateID)
 {
 	assert(depthStencilStateID > -1 && static_cast<size_t>(depthStencilStateID) < m_depthStencilStates.size());
-	m_stateObjects._activeDepthStencilState = depthStencilStateID;
+	m_state._activeDepthStencilState = depthStencilStateID;
 }
 
 void Renderer::BindRenderTarget(RenderTargetID rtvID)
 {
 	assert(rtvID > -1 && static_cast<size_t>(rtvID) < m_renderTargets.size());
-	m_stateObjects._boundRenderTarget = rtvID;
+	m_state._boundRenderTarget = rtvID;
 }
 
 void Renderer::BindDepthStencil(DepthStencilID dsvID)
 {
 	assert(dsvID > -1 && static_cast<size_t>(dsvID) < m_depthStencils.size());
-	m_stateObjects._boundDepthStencil = dsvID;
+	m_state._boundDepthStencil = dsvID;
 }
 
 void Renderer::UnbindRenderTarget()
 {
-	m_stateObjects._boundRenderTarget = -1;
+	m_state._boundRenderTarget = -1;
 }
 
 void Renderer::UnbindDepthStencil()
 {
-	m_stateObjects._boundDepthStencil = -1;
+	m_state._boundDepthStencil = -1;
 }
 
 // temp
@@ -936,18 +944,18 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 // todo: add stencil view params
 void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
-	const RenderTargetID rtv = m_stateObjects._boundRenderTarget;
-	const DepthStencilID dsv = m_stateObjects._boundDepthStencil;
+	const RenderTargetID rtv = m_state._boundRenderTarget;
+	const DepthStencilID dsv = m_state._boundDepthStencil;
 	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv]._renderTargetView, clearColor);
 	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthStencils[dsv], D3D11_CLEAR_DEPTH, depthValue, 0);
 }
 
 void Renderer::End()
 {
-	auto* backBuffer = m_renderTargets[m_stateObjects._mainRenderTarget]._texture._tex2D;
-	if (backBuffer != m_renderTargets[m_stateObjects._boundRenderTarget]._texture._tex2D)
+	auto* backBuffer = m_renderTargets[m_state._mainRenderTarget]._texture._tex2D;
+	if (backBuffer != m_renderTargets[m_state._boundRenderTarget]._texture._tex2D)
 	{
-		m_deviceContext->CopyResource(backBuffer, m_renderTargets[m_stateObjects._boundRenderTarget]._texture._tex2D);
+		m_deviceContext->CopyResource(backBuffer, m_renderTargets[m_state._boundRenderTarget]._texture._tex2D);
 	}
 
 	m_Direct3D->EndFrame();
@@ -957,7 +965,7 @@ void Renderer::End()
 
 void Renderer::Apply()
 {	// Here, we make all the API calls
-	Shader* shader = m_stateObjects._activeShader >= 0 ? m_shaders[m_stateObjects._activeShader] : nullptr;
+	Shader* shader = m_state._activeShader >= 0 ? m_shaders[m_state._activeShader] : nullptr;
 	
 	// TODO: check if state is changed
 
@@ -965,9 +973,9 @@ void Renderer::Apply()
 	// ----------------------------------------
 	unsigned stride = sizeof(Vertex);	// layout?
 	unsigned offset = 0;
-	if (m_stateObjects._activeBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_stateObjects._activeBuffer]->m_vertexBuffer, &stride, &offset);
+	if (m_state._activeBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_state._activeBuffer]->m_vertexBuffer, &stride, &offset);
 	//else OutputDebugString("Warning: no active buffer object (-1)\n");
-	if (m_stateObjects._activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_stateObjects._activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	if (m_state._activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_state._activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	//else OutputDebugString("Warning: no active buffer object (-1)\n");
 	if(shader) m_deviceContext->IASetInputLayout(shader->m_layout);
 
@@ -1034,14 +1042,14 @@ void Renderer::Apply()
 		// RASTERIZER
 		// ----------------------------------------
 		m_deviceContext->RSSetViewports(1, &m_viewPort);
-		m_deviceContext->RSSetState(m_rasterizerStates[m_stateObjects._activeRSState]);
+		m_deviceContext->RSSetState(m_rasterizerStates[m_state._activeRSState]);
 
 
 		// OUTPUT MERGER
 		// ----------------------------------------
-		const auto indexDSState = m_stateObjects._activeDepthStencilState;
-		const auto indexRTV = m_stateObjects._boundRenderTarget;
-		const auto indexDSV = m_stateObjects._boundDepthStencil;
+		const auto indexDSState = m_state._activeDepthStencilState;
+		const auto indexRTV = m_state._boundRenderTarget;
+		const auto indexDSV = m_state._boundDepthStencil;
 		ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &m_renderTargets[indexRTV]._renderTargetView;
 		DepthStencil*  DSV = indexDSV == -1 ? nullptr : m_depthStencils[indexDSV];
 		auto*  DSSTATE = m_depthStencilStates[indexDSState];
@@ -1057,7 +1065,7 @@ void Renderer::Apply()
 void Renderer::DrawIndexed(TOPOLOGY topology)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
-	m_deviceContext->DrawIndexed(m_bufferObjects[m_stateObjects._activeBuffer]->m_indexCount, 0, 0);
+	m_deviceContext->DrawIndexed(m_bufferObjects[m_state._activeBuffer]->m_indexCount, 0, 0);
 }
 
 void Renderer::Draw(TOPOLOGY topology)

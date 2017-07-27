@@ -6,7 +6,9 @@
 
 const std::array<const char*, ERROR_LOG::ERR_LOG_COUNT> s_errorStrings =
 {
-	"Can't open file "
+	"Can't open file ",
+	"Creating rendering resource: ",
+	"Creating render state: "
 };
 
 const char* debugOutputPath = "";

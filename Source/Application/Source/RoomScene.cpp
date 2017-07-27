@@ -69,6 +69,7 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 	m_skybox.Render(viewProj);
 
 	pRenderer->SetShader(selectedShader);
+	m_sceneManager.SendLightData();
 	m_room.Render(m_pRenderer, viewProj, SendMaterialData);
 	if (selectedShader == SHADERS::NORMAL) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
 	RenderCentralObjects(viewProj);
@@ -90,8 +91,8 @@ void RoomScene::InitializeRoom()
 
 		//m_room.floor.m_model.m_material.shininess	= 40.0f;
 		m_room.floor.m_model.m_material = Material::bronze;
-		m_room.floor.m_model.m_material.diffuseMap = m_pRenderer->TextureFromFile("metal3.png");
-		m_room.floor.m_model.m_material.normalMap = m_pRenderer->TextureFromFile("nrm_metal3.png");
+		m_room.floor.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("metal3.png");
+		m_room.floor.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("nrm_metal3.png");
 	}
 	// CEILING
 	{
@@ -102,8 +103,8 @@ void RoomScene::InitializeRoom()
 		//m_room.ceiling.m_model.m_material.color		= Color::purple;
 		//m_room.ceiling.m_model.m_material.shininess	= 10.0f;
 		m_room.ceiling.m_model.m_material = Material::gold;
-		m_room.ceiling.m_model.m_material.diffuseMap = m_pRenderer->TextureFromFile("metal2.png");
-		m_room.ceiling.m_model.m_material.normalMap = m_pRenderer->TextureFromFile("nrm_metal2.png");
+		m_room.ceiling.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("metal2.png");
+		m_room.ceiling.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("nrm_metal2.png");
 	}
 
 	// RIGHT WALL
@@ -119,8 +120,8 @@ void RoomScene::InitializeRoom()
 		//m_room.wallR.m_model.m_material.shininess	= 120.0f;
 		m_room.wallR.m_model.m_material = Material::bronze;
 
-		m_room.wallR.m_model.m_material.diffuseMap = m_pRenderer->TextureFromFile("metal2.png");
-		m_room.wallR.m_model.m_material.normalMap = m_pRenderer->TextureFromFile("nrm_metal2.png");
+		m_room.wallR.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("metal2.png");
+		m_room.wallR.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("nrm_metal2.png");
 	}
 
 	// LEFT WALL
@@ -134,8 +135,8 @@ void RoomScene::InitializeRoom()
 		//m_room.wallL.m_model.m_material.color		= Color::gray;
 		//m_room.wallL.m_model.m_material.shininess	= 60.0f;
 		m_room.wallL.m_model.m_material = Material::bronze;
-		m_room.wallL.m_model.m_material.diffuseMap = m_pRenderer->TextureFromFile("metal2.png");;
-		m_room.wallL.m_model.m_material.normalMap = m_pRenderer->TextureFromFile("nrm_metal2.png");;
+		m_room.wallL.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("metal2.png");;
+		m_room.wallL.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("nrm_metal2.png");;
 	}
 	// WALL
 	{
@@ -146,8 +147,8 @@ void RoomScene::InitializeRoom()
 		//m_room.wallF.m_model.m_material.color		= Color::gray;
 		m_room.wallF.m_model.m_material = Material::gold;
 		//m_room.wallF.m_model.m_material.shininess	= 90.0f;
-		m_room.wallF.m_model.m_material.diffuseMap = m_pRenderer->TextureFromFile("metal2.png");
-		m_room.wallF.m_model.m_material.normalMap = m_pRenderer->TextureFromFile("nrm_metal2.png");
+		m_room.wallF.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("metal2.png");
+		m_room.wallF.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("nrm_metal2.png");
 	}
 
 	m_room.floor.m_model.m_mesh   = GEOMETRY::CUBE;
@@ -183,7 +184,7 @@ void RoomScene::InitializeLights()
 		l._transform.SetPosition(-8.0f, 22.0f, 0);
 		l._transform.SetUniformScale(0.3f);
 		l._model.m_mesh = GEOMETRY::SPHERE;
-		l._model.m_material.color = l._color = Color::blue;
+		l._model.m_material.color = l._color = Color::orange;
 		l.SetLightRange(180);
 		m_lights.push_back(l);
 	}
@@ -192,7 +193,7 @@ void RoomScene::InitializeLights()
 		l._transform.SetPosition(28.0f, 15.0f, -17.0f);
 		l._transform.SetUniformScale(0.4f);
 		l._model.m_mesh = GEOMETRY::SPHERE;
-		l._model.m_material.color = Color::orange;
+		l._model.m_material.color = Color::blue;
 		l._color = l._model.m_material.color;
 		l.SetLightRange(250);
 		m_lights.push_back(l);
@@ -266,7 +267,7 @@ void RoomScene::InitializeObjectArrays()
 				cube.m_model.m_mesh = GEOMETRY::CUBE;
 				//cube.m_model.m_material = Material::RandomMaterial();
 				//cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
-				cube.m_model.m_material.normalMap = m_pRenderer->TextureFromFile("simple_normalmap.png");
+				cube.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("simple_normalmap.png");
 
 				cubes.push_back(cube);
 			}
@@ -582,7 +583,7 @@ void SceneManager::InitializePhysicsObjects()
 	m_anchor1.m_model.m_mesh = GEOMETRY::SPHERE;
 	m_anchor1.m_model.m_material.color = Color::white;
 	m_anchor1.m_model.m_material.shininess = 90.0f;
-	m_anchor1.m_model.m_material.normalMap._id = m_pRenderer->TextureFromFile("bricks_n.png");
+	m_anchor1.m_model.m_material.normalMap._id = m_pRenderer->CreateTextureFromFile("bricks_n.png");
 	m_anchor1.m_model.m_material.normalMap._name = "bricks_n.png";	// todo: rethink this
 	m_anchor1.m_transform.SetRotationDeg(15.0f, .0f, .0f);
 	m_anchor1.m_transform.SetPosition(-20.0f, 25.0f, 2.0f);
@@ -595,7 +596,7 @@ void SceneManager::InitializePhysicsObjects()
 	m_anchor2.m_model.m_material.color = Color::white;
 	m_anchor2.m_model.m_material.shininess = 90.0f;
 	//m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
-	m_anchor2.m_model.m_material.normalMap._id = m_pRenderer->TextureFromFile("bricks_n.png");
+	m_anchor2.m_model.m_material.normalMap._id = m_pRenderer->CreateTextureFromFile("bricks_n.png");
 	m_anchor2.m_model.m_material.normalMap._name = "bricks_n.png";	// todo: rethink this
 	m_anchor2.m_transform.SetRotationDeg(15.0f, .0f, .0f);
 	m_anchor2.m_transform.SetPosition(20.0f, 25.0f, 2.0f);
@@ -608,7 +609,7 @@ void SceneManager::InitializePhysicsObjects()
 	msh = GEOMETRY::CUBE;
 	mat.color = Color::white;
 	//mat.normalMap.id	= m_renderer->AddTexture("bricks_n.png");
-	mat.diffuseMap._id = m_pRenderer->TextureFromFile("bricks_d.png");
+	mat.diffuseMap._id = m_pRenderer->CreateTextureFromFile("bricks_d.png");
 	mat.normalMap._name = "bricks_n.png";	// todo: rethink this
 	mat.shininess = 65.0f;
 	tfm.SetPosition(0.0f, 10.0f, 0.0f);

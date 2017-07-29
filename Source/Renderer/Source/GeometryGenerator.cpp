@@ -25,6 +25,7 @@ using std::vector;
 
 // Direct3D Transformation Pipeline: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418867(v=vs.85).aspx
 
+ID3D11Device* GeometryGenerator::m_device = nullptr;
 
 void CalculateTangentsAndBitangents(BufferObject*& obj)
 {
@@ -99,15 +100,6 @@ void CalculateTangentsAndBitangents(BufferObject*& obj)
 			v2.normal = static_cast<const vec3>((XMVector3Cross(T, B))).normalized();
 		}
 	}
-}
-
-GeometryGenerator::GeometryGenerator()
-	:
-	m_device(nullptr)
-{}
-
-GeometryGenerator::~GeometryGenerator()
-{
 }
 
 BufferObject* GeometryGenerator::Triangle()

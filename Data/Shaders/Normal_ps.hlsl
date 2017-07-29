@@ -77,5 +77,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 	float3 n = (isNormalMap)* UnpackNormals(In.texCoord, N, T) +
 		(1.0f - isNormalMap) * N;
 	//n = (n + 1) / 2;
-	return 	float4(n, 1);
+	const float gamma = 2.2;
+	return 	pow(float4(n, 1), float4(gamma, gamma, gamma, 1));
 }

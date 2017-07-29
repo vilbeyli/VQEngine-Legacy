@@ -40,4 +40,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	//float4 finalColor = float4(max(clipValue, color), 1);
 	//return finalColor;
 	return color;
+	const float c = In.texCoord.x;
+	//const float g = 1.0 / 2.2;
+	//const float g =  2.2;
+	const float g =  1.0;
+	return pow(float4(c, c, c, 1), float4(g,g,g,1));
 }

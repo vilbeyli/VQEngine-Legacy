@@ -160,7 +160,7 @@ inline float3 UnpackNormals(float2 uv, float3 worldNormal, float3 worldTangent)
 	// uncompressed normal in tangent space
 	float3 SampledNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
 	SampledNormal = normalize(SampledNormal * 2.0f - 1.0f);
-
+	//SampledNormal.y *= -1.0f;
 	//float3 T = normalize(worldTangent);	// after interpolation, T and N might not be orthonormal
 	// make sure T is orthonormal to N by subtracting off any component of T along direction N.
 	const float3 T = normalize(worldTangent - dot(worldNormal, worldTangent) * worldNormal);
@@ -234,7 +234,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	float3 N = normalize(In.normal);
 	float3 T = normalize(In.tangent);
 	float3 V = normalize(cameraPos - In.worldPos);
-	const float ambient = 0.000075f;
+	const float ambient = 0.035f;
 	Surface s;
 	s.N = (isNormalMap)* UnpackNormals(In.texCoord, N, T) +
 		(1.0f - isNormalMap) * N;
@@ -261,7 +261,13 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	// gamma correction
 	const bool gammaCorrect = gammaCorrection > 0.99f;
-	const float gamma = 1.0 / 2.2;
-	if (gammaCorrect)	return pow(outColor, float4(gamma, gamma, gamma, 1.0f));
-	else        		return outColor;
+	//const float gamma = 1.0 / 2.2;
+	//const float gamma = 1.0;
+	const float gamma = 2.2;
+	//const float gamma = 2.2f * (1.0f - isDiffuseMap) + isDiffuseMap * 1.0f;
+	
+	//return outColor;
+	return pow(outColor, float4(gamma, gamma, gamma, 1.0f));
+	//if (gammaCorrect)	
+	//else        		return outColor;
 }

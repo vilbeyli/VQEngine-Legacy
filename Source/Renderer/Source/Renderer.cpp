@@ -16,6 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "GeometryGenerator.h"
 #include "Renderer.h"
 #include "D3DManager.h"
 #include "BufferObject.h"
@@ -150,14 +151,14 @@ void Renderer::GeneratePrimitives()
 	const unsigned sphRingCount = 40;
 	const unsigned sphSliceCount = 40;
 
-	m_geom.SetDevice(m_device);
-	m_bufferObjects[TRIANGLE]	= m_geom.Triangle();
-	m_bufferObjects[QUAD]		= m_geom.Quad();
-	m_bufferObjects[CUBE]		= m_geom.Cube();
-	m_bufferObjects[GRID]		= m_geom.Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV);
-	m_bufferObjects[CYLINDER]	= m_geom.Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount);
-	m_bufferObjects[SPHERE]		= m_geom.Sphere(sphRadius, sphRingCount, sphSliceCount);
-	m_bufferObjects[BONE]		= m_geom.Sphere(sphRadius/40, 10, 10);
+	GeometryGenerator::SetDevice(m_device);
+	m_bufferObjects[TRIANGLE]	= GeometryGenerator::Triangle();
+	m_bufferObjects[QUAD]		= GeometryGenerator::Quad();
+	m_bufferObjects[CUBE]		= GeometryGenerator::Cube();
+	m_bufferObjects[GRID]		= GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV);
+	m_bufferObjects[CYLINDER]	= GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount);
+	m_bufferObjects[SPHERE]		= GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount);
+	m_bufferObjects[BONE]		= GeometryGenerator::Sphere(sphRadius/40, 10, 10);
 }
 
 void Renderer::LoadShaders()
@@ -720,6 +721,17 @@ const Texture& Renderer::GetTexture(TextureID id) const
 	return m_textures[id];
 }
 
+const TextureID Renderer::GetTexture(const std::string name) const
+{
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&name](auto& tex) { return tex._name == name; });
+	if (found != m_textures.end())
+	{
+		return found->_id;
+	}
+	Log::Error("Texture not found: " + name);
+	return -1;
+}
+
 
 void Renderer::SetShader(ShaderID id)
 {
@@ -850,12 +862,14 @@ void Renderer::SetConstant(const char * cName, const void * data)
 		}
 	}
 
+#ifdef _DEBUG
 	if (!found)
 	{
 		char err[256];
 		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_state._activeShader, shader->Name().c_str());
 		OutputDebugString(err);
 	}
+#endif
 }
 
 void Renderer::SetTexture(const char * texName, TextureID tex)
@@ -876,12 +890,14 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 		}
 	}
 
+#ifdef _DEBUG
 	if (!found)
 	{
 		char err[256];
 		sprintf_s(err, "Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_state._activeShader, shader->Name().c_str());
 		Log::Error(err);
 	}
+#endif
 }
 
 void Renderer::SetRasterizerState(RasterizerStateID rsStateID)

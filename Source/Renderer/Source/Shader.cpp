@@ -527,8 +527,8 @@ const std::vector<ConstantBuffer>& Shader::GetConstantBuffers() const
 
 std::tuple<CPUConstant&, CPUConstantID> CPUConstant::GetNextAvailable()
 {
-	const CPUConstantID id = s_nextConstIndex++;
-	return std::make_tuple(std::ref(s_constants[id]), static_cast<CPUConstantID>(id));
+	const CPUConstantID id = static_cast<CPUConstantID>(s_nextConstIndex++);
+	return std::make_tuple(std::ref(s_constants[id]), id);
 }
 
 void CPUConstant::CleanUp()

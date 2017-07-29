@@ -317,7 +317,7 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 
 	// Set regular 32-bit surface for the back buffer.
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb173064(v=vs.85).aspx
-	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
 	// Set the refresh rate of the back buffer.
 	if (m_vsync_enabled)

@@ -25,19 +25,19 @@ struct ID3D11Device;
 class GeometryGenerator
 {
 public:
-	GeometryGenerator();
-	~GeometryGenerator();
+	GeometryGenerator() = delete;
+	~GeometryGenerator() = delete;
 
-	void SetDevice(ID3D11Device* dev) { m_device = dev; }
+	static void SetDevice(ID3D11Device* dev) { m_device = dev; }
 
-	BufferObject* Triangle();
-	BufferObject* Quad();
-	BufferObject* Cube();
-	BufferObject* Sphere(float radius, unsigned ringCount, unsigned sliceCount);
-	BufferObject* Grid(float width, float depth, unsigned m, unsigned n);
-	BufferObject* Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount);
+	static BufferObject* Triangle();
+	static BufferObject* Quad();
+	static BufferObject* Cube();
+	static BufferObject* Sphere(float radius, unsigned ringCount, unsigned sliceCount);
+	static BufferObject* Grid(float width, float depth, unsigned m, unsigned n);
+	static BufferObject* Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount);
 
 private:
-	ID3D11Device* m_device;
+	static ID3D11Device* m_device;
 };
 

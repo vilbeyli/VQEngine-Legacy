@@ -17,7 +17,6 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
-#include "GeometryGenerator.h"
 #include "D3DManager.h"
 #include "Shader.h"
 #include "Texture.h"
@@ -107,6 +106,7 @@ public:
 
 	const Shader*		GetShader(ShaderID shader_id) const;
 	const Texture&		GetTexture(TextureID) const;
+	const TextureID		GetTexture(const std::string name) const;
 
 	// state management
 	void SetViewport(const unsigned width, const unsigned height);
@@ -166,8 +166,6 @@ public:
 private:
 	D3DManager*						m_Direct3D;
 	HWND							m_hWnd;
-
-	GeometryGenerator				m_geom;			// maybe static functions? yes... definitely static functions. todo:
 
 	// render data
 	Camera*							m_mainCamera;

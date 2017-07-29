@@ -202,7 +202,7 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 
 	m_roomScene.Load(m_pRenderer);
 
-	// todo get game objects with z pass
+	// todo: static game object array in gameobj.h 
 	m_depthPass.Initialize(m_pRenderer, m_pRenderer->m_device);
 	m_ZPassObjects.push_back(&m_roomScene.m_room.floor);
 	m_ZPassObjects.push_back(&m_roomScene.m_room.wallL);
@@ -213,6 +213,8 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 	m_ZPassObjects.push_back(&m_roomScene.grid);
 	m_ZPassObjects.push_back(&m_roomScene.cylinder);
 	m_ZPassObjects.push_back(&m_roomScene.triangle);
+	m_ZPassObjects.push_back(&m_roomScene.cube);
+	m_ZPassObjects.push_back(&m_roomScene.sphere);
 	for (GameObject& obj : m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
 	for (GameObject& obj : m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
 
@@ -243,9 +245,10 @@ void SceneManager::Update(float dt)
 	// F1-F4 | Debug Shaders
 	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
 	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = SHADERS::NORMAL;
-	if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = SHADERS::TANGENT;
+	//if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = SHADERS::TANGENT;
+	if (ENGINE->INP()->IsKeyTriggered(114)) m_roomScene.ToggleFloorNormalMap();;
 	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = SHADERS::BINORMAL;
-															   
+	
 	// F5-F8 | Lighting Shaders								   
 	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = SHADERS::UNLIT;
 	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = SHADERS::FORWARD_PHONG;
@@ -253,6 +256,10 @@ void SceneManager::Update(float dt)
 
 	// F9-F12 | Shader Parameters
 	if (ENGINE->INP()->IsKeyTriggered(120)) m_gammaCorrection = !m_gammaCorrection;
+	if (ENGINE->INP()->IsKeyTriggered(120)) m_gammaCorrection = !m_gammaCorrection;
+	if (ENGINE->INP()->IsKeyTriggered(122)) m_gammaCorrection = !m_gammaCorrection;
+	//if (ENGINE->INP()->IsKeyTriggered(123)) 
+		
 	//if (ENGINE->INP()->IsKeyTriggered(52)) TBNMode = 3;
 
 }

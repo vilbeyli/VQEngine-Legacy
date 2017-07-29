@@ -48,6 +48,7 @@ private:
 	void RenderCentralObjects(const XMMATRIX& viewProj)  const;
 // ----------------------------------------------------------------------
 	friend class SceneManager;
+	void ToggleFloorNormalMap();
 
 	SceneManager&		m_sceneManager;
 	Renderer*			m_pRenderer;

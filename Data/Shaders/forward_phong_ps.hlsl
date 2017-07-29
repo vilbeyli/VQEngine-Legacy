@@ -136,20 +136,26 @@ float Intensity(Light l, float3 worldPos)
 }
 
 #define ATTENUATION_TEST
+#define BLINN_PHONG
 
 // returns diffuse and specular light
 float3 Phong(Light light, Surface s, float3 V, float3 worldPos)
 {
-	float3 N = s.N;
-	float3 L = normalize(light.position - worldPos);
-	float3 R = normalize(2 * N * dot(N, L) - L);
-	//float3 R = normalize(2*N*max(dot(N, L), 0.0f) - L);
-	//if (dot(R,L) < -0.99f)
-	//	R = float3(0, 0, 0);
+	const float3 N = s.N;
+	const float3 L = normalize(light.position - worldPos);
+	const float3 R = normalize(2 * N * dot(N, L) - L);
+	
 
 	float diffuse = max(0.0f, dot(N, L));   // lights
 	float3 Id = light.color * s.diffuseColor  * diffuse;
+
+#ifdef BLINN_PHONG
+	const float3 H = normalize(L + V);
+	float3 Is = light.color * s.specularColor * pow(max(dot(N, H), 0.0f), 4.0f * s.shininess) * diffuse;
+#else
 	float3 Is = light.color * s.specularColor * pow(max(dot(R, V), 0.0f), s.shininess) * diffuse;
+#endif
+	
 	//float3 Is = light.color * pow(max(dot(R, V), 0.0f), 240) ;
 
 	return Id + Is;

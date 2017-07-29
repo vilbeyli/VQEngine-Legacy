@@ -293,10 +293,11 @@ void RoomScene::InitializeObjectArrays()
 	cubes.front().m_transform.Translate(0, 10, 0);
 	cubes.front().m_transform.SetXRotationDeg(90);
 	cubes.front().m_transform.RotateAroundGlobalXAxisDegrees(30);
-	//cubes.front().m_transform.RotateAroundGlobalYAxisDegrees(-90);
+	cubes.front().m_transform.RotateAroundGlobalYAxisDegrees(30);
 	cubes.front().m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("BumpMapTexturePreview.png");
+	
 	// circle arrangement
-	const float sphHeight[2] = { 60.0f, 45.0f };
+	const float sphHeight[2] = { 10.0f, 45.0f };
 	{	// large circle
 		const float r = 30.0f;
 		const size_t numSph = 15;
@@ -313,8 +314,9 @@ void RoomScene::InitializeObjectArrays()
 			GameObject sph;
 			sph.m_transform = pos;
 			sph.m_model.m_mesh = GEOMETRY::SPHERE;
-			const float baseSpecular = 10.0f;
-			sph.m_model.m_material.specular = vec3((static_cast<float>(i) / numSph) * baseSpecular)._v;
+			const float baseSpecular = 5.0f;
+			const float step = 10.0f;
+			sph.m_model.m_material.specular = vec3( baseSpecular + (static_cast<float>(i) / numSph) * step)._v;
 			//sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * baseSpecular)._v : vec3((static_cast<float>(numSph - i) / numSph) * baseSpecular)._v;
 			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;
 
@@ -337,7 +339,7 @@ void RoomScene::InitializeObjectArrays()
 			GameObject sph;
 			sph.m_transform = pos;
 			sph.m_model.m_mesh = GEOMETRY::SPHERE;
-			sph.m_model.m_material = Material::RandomMaterial();
+			sph.m_model.m_material = Material::gold;
 
 			spheres.push_back(sph);
 		}
@@ -428,6 +430,8 @@ void RoomScene::UpdateCentralObj(const float dt)
 
 	// rotate cubes
 	const float cubeRotSpeed = 100.0f; // degs/s
+	cubes.front().m_transform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
+
 	for (int i = 0; i <  CUBE_ROW_COUNT; ++i)
 	{
 		for (int j = 0; j < CUBE_COLUMN_COUNT; ++j)

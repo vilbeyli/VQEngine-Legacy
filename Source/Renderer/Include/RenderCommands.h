@@ -1,24 +1,22 @@
 #pragma once
-//class RenderCommands
-//{
-//public:
-//	RenderCommands();
-//	~RenderCommands();
-//};
-
-
-//#include "Renderer.h"
-
 
 class Renderer;
 
 #include "Shader.h"
 
-struct TextureSetCommand
+struct SetTextureCommand
 {
 	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
 
 	int texID;
 	ShaderTexture shdTex;
+};
+
+struct SetSamplerCommand
+{
+	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
+
+	int samplerID;
+	ShaderSampler shdSampler;
 };
 

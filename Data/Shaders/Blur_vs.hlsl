@@ -16,41 +16,24 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+struct VSIn
+{
+	float3 position : POSITION;
+	float3 normal	: NORMAL;
+	float2 texCoord : TEXCOORD0;
+	float3 tangent	: TANGENT0;
+};
+
 struct PSIn
 {
 	float4 position : SV_POSITION;
 	float2 texCoord : TEXCOORD0;
 };
 
-struct PSOut
+PSIn VSMain(VSIn In)
 {
-	float4 color		: SV_TARGET0;
-	float4 brightColor	: SV_TARGET1;
-};
-
-Texture2D worldRenderTarget;
-SamplerState samTriLinearSam
-{
-	Filter = MIN_MAG_MIP_LINEAR;
-	AddressU = Wrap;
-	AddressV = Wrap;
-};
-
-const float BrightnessThreshold = 0.6f;
-
-PSOut PSMain(PSIn In) : SV_TARGET
-{
-	PSOut _out;
-
-	const float4 color = worldRenderTarget.Sample(samTriLinearSam, In.texCoord);
-	_out.color = color;
-	
-	// source: https://learnopengl.com/#!Advanced-Lighting/Bloom
-	const float brightness = dot(float3(0.216, 0.715, 0.0722), color.xyz);
-	if (brightness > BrightnessThreshold)
-		_out.brightColor = color;
-	else
-		_out.brightColor = float4(0, 0, 0, 1);
-	
-	return _out;
+	PSIn Out;
+    Out.position = float4(In.position, 1);
+    Out.texCoord = In.texCoord;
+	return Out;
 }

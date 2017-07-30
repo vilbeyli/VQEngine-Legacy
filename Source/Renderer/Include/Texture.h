@@ -22,6 +22,8 @@
 #include <d3d11.h>
 
 using TextureID = int;
+using SamplerID = int;
+
 class Renderer;
 
 struct Texture
@@ -36,7 +38,7 @@ public:
 	// - tell d3d how the resource will be used: at what stage if the pipeline it will be bound etc.
 	// - tell if the resource format was specified as typeless at creation time, then we must specify
 	//   the type right before binding by reinterpret casting.
-	// note: typed resources are optimized for access. use typeless if you really need.
+	// note: typed resources are optimized for access. use typeless if you really need. (src?)
 	ID3D11ShaderResourceView*	_srv;
 
 	union
@@ -45,11 +47,17 @@ public:
 		ID3D11Texture2D*		_tex2D;
 	};
 
-	ID3D11SamplerState*			_samplerState;
 	unsigned					_width;
 	unsigned					_height;
 	unsigned					_depth;
 
 	std::string					_name;
 	TextureID					_id;
+};
+
+struct Sampler
+{
+	ID3D11SamplerState*		_samplerState;
+	std::string				_name;
+	SamplerID				_id;
 };

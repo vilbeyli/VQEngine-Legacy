@@ -21,8 +21,8 @@ public:
 	static void Info(const std::string& s);
 	static void Error(ERROR_LOG errMode, const std::string& s);
 	static void Error(const std::string& s);
+	static void Error(const char* format, ...);
 
-	// todo: variadic arguments & formatted string as param
 private:
 	std::ofstream m_outFile;
 };

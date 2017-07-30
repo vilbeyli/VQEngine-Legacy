@@ -20,6 +20,7 @@
 #include "Settings.h"
 #include "Renderer.h"
 #include <vector>
+#include <array>
 #include <memory>
 
 // scenes
@@ -37,6 +38,7 @@ struct DepthShadowPass
 {
 	unsigned				_shadowMapDimension;
 	TextureID				_shadowMap;
+	SamplerID				_shadowSampler;
 	const Shader*			_shadowShader;
 	RasterizerStateID		_drawRenderState;
 	RasterizerStateID		_shadowRenderState;
@@ -50,6 +52,7 @@ struct BloomPass
 {
 	RenderTargetID _colorRT;
 	RenderTargetID _brightRT;
+	std::array<RenderTargetID, 2> _blurPingPong;
 };
 
 struct PostProcessPass

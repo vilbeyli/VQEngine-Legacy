@@ -182,6 +182,7 @@ void Renderer::LoadShaders()
 	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"            , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"           , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"            , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"             , s_shaderRoot, layout);
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
 
@@ -470,9 +471,7 @@ const Texture& Renderer::CreateTextureFromFile(const std::string& texFileName, c
 			tex._height = desc.Height;
 			tex._tex2D = tex2D;
 		}
-
-		tex._samplerState = nullptr;		// default? todo
-
+		
 		tex._id = static_cast<int>(m_textures.size());
 		m_textures.push_back(tex);
 		return m_textures.back();
@@ -582,6 +581,23 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	m_textures.push_back(cubemapOut);
 
 	return cubemapOut._id;
+}
+
+SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)
+{
+	ID3D11SamplerState*	pSamplerState;
+	HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &pSamplerState);
+	if (FAILED(hr))
+	{
+		Log::Error(ERROR_LOG::CANT_CREATE_RESOURCE, "Cannot create sampler state\n");
+	}
+
+	Sampler out;
+	out._id = static_cast<SamplerID>(m_samplers.size());
+	out._samplerState = pSamplerState;
+	out._name = "";	// ?
+	m_samplers.push_back(out);
+	return out._id;
 }
 
 DepthStencilStateID Renderer::AddDepthStencilState()
@@ -740,27 +756,27 @@ void Renderer::SetShader(ShaderID id)
 			// nullify texture units
 			for (ShaderTexture& tex : shader->m_textures)
 			{
-				ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+				ID3D11ShaderResourceView* nullSRV[6] = { nullptr };
 				//(m_deviceContext->*SetShaderResources[tex.shdType])(tex.bufferSlot, 1, nullSRV);
 				switch (tex.shdType)
 				{
 				case ShaderType::VS:
-					m_deviceContext->VSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					m_deviceContext->VSSetShaderResources(tex.bufferSlot, 6, nullSRV);
 					break;
 				case ShaderType::GS:
-					m_deviceContext->GSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					m_deviceContext->GSSetShaderResources(tex.bufferSlot, 6, nullSRV);
 					break;
 				case ShaderType::HS:
-					m_deviceContext->HSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					m_deviceContext->HSSetShaderResources(tex.bufferSlot, 6, nullSRV);
 					break;
 				case ShaderType::DS:
-					m_deviceContext->DSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					m_deviceContext->DSSetShaderResources(tex.bufferSlot, 6, nullSRV);
 					break;
 				case ShaderType::PS:
-					m_deviceContext->PSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					m_deviceContext->PSSetShaderResources(tex.bufferSlot, 6, nullSRV);
 					break;
 				case ShaderType::CS:
-					m_deviceContext->CSSetShaderResources(tex.bufferSlot, 1, nullSRV);
+					m_deviceContext->CSSetShaderResources(tex.bufferSlot, 6, nullSRV);
 					break;
 				default:
 					break;
@@ -861,9 +877,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 #ifdef _DEBUG
 	if (!found)
 	{
-		char err[256];
-		sprintf_s(err, "Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_state._activeShader, shader->Name().c_str());
-		OutputDebugString(err);
+		Log::Error("Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_state._activeShader, shader->Name().c_str());	
 	}
 #endif
 }
@@ -879,19 +893,44 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 		if (strcmp(texName, shader->m_textures[i].name.c_str()) == 0)
 		{
 			found = true;
-			TextureSetCommand cmd;
+			SetTextureCommand cmd;
 			cmd.texID = tex;
 			cmd.shdTex = shader->m_textures[i];
-			m_texSetCommands.push(cmd);
+			m_setTextureCmds.push(cmd);
 		}
 	}
 
 #ifdef _DEBUG
 	if (!found)
 	{
-		char err[256];
-		sprintf_s(err, "Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_state._activeShader, shader->Name().c_str());
-		Log::Error(err);
+		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_state._activeShader, shader->Name().c_str());
+	}
+#endif
+}
+
+void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
+{
+	Shader* shader = m_shaders[m_state._activeShader];
+	bool found = false;
+
+	// linear name lookup
+	for (size_t i = 0; i < shader->m_samplers.size(); ++i)
+	{
+		const ShaderSampler& sampler = shader->m_samplers[i];
+		if (strcmp(samplerName, sampler.name.c_str()) == 0)
+		{
+			found = true;
+			SetSamplerCommand cmd;
+			cmd.samplerID = samplerID;
+			cmd.shdSampler = sampler;
+			m_setSamplerCmds.push(cmd);
+		}
+	}
+
+#ifdef _DEBUG
+	if (!found)
+	{
+		Log::Error("Sampler not found: \"%s\" in Shader(Id=%d) \"%s\"\n", samplerName, m_state._activeShader, shader->Name().c_str());
 	}
 #endif
 }
@@ -1013,11 +1052,18 @@ void Renderer::Apply()
 
 		// SHADER RESOURCES
 		// ----------------------------------------
-		while (m_texSetCommands.size() > 0)
+		while (m_setTextureCmds.size() > 0)
 		{
-			TextureSetCommand& cmd = m_texSetCommands.front();
+			SetTextureCommand& cmd = m_setTextureCmds.front();
 			cmd.SetResource(this);
-			m_texSetCommands.pop();
+			m_setTextureCmds.pop();
+		}
+
+		while (m_setSamplerCmds.size() > 0)
+		{
+			SetSamplerCommand& cmd = m_setSamplerCmds.front();
+			cmd.SetResource(this);
+			m_setSamplerCmds.pop();
 		}
 
 		// RASTERIZER
@@ -1047,7 +1093,6 @@ void Renderer::Apply()
 		auto*  DSSTATE = m_depthStencilStates[indexDSState];
 
 		m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
-		//m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
 		m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
 	}
 	else

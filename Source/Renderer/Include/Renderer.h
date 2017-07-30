@@ -46,6 +46,7 @@ using Viewport = D3D11_VIEWPORT;
 using ShaderID            = int;
 using BufferID            = int;
 using TextureID           = int;
+using SamplerID           = int;
 using RasterizerStateID   = int;
 using DepthStencilStateID = int;
 using RenderTargetID	  = int;
@@ -76,7 +77,8 @@ struct RenderTarget
 class Renderer
 {
 	friend class Engine;
-	friend struct TextureSetCommand;
+	friend struct SetTextureCommand;
+	friend struct SetSamplerCommand;	// todo: refactor commands
 
 public:
 	Renderer();
@@ -90,6 +92,7 @@ public:
 	inline unsigned			WindowWidth()	const { return m_Direct3D->WindowWidth();  };
 	inline RenderTargetID	GetDefaultRenderTarget() const	{ return m_state._mainRenderTarget; }
 	inline TextureID		GetDefaultRenderTargetTexture() const { return m_renderTargets[m_state._mainRenderTarget]._texture._id; }
+	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return m_renderTargets[RT]._texture._id; }
 
 	// resource interface
 	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
@@ -101,6 +104,8 @@ public:
 	TextureID			CreateTexture2D(D3D11_TEXTURE2D_DESC& textureDesc);
 	TextureID			CreateCubemapTexture(const std::vector<std::string>& textureFiles);
 	
+	SamplerID			CreateSamplerState(D3D11_SAMPLER_DESC& samplerDesc);
+
 	RenderTargetID		AddRenderTarget(D3D11_TEXTURE2D_DESC& RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
 	DepthStencilID		AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface);
 	DepthStencilStateID AddDepthStencilState();	// todo params
@@ -117,6 +122,7 @@ public:
 	void SetShader(ShaderID);
 	void SetBufferObj(int BufferID);
 	void SetTexture(const char* texName, TextureID tex);
+	void SetSamplerState(const char* texName, SamplerID sampler);
 	void SetRasterizerState(RasterizerStateID rsStateID);
 	void SetDepthStencilState(DepthStencilStateID depthStencilStateID);
 
@@ -175,7 +181,9 @@ private:
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
 	std::vector<Texture>			m_textures;
-	std::queue<TextureSetCommand>	m_texSetCommands;
+	std::vector<Sampler>			m_samplers;
+	std::queue<SetTextureCommand>	m_setTextureCmds;
+	std::queue<SetSamplerCommand>	m_setSamplerCmds;
 
 	std::vector<RasterizerState*>	m_rasterizerStates;
 	std::vector<DepthStencilState*> m_depthStencilStates;

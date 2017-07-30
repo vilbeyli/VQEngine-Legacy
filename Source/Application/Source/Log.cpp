@@ -45,6 +45,19 @@ void Log::Error(const std::string & s)
 	OutputDebugString(err.c_str());
 }
 
+void Log::Error(const char * format, ...)
+{
+	return; // todo: fix variadic arguments
+	va_list args;
+
+	va_start(args, format);			// unpack variadic arguments 
+	char err[256];
+	sprintf_s(err, format, args);	
+	va_end(args);
+
+	OutputDebugString(err);
+}
+
 void Log::Info(const std::string & s)
 {
 	std::string info("\n----- INFO : ");

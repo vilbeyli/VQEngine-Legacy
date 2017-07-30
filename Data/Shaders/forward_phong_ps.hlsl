@@ -92,13 +92,15 @@ Texture2D gDiffuseMap;
 Texture2D gNormalMap;
 Texture2D gShadowMap;
 
-SamplerState samAnisotropic
-{
-	Filter = ANISOTROPIC;
-	MaxAnisotropy = 4;
-	AddressU = WRAP;
-	AddressV = WRAP;
-};
+//SamplerState samAnisotropic
+//{
+//	Filter = ANISOTROPIC;
+//	MaxAnisotropy = 4;
+//	AddressU = WRAP;
+//	AddressV = WRAP;
+//};
+
+SamplerState sShadowSampler;
 
 // FUNCTIONS
 //---------------------------------------------------------
@@ -164,7 +166,7 @@ float3 Phong(Light light, Surface s, float3 V, float3 worldPos)
 inline float3 UnpackNormals(float2 uv, float3 worldNormal, float3 worldTangent)
 {
 	// uncompressed normal in tangent space
-	float3 SampledNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
+	float3 SampledNormal = gNormalMap.Sample(sShadowSampler, uv).xyz;
 	SampledNormal = normalize(SampledNormal * 2.0f - 1.0f);
 	//SampledNormal.y *= -1.0f;
 	//float3 T = normalize(worldTangent);	// after interpolation, T and N might not be orthonormal
@@ -185,7 +187,7 @@ float ShadowTest(float3 worldPos, float4 lightSpacePos)
 	float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
 
 	float pxDepthInLSpace = projLSpaceCoords.z;
-	float closestDepthInLSpace = gShadowMap.Sample(samAnisotropic, shadowTexCoords).x;
+	float closestDepthInLSpace = gShadowMap.Sample(sShadowSampler, shadowTexCoords).x;
 
 	// frustum check
 	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
@@ -216,7 +218,7 @@ float3 ShadowTestDebug(float3 worldPos, float4 lightSpacePos, float3 illuminatio
 
 	float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
 	float pxDepthInLSpace = projLSpaceCoords.z;
-	float closestDepthInLSpace = gShadowMap.Sample(samAnisotropic, shadowTexCoords).x;
+	float closestDepthInLSpace = gShadowMap.Sample(sShadowSampler, shadowTexCoords).x;
 
 	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
 		projLSpaceCoords.y < -1.0f || projLSpaceCoords.y > 1.0f ||
@@ -244,7 +246,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	Surface s;
 	s.N = (isNormalMap)* UnpackNormals(In.texCoord, N, T) +
 		(1.0f - isNormalMap) * N;
-	s.diffuseColor = diffuse *  (isDiffuseMap          * gDiffuseMap.Sample(samAnisotropic, In.texCoord).xyz +
+	s.diffuseColor = diffuse *  (isDiffuseMap          * gDiffuseMap.Sample(sShadowSampler, In.texCoord).xyz +
 		(1.0f - isDiffuseMap)   * float3(1,1,1));
 	s.specularColor = specular;
 	s.shininess = shininess * SHININESS_ADJUSTER;

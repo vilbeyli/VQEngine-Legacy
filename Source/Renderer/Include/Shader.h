@@ -149,6 +149,7 @@ enum SHADERS	// good enough for global namespace
 	DEBUG,
 	SKYBOX,
 	BLOOM,
+	BLUR,
 
 	SHADER_COUNT
 };
@@ -158,8 +159,6 @@ using ShaderID = int;
 
 class Shader
 {
-	friend class Renderer;
-
 public:
 	Shader(const std::string& shaderFileName);
 	~Shader();
@@ -169,12 +168,13 @@ public:
 	void UpdateConstants(ID3D11DeviceContext* context);
 
 
-	const std::string&	Name() const;
-	ShaderID ID() const;
+	const std::string&							Name() const;
+	ShaderID									ID() const;
 	const std::vector<ConstantBufferLayout>&	GetConstantBufferLayouts() const;
 	const std::vector<ConstantBuffer>&			GetConstantBuffers() const;
 
 private:
+	friend class Renderer;
 	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, ShaderType type);
 	void Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts, bool geoShader);
 	void SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob);

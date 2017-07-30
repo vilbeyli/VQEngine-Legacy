@@ -62,7 +62,7 @@ bool BaseSystem::Init()
 		return false;
 	}
 
-	Log::Info("Engine initialization and asset loading successful.");
+	Log::Info("Engine initialization and asset loading successful.\n");
 	return true;
 }	
 

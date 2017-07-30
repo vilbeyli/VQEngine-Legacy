@@ -22,13 +22,7 @@ struct PSIn
 	float2 texCoord : TEXCOORD0;
 };
 
-struct PSOut
-{
-	float4 color		: SV_TARGET0;
-	float4 brightColor	: SV_TARGET1;
-};
-
-Texture2D worldRenderTarget;
+Texture2D InputTexture;
 SamplerState samTriLinearSam
 {
 	Filter = MIN_MAG_MIP_LINEAR;
@@ -36,21 +30,22 @@ SamplerState samTriLinearSam
 	AddressV = Wrap;
 };
 
-const float BrightnessThreshold = 0.6f;
+//const float BrightnessThreshold = 0.6f;
 
-PSOut PSMain(PSIn In) : SV_TARGET
+cbuffer constants 
 {
-	PSOut _out;
+	int isHorizontal;
+};
 
-	const float4 color = worldRenderTarget.Sample(samTriLinearSam, In.texCoord);
-	_out.color = color;
-	
-	// source: https://learnopengl.com/#!Advanced-Lighting/Bloom
-	const float brightness = dot(float3(0.216, 0.715, 0.0722), color.xyz);
-	if (brightness > BrightnessThreshold)
-		_out.brightColor = color;
+float4 PSMain(PSIn In) : SV_TARGET
+{
+	const float4 color = InputTexture.Sample(samTriLinearSam, In.texCoord);
+	if(isHorizontal)
+	{
+		return float4(color/3);
+	}
 	else
-		_out.brightColor = float4(0, 0, 0, 1);
-	
-	return _out;
+	{
+		return color;
+	}
 }

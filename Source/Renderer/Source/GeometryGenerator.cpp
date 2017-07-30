@@ -54,7 +54,7 @@ void CalculateTangentsAndBitangents(BufferObject*& obj)
 
 	const vec3 N = vec3::Forward;	//  (0, 0, 1)
 
-	for (int i = 0; i < countIndices; i += 3)
+	for (size_t i = 0; i < countIndices; i += 3)
 	{
 		Vertex& v0 = verts[obj->m_indices[i]];
 		Vertex& v1 = verts[obj->m_indices[i + 1]];

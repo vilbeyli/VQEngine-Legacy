@@ -17,6 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Texture.h"
+#include "Renderer.h"
 
 Texture::Texture()
 	:
@@ -34,11 +35,16 @@ Texture::Texture()
 Texture::~Texture()
 {}
 
-// todo: take params
-//bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC & textureDescriptor)
-//{
-//
-//	return false;
-//}
-
-
+bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC & descriptor, Renderer * pRenderer)
+{
+	HRESULT hr = pRenderer->m_device->CreateTexture2D(&descriptor, nullptr, &this->_tex2D);
+	if (!SUCCEEDED(hr))
+	{
+		Log::Error("Texture::InitializeTexture2D(): Cannot create texture2D");
+		return false;
+	}
+	this->_width = descriptor.Width;
+	this->_height = descriptor.Height;
+	
+	return true;
+}

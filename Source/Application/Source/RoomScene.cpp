@@ -315,7 +315,7 @@ void RoomScene::InitializeObjectArrays()
 			sph.m_transform = pos;
 			sph.m_model.m_mesh = GEOMETRY::SPHERE;
 			const float baseSpecular = 5.0f;
-			const float step = 10.0f;
+			const float step = 15.0f;
 			sph.m_model.m_material.specular = vec3( baseSpecular + (static_cast<float>(i) / numSph) * step)._v;
 			//sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * baseSpecular)._v : vec3((static_cast<float>(numSph - i) / numSph) * baseSpecular)._v;
 			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;

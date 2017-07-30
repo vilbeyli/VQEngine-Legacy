@@ -65,49 +65,34 @@ public:
 	D3DManager();
 	~D3DManager();
 
-	bool Initialize(int width, int height, const bool VSYNC, HWND m_hwnd, const bool FULL_SCREEN);
+	bool Initialize(int width, int height, const bool VSYNC, HWND hwnd, const bool FULL_SCREEN);
 	void Shutdown();
 
 	void EndFrame();
 
-	void EnableAlphaBlending(bool enable);
-	void EnableZBuffer(bool enable);
-
-	ID3D11Device*			GetDevice()			{ return m_device; }
-	ID3D11DeviceContext*	GetDeviceContext()	{ return m_deviceContext;}
-
 	void GetVideoCardInfo(char*, int&);
-	float AspectRatio() const;
+	
+	float    AspectRatio() const;
 	unsigned WindowWidth() const;
 	unsigned WindowHeight() const;
+	inline HWND	 WindowHandle() const { return m_hwnd; }
 
 private:
 	bool InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator);
 	bool InitializeDepthBuffer(int scrWidth, int scrHeight, ID3D11Texture2D* depthStencilBuffer);
-	bool InitDepthStencilBuffer();
-	bool InitRasterizerState();
-	bool InitStencilView(D3D11_TEXTURE2D_DESC tex2DDesc);
-	D3D11_VIEWPORT InitializeViewport(int scrWidth, int scrHeight);
-	bool InitAlphaBlending();
-	bool InitZBuffer();
 
 private:
 	bool						m_vsync_enabled;
 	int							m_VRAM;
 	char						m_GPUDescription[128];
+	HWND						m_hwnd;
+
 	IDXGISwapChain*				m_swapChain;
-	ID3D11Device*				m_device;
+	
+	ID3D11Device*				m_device;			// shared ptr
 	ID3D11DeviceContext*		m_deviceContext;
 	
 	
 	unsigned					m_wndWidth, m_wndHeight;
-	
-	//-----------------------------------------------
-	// State Management (todo move to renderer)
-	ID3D11RasterizerState*		m_rasterState;
-	ID3D11DepthStencilState*	m_depthStencilState;
-	ID3D11DepthStencilState*	m_depthDisabledStencilState;
-	ID3D11BlendState*			m_alphaEnableBlendState;
-	ID3D11BlendState*			m_alphaDisableBlendState;
 };
 

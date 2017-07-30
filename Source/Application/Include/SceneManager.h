@@ -46,11 +46,20 @@ struct DepthShadowPass
 	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
 };
 
+struct BloomPass
+{
+	RenderTargetID _colorRT;
+	RenderTargetID _brightRT;
+};
+
 struct PostProcessPass
 {
 
 	void Initialize(Renderer* pRenderer, ID3D11Device* device);
 	void Render(Renderer* pRenderer) const;
+
+	BloomPass		_bloomPass;
+
 	RenderTargetID	_finalRenderTarget;
 };
 

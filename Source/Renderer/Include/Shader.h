@@ -91,6 +91,7 @@ private:
 
 public:
 	inline static CPUConstant& Get(int id) { return s_constants[id]; }
+	
 	static std::tuple<CPUConstant&, CPUConstantID> GetNextAvailable();
 	static void CleanUp();	// call once
 	
@@ -163,8 +164,10 @@ public:
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
-	void SetConstantBuffers(ID3D11Device* device);
 	void ClearConstantBuffers();
+
+	void UpdateConstants(ID3D11DeviceContext* context);
+
 
 	const std::string&	Name() const;
 	ShaderID ID() const;
@@ -176,6 +179,7 @@ private:
 	void Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts, bool geoShader);
 	void SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob);
 	void CheckSignatures();
+	void SetConstantBuffers(ID3D11Device* device);
 
 private:
 	static std::array<ShaderID, SHADERS::SHADER_COUNT>	s_shaders;

@@ -27,11 +27,6 @@ D3DManager::D3DManager()
 	m_swapChain					= nullptr;
 	m_device					= nullptr;
 	m_deviceContext				= nullptr;
-	m_depthStencilState			= nullptr;
-	m_rasterState				= nullptr;
-	m_alphaEnableBlendState		= nullptr;
-	m_alphaDisableBlendState	= nullptr;
-	m_depthDisabledStencilState = nullptr;
 	m_wndHeight = m_wndWidth	= 0;
 }
 
@@ -42,6 +37,8 @@ D3DManager::~D3DManager()
 
 bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hWnd, const bool isFullscreen)
 {
+	m_hwnd = hWnd;
+
 	HRESULT result;
 	IDXGIFactory* factory;
 	IDXGIAdapter* adapter;
@@ -150,41 +147,12 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hWnd, 
 	}
 
 	// Release memory
-	delete[] displayModeList;
-	displayModeList = 0;
+	delete[] displayModeList;	displayModeList = 0;
+	adapterOutput->Release();	adapterOutput = 0;
+	adapter->Release();			adapter = 0;
+	factory->Release();			factory = 0;
 
-	adapterOutput->Release();
-	adapterOutput = 0;
-
-	adapter->Release();
-	adapter = 0;
-
-	factory->Release();
-	factory = 0;
-
-	// D3D Initialization
-	//----------------------------------------------------------------------------------
 	if (!InitSwapChain(hWnd, isFullscreen, width, height, numerator, denominator))
-	{
-		return false;
-	}
-
-	if (!InitDepthStencilBuffer())
-	{
-		return false;
-	}
-
-	if (!InitRasterizerState())
-	{
-		return false;
-	}
-
-	if (!InitAlphaBlending())
-	{
-		return false;
-	}
-
-	if (!InitZBuffer())
 	{
 		return false;
 	}
@@ -200,18 +168,6 @@ void D3DManager::Shutdown()
 	if (m_swapChain)
 	{
 		m_swapChain->SetFullscreenState(false, NULL);
-	}
-
-	if (m_rasterState)
-	{
-		m_rasterState->Release();
-		m_rasterState = 0;
-	}
-
-	if (m_depthStencilState)
-	{
-		m_depthStencilState->Release();
-		m_depthStencilState = 0;
 	}
 
 	if (m_deviceContext)
@@ -248,32 +204,6 @@ void D3DManager::EndFrame()
 	m_deviceContext->CSSetShader(NULL, NULL, 0);
 	if (m_vsync_enabled)		m_swapChain->Present(1, 0);
 	else						m_swapChain->Present(0, 0);
-}
-
-void D3DManager::EnableAlphaBlending(bool enable)
-{
-	float blendFactor[4] = { 0 };
-
-	if (enable)
-	{
-		m_deviceContext->OMSetBlendState(m_alphaEnableBlendState, blendFactor, 0xffffffff);
-	}
-	else
-	{
-		m_deviceContext->OMSetBlendState(m_alphaDisableBlendState, blendFactor, 0xffffffff);
-	}
-}
-
-void D3DManager::EnableZBuffer(bool enable)
-{
-	if (enable)
-	{
-		m_deviceContext->OMSetDepthStencilState(m_depthStencilState, 1);
-	}
-	else
-	{
-		m_deviceContext->OMSetDepthStencilState(m_depthDisabledStencilState, 1);
-	}
 }
 
 void D3DManager::GetVideoCardInfo(char* cardName, int& memory)
@@ -412,181 +342,111 @@ bool D3DManager::InitializeDepthBuffer(int scrWidth, int scrHeight, ID3D11Textur
 	return true;
 }
 
-bool D3DManager::InitDepthStencilBuffer()
-{
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-	HRESULT result;
-
-	// Initialize the description of the stencil state.
-	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
-
-	// Set up the description of the stencil state.
-	depthStencilDesc.DepthEnable = true;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-
-	depthStencilDesc.StencilEnable = false;
-	depthStencilDesc.StencilReadMask = 0xFF;
-	depthStencilDesc.StencilWriteMask = 0xFF;
-
-	// Stencil operations if pixel is front-facing.
-	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	// Stencil operations if pixel is back-facing.
-	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	// Create the depth stencil state.
-	result = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilState);
-	if (FAILED(result))
-	{
-		return false;
-	}
-
-	return true;
-}
-
-bool D3DManager::InitRasterizerState()
-{
-
-	HRESULT result;
-	D3D11_RASTERIZER_DESC rasterDesc;
-
-	// Setup the raster description which will determine how and what polygons will be drawn.
-	rasterDesc.AntialiasedLineEnable = false;
-	rasterDesc.CullMode = D3D11_CULL_NONE;
-	rasterDesc.DepthBias = 0;
-	rasterDesc.DepthBiasClamp = 0.0f;
-	rasterDesc.DepthClipEnable = true;
-	rasterDesc.FillMode = D3D11_FILL_SOLID;
-	rasterDesc.FrontCounterClockwise = false;
-	rasterDesc.MultisampleEnable = false;
-	rasterDesc.ScissorEnable = false;
-	rasterDesc.SlopeScaledDepthBias = 0.0f;
-
-	// Create the rasterizer state from the description we just filled out.
-	result = m_device->CreateRasterizerState(&rasterDesc, &m_rasterState);
-	if (FAILED(result))
-	{
-		return false;
-	}
-
-	// Now set the rasterizer state.
-	m_deviceContext->RSSetState(m_rasterState);
-
-	return true;
-}
-
-bool D3DManager::InitStencilView(D3D11_TEXTURE2D_DESC tex2DDesc)
-{
-#if 0
-	HRESULT result;
-	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-
-	// Initialize the depth stencil view.
-	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-
-	// Set up the depth stencil view description.
-	depthStencilViewDesc.Format = tex2DDesc.Format;
-	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	depthStencilViewDesc.Texture2D.MipSlice = 0;
-
-	// Create the depth stencil view.
-	result = m_device->CreateDepthStencilView(m_depthStencilBuffer, &depthStencilViewDesc, &m_depthStencilView);
-	if (FAILED(result))
-	{
-		return false;
-	}
-#endif
-	return true;
-}
-
-D3D11_VIEWPORT D3DManager::InitializeViewport(int scrWidth, int scrHeight)
-{
-	D3D11_VIEWPORT viewport;
-	viewport.Width = (float)scrWidth;
-	viewport.Height = (float)scrHeight;
-	viewport.MinDepth = 0.0f;
-	viewport.MaxDepth = 1.0f;
-	viewport.TopLeftX = 0.0f;
-	viewport.TopLeftY = 0.0f;
-	return viewport;
-}
-
-bool D3DManager::InitAlphaBlending()
-{
-	HRESULT result;
-	D3D11_BLEND_DESC blendStateDesc;
-
-	ZeroMemory(&blendStateDesc, sizeof(blendStateDesc));
-
-	// initialize/clear description
-	blendStateDesc.RenderTarget[0].BlendEnable				= TRUE;
-	blendStateDesc.RenderTarget[0].SrcBlend					= D3D11_BLEND_SRC_ALPHA;
-	blendStateDesc.RenderTarget[0].DestBlend				= D3D11_BLEND_INV_SRC_ALPHA;
-	blendStateDesc.RenderTarget[0].BlendOp					= D3D11_BLEND_OP_ADD;
-	blendStateDesc.RenderTarget[0].SrcBlendAlpha			= D3D11_BLEND_ONE;
-	blendStateDesc.RenderTarget[0].DestBlendAlpha			= D3D11_BLEND_ZERO;
-	blendStateDesc.RenderTarget[0].BlendOpAlpha				= D3D11_BLEND_OP_ADD;
-	blendStateDesc.RenderTarget[0].RenderTargetWriteMask	= 0x0f;
-
-	// create blend states
-	result = m_device->CreateBlendState(&blendStateDesc, &m_alphaEnableBlendState);
-	if (FAILED(result))
-	{
-		return false;
-	}
-
-	blendStateDesc.RenderTarget[0].BlendEnable = FALSE;
-	result = m_device->CreateBlendState(&blendStateDesc, &m_alphaDisableBlendState);
-	if (FAILED(result))
-	{
-		return false;
-	}
-
-	return true;
-}
-
-bool D3DManager::InitZBuffer()
-{
-	HRESULT result;
-	D3D11_DEPTH_STENCIL_DESC depthDisabledStencilDesc;
-
-	// clear the desciprtion;
-	ZeroMemory(&depthDisabledStencilDesc, sizeof(depthDisabledStencilDesc));
-
-	// Set up the description of the stencil state.
-	depthDisabledStencilDesc.DepthEnable = false;
-	depthDisabledStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthDisabledStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
-
-	depthDisabledStencilDesc.StencilEnable = true;
-	depthDisabledStencilDesc.StencilReadMask = 0xFF;
-	depthDisabledStencilDesc.StencilWriteMask = 0xFF;
-
-	// Stencil operations if pixel is front-facing.
-	depthDisabledStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthDisabledStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	depthDisabledStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthDisabledStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	// Stencil operations if pixel is back-facing.
-	depthDisabledStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthDisabledStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	depthDisabledStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthDisabledStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	// create blend states
-	result = m_device->CreateDepthStencilState(&depthDisabledStencilDesc, &m_depthDisabledStencilState);
-	if (FAILED(result))
-	{
-		return false;
-	}
-
-	return true;
-}
+//bool D3DManager::InitStencilView(D3D11_TEXTURE2D_DESC tex2DDesc)
+//{
+//#if 0
+//	HRESULT result;
+//	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
+//
+//	// Initialize the depth stencil view.
+//	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
+//
+//	// Set up the depth stencil view description.
+//	depthStencilViewDesc.Format = tex2DDesc.Format;
+//	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+//	depthStencilViewDesc.Texture2D.MipSlice = 0;
+//
+//	// Create the depth stencil view.
+//	result = m_device->CreateDepthStencilView(m_depthStencilBuffer, &depthStencilViewDesc, &m_depthStencilView);
+//	if (FAILED(result))
+//	{
+//		return false;
+//	}
+//#endif
+//	return true;
+//}
+//
+//D3D11_VIEWPORT D3DManager::InitializeViewport(int scrWidth, int scrHeight)
+//{
+//	D3D11_VIEWPORT viewport;
+//	viewport.Width = (float)scrWidth;
+//	viewport.Height = (float)scrHeight;
+//	viewport.MinDepth = 0.0f;
+//	viewport.MaxDepth = 1.0f;
+//	viewport.TopLeftX = 0.0f;
+//	viewport.TopLeftY = 0.0f;
+//	return viewport;
+//}
+//
+//bool D3DManager::InitAlphaBlending()
+//{
+//	HRESULT result;
+//	D3D11_BLEND_DESC blendStateDesc;
+//
+//	ZeroMemory(&blendStateDesc, sizeof(blendStateDesc));
+//
+//	// initialize/clear description
+//	blendStateDesc.RenderTarget[0].BlendEnable				= TRUE;
+//	blendStateDesc.RenderTarget[0].SrcBlend					= D3D11_BLEND_SRC_ALPHA;
+//	blendStateDesc.RenderTarget[0].DestBlend				= D3D11_BLEND_INV_SRC_ALPHA;
+//	blendStateDesc.RenderTarget[0].BlendOp					= D3D11_BLEND_OP_ADD;
+//	blendStateDesc.RenderTarget[0].SrcBlendAlpha			= D3D11_BLEND_ONE;
+//	blendStateDesc.RenderTarget[0].DestBlendAlpha			= D3D11_BLEND_ZERO;
+//	blendStateDesc.RenderTarget[0].BlendOpAlpha				= D3D11_BLEND_OP_ADD;
+//	blendStateDesc.RenderTarget[0].RenderTargetWriteMask	= 0x0f;
+//
+//	// create blend states
+//	result = m_device->CreateBlendState(&blendStateDesc, &m_alphaEnableBlendState);
+//	if (FAILED(result))
+//	{
+//		return false;
+//	}
+//
+//	blendStateDesc.RenderTarget[0].BlendEnable = FALSE;
+//	result = m_device->CreateBlendState(&blendStateDesc, &m_alphaDisableBlendState);
+//	if (FAILED(result))
+//	{
+//		return false;
+//	}
+//
+//	return true;
+//}
+//
+//bool D3DManager::InitZBuffer()
+//{
+//	HRESULT result;
+//	D3D11_DEPTH_STENCIL_DESC depthDisabledStencilDesc;
+//
+//	// clear the desciprtion;
+//	ZeroMemory(&depthDisabledStencilDesc, sizeof(depthDisabledStencilDesc));
+//
+//	// Set up the description of the stencil state.
+//	depthDisabledStencilDesc.DepthEnable = false;
+//	depthDisabledStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+//	depthDisabledStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+//
+//	depthDisabledStencilDesc.StencilEnable = true;
+//	depthDisabledStencilDesc.StencilReadMask = 0xFF;
+//	depthDisabledStencilDesc.StencilWriteMask = 0xFF;
+//
+//	// Stencil operations if pixel is front-facing.
+//	depthDisabledStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+//	depthDisabledStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+//	depthDisabledStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+//	depthDisabledStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+//
+//	// Stencil operations if pixel is back-facing.
+//	depthDisabledStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+//	depthDisabledStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+//	depthDisabledStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+//	depthDisabledStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+//
+//	// create blend states
+//	result = m_device->CreateDepthStencilState(&depthDisabledStencilDesc, &m_depthDisabledStencilState);
+//	if (FAILED(result))
+//	{
+//		return false;
+//	}
+//
+//	return true;
+//}

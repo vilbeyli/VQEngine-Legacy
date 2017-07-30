@@ -144,8 +144,8 @@ void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
 
 	D3D11_TEXTURE2D_DESC rtDesc;
 	ZeroMemory(&rtDesc, sizeof(rtDesc));
-	rtDesc.Width = 1600;	// todo get size
-	rtDesc.Height = 900;
+	rtDesc.Width = pRenderer->WindowWidth();
+	rtDesc.Height = pRenderer->WindowHeight();
 	rtDesc.MipLevels = 1;
 	rtDesc.ArraySize = 1;
 	rtDesc.Format = format;
@@ -161,8 +161,9 @@ void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
 	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	RTVDesc.Texture2D.MipSlice = 0;
 
-
-	this->_finalRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->_finalRenderTarget   = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->_bloomPass._colorRT  = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->_bloomPass._brightRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 }
 
 void PostProcessPass::Render(Renderer * pRenderer) const
@@ -171,6 +172,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 
 	pRenderer->SetShader(SHADERS::BLOOM);
 	pRenderer->BindRenderTarget(_finalRenderTarget);
+	pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
 	pRenderer->UnbindDepthStencil();
 	pRenderer->SetBufferObj(GEOMETRY::QUAD);
 	pRenderer->Apply();

@@ -505,6 +505,45 @@ void Shader::ClearConstantBuffers()
 	}
 }
 
+void Shader::UpdateConstants(ID3D11DeviceContext* context)
+{
+	static void(__cdecl ID3D11DeviceContext:: *SetShaderConstants[6])
+		(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = {
+		&ID3D11DeviceContext::VSSetConstantBuffers,
+		&ID3D11DeviceContext::GSSetConstantBuffers,
+		&ID3D11DeviceContext::DSSetConstantBuffers,
+		&ID3D11DeviceContext::HSSetConstantBuffers,
+		&ID3D11DeviceContext::CSSetConstantBuffers,
+		&ID3D11DeviceContext::PSSetConstantBuffers };
+	for (unsigned i = 0; i < m_cBuffers.size(); ++i)
+	{
+		ConstantBuffer& CB = m_cBuffers[i];
+		if (CB.dirty)	// if the CPU-side buffer is updated
+		{
+			ID3D11Buffer* data = CB.data;
+			D3D11_MAPPED_SUBRESOURCE mappedResource;
+
+			// Map sub-resource to GPU - update contends - discard the sub-resource
+			context->Map(data, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+			char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
+			std::vector<CPUConstantID>& cpuConsts = m_constants[i];
+			for (const CPUConstantID& c_id : cpuConsts)
+			{
+				CPUConstant& c = CPUConstant::Get(c_id);
+				memcpy(bufferPos, c._data, c._size);
+				bufferPos += c._size;
+			}
+			context->Unmap(data, 0);
+
+			// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader, see it)
+
+			// call XSSetConstantBuffers() from array using ShaderType enum
+			(context->*SetShaderConstants[CB.shdType])(CB.bufferSlot, 1, &data);
+			CB.dirty = false;
+		}
+	}
+}
+
 const std::string& Shader::Name() const
 {
 	return m_name;

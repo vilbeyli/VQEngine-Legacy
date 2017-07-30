@@ -67,6 +67,8 @@ enum class DEFAULT_RS_STATE
 struct RenderTarget
 {
 	RenderTarget() : _renderTargetView(nullptr) {}
+	ID3D11Resource*	GetTextureResource() const { return _texture._tex2D; }
+	//--------------------------------------------
 	Texture						_texture;
 	ID3D11RenderTargetView*		_renderTargetView;
 };
@@ -79,15 +81,15 @@ class Renderer
 public:
 	Renderer();
 	~Renderer();
-
 	bool Initialize(HWND hwnd, const Settings::Window& settings);
-	void		Exit();
-	inline HWND		GetWindow()		const { return m_hWnd; };
-	inline float	AspectRatio()	const { return m_Direct3D->AspectRatio(); };
-	inline unsigned	WindowHeight()	const { return m_Direct3D->WindowHeight(); };
-	inline unsigned	WindowWidth()	const { return m_Direct3D->WindowWidth(); };
-	inline RenderTargetID GetDefaultRenderTarget() const		{ return m_state._mainRenderTarget; }
-	inline TextureID	  GetDefaultRenderTargetTexture() const { return m_renderTargets[m_state._mainRenderTarget]._texture._id; }
+	void Exit();
+
+	inline HWND				GetWindow()		const { return m_Direct3D->WindowHandle(); };
+	inline float			AspectRatio()	const { return m_Direct3D->AspectRatio();  };
+	inline unsigned			WindowHeight()	const { return m_Direct3D->WindowHeight(); };
+	inline unsigned			WindowWidth()	const { return m_Direct3D->WindowWidth();  };
+	inline RenderTargetID	GetDefaultRenderTarget() const	{ return m_state._mainRenderTarget; }
+	inline TextureID		GetDefaultRenderTargetTexture() const { return m_renderTargets[m_state._mainRenderTarget]._texture._id; }
 
 	// resource interface
 	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
@@ -119,6 +121,9 @@ public:
 	void SetDepthStencilState(DepthStencilStateID depthStencilStateID);
 
 	void BindRenderTarget(RenderTargetID rtvID);
+	
+	template <typename... Args> 	inline void Renderer::BindRenderTargets(Args const&... renderTargetIDs) { m_state._boundRenderTargets = { renderTargetIDs... }; }
+
 	void BindDepthStencil(DepthStencilID dsvID);
 	void UnbindRenderTarget();
 	void UnbindDepthStencil();
@@ -165,12 +170,8 @@ public:
 
 private:
 	D3DManager*						m_Direct3D;
-	HWND							m_hWnd;
-
-	// render data
 	Camera*							m_mainCamera;
-	Viewport						m_viewPort;
-
+	
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
 	std::vector<Texture>			m_textures;
@@ -183,13 +184,16 @@ private:
 	std::vector<DepthStencil*>		m_depthStencils;	// not ptrs?
 
 	// state objects
+	Viewport						m_viewPort;
+
+	using RenderTargetIDs = std::vector<RenderTargetID>;
 	struct StateObjects
 	{
 		ShaderID			_activeShader;
 		BufferID			_activeBuffer;
 		RasterizerStateID	_activeRSState;
 		DepthStencilStateID	_activeDepthStencilState;
-		RenderTargetID		_boundRenderTarget;
+		RenderTargetIDs		_boundRenderTargets;
 		DepthStencilID		_boundDepthStencil;
 		RenderTargetID		_mainRenderTarget;
 		Texture				_depthBufferTexture;

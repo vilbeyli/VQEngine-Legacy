@@ -21,7 +21,8 @@
 #include <string>
 #include <d3d11.h>
 
-typedef int TextureID;
+using TextureID = int;
+class Renderer;
 
 struct Texture
 {
@@ -29,7 +30,7 @@ public:
 	Texture();
 	~Texture();
 
-	//bool InitializeTexture2D(const D3D11_TEXTURE2D_DESC& textureDescriptor);
+	bool InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Renderer* pRenderer);
 
 	// shader resource view does 2 things
 	// - tell d3d how the resource will be used: at what stage if the pipeline it will be bound etc.

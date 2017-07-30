@@ -22,6 +22,12 @@ struct PSIn
 	float2 texCoord : TEXCOORD0;
 };
 
+struct PSOut
+{
+	float4 color		: SV_TARGET0;
+	float4 brightness	: SV_TARGET1;
+};
+
 Texture2D worldRenderTarget;
 SamplerState samTriLinearSam
 {
@@ -31,18 +37,25 @@ SamplerState samTriLinearSam
 };
 
 
-float4 PSMain(PSIn In) : SV_TARGET
+PSOut PSMain(PSIn In) : SV_TARGET
 {
-	float4 color = worldRenderTarget.Sample(samTriLinearSam, In.texCoord);
+	PSOut _out;
 
-	//const float3 clipValue = float3(0.5, 0.5, 0.5);
-	//float4 finalColor = float4(color * float3(10, 1, 1), 1);
-	//float4 finalColor = float4(max(clipValue, color), 1);
-	//return finalColor;
-	return color;
-	const float c = In.texCoord.x;
-	//const float g = 1.0 / 2.2;
-	//const float g =  2.2;
-	const float g =  1.0;
-	return pow(float4(c, c, c, 1), float4(g,g,g,1));
+const float4 color = worldRenderTarget.Sample(samTriLinearSam, In.texCoord);
+
+//const float3 clipValue = float3(0.5, 0.5, 0.5);
+//float4 finalColor = float4(color * float3(10, 1, 1), 1);
+//float4 finalColor = float4(max(clipValue, color), 1);
+
+// gamma
+// -----
+//const float c = In.texCoord.x;
+//const float g = 1.0 / 2.2;
+//const float g =  2.2;
+//const float g =  1.0;
+//return pow(float4(c, c, c, 1), float4(g,g,g,1));
+
+_out.color = color;
+_out.brightness = float4(color.x, color.x, color.x, 1.0f);
+return _out;
 }

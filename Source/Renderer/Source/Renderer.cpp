@@ -96,14 +96,13 @@ void Renderer::Exit()
 
 const Shader* Renderer::GetShader(ShaderID shader_id) const
 {
-	assert(shader_id >= 0 && m_shaders.size() > shader_id);
+	assert(shader_id >= 0 && (int)m_shaders.size() > shader_id);
 	return m_shaders[shader_id];
 }
 
 
 bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 {
-	m_hWnd = hwnd;
 
 	m_Direct3D = new D3DManager();
 	if (!m_Direct3D)
@@ -113,14 +112,14 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	}
 
 	bool result = m_Direct3D->Initialize(settings.width, settings.height, settings.vsync == 1,
-										m_hWnd, settings.fullscreen == 1);
+										hwnd, settings.fullscreen == 1);
 	if (!result)
 	{
-		MessageBox(m_hWnd, "Could not initialize Direct3D", "Error", MB_OK);
+		MessageBox(hwnd, "Could not initialize Direct3D", "Error", MB_OK);
 		return false;
 	}
-	m_device		= m_Direct3D->GetDevice();
-	m_deviceContext = m_Direct3D->GetDeviceContext();
+	m_device		= m_Direct3D->m_device;
+	m_deviceContext = m_Direct3D->m_deviceContext;
 
 	InitializeDefaultRenderTarget();
 	InitializeDefaultDepthBuffer();
@@ -503,13 +502,9 @@ const Texture & Renderer::CreateTexture2D(int widht, int height)
 TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc)
 {
 	Texture tex;
-	m_device->CreateTexture2D(
-		&textureDesc,
-		nullptr,
-		&tex._tex2D
-	);
-	tex._id = static_cast<int>(m_textures.size());
+	tex.InitializeTexture2D(textureDesc, this);
 	m_textures.push_back(tex);
+	m_textures.back()._id = static_cast<int>(m_textures.size() - 1);
 	return m_textures.back()._id;
 }
 
@@ -746,6 +741,7 @@ void Renderer::SetShader(ShaderID id)
 			for (ShaderTexture& tex : shader->m_textures)
 			{
 				ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+				//(m_deviceContext->*SetShaderResources[tex.shdType])(tex.bufferSlot, 1, nullSRV);
 				switch (tex.shdType)
 				{
 				case ShaderType::VS:
@@ -915,7 +911,7 @@ void Renderer::SetDepthStencilState(DepthStencilStateID depthStencilStateID)
 void Renderer::BindRenderTarget(RenderTargetID rtvID)
 {
 	assert(rtvID > -1 && static_cast<size_t>(rtvID) < m_renderTargets.size());
-	m_state._boundRenderTarget = rtvID;
+	m_state._boundRenderTargets = { rtvID };
 }
 
 void Renderer::BindDepthStencil(DepthStencilID dsvID)
@@ -926,7 +922,7 @@ void Renderer::BindDepthStencil(DepthStencilID dsvID)
 
 void Renderer::UnbindRenderTarget()
 {
-	m_state._boundRenderTarget = -1;
+	m_state._boundRenderTargets = { -1 };
 }
 
 void Renderer::UnbindDepthStencil()
@@ -960,7 +956,7 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 // todo: add stencil view params
 void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
-	const RenderTargetID rtv = m_state._boundRenderTarget;
+	const RenderTargetID rtv = m_state._boundRenderTargets[0];
 	const DepthStencilID dsv = m_state._boundDepthStencil;
 	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv]._renderTargetView, clearColor);
 	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthStencils[dsv], D3D11_CLEAR_DEPTH, depthValue, 0);
@@ -968,10 +964,20 @@ void Renderer::Begin(const float clearColor[4], const float depthValue)
 
 void Renderer::End()
 {
-	auto* backBuffer = m_renderTargets[m_state._mainRenderTarget]._texture._tex2D;
-	if (backBuffer != m_renderTargets[m_state._boundRenderTarget]._texture._tex2D)
+	auto* backBuffer = m_renderTargets[m_state._mainRenderTarget].GetTextureResource();
+
+	auto* dst = backBuffer;
+	auto* src = m_renderTargets[m_state._boundRenderTargets[0]].GetTextureResource();
+	if (dst != src)
 	{
-		m_deviceContext->CopyResource(backBuffer, m_renderTargets[m_state._boundRenderTarget]._texture._tex2D);
+		// cannot copy entire final texture if sizes are not equal -> use copy subresource region
+		// m_deviceContext->CopyResource(backBuffer, m_renderTargets[m_state._boundRenderTarget].GetTextureResource());
+		
+		m_deviceContext->CopySubresourceRegion(
+			dst, 0,	 // dst: backbuffer[0]
+			0, 0, 0, // upper left (x,y,z)
+			src, 0,  // src: boundRT[0]
+			nullptr);
 	}
 
 	m_Direct3D->EndFrame();
@@ -982,22 +988,17 @@ void Renderer::End()
 void Renderer::Apply()
 {	// Here, we make all the API calls
 	Shader* shader = m_state._activeShader >= 0 ? m_shaders[m_state._activeShader] : nullptr;
-	
-	// TODO: check if state is changed
 
 	// INPUT ASSEMBLY
 	// ----------------------------------------
 	unsigned stride = sizeof(Vertex);	// layout?
 	unsigned offset = 0;
 	if (m_state._activeBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_state._activeBuffer]->m_vertexBuffer, &stride, &offset);
-	//else OutputDebugString("Warning: no active buffer object (-1)\n");
 	if (m_state._activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_state._activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-	//else OutputDebugString("Warning: no active buffer object (-1)\n");
-	if(shader) m_deviceContext->IASetInputLayout(shader->m_layout);
+	if (shader)						 m_deviceContext->IASetInputLayout(shader->m_layout);
 
 	if (shader)
-	{
-		// SHADER STAGES
+	{	// SHADER STAGES
 		// ----------------------------------------
 		m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
 		m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
@@ -1006,47 +1007,12 @@ void Renderer::Apply()
 		if (shader->m_domainShader)	 m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
 		if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
 
-
 		// CONSTANT BUFFERS 
-		// ----------------
-		static void(__cdecl ID3D11DeviceContext:: *SetShaderConstants[6])
-			(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) =	{
-			&ID3D11DeviceContext::VSSetConstantBuffers,
-			&ID3D11DeviceContext::GSSetConstantBuffers,
-			&ID3D11DeviceContext::DSSetConstantBuffers,
-			&ID3D11DeviceContext::HSSetConstantBuffers,
-			&ID3D11DeviceContext::CSSetConstantBuffers,
-			&ID3D11DeviceContext::PSSetConstantBuffers};
-		for (unsigned i = 0; i < shader->m_cBuffers.size(); ++i)
-		{
-			ConstantBuffer& CB = shader->m_cBuffers[i];
-			if (CB.dirty)	// if the CPU-side buffer is updated
-			{
-				ID3D11Buffer* data = CB.data;
-				D3D11_MAPPED_SUBRESOURCE mappedResource;
-
-				// Map sub-resource to GPU - update contends - discard the sub-resource
-				m_deviceContext->Map(data, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-				char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
-				std::vector<CPUConstantID>& cpuConsts = shader->m_constants[i];
-				for (const CPUConstantID& c_id : cpuConsts)
-				{
-					CPUConstant& c = CPUConstant::Get(c_id);
-					memcpy(bufferPos, c._data, c._size);
-					bufferPos += c._size;
-				}
-				m_deviceContext->Unmap(data, 0);
-
-				// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader, see it)
-				
-				// call XSSetConstantBuffers() from array using ShaderType enum
-				(m_deviceContext->*SetShaderConstants[CB.shdType])(CB.bufferSlot, 1, &data);	
-				CB.dirty = false;
-			}
-		}
+		// ----------------------------------------
+		shader->UpdateConstants(m_deviceContext);
 
 		// SHADER RESOURCES
-		// ----------------
+		// ----------------------------------------
 		while (m_texSetCommands.size() > 0)
 		{
 			TextureSetCommand& cmd = m_texSetCommands.front();
@@ -1054,23 +1020,35 @@ void Renderer::Apply()
 			m_texSetCommands.pop();
 		}
 
-
 		// RASTERIZER
 		// ----------------------------------------
 		m_deviceContext->RSSetViewports(1, &m_viewPort);
 		m_deviceContext->RSSetState(m_rasterizerStates[m_state._activeRSState]);
 
-
 		// OUTPUT MERGER
 		// ----------------------------------------
 		const auto indexDSState = m_state._activeDepthStencilState;
-		const auto indexRTV = m_state._boundRenderTarget;
-		const auto indexDSV = m_state._boundDepthStencil;
-		ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &m_renderTargets[indexRTV]._renderTargetView;
-		DepthStencil*  DSV = indexDSV == -1 ? nullptr : m_depthStencils[indexDSV];
+		const auto indexRTV = m_state._boundRenderTargets[0];
+		
+		// get the bound render target addresses
+		std::vector<ID3D11RenderTargetView*> RTVs = [&]() {				
+			std::vector<ID3D11RenderTargetView*> v(m_state._boundRenderTargets.size(), nullptr);
+			size_t i = 0;
+			for (RenderTargetID hRT : m_state._boundRenderTargets) 
+				if(hRT >= 0) 
+					v[i++] = m_renderTargets[hRT]._renderTargetView;
+			return v;
+		}();
+
+		const auto indexDSV     = m_state._boundDepthStencil;
+
+		ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &RTVs[0];
+		DepthStencil*  DSV           = indexDSV == -1 ? nullptr : m_depthStencils[indexDSV];
 		auto*  DSSTATE = m_depthStencilStates[indexDSState];
+
 		m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
-		m_deviceContext->OMSetRenderTargets(RTV ? 1 : 0, RTV, DSV);
+		//m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
+		m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
 	}
 	else
 	{

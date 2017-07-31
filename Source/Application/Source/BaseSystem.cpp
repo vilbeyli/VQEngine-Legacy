@@ -343,7 +343,7 @@ void BaseSystem::InitRawInputDevices()
 	Rid[0].usUsage = (USHORT)0x02;	// HID_USAGE_GENERIC_MOUSE;
 	Rid[0].dwFlags = 0;
 	Rid[0].hwndTarget = m_hwnd;
-	if (FAILED(RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]))))	// Cast between semantically different integer types : a Boolean type to HRESULT.
+	if (FALSE == (RegisterRawInputDevices(Rid, 1, sizeof(Rid[0]))))	// Cast between semantically different integer types : a Boolean type to HRESULT.
 	{
 		OutputDebugString("Failed to register raw input device!");
 	}
@@ -370,7 +370,7 @@ void BaseSystem::InitRawInputDevices()
 			sprintf_s(info, "Mouse: Handle=0x%08p\n", device.hDevice);
 			OutputDebugString(info);
 
-			UINT dataSize;
+			UINT dataSize = 0;
 			GetRawInputDeviceInfo(
 				device.hDevice, RIDI_DEVICENAME, nullptr, &dataSize);
 			if (dataSize)

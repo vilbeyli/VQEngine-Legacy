@@ -96,12 +96,12 @@ void SceneManager::Update(float dt)
 	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
 	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = SHADERS::NORMAL;
 	//if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = SHADERS::TANGENT;
-	if (ENGINE->INP()->IsKeyTriggered(114)) m_roomScene.ToggleFloorNormalMap();;
+	if (ENGINE->INP()->IsKeyTriggered(114)) m_roomScene.ToggleFloorNormalMap();
 	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = SHADERS::BINORMAL;
 	
 	// F5-F8 | Lighting Shaders								   
 	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = SHADERS::UNLIT;
-	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = SHADERS::FORWARD_PHONG;
+	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::BRDF : SHADERS::FORWARD_PHONG;
 	if (ENGINE->INP()->IsKeyTriggered(118)) m_debugRender = !m_debugRender;
 
 	// F9-F12 | Shader Parameters
@@ -147,7 +147,6 @@ void SceneManager::Render() const
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
 	
 	m_pRenderer->SetShader(m_selectedShader);
-	m_pRenderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 
 	constexpr int TBNMode = 0;

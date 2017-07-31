@@ -213,7 +213,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	pRenderer->SetShader(SHADERS::BLOOM_COMBINE);
 	pRenderer->BindRenderTarget(_finalRenderTarget);
 	pRenderer->Apply();
-	pRenderer->SetConstant1f("exposure", 1.0f);
+	//pRenderer->SetConstant1f("exposure", 1.0f);		// currently unused in shader
 	pRenderer->SetTexture("ColorTexture", colorTex);
 	pRenderer->SetTexture("BloomTexture", bloomTex);
 	pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);

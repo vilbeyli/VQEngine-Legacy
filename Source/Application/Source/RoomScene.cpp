@@ -72,7 +72,13 @@ void RoomScene::Update(float dt)
 void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
 	const ShaderID selectedShader = m_sceneManager.GetSelectedShader();
-	const bool SendMaterialData = selectedShader == SHADERS::FORWARD_PHONG || selectedShader == SHADERS::UNLIT || selectedShader == SHADERS::NORMAL;
+	const bool SendMaterialData = (
+		   selectedShader == SHADERS::FORWARD_PHONG 
+		|| selectedShader == SHADERS::UNLIT 
+		|| selectedShader == SHADERS::NORMAL
+		|| selectedShader == SHADERS::BRDF
+	);
+
 
 	m_skybox.Render(viewProj);
 
@@ -473,7 +479,7 @@ void RoomScene::RenderLights(const XMMATRIX& viewProj) const
 void RoomScene::RenderCentralObjects(const XMMATRIX& viewProj) const
 {
 	const ShaderID shd = m_sceneManager.GetSelectedShader();
-	const bool sendMaterialData = shd == SHADERS::FORWARD_PHONG || shd == SHADERS::UNLIT || shd == SHADERS::NORMAL;
+	const bool sendMaterialData = shd == SHADERS::FORWARD_PHONG || shd == SHADERS::UNLIT || shd == SHADERS::NORMAL || shd == SHADERS::BRDF;
 
 	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj, sendMaterialData);
 	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj, sendMaterialData);

@@ -48,6 +48,7 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float brightness = dot(float3(0.216, 0.715, 0.0722), color.xyz); // luma conversion
 	
 	_out.brightColor = color * brightness;
+
 	if (brightness > BrightnessThreshold)
 		_out.brightColor = color;
 	else

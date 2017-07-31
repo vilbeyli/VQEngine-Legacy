@@ -20,11 +20,13 @@
 #include "Settings.h"
 #include "Renderer.h"
 #include <vector>
-#include <array>
 #include <memory>
 
 // scenes
 #include "RoomScene.h"
+
+#include "RenderPasses.h"
+
 
 using std::shared_ptr;
 
@@ -33,40 +35,6 @@ class PathManager;
 
 struct Path;
 
-
-struct DepthShadowPass
-{
-	unsigned				_shadowMapDimension;
-	TextureID				_shadowMap;
-	SamplerID				_shadowSampler;
-	const Shader*			_shadowShader;
-	RasterizerStateID		_drawRenderState;
-	RasterizerStateID		_shadowRenderState;
-	D3D11_VIEWPORT			_shadowViewport;
-	DepthStencilID			_dsv;
-	void Initialize(Renderer* pRenderer, ID3D11Device* device);
-	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
-};
-
-struct BloomPass
-{
-	BloomPass() : _blurSampler(-1), _colorRT(-1), _brightRT(-1), _blurPingPong({ -1, -1 }) {}
-	SamplerID _blurSampler;
-	RenderTargetID _colorRT;
-	RenderTargetID _brightRT;
-	std::array<RenderTargetID, 2> _blurPingPong;
-};
-
-struct PostProcessPass
-{
-
-	void Initialize(Renderer* pRenderer, ID3D11Device* device);
-	void Render(Renderer* pRenderer) const;
-
-	BloomPass		_bloomPass;
-
-	RenderTargetID	_finalRenderTarget;
-};
 
 class SceneManager
 {

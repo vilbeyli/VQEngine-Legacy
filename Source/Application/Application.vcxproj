@@ -158,6 +158,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\RenderPasses.cpp" />
     <ClCompile Include="Source\Skybox.cpp" />
     <ClCompile Include="Source\RoomScene.cpp" />
     <ClCompile Include="Source\Log.cpp" />
@@ -188,6 +189,7 @@
     <ClInclude Include="Include\Log.h" />
     <ClInclude Include="Include\RoomScene.h" />
     <ClInclude Include="Include\Skybox.h" />
+    <ClInclude Include="Include\RenderPasses.h" />
     <ClInclude Include="Source\Components\Component.h" />
     <ClInclude Include="Source\Components\Transform.h" />
     <ClInclude Include="Include\Engine.h" />

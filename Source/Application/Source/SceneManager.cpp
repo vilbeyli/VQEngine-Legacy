@@ -181,6 +181,11 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 {
 	const TextureID worldTexture = pRenderer->GetDefaultRenderTargetTexture();
 
+	// ======================================================================================
+	// BLOOM  PASS
+	// ======================================================================================
+
+	// bright filter
 	pRenderer->SetShader(SHADERS::BLOOM);
 	pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
 	pRenderer->UnbindDepthStencil();
@@ -193,6 +198,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	constexpr size_t BLUR_PASS_COUNT = 10;
 	const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
 
+	// blur
 	pRenderer->SetShader(SHADERS::BLUR);
 	for (size_t i = 0; i < BLUR_PASS_COUNT; i++)
 	{
@@ -213,10 +219,22 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 		pRenderer->DrawIndexed();
 	}
 
-	// todo: blend blurred blright color + world render target
-	// blend state or shader????
-	//pRenderer->BindRenderTarget(_finalRenderTarget);
+	// additive blend combine
+	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._colorRT);
+	const TextureID bloomTex = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[0]);
+	pRenderer->SetShader(SHADERS::BLOOM_COMBINE);
+	pRenderer->BindRenderTarget(_finalRenderTarget);
+	pRenderer->Apply();
+	pRenderer->SetConstant1f("exposure", 1.0f);
+	pRenderer->SetTexture("ColorTexture", colorTex);
+	pRenderer->SetTexture("BloomTexture", bloomTex);
+	pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
 
+	// ======================================================================================
+	// BLOOM  PASS END
+	// ======================================================================================
 }
 
 //=======================================================================================

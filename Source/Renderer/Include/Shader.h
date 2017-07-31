@@ -150,6 +150,7 @@ enum SHADERS	// good enough for global namespace
 	SKYBOX,
 	BLOOM,
 	BLUR,
+	BLOOM_COMBINE,
 
 	SHADER_COUNT
 };

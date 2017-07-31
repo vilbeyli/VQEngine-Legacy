@@ -22,36 +22,25 @@ struct PSIn
 	float2 texCoord : TEXCOORD0;
 };
 
-struct PSOut
+Texture2D ColorTexture;
+Texture2D BloomTexture;
+SamplerState BlurSampler;
+
+cbuffer constants 
 {
-	float4 color		: SV_TARGET0;
-	float4 brightColor	: SV_TARGET1;
+	float exposure;
 };
 
-Texture2D worldRenderTarget;
-SamplerState samTriLinearSam
+float4 PSMain(PSIn In) : SV_TARGET
 {
-	Filter = MIN_MAG_MIP_LINEAR;
-	AddressU = Wrap;
-	AddressV = Wrap;
-};
-
-PSOut PSMain(PSIn In) : SV_TARGET
-{
-	const float BrightnessThreshold = 0.55f;
-	PSOut _out;
-
-	const float4 color = worldRenderTarget.Sample(samTriLinearSam, In.texCoord);
-	_out.color = color;
+	float3 result;
+	float3 color = ColorTexture.Sample(BlurSampler, In.texCoord);
+	float3 bloom = BloomTexture.Sample(BlurSampler, In.texCoord);
 	
-	// source: https://learnopengl.com/#!Advanced-Lighting/Bloom
-	const float brightness = dot(float3(0.216, 0.715, 0.0722), color.xyz); // luma conversion
-	
-	_out.brightColor = color * brightness;
-	if (brightness > BrightnessThreshold)
-		_out.brightColor = color;
+	if (length(bloom) != 0.0f)
+		result = color + bloom;
 	else
-		_out.brightColor = float4(0, 0, 0, 1);
-	
-	return _out;
+		result = color;
+
+	return float4(result, 1.0f);
 }

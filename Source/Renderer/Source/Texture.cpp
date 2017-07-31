@@ -34,7 +34,7 @@ Texture::Texture()
 Texture::~Texture()
 {}
 
-bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC & descriptor, Renderer * pRenderer)
+bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Renderer* pRenderer, bool initializeSRV)
 {
 	HRESULT hr = pRenderer->m_device->CreateTexture2D(&descriptor, nullptr, &this->_tex2D);
 	if (!SUCCEEDED(hr))
@@ -45,5 +45,14 @@ bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC & descriptor, Rende
 	this->_width = descriptor.Width;
 	this->_height = descriptor.Height;
 	
+	if (initializeSRV)
+	{
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+		ZeroMemory(&srvDesc, sizeof(srvDesc));
+		srvDesc.Format = descriptor.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;	// array maybe? check descriptor.
+		srvDesc.Texture2D.MipLevels = 1;
+		pRenderer->m_device->CreateShaderResourceView(this->_tex2D, &srvDesc, &this->_srv);
+	}
 	return true;
 }

@@ -53,7 +53,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 		const auto offsetIter = s_filePaths.begin() + SKYBOX_PRESETS::NIGHT_SKY;
 		const FilePaths filePaths = FilePaths(offsetIter, offsetIter + 6);
 		
-		Texture skydomeTex = pRenderer->GetTexture(pRenderer->CreateCubemapTexture(filePaths));
+		Texture skydomeTex = pRenderer->GetTextureObject(pRenderer->CreateCubemapTexture(filePaths));
 		s_Presets[SKYBOX_PRESETS::NIGHT_SKY] = skybox.Initialize(pRenderer, skydomeTex, 1.0f, SHADERS::SKYBOX);
 	}
 }

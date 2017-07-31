@@ -498,10 +498,10 @@ const Texture & Renderer::CreateTexture2D(int widht, int height)
 	return m_textures.back();
 }
 
-TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc)
+TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc, bool initializeSRV)
 {
 	Texture tex;
-	tex.InitializeTexture2D(textureDesc, this);
+	tex.InitializeTexture2D(textureDesc, this, initializeSRV);
 	m_textures.push_back(tex);
 	m_textures.back()._id = static_cast<int>(m_textures.size() - 1);
 	return m_textures.back()._id;
@@ -697,7 +697,7 @@ void Renderer::InitializeDefaultRenderTarget()
 RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
 {
 	RenderTarget newRenderTarget;
-	newRenderTarget._texture = GetTexture(CreateTexture2D(RTTextureDesc));
+	newRenderTarget._texture = GetTextureObject(CreateTexture2D(RTTextureDesc, true));
 	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget._texture._tex2D, &RTVDesc, &newRenderTarget._renderTargetView);
 	if (!SUCCEEDED(hr))
 	{
@@ -726,7 +726,7 @@ DepthStencilID Renderer::AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& ds
 	return static_cast<int>(m_depthStencils.size() - 1);
 }
 
-const Texture& Renderer::GetTexture(TextureID id) const
+const Texture& Renderer::GetTextureObject(TextureID id) const
 {
 	assert(id >= 0 && static_cast<unsigned>(id) < m_textures.size());
 	return m_textures[id];
@@ -782,6 +782,11 @@ void Renderer::SetShader(ShaderID id)
 					break;
 				}
 			}
+
+			ID3D11RenderTargetView* nullRTV[6] = { nullptr };
+			ID3D11DepthStencilView* nullDSV = { nullptr };
+			m_deviceContext->OMSetRenderTargets(6, nullRTV, nullDSV);
+
 		} // if not same shader
 	}	// if valid shader
 	else
@@ -950,6 +955,7 @@ void Renderer::SetDepthStencilState(DepthStencilStateID depthStencilStateID)
 void Renderer::BindRenderTarget(RenderTargetID rtvID)
 {
 	assert(rtvID > -1 && static_cast<size_t>(rtvID) < m_renderTargets.size());
+	//for(RenderTargetID& hRT : m_state._boundRenderTargets) 
 	m_state._boundRenderTargets = { rtvID };
 }
 
@@ -961,7 +967,7 @@ void Renderer::BindDepthStencil(DepthStencilID dsvID)
 
 void Renderer::UnbindRenderTarget()
 {
-	m_state._boundRenderTargets = { -1 };
+	m_state._boundRenderTargets = { -1, -1, -1, -1, -1, -1 };
 }
 
 void Renderer::UnbindDepthStencil()
@@ -1087,13 +1093,15 @@ void Renderer::Apply()
 		}();
 
 		const auto indexDSV     = m_state._boundDepthStencil;
-
-		ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &RTVs[0];
+		//ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &RTVs[0];
+		ID3D11RenderTargetView** RTV = &RTVs[0];
 		DepthStencil*  DSV           = indexDSV == -1 ? nullptr : m_depthStencils[indexDSV];
-		auto*  DSSTATE = m_depthStencilStates[indexDSState];
 
-		m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
 		m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
+		
+
+		auto*  DSSTATE = m_depthStencilStates[indexDSState];
+		m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
 	}
 	else
 	{

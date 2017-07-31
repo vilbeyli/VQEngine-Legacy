@@ -32,7 +32,7 @@ public:
 	Texture();
 	~Texture();
 
-	bool InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Renderer* pRenderer);
+	bool InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Renderer* pRenderer, bool initializeSRV);
 
 	// shader resource view does 2 things
 	// - tell d3d how the resource will be used: at what stage if the pipeline it will be bound etc.

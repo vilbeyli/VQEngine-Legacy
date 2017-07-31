@@ -101,7 +101,7 @@ public:
 	// todo: return textureID to outside, use Texture& private
 	const Texture&		CreateTextureFromFile(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
 	const Texture&		CreateTexture2D(int widht, int height);
-	TextureID			CreateTexture2D(D3D11_TEXTURE2D_DESC& textureDesc);
+	TextureID			CreateTexture2D(D3D11_TEXTURE2D_DESC& textureDesc, bool initializeSRV);
 	TextureID			CreateCubemapTexture(const std::vector<std::string>& textureFiles);
 	
 	SamplerID			CreateSamplerState(D3D11_SAMPLER_DESC& samplerDesc);
@@ -112,7 +112,7 @@ public:
 	DepthStencilStateID AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
 
 	const Shader*		GetShader(ShaderID shader_id) const;
-	const Texture&		GetTexture(TextureID) const;
+	const Texture&		GetTextureObject(TextureID) const;
 	const TextureID		GetTexture(const std::string name) const;
 
 	// state management

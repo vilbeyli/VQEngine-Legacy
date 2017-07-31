@@ -49,10 +49,10 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	shadowMapDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
 	shadowMapDesc.Height = static_cast<UINT>(_shadowMapDimension);
 	shadowMapDesc.Width = static_cast<UINT>(_shadowMapDimension);
-	this->_shadowMap = pRenderer->CreateTexture2D(shadowMapDesc);
+	this->_shadowMap = pRenderer->CreateTexture2D(shadowMapDesc, false);
 
 	// careful: removing const qualified from texture. rethink this
-	Texture& shadowMap = const_cast<Texture&>(pRenderer->GetTexture(_shadowMap));
+	Texture& shadowMap = const_cast<Texture&>(pRenderer->GetTextureObject(_shadowMap));
 
 	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
@@ -89,7 +89,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	comparisonSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 	comparisonSamplerDesc.MipLODBias = 0.f;
 	comparisonSamplerDesc.MaxAnisotropy = 0;
-	//comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;
+	//comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;	// todo: set default sampler elsewhere
 	comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 	//comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
 	comparisonSamplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
@@ -165,6 +165,16 @@ void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
 	this->_finalRenderTarget   = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->_bloomPass._colorRT  = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->_bloomPass._brightRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->_bloomPass._blurPingPong[0] = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->_bloomPass._blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+
+	D3D11_SAMPLER_DESC blurSamplerDesc;
+	ZeroMemory(&blurSamplerDesc, sizeof(blurSamplerDesc));
+	blurSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	blurSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	blurSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	blurSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	this->_bloomPass._blurSampler = pRenderer->CreateSamplerState(blurSamplerDesc);
 }
 
 void PostProcessPass::Render(Renderer * pRenderer) const
@@ -183,19 +193,30 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	constexpr size_t BLUR_PASS_COUNT = 10;
 	const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
 
-	//pRenderer->SetShader(SHADERS::BLUR);
-	//for (size_t i = 0; i < BLUR_PASS_COUNT; i++)
-	//{
-	//	const int isHorizontal = i % 2;
-	//
-	//	pRenderer->BindRenderTarget(_bloomPass._blurPingPong[isHorizontal]);
-	//	pRenderer->SetConstant1i("isHorizontal", 1 - isHorizontal);
-	//	pRenderer->SetTexture("InputTexture", i == 0 ? brightTexture : _bloomPass._blurPingPong[1 - isHorizontal]);
-	//	pRenderer->Apply();
-	//	pRenderer->DrawIndexed();
-	//}
+	pRenderer->SetShader(SHADERS::BLUR);
+	for (size_t i = 0; i < BLUR_PASS_COUNT; i++)
+	{
+		const int isHorizontal = i % 2;
+		const TextureID pingPong = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[1 - isHorizontal]);
+		const int texWidth = pRenderer->GetTextureObject(pingPong)._width;
+		const int texHeight = pRenderer->GetTextureObject(pingPong)._height;
 
+		pRenderer->UnbindRenderTarget();
+		pRenderer->Apply();
+		pRenderer->BindRenderTarget(_bloomPass._blurPingPong[isHorizontal]);
+		pRenderer->SetConstant1i("isHorizontal", 1 - isHorizontal);
+		pRenderer->SetConstant1i("textureWidth" , texWidth);
+		pRenderer->SetConstant1i("textureHeight", texHeight);
+		pRenderer->SetTexture("InputTexture", i == 0 ? brightTexture : pingPong);
+		pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);
+		pRenderer->Apply();
+		pRenderer->DrawIndexed();
+	}
+
+	// todo: blend blurred blright color + world render target
+	// blend state or shader????
 	//pRenderer->BindRenderTarget(_finalRenderTarget);
+
 }
 
 //=======================================================================================

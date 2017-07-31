@@ -21,7 +21,14 @@ public:
 	static void Info(const std::string& s);
 	static void Error(ERROR_LOG errMode, const std::string& s);
 	static void Error(const std::string& s);
-	static void Error(const char* format, ...);
+
+	template<class... Args> 
+	static void Error(const char* format, Args&&... args)
+	{
+		char msg[256];
+		sprintf_s(msg, format, args...);
+		Error(std::string(msg));
+	}
 
 private:
 	std::ofstream m_outFile;

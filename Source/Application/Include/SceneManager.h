@@ -50,6 +50,8 @@ struct DepthShadowPass
 
 struct BloomPass
 {
+	BloomPass() : _blurSampler(-1), _colorRT(-1), _brightRT(-1), _blurPingPong({ -1, -1 }) {}
+	SamplerID _blurSampler;
 	RenderTargetID _colorRT;
 	RenderTargetID _brightRT;
 	std::array<RenderTargetID, 2> _blurPingPong;

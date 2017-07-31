@@ -23,29 +23,42 @@ struct PSIn
 };
 
 Texture2D InputTexture;
-SamplerState samTriLinearSam
-{
-	Filter = MIN_MAG_MIP_LINEAR;
-	AddressU = Wrap;
-	AddressV = Wrap;
-};
-
-//const float BrightnessThreshold = 0.6f;
+SamplerState BlurSampler;
 
 cbuffer constants 
 {
 	int isHorizontal;
+	int textureWidth;
+	int textureHeight;
 };
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	const float4 color = InputTexture.Sample(samTriLinearSam, In.texCoord);
+	const float4 color = InputTexture.Sample(BlurSampler, In.texCoord);
+	const float2 texOffset = float2(1.0f, 1.0f) / float2(textureWidth, textureHeight);
+	
+	// gaussian kernel : src=https://learnopengl.com/#!Advanced-Lighting/Bloom
+	const float weight[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
+	
+	float3 result = weight[0] * color;	// use first weight 
 	if(isHorizontal)
 	{
-		return float4(color/3);
+		for (int i = 1; i < 5; ++i)
+		{
+			const float2 weighedOffset = float2(texOffset.x * i, 0.0f);
+			result += InputTexture.Sample(BlurSampler, In.texCoord + weighedOffset).rgb * weight[i];
+			result += InputTexture.Sample(BlurSampler, In.texCoord - weighedOffset).rgb * weight[i];
+		}
 	}
 	else
 	{
-		return color;
+		for (int i = 1; i < 5; ++i)
+		{
+			const float2 weighedOffset = float2(0.0f, texOffset.y * i);
+			result += InputTexture.Sample(BlurSampler, In.texCoord + weighedOffset).rgb * weight[i];
+			result += InputTexture.Sample(BlurSampler, In.texCoord - weighedOffset).rgb * weight[i];
+		}
 	}
+
+	return float4(result, 1.0f);
 }

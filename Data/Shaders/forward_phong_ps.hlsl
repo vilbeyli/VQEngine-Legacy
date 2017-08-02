@@ -39,7 +39,6 @@ struct Surface
 
 // CBUFFERS
 //---------------------------------------------------------
-// defines maximum number of dynamic lights
 #define LIGHT_COUNT 20  // don't forget to update CPU define too (SceneManager.cpp)
 #define SPOT_COUNT 10   // ^
 struct Light
@@ -91,14 +90,6 @@ cbuffer perObject
 Texture2D gDiffuseMap;
 Texture2D gNormalMap;
 Texture2D gShadowMap;
-
-//SamplerState samAnisotropic
-//{
-//	Filter = ANISOTROPIC;
-//	MaxAnisotropy = 4;
-//	AddressU = WRAP;
-//	AddressV = WRAP;
-//};
 
 SamplerState sShadowSampler;
 

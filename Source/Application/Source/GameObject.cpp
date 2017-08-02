@@ -65,8 +65,8 @@ void GameObject::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool Uplo
 	// TODO: set shader for material
 	if(UploadMaterialDataToGPU) m_model.m_material.SetMaterialConstants(pRenderer);
 	pRenderer->SetBufferObj(m_model.m_mesh);
-	XMMATRIX world = m_transform.WorldTransformationMatrix();
-	XMMATRIX wvp = world * viewProj;
+	const XMMATRIX world = m_transform.WorldTransformationMatrix();
+	const XMMATRIX wvp = world * viewProj;
 	pRenderer->SetConstant4x4f("world", world);
 	pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);

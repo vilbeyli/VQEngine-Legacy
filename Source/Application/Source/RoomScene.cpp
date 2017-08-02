@@ -540,7 +540,36 @@ void RoomScene::Room::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool
 
 
 
+void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj)
+{
+	// todo: show minimal demonstration of renderer
+	GameObject obj;										// create object
+	obj.m_model.m_mesh = GEOMETRY::CUBE;				// set material
+	obj.m_model.m_material.color = Color::cyan;
+	obj.m_model.m_material.alpha = 1.0f;
+	obj.m_model.m_material.specular = 90.0f;
+	obj.m_model.m_material.diffuseMap = Texture();		// empty texture
+	obj.m_model.m_material.normalMap  = Texture();
+	//-------------------------------------------------------------------
+	obj.m_transform.SetPosition(0,0,0);					// set transform
+	obj.m_transform.SetXRotationDeg(30.0f);
+	obj.m_transform.SetUniformScale(5.0f);
+	//-------------------------------------------------------------------
+	pRenderer->SetShader(SHADERS::FORWARD_PHONG);
+	
+	// obj.Render(pRenderer);
+	//
+	// const XMMATRIX world = m_transform.WorldTransformationMatrix();
+	// const XMMATRIX wvp = world * viewProj;
+	// m_model.m_material.SetMaterialConstants(pRenderer);
+	// pRenderer->SetBufferObj(m_model.m_mesh);
+	// pRenderer->SetConstant4x4f("world", world);
+	// pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
+	// pRenderer->SetConstant4x4f("worldViewProj", wvp);
+	// pRenderer->Apply();
+	// pRenderer->DrawIndexed();
 
+}
 
 
 

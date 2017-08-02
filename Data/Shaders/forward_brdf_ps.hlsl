@@ -65,6 +65,7 @@ struct Light
 
 cbuffer renderConsts
 {
+	float pad0;
 	float3 cameraPos;
 
 	float lightCount;
@@ -273,13 +274,14 @@ float3 BRDF(Light light, Surface s, float3 V, float3 worldPos)
 	float3 Id = F_LambertDiffuse(kd);
 	float3 Is = ks * F_CookTorrence(Wo, N, Wi, shininess);
 
-	return light.color * (Id + Is * 0.00000001f) * NL;
+	return light.color * (Id + Is) * NL;
 }
 // ================================== BRDF END =========================================
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	// lighting & surface parameters
+	const float3 P = In.worldPos;
 	const float3 N = normalize(In.normal);
 	const float3 T = normalize(In.tangent);
 	const float3 V = normalize(cameraPos - In.worldPos);
@@ -297,14 +299,19 @@ float4 PSMain(PSIn In) : SV_TARGET
 	// illumination
 	const float3 Ia = s.diffuseColor * ambient;	// ambient
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
-	for (int i = 0; i < lightCount; ++i)		// POINT Lights
-		IdIs += BRDF(lights[i], s, V, In.worldPos) * Attenuation(lights[i].attenuation, length(lights[i].position - In.worldPos));
 
-	for (int j = 0; j < spotCount; ++j)			// SPOT Lights
-		IdIs += BRDF(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos) * ShadowTest(In.worldPos, In.lightSpacePos);
-
-	const float3 illumination = Ia + IdIs;
+	// integrate BRDFs
+	const int steps = 1;
+	const float dW = 1.0f / steps;
+	for (int i = 0; i < steps; ++i)
+	{
+		for (int i = 0; i < lightCount; ++i)		// POINT Lights
+			IdIs += BRDF(lights[i], s, V, P) * Attenuation(lights[i].attenuation, length(lights[i].position - P)) * dW;
+		for (int j = 0; j < spotCount; ++j)			// SPOT Lights
+			IdIs += BRDF(spots[j], s, V, P) * Intensity(spots[j], P) * ShadowTest(P, In.lightSpacePos) * dW;
+	}
 	
+	const float3 illumination = Ia + IdIs;
 	const float4 outColor = float4(illumination, 1);
 	return pow(outColor, float4(gamma, gamma, gamma, 1.0f));
 }

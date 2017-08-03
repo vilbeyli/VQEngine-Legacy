@@ -299,8 +299,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 T = normalize(In.tangent);
 	const float3 V = normalize(cameraPos - P);
 	const float ambient = 0.035f;
-	const float gamma = 2.2;
-	//const float gamma = 1.0;
+	//const float gamma = 2.2;
+	const float gamma = 1.0;
 
 	Surface s;	// surface 
 	s.N = (isNormalMap)* UnpackNormals(In.texCoord, N, T) +

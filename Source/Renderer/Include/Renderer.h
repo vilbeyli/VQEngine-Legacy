@@ -114,6 +114,7 @@ public:
 	const Shader*		GetShader(ShaderID shader_id) const;
 	const Texture&		GetTextureObject(TextureID) const;
 	const TextureID		GetTexture(const std::string name) const;
+	inline const ShaderID GetActiveShader() const { return m_state._activeShader; }
 
 	// state management
 	void SetViewport(const unsigned width, const unsigned height);

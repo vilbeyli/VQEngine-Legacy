@@ -172,6 +172,10 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// ======================================================================================
 	// BLOOM  PASS
 	// ======================================================================================
+	const float  BRDF_BrightnessThreshold = 0.55f;
+	const float Phong_BrightnessThreshold = 0.85f;
+	const float brightnessThreashold = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader()
+		? BRDF_BrightnessThreshold : Phong_BrightnessThreshold;
 
 	// bright filter
 	pRenderer->SetShader(SHADERS::BLOOM);
@@ -180,13 +184,13 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	pRenderer->SetBufferObj(GEOMETRY::QUAD);
 	pRenderer->Apply();
 	pRenderer->SetTexture("worldRenderTarget", worldTexture);
+	pRenderer->SetConstant1f("BrightnessThreshold", brightnessThreashold);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 
+	// blur
 	constexpr size_t BLUR_PASS_COUNT = 10;
 	const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
-
-	// blur
 	pRenderer->SetShader(SHADERS::BLUR);
 	for (size_t i = 0; i < BLUR_PASS_COUNT; i++)
 	{
@@ -219,7 +223,6 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
-
 	// ======================================================================================
 	// BLOOM  PASS END
 	// ======================================================================================

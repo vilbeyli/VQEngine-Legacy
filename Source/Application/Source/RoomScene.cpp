@@ -69,6 +69,7 @@ void RoomScene::Update(float dt)
 	UpdateCentralObj(dt);
 }
 
+void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj);
 void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
 	const ShaderID selectedShader = m_sceneManager.GetSelectedShader();
@@ -76,7 +77,7 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 		   selectedShader == SHADERS::FORWARD_PHONG 
 		|| selectedShader == SHADERS::UNLIT 
 		|| selectedShader == SHADERS::NORMAL
-		|| selectedShader == SHADERS::BRDF
+		|| selectedShader == SHADERS::FORWARD_BRDF
 	);
 
 
@@ -286,7 +287,7 @@ void RoomScene::InitializeObjectArrays()
 
 				if (i == 0 && j == 0)
 				{
-					cube.m_transform.SetPosition(0, 10, 0);
+					//cube.m_transform.SetPosition(0, 10, 0);
 					cube.m_transform.SetUniformScale(9);
 					cube.m_model.m_material.color = Color::white;
 					//cube.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("metal2.png");
@@ -367,7 +368,9 @@ void RoomScene::InitializeObjectArrays()
 	--i;
 
 
-	sphere.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
+	//sphere.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
+	sphere.m_transform.SetPosition(0, 20.0f, 0);
+	sphere.m_transform.SetUniformScale(5.0f);
 	--i;
 
 	triangle.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
@@ -479,10 +482,10 @@ void RoomScene::RenderLights(const XMMATRIX& viewProj) const
 void RoomScene::RenderCentralObjects(const XMMATRIX& viewProj) const
 {
 	const ShaderID shd = m_sceneManager.GetSelectedShader();
-	const bool sendMaterialData = shd == SHADERS::FORWARD_PHONG || shd == SHADERS::UNLIT || shd == SHADERS::NORMAL || shd == SHADERS::BRDF;
+	const bool sendMaterialData = shd == SHADERS::FORWARD_PHONG || shd == SHADERS::UNLIT || shd == SHADERS::NORMAL || shd == SHADERS::FORWARD_BRDF;
 
-	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj, sendMaterialData);
-	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj, sendMaterialData);
+	//for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj, sendMaterialData);
+	//for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj, sendMaterialData);
 
 	grid.Render(m_pRenderer, viewProj, sendMaterialData);
 	quad.Render(m_pRenderer, viewProj, sendMaterialData);
@@ -544,30 +547,20 @@ void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj)
 {
 	// todo: show minimal demonstration of renderer
 	GameObject obj;										// create object
-	obj.m_model.m_mesh = GEOMETRY::CUBE;				// set material
+	obj.m_model.m_mesh = GEOMETRY::SPHERE;				// set material
 	obj.m_model.m_material.color = Color::cyan;
 	obj.m_model.m_material.alpha = 1.0f;
 	obj.m_model.m_material.specular = 90.0f;
 	obj.m_model.m_material.diffuseMap = Texture();		// empty texture
 	obj.m_model.m_material.normalMap  = Texture();
 	//-------------------------------------------------------------------
-	obj.m_transform.SetPosition(0,0,0);					// set transform
-	obj.m_transform.SetXRotationDeg(30.0f);
+	obj.m_transform.SetPosition(0,20,50);				
+	//obj.m_transform.SetXRotationDeg(30.0f);
 	obj.m_transform.SetUniformScale(5.0f);
 	//-------------------------------------------------------------------
-	pRenderer->SetShader(SHADERS::FORWARD_PHONG);
+	pRenderer->SetShader(SHADERS::FORWARD_BRDF);
+	obj.Render(pRenderer, viewProj, true);
 	
-	// obj.Render(pRenderer);
-	//
-	// const XMMATRIX world = m_transform.WorldTransformationMatrix();
-	// const XMMATRIX wvp = world * viewProj;
-	// m_model.m_material.SetMaterialConstants(pRenderer);
-	// pRenderer->SetBufferObj(m_model.m_mesh);
-	// pRenderer->SetConstant4x4f("world", world);
-	// pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
-	// pRenderer->SetConstant4x4f("worldViewProj", wvp);
-	// pRenderer->Apply();
-	// pRenderer->DrawIndexed();
 
 }
 

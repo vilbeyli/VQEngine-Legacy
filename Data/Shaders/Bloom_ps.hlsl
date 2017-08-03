@@ -36,9 +36,13 @@ SamplerState samTriLinearSam
 	AddressV = Wrap;
 };
 
+cbuffer BloomParams 
+{
+	float BrightnessThreshold;
+};
+
 PSOut PSMain(PSIn In) : SV_TARGET
 {
-	const float BrightnessThreshold = 0.55f;
 	PSOut _out;
 
 	const float4 color = worldRenderTarget.Sample(samTriLinearSam, In.texCoord);

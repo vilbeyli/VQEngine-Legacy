@@ -45,7 +45,7 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 	//m_pPathManager		= pathMan;
 
 	m_pRenderer			= renderer;
-	m_selectedShader	= SHADERS::FORWARD_PHONG;
+	m_selectedShader	= SHADERS::FORWARD_BRDF;
 	m_gammaCorrection	= true;
 	m_debugRender		= false;
 	Skybox::InitializePresets(m_pRenderer);
@@ -101,7 +101,7 @@ void SceneManager::Update(float dt)
 	
 	// F5-F8 | Lighting Shaders								   
 	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = SHADERS::UNLIT;
-	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::BRDF : SHADERS::FORWARD_PHONG;
+	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::FORWARD_BRDF : SHADERS::FORWARD_PHONG;
 	if (ENGINE->INP()->IsKeyTriggered(118)) m_debugRender = !m_debugRender;
 
 	// F9-F12 | Shader Parameters

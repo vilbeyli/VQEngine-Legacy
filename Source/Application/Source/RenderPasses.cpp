@@ -172,7 +172,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// ======================================================================================
 	// BLOOM  PASS
 	// ======================================================================================
-	const float  BRDF_BrightnessThreshold = 0.55f;
+	const float  BRDF_BrightnessThreshold = 0.0005f;
 	const float Phong_BrightnessThreshold = 0.85f;
 	const float brightnessThreashold = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader()
 		? BRDF_BrightnessThreshold : Phong_BrightnessThreshold;

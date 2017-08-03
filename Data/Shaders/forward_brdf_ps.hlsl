@@ -223,8 +223,8 @@ inline float Geometry_Smiths_SchlickGGX(float3 N, float3 V, float roughness)
 	const float k = pow(roughness, 2) / 2.0f;
 #endif
 	const float NV = max(0.0f, dot(N, V));
-	const float denom = (NV * (1.0f - k) + k);
-	if (denom < EPSILON) return 1.0f;
+	const float denom = (NV * (1.0f - k) + k) + 0.0001f;
+	//if (denom < EPSILON) return 1.0f;
 	return NV / denom;
 }
 
@@ -250,12 +250,10 @@ inline float3 Fresnel(float3 N, float3 V)
 float3 F_CookTorrence(float3 Wo, float3 N, float3 Wi, float roughness)
 {
 	const float3 H = normalize(Wo + Wi);
-	float3 fresnel = Fresnel(N, Wo);
+	float3 fresnel = Fresnel(H, Wo);
 	float geometry = Geometry(N, Wo, Wi, roughness);
 	float normalDistr = NormalDistribution(N, H, roughness);
-	float denom = (4.0f * max(0.0f, dot(Wo, N)) * max(0.0f, dot(Wi, N)));
-	if (denom < EPSILON)
-		return float3(0,0,0);
+	float denom = (4.0f * max(0.0f, dot(Wo, N)) * max(0.0f, dot(Wi, N))) + 0.0001f;
 	return  normalDistr * fresnel * geometry / denom;
 }
 #else
@@ -308,7 +306,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.diffuseColor = diffuse *  (isDiffuseMap          * gDiffuseMap.Sample(sShadowSampler, In.texCoord).xyz +
 		(1.0f - isDiffuseMap)   * float3(1,1,1));
 	s.specularColor = specular;
-	s.shininess = 0.1f; // roughness
+	s.shininess = 0.15f; // roughness
 
 	// illumination
 	const float3 Ia = s.diffuseColor * ambient;	// ambient

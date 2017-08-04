@@ -73,7 +73,7 @@ void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj);
 void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
 	const ShaderID selectedShader = m_sceneManager.GetSelectedShader();
-	const bool SendMaterialData = (
+	const bool bSendMaterialData = (
 		   selectedShader == SHADERS::FORWARD_PHONG 
 		|| selectedShader == SHADERS::UNLIT 
 		|| selectedShader == SHADERS::NORMAL
@@ -85,8 +85,8 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 
 	pRenderer->SetShader(selectedShader);
 	m_sceneManager.SendLightData();
-	m_room.Render(m_pRenderer, viewProj, SendMaterialData);
-	if (selectedShader == SHADERS::NORMAL) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
+	m_room.Render(m_pRenderer, viewProj, bSendMaterialData);
+	if (selectedShader == SHADERS::FORWARD_BRDF) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
 	RenderCentralObjects(viewProj);
 	RenderLights(viewProj);
 }
@@ -106,7 +106,12 @@ void RoomScene::InitializeRoom()
 		tf.SetScale(floorWidth, 0.1f, floorDepth);
 		tf.SetPosition(0, -wallHieght + YOffset, 0);
 
-		m_room.floor.m_model.m_material.shininess	= 20.0f;
+		Material& mat = m_room.floor.m_model.m_material;
+		mat.shininess = 20.0f;
+		mat.roughness = 0.1f;	// brdf material
+		mat.metalness = 0.3f;
+		
+
 		//m_room.floor.m_model.m_material = Material::bronze;
 		m_room.floor.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("185.JPG");
 		m_room.floor.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("185_norm.JPG");
@@ -202,8 +207,9 @@ void RoomScene::InitializeLights()
 		l._transform.SetPosition(-48.0f, 22.0f, 20.0f);
 		l._transform.SetUniformScale(0.3f);
 		l._model.m_mesh = GEOMETRY::SPHERE;
-		l._model.m_material.color = l._color = Color::orange;
-		l.SetLightRange(600);
+		l._model.m_material.color = l._color = vec3(Color::orange) * 3.0f;
+		l._brightness = 2.0f;
+		l.SetLightRange(60);
 		m_lights.push_back(l);
 	}
 	{
@@ -213,6 +219,7 @@ void RoomScene::InitializeLights()
 		l._model.m_mesh = GEOMETRY::SPHERE;
 		l._model.m_material.color = Color::cyan;
 		l._color = l._model.m_material.color;
+		l._brightness = 1.0f;
 		l.SetLightRange(500);
 		m_lights.push_back(l);
 	}
@@ -221,8 +228,9 @@ void RoomScene::InitializeLights()
 		l._transform.SetPosition(-140.0f, 100.0f, 140.0f);
 		l._transform.SetUniformScale(0.5f);
 		l._model.m_mesh = GEOMETRY::SPHERE;
-		l._model.m_material.color = l._color = Color::red;
-		l.SetLightRange(600);
+		l._model.m_material.color = l._color = vec3(Color::red) * 1.5f;
+		l._brightness = 5.0f;
+		l.SetLightRange(120);
 		m_lights.push_back(l);
 	}
 
@@ -756,7 +764,7 @@ UpdateAnchors(dt);
 // draw anchor 1 sphere
 m_pRenderer->SetBufferObj(m_anchor1.m_model.m_mesh);
 if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
-m_anchor1.m_model.m_material.SetMaterialConstants(m_pRenderer);
+m_anchor1.m_model.m_material.SetMaterialConstants(m_pRenderer, TODO);
 XMMATRIX world = m_anchor1.m_transform.WorldTransformationMatrix();
 XMMATRIX nrmMatrix = m_anchor1.m_transform.NormalMatrix(world);
 m_pRenderer->SetConstant4x4f("world", world);
@@ -767,7 +775,7 @@ m_pRenderer->DrawIndexed();
 // draw anchor 2 sphere
 m_pRenderer->SetBufferObj(m_anchor2.m_model.m_mesh);
 if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
-m_anchor2.m_model.m_material.SetMaterialConstants(m_pRenderer);
+m_anchor2.m_model.m_material.SetMaterialConstants(m_pRenderer, TODO);
 world = m_anchor2.m_transform.WorldTransformationMatrix();
 nrmMatrix = m_anchor2.m_transform.NormalMatrix(world);
 m_pRenderer->SetConstant4x4f("world", world);
@@ -779,7 +787,7 @@ m_pRenderer->DrawIndexed();
 //----------------------
 // materials
 m_pRenderer->SetBufferObj(m_physObj.m_model.m_mesh);
-m_physObj.m_model.m_material.SetMaterialConstants(m_pRenderer);
+m_physObj.m_model.m_material.SetMaterialConstants(m_pRenderer, TODO);
 
 // render bricks
 for (const auto& pObj : m_vPhysObj)

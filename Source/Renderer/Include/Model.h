@@ -20,6 +20,7 @@
 
 #include "Color.h"
 #include "Texture.h"
+#include "Shader.h"
 
 #include <string>
 #include <memory>
@@ -33,17 +34,23 @@ struct Material
 	Color		color;
 	float		alpha;	
 	vec3		specular;
-	float		shininess;
+	float		roughness;
+
+	// store brdf/phong both for being able to togge between different lighting models
+	float		metalness;	// cook-torrence brdf
+	float		shininess;	// phong
 
 	Texture		diffuseMap;
 	Texture		normalMap;
 
+	// phong default materials
 	static const Material jade, ruby, bronze, gold;
 	static Material RandomMaterial();
 
+
 	Material(const vec3& diffuse, const vec3& specular, float shininess);
 	Material();
-	void SetMaterialConstants(Renderer* renderer) const;
+	void SetMaterialConstants(Renderer* renderer, SHADERS shader) const;
 };
 
 class Model

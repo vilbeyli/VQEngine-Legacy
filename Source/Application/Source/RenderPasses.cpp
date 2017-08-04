@@ -129,7 +129,8 @@ void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
 	smpDesc.Count = 1;
 	smpDesc.Quality = 0;
 
-	DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	//DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;		// LDR
+	DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT;	// HDR
 
 	D3D11_TEXTURE2D_DESC rtDesc;
 	ZeroMemory(&rtDesc, sizeof(rtDesc));
@@ -172,10 +173,11 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// ======================================================================================
 	// BLOOM  PASS
 	// ======================================================================================
-	const float  BRDF_BrightnessThreshold = 0.0005f;
+	const float  BRDF_BrightnessThreshold = 1.0f;
 	const float Phong_BrightnessThreshold = 0.85f;
 	const float brightnessThreashold = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader()
 		? BRDF_BrightnessThreshold : Phong_BrightnessThreshold;
+	const float exposure = 1.0f;
 
 	// bright filter
 	pRenderer->SetShader(SHADERS::BLOOM);
@@ -217,7 +219,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	pRenderer->SetShader(SHADERS::BLOOM_COMBINE);
 	pRenderer->BindRenderTarget(_finalRenderTarget);
 	pRenderer->Apply();
-	//pRenderer->SetConstant1f("exposure", 1.0f);		// currently unused in shader
+	pRenderer->SetConstant1f("exposure", exposure);		// currently unused in shader
 	pRenderer->SetTexture("ColorTexture", colorTex);
 	pRenderer->SetTexture("BloomTexture", bloomTex);
 	pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);

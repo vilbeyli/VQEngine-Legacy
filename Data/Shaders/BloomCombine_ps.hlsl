@@ -33,14 +33,19 @@ cbuffer constants
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	float3 result;
-	float3 color = ColorTexture.Sample(BlurSampler, In.texCoord);
-	float3 bloom = BloomTexture.Sample(BlurSampler, In.texCoord);
+	float3 outColor;
+	const float3 color = ColorTexture.Sample(BlurSampler, In.texCoord);
+	const float3 bloom = BloomTexture.Sample(BlurSampler, In.texCoord);
 	
 	if (length(bloom) != 0.0f)
-		result = color + bloom;
+		outColor = color + bloom;
 	else
-		result = color;
+		outColor = color;
 
-	return float4(result, 1.0f);
+	float3 toneMapped = float3(1, 1, 1) - exp(-outColor * exposure);
+	
+	//const float gamma = 1.0f / 2.2f;
+	const float gamma = 1.0f;
+	toneMapped = pow(toneMapped, float3(gamma, gamma, gamma));
+	return float4(toneMapped, 1.0f);
 }

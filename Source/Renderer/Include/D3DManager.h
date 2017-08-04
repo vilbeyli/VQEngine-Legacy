@@ -65,7 +65,7 @@ public:
 	D3DManager();
 	~D3DManager();
 
-	bool Initialize(int width, int height, const bool VSYNC, HWND hwnd, const bool FULL_SCREEN);
+	bool Initialize(int width, int height, const bool VSYNC, HWND hwnd, const bool FULL_SCREEN, DXGI_FORMAT FrameBufferFormat);
 	void Shutdown();
 
 	void EndFrame();
@@ -78,7 +78,7 @@ public:
 	inline HWND	 WindowHandle() const { return m_hwnd; }
 
 private:
-	bool InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator);
+	bool InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator, DXGI_FORMAT FrameBufferFormat);
 	bool InitializeDepthBuffer(int scrWidth, int scrHeight, ID3D11Texture2D* depthStencilBuffer);
 
 private:

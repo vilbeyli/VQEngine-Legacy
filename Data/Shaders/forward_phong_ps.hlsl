@@ -59,9 +59,9 @@ struct Light
 	float pad3;
 };
 
-cbuffer renderConsts
+cbuffer SceneConstants
 {
-	float gammaCorrection;
+	float padding0;
 	float3 cameraPos;
 
 	float lightCount;
@@ -73,7 +73,7 @@ cbuffer renderConsts
 	//	float ambient;
 };
 
-cbuffer perObject
+cbuffer SufaceMaterial
 {
 	float3 diffuse;
 	float alpha;
@@ -256,17 +256,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	// --- debug --- 
 	// illumination += ShadowTestDebug(In.worldPos, In.lightSpacePos, illumination);
 	// --- debug --- 
-	float4 outColor = float4(illumination, 1);	// alpha
-
-	// gamma correction
-	const bool gammaCorrect = gammaCorrection > 0.99f;
-	//const float gamma = 1.0 / 2.2;
-	//const float gamma = 1.0;
-	const float gamma = 2.2;
-	//const float gamma = 2.2f * (1.0f - isDiffuseMap) + isDiffuseMap * 1.0f;
-	
-	//return outColor;
-	return pow(outColor, float4(gamma, gamma, gamma, 1.0f));
-	//if (gammaCorrect)	
-	//else        		return outColor;
+	float4 outColor = float4(illumination, 1);	
+	outColor = outColor / (float4(1, 1, 1, 0) + outColor);
+	return outColor;
 }

@@ -17,6 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "D3DManager.h"
+#include "Log.h"
 
 #include <string>
 
@@ -35,9 +36,9 @@ D3DManager::~D3DManager()
 {
 }
 
-bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hWnd, const bool isFullscreen)
+bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hwnd, const bool FULL_SCREEN, DXGI_FORMAT FrameBufferFormat)
 {
-	m_hwnd = hWnd;
+	m_hwnd = hwnd;
 
 	HRESULT result;
 	IDXGIFactory* factory;
@@ -123,7 +124,7 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hWnd, 
 		OutputDebugString(info);
 
 		// also resize window
-		SetWindowPos(hWnd, 0, 10, 10, width, height, SWP_NOZORDER);
+		SetWindowPos(hwnd, 0, 10, 10, width, height, SWP_NOZORDER);
 	}
 
 	// Get the adapter (video card) description.
@@ -152,7 +153,7 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hWnd, 
 	adapter->Release();			adapter = 0;
 	factory->Release();			factory = 0;
 
-	if (!InitSwapChain(hWnd, isFullscreen, width, height, numerator, denominator))
+	if (!InitSwapChain(hwnd, FULL_SCREEN, width, height, numerator, denominator, FrameBufferFormat))
 	{
 		return false;
 	}
@@ -231,7 +232,7 @@ unsigned D3DManager::WindowHeight() const
 //----------------------------------------------------------------------------------------------------------------------------------------
 // private functions
 
-bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator)
+bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator, DXGI_FORMAT FrameBufferFormat)
 {
 	HRESULT result;
 	DXGI_SWAP_CHAIN_DESC swapChainDesc;
@@ -247,7 +248,7 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 
 	// Set regular 32-bit surface for the back buffer.
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb173064(v=vs.85).aspx
-	swapChainDesc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	swapChainDesc.BufferDesc.Format = FrameBufferFormat;
 
 	// Set the refresh rate of the back buffer.
 	if (m_vsync_enabled)
@@ -287,6 +288,7 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 
 #if defined( _DEBUG )
 	UINT flags = D3D11_CREATE_DEVICE_DEBUG;
+
 #else
 	UINT flags = 0;
 #endif
@@ -304,7 +306,36 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 											&m_device, NULL, &m_deviceContext);
 	if (FAILED(result))
 	{
+		Log::Error("D3DManager: Cannot create swap chain");
 		return false;
+	}
+
+	// Direct3D SDK Debug Layer Tricks
+	// src: https://blogs.msdn.microsoft.com/chuckw/2012/11/30/direct3d-sdk-debug-layer-tricks/
+	ID3D11Debug* d3dDebug = nullptr;
+	if ( SUCCEEDED(m_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&d3dDebug)) )
+	{
+		ID3D11InfoQueue* d3dInfoQueue = nullptr;
+		if (SUCCEEDED(d3dDebug->QueryInterface(__uuidof(ID3D11InfoQueue), (void**)&d3dInfoQueue)))
+		{
+#ifdef _DEBUG	// move top?
+			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
+			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+#endif
+			D3D11_MESSAGE_ID hide[] =
+			{
+				D3D11_MESSAGE_ID_DEVICE_DRAW_RENDERTARGETVIEW_NOT_SET,
+				// Add more message IDs here as needed
+			};
+
+			D3D11_INFO_QUEUE_FILTER filter;
+			memset(&filter, 0, sizeof(filter));
+			filter.DenyList.NumIDs = _countof(hide);
+			filter.DenyList.pIDList = hide;
+			d3dInfoQueue->AddStorageFilterEntries(&filter);
+			d3dInfoQueue->Release();
+		}
+		d3dDebug->Release();
 	}
 
 	return true;

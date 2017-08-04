@@ -19,7 +19,7 @@
 // constants
 #define PI 3.14159265359f
 #define SHININESS_ADJUSTER 1.0f		// temp hack
-#define EPSILON 0.000001f
+#define EPSILON 0.000000000001f
 
 // defines
 #define _DEBUG
@@ -38,9 +38,10 @@ struct PSIn
 struct Surface
 {
 	float3 N;
+	float roughness;
 	float3 diffuseColor;
+	float metalness;
 	float3 specularColor;
-	float shininess;
 };
 
 
@@ -54,27 +55,27 @@ struct Light
 {
 	// COMMON
 	float3 position;
-	float pad1;
+	float  pad1;
 	float3 color;
-	float brightness;
+	float  brightness;
 
 	// SPOTLIGHT
 	float3 spotDir;
-	float halfAngle;
+	float  halfAngle;
 
 	// POINT LIGHT
 	float2 attenuation;
-	float range;
-	float pad3;
+	float  range;
+	float  pad3;
 };
 
-cbuffer renderConsts
+cbuffer SceneVariables
 {
-	float pad0;
+	float  pad0;
 	float3 cameraPos;
 
-	float lightCount;
-	float spotCount;
+	float  lightCount;
+	float  spotCount;
 	float2 padding;
 
 	Light lights[LIGHT_COUNT];
@@ -82,16 +83,17 @@ cbuffer renderConsts
 	//	float ambient;
 };
 
-cbuffer perObject
+cbuffer SurfaceMaterial
 {
 	float3 diffuse;
-	float alpha;
+	float  alpha;
 
 	float3 specular;
-	float shininess;
+	float  roughness;
 
-	float isDiffuseMap;
-	float isNormalMap;
+	float  isDiffuseMap;
+	float  isNormalMap;
+	float  metalness;
 };
 
 // TEXTURES & SAMPLERS
@@ -105,14 +107,13 @@ SamplerState sShadowSampler;
 // FUNCTIONS
 //---------------------------------------------------------
 // point light attenuation equation
-float Attenuation(float2 coeffs, float dist)
+inline float Attenuation(float2 coeffs, float dist)
 {
 	return 1.0f / (
 		1.0f
 		+ coeffs[0] * dist
 		+ coeffs[1] * dist * dist
 		);
-
 }
 
 // spotlight intensity calculataion
@@ -199,9 +200,10 @@ inline float NormalDistribution(float3 N, float3 H, float roughness)
 	//								of the surface
 
 	// NDF_GGXTR(N, H, roughness) = roughness^2 / ( PI * ( dot(N, H))^2 * (roughness^2 - 1) + 1 )^2
-	const float a2 = roughness * roughness;
+	const float a = roughness * roughness;
+	const float a2 = a * a;
 	const float nh2 = pow(max(dot(N, H), 0), 2);
-	const float denom = (PI * pow((nh2 * (a2 - 1) + 1), 2));
+	const float denom = (PI * pow((nh2 * (a2 - 1.0f) + 1.0f), 2));
 	if (denom < EPSILON) return 0.0f;
 	return a2 / denom;
 }
@@ -218,7 +220,7 @@ inline float Geometry_Smiths_SchlickGGX(float3 N, float3 V, float roughness)
 	// k_IBL	 = roughness^2 / 2
 	//
 #ifdef DIRECT_LIGHTING
-	const float k = pow((roughness + 1), 2) / 8.0f;
+	const float k = pow((roughness + 1.0f), 2) / 8.0f;
 #else	// IBL
 	const float k = pow(roughness, 2) / 2.0f;
 #endif
@@ -228,20 +230,25 @@ inline float Geometry_Smiths_SchlickGGX(float3 N, float3 V, float roughness)
 	return NV / denom;
 }
 
+#ifdef _DEBUG
+float Geometry(float3 N, float3 V, float3 L, float k)
+{	// essentially a multiplier [0, 1] measuring microfacet shadowing
+	float geomNV = Geometry_Smiths_SchlickGGX(N, V, k);
+	float geomNL = Geometry_Smiths_SchlickGGX(N, L, k);
+	return  geomNV * geomNL;
+}
+#else
 inline float Geometry(float3 N, float3 V, float3 L, float k)
 {	// essentially a multiplier [0, 1] measuring microfacet shadowing
-	return Geometry_Smiths_SchlickGGX(N, V, k) * Geometry_Smiths_SchlickGGX(N, L, k);
+	return  Geometry_Smiths_SchlickGGX(N, V, k) * Geometry_Smiths_SchlickGGX(N, L, k);
 }
+#endif
 
-// Fresnel-Schlick approximation
-inline float3 Fresnel(float3 N, float3 V)
-{	// descrribes reflection
-	//
-	// F_Schlick(N, V, F0) = F0 - (1-F0)*(1 - dot(N,V))^5
-	//
-	// approx F0=vec3(0.4f), see src for more
-	const float3 F0 = float3(0.4f, 0.4f, 0.4f);
+// approx F0=vec3(0.4f), see src for more
 
+// Fresnel-Schlick approximation descrribes reflection
+inline float3 Fresnel(float3 N, float3 V, float3 F0)
+{	// F_Schlick(N, V, F0) = F0 - (1-F0)*(1 - dot(N,V))^5
 	return F0 + (float3(1,1,1) - F0) * pow(1.0f - max(0.0f, dot(N, V)), 5.0f);
 }
 
@@ -249,12 +256,7 @@ inline float3 Fresnel(float3 N, float3 V)
 #ifdef _DEBUG
 float3 F_CookTorrence(float3 Wo, float3 N, float3 Wi, float roughness)
 {
-	const float3 H = normalize(Wo + Wi);
-	float3 fresnel = Fresnel(H, Wo);
-	float geometry = Geometry(N, Wo, Wi, roughness);
-	float normalDistr = NormalDistribution(N, H, roughness);
-	float denom = (4.0f * max(0.0f, dot(Wo, N)) * max(0.0f, dot(Wi, N))) + 0.0001f;
-	return  normalDistr * fresnel * geometry / denom;
+
 }
 #else
 inline float3 F_CookTorrence(float3 Wo, float3 N, float3 Wi, float roughness)
@@ -276,14 +278,27 @@ float3 BRDF(float3 Wi, Surface s, float3 V, float3 worldPos)
 {
 	const float3 Wo = V;
 	const float3 N  = s.N;
-	const float NL = max(0.0f, dot(N, Wi));
+	const float3 H = normalize(Wo + Wi);
+	const float  NL = max(0.0f, dot(N, Wi));
 
-	const float3 kd = s.diffuseColor;
-	const float3 ks = s.specularColor;
-	const float  roughness = s.shininess;
+	// surface
+	const float3 albedo = s.diffuseColor;
+	const float  roughness = s.roughness;
+	const float  metalness = s.metalness;
+	const float3 F0 = lerp(float3(0.04f, 0.04f, 0.04f), albedo, metalness);
 
-	const float3 Id = F_LambertDiffuse(kd);
-	const float3 Is = ks * F_CookTorrence(Wo, N, Wi, roughness);
+	// Cook-Torrence BRDF
+	const float3 F   = Fresnel(H, V, F0);
+	const float  G   = Geometry(N, Wo, Wi, roughness);
+	const float  NDF = NormalDistribution(N, H, roughness);
+	const float  denom = (4.0f * max(0.0f, dot(Wo, N)) * max(0.0f, dot(Wi, N))) + 0.0001f;
+	const float3 specular = NDF * F * G / denom;
+
+	const float3 kS = F;
+	const float3 kD = (float3(1, 1, 1) - kS) * (1.0f - metalness);
+
+	const float3 Id = F_LambertDiffuse(kD);
+	const float3 Is = specular;
 
 	return (Id + Is) * NL;
 }
@@ -297,8 +312,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 T = normalize(In.tangent);
 	const float3 V = normalize(cameraPos - P);
 	const float ambient = 0.035f;
-	//const float gamma = 2.2;
-	const float gamma = 1.0;
 
 	Surface s;	// surface 
 	s.N = (isNormalMap)* UnpackNormals(In.texCoord, N, T) +
@@ -306,7 +319,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.diffuseColor = diffuse *  (isDiffuseMap          * gDiffuseMap.Sample(sShadowSampler, In.texCoord).xyz +
 		(1.0f - isDiffuseMap)   * float3(1,1,1));
 	s.specularColor = specular;
-	s.shininess = 0.15f; // roughness
+	s.roughness = roughness;
+	s.metalness = metalness;
 
 	// illumination
 	const float3 Ia = s.diffuseColor * ambient;	// ambient
@@ -320,7 +334,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		for (int i = 0; i < lightCount; ++i)		// POINT Lights
 		{
 			const float3 Wi       = normalize(lights[i].position - P);
-			const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P)) * lights[i].color;
+			const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P)) * lights[i].color * lights[i].brightness;
 			IdIs += BRDF(Wi, s, V, P) * radiance * dW;
 		}
 		for (int j = 0; j < spotCount; ++j)			// SPOT Lights (shadow)
@@ -333,6 +347,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 	
 	const float3 illumination = Ia + IdIs;
 	float4 outColor = float4(illumination, 1);
-	outColor /= outColor + float4(1.0f, 1.0f, 1.0f, 0.0f);
-	return pow(outColor, float4(gamma, gamma, gamma, 1.0f));
+	outColor = outColor / (outColor + float4(1.0f, 1.0f, 1.0f, 0.0f));
+	return outColor;
 }

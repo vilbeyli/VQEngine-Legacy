@@ -57,41 +57,66 @@ Renderer::~Renderer(){}
 
 void Renderer::Exit()
 {
-	// Release the Direct3D object.
+	// C-style resource release - not using smart pointers
+	// todo: compare performance
+	
 	if (m_Direct3D)
 	{
 		m_Direct3D->Shutdown();
 		delete m_Direct3D;
 	}
 
-	// BUFFERS
-	//---------
 	for (BufferObject* bo : m_bufferObjects)
 	{
 		delete bo;
 		bo = nullptr;
 	}
+
 	CPUConstant::CleanUp();
-
-
-	// SHADERS
-	//---------
+	
 	for (Shader* shd : m_shaders)
 	{
 		delete shd;
 		shd = nullptr;
 	}
 
-	// TEXTURES
-	//---------
 	for (Texture& tex : m_textures)
 	{
 		if(tex._srv)
 			tex._srv->Release();
 		tex._srv = nullptr;
+
+		if(tex._tex2D)
+			tex._tex2D->Release();
+		tex._tex2D = nullptr;
 	}
 
-	return;
+	for (Sampler& s : m_samplers)
+	{
+		if (s._samplerState)
+		{
+			s._samplerState->Release();
+			s._samplerState = nullptr;
+		}
+	}
+
+	for (RenderTarget& rs : m_renderTargets)
+	{
+		if (rs._renderTargetView)
+		{
+			rs._renderTargetView->Release();
+			rs._renderTargetView = nullptr;
+		}
+	}
+
+	for (ID3D11RasterizerState*& rs : m_rasterizerStates)
+	{
+		if (rs)
+		{
+			rs->Release();
+			rs = nullptr;
+		}
+	}
 }
 
 const Shader* Renderer::GetShader(ShaderID shader_id) const
@@ -111,8 +136,15 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		return false;
 	}
 
-	bool result = m_Direct3D->Initialize(settings.width, settings.height, settings.vsync == 1,
-										hwnd, settings.fullscreen == 1);
+	bool result = m_Direct3D->Initialize(
+		settings.width, 
+		settings.height, 
+		settings.vsync == 1,
+		hwnd, 
+		settings.fullscreen == 1,
+		DXGI_FORMAT_R16G16B16A16_FLOAT
+	);
+	
 	if (!result)
 	{
 		MessageBox(hwnd, "Could not initialize Direct3D", "Error", MB_OK);
@@ -245,113 +277,6 @@ void Renderer::InitializeDefaultDepthBuffer()
 	AddDepthStencilState(depthStencilDesc);
 }
 
-void Renderer::PollThread()
-{
-	// Concerns:
-	// separate thread sharing window resources like context and d3d11device
-	// might not perform as expected
-	// link: https://www.opengl.org/discussion_boards/showthread.php/185980-recompile-the-shader-on-runtime-like-hot-plug-the-new-compiled-shader
-	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
-	Log::Info("Thread here : PollStarted.\n");
-	Sleep(800);
-
-
-	static HANDLE dwChangeHandle;
-	DWORD dwWaitStatus;
-	LPTSTR lpDir = "Data/Shaders/";
-
-	dwChangeHandle = FindFirstChangeNotification(
-		lpDir,                         // directory to watch 
-		TRUE,                         // do not watch subtree 
-		FILE_NOTIFY_CHANGE_FILE_NAME); // watch file name changes 
-
-	if (dwChangeHandle == INVALID_HANDLE_VALUE)
-	{
-		Log::Error("FindFirstChangeNotification function failed.\n");
-		;// ExitProcess(GetLastError());
-	}
-
-	while (TRUE)
-	{
-		//	Wait for notification.
-		Log::Info("\nWaiting for notification...\n");
-
-		dwWaitStatus = WaitForSingleObject(dwChangeHandle,
-			INFINITE);
-
-		switch (dwWaitStatus)
-		{
-		case WAIT_OBJECT_0:
-
-			//A file was created, renamed, or deleted in the directory.
-			//Refresh this directory and restart the notification.
-
-			OnShaderChange(lpDir);
-			if (FindNextChangeNotification(dwChangeHandle) == FALSE)
-			{
-				Log::Error("FindNextChangeNotification function failed.\n");
-				ExitProcess(GetLastError());
-			}
-			break;
-
-			case WAIT_OBJECT_0 + 1:
-
-				// A directory was created, renamed, or deleted.
-				// Refresh the tree and restart the notification.
-
-				//RefreshTree(lpDrive);
-				/*if (FindNextChangeNotification(dwChangeHandles[1]) == FALSE)
-				{
-					printf("\n ERROR: FindNextChangeNotification function failed.\n");
-					ExitProcess(GetLastError());
-				}*/
-			break;
-
-		case WAIT_TIMEOUT:
-
-			//A timeout occurred, this would happen if some value other 
-			//than INFINITE is used in the Wait call and no changes occur.
-			//In a single-threaded environment you might not want an
-			//INFINITE wait.
-
-			OutputDebugString("\nNo changes in the timeout period.\n");
-			break;
-
-		default:
-			OutputDebugString("\n ERROR: Unhandled dwWaitStatus.\n");
-			ExitProcess(GetLastError());
-			break;
-		}
-	}
-	OutputDebugString("Done.\n");
-}
-
-void Renderer::OnShaderChange(LPTSTR dir)
-{
-	char info[129];
-	sprintf_s(info, "OnShaderChange(%s)\n\n", dir);
-	OutputDebugString(info);
-
-	// we know that a change occurred in the 'dir' directory. Read source again
-	// works		: create file, delete file
-	// doesnt work	: modify file
-	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
-}
-
-void Renderer::PollShaderFiles()
-{
-#if (SHADER_HOTSWAP != 0)
-	static bool pollStarted = false;
-	if (!pollStarted)
-	{
-		std::thread t1(&Renderer::PollThread, this);
-		t1.detach();	// dont wait for t1 to finish;
-
-		OutputDebugString("poll started main thread\n");
-		pollStarted = true;
-	}
-#endif
-}
 
 void Renderer::InitializeDefaultRasterizerStates()
 {
@@ -1121,4 +1046,114 @@ void Renderer::Draw(TOPOLOGY topology)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->Draw(1, 0);
+}
+
+
+
+void Renderer::PollThread()
+{
+	// Concerns:
+	// separate thread sharing window resources like context and d3d11device
+	// might not perform as expected
+	// link: https://www.opengl.org/discussion_boards/showthread.php/185980-recompile-the-shader-on-runtime-like-hot-plug-the-new-compiled-shader
+	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
+	Log::Info("Thread here : PollStarted.\n");
+	Sleep(800);
+
+
+	static HANDLE dwChangeHandle;
+	DWORD dwWaitStatus;
+	LPTSTR lpDir = "Data/Shaders/";
+
+	dwChangeHandle = FindFirstChangeNotification(
+		lpDir,                         // directory to watch 
+		TRUE,                         // do not watch subtree 
+		FILE_NOTIFY_CHANGE_FILE_NAME); // watch file name changes 
+
+	if (dwChangeHandle == INVALID_HANDLE_VALUE)
+	{
+		Log::Error("FindFirstChangeNotification function failed.\n");
+		;// ExitProcess(GetLastError());
+	}
+
+	while (TRUE)
+	{
+		//	Wait for notification.
+		Log::Info("\nWaiting for notification...\n");
+
+		dwWaitStatus = WaitForSingleObject(dwChangeHandle,
+			INFINITE);
+
+		switch (dwWaitStatus)
+		{
+		case WAIT_OBJECT_0:
+
+			//A file was created, renamed, or deleted in the directory.
+			//Refresh this directory and restart the notification.
+
+			OnShaderChange(lpDir);
+			if (FindNextChangeNotification(dwChangeHandle) == FALSE)
+			{
+				Log::Error("FindNextChangeNotification function failed.\n");
+				ExitProcess(GetLastError());
+			}
+			break;
+
+		case WAIT_OBJECT_0 + 1:
+
+			// A directory was created, renamed, or deleted.
+			// Refresh the tree and restart the notification.
+
+			//RefreshTree(lpDrive);
+			/*if (FindNextChangeNotification(dwChangeHandles[1]) == FALSE)
+			{
+			printf("\n ERROR: FindNextChangeNotification function failed.\n");
+			ExitProcess(GetLastError());
+			}*/
+			break;
+
+		case WAIT_TIMEOUT:
+
+			//A timeout occurred, this would happen if some value other 
+			//than INFINITE is used in the Wait call and no changes occur.
+			//In a single-threaded environment you might not want an
+			//INFINITE wait.
+
+			OutputDebugString("\nNo changes in the timeout period.\n");
+			break;
+
+		default:
+			OutputDebugString("\n ERROR: Unhandled dwWaitStatus.\n");
+			ExitProcess(GetLastError());
+			break;
+		}
+	}
+	OutputDebugString("Done.\n");
+}
+
+void Renderer::OnShaderChange(LPTSTR dir)
+{
+	char info[129];
+	sprintf_s(info, "OnShaderChange(%s)\n\n", dir);
+	OutputDebugString(info);
+
+	// we know that a change occurred in the 'dir' directory. Read source again
+	// works		: create file, delete file
+	// doesnt work	: modify file
+	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
+}
+
+void Renderer::PollShaderFiles()
+{
+#if (SHADER_HOTSWAP != 0)
+	static bool pollStarted = false;
+	if (!pollStarted)
+	{
+		std::thread t1(&Renderer::PollThread, this);
+		t1.detach();	// dont wait for t1 to finish;
+
+		OutputDebugString("poll started main thread\n");
+		pollStarted = true;
+	}
+#endif
 }

@@ -30,7 +30,7 @@ public:
 	Input(const Input&);
 	~Input();
 
-	void Init();
+	void Initialize();
 
 	// update state
 	void KeyDown(KeyCode);

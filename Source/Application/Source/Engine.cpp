@@ -23,6 +23,7 @@
 #include "PerfTimer.h"
 #include "SceneParser.h"
 #include "SceneManager.h"
+#include "WorkerPool.h"
 
 #include "Mesh.h"
 #include "Camera.h"
@@ -43,13 +44,23 @@ Engine::~Engine(){}
 
 bool Engine::Initialize(HWND hwnd, const Settings::Window& windowSettings)
 {
-	if (!m_renderer || !m_input || !m_sceneManager || !m_timer) 
+	if (!m_renderer || !m_input || !m_sceneManager || !m_timer)
+	{
+		Log::Error("Nullptr Engine::Init()\n");
 		return false;
+	}
 
-	m_input->Init();
-	if(!m_renderer->Initialize(hwnd, windowSettings))
+	constexpr size_t workerCount = 1;
+	m_workerPool.Initialize(workerCount);
+		
+	m_input->Initialize();
+	
+	if (!m_renderer->Initialize(hwnd, windowSettings))
+	{
+		Log::Error("Cannot initialize Renderer.\n");
 		return false;
-
+	}
+	
 	m_sceneManager->Initialize(m_renderer.get(), nullptr);
 
 	return true;
@@ -95,6 +106,8 @@ void Engine::CalcFrameStats()
 void Engine::Exit()
 {
 	m_renderer->Exit();
+
+	m_workerPool.Terminate();
 
 	if (s_instance)
 	{
@@ -149,10 +162,6 @@ bool Engine::Run()
 	}
 
 	m_input->Update();	// update previous state after frame;
-
-#ifdef _DEBUG
-	m_renderer->PollShaderFiles();
-#endif
 	return true;
 }
 

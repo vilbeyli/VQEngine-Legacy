@@ -31,8 +31,6 @@
 #include <mutex>
 #include <cassert>
 
-#define SHADER_HOTSWAP 0
-
 const char* Renderer::s_shaderRoot = "Data/Shaders/";
 const char* Renderer::s_textureRoot = "Data/Textures/";
 
@@ -42,9 +40,10 @@ Renderer::Renderer()
 	m_device(nullptr),
 	m_deviceContext(nullptr),
 	m_mainCamera(nullptr),
-	m_bufferObjects(std::vector<BufferObject*>(GEOMETRY::MESH_TYPE_COUNT)),
-	m_rasterizerStates(std::vector<RasterizerState*>((int)DEFAULT_RS_STATE::RS_COUNT)),
-	m_depthStencilStates(std::vector<DepthStencilState*>())
+	m_bufferObjects     (std::vector<BufferObject*>     (GEOMETRY::MESH_TYPE_COUNT)      ),
+	m_rasterizerStates  (std::vector<RasterizerState*>  ((int)DEFAULT_RS_STATE::RS_COUNT)),
+	m_depthStencilStates(std::vector<DepthStencilState*>()                               )
+	//,	m_ShaderHotswapPollWatcher("ShaderHotswapWatcher")
 {
 	for (int i=0; i<(int)DEFAULT_RS_STATE::RS_COUNT; ++i)
 	{
@@ -1050,7 +1049,7 @@ void Renderer::Draw(TOPOLOGY topology)
 
 
 
-void Renderer::PollThread()
+void Renderer::PollShaderFiles()
 {
 	// Concerns:
 	// separate thread sharing window resources like context and d3d11device
@@ -1060,7 +1059,7 @@ void Renderer::PollThread()
 	Log::Info("Thread here : PollStarted.\n");
 	Sleep(800);
 
-
+#if 0
 	static HANDLE dwChangeHandle;
 	DWORD dwWaitStatus;
 	LPTSTR lpDir = "Data/Shaders/";
@@ -1129,31 +1128,15 @@ void Renderer::PollThread()
 		}
 	}
 	OutputDebugString("Done.\n");
+#endif
 }
 
 void Renderer::OnShaderChange(LPTSTR dir)
 {
-	char info[129];
-	sprintf_s(info, "OnShaderChange(%s)\n\n", dir);
-	OutputDebugString(info);
-
+	Log::Info("OnShaderChange(%s)\n\n", dir);
 	// we know that a change occurred in the 'dir' directory. Read source again
 	// works		: create file, delete file
 	// doesnt work	: modify file
 	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
 }
 
-void Renderer::PollShaderFiles()
-{
-#if (SHADER_HOTSWAP != 0)
-	static bool pollStarted = false;
-	if (!pollStarted)
-	{
-		std::thread t1(&Renderer::PollThread, this);
-		t1.detach();	// dont wait for t1 to finish;
-
-		OutputDebugString("poll started main thread\n");
-		pollStarted = true;
-	}
-#endif
-}

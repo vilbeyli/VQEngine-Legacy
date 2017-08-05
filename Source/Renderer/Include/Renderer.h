@@ -26,6 +26,7 @@
 #include "GameObject.h"
 
 #include "RenderCommands.h"
+#include "WorkerPool.h"
 
 #include <memory>
 
@@ -154,9 +155,8 @@ public:
 	void Apply();
 	
 private:
-	// multithread shader hostwap
+	// shader hotswap
 	void PollShaderFiles();
-	void PollThread();
 	void OnShaderChange(LPTSTR dir);
 
 	// init / load
@@ -183,6 +183,7 @@ private:
 	std::vector<Shader*>			m_shaders;
 	std::vector<Texture>			m_textures;
 	std::vector<Sampler>			m_samplers;
+
 	std::queue<SetTextureCommand>	m_setTextureCmds;
 	std::queue<SetSamplerCommand>	m_setSamplerCmds;
 
@@ -190,9 +191,8 @@ private:
 	std::vector<DepthStencilState*> m_depthStencilStates;
 
 	std::vector<RenderTarget>		m_renderTargets;
-	std::vector<DepthStencil*>		m_depthStencils;	// not ptrs?
+	std::vector<DepthStencil*>		m_depthStencils;
 
-	// state objects
 	Viewport						m_viewPort;
 
 	using RenderTargetIDs = std::vector<RenderTargetID>;
@@ -212,5 +212,8 @@ private:
 	unsigned long long				m_frameCount;
 
 	//std::vector<Point>				m_debugLines;
+	
+	//Worker		m_ShaderHotswapPollWatcher;
+
 };
  

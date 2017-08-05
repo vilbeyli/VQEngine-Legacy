@@ -21,6 +21,7 @@
 #include <windows.h>
 #include "PerfTimer.h"
 #include "Settings.h"
+#include "WorkerPool.h"
 
 #include <memory>
 using std::shared_ptr;
@@ -71,7 +72,6 @@ private:
 
 private:
 	static Engine*					s_instance;
-	// TODO : TYEPDEF POINTER TYPES...
 	
 	std::shared_ptr<Input>			m_input;
 	std::shared_ptr<Renderer>		m_renderer;
@@ -79,6 +79,7 @@ private:
 	std::shared_ptr<PerfTimer>		m_timer;
 
 	bool							m_isPaused;
+	WorkerPool						m_workerThreads;
 };
 
 #define ENGINE Engine::GetEngine()

@@ -45,7 +45,7 @@ Input::~Input()
 {
 }
 
-void Input::Init()
+void Input::Initialize()
 {
 	memset(m_keys,	   false, sizeof(bool) * KEY_COUNT);
 	memset(m_prevKeys, false, sizeof(bool) * KEY_COUNT);

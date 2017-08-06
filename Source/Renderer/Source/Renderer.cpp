@@ -59,24 +59,28 @@ void Renderer::Exit()
 	// C-style resource release - not using smart pointers
 	// todo: compare performance
 	
+	auto Release = [](void** ptr) { if (*ptr) {
+		delete *ptr;
+		*ptr = nullptr;
+	}};
+
+	
 	if (m_Direct3D)
 	{
 		m_Direct3D->Shutdown();
-		delete m_Direct3D;
+		Release((void**)(&m_Direct3D));
 	}
 
 	for (BufferObject* bo : m_bufferObjects)
 	{
-		delete bo;
-		bo = nullptr;
+		Release((void**)&bo);
 	}
 
 	CPUConstant::CleanUp();
 	
 	for (Shader* shd : m_shaders)
 	{
-		delete shd;
-		shd = nullptr;
+		Release((void**)&shd);
 	}
 
 	for (Texture& tex : m_textures)
@@ -89,7 +93,7 @@ void Renderer::Exit()
 			tex._tex2D->Release();
 		tex._tex2D = nullptr;
 	}
-
+#if 1
 	for (Sampler& s : m_samplers)
 	{
 		if (s._samplerState)
@@ -108,7 +112,7 @@ void Renderer::Exit()
 		}
 	}
 
-	for (ID3D11RasterizerState*& rs : m_rasterizerStates)
+	for (RasterizerState*& rs : m_rasterizerStates)
 	{
 		if (rs)
 		{
@@ -116,6 +120,26 @@ void Renderer::Exit()
 			rs = nullptr;
 		}
 	}
+
+	for (DepthStencilState*& dss : m_depthStencilStates)
+	{
+		if (dss)
+		{
+			dss->Release();
+			dss = nullptr;
+		}
+	}
+
+	for (DepthStencil*& ds : m_depthStencils)
+	{
+		if (ds)
+		{
+			ds->Release();
+			ds = nullptr;
+		}
+	}
+#endif
+
 }
 
 const Shader* Renderer::GetShader(ShaderID shader_id) const
@@ -215,7 +239,8 @@ void Renderer::LoadShaders()
 	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"            , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"             , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"     , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::FORWARD_BRDF               ]	= AddShader("Forward_BRDF"     , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"     , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::FORWARD_BRDF       ]	= AddShader("Forward_BRDF"     , s_shaderRoot, layout);
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
 
@@ -280,7 +305,7 @@ void Renderer::InitializeDefaultDepthBuffer()
 void Renderer::InitializeDefaultRasterizerStates()
 {
 	HRESULT hr;
-	const std::string err("Unable to create Rrasterizer State: Cull ");
+	const std::string err("Unable to create Rasterizer State: Cull ");
 
 	ID3D11RasterizerState*& cullNone  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_NONE];
 	ID3D11RasterizerState*& cullBack  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_BACK];
@@ -475,7 +500,7 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	
 	// init cubemap texture from 6 textures
 	ID3D11Texture2D* cubemapTexture;
-	HRESULT hr = m_device->CreateTexture2D(&texDesc, &pData[0], &cubemapTexture);	// access violation error here reading first image data
+	HRESULT hr = m_device->CreateTexture2D(&texDesc, &pData[0], &cubemapTexture);
 	if (hr != S_OK)
 	{
 		Log::Error(std::string("Cannot create cubemap texture: ") + split(textureFileNames.front(), '_').front());
@@ -679,30 +704,31 @@ void Renderer::SetShader(ShaderID id)
 		{
 			Shader* shader = m_shaders[m_state._activeShader];
 
-			// nullify texture units
+			// nullify texture units 
 			for (ShaderTexture& tex : shader->m_textures)
 			{
-				ID3D11ShaderResourceView* nullSRV[6] = { nullptr };
+				constexpr UINT NumNullSRV = 6;
+				ID3D11ShaderResourceView* nullSRV[NumNullSRV ] = { nullptr };
 				//(m_deviceContext->*SetShaderResources[tex.shdType])(tex.bufferSlot, 1, nullSRV);
 				switch (tex.shdType)
 				{
 				case ShaderType::VS:
-					m_deviceContext->VSSetShaderResources(tex.bufferSlot, 6, nullSRV);
+					m_deviceContext->VSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
 				case ShaderType::GS:
-					m_deviceContext->GSSetShaderResources(tex.bufferSlot, 6, nullSRV);
+					m_deviceContext->GSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
 				case ShaderType::HS:
-					m_deviceContext->HSSetShaderResources(tex.bufferSlot, 6, nullSRV);
+					m_deviceContext->HSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
 				case ShaderType::DS:
-					m_deviceContext->DSSetShaderResources(tex.bufferSlot, 6, nullSRV);
+					m_deviceContext->DSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
 				case ShaderType::PS:
-					m_deviceContext->PSSetShaderResources(tex.bufferSlot, 6, nullSRV);
+					m_deviceContext->PSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
 				case ShaderType::CS:
-					m_deviceContext->CSSetShaderResources(tex.bufferSlot, 6, nullSRV);
+					m_deviceContext->CSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
 				default:
 					break;

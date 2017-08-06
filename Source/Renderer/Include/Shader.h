@@ -151,6 +151,7 @@ enum SHADERS	// good enough for global namespace
 	BLOOM,
 	BLUR,
 	BLOOM_COMBINE,
+	TONEMAPPING,
 	FORWARD_BRDF,
 
 	SHADER_COUNT

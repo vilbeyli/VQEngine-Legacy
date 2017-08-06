@@ -79,7 +79,7 @@ private:
 	std::shared_ptr<PerfTimer>		m_timer;
 
 	bool							m_isPaused;
-	WorkerPool						m_workerThreads;
+	WorkerPool						m_workerPool;
 };
 
 #define ENGINE Engine::GetEngine()

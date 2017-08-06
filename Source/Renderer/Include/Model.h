@@ -31,7 +31,15 @@ class Renderer;
 
 struct Material
 {
+#if 0
+	union
+	{
+		Color	albedo;
+		Color	color;
+	};
+#else
 	Color		color;
+#endif
 	float		alpha;	
 	vec3		specular;
 	float		roughness;

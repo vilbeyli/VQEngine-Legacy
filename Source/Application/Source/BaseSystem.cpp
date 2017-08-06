@@ -68,9 +68,8 @@ bool BaseSystem::Init()
 
 void BaseSystem::Run()
 {
-	MSG msg;
-	ZeroMemory(&msg, sizeof(MSG));
-
+	MSG msg = { };
+	
 	bool done = false;
 	while (!done)
 	{

@@ -16,7 +16,13 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define DO_BLOOM
+struct VSIn
+{
+	float3 position : POSITION;
+	float3 normal	: NORMAL;
+	float2 texCoord : TEXCOORD0;
+	float3 tangent	: TANGENT0;
+};
 
 struct PSIn
 {
@@ -24,23 +30,10 @@ struct PSIn
 	float2 texCoord : TEXCOORD0;
 };
 
-Texture2D ColorTexture;
-Texture2D BloomTexture;
-SamplerState BlurSampler;
-
-float4 PSMain(PSIn In) : SV_TARGET
+PSIn VSMain(VSIn In)
 {
-	float3 outColor;
-	const float3 color = ColorTexture.Sample(BlurSampler, In.texCoord);
-	const float3 bloom = BloomTexture.Sample(BlurSampler, In.texCoord);
-	
-#ifdef DO_BLOOM
-	if (length(bloom) != 0.0f)
-		outColor = color + bloom;
-	else
-		outColor = color;
-#else
-	outColor = color;
-#endif
-	return float4(outColor, 1);
+	PSIn Out;
+    Out.position = float4(In.position, 1);
+    Out.texCoord = In.texCoord;
+	return Out;
 }

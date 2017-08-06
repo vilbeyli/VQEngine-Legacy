@@ -36,6 +36,7 @@ class PathManager;
 struct Path;
 
 
+
 class SceneManager
 {
 public:
@@ -61,13 +62,11 @@ private:
 	shared_ptr<Camera>	m_pCamera;
 	//PathManager*		m_pPathManager; // unused
 
-	// pipeline state data
+	// rendering passes
 	DepthShadowPass		m_depthPass;
 	PostProcessPass		m_postProcessPass;
 
-
 	ShaderID			m_selectedShader;
-	bool				m_gammaCorrection;
 	bool				m_debugRender;
 
 	std::vector<GameObject*> m_ZPassObjects;

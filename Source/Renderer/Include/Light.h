@@ -39,7 +39,7 @@ struct LightShaderSignature
 	float pad3;
 };
 
-struct Light// : public Component
+struct Light
 {
 	friend class Graphics;
 

@@ -28,10 +28,10 @@
 
 constexpr size_t	RAND_LIGHT_COUNT	= 0;
 
-constexpr size_t	CUBE_ROW_COUNT		= 11;
+constexpr size_t	CUBE_ROW_COUNT		= 20;
 constexpr size_t	CUBE_COLUMN_COUNT	= 4;
 constexpr size_t	CUBE_COUNT			= CUBE_ROW_COUNT * CUBE_COLUMN_COUNT;
-constexpr float		CUBE_DISTANCE		= 4.0f * 6;
+constexpr float		CUBE_DISTANCE		= 4.0f * 2.2f;
 
 //constexpr size_t	CUBE_ROW_COUNT		= 20;
 //constexpr size_t	CUBE_ROW_COUNT		= 20;
@@ -56,7 +56,7 @@ RoomScene::RoomScene(SceneManager& sceneMan)
 void RoomScene::Load(Renderer* pRenderer)
 {
 	m_pRenderer = pRenderer;
-	InitializeRoom();
+	m_room.Initialize(pRenderer);
 	InitializeLights();
 	InitializeObjectArrays();
 
@@ -66,6 +66,7 @@ void RoomScene::Load(Renderer* pRenderer)
 
 void RoomScene::Update(float dt)
 {
+	for (auto& anim : m_animations) anim.Update(dt);
 	UpdateCentralObj(dt);
 }
 
@@ -85,101 +86,17 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 
 	pRenderer->SetShader(selectedShader);
 	m_sceneManager.SendLightData();
+	
 	m_room.Render(m_pRenderer, viewProj, bSendMaterialData);
+	
 	if (selectedShader == SHADERS::FORWARD_BRDF) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
+	
 	RenderCentralObjects(viewProj);
 	RenderLights(viewProj);
 }
 
 
-
-void RoomScene::InitializeRoom()
-{
-	const float floorWidth = 5 * 30.0f;
-	const float floorDepth = 5 * 30.0f;
-	const float wallHieght = 3.8*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
-	const float YOffset = wallHieght - 9.0f;
-
-	// FLOOR
-	{
-		Transform& tf = m_room.floor.m_transform;
-		tf.SetScale(floorWidth, 0.1f, floorDepth);
-		tf.SetPosition(0, -wallHieght + YOffset, 0);
-
-		Material& mat = m_room.floor.m_model.m_material;
-		mat.shininess = 20.0f;
-		mat.roughness = 0.1f;	// brdf material
-		mat.metalness = 0.3f;
-		
-
-		//m_room.floor.m_model.m_material = Material::bronze;
-		m_room.floor.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("185.JPG");
-		m_room.floor.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("185_norm.JPG");
-		//m_room.floor.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("BumpMapTexturePreview.JPG");
-	}
-	// CEILING
-	{
-		Transform& tf = m_room.ceiling.m_transform;
-		tf.SetScale(floorWidth, 0.1f, floorDepth);
-		tf.SetPosition(0, wallHieght + YOffset, 0);
-
-		//m_room.ceiling.m_model.m_material.color		= Color::purple;
-		m_room.ceiling.m_model.m_material.shininess	= 20.0f;
-		//m_room.ceiling.m_model.m_material = Material::gold;
-		//m_room.ceiling.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("metal2.JPG");
-		//m_room.ceiling.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("nrm_metal2.JPG");
-	}
-
-	// RIGHT WALL
-	{
-		Transform& tf = m_room.wallR.m_transform;
-		tf.SetScale(floorDepth, 0.1f, wallHieght);
-		tf.SetPosition(floorWidth, YOffset, 0);
-		tf.SetXRotationDeg(90.0f);
-		tf.RotateAroundGlobalYAxisDegrees(-90);
-		//tf.RotateAroundGlobalXAxisDegrees(-180.0f);
-
-		//m_room.wallR.m_model.m_material.color		= Color::gray;
-		//m_room.wallR.m_model.m_material.shininess	= 120.0f;
-		//m_room.wallR.m_model.m_material = Material::bronze;
-		m_room.wallR.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("190.JPG");
-		m_room.wallR.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("190_norm.JPG");
-	}
-
-	// LEFT WALL
-	{
-		Transform& tf = m_room.wallL.m_transform;
-		tf.SetScale(floorDepth, 0.1f, wallHieght);
-		tf.SetPosition(-floorWidth, YOffset, 0);
-		tf.SetXRotationDeg(-90.0f);
-		tf.RotateAroundGlobalYAxisDegrees(-90.0f);
-		//tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
-		//m_room.wallL.m_model.m_material.color		= Color::gray;
-		m_room.wallL.m_model.m_material.shininess	= 60.0f;
-		//m_room.wallL.m_model.m_material = Material::bronze;
-		m_room.wallL.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("190.JPG");
-		m_room.wallL.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("190_norm.JPG");
-	}
-	// WALL
-	{
-		Transform& tf = m_room.wallF.m_transform;
-		tf.SetScale(floorWidth, 0.1f, wallHieght);
-		tf.SetPosition(0, YOffset, floorDepth);
-		tf.SetXRotationDeg(-90.0f);
-		//m_room.wallF.m_model.m_material.color		= Color::gray;
-		//m_room.wallF.m_model.m_material = Material::gold;
-		m_room.wallF.m_model.m_material.shininess	= 90.0f;
-		m_room.wallF.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("190.JPG");
-		m_room.wallF.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("190_norm.JPG");
-	}
-
-	m_room.floor.m_model.m_mesh   = GEOMETRY::CUBE;
-	m_room.wallL.m_model.m_mesh   = GEOMETRY::CUBE;
-	m_room.wallR.m_model.m_mesh   = GEOMETRY::CUBE;
-	m_room.wallF.m_model.m_mesh   = GEOMETRY::CUBE;
-	m_room.ceiling.m_model.m_mesh = GEOMETRY::CUBE;
-}
-	 		  
+ 		  
 void RoomScene::InitializeLights()
 {
 	// todo: read from file
@@ -187,9 +104,11 @@ void RoomScene::InitializeLights()
 	{
 		Light l;
 		l._type = Light::LightType::SPOT;
-		l._transform.SetPosition(0.0f, 4*25.0f, 0.0f);
+		//l._transform.SetPosition(-48.0f, 4 * 25.0f, 0.0f);
+		l._transform.SetPosition(-70.0f, 35.0f, 0.0f);
 		//l._transform.RotateAroundGlobalXAxisDegrees(200.0f);
 		l._transform.RotateAroundGlobalXAxisDegrees(180.0f);
+		l._transform.RotateAroundGlobalZAxisDegrees(65.0f);
 		l._transform.SetUniformScale(0.8f);
 		l._model.m_mesh = GEOMETRY::CYLINDER;
 		l._model.m_material.color = Color::white;
@@ -204,23 +123,26 @@ void RoomScene::InitializeLights()
 	// point lights
 	{
 		Light l;
-		l._transform.SetPosition(-48.0f, 22.0f, 20.0f);
+		//l._transform.SetPosition(-48.0f, 22.0f, 20.0f);
+		l._transform.SetPosition(0.0f, 30.0f, 0.0f);
 		l._transform.SetUniformScale(0.3f);
 		l._model.m_mesh = GEOMETRY::SPHERE;
 		l._model.m_material.color = l._color = vec3(Color::orange) * 3.0f;
-		l._brightness = 2.0f;
+		//l._model.m_material.color = l._color = vec3(Color::white);
+		l._brightness = 1.0f;
 		l.SetLightRange(60);
 		m_lights.push_back(l);
 	}
 	{
 		Light l;
-		l._transform.SetPosition(80.0f, 15.0f, -2.0f);
+		l._transform.SetPosition(60.0f, 25.0f, -2.0f);
 		l._transform.SetUniformScale(0.4f);
 		l._model.m_mesh = GEOMETRY::SPHERE;
 		l._model.m_material.color = Color::cyan;
+		//l._model.m_material.color = Color::white;
 		l._color = l._model.m_material.color;
-		l._brightness = 1.0f;
-		l.SetLightRange(500);
+		l._brightness = 240.0f;
+		l.SetLightRange(84);
 		m_lights.push_back(l);
 	}
 	{
@@ -228,9 +150,10 @@ void RoomScene::InitializeLights()
 		l._transform.SetPosition(-140.0f, 100.0f, 140.0f);
 		l._transform.SetUniformScale(0.5f);
 		l._model.m_mesh = GEOMETRY::SPHERE;
+		//l._model.m_material.color = l._color = vec3(Color::white);
 		l._model.m_material.color = l._color = vec3(Color::red) * 1.5f;
-		l._brightness = 5.0f;
-		l.SetLightRange(120);
+		l._brightness = 100.0f;
+		l.SetLightRange(60);
 		m_lights.push_back(l);
 	}
 
@@ -249,15 +172,19 @@ void RoomScene::InitializeLights()
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
 		m_lights.push_back(l);
 	}
+
+	Animation anim;
+	anim._fTracks.push_back(Track<float>(&m_lights[1]._brightness, 10.f, 500.f, 3.0f));
+	m_animations.push_back(anim);
 #endif
 }
 	 		  
 void RoomScene::InitializeObjectArrays()
 {
 	{	// grid arrangement ( (row * col) cubes that are 'CUBE_DISTANCE' apart from each other )
-		const std::vector<vec3> c_rowRotations = { vec3::Zero, vec3::Up, vec3::Right, vec3::Forward };
+		const std::vector<vec3>   c_rowRotations = { vec3::Zero, vec3::Up, vec3::Right, vec3::Forward };
 		static std::vector<float> s_cubeDelays = std::vector<float>(CUBE_COUNT, 0.0f);
-		const std::vector<Color> c_colors = { Color::white, Color::red, Color::green, Color::blue, Color::orange, Color::light_gray, Color::cyan };
+		const std::vector<Color>  c_colors = { Color::white, Color::red, Color::green, Color::blue, Color::orange, Color::light_gray, Color::cyan };
 		for (int i = 0; i < CUBE_ROW_COUNT; ++i)
 		{
 			//Color color = c_colors[i % c_colors.size()];
@@ -272,18 +199,6 @@ void RoomScene::InitializeObjectArrays()
 				x = i * CUBE_DISTANCE - CUBE_ROW_COUNT * CUBE_DISTANCE / 2;		y = 5.0f;	z = j * CUBE_DISTANCE - CUBE_COLUMN_COUNT * CUBE_DISTANCE / 2;
 				cube.m_transform.SetPosition(x, y, z + 550);
 				cube.m_transform.SetUniformScale(4.0f);
-				//if (RandF(0, 1) < 0.5f)	cube.m_transform.SetScale(1, 6, 3);
-				//else					cube.m_transform.SetUniformScale(RandF(3.0f, 5.0f));
-				//if (j == 3)	cube.m_transform.SetUniformScale(RandF(6.0f, 9.0f));
-				//if (i == j) cube.m_transform.SetRotationDeg(90.0f / 4 * sqrt(i*j), 0, 0);
-				//if (i == j) cube.m_transform.RotateAroundAxisDegrees(c_rowRotations[1], 90.0f);
-#if 0
-				if (j == 0 && CUBE_COLUMN_COUNT != 1) cube.m_transform.RotateAroundAxisDegrees(vec3::XAxis, (static_cast<float>(i) / ( CUBE_COLUMN_COUNT - 1)) * 90.0f);
-				if (j == 1 && CUBE_COLUMN_COUNT != 1) cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, (static_cast<float>(i) / ( CUBE_COLUMN_COUNT - 1)) * 90.0f);
-				if (j == 3 && CUBE_COLUMN_COUNT != 1) cube.m_transform.RotateAroundAxisDegrees(vec3::ZAxis, (static_cast<float>(i) / ( CUBE_COLUMN_COUNT - 1)) * 90.0f);
-				cube.m_transform.RotateAroundAxisDegrees(vec3::YAxis, -90.0f);
-#endif
-
 
 				// set material
 				cube.m_model.m_material.color = color;
@@ -292,33 +207,19 @@ void RoomScene::InitializeObjectArrays()
 				//cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
 				cube.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("simple_normalmap.png");
 
-
-				if (i == 0 && j == 0)
-				{
-					//cube.m_transform.SetPosition(0, 10, 0);
-					cube.m_transform.SetUniformScale(9);
-					cube.m_model.m_material.color = Color::white;
-					//cube.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("metal2.png");
-				}
-
 				cubes.push_back(cube);
 			}
 		}
 	}
-	cubes.front().m_transform.Translate(0, 10, 0);
-	cubes.front().m_transform.SetXRotationDeg(90);
-	cubes.front().m_transform.RotateAroundGlobalXAxisDegrees(30);
-	cubes.front().m_transform.RotateAroundGlobalYAxisDegrees(30);
-	cubes.front().m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("BumpMapTexturePreview.png");
 	
 	// circle arrangement
-	const float sphHeight[2] = { 10.0f, 45.0f };
-	{	// large circle
+	const float sphHeight[2] = { 10.0f, 19.0f };
+	{	// rotating spheres
 		const float r = 30.0f;
 		const size_t numSph = 15;
 
 		const vec3 radius(r, sphHeight[0], 0.0f);
-		const float rot = 2.0f * XM_PI / numSph == 0 ? 1.0f : numSph;
+		const float rot = 2.0f * XM_PI / (numSph == 0 ? 1.0f : numSph);
 		const vec3 axis = vec3::Up;
 		for (size_t i = 0; i < numSph; i++)
 		{
@@ -328,33 +229,57 @@ void RoomScene::InitializeObjectArrays()
 
 			GameObject sph;
 			sph.m_transform = pos;
+			sph.m_transform.Translate(vec3::Up * (sphHeight[1] * ((float)i / (float)numSph) + sphHeight[1]));
 			sph.m_model.m_mesh = GEOMETRY::SPHERE;
+			sph.m_model.m_material = Material::gold;
+
+			// set materials
 			const float baseSpecular = 5.0f;
 			const float step = 15.0f;
 			sph.m_model.m_material.specular = vec3( baseSpecular + (static_cast<float>(i) / numSph) * step)._v;
 			//sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * baseSpecular)._v : vec3((static_cast<float>(numSph - i) / numSph) * baseSpecular)._v;
 			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;
 
+			sph.m_model.m_material.roughness = 0.2f;
+			sph.m_model.m_material.metalness = 1.0f - static_cast<float>(i) / static_cast<float>(numSph);
+
 			spheres.push_back(sph);
 		}
 	}
-	{	// small circle
-		const float r = 15.0f;
-		const size_t numSph = 5;
+	{	// sphere grid
+		constexpr float r = 15.0f;
+		constexpr size_t gridDimension = 5;
+		constexpr size_t numSph = gridDimension * gridDimension;
 
-		const float rot = 2.0f * XM_PI / numSph == 0 ? 1.0f : numSph;
-		const vec3 radius(r, sphHeight[1], 0.0f);
-		const auto axis = vec3::Up;
+		const vec3 origin = vec3::Zero;
+
 		for (size_t i = 0; i < numSph; i++)
 		{
-			// calc position
-			Quaternion rotQ = Quaternion::FromAxisAngle(axis, rot * i);
-			vec3 pos = rotQ.TransformVector(radius);
+			const size_t row = i / gridDimension;
+			const size_t col = i % gridDimension;
+
+			const float sphereStep = static_cast<float>(i) / numSph;
+			const float rowStep = static_cast<float>(row) / (numSph / gridDimension);
+			const float colStep = static_cast<float>(col) / (numSph / gridDimension);
+
+			// offset to center the grid
+			const float offsetDim = -static_cast<float>(gridDimension) * r / 2 + r/2.0f;
+			const vec3 offset = vec3(col * r, 0.0f, row * r) + vec3(offsetDim, 0.0f, offsetDim);
+
+			const vec3 pos = origin + offset;
 
 			GameObject sph;
 			sph.m_transform = pos;
+			sph.m_transform.SetUniformScale(2.5f);
 			sph.m_model.m_mesh = GEOMETRY::SPHERE;
-			sph.m_model.m_material = Material::gold;
+			const float roughnessBase = 0.1f;
+			const float roughnessScale = 0.45f;
+			sph.m_model.m_material.roughness = colStep * roughnessScale + roughnessBase;
+			sph.m_model.m_material.metalness = 0.0f;
+
+			//float colorVal = 0.5f + step / 2.0f;
+			float colorVal = 1.0f * rowStep;
+			sph.m_model.m_material.color = vec3(colorVal, colorVal, colorVal);
 
 			spheres.push_back(sph);
 		}
@@ -376,18 +301,20 @@ void RoomScene::InitializeObjectArrays()
 	--i;
 
 
-	//sphere.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	sphere.m_transform.SetPosition(0, 20.0f, 0);
-	sphere.m_transform.SetUniformScale(5.0f);
+	sphere.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
+	//sphere.m_transform.SetPosition(0, 20.0f, 0);
+	//sphere.m_transform.SetUniformScale(5.0f);
 	--i;
 
 	triangle.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
 	triangle.m_transform.SetXRotationDeg(30.0f);
+	triangle.m_transform.RotateAroundGlobalYAxisDegrees(30.0f);
 	triangle.m_transform.SetUniformScale(4.0f);
 	--i;
 
 	quad.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
 	quad.m_transform.SetXRotationDeg(30);
+	quad.m_transform.RotateAroundGlobalYAxisDegrees(30);
 	quad.m_transform.SetUniformScale(4.0f);
 
 
@@ -403,9 +330,22 @@ void RoomScene::InitializeObjectArrays()
 	triangle.m_model.m_material = Material();
 	    quad.m_model.m_material = Material();
 		cube.m_model.m_material = Material();
+		cube.m_model.m_material.roughness = 0.6f;
+		cube.m_model.m_material.metalness = 0.6f;
 	  sphere.m_model.m_material = Material();
+	  sphere.m_model.m_material.roughness = 0.25f;
+	  sphere.m_transform.SetUniformScale(2.5f);
 
+
+
+	  //cubes.front().m_transform.Translate(0, 30, 0);
+	  cube.m_transform.SetPosition(0, 15, 0);
+	  cube.m_transform.SetXRotationDeg(90);
+	  cube.m_transform.RotateAroundGlobalXAxisDegrees(30);
+	  cube.m_transform.RotateAroundGlobalYAxisDegrees(30);
 	  cube.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("BumpMapTexturePreview.png");
+	  cube.m_model.m_material.metalness = 0.6f;
+	  cube.m_model.m_material.roughness = 0.15f;
 }
 	 		  
 	 		  
@@ -434,20 +374,23 @@ void RoomScene::UpdateCentralObj(const float dt)
 		//const vec3 largeSphereRotAxis = (vec3::Down + vec3::Back * 0.3f);
 		//const vec3 rotPoint = sphIndx < 12 ? vec3() : vec3(0, 35, 0);
 		//const vec3 rotAxis = sphIndx < 12 ? vec3::Up : largeSphereRotAxis.normalized();
-		const vec3 rotAxis = vec3::Up;
-		const vec3 rotPoint = vec3::Zero;
-		sph.m_transform.RotateAroundPointAndAxis(rotAxis, angle, rotPoint);
-		const vec3 pos = sph.m_transform._position;
-		const float sinx = sinf(pos._v.x / 3.5f);
-		const float y = 10.0f + 2.5f * sinx;
+		if (sphIndx < 15)	// don't rotate grid spheres
+		{
+			const vec3 rotAxis = vec3::Up;
+			const vec3 rotPoint = vec3::Zero;
+			sph.m_transform.RotateAroundPointAndAxis(rotAxis, angle, rotPoint);
+		}
+		//const vec3 pos = sph.m_transform._position;
+		//const float sinx = sinf(pos._v.x / 3.5f);
+		//const float y = 10.0f + 2.5f * sinx;
+		//sph.m_transform._position = pos;
 
-		sph.m_transform._position = pos;
 		++sphIndx;
 	}
 
 	// rotate cubes
 	const float cubeRotSpeed = 100.0f; // degs/s
-	cubes.front().m_transform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
+	cube.m_transform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
 
 	for (int i = 0; i <  CUBE_ROW_COUNT; ++i)
 	{
@@ -492,8 +435,8 @@ void RoomScene::RenderCentralObjects(const XMMATRIX& viewProj) const
 	const ShaderID shd = m_sceneManager.GetSelectedShader();
 	const bool sendMaterialData = shd == SHADERS::FORWARD_PHONG || shd == SHADERS::UNLIT || shd == SHADERS::NORMAL || shd == SHADERS::FORWARD_BRDF;
 
-	//for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj, sendMaterialData);
-	//for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj, sendMaterialData);
+	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj, sendMaterialData);
+	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj, sendMaterialData);
 
 	grid.Render(m_pRenderer, viewProj, sendMaterialData);
 	quad.Render(m_pRenderer, viewProj, sendMaterialData);
@@ -539,6 +482,9 @@ void RoomScene::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const
 #endif
 }
 
+
+
+
 void RoomScene::Room::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool sendMaterialData) const
 {
 	floor.Render(pRenderer, viewProj, sendMaterialData);
@@ -546,6 +492,114 @@ void RoomScene::Room::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool
 	wallR.Render(pRenderer, viewProj, sendMaterialData);
 	wallF.Render(pRenderer, viewProj, sendMaterialData);
 	ceiling.Render(pRenderer, viewProj, sendMaterialData);
+}
+
+void RoomScene::Room::Initialize(Renderer* pRenderer)
+{
+	const float floorWidth = 5 * 30.0f;
+	const float floorDepth = 5 * 30.0f;
+	const float wallHieght = 3.8*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
+	const float YOffset = wallHieght - 9.0f;
+
+#if 0
+	constexpr size_t WallCount = 5;
+	std::array<Material&, WallCount> mats = 
+	{
+		floor.m_model.m_material,
+		wallL.m_model.m_material,
+		wallR.m_model.m_material,
+		wallF.m_model.m_material,
+		ceiling.m_model.m_material
+	};
+
+	std::array<Transform&, WallCount> tfs =
+	{
+
+		  floor.m_transform,
+		  wallL.m_transform,
+		  wallR.m_transform,
+		  wallF.m_transform,
+		ceiling.m_transform
+	};
+#endif
+
+	// FLOOR
+	{
+		Transform& tf = floor.m_transform;
+		tf.SetScale(floorWidth, 0.1f, floorDepth);
+		tf.SetPosition(0, -wallHieght + YOffset, 0);
+
+		Material& mat = floor.m_model.m_material;
+		mat.shininess = 20.0f;	// phong material
+		mat.roughness = 0.8f;	// brdf  material
+		mat.metalness = 0.0f;
+
+		//mat = Material::bronze;
+		mat.diffuseMap = pRenderer->CreateTextureFromFile("185.JPG");
+		mat.normalMap = pRenderer->CreateTextureFromFile("185_norm.JPG");
+		//mat.normalMap = m_pRenderer->CreateTextureFromFile("BumpMapTexturePreview.JPG");
+	}
+	// CEILING
+	{
+		Transform& tf = ceiling.m_transform;
+		tf.SetScale(floorWidth, 0.1f, floorDepth);
+		tf.SetPosition(0, wallHieght + YOffset, 0);
+
+		//ceiling.m_model.m_material.color		= Color::purple;
+		ceiling.m_model.m_material.shininess = 20.0f;
+		//ceiling.m_model.m_material = Material::gold;
+		//ceiling.m_model.m_material.diffuseMap = m_pRenderer->CreateTextureFromFile("metal2.JPG");
+		//ceiling.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("nrm_metal2.JPG");
+	}
+
+	// RIGHT WALL
+	{
+		Transform& tf = wallR.m_transform;
+		tf.SetScale(floorDepth, 0.1f, wallHieght);
+		tf.SetPosition(floorWidth, YOffset, 0);
+		tf.SetXRotationDeg(90.0f);
+		tf.RotateAroundGlobalYAxisDegrees(-90);
+		//tf.RotateAroundGlobalXAxisDegrees(-180.0f);
+
+		//wallR.m_model.m_material.color		= Color::gray;
+		//wallR.m_model.m_material.shininess	= 120.0f;
+		//wallR.m_model.m_material = Material::bronze;
+		wallR.m_model.m_material.diffuseMap = pRenderer->CreateTextureFromFile("190.JPG");
+		wallR.m_model.m_material.normalMap = pRenderer->CreateTextureFromFile("190_norm.JPG");
+	}
+
+	// LEFT WALL
+	{
+		Transform& tf = wallL.m_transform;
+		tf.SetScale(floorDepth, 0.1f, wallHieght);
+		tf.SetPosition(-floorWidth, YOffset, 0);
+		tf.SetXRotationDeg(-90.0f);
+		tf.RotateAroundGlobalYAxisDegrees(-90.0f);
+		//tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
+		//wallL.m_model.m_material.color		= Color::gray;
+		wallL.m_model.m_material.shininess = 60.0f;
+		//wallL.m_model.m_material = Material::bronze;
+		wallL.m_model.m_material.diffuseMap = pRenderer->CreateTextureFromFile("190.JPG");
+		wallL.m_model.m_material.normalMap = pRenderer->CreateTextureFromFile("190_norm.JPG");
+	}
+	// WALL
+	{
+		Transform& tf = wallF.m_transform;
+		tf.SetScale(floorWidth, 0.1f, wallHieght);
+		tf.SetPosition(0, YOffset, floorDepth);
+		tf.SetXRotationDeg(-90.0f);
+		//wallF.m_model.m_material.color		= Color::gray;
+		//wallF.m_model.m_material = Material::gold;
+		wallF.m_model.m_material.shininess = 90.0f;
+		wallF.m_model.m_material.diffuseMap = pRenderer->CreateTextureFromFile("190.JPG");
+		wallF.m_model.m_material.normalMap = pRenderer->CreateTextureFromFile("190_norm.JPG");
+	}
+
+	floor.m_model.m_mesh = GEOMETRY::CUBE;
+	wallL.m_model.m_mesh = GEOMETRY::CUBE;
+	wallR.m_model.m_mesh = GEOMETRY::CUBE;
+	wallF.m_model.m_mesh = GEOMETRY::CUBE;
+	ceiling.m_model.m_mesh = GEOMETRY::CUBE;
 }
 
 
@@ -572,6 +626,27 @@ void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj)
 
 }
 
+
+template<typename T>
+void Track<T>::Update(float dt)
+{
+	const float prevNormalizedTime = _totalTime - static_cast<int>(_totalTime / _period) * _period;
+	const float prev_t = prevNormalizedTime / _period;
+
+	_totalTime += dt;
+
+	const float normalizedTime = _totalTime - static_cast<int>(_totalTime / _period) * _period;
+	const float t = normalizedTime / _period;	// [0, 1] for lerping
+	//const float prev_t = (*_data - _valueBegin) / (_valueEnd - _valueBegin);
+	if (prev_t > t)
+	{
+		std::swap(_valueBegin, _valueEnd);
+	}
+
+	*_data = _valueBegin * (1.0f - t) + _valueEnd * t;
+
+
+}
 
 
 

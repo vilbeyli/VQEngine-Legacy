@@ -46,8 +46,8 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 
 	m_pRenderer			= renderer;
 	m_selectedShader	= SHADERS::FORWARD_BRDF;
-	m_gammaCorrection	= true;
 	m_debugRender		= false;
+
 	Skybox::InitializePresets(m_pRenderer);
 
 	m_roomScene.Load(m_pRenderer);
@@ -105,12 +105,8 @@ void SceneManager::Update(float dt)
 	if (ENGINE->INP()->IsKeyTriggered(118)) m_debugRender = !m_debugRender;
 
 	// F9-F12 | Shader Parameters
-	if (ENGINE->INP()->IsKeyTriggered(120)) m_gammaCorrection = !m_gammaCorrection;
-	if (ENGINE->INP()->IsKeyTriggered(120)) m_gammaCorrection = !m_gammaCorrection;
-	if (ENGINE->INP()->IsKeyTriggered(122)) m_gammaCorrection = !m_gammaCorrection;
-	//if (ENGINE->INP()->IsKeyTriggered(123)) 
-		
-	//if (ENGINE->INP()->IsKeyTriggered(52)) TBNMode = 3;
+	if (ENGINE->INP()->IsKeyTriggered(120)) m_postProcessPass._bloomPass.ToggleBloomPass();
+	
 
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------

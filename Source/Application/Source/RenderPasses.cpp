@@ -22,7 +22,7 @@
 
 void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 {
-	this->_shadowMapDimension = 1024;
+	this->_shadowMapDimension = 2048;
 
 	// check feature support & error handle:
 	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
@@ -151,9 +151,10 @@ void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
 	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	RTVDesc.Texture2D.MipSlice = 0;
 
-	this->_finalRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	// Bloom effect
 	this->_bloomPass._colorRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->_bloomPass._brightRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->_bloomPass._finalRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->_bloomPass._blurPingPong[0] = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->_bloomPass._blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 
@@ -164,6 +165,10 @@ void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
 	blurSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 	blurSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	this->_bloomPass._blurSampler = pRenderer->CreateSamplerState(blurSamplerDesc);
+	
+	// Tonemapping
+	this->_tonemappingPass._HDRExposure = 3.0f;	// default
+	this->_tonemappingPass._finalRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 }
 
 void PostProcessPass::Render(Renderer * pRenderer) const
@@ -173,59 +178,73 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// ======================================================================================
 	// BLOOM  PASS
 	// ======================================================================================
-	const float  BRDF_BrightnessThreshold = 1.0f;
-	const float Phong_BrightnessThreshold = 0.85f;
-	const float brightnessThreashold = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader()
-		? BRDF_BrightnessThreshold : Phong_BrightnessThreshold;
-	const float exposure = 1.0f;
-
-	// bright filter
-	pRenderer->SetShader(SHADERS::BLOOM);
-	pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
-	pRenderer->UnbindDepthStencil();
-	pRenderer->SetBufferObj(GEOMETRY::QUAD);
-	pRenderer->Apply();
-	pRenderer->SetTexture("worldRenderTarget", worldTexture);
-	pRenderer->SetConstant1f("BrightnessThreshold", brightnessThreashold);
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
-
-	// blur
-	constexpr size_t BLUR_PASS_COUNT = 10;
-	const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
-	pRenderer->SetShader(SHADERS::BLUR);
-	for (size_t i = 0; i < BLUR_PASS_COUNT; i++)
+	if (_bloomPass._isEnabled)
 	{
-		const int isHorizontal = i % 2;
-		const TextureID pingPong = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[1 - isHorizontal]);
-		const int texWidth = pRenderer->GetTextureObject(pingPong)._width;
-		const int texHeight = pRenderer->GetTextureObject(pingPong)._height;
+		const float  BRDF_BrightnessThreshold = 0.45f;
+		const float Phong_BrightnessThreshold = 0.85f;
+		const float brightnessThreshold = BRDF_BrightnessThreshold;
+			// = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader()	? BRDF_BrightnessThreshold : Phong_BrightnessThreshold;
 
-		pRenderer->UnbindRenderTarget();
+		// bright filter
+		pRenderer->SetShader(SHADERS::BLOOM);
+		pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
+		pRenderer->UnbindDepthStencil();
+		pRenderer->SetBufferObj(GEOMETRY::QUAD);
 		pRenderer->Apply();
-		pRenderer->BindRenderTarget(_bloomPass._blurPingPong[isHorizontal]);
-		pRenderer->SetConstant1i("isHorizontal", 1 - isHorizontal);
-		pRenderer->SetConstant1i("textureWidth", texWidth);
-		pRenderer->SetConstant1i("textureHeight", texHeight);
-		pRenderer->SetTexture("InputTexture", i == 0 ? brightTexture : pingPong);
+		pRenderer->SetTexture("worldRenderTarget", worldTexture);
+		pRenderer->SetConstant1f("BrightnessThreshold", brightnessThreshold);
+		pRenderer->Apply();
+		pRenderer->DrawIndexed();
+
+		// blur
+		constexpr size_t BLUR_PASS_COUNT = 20;
+		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
+		pRenderer->SetShader(SHADERS::BLUR);
+		for (size_t i = 0; i < BLUR_PASS_COUNT; i++)
+		{
+			const int isHorizontal = i % 2;
+			const TextureID pingPong = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[1 - isHorizontal]);
+			const int texWidth = pRenderer->GetTextureObject(pingPong)._width;
+			const int texHeight = pRenderer->GetTextureObject(pingPong)._height;
+
+			pRenderer->UnbindRenderTarget();
+			pRenderer->Apply();
+			pRenderer->BindRenderTarget(_bloomPass._blurPingPong[isHorizontal]);
+			pRenderer->SetConstant1i("isHorizontal", 1 - isHorizontal);
+			pRenderer->SetConstant1i("textureWidth", texWidth);
+			pRenderer->SetConstant1i("textureHeight", texHeight);
+			pRenderer->SetTexture("InputTexture", i == 0 ? brightTexture : pingPong);
+			pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);
+			pRenderer->Apply();
+			pRenderer->DrawIndexed();
+		}
+
+		// additive blend combine
+		const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._colorRT);
+		const TextureID bloomTex = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[0]);
+		pRenderer->SetShader(SHADERS::BLOOM_COMBINE);
+		pRenderer->BindRenderTarget(_bloomPass._finalRT);
+		pRenderer->Apply();
+		pRenderer->SetTexture("ColorTexture", colorTex);
+		pRenderer->SetTexture("BloomTexture", bloomTex);
 		pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);
 		pRenderer->Apply();
 		pRenderer->DrawIndexed();
 	}
 
-	// additive blend combine
-	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._colorRT);
-	const TextureID bloomTex = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[0]);
-	pRenderer->SetShader(SHADERS::BLOOM_COMBINE);
-	pRenderer->BindRenderTarget(_finalRenderTarget);
-	pRenderer->Apply();
-	pRenderer->SetConstant1f("exposure", exposure);		// currently unused in shader
+
+
+	// ======================================================================================
+	// TONEMAPPING PASS
+	// ======================================================================================
+	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._isEnabled ? _bloomPass._finalRT : worldTexture);
+	pRenderer->SetShader(SHADERS::TONEMAPPING);
+	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
+	pRenderer->SetConstant1f("exposure", _tonemappingPass._HDRExposure);
+	pRenderer->BindRenderTarget(_tonemappingPass._finalRenderTarget);
 	pRenderer->SetTexture("ColorTexture", colorTex);
-	pRenderer->SetTexture("BloomTexture", bloomTex);
-	pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
-	// ======================================================================================
-	// BLOOM  PASS END
-	// ======================================================================================
+
 }

@@ -79,7 +79,14 @@ void GameObject::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool Uplo
 void GameObject::RenderZ(Renderer * pRenderer) const
 {
 	const XMMATRIX world = m_transform.WorldTransformationMatrix();
+	const bool bIs2DGeometry = false;	// todo: fix self shadowing 2D geometry
+		//m_model.m_mesh == GEOMETRY::TRIANGLE || 
+		//m_model.m_mesh == GEOMETRY::QUAD || 
+		//m_model.m_mesh == GEOMETRY::GRID;
+	const RasterizerStateID rasterizerState = bIs2DGeometry ? (int)DEFAULT_RS_STATE::CULL_NONE : (int)DEFAULT_RS_STATE::CULL_FRONT;
+
 	pRenderer->SetBufferObj(m_model.m_mesh);
+	pRenderer->SetRasterizerState(rasterizerState);
 	pRenderer->SetConstant4x4f("world", world);
 	pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
 	pRenderer->Apply();

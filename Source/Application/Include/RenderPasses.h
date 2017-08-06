@@ -23,6 +23,9 @@
 
 struct DepthShadowPass
 {
+	void Initialize(Renderer* pRenderer, ID3D11Device* device);
+	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
+	
 	unsigned				_shadowMapDimension;
 	TextureID				_shadowMap;
 	SamplerID				_shadowSampler;
@@ -31,17 +34,25 @@ struct DepthShadowPass
 	RasterizerStateID		_shadowRenderState;
 	D3D11_VIEWPORT			_shadowViewport;
 	DepthStencilID			_dsv;
-	void Initialize(Renderer* pRenderer, ID3D11Device* device);
-	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
 };
 
 struct BloomPass
 {
-	BloomPass() : _blurSampler(-1), _colorRT(-1), _brightRT(-1), _blurPingPong({ -1, -1 }) {}
-	SamplerID _blurSampler;
-	RenderTargetID _colorRT;
-	RenderTargetID _brightRT;
-	std::array<RenderTargetID, 2> _blurPingPong;
+	BloomPass() : _blurSampler(-1), _colorRT(-1), _brightRT(-1), _blurPingPong({ -1, -1 }), _isEnabled(true) {}
+	inline void ToggleBloomPass() { _isEnabled = !_isEnabled; }
+
+	SamplerID						_blurSampler;
+	RenderTargetID					_colorRT;
+	RenderTargetID					_brightRT;
+	RenderTargetID					_finalRT;
+	std::array<RenderTargetID, 2>	_blurPingPong;
+	bool							_isEnabled;
+};
+
+struct TonemappingCombinePass
+{
+	RenderTargetID	_finalRenderTarget;
+	float			_HDRExposure;
 };
 
 struct PostProcessPass
@@ -49,7 +60,6 @@ struct PostProcessPass
 	void Initialize(Renderer* pRenderer, ID3D11Device* device);
 	void Render(Renderer* pRenderer) const;
 
-	BloomPass		_bloomPass;
-
-	RenderTargetID	_finalRenderTarget;
+	BloomPass					_bloomPass;
+	TonemappingCombinePass		_tonemappingPass;
 };

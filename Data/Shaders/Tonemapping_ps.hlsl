@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define DO_BLOOM
+#define DO_TONEMAPPING
 
 struct PSIn
 {
@@ -25,22 +25,29 @@ struct PSIn
 };
 
 Texture2D ColorTexture;
-Texture2D BloomTexture;
-SamplerState BlurSampler;
+SamplerState Sampler;
+
+cbuffer constants 
+{
+	float exposure;
+};
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	float3 outColor;
-	const float3 color = ColorTexture.Sample(BlurSampler, In.texCoord);
-	const float3 bloom = BloomTexture.Sample(BlurSampler, In.texCoord);
-	
-#ifdef DO_BLOOM
-	if (length(bloom) != 0.0f)
-		outColor = color + bloom;
-	else
-		outColor = color;
+	const float3 color = ColorTexture.Sample(Sampler, In.texCoord);
+
+#ifdef DO_TONEMAPPING
+	float3 toneMapped = float3(1, 1, 1) - exp(-color * exposure);
 #else
-	outColor = color;
+	float3 toneMapped = color;
 #endif
-	return float4(outColor, 1);
+	
+#if 1
+	const float gamma = 2.2f;
+#else
+	const float gamma = 1.0f;
+#endif
+
+	toneMapped = pow(toneMapped, float3(gamma, gamma, gamma));
+	return float4(toneMapped, 1.0f);
 }

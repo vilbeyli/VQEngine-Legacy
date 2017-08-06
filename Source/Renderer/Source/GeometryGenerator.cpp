@@ -118,15 +118,15 @@ BufferObject* GeometryGenerator::Triangle()
 
 	// vertices - CW
 	bufferObj->m_vertices[0].position	= vec3(-size, -size, 0.0f);
-	bufferObj->m_vertices[0].normal		= vec3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[0].normal		= vec3::Back;
 	bufferObj->m_vertices[0].texCoords	= XMFLOAT2(0.0f, 1.0f);
 
 	bufferObj->m_vertices[1].position	= vec3(0, size, 0.0f);
-	bufferObj->m_vertices[1].normal		= vec3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[1].normal		= vec3::Back;
 	bufferObj->m_vertices[1].texCoords	= XMFLOAT2(0.5f, 0.0f);
 
 	bufferObj->m_vertices[2].position	= vec3(size, -size, 0.0f);
-	bufferObj->m_vertices[2].normal		= vec3(0.0f, 1.0f, 0.0f);
+	bufferObj->m_vertices[2].normal		= vec3::Back;
 	bufferObj->m_vertices[2].texCoords	= XMFLOAT2(1.0f, 1.0f);
 	
 	// indices
@@ -789,8 +789,8 @@ BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float b
 		for (UINT i = 0; i < sliceCount; ++i)
 		{
 			Indices.push_back(centerIndex);
-			Indices.push_back(baseIndex + i + 1);
 			Indices.push_back(baseIndex + i);
+			Indices.push_back(baseIndex + i + 1);
 		}
 	}
 

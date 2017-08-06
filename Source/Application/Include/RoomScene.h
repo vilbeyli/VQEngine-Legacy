@@ -26,6 +26,44 @@
 class SceneManager;
 class Renderer;
 
+template<typename T>
+class Track
+{
+public:
+	Track() = delete;
+	Track(T* data, const T& beginVal, const T& endVal, float period)
+		:
+		_totalTime(0.0f),
+		_period(period),
+		_data(data),
+		_valueBegin(beginVal),
+		_valueEnd(endVal)
+	{}
+
+	void Update(float dt);
+
+private:
+	float _totalTime;
+	float _period;
+
+	T* _data;
+	T _valueBegin;
+	T _valueEnd;
+};
+
+struct Animation
+{
+	// lerping tracks
+	std::vector<Track<float>> _fTracks;
+	std::vector<Track<vec3>>  _vTracks;
+
+	void Update(float dt)
+	{
+		for (auto& t : _fTracks) t.Update(dt);
+		for (auto& t : _vTracks) t.Update(dt);
+	}
+};
+
 class RoomScene
 {
 public:
@@ -37,7 +75,6 @@ public:
 	~RoomScene() = default;
 
 private:
-	void InitializeRoom();
 	void InitializeLights();
 	void InitializeObjectArrays();
 
@@ -59,11 +96,28 @@ private:
 	struct Room {
 		friend class RoomScene;
 		void Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool sendMaterialData) const;
+		void Initialize(Renderer* pRenderer);
+#if 0
+		// union -> deleted dtor
+		union
+		{
+			struct 
+			{
+				GameObject floor;
+				GameObject wallL;
+				GameObject wallR;
+				GameObject wallF;
+				GameObject ceiling;
+			};
+			GameObject walls[5];
+		};
+#else
 		GameObject floor;
 		GameObject wallL;
 		GameObject wallR;
 		GameObject wallF;
 		GameObject ceiling;
+#endif
 	} m_room;
 
 	std::vector<GameObject> spheres;
@@ -75,6 +129,8 @@ private:
 	GameObject cylinder;
 	GameObject cube;
 	GameObject sphere;
+
+	std::vector<Animation> m_animations;
 };
 
 

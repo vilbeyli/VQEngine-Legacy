@@ -56,3 +56,18 @@ bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Render
 	}
 	return true;
 }
+
+void Texture::Release()
+{
+	if (_srv)
+	{
+		_srv->Release();
+		_srv = nullptr;
+	}
+
+	if (_tex2D)
+	{
+		_tex2D->Release();
+		_tex2D = nullptr;
+	}
+}

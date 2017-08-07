@@ -25,6 +25,7 @@
 
 #include <d3d11.h>
 #include <DirectXMath.h>
+#include <string>
 
 using namespace DirectX;
 
@@ -76,6 +77,8 @@ public:
 	unsigned WindowWidth() const;
 	unsigned WindowHeight() const;
 	inline HWND	 WindowHandle() const { return m_hwnd; }
+
+	void ReportLiveObjects(const std::string& LogHeader = "") const;
 
 private:
 	bool InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator, DXGI_FORMAT FrameBufferFormat);

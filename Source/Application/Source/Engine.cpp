@@ -44,6 +44,9 @@ Engine::~Engine(){}
 
 bool Engine::Initialize(HWND hwnd, const Settings::Window& windowSettings)
 {
+	const bool bEnableLogging = true;
+	Log::Initialize(bEnableLogging);
+
 	if (!m_renderer || !m_input || !m_sceneManager || !m_timer)
 	{
 		Log::Error("Nullptr Engine::Init()\n");
@@ -109,6 +112,7 @@ void Engine::Exit()
 
 	m_workerPool.Terminate();
 
+	Log::Exit();
 	if (s_instance)
 	{
 		delete s_instance;

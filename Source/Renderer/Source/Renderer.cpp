@@ -58,41 +58,31 @@ void Renderer::Exit()
 {
 	// C-style resource release - not using smart pointers
 	// todo: compare performance
-	
-	auto Release = [](void** ptr) { if (*ptr) {
-		delete *ptr;
-		*ptr = nullptr;
-	}};
 
-	
-	if (m_Direct3D)
-	{
-		m_Direct3D->Shutdown();
-		Release((void**)(&m_Direct3D));
-	}
-
+	//m_Direct3D->ReportLiveObjects("BEGIN EXIT");
 	for (BufferObject*& bo : m_bufferObjects)
 	{
-		Release((void**)&bo);
+		delete bo;
+		bo = nullptr;
 	}
+	m_bufferObjects.clear();
 
 	CPUConstant::CleanUp();
 	
 	for (Shader*& shd : m_shaders)
 	{
-		Release((void**)&shd);
+		delete shd;
+		shd = nullptr;
 	}
+	m_shaders.clear();
 
 	for (Texture& tex : m_textures)
 	{
-		if(tex._srv)
-			tex._srv->Release();
-		tex._srv = nullptr;
-
-		if(tex._tex2D)
-			tex._tex2D->Release();
-		tex._tex2D = nullptr;
+		tex.Release();
 	}
+	m_textures.clear();
+	m_state._depthBufferTexture.Release();
+
 #if 1
 	for (Sampler& s : m_samplers)
 	{
@@ -109,6 +99,16 @@ void Renderer::Exit()
 		{
 			rs._renderTargetView->Release();
 			rs._renderTargetView = nullptr;
+		}
+		if (rs._texture._srv)
+		{
+			//rs._texture._srv->Release();
+			rs._texture._srv = nullptr;
+		}
+		if (rs._texture._tex2D)
+		{
+			//rs._texture._tex2D->Release();
+			rs._texture._tex2D = nullptr;
 		}
 	}
 
@@ -140,6 +140,15 @@ void Renderer::Exit()
 	}
 #endif
 
+	m_Direct3D->ReportLiveObjects("END EXIT\n");;
+	if (m_Direct3D)
+	{
+		m_Direct3D->Shutdown();
+		delete m_Direct3D;
+		m_Direct3D = nullptr;
+	}
+
+	Log::Info("---------------------------\n");
 }
 
 const Shader* Renderer::GetShader(ShaderID shader_id) const
@@ -177,11 +186,19 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	m_deviceContext = m_Direct3D->m_deviceContext;
 
 	InitializeDefaultRenderTarget();
+	m_Direct3D->ReportLiveObjects("Init Default RT\n");
+
 	InitializeDefaultDepthBuffer();
+	m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
+
 	InitializeDefaultRasterizerStates();
+	m_Direct3D->ReportLiveObjects("Init Default RS ");
+
 
 	GeneratePrimitives();
 	LoadShaders();
+	m_Direct3D->ReportLiveObjects("Shader loaded");
+
 	return true;
 }
 
@@ -239,7 +256,7 @@ void Renderer::LoadShaders()
 	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"            , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"             , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"     , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"     , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"      , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::FORWARD_BRDF       ]	= AddShader("Forward_BRDF"     , s_shaderRoot, layout);
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
@@ -316,9 +333,9 @@ void Renderer::InitializeDefaultRasterizerStates()
 	HRESULT hr;
 	const std::string err("Unable to create Rasterizer State: Cull ");
 
-	ID3D11RasterizerState*& cullNone  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_NONE];
-	ID3D11RasterizerState*& cullBack  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_BACK];
-	ID3D11RasterizerState*& cullFront = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_FRONT];
+	//ID3D11RasterizerState*& cullNone  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_NONE];
+	//ID3D11RasterizerState*& cullBack  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_BACK];
+	//ID3D11RasterizerState*& cullFront = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_FRONT];
 	
 	// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
 	D3D11_RASTERIZER_DESC rsDesc;
@@ -335,21 +352,24 @@ void Renderer::InitializeDefaultRasterizerStates()
 	rsDesc.MultisampleEnable		= true;
 	
 	rsDesc.CullMode = D3D11_CULL_BACK;
-	hr = m_device->CreateRasterizerState(&rsDesc, &cullBack);
+	//hr = m_device->CreateRasterizerState(&rsDesc, &cullBack);
+	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_BACK]);
 	if (FAILED(hr))
 	{
 		Log::Error(err + "Back\n");
 	}
 
 	rsDesc.CullMode = D3D11_CULL_FRONT;
-	hr = m_device->CreateRasterizerState(&rsDesc, &cullFront);
+	//hr = m_device->CreateRasterizerState(&rsDesc, &cullFront);
+	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_FRONT]);
 	if (FAILED(hr))
 	{
 		Log::Error(err + "Front\n");
 	}
 
 	rsDesc.CullMode = D3D11_CULL_NONE;
-	hr = m_device->CreateRasterizerState(&rsDesc, &cullNone);
+	//hr = m_device->CreateRasterizerState(&rsDesc, &cullNone);
+	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_NONE]);
 	if (FAILED(hr))
 	{
 		Log::Error(err + "None\n");
@@ -364,8 +384,12 @@ ShaderID Renderer::AddShader(const std::string& shdFileName,
 	const std::string path = fileRoot + shdFileName;
 
 	Shader* shader = new Shader(shdFileName);
+#if 0
+	if (shdFileName == "Forward_BRDF")
+		shader->Compile(m_device, path, layouts, geoShader);
+#else
 	shader->Compile(m_device, path, layouts, geoShader);
-	
+#endif
 	m_shaders.push_back(shader);
 	shader->m_id = (static_cast<int>(m_shaders.size()) - 1);
 	return shader->ID();
@@ -396,18 +420,22 @@ RasterizerStateID Renderer::AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillM
 
 // assumes unique shader file names (even in different folders)
 // example params: "bricks_d.png", "Data/Textures/"
-const Texture& Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
+TextureID Renderer::CreateTextureFromFile(const std::string& shdFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&shdFileName](auto& tex) { return tex._name == shdFileName; });
 	if (found != m_textures.end())
 	{
-		return *found;
+		return (*found)._id;
 	}
 
-	Texture tex;
-	tex._name = texFileName;
+	{	// push texture right away and hold a reference
+		Texture tex;
+		m_textures.push_back(tex);
+	}
+	Texture& tex = m_textures.back();
 
-	std::string path = fileRoot + texFileName;
+	tex._name = shdFileName;
+	std::string path = fileRoot + shdFileName;
 	std::wstring wpath(path.begin(), path.end());
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
@@ -415,31 +443,30 @@ const Texture& Renderer::CreateTextureFromFile(const std::string& texFileName, c
 		CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), img->GetMetadata(), &tex._srv);
 
 		// get srv from img
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		ZeroMemory(&srvDesc, sizeof(srvDesc));
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		tex._srv->GetDesc(&srvDesc);
 		
 		// read width & height
 		ID3D11Resource* resource = nullptr;
 		tex._srv->GetResource(&resource);
-		ID3D11Texture2D* tex2D = nullptr;
-		if (SUCCEEDED(resource->QueryInterface(&tex2D)))
+		if (SUCCEEDED(resource->QueryInterface(&tex._tex2D)))
 		{
 			D3D11_TEXTURE2D_DESC desc;
-			tex2D->GetDesc(&desc);
+			tex._tex2D->GetDesc(&desc);
 			tex._width = desc.Width;
 			tex._height = desc.Height;
-			tex._tex2D = tex2D;
 		}
+		resource->Release();
 		
-		tex._id = static_cast<int>(m_textures.size());
-		m_textures.push_back(tex);
-		return m_textures.back();
+		tex._id = static_cast<int>(m_textures.size() - 1);
+		//m_textures.push_back(tex);
+
+		return m_textures.back()._id;
 	}
 	else
 	{
 		Log::Error("Cannot load texture file\n");
-		return m_textures[0];
+		return m_textures[0]._id;
 	}
 
 }
@@ -1008,7 +1035,7 @@ void Renderer::Apply()
 		// ----------------------------------------
 		m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
 		m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
-		if (shader->m_geoShader)	 m_deviceContext->GSSetShader(shader->m_geoShader    , nullptr, 0);
+		if (shader->m_geometryShader)	 m_deviceContext->GSSetShader(shader->m_geometryShader    , nullptr, 0);
 		if (shader->m_hullShader)	 m_deviceContext->HSSetShader(shader->m_hullShader   , nullptr, 0);
 		if (shader->m_domainShader)	 m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
 		if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);

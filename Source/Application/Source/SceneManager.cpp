@@ -54,6 +54,8 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 
 	// todo: static game object array in gameobj.h 
 	m_depthPass.Initialize(m_pRenderer, m_pRenderer->m_device);
+
+	//renderer->m_Direct3D->ReportLiveObjects();
 	m_ZPassObjects.push_back(&m_roomScene.m_room.floor);
 	m_ZPassObjects.push_back(&m_roomScene.m_room.wallL);
 	m_ZPassObjects.push_back(&m_roomScene.m_room.wallR);
@@ -67,7 +69,7 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 	m_ZPassObjects.push_back(&m_roomScene.sphere);
 	for (GameObject& obj : m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
 	for (GameObject& obj : m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
-
+	
 	m_postProcessPass.Initialize(m_pRenderer, m_pRenderer->m_device);
 }
 
@@ -114,7 +116,7 @@ void SceneManager::Render() const
 	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
 	const XMMATRIX viewProj = view * proj;
 
-
+#if 1
 	// DEPTH PASS
 	//------------------------------------------------------------------------
 	// get shadow casters (todo: static/dynamic lights)
@@ -126,11 +128,12 @@ void SceneManager::Render() const
 	}
 
 	m_depthPass.RenderDepth(m_pRenderer, _shadowCasters, m_ZPassObjects);
-	
+#endif
+
 	// MAIN PASS
 	//------------------------------------------------------------------------
-	m_pRenderer->Reset();	// is necessary?
-	m_pRenderer->BindDepthStencil(0); //todo, variable names or enums
+	m_pRenderer->Reset();
+	m_pRenderer->BindDepthStencil(0);
 	m_pRenderer->BindRenderTarget(0);
 	m_pRenderer->SetDepthStencilState(0); 
 	m_pRenderer->SetRasterizerState(static_cast<int>(DEFAULT_RS_STATE::CULL_NONE));
@@ -146,7 +149,7 @@ void SceneManager::Render() const
 
 	m_roomScene.Render(m_pRenderer, viewProj);
 	
-
+#if 1
 	// POST PROCESS PASS
 	//------------------------------------------------------------------------
 	m_postProcessPass.Render(m_pRenderer);
@@ -168,7 +171,7 @@ void SceneManager::Render() const
 		m_pRenderer->Apply();
 		m_pRenderer->DrawIndexed();
 	}
-
+#endif
 	m_pRenderer->End();
 }
 

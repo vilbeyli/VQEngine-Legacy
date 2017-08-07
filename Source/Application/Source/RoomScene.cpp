@@ -61,7 +61,6 @@ void RoomScene::Load(Renderer* pRenderer)
 	InitializeObjectArrays();
 
 	m_skybox = Skybox::s_Presets[SKYBOX_PRESETS::NIGHT_SKY];
-	//m_skydome.Initialize(m_pRenderer, "skydomeTex.png", 1000.0f / 2.2f, SHADERS::UNLIT);
 }
 
 void RoomScene::Update(float dt)
@@ -89,7 +88,7 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 	
 	m_room.Render(m_pRenderer, viewProj, bSendMaterialData);
 	
-	if (selectedShader == SHADERS::FORWARD_BRDF) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
+	//if (selectedShader == SHADERS::FORWARD_BRDF) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
 	
 	RenderCentralObjects(viewProj);
 	RenderLights(viewProj);
@@ -448,9 +447,9 @@ void RoomScene::RenderCentralObjects(const XMMATRIX& viewProj) const
 
 void RoomScene::ToggleFloorNormalMap()
 {
-	Texture& nMap = m_room.floor.m_model.m_material.normalMap;
+	TextureID nMap = m_room.floor.m_model.m_material.normalMap;
 
-	nMap = nMap._id == m_pRenderer->GetTexture("185_norm.JPG") ? Texture() : m_pRenderer->CreateTextureFromFile("185_norm.JPG");
+	nMap = nMap == m_pRenderer->GetTexture("185_norm.JPG") ? -1 : m_pRenderer->CreateTextureFromFile("185_norm.JPG");
 }
 
 void RoomScene::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const
@@ -537,8 +536,9 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		//mat = Material::bronze;
 		mat.diffuseMap = pRenderer->CreateTextureFromFile("185.JPG");
 		mat.normalMap = pRenderer->CreateTextureFromFile("185_norm.JPG");
-		//mat.normalMap = m_pRenderer->CreateTextureFromFile("BumpMapTexturePreview.JPG");
+		//mat.normalMap = pRenderer->CreateTextureFromFile("BumpMapTexturePreview.JPG");
 	}
+#if 1
 	// CEILING
 	{
 		Transform& tf = ceiling.m_transform;
@@ -595,11 +595,12 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		wallF.m_model.m_material.normalMap = pRenderer->CreateTextureFromFile("190_norm.JPG");
 	}
 
-	floor.m_model.m_mesh = GEOMETRY::CUBE;
 	wallL.m_model.m_mesh = GEOMETRY::CUBE;
 	wallR.m_model.m_mesh = GEOMETRY::CUBE;
 	wallF.m_model.m_mesh = GEOMETRY::CUBE;
 	ceiling.m_model.m_mesh = GEOMETRY::CUBE;
+#endif
+	floor.m_model.m_mesh = GEOMETRY::CUBE;
 }
 
 
@@ -613,8 +614,8 @@ void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj)
 	obj.m_model.m_material.color = Color::cyan;
 	obj.m_model.m_material.alpha = 1.0f;
 	obj.m_model.m_material.specular = 90.0f;
-	obj.m_model.m_material.diffuseMap = Texture();		// empty texture
-	obj.m_model.m_material.normalMap  = Texture();
+	obj.m_model.m_material.diffuseMap = -1;		// empty texture
+	obj.m_model.m_material.normalMap  = -1;
 	//-------------------------------------------------------------------
 	obj.m_transform.SetPosition(0,20,50);				
 	//obj.m_transform.SetXRotationDeg(30.0f);

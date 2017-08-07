@@ -18,6 +18,9 @@ public:
 	Log()  = delete;
 	~Log() = delete;
 
+	static void Initialize(bool bEnableLogging);
+	static void Exit();
+
 	static void Info(const std::string& s);
 	static void Error(ERROR_LOG errMode, const std::string& s);
 	static void Error(const std::string& s);
@@ -37,6 +40,6 @@ public:
 		Info(std::string(msg));
 	}
 private:
-	std::ofstream m_outFile;	
+	static std::ofstream sOutFile;	
 };
 

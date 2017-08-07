@@ -24,10 +24,13 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 {
 	this->_shadowMapDimension = 2048;
 
+	pRenderer->m_Direct3D->ReportLiveObjects("--------SHADOW_PASS_INIT");
+
 	// check feature support & error handle:
 	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
 
 	// create shadow map texture for the pixel shader stage
+	const bool bInitializeSRV = false;
 	D3D11_TEXTURE2D_DESC shadowMapDesc;
 	ZeroMemory(&shadowMapDesc, sizeof(D3D11_TEXTURE2D_DESC));
 	shadowMapDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
@@ -37,7 +40,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
 	shadowMapDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
 	shadowMapDesc.Height = static_cast<UINT>(_shadowMapDimension);
 	shadowMapDesc.Width = static_cast<UINT>(_shadowMapDimension);
-	this->_shadowMap = pRenderer->CreateTexture2D(shadowMapDesc, false);
+	this->_shadowMap = pRenderer->CreateTexture2D(shadowMapDesc, bInitializeSRV);
 
 	// careful: removing const qualified from texture. rethink this
 	Texture& shadowMap = const_cast<Texture&>(pRenderer->GetTextureObject(_shadowMap));

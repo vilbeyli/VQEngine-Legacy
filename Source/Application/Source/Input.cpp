@@ -34,7 +34,7 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	return m;
 }();
 
-#define LOG
+#define xLOG
 
 Input::Input()
 	:
@@ -112,8 +112,6 @@ void Input::UpdateMousePos(long x, long y)
 #endif
 
 #if defined(_DEBUG) && defined(LOG)
-	char info[128];
-
 	Log::Info("Mouse Delta: (%d, %d)\tMouse Position: (%d, %d)", 
 		m_mouseDelta[0], m_mouseDelta[1],
 		m_mousePos[0], m_mousePos[1]);

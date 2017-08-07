@@ -229,6 +229,21 @@ unsigned D3DManager::WindowHeight() const
 	return m_wndHeight;
 }
 
+void D3DManager::ReportLiveObjects(const std::string& LogHeader /*= ""*/) const
+{
+	return;
+	if (!LogHeader.empty())
+		Log::Info(LogHeader);
+
+	ID3D11Debug* debugDevice = nullptr;
+	HRESULT hr = m_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&debugDevice);
+	
+	hr = debugDevice->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+
+	debugDevice->Release();
+	debugDevice = nullptr;
+}
+
 //----------------------------------------------------------------------------------------------------------------------------------------
 // private functions
 

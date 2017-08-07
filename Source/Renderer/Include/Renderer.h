@@ -92,6 +92,7 @@ public:
 	inline unsigned			WindowHeight()	const { return m_Direct3D->WindowHeight(); };
 	inline unsigned			WindowWidth()	const { return m_Direct3D->WindowWidth();  };
 	inline RenderTargetID	GetDefaultRenderTarget() const	                { return m_state._mainRenderTarget; }
+	inline DepthStencilID	GetDefaultDepthStencil() const	                { return m_state._boundDepthStencil; }
 	inline TextureID		GetDefaultRenderTargetTexture() const           { return m_renderTargets[m_state._mainRenderTarget]._texture._id; }
 	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return m_renderTargets[RT]._texture._id; }
 
@@ -100,7 +101,7 @@ public:
 	RasterizerStateID	AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip);
 	
 	// todo: return textureID to outside, return Texture& private
-	const Texture&		CreateTextureFromFile(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
+	TextureID			CreateTextureFromFile(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
 	const Texture&		CreateTexture2D(int widht, int height);
 	TextureID			CreateTexture2D(D3D11_TEXTURE2D_DESC& textureDesc, bool initializeSRV);
 	TextureID			CreateCubemapTexture(const std::vector<std::string>& textureFiles);
@@ -175,9 +176,9 @@ public:
 
 	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;
+	D3DManager*						m_Direct3D;
 
 private:
-	D3DManager*						m_Direct3D;
 	Camera*							m_mainCamera;
 	
 	std::vector<BufferObject*>		m_bufferObjects;

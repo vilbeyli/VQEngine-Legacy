@@ -63,7 +63,7 @@ Shader::Shader(const std::string& shaderFileName)
 	:
 	m_vertexShader(nullptr),
 	m_pixelShader(nullptr),
-	m_geoShader(nullptr),
+	m_geometryShader(nullptr),
 	m_layout(nullptr),
 	m_name(shaderFileName),
 	m_id(-1)
@@ -71,6 +71,10 @@ Shader::Shader(const std::string& shaderFileName)
 
 Shader::~Shader(void)
 {
+#if _DEBUG 
+	//Log::Info("Shader dtor: %s", m_name.c_str());
+#endif
+
 	// release constants
 	for (ConstantBuffer& cbuf : m_cBuffers)
 	{
@@ -98,6 +102,13 @@ Shader::~Shader(void)
 		m_vertexShader->Release();
 		m_vertexShader = nullptr;
 	}
+
+	if (m_geometryShader)
+	{
+		m_geometryShader->Release();
+		m_geometryShader = nullptr;
+	}
+
 
 	if (m_vsRefl)
 	{
@@ -226,7 +237,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		result = device->CreateGeometryShader(  gsBlob->GetBufferPointer(),
 												gsBlob->GetBufferSize(),
 												NULL,
-												&m_geoShader);
+												&m_geometryShader);
 		if (FAILED(result))
 		{
 			OutputDebugString("Error creating geometry shader program");

@@ -48,8 +48,8 @@ struct Material
 	float		metalness;	// cook-torrence brdf
 	float		shininess;	// phong
 
-	Texture		diffuseMap;
-	Texture		normalMap;
+	TextureID	diffuseMap;
+	TextureID	normalMap;
 
 	// phong default materials
 	static const Material jade, ruby, bronze, gold;
@@ -58,6 +58,7 @@ struct Material
 
 	Material(const vec3& diffuse, const vec3& specular, float shininess);
 	Material();
+	~Material();
 	void SetMaterialConstants(Renderer* renderer, SHADERS shader) const;
 };
 

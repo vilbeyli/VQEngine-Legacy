@@ -51,9 +51,14 @@ Material Material::RandomMaterial()
 }
 
 Material::Material(const vec3 & diffuse_in, const vec3 & specular_in, float shininess_in)
+	:
+	alpha(1.0f),
+	diffuseMap(-1),
+	normalMap(-1),
+	roughness(0.3f),
+	metalness(0.0f)
 {
 	color = diffuse_in;
-	alpha = 1.0f;
 	specular = specular_in;
 	shininess = shininess_in;
 }
@@ -65,8 +70,14 @@ Material::Material()
 	specular(Color::white.Value()),
 	shininess(90.0f),
 	roughness(0.5f),
-	metalness(0.01f)
+	metalness(0.01f),
+	diffuseMap(-1),
+	normalMap(-1)
 {}
+
+Material::~Material()
+{
+}
 
 void Material::SetMaterialConstants(Renderer* renderer, SHADERS shader) const
 {
@@ -88,8 +99,8 @@ void Material::SetMaterialConstants(Renderer* renderer, SHADERS shader) const
 	}
 
 	
-	renderer->SetConstant1f("isDiffuseMap", diffuseMap._id == -1 ? 0.0f : 1.0f);
-	renderer->SetConstant1f("isNormalMap" , normalMap._id  == -1 ? 0.0f : 1.0f);
-	if (diffuseMap._id>=0) renderer->SetTexture("gDiffuseMap", diffuseMap._id);
-	if ( normalMap._id>=0) renderer->SetTexture("gNormalMap" , normalMap._id);
+	renderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0.0f : 1.0f);
+	renderer->SetConstant1f("isNormalMap" , normalMap  == -1 ? 0.0f : 1.0f);
+	if (diffuseMap>=0) renderer->SetTexture("gDiffuseMap", diffuseMap);
+	if ( normalMap>=0) renderer->SetTexture("gNormalMap" , normalMap);
 }

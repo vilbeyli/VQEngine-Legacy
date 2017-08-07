@@ -231,7 +231,7 @@ unsigned D3DManager::WindowHeight() const
 
 void D3DManager::ReportLiveObjects(const std::string& LogHeader /*= ""*/) const
 {
-	return;
+	return;	// todo:
 	if (!LogHeader.empty())
 		Log::Info(LogHeader);
 

@@ -140,7 +140,7 @@ void Renderer::Exit()
 	}
 #endif
 
-	m_Direct3D->ReportLiveObjects("END EXIT\n");;
+	m_Direct3D->ReportLiveObjects("END EXIT\n");	// todo: ifdef debug & log_mem
 	if (m_Direct3D)
 	{
 		m_Direct3D->Shutdown();

@@ -20,13 +20,21 @@
 #include "SystemDefs.h"
 
 #include <algorithm>
-#include <string>
 
-#ifdef _DEBUG
-#include <Windows.h>
-#endif
+const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
+	// keyboard mapping for windows keycodes.
+	// #define LOG to see each keycode when you press on output window
+	// to be used for this->IsKeyDown("F4")
+	std::unordered_map<const char*, KeyCode> m;
+	m["F1"] = 112;	m["F2"] = 113;	m["F3"] = 114;	m["F4"] = 115;
+	m["F5"] = 116;	m["F6"] = 117;	m["F7"] = 118;	m["F8"] = 119;
+	m["F9"] = 120;	m["F10"] = 121;	m["F11"] = 122;	m["F12"] = 123;
 
-#define LOG__
+	m["Enter"] = 13;
+	return m;
+}();
+
+#define LOG
 
 Input::Input()
 	:
@@ -56,16 +64,14 @@ void Input::KeyDown(KeyCode key)
 	m_keys[key] = true;
 
 #if defined(_DEBUG) && defined(LOG)
-	std::string info("KeyDown: "); info += std::to_string(key); info += "\n";
-	OutputDebugString(info.c_str());
+	Log::Info("KeyDown: %u", key);
 #endif
 }
 
 void Input::KeyUp(KeyCode key)
 {
 #if defined(_DEBUG) && defined(LOG)
-	std::string info("KeyReleased: "); info += std::to_string(key); info += "\n";
-	OutputDebugString(info.c_str());
+	Log::Info("KeyReleased: %u", key);
 #endif
 	m_keys[key] = false;
 }
@@ -73,9 +79,7 @@ void Input::KeyUp(KeyCode key)
 void Input::ButtonDown(KeyCode btn)
 {
 #if defined(_DEBUG) && defined(LOG)
-	char msg[128];
-	sprintf_s(msg, "Mouse Button Down: %d\n", btn);
-	OutputDebugString(msg);
+	Log::Info("Mouse Button Down: %d", btn);
 #endif
 
 	m_buttons[btn] = true;
@@ -84,9 +88,7 @@ void Input::ButtonDown(KeyCode btn)
 void Input::ButtonUp(KeyCode btn)
 {
 #if defined(_DEBUG) && defined(LOG)
-	char msg[128];
-	sprintf_s(msg, "Mouse Button Up: %d\n", btn);
-	OutputDebugString(msg);
+	Log::Info("Mouse Button Up: %d", btn);
 #endif
 
 	m_buttons[btn] = false;
@@ -111,10 +113,10 @@ void Input::UpdateMousePos(long x, long y)
 
 #if defined(_DEBUG) && defined(LOG)
 	char info[128];
-	sprintf_s(info, "Mouse Delta: (%d, %d)\tMouse Pos: (%d, %d)\n", 
+
+	Log::Info("Mouse Delta: (%d, %d)\tMouse Position: (%d, %d)", 
 		m_mouseDelta[0], m_mouseDelta[1],
 		m_mousePos[0], m_mousePos[1]);
-	OutputDebugString(info);
 #endif
 	m_isConsumed = false;
 }
@@ -132,6 +134,18 @@ bool Input::IsMouseDown(KeyCode btn) const
 bool Input::IsKeyTriggered(KeyCode key) const
 {
 	return !m_prevKeys[key] && m_keys[key];
+}
+
+bool Input::IsKeyTriggered(const char *key) const
+{
+	const KeyCode code = sKeyMap.at(key);
+	return !m_prevKeys[code] && m_keys[code];
+}
+
+bool Input::IsKeyTriggered(const std::string & key) const
+{
+	const KeyCode code = sKeyMap.at(key.data());
+	return !m_prevKeys[code] && m_keys[code];
 }
 
 int Input::MouseDeltaX() const

@@ -92,21 +92,17 @@ void SceneManager::Update(float dt)
 	
 	//-------------------------------------------------------------------------------- SHADER CONFIGURATION ----------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
-	// F1-F4 | Debug Shaders
-	if (ENGINE->INP()->IsKeyTriggered(112)) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
-	if (ENGINE->INP()->IsKeyTriggered(113)) m_selectedShader = SHADERS::NORMAL;
+	if (ENGINE->INP()->IsKeyTriggered("F1")) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
+	if (ENGINE->INP()->IsKeyTriggered("F2")) m_selectedShader = SHADERS::NORMAL;
 	//if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = SHADERS::TANGENT;
-	if (ENGINE->INP()->IsKeyTriggered(114)) m_roomScene.ToggleFloorNormalMap();
-	if (ENGINE->INP()->IsKeyTriggered(115)) m_selectedShader = SHADERS::BINORMAL;
+	if (ENGINE->INP()->IsKeyTriggered("F3")) m_roomScene.ToggleFloorNormalMap();
+	if (ENGINE->INP()->IsKeyTriggered("F4")) m_selectedShader = SHADERS::BINORMAL;
 	
-	// F5-F8 | Lighting Shaders								   
-	if (ENGINE->INP()->IsKeyTriggered(116)) m_selectedShader = SHADERS::UNLIT;
-	if (ENGINE->INP()->IsKeyTriggered(117)) m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::FORWARD_BRDF : SHADERS::FORWARD_PHONG;
-	if (ENGINE->INP()->IsKeyTriggered(118)) m_debugRender = !m_debugRender;
+	if (ENGINE->INP()->IsKeyTriggered("F5")) m_selectedShader = SHADERS::UNLIT;
+	if (ENGINE->INP()->IsKeyTriggered("F6")) m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::FORWARD_BRDF : SHADERS::FORWARD_PHONG;
+	if (ENGINE->INP()->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
 
-	// F9-F12 | Shader Parameters
-	if (ENGINE->INP()->IsKeyTriggered(120)) m_postProcessPass._bloomPass.ToggleBloomPass();
-	
+	if (ENGINE->INP()->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
 
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------

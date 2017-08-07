@@ -71,14 +71,14 @@ void Renderer::Exit()
 		Release((void**)(&m_Direct3D));
 	}
 
-	for (BufferObject* bo : m_bufferObjects)
+	for (BufferObject*& bo : m_bufferObjects)
 	{
 		Release((void**)&bo);
 	}
 
 	CPUConstant::CleanUp();
 	
-	for (Shader* shd : m_shaders)
+	for (Shader*& shd : m_shaders)
 	{
 		Release((void**)&shd);
 	}
@@ -220,7 +220,7 @@ void Renderer::LoadShaders()
 	Log::Info("\r------------------------ COMPILING SHADERS ------------------------ \n");
 	
 	// todo: layouts from reflection?
-	std::vector<InputLayout> layout = {
+	const std::vector<InputLayout> layout = {
 		{ "POSITION",	FLOAT32_3 },
 		{ "NORMAL",		FLOAT32_3 },
 		{ "TANGENT",	FLOAT32_3 },
@@ -242,6 +242,15 @@ void Renderer::LoadShaders()
 	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"     , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::FORWARD_BRDF       ]	= AddShader("Forward_BRDF"     , s_shaderRoot, layout);
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
+}
+
+void Renderer::ReloadShaders()
+{
+	Log::Info("Reloading Shaders...");
+
+
+
+	Log::Info("Done");
 }
 
 void Renderer::InitializeDefaultDepthBuffer()

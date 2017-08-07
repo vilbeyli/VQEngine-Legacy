@@ -18,13 +18,18 @@
 
 #pragma once
 
+#include <unordered_map>
+#include <string>
+
 #define KEY_COUNT 256
 #define ENABLE_RAW_INPUT
 
-typedef unsigned int KeyCode;
+using KeyCode = unsigned int;
 
 class Input
 {
+	static const std::unordered_map<const char*, KeyCode> sKeyMap;
+
 public:
 	Input();
 	Input(const Input&);
@@ -43,6 +48,8 @@ public:
 	bool IsKeyDown(KeyCode) const;
 	bool IsMouseDown(KeyCode) const;
 	bool IsKeyTriggered(KeyCode) const;
+	bool IsKeyTriggered(const char*) const;
+	bool IsKeyTriggered(const std::string&) const;
 	int  MouseDeltaX() const;
 	int  MouseDeltaY() const;
 

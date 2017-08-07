@@ -183,6 +183,7 @@ float Engine::TotalTime() const
 void Engine::Update(float dt)
 {
 	//m_physics->Update(dt);
+	if (INP()->IsKeyTriggered("Enter")) m_renderer->ReloadShaders();
 	m_sceneManager->Update(dt);
 }
 

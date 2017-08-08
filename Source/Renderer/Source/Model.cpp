@@ -96,7 +96,6 @@ void Material::SetMaterialConstants(Renderer* renderer, SHADERS shader) const
 		break;
 	}
 
-	
 	renderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0.0f : 1.0f);
 	renderer->SetConstant1f("isNormalMap" , normalMap  == -1 ? 0.0f : 1.0f);
 	if (diffuseMap>=0) renderer->SetTexture("gDiffuseMap", diffuseMap);

@@ -43,17 +43,19 @@ cbuffer BloomParams
 
 PSOut PSMain(PSIn In) : SV_TARGET
 {
-	PSOut _out;
-
 	const float4 color = worldRenderTarget.Sample(samTriLinearSam, In.texCoord);
-	_out.color = color;
 	
-	// source: https://learnopengl.com/#!Advanced-Lighting/Bloom
+	// clamp values that is made very large by NDF in BRDF
+	// this reduces bloom flickering
+	const float BrightnessUpperThreshold = 3.0f;	
 	const float brightness = dot(float3(0.2126, 0.7152, 0.0722), color.xyz); // luma conversion
-	if (brightness > BrightnessThreshold)
+
+	// source: https://learnopengl.com/#!Advanced-Lighting/Bloom
+	PSOut _out;
+	_out.color = color;
+	if (brightness > BrightnessThreshold && brightness < BrightnessUpperThreshold)
 		_out.brightColor = color;
 	else
 		_out.brightColor = float4(0, 0, 0, 1);
-	
 	return _out;
 }

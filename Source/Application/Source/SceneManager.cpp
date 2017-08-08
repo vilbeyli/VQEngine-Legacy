@@ -71,6 +71,18 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 	for (GameObject& obj : m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
 	
 	m_postProcessPass.Initialize(m_pRenderer, m_pRenderer->m_device);
+
+	D3D11_SAMPLER_DESC normalSamplerDesc = {};
+	normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	normalSamplerDesc.MinLOD = 0.f;
+	normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	normalSamplerDesc.MipLODBias = 0.f;
+	normalSamplerDesc.MaxAnisotropy = 0;
+	normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	m_normalSampler = renderer->CreateSamplerState(normalSamplerDesc);
 }
 
 
@@ -143,6 +155,7 @@ void SceneManager::Render() const
 	
 	m_pRenderer->SetShader(m_selectedShader);
 	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+	m_pRenderer->SetSamplerState("sNormalSampler", 0);
 
 	constexpr int TBNMode = 0;
 	if (m_selectedShader == SHADERS::TBN)	m_pRenderer->SetConstant1i("mode", TBNMode);

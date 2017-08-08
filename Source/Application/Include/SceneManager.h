@@ -63,6 +63,8 @@ private:
 	//PathManager*		m_pPathManager; // unused
 
 	// rendering passes
+	// lighting pass?
+	SamplerID			m_normalSampler;
 	DepthShadowPass		m_depthPass;
 	PostProcessPass		m_postProcessPass;
 

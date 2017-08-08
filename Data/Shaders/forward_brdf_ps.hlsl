@@ -104,6 +104,7 @@ Texture2D gNormalMap;
 Texture2D gShadowMap;
 
 SamplerState sShadowSampler;
+SamplerState sNormalSampler;
 
 // FUNCTIONS
 //---------------------------------------------------------
@@ -180,7 +181,7 @@ float ShadowTest(float3 worldPos, float4 lightSpacePos)
 // ================================== BRDF NOTES =========================================
 //
 //	src: https://learnopengl.com/#!PBR/Theory
-//
+//	ref: http://blog.selfshadow.com/publications/s2012-shading-course/hoffman/s2012_pbs_physics_math_notes.pdf
 // Rendering Equation
 // ------------------
 //
@@ -204,14 +205,20 @@ inline float NormalDistribution(float3 N, float3 H, float roughness)
 {	// approximates microfacets :	approximates the amount the surface's microfacets are
 	//								aligned to the halfway vector influenced by the roughness
 	//								of the surface
-
+	//							:	determines the size, brightness, and shape of the specular highlight
+	// more: http://reedbeta.com/blog/hows-the-ndf-really-defined/
+	//
 	// NDF_GGXTR(N, H, roughness) = roughness^2 / ( PI * ( dot(N, H))^2 * (roughness^2 - 1) + 1 )^2
 	const float a = roughness * roughness;
 	const float a2 = a * a;
 	const float nh2 = pow(max(dot(N, H), 0), 2);
 	const float denom = (PI * pow((nh2 * (a2 - 1.0f) + 1.0f), 2));
 	if (denom < EPSILON) return 1.0f;
+#if 0
+	return min(a2 / denom, 10);
+#else
 	return a2 / denom;
+#endif
 }
 
 // Smith's Schlick-GGX
@@ -341,7 +348,5 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 	
 	const float3 illumination = Ia + IdIs;
-	float4 outColor = float4(illumination, 1);
-	outColor = outColor / (outColor + float4(1.0f, 1.0f, 1.0f, 1.0f));
-	return outColor;
+	return float4(illumination, 1);
 }

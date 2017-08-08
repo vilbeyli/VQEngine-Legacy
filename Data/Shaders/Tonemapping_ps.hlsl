@@ -32,20 +32,21 @@ cbuffer constants
 	float exposure;
 };
 
+// src
+//	: reference	: https://learnopengl.com/#!Advanced-Lighting/HDR
+//	: tonemap	: https://photo.stackexchange.com/questions/7630/what-is-tone-mapping-how-does-it-relate-to-hdr
+//	: hdr		: https://www.slideshare.net/ozlael/hable-john-uncharted2-hdr-lighting
+//	: hdr		: https://gamedev.stackexchange.com/questions/62836/does-hdr-rendering-have-any-benefits-if-bloom-wont-be-applied
+//  : gamma		: http://blog.johnnovak.net/2016/09/21/what-every-coder-should-know-about-gamma/
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	const float3 color = ColorTexture.Sample(Sampler, In.texCoord);
+	const float gamma = 1.0f / 2.2f;
 
 #ifdef DO_TONEMAPPING
 	float3 toneMapped = float3(1, 1, 1) - exp(-color * exposure);
 #else
 	float3 toneMapped = color;
-#endif
-	
-#if 1
-	const float gamma = 1.0f / 2.2f;
-#else
-	const float gamma = 1.0f;
 #endif
 
 	toneMapped = pow(toneMapped, float3(gamma, gamma, gamma));

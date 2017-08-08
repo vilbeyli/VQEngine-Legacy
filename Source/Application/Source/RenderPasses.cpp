@@ -170,7 +170,7 @@ void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
 	this->_bloomPass._blurSampler = pRenderer->CreateSamplerState(blurSamplerDesc);
 	
 	// Tonemapping
-	this->_tonemappingPass._HDRExposure = 1.0f;	// default
+	this->_tonemappingPass._HDRExposure = 1.2f;	// default
 	this->_tonemappingPass._finalRenderTarget = pRenderer->GetDefaultRenderTarget();
 
 	// World Render Target
@@ -186,7 +186,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// ======================================================================================
 	if (_bloomPass._isEnabled)
 	{
-		const float  BRDF_BrightnessThreshold = 0.7f;
+		const float  BRDF_BrightnessThreshold = 0.98f;
 		const float Phong_BrightnessThreshold = 0.85f;
 		const float brightnessThreshold = BRDF_BrightnessThreshold;
 			// = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader()	? BRDF_BrightnessThreshold : Phong_BrightnessThreshold;
@@ -203,7 +203,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 		pRenderer->DrawIndexed();
 
 		// blur
-		constexpr size_t BLUR_PASS_COUNT = 20;
+		constexpr size_t BLUR_PASS_COUNT = 6;
 		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
 		pRenderer->SetShader(SHADERS::BLUR);
 		for (size_t i = 0; i < BLUR_PASS_COUNT; i++)

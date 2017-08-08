@@ -60,6 +60,7 @@ struct PostProcessPass
 	void Initialize(Renderer* pRenderer, ID3D11Device* device);
 	void Render(Renderer* pRenderer) const;
 
+	RenderTargetID				_worldRenderTarget;
 	BloomPass					_bloomPass;
 	TonemappingCombinePass		_tonemappingPass;
 };

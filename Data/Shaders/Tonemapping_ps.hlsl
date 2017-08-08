@@ -43,7 +43,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 #endif
 	
 #if 1
-	const float gamma = 2.2f;
+	const float gamma = 1.0f / 2.2f;
 #else
 	const float gamma = 1.0f;
 #endif

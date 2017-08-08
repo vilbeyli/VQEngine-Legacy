@@ -44,9 +44,12 @@ public:
 	void ButtonUp(KeyCode);
 	void UpdateMousePos(long x, long y);
 
-	// quert state
 	bool IsKeyDown(KeyCode) const;
+	bool IsKeyDown(const char*) const;
+	bool IsKeyDown(const std::string&) const;
 	bool IsMouseDown(KeyCode) const;
+	//bool IsMouseDown(const char*) const;
+	//bool IsMouseDown(const std::string&) const;
 	bool IsKeyTriggered(KeyCode) const;
 	bool IsKeyTriggered(const char*) const;
 	bool IsKeyTriggered(const std::string&) const;

@@ -23,11 +23,6 @@ struct PSIn
 	float2 texCoord : TEXCOORD0;
 };
 
-cbuffer renderConsts
-{
-	float gammaCorrection;
-};
-
 cbuffer perObject
 {
 	float3 diffuse;
@@ -45,22 +40,8 @@ SamplerState samAnisotropic
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	// gamma correction
-	bool gammaCorrect = gammaCorrection > 0.99f;
-	//const float gammaa = 1.0 / 2.2;
-	//const float gamma = 1.0 / 2.2;
-	//const float gamma = 2.2;
-	//const float gamma = 1.0;
-
 	float2 uv = In.texCoord;
     float4 outColor = isDiffuseMap          * gDiffuseMap.Sample(samAnisotropic, uv) * float4(diffuse, 1) 
                     + (1.0f - isDiffuseMap) * float4(diffuse,1);
-	
-	const float gamma = 2.2f * (1.0f - isDiffuseMap) + isDiffuseMap * 1.0f;
-
-	if(gammaCorrect)
-		return pow(outColor, float4(gamma,gamma,gamma,1.0f));
-	else
-		//return pow(outColor, float4(gammaa, gammaa, gammaa, 1.0f));
 	return outColor;
 }

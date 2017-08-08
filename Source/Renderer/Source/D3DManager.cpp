@@ -153,7 +153,7 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hwnd, 
 	adapter->Release();			adapter = 0;
 	factory->Release();			factory = 0;
 
-	if (!InitSwapChain(hwnd, FULL_SCREEN, width, height, numerator, denominator, FrameBufferFormat))
+	if (!InitSwapChain(hwnd, FULL_SCREEN, width, height, numerator, denominator, DXGI_FORMAT_B8G8R8A8_UNORM))
 	{
 		return false;
 	}

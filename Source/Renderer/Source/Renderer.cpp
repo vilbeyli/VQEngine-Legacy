@@ -175,6 +175,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		hwnd, 
 		settings.fullscreen == 1,
 		DXGI_FORMAT_R16G16B16A16_FLOAT
+		// swapchain should be bgra unorm 32bit
 	);
 	
 	if (!result)
@@ -997,21 +998,22 @@ void Renderer::Begin(const float clearColor[4], const float depthValue)
 
 void Renderer::End()
 {
-	auto* backBuffer = m_renderTargets[m_state._mainRenderTarget].GetTextureResource();
-
-	auto* dst = backBuffer;
-	auto* src = m_renderTargets[m_state._boundRenderTargets[0]].GetTextureResource();
-	if (dst != src)
-	{
-		// cannot copy entire final texture if sizes are not equal -> use copy subresource region
+	//auto* backBuffer = m_renderTargets[m_state._mainRenderTarget].GetTextureResource();
+	//
+	//auto* dst = backBuffer;
+	//auto* src = m_renderTargets[m_state._boundRenderTargets[0]].GetTextureResource();
+	//if (dst != src)
+	//{
+	//	// cannot copy entire final texture if sizes are not equal -> use copy subresource region
 		// m_deviceContext->CopyResource(backBuffer, m_renderTargets[m_state._boundRenderTarget].GetTextureResource());
-		
-		m_deviceContext->CopySubresourceRegion(
-			dst, 0,	 // dst: backbuffer[0]
-			0, 0, 0, // upper left (x,y,z)
-			src, 0,  // src: boundRT[0]
-			nullptr);
-	}
+	//	
+	//	// bgra unorm
+	//	m_deviceContext->CopySubresourceRegion(
+	//		dst, 0,	 // dst: backbuffer[0]
+	//		0, 0, 0, // upper left (x,y,z)
+	//		src, 0,  // src: boundRT[0]
+	//		nullptr);
+	//}
 
 	m_Direct3D->EndFrame();
 	++m_frameCount;

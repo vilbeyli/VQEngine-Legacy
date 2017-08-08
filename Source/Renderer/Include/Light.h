@@ -71,7 +71,7 @@ struct Light
 	LightType _type;
 	Color _color;
 	float _range;
-	float _brightness;
+	float _brightness;	// 300.0f is a good default value
 	
 	bool _castsShadow;
 

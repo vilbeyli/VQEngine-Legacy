@@ -68,6 +68,7 @@ void Input::KeyDown(KeyCode key)
 #endif
 }
 
+
 void Input::KeyUp(KeyCode key)
 {
 #if defined(_DEBUG) && defined(LOG)
@@ -122,6 +123,18 @@ void Input::UpdateMousePos(long x, long y)
 bool Input::IsKeyDown(KeyCode key) const
 {
 	return m_keys[key];
+}
+
+bool Input::IsKeyDown(const char * key) const
+{
+	const KeyCode code = sKeyMap.at(key);
+	return m_keys[code];
+}
+
+bool Input::IsKeyDown(const std::string& key) const
+{
+	const KeyCode code = sKeyMap.at(key.c_str());
+	return m_keys[code];
 }
 
 bool Input::IsMouseDown(KeyCode btn) const

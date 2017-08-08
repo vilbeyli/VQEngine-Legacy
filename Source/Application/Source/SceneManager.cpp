@@ -134,7 +134,7 @@ void SceneManager::Render() const
 	//------------------------------------------------------------------------
 	m_pRenderer->Reset();
 	m_pRenderer->BindDepthStencil(0);
-	m_pRenderer->BindRenderTarget(0);
+	m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);
 	m_pRenderer->SetDepthStencilState(0); 
 	m_pRenderer->SetRasterizerState(static_cast<int>(DEFAULT_RS_STATE::CULL_NONE));
 	m_pRenderer->Begin(clearColor, 1.0f);

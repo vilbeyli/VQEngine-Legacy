@@ -170,20 +170,23 @@ void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
 	this->_bloomPass._blurSampler = pRenderer->CreateSamplerState(blurSamplerDesc);
 	
 	// Tonemapping
-	this->_tonemappingPass._HDRExposure = 3.0f;	// default
-	this->_tonemappingPass._finalRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->_tonemappingPass._HDRExposure = 1.0f;	// default
+	this->_tonemappingPass._finalRenderTarget = pRenderer->GetDefaultRenderTarget();
+
+	// World Render Target
+	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 }
 
 void PostProcessPass::Render(Renderer * pRenderer) const
 {
-	const TextureID worldTexture = pRenderer->GetDefaultRenderTargetTexture();
+	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
 
 	// ======================================================================================
 	// BLOOM  PASS
 	// ======================================================================================
 	if (_bloomPass._isEnabled)
 	{
-		const float  BRDF_BrightnessThreshold = 0.45f;
+		const float  BRDF_BrightnessThreshold = 0.7f;
 		const float Phong_BrightnessThreshold = 0.85f;
 		const float brightnessThreshold = BRDF_BrightnessThreshold;
 			// = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader()	? BRDF_BrightnessThreshold : Phong_BrightnessThreshold;
@@ -240,7 +243,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// ======================================================================================
 	// TONEMAPPING PASS
 	// ======================================================================================
-	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._isEnabled ? _bloomPass._finalRT : worldTexture);
+	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._isEnabled ? _bloomPass._finalRT : _worldRenderTarget);
 	pRenderer->SetShader(SHADERS::TONEMAPPING);
 	pRenderer->SetBufferObj(GEOMETRY::QUAD);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);

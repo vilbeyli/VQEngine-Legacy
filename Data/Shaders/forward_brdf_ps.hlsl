@@ -299,7 +299,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 N = normalize(In.normal);
 	const float3 T = normalize(In.tangent);
 	const float3 V = normalize(cameraPos - P);
-	const float ambient = 0.035f;
+	const float ambient = 0.00005f;
 
 	Surface s;	// surface 
 	s.N = (isNormalMap)* UnpackNormals(In.texCoord, N, T) +
@@ -314,18 +314,25 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 Ia = s.diffuseColor * ambient;	// ambient
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
 
-	// integrate BRDFs
+	// integrate the lighting equation
 	const int steps = 10;
 	const float dW = 1.0f / steps;
 	for (int iter = 0; iter < steps; ++iter)
 	{
-		for (int i = 0; i < lightCount; ++i)		// POINT Lights
+		// POINT Lights
+		// brightness default: 300
+		//---------------------------------
+		for (int i = 0; i < lightCount; ++i)		
 		{
 			const float3 Wi       = normalize(lights[i].position - P);
 			const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P)) * lights[i].color * lights[i].brightness;
 			IdIs += BRDF(Wi, s, V, P) * radiance * dW;
 		}
-		for (int j = 0; j < spotCount; ++j)			// SPOT Lights (shadow)
+
+		// SPOT Lights (shadow)
+		// todo: intensity/brightness
+		//---------------------------------
+		for (int j = 0; j < spotCount; ++j)			
 		{
 			const float3 Wi       = normalize(spots[j].position - P);
 			const float3 radiance = Intensity(spots[j], P) * spots[j].color;
@@ -335,6 +342,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 	
 	const float3 illumination = Ia + IdIs;
 	float4 outColor = float4(illumination, 1);
-	outColor = outColor / (outColor + float4(1.0f, 1.0f, 1.0f, 0.0f));
+	outColor = outColor / (outColor + float4(1.0f, 1.0f, 1.0f, 1.0f));
 	return outColor;
 }

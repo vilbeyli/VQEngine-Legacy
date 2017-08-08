@@ -136,39 +136,6 @@ Engine * Engine::GetEngine()
 
 }
 
-bool Engine::Run()
-{
-	//float begin = m_timer.CurrentTime();	// fps lock
-	m_timer->Tick();
-	if (m_input->IsKeyDown(VK_ESCAPE))
-	{
-		return false;
-	}
-
-	if (m_input->IsKeyTriggered(0x08)) // Key backspace
-		TogglePause(); 
-
-	if (!m_isPaused)
-	{
-		CalcFrameStats();
-		Update(m_timer->DeltaTime());
-		Render();
-		
-		// 70 fps block - won't work because of input lag
-		//float end = 0.0f;
-		//do 
-		//{
-		//	end = m_timer.CurrentTime();
-		//	//char info[128];
-		//	//sprintf_s(info, "end=%f, begin=%f, end-begin=%f\n", end, begin, end - begin);
-		//	//OutputDebugString(info);
-		//} while ((end-begin) < 0.01428f);		
-	}
-
-	m_input->Update();	// update previous state after frame;
-	return true;
-}
-
 void Engine::Pause()
 {
 	m_isPaused = true;
@@ -184,11 +151,43 @@ float Engine::TotalTime() const
 	return m_timer->TotalTime();
 }
 
-void Engine::Update(float dt)
+bool Engine::Update()
 {
-	//m_physics->Update(dt);
-	if (INP()->IsKeyTriggered("Enter")) m_renderer->ReloadShaders();
-	m_sceneManager->Update(dt);
+	//float begin = m_timer.CurrentTime();	// fps lock
+	
+	m_timer->Tick();
+	const float dt = m_timer->DeltaTime();
+
+	if (m_input->IsKeyDown(VK_ESCAPE))
+	{
+		return false;
+	}
+
+	if (m_input->IsKeyTriggered(0x08)) // Key backspace
+		TogglePause();
+
+	if (!m_isPaused)
+	{
+		CalcFrameStats();
+
+		if (INP()->IsKeyTriggered("Enter")) m_renderer->ReloadShaders();
+		
+		m_sceneManager->Update(dt);
+		Render();
+
+		// 70 fps block - won't work because of input lag
+		//float end = 0.0f;
+		//do 
+		//{
+		//	end = m_timer.CurrentTime();
+		//	//char info[128];
+		//	//sprintf_s(info, "end=%f, begin=%f, end-begin=%f\n", end, begin, end - begin);
+		//	//OutputDebugString(info);
+		//} while ((end-begin) < 0.01428f);		
+	}
+
+	m_input->Update();	// update previous state after frame;
+	return true;
 }
 
 void Engine::Render()

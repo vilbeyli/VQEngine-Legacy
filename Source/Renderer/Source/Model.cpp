@@ -68,16 +68,14 @@ Material::Material()
 	color(Color::white),
 	alpha(1.0f),
 	specular(Color::white.Value()),
-	shininess(90.0f),
-	roughness(0.5f),
-	metalness(0.01f),
+	shininess(90.0f),	// phong
+	roughness(0.4f),	// brdf
+	metalness(0.01f),	// brdf
 	diffuseMap(-1),
 	normalMap(-1)
 {}
 
-Material::~Material()
-{
-}
+Material::~Material(){}
 
 void Material::SetMaterialConstants(Renderer* renderer, SHADERS shader) const
 {

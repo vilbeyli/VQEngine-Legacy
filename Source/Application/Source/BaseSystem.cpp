@@ -84,7 +84,7 @@ void BaseSystem::Run()
 		else
 		{
 			if (msg.message == WM_QUIT)	done = true;
-			else						done = !ENGINE->Run();
+			else						done = !ENGINE->Update();
 		}
 	}
 

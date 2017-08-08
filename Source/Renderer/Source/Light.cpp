@@ -26,7 +26,8 @@ using std::cout;
 using std::endl;
 using std::string;
 
-//			 range(distance)   -   (Linear, Quadratic) attenuation factor map
+// For Phong Lighting
+// range(distance)   -   (Linear, Quadratic) attenuation factor map
 // source: http://www.ogre3d.org/tikiwiki/tiki-index.php?page=-Point+Light+Attenuation
 const std::map<unsigned, std::pair<float, float>> rangeAttenuationMap_ = 
 {
@@ -48,8 +49,8 @@ Light::Light()
 	:
 	_type(LightType::POINT),
 	_color(Color::white),
-	_range(50),
-	_brightness(1.0f),
+	_range(50),	// phong
+	_brightness(300.0f),
 	_castsShadow(false),
 	_spotAngle(vec2()),
 	_attenuation(vec2())

@@ -46,13 +46,12 @@ public:
 
 	bool Initialize(HWND hwnd, const Settings::Window& windowSettings);
 	bool Load();
-	bool Run();
 
 	void Pause();
 	void Unpause();
 	float TotalTime() const;
 
-	void Update(float dt);
+	bool Update();
 	void Render();
 
 	void Exit();

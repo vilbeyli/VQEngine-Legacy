@@ -28,7 +28,7 @@
 
 constexpr size_t	RAND_LIGHT_COUNT	= 0;
 
-constexpr size_t	CUBE_ROW_COUNT		= 20;
+constexpr size_t	CUBE_ROW_COUNT		= 21;
 constexpr size_t	CUBE_COLUMN_COUNT	= 4;
 constexpr size_t	CUBE_COUNT			= CUBE_ROW_COUNT * CUBE_COLUMN_COUNT;
 constexpr float		CUBE_DISTANCE		= 4.0f * 2.2f;
@@ -128,30 +128,32 @@ void RoomScene::InitializeLights()
 		l._model.m_mesh = GEOMETRY::SPHERE;
 		l._model.m_material.color = l._color = vec3(Color::orange) * 3.0f;
 		//l._model.m_material.color = l._color = vec3(Color::white);
-		l._brightness = 1.0f;
+		l._brightness = 300.0f;
 		l.SetLightRange(60);
 		m_lights.push_back(l);
 	}
 	{
 		Light l;
 		l._transform.SetPosition(60.0f, 25.0f, -2.0f);
+		//l._transform.SetPosition(10, 25.0f, 10.0f);
 		l._transform.SetUniformScale(0.4f);
 		l._model.m_mesh = GEOMETRY::SPHERE;
 		l._model.m_material.color = Color::cyan;
 		//l._model.m_material.color = Color::white;
 		l._color = l._model.m_material.color;
-		l._brightness = 240.0f;
+		l._brightness = 300.0f;
 		l.SetLightRange(84);
 		m_lights.push_back(l);
 	}
 	{
 		Light l;
 		l._transform.SetPosition(-140.0f, 100.0f, 140.0f);
+		//l._transform.SetPosition(10, 25.0f, -10.0f);
 		l._transform.SetUniformScale(0.5f);
 		l._model.m_mesh = GEOMETRY::SPHERE;
 		//l._model.m_material.color = l._color = vec3(Color::white);
 		l._model.m_material.color = l._color = vec3(Color::red) * 1.5f;
-		l._brightness = 100.0f;
+		l._brightness = 300.0f;
 		l.SetLightRange(60);
 		m_lights.push_back(l);
 	}
@@ -173,7 +175,7 @@ void RoomScene::InitializeLights()
 	}
 
 	Animation anim;
-	anim._fTracks.push_back(Track<float>(&m_lights[1]._brightness, 10.f, 500.f, 3.0f));
+	anim._fTracks.push_back(Track<float>(&m_lights[1]._brightness, 50.0f, 500.0f, 3.0f));
 	m_animations.push_back(anim);
 #endif
 }
@@ -187,7 +189,7 @@ void RoomScene::InitializeObjectArrays()
 		for (int i = 0; i < CUBE_ROW_COUNT; ++i)
 		{
 			//Color color = c_colors[i % c_colors.size()];
-			Color color = vec3(1,1,1) * static_cast<float>(i) / (float)CUBE_ROW_COUNT;
+			Color color = vec3(1,1,1) * static_cast<float>(i) / (float)(CUBE_ROW_COUNT-1);
 
 			for (int j = 0; j < CUBE_COLUMN_COUNT; ++j)
 			{
@@ -246,8 +248,8 @@ void RoomScene::InitializeObjectArrays()
 		}
 	}
 	{	// sphere grid
-		constexpr float r = 15.0f;
-		constexpr size_t gridDimension = 5;
+		constexpr float r = 11.0f;
+		constexpr size_t gridDimension = 7;
 		constexpr size_t numSph = gridDimension * gridDimension;
 
 		const vec3 origin = vec3::Zero;
@@ -258,8 +260,8 @@ void RoomScene::InitializeObjectArrays()
 			const size_t col = i % gridDimension;
 
 			const float sphereStep = static_cast<float>(i) / numSph;
-			const float rowStep = static_cast<float>(row) / (numSph / gridDimension);
-			const float colStep = static_cast<float>(col) / (numSph / gridDimension);
+			const float rowStep = static_cast<float>(row) / ((numSph-1) / gridDimension);
+			const float colStep = static_cast<float>(col) / ((numSph-1) / gridDimension);
 
 			// offset to center the grid
 			const float offsetDim = -static_cast<float>(gridDimension) * r / 2 + r/2.0f;
@@ -271,14 +273,16 @@ void RoomScene::InitializeObjectArrays()
 			sph.m_transform = pos;
 			sph.m_transform.SetUniformScale(2.5f);
 			sph.m_model.m_mesh = GEOMETRY::SPHERE;
-			const float roughnessBase = 0.1f;
-			const float roughnessScale = 0.45f;
-			sph.m_model.m_material.roughness = colStep * roughnessScale + roughnessBase;
-			sph.m_model.m_material.metalness = 0.0f;
 
-			//float colorVal = 0.5f + step / 2.0f;
-			float colorVal = 1.0f * rowStep;
-			sph.m_model.m_material.color = vec3(colorVal, colorVal, colorVal);
+			Material& mat = sph.m_model.m_material;
+
+			// col(-x->+x) -> metalness [0.0f, 1.0f]
+			mat.color = vec3(Color::red) / 2.0f;
+			mat.metalness = colStep;
+
+			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
+			const float roughnessLowClamp = 0.025f;
+			mat.roughness = rowStep < roughnessLowClamp ? roughnessLowClamp : rowStep;
 
 			spheres.push_back(sph);
 		}
@@ -289,6 +293,7 @@ void RoomScene::InitializeObjectArrays()
 	const float distToEachOther = -30.0f;
 	grid.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
 	grid.m_transform.SetUniformScale(30);
+	grid.m_transform.RotateAroundGlobalZAxisDegrees(45);
 	--i;
 
 	cube.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
@@ -325,14 +330,21 @@ void RoomScene::InitializeObjectArrays()
 	 sphere.m_model.m_mesh = GEOMETRY::SPHERE;
 
 	    grid.m_model.m_material = Material();
+		grid.m_model.m_material.roughness = 0.02f;
+		grid.m_model.m_material.metalness = 0.6f;
 	cylinder.m_model.m_material = Material();
+	cylinder.m_model.m_material.roughness = 0.3f;
+	cylinder.m_model.m_material.metalness = 0.3f;
 	triangle.m_model.m_material = Material();
 	    quad.m_model.m_material = Material();
 		cube.m_model.m_material = Material();
 		cube.m_model.m_material.roughness = 0.6f;
 		cube.m_model.m_material.metalness = 0.6f;
 	  sphere.m_model.m_material = Material();
-	  sphere.m_model.m_material.roughness = 0.25f;
+	  sphere.m_model.m_material.roughness = 0.3f;
+	  sphere.m_model.m_material.metalness = 1.0f;
+	  //sphere.m_model.m_material.color = vec3(0.04f, 61.0f / 255.0f, 19.0f / 255.0f);
+	  sphere.m_model.m_material.color = vec3(0.04f, 0.04f, 0.04f);
 	  sphere.m_transform.SetUniformScale(2.5f);
 
 

@@ -17,6 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "SceneManager.h"	
+#include "SceneParser.h"
 #include "Engine.h"			
 #include "Input.h"
 #include "Renderer.h"
@@ -40,10 +41,10 @@ SceneManager::SceneManager()
 SceneManager::~SceneManager()
 {}
 
-void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
+void SceneManager::Load(Renderer* renderer, PathManager* pathMan)
 {
 	//m_pPathManager		= pathMan;
-
+	SceneParser::ReadScene(this);
 	m_pRenderer			= renderer;
 	m_selectedShader	= SHADERS::FORWARD_BRDF;
 	m_debugRender		= false;
@@ -52,72 +53,84 @@ void SceneManager::Initialize(Renderer* renderer, PathManager* pathMan)
 
 	m_roomScene.Load(m_pRenderer);
 
-	// todo: static game object array in gameobj.h 
-	m_depthPass.Initialize(m_pRenderer, m_pRenderer->m_device);
+	{	// RENDER PASS INITIALIZATION
+		
+		// todo: static game object array in gameobj.h 
+		m_depthPass.Initialize(m_pRenderer, m_pRenderer->m_device);
 
-	//renderer->m_Direct3D->ReportLiveObjects();
-	m_ZPassObjects.push_back(&m_roomScene.m_room.floor);
-	m_ZPassObjects.push_back(&m_roomScene.m_room.wallL);
-	m_ZPassObjects.push_back(&m_roomScene.m_room.wallR);
-	m_ZPassObjects.push_back(&m_roomScene.m_room.wallF);
-	m_ZPassObjects.push_back(&m_roomScene.m_room.ceiling);
-	m_ZPassObjects.push_back(&m_roomScene.quad);
-	m_ZPassObjects.push_back(&m_roomScene.grid);
-	m_ZPassObjects.push_back(&m_roomScene.cylinder);
-	m_ZPassObjects.push_back(&m_roomScene.triangle);
-	m_ZPassObjects.push_back(&m_roomScene.cube);
-	m_ZPassObjects.push_back(&m_roomScene.sphere);
-	for (GameObject& obj : m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
-	for (GameObject& obj : m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
-	
-	m_postProcessPass.Initialize(m_pRenderer, m_pRenderer->m_device);
+		//renderer->m_Direct3D->ReportLiveObjects();
+		m_ZPassObjects.push_back(&m_roomScene.m_room.floor);
+		m_ZPassObjects.push_back(&m_roomScene.m_room.wallL);
+		m_ZPassObjects.push_back(&m_roomScene.m_room.wallR);
+		m_ZPassObjects.push_back(&m_roomScene.m_room.wallF);
+		m_ZPassObjects.push_back(&m_roomScene.m_room.ceiling);
+		m_ZPassObjects.push_back(&m_roomScene.quad);
+		m_ZPassObjects.push_back(&m_roomScene.grid);
+		m_ZPassObjects.push_back(&m_roomScene.cylinder);
+		m_ZPassObjects.push_back(&m_roomScene.triangle);
+		m_ZPassObjects.push_back(&m_roomScene.cube);
+		m_ZPassObjects.push_back(&m_roomScene.sphere);
+		for (GameObject& obj : m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
+		for (GameObject& obj : m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
 
-	D3D11_SAMPLER_DESC normalSamplerDesc = {};
-	normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	normalSamplerDesc.MinLOD = 0.f;
-	normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	normalSamplerDesc.MipLODBias = 0.f;
-	normalSamplerDesc.MaxAnisotropy = 0;
-	normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	m_normalSampler = renderer->CreateSamplerState(normalSamplerDesc);
+		m_postProcessPass.Initialize(m_pRenderer, m_pRenderer->m_device);
+
+		D3D11_SAMPLER_DESC normalSamplerDesc = {};
+		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		normalSamplerDesc.MinLOD = 0.f;
+		normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+		normalSamplerDesc.MipLODBias = 0.f;
+		normalSamplerDesc.MaxAnisotropy = 0;
+		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+		m_normalSampler = renderer->CreateSamplerState(normalSamplerDesc);
+	}
+
+	m_pRenderer->SetCamera(m_pCamera.get());	// set camera of the renderer (perhaps multiple views/cameras?)
 }
 
 
-void SceneManager::SetCameraSettings(const Settings::Camera & cameraSettings)
+void SceneManager::SetCameraSettings(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings)
 {
-	assert(m_pRenderer);
 	const auto& NEAR_PLANE = cameraSettings.nearPlane;
 	const auto& FAR_PLANE = cameraSettings.farPlane;
-	m_pCamera->SetOthoMatrix(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight(), NEAR_PLANE, FAR_PLANE);
-	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, m_pRenderer->AspectRatio(), NEAR_PLANE, FAR_PLANE);
+	const float AspectRatio = static_cast<float>(windowSettings.width) / windowSettings.height;
+
+	m_pCamera->SetOthoMatrix(windowSettings.width, windowSettings.height, NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, AspectRatio, NEAR_PLANE, FAR_PLANE);
 	m_pCamera->SetPosition(0, 50, -190);
 	m_pCamera->Rotate(0.0f, 15.0f * DEG2RAD, 1.0f);
-	m_pRenderer->SetCamera(m_pCamera.get());
 }
 
-
-void SceneManager::Update(float dt)
+void SceneManager::HandleInput()
 {
-	m_pCamera->Update(dt);
-	m_roomScene.Update(dt);
-	
 	//-------------------------------------------------------------------------------- SHADER CONFIGURATION ----------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
 	if (ENGINE->INP()->IsKeyTriggered("F1")) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
 	if (ENGINE->INP()->IsKeyTriggered("F2")) m_selectedShader = SHADERS::NORMAL;
-	//if (ENGINE->INP()->IsKeyTriggered(114)) m_selectedShader = SHADERS::TANGENT;
-	if (ENGINE->INP()->IsKeyTriggered("F3")) m_roomScene.ToggleFloorNormalMap();
-	if (ENGINE->INP()->IsKeyTriggered("F4")) m_selectedShader = SHADERS::BINORMAL;
-	
+	if (ENGINE->INP()->IsKeyTriggered("F3")); 
+	if (ENGINE->INP()->IsKeyTriggered("F4"));// m_selectedShader = SHADERS::BINORMAL;
+
 	if (ENGINE->INP()->IsKeyTriggered("F5")) m_selectedShader = SHADERS::UNLIT;
 	if (ENGINE->INP()->IsKeyTriggered("F6")) m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::FORWARD_BRDF : SHADERS::FORWARD_PHONG;
 	if (ENGINE->INP()->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
 
 	if (ENGINE->INP()->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
 
+	if (ENGINE->INP()->IsKeyTriggered("R")) Log::Info("TODO: ReloadLevel");
+	if (ENGINE->INP()->IsKeyTriggered("\\")) Log::Info("TODO: ReloadShader");
+	if (ENGINE->INP()->IsKeyTriggered(";")) Log::Info("TODO: DebugShader");
+	if (ENGINE->INP()->IsKeyTriggered("'")) m_roomScene.ToggleFloorNormalMap();
+
+}
+
+void SceneManager::Update(float dt)
+{
+	HandleInput();
+	m_pCamera->Update(dt);
+	m_roomScene.Update(dt);
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -236,3 +249,4 @@ void SceneManager::SendLightData() const
 	if (spots.size() > MAX_SPOTS)	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif
 }
+

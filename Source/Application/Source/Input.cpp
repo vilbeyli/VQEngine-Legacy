@@ -21,20 +21,27 @@
 
 #include <algorithm>
 
+#define LOG
+
+
 const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
-	// keyboard mapping for windows keycodes.
+	// keyboard mapping for windows keycodes. 
 	// #define LOG to see each keycode when you press on output window
 	// to be used for this->IsKeyDown("F4")
 	std::unordered_map<const char*, KeyCode> m;
 	m["F1"] = 112;	m["F2"] = 113;	m["F3"] = 114;	m["F4"] = 115;
 	m["F5"] = 116;	m["F6"] = 117;	m["F7"] = 118;	m["F8"] = 119;
 	m["F9"] = 120;	m["F10"] = 121;	m["F11"] = 122;	m["F12"] = 123;
+	
+	m["R"] = 82;		m["r"] = 82;
 
+	m["\\"] = 220;		m[";"] = 186;
+	m["'"] = 222;
+	m["Shift"] = 16;	m["shift"] = 16;
 	m["Enter"] = 13;
 	return m;
 }();
 
-#define xLOG
 
 Input::Input()
 	:

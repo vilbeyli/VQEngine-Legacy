@@ -5,9 +5,10 @@
 #include <Windows.h>
 #include <fstream>
 
+#include "BaseSystem.h"
 
 const char* file_root		= "Data\\";
-const char* scene_file		= "scene.scn";
+const char* scene_file		= "RoomScene.scn";
 const char* settings_file	= "settings.ini";	
 
 SceneParser::SceneParser(){}
@@ -67,7 +68,7 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::W
 	}
 }
 
-void SceneParser::ReadScene(shared_ptr<SceneManager> scene_man)
+void SceneParser::ReadScene(SceneManager* pSceneManager)
 {
 	Settings::Camera cam;
 	std::string filePath = std::string(file_root) + std::string(scene_file);
@@ -82,7 +83,7 @@ void SceneParser::ReadScene(shared_ptr<SceneManager> scene_man)
 				continue;
 
 			std::vector<std::string> command = split(line, ' ');	// ignore whitespace
-			ParseScene(command, scene_man, cam);					// process command
+			ParseScene(command, pSceneManager, cam);					// process command
 		}
 	}
 	else
@@ -93,9 +94,8 @@ void SceneParser::ReadScene(shared_ptr<SceneManager> scene_man)
 	sceneFile.close();
 }
 
-void SceneParser::ParseScene(const std::vector<std::string>& command, shared_ptr<SceneManager> scene_man, Settings::Camera& cameraSettings)
+void SceneParser::ParseScene(const std::vector<std::string>& command, SceneManager* pSceneManager, Settings::Camera& cameraSettings)
 {
-	// todo: check scene_man ref count
 	if (command.empty())
 	{
 		OutputDebugString("Empty Command.");
@@ -103,7 +103,7 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, shared_ptr
 		return;
 	}
 	
-	const std::string& cmd = command[0];
+	const std::string& cmd = command[0];	// shorthand
 	if (cmd == "camera")
 	{
 		if (command.size() != 4)
@@ -120,7 +120,7 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, shared_ptr
 		cameraSettings.farPlane		= stof(command[2]);
 		cameraSettings.fov			= stof(command[3]);
 		
-		scene_man->SetCameraSettings(cameraSettings);	// return in tuple?
+		pSceneManager->SetCameraSettings(cameraSettings, BaseSystem::s_windowSettings);	
 	}
 	
 	else if (cmd == "light")

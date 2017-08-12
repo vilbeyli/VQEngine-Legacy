@@ -63,16 +63,10 @@ bool Engine::Initialize(HWND hwnd, const Settings::Window& windowSettings)
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
 	}
-	
-	m_sceneManager->Initialize(m_renderer.get(), nullptr);
 
-	return true;
-}
 
-bool Engine::Load()
-{
-	s_SceneParser.ReadScene(m_sceneManager);
-	m_timer->Reset();
+	m_sceneManager->Load(m_renderer.get(), nullptr);
+
 	return true;
 }
 

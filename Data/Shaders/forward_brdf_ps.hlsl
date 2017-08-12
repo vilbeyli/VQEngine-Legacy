@@ -139,7 +139,7 @@ float Intensity(Light l, float3 worldPos)
 inline float3 UnpackNormals(float2 uv, float3 worldNormal, float3 worldTangent)
 {
 	// uncompressed normal in tangent space
-	float3 SampledNormal = gNormalMap.Sample(sShadowSampler, uv).xyz;
+	float3 SampledNormal = gNormalMap.Sample(sNormalSampler, uv).xyz;
 	SampledNormal = normalize(SampledNormal * 2.0f - 1.0f);
 
 	const float3 T = normalize(worldTangent - dot(worldNormal, worldTangent) * worldNormal);

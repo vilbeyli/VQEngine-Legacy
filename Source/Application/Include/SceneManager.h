@@ -43,8 +43,8 @@ public:
 	SceneManager();
 	~SceneManager();
 
-	void Initialize(Renderer* renderer, PathManager* pathMan);
-	void SetCameraSettings(const Settings::Camera& cameraSettings);
+	void Load(Renderer* renderer, PathManager* pathMan);
+	void SetCameraSettings(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings);
 
 	void Update(float dt);
 	void Render() const;
@@ -54,6 +54,7 @@ public:
 
 private:
 	friend struct DepthShadowPass;
+	void HandleInput();
 
 private:
 	RoomScene			m_roomScene;	// todo: rethink scene management

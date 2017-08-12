@@ -45,7 +45,6 @@ public:
 	~Engine();
 
 	bool Initialize(HWND hwnd, const Settings::Window& windowSettings);
-	bool Load();
 
 	void Pause();
 	void Unpause();

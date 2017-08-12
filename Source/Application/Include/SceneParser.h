@@ -12,7 +12,7 @@ using std::unique_ptr;
 class SceneManager;
 class Camera;
 
-static class SceneParser
+class SceneParser
 {
 public:
 	SceneParser();
@@ -21,9 +21,9 @@ public:
 	static Settings::Window ReadSettings();
 	static void ParseSetting(const std::vector<std::string>& line, Settings::Window& settings);
 
-	static void ReadScene(shared_ptr<SceneManager> scene_man);
-	static void ParseScene(const std::vector<std::string>& command, shared_ptr<SceneManager> scene_man, Settings::Camera& cameraSettings);
+	static void ReadScene(SceneManager* pSceneManager);
+	static void ParseScene(const std::vector<std::string>& command, SceneManager* pSceneManager, Settings::Camera& cameraSettings);
 private:
 
-} s_SceneParser;
+};
 

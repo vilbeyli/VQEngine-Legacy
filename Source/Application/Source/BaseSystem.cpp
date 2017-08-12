@@ -45,7 +45,7 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
-	s_windowSettings = s_SceneParser.ReadSettings();
+	s_windowSettings = SceneParser::ReadSettings();
 
 	int width, height;
 	InitWindow(width, height);
@@ -56,18 +56,18 @@ bool BaseSystem::Init()
 		return false;
 	}
 
-	if (!ENGINE->Load())
-	{
-		Log::Error("cannot load engine. Exiting..");
-		return false;
-	}
-
+	//if (!ENGINE->Load())
+	//{
+	//	Log::Error("cannot load engine. Exiting..");
+	//	return false;
+	//}
 	Log::Info("Engine initialization and asset loading successful.\n");
 	return true;
 }	
 
 void BaseSystem::Run()
 {
+	ENGINE->m_timer->Reset();
 	MSG msg = { };
 	
 	bool done = false;
@@ -87,8 +87,6 @@ void BaseSystem::Run()
 			else						done = !ENGINE->Update();
 		}
 	}
-
-	return;
 }
 
 void BaseSystem::Exit()

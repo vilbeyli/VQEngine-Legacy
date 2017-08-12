@@ -462,6 +462,7 @@ void RoomScene::ToggleFloorNormalMap()
 	TextureID nMap = m_room.floor.m_model.m_material.normalMap;
 
 	nMap = nMap == m_pRenderer->GetTexture("185_norm.JPG") ? -1 : m_pRenderer->CreateTextureFromFile("185_norm.JPG");
+	m_room.floor.m_model.m_material.normalMap = nMap;
 }
 
 void RoomScene::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const

@@ -2,20 +2,37 @@
 #include "utils.h"
 #include "SceneManager.h"
 
-#include <Windows.h>
 #include <fstream>
 
-#include "BaseSystem.h"
+#include <unordered_map>
+#include <algorithm>
+
+#include "Color.h"
 
 const char* file_root		= "Data\\";
 const char* scene_file		= "RoomScene.scn";
 const char* settings_file	= "settings.ini";	
 
+std::unordered_map<std::string, bool> sBoolTypeReflection
+{
+	{"true", true},		{"false", false},
+	{"yes", true},		{"no", false},
+	{"1", true},		{"0", false}
+};
+
+std::string GetLowercased(const std::string& str)
+{
+	std::string lowercase(str);
+	std::transform(str.begin(), str.end(), lowercase.begin(), ::tolower);
+	return lowercase;
+}
+
+
 SceneParser::SceneParser(){}
 
 SceneParser::~SceneParser(){}
 
-Settings::Window SceneParser::ReadSettings()
+Settings::Window SceneParser::ReadWindowSettings()
 {
 	Settings::Window s;
 	
@@ -35,7 +52,7 @@ Settings::Window SceneParser::ReadSettings()
 	}
 	else
 	{
-		OutputDebugString("Error: Settings.ini can't be opened.");
+		Log::Error("Settings.ini can't be opened.");
 	}
 
 	return s;
@@ -68,9 +85,9 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::W
 	}
 }
 
-void SceneParser::ReadScene(SceneManager* pSceneManager)
+SerializedScene SceneParser::ReadScene()
 {
-	Settings::Camera cam;
+	SerializedScene scene;
 	std::string filePath = std::string(file_root) + std::string(scene_file);
 	std::ifstream sceneFile(filePath.c_str());
 
@@ -82,8 +99,8 @@ void SceneParser::ReadScene(SceneManager* pSceneManager)
 			if (line[0] == '/' || line[0] == '#' || line[0] == '\0')	// skip comments
 				continue;
 
-			std::vector<std::string> command = split(line, ' ');	// ignore whitespace
-			ParseScene(command, pSceneManager, cam);					// process command
+			std::vector<std::string> command = split(line, ' ', '\t');	// ignore whitespace
+			ParseScene(command, scene);									// process command
 		}
 	}
 	else
@@ -92,13 +109,14 @@ void SceneParser::ReadScene(SceneManager* pSceneManager)
 	}
 
 	sceneFile.close();
+	return scene;
 }
 
-void SceneParser::ParseScene(const std::vector<std::string>& command, SceneManager* pSceneManager, Settings::Camera& cameraSettings)
+void SceneParser::ParseScene(const std::vector<std::string>& command, SerializedScene& scene)
 {
 	if (command.empty())
 	{
-		OutputDebugString("Empty Command.");
+		Log::Error("Empty Command.");
 		assert(!command.empty());
 		return;
 	}
@@ -112,29 +130,90 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, SceneManag
 			assert(command.size() == 4);
 		}
 
-		// Parameters
+		// Parameters: 3
 		//--------------------------------------------------------------
 		// |  Near Plane	| Far Plane	|	Field of View	
 		//--------------------------------------------------------------
-		cameraSettings.nearPlane	= stof(command[1]);
-		cameraSettings.farPlane		= stof(command[2]);
-		cameraSettings.fov			= stof(command[3]);
-		
-		pSceneManager->SetCameraSettings(cameraSettings, BaseSystem::s_windowSettings);	
+		scene.cameraSettings.nearPlane	= stof(command[1]);
+		scene.cameraSettings.farPlane	= stof(command[2]);
+		scene.cameraSettings.fov		= stof(command[3]);
 	}
 	
 	else if (cmd == "light")
 	{
+		// Parameters: 11
+		//--------------------------------------------------------------
+		// | Light Type	| Color	| Shadowing? |  Brightness | Spot.Angle OR Point.Range | Position3 | Rotation3
+		//--------------------------------------------------------------
+		static const std::unordered_map<std::string, Light::LightType>	sLightTypeLookup
+		{ 
+			{"s", Light::LightType::SPOT },
+			{"p", Light::LightType::POINT},
+			{"d", Light::LightType::DIRECTIONAL}
+		};
+
+		static const std::unordered_map<std::string, const Color&>		sColorLookup
+		{
+			{"orange"    , Color::s_palette[ static_cast<int>(COLOR_VLAUE::ORANGE     )]},
+			{"black"     , Color::s_palette[ static_cast<int>(COLOR_VLAUE::BLACK      )]},
+			{"white"     , Color::s_palette[ static_cast<int>(COLOR_VLAUE::WHITE      )]},
+			{"red"       , Color::s_palette[ static_cast<int>(COLOR_VLAUE::RED        )]},
+			{"green"     , Color::s_palette[ static_cast<int>(COLOR_VLAUE::GREEN      )]},
+			{"blue"      , Color::s_palette[ static_cast<int>(COLOR_VLAUE::BLUE       )]},
+			{"yellow"    , Color::s_palette[ static_cast<int>(COLOR_VLAUE::YELLOW     )]},
+			{"magenta"   , Color::s_palette[ static_cast<int>(COLOR_VLAUE::MAGENTA    )]},
+			{"cyan"      , Color::s_palette[ static_cast<int>(COLOR_VLAUE::CYAN       )]},
+			{"gray"      , Color::s_palette[ static_cast<int>(COLOR_VLAUE::GRAY       )]},
+			{"light_gray", Color::s_palette[ static_cast<int>(COLOR_VLAUE::LIGHT_GRAY )]},
+			{"orange"    , Color::s_palette[ static_cast<int>(COLOR_VLAUE::ORANGE     )]},
+			{"purple"    , Color::s_palette[ static_cast<int>(COLOR_VLAUE::PURPLE     )]}
+		};
+
+		const bool bCommandHasRotationEntry = command.size() > 9;
+
+		const std::string lightType	 = GetLowercased(command[1]);	// lookups have lowercase keys
+		const std::string colorValue = GetLowercased(command[2]);
+		const std::string shadowing	 = GetLowercased(command[3]);
+		const float rotX = bCommandHasRotationEntry ? stof(command[9])  : 0.0f;
+		const float rotY = bCommandHasRotationEntry ? stof(command[10]) : 0.0f;
+		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
+		const float range      = stof(command[5]);
+		const float brightness = stof(command[4]);
+		const bool  castsShadows = sBoolTypeReflection.at(shadowing);
+
+		if (lightType != "s" && lightType != "p" && lightType != "d")
+		{	// check light types
+			Log::Error("light type unknown: %s", command[1]);
+			return;
+		}
+		
+		Light l(	// let there be light
+			sLightTypeLookup.at(lightType),
+			sColorLookup.at(colorValue),
+			range,
+			brightness,
+			range,	// = spot angle
+			castsShadows
+		);
+		l._transform.SetPosition(stof(command[6]), stof(command[7]), stof(command[8]));
+		l._transform.RotateAroundGlobalXAxisDegrees(rotX);
+		l._transform.RotateAroundGlobalYAxisDegrees(rotY);
+		l._transform.RotateAroundGlobalZAxisDegrees(rotZ);
+		scene.lights.push_back(l);
+	}
+
+	else if (cmd == "object_grid")
+	{
+#if 0	
 		// Parameters
 		//--------------------------------------------------------------
-		// | Color	|  Light Type	| Spot.Angle OR Point.Range
+		// |  |   | 
 		//--------------------------------------------------------------
-		//mSceneSettings.light.color = Color::white;				// todo read color
-		//mSceneSettings.light.type = Light::LightType::POINT;	// todo
-		//mSceneSettings.light
-		Log::Error("TODO: parse light info to build scene from file\n");
+#else
+		Log::Error("TODO: parse object grid info to build scene from file\n");
+#endif
 	}
-	
+
 	else
 	{
 		Log::Error("Parser: Unknown command\n");

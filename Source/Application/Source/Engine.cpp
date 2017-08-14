@@ -65,7 +65,7 @@ bool Engine::Initialize(HWND hwnd, const Settings::Window& windowSettings)
 	}
 
 
-	m_sceneManager->Load(m_renderer.get(), nullptr);
+	m_sceneManager->Load(m_renderer.get(), nullptr, windowSettings);
 
 	return true;
 }

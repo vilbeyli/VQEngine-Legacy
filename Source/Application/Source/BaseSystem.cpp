@@ -45,7 +45,7 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
-	s_windowSettings = SceneParser::ReadSettings();
+	s_windowSettings = SceneParser::ReadWindowSettings();
 
 	int width, height;
 	InitWindow(width, height);

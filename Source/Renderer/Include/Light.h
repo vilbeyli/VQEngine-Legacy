@@ -47,6 +47,7 @@ struct Light
 	{
 		POINT = 0,
 		SPOT,
+		DIRECTIONAL,
 
 		LIGHT_TYPE_COUNT
 	};
@@ -56,7 +57,8 @@ struct Light
 			Color color, 
 			float range,
 			float brightness,
-			float spotAngle);
+			float spotAngle,
+			bool castsShadows = false);
 	Light(const Light& l);
 	~Light();
 
@@ -64,16 +66,16 @@ struct Light
 	XMMATRIX GetLightSpaceMatrix() const;
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
-	LightShaderSignature ShaderLightStruct() const;
+	LightShaderSignature ShaderSignature() const;
 
 	//---------------------------------------------------------------------------------
 	
-	LightType _type;
-	Color _color;
-	float _range;
-	float _brightness;	// 300.0f is a good default value
+	LightType	_type;
+	Color		_color;
+	float		_range;
+	float		_brightness;	// 300.0f is a good default value
 	
-	bool _castsShadow;
+	bool		_castsShadow;
 
 	// point light attributes
 	union {
@@ -81,8 +83,8 @@ struct Light
 		vec2 _spotAngle;	// uses only X channel
 	};	
 
-	Transform _transform;
-	Model _model;
+	Transform	_transform;
+	Model		_model;
 };
 
 

@@ -41,17 +41,22 @@ SceneManager::SceneManager()
 SceneManager::~SceneManager()
 {}
 
-void SceneManager::Load(Renderer* renderer, PathManager* pathMan)
+void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Window& windowSettings)
 {
 	//m_pPathManager		= pathMan;
-	SceneParser::ReadScene(this);
+	
+	SerializedScene scene = SceneParser::ReadScene();
+	m_serializedScenes.push_back(scene);
+
+	SetCameraSettings(m_serializedScenes.front().cameraSettings, windowSettings);
+
 	m_pRenderer			= renderer;
 	m_selectedShader	= SHADERS::FORWARD_BRDF;
 	m_debugRender		= false;
 
 	Skybox::InitializePresets(m_pRenderer);
 
-	m_roomScene.Load(m_pRenderer);
+	m_roomScene.Load(m_pRenderer, scene);
 
 	{	// RENDER PASS INITIALIZATION
 		
@@ -120,7 +125,7 @@ void SceneManager::HandleInput()
 	if (ENGINE->INP()->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
 
 	if (ENGINE->INP()->IsKeyTriggered("R")) Log::Info("TODO: ReloadLevel");
-	if (ENGINE->INP()->IsKeyTriggered("\\")) Log::Info("TODO: ReloadShader");
+	if (ENGINE->INP()->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
 	if (ENGINE->INP()->IsKeyTriggered(";")) Log::Info("TODO: DebugShader");
 	if (ENGINE->INP()->IsKeyTriggered("'")) m_roomScene.ToggleFloorNormalMap();
 
@@ -216,11 +221,11 @@ void SceneManager::SendLightData() const
 		switch (l._type)
 		{
 		case Light::LightType::POINT:
-			lights[lightCount] = l.ShaderLightStruct();
+			lights[lightCount] = l.ShaderSignature();
 			++lightCount;
 			break;
 		case Light::LightType::SPOT:
-			spots[spotCount] = l.ShaderLightStruct();
+			spots[spotCount] = l.ShaderSignature();
 			++spotCount;
 			break;
 		default:

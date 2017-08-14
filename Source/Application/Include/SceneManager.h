@@ -35,15 +35,21 @@ class PathManager;
 
 struct Path;
 
-
+struct SerializedScene
+{
+	Settings::Camera	cameraSettings;
+	std::vector<Light>	lights;
+	// objects?
+};
 
 class SceneManager
 {
+	friend class SceneParser;
 public:
 	SceneManager();
 	~SceneManager();
 
-	void Load(Renderer* renderer, PathManager* pathMan);
+	void Load(Renderer* renderer, PathManager* pathMan, const Settings::Window& windowSettings);
 	void SetCameraSettings(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings);
 
 	void Update(float dt);
@@ -57,7 +63,8 @@ private:
 	void HandleInput();
 
 private:
-	RoomScene			m_roomScene;	// todo: rethink scene management
+	RoomScene						m_roomScene;	// todo: rethink scene management
+	std::vector<SerializedScene>	m_serializedScenes;
 
 	Renderer*			m_pRenderer;
 	shared_ptr<Camera>	m_pCamera;

@@ -256,7 +256,5 @@ float4 PSMain(PSIn In) : SV_TARGET
 	// --- debug --- 
 	// illumination += ShadowTestDebug(In.worldPos, In.lightSpacePos, illumination);
 	// --- debug --- 
-	float4 outColor = float4(illumination, 1);	
-	outColor = outColor / (float4(1, 1, 1, 0) + outColor);
-	return outColor;
+	return float4(illumination, 1);	
 }

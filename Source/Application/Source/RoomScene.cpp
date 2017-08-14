@@ -53,11 +53,11 @@ RoomScene::RoomScene(SceneManager& sceneMan)
 	m_sceneManager(sceneMan)
 {}
 
-void RoomScene::Load(Renderer* pRenderer)
+void RoomScene::Load(Renderer* pRenderer, SerializedScene& scene)
 {
 	m_pRenderer = pRenderer;
 	m_room.Initialize(pRenderer);
-	InitializeLights();
+	InitializeLights(scene);
 	InitializeObjectArrays();
 
 	m_skybox = Skybox::s_Presets[SKYBOX_PRESETS::NIGHT_SKY];
@@ -96,67 +96,18 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 
 
  		  
-void RoomScene::InitializeLights()
+void RoomScene::InitializeLights(SerializedScene& scene)
 {
-	// todo: read from file
-	// spot lights
-	{
-		Light l;
-		l._type = Light::LightType::SPOT;
-		//l._transform.SetPosition(-48.0f, 4 * 25.0f, 0.0f);
-		l._transform.SetPosition(-70.0f, 35.0f, 0.0f);
-		//l._transform.RotateAroundGlobalXAxisDegrees(200.0f);
-		l._transform.RotateAroundGlobalXAxisDegrees(180.0f);
-		l._transform.RotateAroundGlobalZAxisDegrees(65.0f);
-		l._transform.SetUniformScale(0.8f);
-		l._model.m_mesh = GEOMETRY::CYLINDER;
-		l._model.m_material.color = Color::white;
-		l._color = Color::white;
-		l._range = 20;
-		l._spotAngle = 70.0f;
-		l._castsShadow = true;
-		m_lights.push_back(l);
-	}
-
-#ifdef ENABLE_POINT_LIGHTS
-	// point lights
-	{
-		Light l;
-		//l._transform.SetPosition(-48.0f, 22.0f, 20.0f);
-		l._transform.SetPosition(0.0f, 30.0f, 0.0f);
-		l._transform.SetUniformScale(0.3f);
-		l._model.m_mesh = GEOMETRY::SPHERE;
-		l._model.m_material.color = l._color = vec3(Color::orange) * 3.0f;
-		//l._model.m_material.color = l._color = vec3(Color::white);
-		l._brightness = 300.0f;
-		l.SetLightRange(60);
-		m_lights.push_back(l);
-	}
-	{
-		Light l;
-		l._transform.SetPosition(60.0f, 25.0f, -2.0f);
-		//l._transform.SetPosition(10, 25.0f, 10.0f);
-		l._transform.SetUniformScale(0.4f);
-		l._model.m_mesh = GEOMETRY::SPHERE;
-		l._model.m_material.color = Color::cyan;
-		//l._model.m_material.color = Color::white;
-		l._color = l._model.m_material.color;
-		l._brightness = 300.0f;
-		l.SetLightRange(84);
-		m_lights.push_back(l);
-	}
-	{
-		Light l;
-		l._transform.SetPosition(-140.0f, 100.0f, 140.0f);
-		//l._transform.SetPosition(10, 25.0f, -10.0f);
-		l._transform.SetUniformScale(0.5f);
-		l._model.m_mesh = GEOMETRY::SPHERE;
-		//l._model.m_material.color = l._color = vec3(Color::white);
-		l._model.m_material.color = l._color = vec3(Color::red) * 1.5f;
-		l._brightness = 300.0f;
-		l.SetLightRange(60);
-		m_lights.push_back(l);
-	}
+	m_lights = std::move(scene.lights);
+	m_lights[1]._color = m_lights[1]._model.m_material.color = vec3(m_lights[1]._color) * 3.0f;
+	m_lights[2]._color = m_lights[2]._model.m_material.color = vec3(m_lights[2]._color) * 2.0f;
+	m_lights[3]._color = vec3(m_lights[3]._color) * 1.5f;
+	
+	// hard-coded scales for now
+	m_lights[0]._transform.SetUniformScale(0.8f);
+	m_lights[1]._transform.SetUniformScale(0.3f);
+	m_lights[2]._transform.SetUniformScale(0.4f);
+	m_lights[3]._transform.SetUniformScale(0.5f);
 
 	for (size_t i = 0; i < RAND_LIGHT_COUNT; i++)
 	{
@@ -175,17 +126,17 @@ void RoomScene::InitializeLights()
 	}
 
 	Animation anim;
-	anim._fTracks.push_back(Track<float>(&m_lights[1]._brightness, 50.0f, 500.0f, 3.0f));
+	anim._fTracks.push_back(Track<float>(&m_lights[1]._brightness, 40.0f, 800.0f, 3.0f));
 	m_animations.push_back(anim);
-#endif
 }
 	 		  
 void RoomScene::InitializeObjectArrays()
 {
 	{	// grid arrangement ( (row * col) cubes that are 'CUBE_DISTANCE' apart from each other )
-		const std::vector<vec3>   c_rowRotations = { vec3::Zero, vec3::Up, vec3::Right, vec3::Forward };
-		static std::vector<float> s_cubeDelays = std::vector<float>(CUBE_COUNT, 0.0f);
-		const std::vector<Color>  c_colors = { Color::white, Color::red, Color::green, Color::blue, Color::orange, Color::light_gray, Color::cyan };
+		const std::vector<vec3>   rowRotations = { vec3::Zero, vec3::Up, vec3::Right, vec3::Forward };
+		static std::vector<float> sCubeDelays = std::vector<float>(CUBE_COUNT, 0.0f);
+		const std::vector<Color>  colors = { Color::white, Color::red, Color::green, Color::blue, Color::orange, Color::light_gray, Color::cyan };
+
 		for (int i = 0; i < CUBE_ROW_COUNT; ++i)
 		{
 			//Color color = c_colors[i % c_colors.size()];

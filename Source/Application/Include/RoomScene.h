@@ -23,8 +23,14 @@
 #include "Skybox.h"
 #include "Light.h"
 
+struct SerializedScene;
 class SceneManager;
 class Renderer;
+
+//-------------------------------------------------------------
+
+// animation prototype, currently only used here.
+// todo: animation class
 
 template<typename T>
 class Track
@@ -64,10 +70,12 @@ struct Animation
 	}
 };
 
+//-------------------------------------------------------------
+
 class RoomScene
 {
 public:
-	void Load(Renderer* pRenderer);
+	void Load(Renderer* pRenderer, SerializedScene& scene);
 	void Update(float dt);
 	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
 
@@ -75,7 +83,7 @@ public:
 	~RoomScene() = default;
 
 private:
-	void InitializeLights();
+	void InitializeLights(SerializedScene& scene);
 	void InitializeObjectArrays();
 
 	void UpdateCentralObj(const float dt);
@@ -98,7 +106,7 @@ private:
 		void Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool sendMaterialData) const;
 		void Initialize(Renderer* pRenderer);
 #if 0
-		// union -> deleted dtor
+		// union -> deleted dtor??
 		union
 		{
 			struct 

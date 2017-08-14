@@ -77,7 +77,9 @@ struct RenderTarget
 
 class Renderer
 {
-	friend class Engine;
+	friend class Engine;		// two main components have private access to Renderer
+	friend class SceneManager;	// mainly for the private functions
+
 	friend struct SetTextureCommand;
 	friend struct SetSamplerCommand;	// todo: refactor commands - dont use friend
 

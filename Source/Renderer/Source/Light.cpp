@@ -21,6 +21,8 @@
 #include "Components/Transform.h"
 
 #include <iostream>
+#include <unordered_map>
+#include "Mesh.h"
 
 using std::cout;
 using std::endl;
@@ -43,6 +45,13 @@ const std::map<unsigned, std::pair<float, float>> rangeAttenuationMap_ =
 	{ 325 , std::make_pair(0.0140f, 0.0007f) },
 	{ 600 , std::make_pair(0.0070f, 0.0002f) },
 	{ 3250, std::make_pair(0.0014f, 0.00007f)},
+};
+
+static const std::unordered_map<Light::LightType, GEOMETRY>		sLightTypeMeshLookup
+{
+	{ Light::LightType::SPOT       , GEOMETRY::CYLINDER },
+	{ Light::LightType::POINT      , GEOMETRY::SPHERE },
+	{ Light::LightType::DIRECTIONAL, GEOMETRY::SPHERE }
 };
 
 Light::Light()
@@ -70,14 +79,29 @@ Light::Light(const Light& l)
 	_model(l._model)
 {}
 
-Light::Light(LightType type, Color color, float range, float brightness, float spotAngle) 
+Light::Light(LightType type, Color color, float range, float brightness, float spotAngle, bool castsShadows) 
 	:
 	_type(type),
 	_color(color),
 	_range(range),
-	_brightness(brightness)
+	_brightness(brightness),
+	_castsShadow(castsShadows)
 {
-	SetLightRange(_range);
+	switch (_type)
+	{
+	case LightType::POINT:
+		SetLightRange(_range);
+		break;
+	case LightType::SPOT:
+		_spotAngle.x() = spotAngle;
+		break;
+	case LightType::DIRECTIONAL:
+		Log::Error("todo: directional lights...");
+		break;
+	}
+
+	_model.m_material.color = color;
+	_model.m_mesh = sLightTypeMeshLookup.at(_type);
 }
 
 Light::~Light()
@@ -134,7 +158,7 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 
 XMMATRIX Light::GetViewMatrix() const
 {
-	XMMATRIX ViewMatarix = [&]() -> XMMATRIX {
+	const XMMATRIX ViewMatarix = [&]() -> XMMATRIX {
 		switch (_type)
 		{
 		case LightType::POINT:
@@ -185,7 +209,7 @@ XMMATRIX Light::GetProjectionMatrix() const
 	return proj;
 }
 
-LightShaderSignature Light::ShaderLightStruct() const
+LightShaderSignature Light::ShaderSignature() const
 {
 	const vec3 spotDirection = [&]() -> const vec3 {
 		if (_type == LightType::SPOT)

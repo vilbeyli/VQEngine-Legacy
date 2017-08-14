@@ -21,7 +21,7 @@
 
 #include <algorithm>
 
-#define LOG
+#define xLOG
 
 
 const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {

@@ -41,8 +41,15 @@ vector<string> split(const char* s, char c)
 	do
 	{
 		const char* begin = s;
-		while (*s != c && *s) s++;			// iterate until delimiter is found
+
+		// skip delimiter character
+		if (*begin == c) continue;
+		
+		// iterate until delimiter is found
+		while (*s != c && *s) s++;
+
 		result.push_back(string(begin, s));
+
 	} while (*s++);
 	return result;
 }
@@ -50,6 +57,31 @@ vector<string> split(const char* s, char c)
 vector<string> split(const string& str, char c)
 {
 	return split(str.c_str(), c);
+}
+
+std::vector<std::string> split(const std::string & s, const std::vector<char>& delimiters)
+{
+	vector<string> result;
+	const char* ps = s.c_str();
+	auto& IsDelimiter = [&delimiters](const char c)
+	{
+		return std::find(delimiters.begin(), delimiters.end(), c) != delimiters.end();
+	};
+
+	do
+	{
+		const char* begin = ps;
+
+		// skip delimiter characters
+		if (IsDelimiter(*begin) || (*begin == '\0')) continue;
+
+		// iterate until delimiter is found or string has ended
+		while ( !IsDelimiter(*ps) && *ps ) ps++;
+
+		result.push_back(string(begin, ps));
+
+	} while (*ps++);
+	return result;
 }
 
 float RandF(float l, float h)

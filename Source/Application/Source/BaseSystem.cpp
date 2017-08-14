@@ -30,7 +30,7 @@
 #include <cassert>
 #endif
 
-Settings::Window BaseSystem::s_windowSettings;
+Settings::Renderer BaseSystem::s_rendererSettings;
 
 BaseSystem::BaseSystem()
 {
@@ -45,12 +45,13 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
-	s_windowSettings = SceneParser::ReadWindowSettings();
+
+	s_rendererSettings = SceneParser::ReadRendererSettings();
 
 	int width, height;
 	InitWindow(width, height);
 
-	if (!ENGINE->Initialize(m_hwnd, s_windowSettings))
+	if (!ENGINE->Initialize(m_hwnd, s_rendererSettings))
 	{
 		Log::Error("cannot initialize engine. Exiting..");
 		return false;
@@ -186,7 +187,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 			long xPosRelative = raw->data.mouse.lLastX;
 			long yPosRelative = raw->data.mouse.lLastY;
 			ENGINE->m_input->UpdateMousePos(xPosRelative, yPosRelative);
-			SetCursorPos(s_windowSettings.width/2, s_windowSettings.height/2);
+			SetCursorPos(s_rendererSettings.window.width/2, s_rendererSettings.window.height/2);
 			
 #ifdef LOG
 			char szTempOutput[1024];
@@ -250,7 +251,7 @@ void BaseSystem::InitWindow(int& width, int& height)
 	height	= GetSystemMetrics(SM_CYSCREEN);
 
 	// set screen settings
-	if (s_windowSettings.fullscreen)
+	if (s_rendererSettings.window.fullscreen)
 	{
 		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
@@ -265,8 +266,8 @@ void BaseSystem::InitWindow(int& width, int& height)
 	}
 	else
 	{
-		width  = s_windowSettings.width;
-		height = s_windowSettings.height;
+		width  = s_rendererSettings.window.width;
+		height = s_rendererSettings.window.height;
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
 		posY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
@@ -312,7 +313,7 @@ void BaseSystem::ShutdownWindows()
 {
 	ShowCursor(true);
 
-	if (s_windowSettings.fullscreen)
+	if (s_rendererSettings.window.fullscreen)
 	{
 		ChangeDisplaySettings(NULL, 0);
 	}

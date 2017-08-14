@@ -20,11 +20,13 @@
 
 #include "Light.h"
 
-void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device)
+void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
 {
-	this->_shadowMapDimension = 2048;
+	this->_shadowMapDimension = static_cast<int>(shadowMapSettings.dimension);
 
+#if _DEBUG
 	pRenderer->m_Direct3D->ReportLiveObjects("--------SHADOW_PASS_INIT");
+#endif
 
 	// check feature support & error handle:
 	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
@@ -126,14 +128,17 @@ void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const L
 	}
 }
 
-void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
+void PostProcessPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::PostProcess& postProcessSettings)
 {
+	_settings = postProcessSettings;
 	DXGI_SAMPLE_DESC smpDesc;
 	smpDesc.Count = 1;
 	smpDesc.Quality = 0;
 
-	//DXGI_FORMAT format = DXGI_FORMAT_R8G8B8A8_UNORM;		// LDR
-	DXGI_FORMAT format = DXGI_FORMAT_R16G16B16A16_FLOAT;	// HDR
+	constexpr const DXGI_FORMAT HDR_Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	constexpr const DXGI_FORMAT LDR_Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	DXGI_FORMAT format = _settings.HDREnabled ? HDR_Format : LDR_Format;
 
 	D3D11_TEXTURE2D_DESC rtDesc;
 	ZeroMemory(&rtDesc, sizeof(rtDesc));
@@ -170,7 +175,6 @@ void PostProcessPass::Initialize(Renderer * pRenderer, ID3D11Device * device)
 	this->_bloomPass._blurSampler = pRenderer->CreateSamplerState(blurSamplerDesc);
 	
 	// Tonemapping
-	this->_tonemappingPass._HDRExposure = 1.2f;	// default
 	this->_tonemappingPass._finalRenderTarget = pRenderer->GetDefaultRenderTarget();
 
 	// World Render Target
@@ -186,10 +190,8 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// ======================================================================================
 	if (_bloomPass._isEnabled)
 	{
-		const float  BRDF_BrightnessThreshold = 0.98f;
-		const float Phong_BrightnessThreshold = 0.85f;
-		const float brightnessThreshold = BRDF_BrightnessThreshold;
-			// = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader()	? BRDF_BrightnessThreshold : Phong_BrightnessThreshold;
+		const Settings::PostProcess::Bloom& s = _settings.bloom;
+		const float brightnessThreshold = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader() ? s.threshold_brdf : s.threshold_phong;
 
 		// bright filter
 		pRenderer->SetShader(SHADERS::BLOOM);
@@ -203,10 +205,9 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 		pRenderer->DrawIndexed();
 
 		// blur
-		constexpr size_t BLUR_PASS_COUNT = 6;
 		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
 		pRenderer->SetShader(SHADERS::BLUR);
-		for (size_t i = 0; i < BLUR_PASS_COUNT; i++)
+		for (int i = 0; i < s.blurPassCount; ++i)
 		{
 			const int isHorizontal = i % 2;
 			const TextureID pingPong = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[1 - isHorizontal]);
@@ -244,10 +245,12 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// TONEMAPPING PASS
 	// ======================================================================================
 	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._isEnabled ? _bloomPass._finalRT : _worldRenderTarget);
+	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
 	pRenderer->SetShader(SHADERS::TONEMAPPING);
 	pRenderer->SetBufferObj(GEOMETRY::QUAD);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
-	pRenderer->SetConstant1f("exposure", _tonemappingPass._HDRExposure);
+	pRenderer->SetConstant1f("exposure", _settings.toneMapping.exposure);
+	pRenderer->SetConstant1f("isHDR", isHDR);
 	pRenderer->BindRenderTarget(_tonemappingPass._finalRenderTarget);
 	pRenderer->SetTexture("ColorTexture", colorTex);
 	pRenderer->Apply();

@@ -42,7 +42,7 @@ Engine::Engine()
 
 Engine::~Engine(){}
 
-bool Engine::Initialize(HWND hwnd, const Settings::Window& windowSettings)
+bool Engine::Initialize(HWND hwnd, const Settings::Renderer& rendererSettings)
 {
 	const bool bEnableLogging = true;
 	Log::Initialize(bEnableLogging);
@@ -58,14 +58,14 @@ bool Engine::Initialize(HWND hwnd, const Settings::Window& windowSettings)
 		
 	m_input->Initialize();
 	
-	if (!m_renderer->Initialize(hwnd, windowSettings))
+	if (!m_renderer->Initialize(hwnd, rendererSettings))
 	{
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
 	}
 
 
-	m_sceneManager->Load(m_renderer.get(), nullptr, windowSettings);
+	m_sceneManager->Load(m_renderer.get(), nullptr, rendererSettings);
 
 	return true;
 }

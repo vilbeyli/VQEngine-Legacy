@@ -86,7 +86,7 @@ class Renderer
 public:
 	Renderer();
 	~Renderer();
-	bool Initialize(HWND hwnd, const Settings::Window& settings);
+	bool Initialize(HWND hwnd, const Settings::Renderer& settings);
 	void Exit();
 
 	inline HWND				GetWindow()		const { return m_Direct3D->WindowHandle(); };
@@ -173,8 +173,9 @@ private:
 	void SetConstant(const char* cName, const void* data);
 	//=======================================================================================================================================================
 public:
-	static const char* s_shaderRoot;
-	static const char* s_textureRoot;
+	static const char*				s_shaderRoot;
+	static const char*				s_textureRoot;
+	static Renderer			s_defaultSettings;
 
 	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;

@@ -21,13 +21,27 @@ namespace Settings
 		float	farPlane;
 	};
 
-	//struct LightSetting {
-	//	Color				color;
-	//	Light::LightType	type;
-	//	float				angle_or_range;
-	//} light;
+	struct ShadowMap {
+		size_t	dimension;
+	};
 
+	struct PostProcess {
+		struct Bloom {
+			float	threshold_brdf;
+			float	threshold_phong;
+			int     blurPassCount;
+		} bloom;
 
-	static Window window;
-	static Camera camera;
+		struct Tonemapping {
+			float	exposure;
+		} toneMapping;
+
+		bool HDREnabled = false;
+	};
+	
+	struct Renderer{
+		Window		window;
+		ShadowMap	shadowMap;
+		PostProcess postProcess;
+	};
 };

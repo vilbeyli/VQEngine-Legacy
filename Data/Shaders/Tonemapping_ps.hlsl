@@ -30,6 +30,7 @@ SamplerState Sampler;
 cbuffer constants 
 {
 	float exposure;
+	float isHDR;
 };
 
 // src
@@ -44,7 +45,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float gamma = 1.0f / 2.2f;
 
 #ifdef DO_TONEMAPPING
-	float3 toneMapped = float3(1, 1, 1) - exp(-color * exposure);
+	const float3 HDRToneMapped = float3(1, 1, 1) - exp(-color * exposure);
+	const float3 LDRToneMapped = color / (color + float3(1, 1, 1));
+	float3 toneMapped = HDRToneMapped * isHDR + LDRToneMapped * (1.0f - isHDR);
 #else
 	float3 toneMapped = color;
 #endif

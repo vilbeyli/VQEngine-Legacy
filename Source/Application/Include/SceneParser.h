@@ -12,8 +12,8 @@ public:
 	SceneParser();
 	~SceneParser();
 
-	static Settings::Window ReadWindowSettings();
-	static void ParseSetting(const std::vector<std::string>& line, Settings::Window& settings);
+	static Settings::Renderer ReadRendererSettings();
+	static void ParseSetting(const std::vector<std::string>& line, Settings::Renderer& settings);
 
 	static SerializedScene ReadScene();
 	static void ParseScene(const std::vector<std::string>& command, SerializedScene& scene);

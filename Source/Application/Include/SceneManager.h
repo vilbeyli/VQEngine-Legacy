@@ -49,7 +49,7 @@ public:
 	SceneManager();
 	~SceneManager();
 
-	void Load(Renderer* renderer, PathManager* pathMan, const Settings::Window& windowSettings);
+	void Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings);
 	void SetCameraSettings(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings);
 
 	void Update(float dt);

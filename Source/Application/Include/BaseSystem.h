@@ -27,7 +27,7 @@
 class BaseSystem
 {
 public:
-	static Settings::Window	s_windowSettings;
+	static Settings::Renderer	s_rendererSettings;
 	BaseSystem();
 	BaseSystem(const BaseSystem&);
 	~BaseSystem();

@@ -32,9 +32,9 @@ SceneParser::SceneParser(){}
 
 SceneParser::~SceneParser(){}
 
-Settings::Window SceneParser::ReadWindowSettings()
+Settings::Renderer SceneParser::ReadRendererSettings()
 {
-	Settings::Window s;
+	Settings::Renderer s;
 	
 	std::string filePath = std::string(file_root) + std::string(settings_file);
 	std::ifstream settingsFile(filePath.c_str());
@@ -58,7 +58,7 @@ Settings::Window SceneParser::ReadWindowSettings()
 	return s;
 }
 
-void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::Window& settings)
+void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::Renderer& settings)
 {
 	if (line.empty())
 	{
@@ -73,14 +73,48 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::W
 		//---------------------------------------------------------------
 		// | Window Width	|  Window Height	| Fullscreen?	| VSYNC?
 		//---------------------------------------------------------------
-		settings.width      = stoi(line[1]);
-		settings.height     = stoi(line[2]);
-		settings.fullscreen = stoi(line[3]);
-		settings.vsync      = stoi(line[4]);
+		settings.window.width      = stoi(line[1]);
+		settings.window.height     = stoi(line[2]);
+		settings.window.fullscreen = stoi(line[3]);
+		settings.window.vsync      = stoi(line[4]);
+	}
+	else if (cmd == "Bloom")
+	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Bloom Threshold BRDF | Bloom Threshold PHONG | BlurPassCount
+		//---------------------------------------------------------------
+		settings.postProcess.bloom.threshold_brdf  = stof(line[1]);
+		settings.postProcess.bloom.threshold_phong = stof(line[2]);
+		settings.postProcess.bloom.blurPassCount   = stoi(line[3]);
+	}
+	else if (cmd == "shadowMap")
+	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Shadow Map dimension
+		//---------------------------------------------------------------
+		settings.shadowMap.dimension = stoi(line[1]);
+	}
+	else if (cmd == "Tonemapping")
+	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Exposure
+		//---------------------------------------------------------------
+		settings.postProcess.toneMapping.exposure = stof(line[1]);
+	}
+	else if (cmd == "HDR")
+	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Enabled?
+		//---------------------------------------------------------------
+		settings.postProcess.HDREnabled = sBoolTypeReflection.at(GetLowercased(line[1]));
 	}
 	else
 	{
-		Log::Error("Setting Parser: Invalid command, expected ""screen""");
+		Log::Error("Setting Parser: Unknown command: %s", cmd);
 		return;
 	}
 }
@@ -126,7 +160,7 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 	{
 		if (command.size() != 4)
 		{
-			OutputDebugString("camera input parameter count != 4");
+			Log::Info("camera input parameter count != 4");
 			assert(command.size() == 4);
 		}
 

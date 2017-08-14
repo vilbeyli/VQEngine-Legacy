@@ -23,7 +23,7 @@
 
 struct DepthShadowPass
 {
-	void Initialize(Renderer* pRenderer, ID3D11Device* device);
+	void Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings);
 	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
 	
 	unsigned				_shadowMapDimension;
@@ -51,16 +51,16 @@ struct BloomPass
 
 struct TonemappingCombinePass
 {
-	RenderTargetID	_finalRenderTarget;
-	float			_HDRExposure;
+	RenderTargetID						_finalRenderTarget;
 };
 
 struct PostProcessPass
 {
-	void Initialize(Renderer* pRenderer, ID3D11Device* device);
+	void Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::PostProcess& postProcessSettings);
 	void Render(Renderer* pRenderer) const;
 
 	RenderTargetID				_worldRenderTarget;
 	BloomPass					_bloomPass;
 	TonemappingCombinePass		_tonemappingPass;
+	Settings::PostProcess		_settings;
 };

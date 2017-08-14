@@ -44,7 +44,7 @@ class Engine
 public:
 	~Engine();
 
-	bool Initialize(HWND hwnd, const Settings::Window& windowSettings);
+	bool Initialize(HWND hwnd, const Settings::Renderer& windowSettings);
 
 	void Pause();
 	void Unpause();

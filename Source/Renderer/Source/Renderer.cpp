@@ -158,9 +158,8 @@ const Shader* Renderer::GetShader(ShaderID shader_id) const
 }
 
 
-bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
+bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 {
-
 	m_Direct3D = new D3DManager();
 	if (!m_Direct3D)
 	{
@@ -169,11 +168,11 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	}
 
 	bool result = m_Direct3D->Initialize(
-		settings.width, 
-		settings.height, 
-		settings.vsync == 1,
+		settings.window.width, 
+		settings.window.height, 
+		settings.window.vsync == 1,
 		hwnd, 
-		settings.fullscreen == 1,
+		settings.window.fullscreen == 1,
 		DXGI_FORMAT_R16G16B16A16_FLOAT
 		// swapchain should be bgra unorm 32bit
 	);

@@ -41,14 +41,14 @@ SceneManager::SceneManager()
 SceneManager::~SceneManager()
 {}
 
-void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Window& windowSettings)
+void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings)
 {
 	//m_pPathManager		= pathMan;
 	
 	SerializedScene scene = SceneParser::ReadScene();
 	m_serializedScenes.push_back(scene);
 
-	SetCameraSettings(m_serializedScenes.front().cameraSettings, windowSettings);
+	SetCameraSettings(m_serializedScenes.front().cameraSettings, rendererSettings.window);
 
 	m_pRenderer			= renderer;
 	m_selectedShader	= SHADERS::FORWARD_BRDF;
@@ -61,7 +61,7 @@ void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 	{	// RENDER PASS INITIALIZATION
 		
 		// todo: static game object array in gameobj.h 
-		m_depthPass.Initialize(m_pRenderer, m_pRenderer->m_device);
+		m_depthPass.Initialize(m_pRenderer, m_pRenderer->m_device, rendererSettings.shadowMap);
 
 		//renderer->m_Direct3D->ReportLiveObjects();
 		m_ZPassObjects.push_back(&m_roomScene.m_room.floor);
@@ -78,7 +78,7 @@ void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 		for (GameObject& obj : m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
 		for (GameObject& obj : m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
 
-		m_postProcessPass.Initialize(m_pRenderer, m_pRenderer->m_device);
+		m_postProcessPass.Initialize(m_pRenderer, m_pRenderer->m_device, rendererSettings.postProcess);
 
 		D3D11_SAMPLER_DESC normalSamplerDesc = {};
 		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;

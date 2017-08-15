@@ -24,6 +24,7 @@
 #include "Camera.h"
 #include "utils.h"
 #include "Light.h"
+#include "BaseSystem.h"	// only for renderer settings... maybe store in renderer?
 
 #define KEY_TRIG(k) ENGINE->INP()->IsKeyTriggered(k)
 
@@ -41,6 +42,19 @@ SceneManager::SceneManager()
 SceneManager::~SceneManager()
 {}
 
+
+void SceneManager::ReloadLevel()
+{
+	const SerializedScene&		scene            =  m_serializedScenes.back();	// load last level
+	const Settings::Renderer&	rendererSettings = BaseSystem::s_rendererSettings;
+	Log::Info("Reloading Level...");
+
+	SetCameraSettings(scene.cameraSettings, rendererSettings.window);
+	// only camera reset for now
+	// todo: unload and reload scene, initialize depth pass...
+}
+
+
 void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings)
 {
 	//m_pPathManager		= pathMan;
@@ -48,7 +62,7 @@ void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 	SerializedScene scene = SceneParser::ReadScene();
 	m_serializedScenes.push_back(scene);
 
-	SetCameraSettings(m_serializedScenes.front().cameraSettings, rendererSettings.window);
+	SetCameraSettings(m_serializedScenes.back().cameraSettings, rendererSettings.window);
 
 	m_pRenderer			= renderer;
 	m_selectedShader	= SHADERS::FORWARD_BRDF;
@@ -102,11 +116,13 @@ void SceneManager::SetCameraSettings(const Settings::Camera& cameraSettings, con
 	const auto& NEAR_PLANE = cameraSettings.nearPlane;
 	const auto& FAR_PLANE = cameraSettings.farPlane;
 	const float AspectRatio = static_cast<float>(windowSettings.width) / windowSettings.height;
-
+	
 	m_pCamera->SetOthoMatrix(windowSettings.width, windowSettings.height, NEAR_PLANE, FAR_PLANE);
 	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, AspectRatio, NEAR_PLANE, FAR_PLANE);
-	m_pCamera->SetPosition(0, 50, -190);
-	m_pCamera->Rotate(0.0f, 15.0f * DEG2RAD, 1.0f);
+	m_pCamera->SetPosition(cameraSettings.x, cameraSettings.y, cameraSettings.z);
+
+	m_pCamera->m_yaw = m_pCamera->m_pitch = 0.0f;
+	m_pCamera->Rotate(cameraSettings.yaw, cameraSettings.pitch * DEG2RAD, 1.0f);
 }
 
 void SceneManager::HandleInput()
@@ -124,7 +140,7 @@ void SceneManager::HandleInput()
 
 	if (ENGINE->INP()->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
 
-	if (ENGINE->INP()->IsKeyTriggered("R")) Log::Info("TODO: ReloadLevel");
+	if (ENGINE->INP()->IsKeyTriggered("R")) ReloadLevel();
 	if (ENGINE->INP()->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
 	if (ENGINE->INP()->IsKeyTriggered(";")) Log::Info("TODO: DebugShader");
 	if (ENGINE->INP()->IsKeyTriggered("'")) m_roomScene.ToggleFloorNormalMap();

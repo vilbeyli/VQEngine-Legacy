@@ -61,7 +61,7 @@ public:
 private:
 	friend struct DepthShadowPass;
 	void HandleInput();
-
+	void ReloadLevel();
 private:
 	RoomScene						m_roomScene;	// todo: rethink scene management
 	std::vector<SerializedScene>	m_serializedScenes;

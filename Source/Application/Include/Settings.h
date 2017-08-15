@@ -1,7 +1,6 @@
 #pragma once
 
-//#include "Color.h"
-//#include "Light.h"
+#include "Components/Transform.h"
 
 namespace Settings
 {
@@ -16,9 +15,11 @@ namespace Settings
 	};
 
 	struct Camera {
-		float	fov;
-		float	nearPlane;
-		float	farPlane;
+		float		fov;
+		float		nearPlane;
+		float		farPlane;
+		float		x, y, z;
+		float		yaw, pitch;
 	};
 
 	struct ShadowMap {

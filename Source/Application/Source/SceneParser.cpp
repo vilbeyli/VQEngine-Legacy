@@ -158,19 +158,24 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 	const std::string& cmd = command[0];	// shorthand
 	if (cmd == "camera")
 	{
-		if (command.size() != 4)
+		if (command.size() != 9)
 		{
 			Log::Info("camera input parameter count != 4");
-			assert(command.size() == 4);
+			assert(command.size() == 9);
 		}
 
 		// Parameters: 3
 		//--------------------------------------------------------------
-		// |  Near Plane	| Far Plane	|	Field of View	
+		// |  Near Plane	| Far Plane	|	Field of View	| Position | Rotation
 		//--------------------------------------------------------------
 		scene.cameraSettings.nearPlane	= stof(command[1]);
 		scene.cameraSettings.farPlane	= stof(command[2]);
 		scene.cameraSettings.fov		= stof(command[3]);
+		scene.cameraSettings.x          = stof(command[4]);
+		scene.cameraSettings.y          = stof(command[5]);
+		scene.cameraSettings.z          = stof(command[6]);
+		scene.cameraSettings.yaw        = stof(command[7]);
+		scene.cameraSettings.pitch      = stof(command[8]);
 	}
 	
 	else if (cmd == "light")

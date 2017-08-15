@@ -50,12 +50,15 @@ You will get the following error message on build unless you have already copmil
 | **numpad::468239** |	Shadow Caster Light Movement |
 | **F1** |	TexCoord Shader |
 | **F2** |	Normals Shader |
-| **F3** |	Tangents Shader |
-| **F4** |	Bitangents Shader |
-| **F5** |	Unlit Shader |
-| **F6** |	Phong Shader |
-| **F7** |	Debug Shader |
-| **F9** |	Toggle Gamma Correction |
+| **F3** |	Diffuse Color Shader |
+| **F4** |	Empty |
+| **F5** |	Empty |
+| **F6** |	Toggle Phong/BRDF Shaders |
+| **F7** |	Toggle Debug Shader |
+| **F9** |	Toggle Bloom |
 | **Backspace** | Pause App |
+| **R** | Reset Camera |
+| **\\** | Reload Shaders |
+| **'** | Toggle Floor Normal Map |
 | **ESC** |	Exit App |
  

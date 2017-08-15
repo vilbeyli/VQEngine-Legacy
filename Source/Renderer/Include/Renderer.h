@@ -29,6 +29,7 @@
 #include "WorkerPool.h"
 
 #include <memory>
+#include <stack>
 
 // forward declarations
 class D3DManager;
@@ -164,8 +165,11 @@ private:
 
 	// init / load
 	void GeneratePrimitives();
+	
 	void LoadShaders();
+	std::stack<std::string> UnloadShaders();
 	void ReloadShaders();
+
 	void InitializeDefaultRenderTarget();
 	void InitializeDefaultDepthBuffer();
 	void InitializeDefaultRasterizerStates();
@@ -175,7 +179,7 @@ private:
 public:
 	static const char*				s_shaderRoot;
 	static const char*				s_textureRoot;
-	static Renderer			s_defaultSettings;
+	static Settings::Renderer		s_defaultSettings;
 
 	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;

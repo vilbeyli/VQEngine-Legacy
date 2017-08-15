@@ -31,8 +31,9 @@
 #include <mutex>
 #include <cassert>
 
-const char* Renderer::s_shaderRoot = "Data/Shaders/";
-const char* Renderer::s_textureRoot = "Data/Textures/";
+const char*			Renderer::s_shaderRoot		= "Data/Shaders/";
+const char*			Renderer::s_textureRoot		= "Data/Textures/";
+Settings::Renderer	Renderer::s_defaultSettings = Settings::Renderer();
 
 Renderer::Renderer()
 	:
@@ -69,12 +70,7 @@ void Renderer::Exit()
 
 	CPUConstant::CleanUp();
 	
-	for (Shader*& shd : m_shaders)
-	{
-		delete shd;
-		shd = nullptr;
-	}
-	m_shaders.clear();
+	UnloadShaders();
 
 	for (Texture& tex : m_textures)
 	{
@@ -160,6 +156,7 @@ const Shader* Renderer::GetShader(ShaderID shader_id) const
 
 bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 {
+	s_defaultSettings = settings;
 	m_Direct3D = new D3DManager();
 	if (!m_Direct3D)
 	{
@@ -258,15 +255,32 @@ void Renderer::LoadShaders()
 	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"     , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"      , s_shaderRoot, layout);
 	Shader::s_shaders[SHADERS::FORWARD_BRDF       ]	= AddShader("Forward_BRDF"     , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::SHADOWMAP_DEPTH    ]	= AddShader("DepthShader"      , s_shaderRoot, layout);
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
+}
+
+std::stack<std::string> Renderer::UnloadShaders()
+{
+	std::stack<std::string> fileNames;
+	for (Shader*& shd : m_shaders)
+	{
+		fileNames.push(shd->m_name);
+		delete shd;
+		shd = nullptr;
+	}
+	m_shaders.clear();
+	return fileNames;
 }
 
 void Renderer::ReloadShaders()
 {
 	Log::Info("Reloading Shaders...");
+	Sleep(100);	// wait for GPU to finish
+	
+	// get unloaded shaders and remove Shader::s_shaders[] (depth shader so far)
+	std::stack<std::string> fileNames = UnloadShaders();
 
-
-
+	LoadShaders();
 	Log::Info("Done");
 }
 

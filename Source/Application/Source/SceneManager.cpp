@@ -131,10 +131,10 @@ void SceneManager::HandleInput()
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
 	if (ENGINE->INP()->IsKeyTriggered("F1")) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
 	if (ENGINE->INP()->IsKeyTriggered("F2")) m_selectedShader = SHADERS::NORMAL;
-	if (ENGINE->INP()->IsKeyTriggered("F3")); 
+	if (ENGINE->INP()->IsKeyTriggered("F3")) m_selectedShader = SHADERS::UNLIT;
 	if (ENGINE->INP()->IsKeyTriggered("F4"));// m_selectedShader = SHADERS::BINORMAL;
 
-	if (ENGINE->INP()->IsKeyTriggered("F5")) m_selectedShader = SHADERS::UNLIT;
+	if (ENGINE->INP()->IsKeyTriggered("F5"));
 	if (ENGINE->INP()->IsKeyTriggered("F6")) m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::FORWARD_BRDF : SHADERS::FORWARD_PHONG;
 	if (ENGINE->INP()->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
 

@@ -163,7 +163,6 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 			Log::Info("camera input parameter count != 4");
 			assert(command.size() == 9);
 		}
-
 		// Parameters: 3
 		//--------------------------------------------------------------
 		// |  Near Plane	| Far Plane	|	Field of View	| Position | Rotation

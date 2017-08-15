@@ -29,7 +29,7 @@ struct DepthShadowPass
 	unsigned				_shadowMapDimension;
 	TextureID				_shadowMap;
 	SamplerID				_shadowSampler;
-	const Shader*			_shadowShader;
+	ShaderID				_shadowShader;
 	RasterizerStateID		_drawRenderState;
 	RasterizerStateID		_shadowRenderState;
 	D3D11_VIEWPORT			_shadowViewport;

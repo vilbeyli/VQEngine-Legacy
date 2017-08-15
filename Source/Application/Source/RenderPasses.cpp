@@ -98,7 +98,7 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device, cons
 		{ "NORMAL",		FLOAT32_3 },
 		{ "TANGENT",	FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 } };
-	this->_shadowShader = pRenderer->GetShader(pRenderer->AddShader("DepthShader", pRenderer->s_shaderRoot, layout, false));
+	this->_shadowShader = SHADERS::SHADOWMAP_DEPTH;
 
 	ZeroMemory(&_shadowViewport, sizeof(D3D11_VIEWPORT));
 	_shadowViewport.Height = static_cast<float>(_shadowMapDimension);
@@ -115,7 +115,7 @@ void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const L
 	pRenderer->BindDepthStencil(_dsv);						// only depth stencil buffer
 	pRenderer->SetRasterizerState(_shadowRenderState);		// shadow render state: cull front faces, fill solid, clip dep
 	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
-	pRenderer->SetShader(_shadowShader->ID());				// shader for rendering z buffer
+	pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
 	pRenderer->SetConstant4x4f("viewProj", shadowLights.front()->GetLightSpaceMatrix());
 	pRenderer->SetConstant4x4f("view", shadowLights.front()->GetViewMatrix());
 	pRenderer->SetConstant4x4f("proj", shadowLights.front()->GetProjectionMatrix());

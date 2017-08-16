@@ -302,7 +302,68 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	Log::Info("Done.");
 }
 
-void DeferredRenderingPasses::Render(Renderer * pRenderer)
+void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) const
 {
+	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	const float clearDepth = 1.0f;
 
+	pRenderer->SetShader(SHADERS::DEFERRED_GEOMETRY);
+	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT, _GBuffer._positionRT);
+	pRenderer->SetSamplerState("sNormalSampler", 0);
+	pRenderer->Begin(clearColor, clearDepth);
+	pRenderer->Apply();
+}
+
+void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const std::vector<Light>& lights) const
+{
+	constexpr const float clearColor[4] = { 0,0,0,0 };
+	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
+	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer._diffuseRoughnessRT);
+	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer._specularMetallicRT);
+	const TextureID texPosition = pRenderer->GetRenderTargetTexture(_GBuffer._positionRT);
+
+	// pRenderer->UnbindRendertargets();	// ignore this for now
+	pRenderer->UnbindDepthStencil();
+	pRenderer->BindRenderTarget(target);
+	pRenderer->Begin(clearColor, 0);
+	pRenderer->Apply();
+
+
+	// AMBIENT LIGHTING
+	// todo: set ambient occlusion texture
+	pRenderer->SetShader(SHADERS::DEFERRED_BRDF);
+	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
+	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+
+
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+
+	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
+	pRenderer->SetTexture("texNormals", texNormal);
+	pRenderer->SetTexture("texPosition", texPosition);
+
+#if 0
+	//	SendLightData();	// scenemanager OR get lights themselves
+
+	// POINT LIGHTS
+	pRenderer->SetShader(SHADERS::DEFERRED_BRDF);
+	pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+
+	// for point lights
+
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+
+	// SPOT LIGHTS
+	pRenderer->SetShader(SHADERS::DEFERRED_BRDF);
+	pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+
+	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+	
+	// for spot lights
+	
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+#endif
 }

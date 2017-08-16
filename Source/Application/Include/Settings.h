@@ -62,6 +62,7 @@ namespace Settings
 		Window		window;
 		ShadowMap	shadowMap;
 		bool		bUseDeferredRendering;
+		bool		bAmbientOcclusion;
 		PostProcess postProcess;
 	};
 };

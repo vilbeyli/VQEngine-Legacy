@@ -284,20 +284,18 @@ void Renderer::ReloadShaders()
 
 void Renderer::InitializeDefaultDepthBuffer()
 {
-	// Initialize the description of the depth buffer.
-	D3D11_TEXTURE2D_DESC depthBufferDesc;
-	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
-
 	// Set up the description of the depth buffer.
+	DXGI_FORMAT depthFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	D3D11_TEXTURE2D_DESC depthBufferDesc = {};
 	depthBufferDesc.Width = m_Direct3D->m_wndWidth;
 	depthBufferDesc.Height = m_Direct3D->m_wndHeight;
 	depthBufferDesc.MipLevels = 1;
 	depthBufferDesc.ArraySize = 1;
-	depthBufferDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthBufferDesc.Format = depthFormat;
 	depthBufferDesc.SampleDesc.Count = 1;
 	depthBufferDesc.SampleDesc.Quality = 0;
 	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;	// todo: D3D11_BIND_SHADER_RESOURCE | find a way to read depth buffer for SSAO
 	depthBufferDesc.CPUAccessFlags = 0;
 	depthBufferDesc.MiscFlags = 0;
 
@@ -305,9 +303,8 @@ void Renderer::InitializeDefaultDepthBuffer()
 	HRESULT result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_state._depthBufferTexture._tex2D);
 
 	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+	dsvDesc.Format = depthFormat;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2D.MipSlice = 0;
 	AddDepthStencil(dsvDesc, m_state._depthBufferTexture._tex2D);

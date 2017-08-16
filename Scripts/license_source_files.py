@@ -6,8 +6,6 @@ contain it (currently it checkts to see if it starts with '/')
 WARNING:    run this on a backup and then diff to make sure no content is lost.
 """
 
-# TODO: start from parent dir as this is moved into /Scripts folder
-
 import os
 
 # exclude directories

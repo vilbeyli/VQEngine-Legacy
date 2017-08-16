@@ -73,10 +73,11 @@ private:
 
 	// rendering passes
 	SamplerID						m_normalSampler;
-	ShadowMapPass					m_depthPass;
+	ShadowMapPass					m_shadowMapPass;
 	PostProcessPass					m_postProcessPass;
 	// Lighting pass?
 	bool							m_useDeferredRendering;
+	bool							m_isAmbientOcclusionOn;
 	DeferredRenderingPasses			m_deferredRenderingPasses;
 
 	ShaderID						m_selectedShader;

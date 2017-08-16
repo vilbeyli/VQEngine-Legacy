@@ -61,6 +61,7 @@ void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 	m_pPathManager		= pathMan;
 #endif
 	m_useDeferredRendering	= rendererSettings.bUseDeferredRendering;
+	m_isAmbientOcclusionOn	= rendererSettings.bAmbientOcclusion;
 	m_pRenderer				= renderer;
 	m_selectedShader		= m_useDeferredRendering ? SHADERS::DEFERRED_GEOMETRY : SHADERS::FORWARD_BRDF;
 	m_debugRender			= false;
@@ -82,7 +83,7 @@ void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 
 	{	// RENDER PASS INITIALIZATION
 		// todo: static game object array in gameobj.h 
-		m_depthPass.Initialize(m_pRenderer, m_pRenderer->m_device, rendererSettings.shadowMap);
+		m_shadowMapPass.Initialize(m_pRenderer, m_pRenderer->m_device, rendererSettings.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
 		m_ZPassObjects.push_back(&m_roomScene.m_room.floor);
 		m_ZPassObjects.push_back(&m_roomScene.m_room.wallL);
@@ -178,8 +179,7 @@ void SceneManager::Render() const
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
 	m_pRenderer->UnbindRenderTarget();	// unbind the back render target | every pass has their own render targets
-	m_depthPass.RenderShadowMaps(m_pRenderer, _shadowCasters, m_ZPassObjects);
-
+	m_shadowMapPass.RenderShadowMaps(m_pRenderer, _shadowCasters, m_ZPassObjects);
 
 	// LIGHTING pass
 	//------------------------------------------------------------------------
@@ -191,44 +191,25 @@ void SceneManager::Render() const
 
 	if (m_useDeferredRendering)
 	{
-		// GEOMETRY - DEPTH PASS
-		//------------------------------------------------------------------------
-		const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-		const float clearDepth = 1.0f;
 		const GBuffer& gBuffer = m_deferredRenderingPasses._GBuffer;
-
-		m_pRenderer->SetShader(SHADERS::DEFERRED_GEOMETRY);
-		m_pRenderer->BindRenderTargets(gBuffer._diffuseRoughnessRT, gBuffer._specularMetallicRT, gBuffer._normalRT, gBuffer._positionRT);
-		m_pRenderer->SetSamplerState("sNormalSampler", 0);
-		m_pRenderer->Begin(clearColor, clearDepth);
-		m_pRenderer->Apply();
-
-		m_roomScene.Render(m_pRenderer, viewProj);
-#if 1
-		// DEFERRED LIGHTING PASS
-		//------------------------------------------------------------------------
+		const TextureID texNormal			= m_pRenderer->GetRenderTargetTexture(gBuffer._normalRT);
 		const TextureID texDiffuseRoughness = m_pRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
 		const TextureID texSpecularMetallic = m_pRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
-		const TextureID texNormal			= m_pRenderer->GetRenderTargetTexture(gBuffer._normalRT);
 		const TextureID texPosition			= m_pRenderer->GetRenderTargetTexture(gBuffer._positionRT);
+		const TextureID texDepthTexture		= m_pRenderer->m_state._depthBufferTexture._id;
+		
+		// GEOMETRY - DEPTH PASS
+		m_deferredRenderingPasses.SetGeometryRenderingStates(m_pRenderer);
+		m_roomScene.Render(m_pRenderer, viewProj);
 
-		m_pRenderer->SetShader(SHADERS::DEFERRED_BRDF);
-		// m_pRenderer->UnbindRendertargets();	// ignore this for now
-		m_pRenderer->UnbindDepthStencil();
-		m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);	
-		m_pRenderer->Begin(clearColor, 0);
-		m_pRenderer->Apply();
+		// AMBIENT OCCLUSION  PASS
+		if (m_isAmbientOcclusionOn)
+		{
+			// TODO: implement
+		}
 
-		m_pRenderer->SetBufferObj(GEOMETRY::QUAD);
-		//m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-		m_pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
-		//m_pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
-		//m_pRenderer->SetTexture("texNormals", texNormal);
-		//m_pRenderer->SetTexture("texPosition", texPosition);
-		//SendLightData();
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-#endif
+		// DEFERRED LIGHTING PASS
+		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_roomScene.m_lights);
 	}
 	else
 	{
@@ -245,7 +226,8 @@ void SceneManager::Render() const
 
 		constexpr int TBNMode = 0;
 		if (m_selectedShader == SHADERS::TBN)	m_pRenderer->SetConstant1i("mode", TBNMode);
-
+		
+		SendLightData();
 		m_roomScene.Render(m_pRenderer, viewProj);
 	}
 
@@ -267,7 +249,7 @@ void SceneManager::Render() const
 		//m_selectedShader = prevShader;
 
 		m_pRenderer->SetShader(SHADERS::DEBUG);
-		m_pRenderer->SetTexture("t_shadowMap", m_depthPass._shadowMap);	// todo: decide shader naming 
+		m_pRenderer->SetTexture("t_shadowMap", m_shadowMapPass._shadowMap);	// todo: decide shader naming 
 		m_pRenderer->SetBufferObj(GEOMETRY::QUAD);
 		m_pRenderer->Apply();
 		m_pRenderer->DrawIndexed();
@@ -312,8 +294,8 @@ void SceneManager::SendLightData() const
 	//--------------------------------------------------------------
 	// first light is spot: single shadaw map support for now
 	const Light& caster = m_roomScene.m_lights[0];
-	TextureID shadowMap = m_depthPass._shadowMap;
-	SamplerID shadowSampler = m_depthPass._shadowSampler;
+	TextureID shadowMap = m_shadowMapPass._shadowMap;
+	SamplerID shadowSampler = m_shadowMapPass._shadowSampler;
 
 	m_pRenderer->SetConstant4x4f("lightSpaceMat", caster.GetLightSpaceMatrix());
 	m_pRenderer->SetTexture("gShadowMap", shadowMap);

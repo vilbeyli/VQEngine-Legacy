@@ -43,6 +43,7 @@ namespace Settings
 	struct Renderer{
 		Window		window;
 		ShadowMap	shadowMap;
+		bool		bUseDeferredRendering;
 		PostProcess postProcess;
 	};
 };

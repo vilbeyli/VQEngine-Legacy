@@ -59,25 +59,28 @@ public:
 	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
 
 private:
-	friend struct DepthShadowPass;
+	friend struct ShadowMapPass;
 	void HandleInput();
 	void ReloadLevel();
+
 private:
 	RoomScene						m_roomScene;	// todo: rethink scene management
 	std::vector<SerializedScene>	m_serializedScenes;
 
-	Renderer*			m_pRenderer;
-	shared_ptr<Camera>	m_pCamera;
-	//PathManager*		m_pPathManager; // unused
+	Renderer*						m_pRenderer;
+	shared_ptr<Camera>				m_pCamera;
+	//PathManager*					m_pPathManager; // unused
 
 	// rendering passes
-	// lighting pass?
-	SamplerID			m_normalSampler;
-	DepthShadowPass		m_depthPass;
-	PostProcessPass		m_postProcessPass;
+	SamplerID						m_normalSampler;
+	ShadowMapPass					m_depthPass;
+	PostProcessPass					m_postProcessPass;
+	// Lighting pass?
+	bool							m_useDeferredRendering;
+	DeferredRenderingPasses			m_deferredRenderingPasses;
 
-	ShaderID			m_selectedShader;
-	bool				m_debugRender;
+	ShaderID						m_selectedShader;
+	bool							m_debugRender;
 
-	std::vector<GameObject*> m_ZPassObjects;
+	std::vector<GameObject*>		m_ZPassObjects;
 };

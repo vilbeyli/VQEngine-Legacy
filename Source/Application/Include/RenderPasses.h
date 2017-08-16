@@ -21,10 +21,10 @@
 #include "Renderer.h"
 #include <array>
 
-struct DepthShadowPass
+struct ShadowMapPass
 {
 	void Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings);
-	void RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
+	void RenderShadowMaps(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
 	
 	unsigned				_shadowMapDimension;
 	TextureID				_shadowMap;
@@ -56,11 +56,27 @@ struct TonemappingCombinePass
 
 struct PostProcessPass
 {
-	void Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::PostProcess& postProcessSettings);
+	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
 	void Render(Renderer* pRenderer) const;
 
 	RenderTargetID				_worldRenderTarget;
 	BloomPass					_bloomPass;
 	TonemappingCombinePass		_tonemappingPass;
 	Settings::PostProcess		_settings;
+};
+
+struct GBuffer
+{
+	RenderTargetID	_diffuseRoughnessRT;
+	RenderTargetID	_specularMetallicRT;
+	RenderTargetID	_normalRT;
+	RenderTargetID	_positionRT;	// todo: construct position from viewProj^-1 
+};
+
+struct DeferredRenderingPasses
+{
+	void InitializeGBuffer(Renderer* pRenderer);
+	void Render(Renderer* pRenderer);
+	GBuffer _GBuffer;
+
 };

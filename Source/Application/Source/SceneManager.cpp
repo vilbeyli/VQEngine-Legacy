@@ -57,26 +57,32 @@ void SceneManager::ReloadLevel()
 
 void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings)
 {
-	//m_pPathManager		= pathMan;
+#if 0
+	m_pPathManager		= pathMan;
+#endif
+	m_useDeferredRendering	= rendererSettings.bUseDeferredRendering;
+	m_pRenderer				= renderer;
+	m_selectedShader		= m_useDeferredRendering ? SHADERS::DEFERRED_GEOMETRY : SHADERS::FORWARD_BRDF;
+	m_debugRender			= false;
 	
-	SerializedScene scene = SceneParser::ReadScene();
-	m_serializedScenes.push_back(scene);
-
-	SetCameraSettings(m_serializedScenes.back().cameraSettings, rendererSettings.window);
-
-	m_pRenderer			= renderer;
-	m_selectedShader	= SHADERS::FORWARD_BRDF;
-	m_debugRender		= false;
-
+	if (m_useDeferredRendering)
+	{
+		m_deferredRenderingPasses.InitializeGBuffer(renderer);
+	}
+	
 	Skybox::InitializePresets(m_pRenderer);
-
+	
+	m_serializedScenes.push_back(SceneParser::ReadScene());
+	
+	SerializedScene& scene = m_serializedScenes.back();	// non-const because lights are std::move()d for roomscene loading
 	m_roomScene.Load(m_pRenderer, scene);
+	SetCameraSettings(scene.cameraSettings, rendererSettings.window);
+	m_pRenderer->SetCamera(m_pCamera.get());	// set camera of the renderer (perhaps multiple views/cameras?)
+
 
 	{	// RENDER PASS INITIALIZATION
-		
 		// todo: static game object array in gameobj.h 
 		m_depthPass.Initialize(m_pRenderer, m_pRenderer->m_device, rendererSettings.shadowMap);
-
 		//renderer->m_Direct3D->ReportLiveObjects();
 		m_ZPassObjects.push_back(&m_roomScene.m_room.floor);
 		m_ZPassObjects.push_back(&m_roomScene.m_room.wallL);
@@ -92,8 +98,9 @@ void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 		for (GameObject& obj : m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
 		for (GameObject& obj : m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
 
-		m_postProcessPass.Initialize(m_pRenderer, m_pRenderer->m_device, rendererSettings.postProcess);
+		m_postProcessPass.Initialize(m_pRenderer, rendererSettings.postProcess);
 
+		// Samplers
 		D3D11_SAMPLER_DESC normalSamplerDesc = {};
 		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 		normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -106,8 +113,6 @@ void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 		m_normalSampler = renderer->CreateSamplerState(normalSamplerDesc);
 	}
-
-	m_pRenderer->SetCamera(m_pCamera.get());	// set camera of the renderer (perhaps multiple views/cameras?)
 }
 
 
@@ -157,45 +162,94 @@ void SceneManager::Update(float dt)
 
 void SceneManager::Render() const
 {
-	const float clearColor[4] = { 0.2f, 0.4f, 0.7f, 1.0f };
 	const XMMATRIX view = m_pCamera->GetViewMatrix();
 	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
 	const XMMATRIX viewProj = view * proj;
-
-#if 1
-	// DEPTH PASS
-	//------------------------------------------------------------------------
+	
 	// get shadow casters (todo: static/dynamic lights)
-	std::vector<const Light*> _shadowCasters;	// warning: dynamic memory alloc. put in paramStruct { array start end } or C++11 equiv
+	std::vector<const Light*> _shadowCasters;
 	for (const Light& light : m_roomScene.m_lights)
 	{
 		if (light._castsShadow)
 			_shadowCasters.push_back(&light);
 	}
 
-	m_depthPass.RenderDepth(m_pRenderer, _shadowCasters, m_ZPassObjects);
-#endif
+	
+	// SHADOW MAPS
+	//------------------------------------------------------------------------
+	m_pRenderer->UnbindRenderTarget();	// unbind the back render target | every pass has their own render targets
+	m_depthPass.RenderShadowMaps(m_pRenderer, _shadowCasters, m_ZPassObjects);
 
-	// MAIN PASS
+
+	// LIGHTING pass
 	//------------------------------------------------------------------------
 	m_pRenderer->Reset();
 	m_pRenderer->BindDepthStencil(0);
-	m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);
-	m_pRenderer->SetDepthStencilState(0); 
+	m_pRenderer->SetDepthStencilState(0);
 	m_pRenderer->SetRasterizerState(static_cast<int>(DEFAULT_RS_STATE::CULL_NONE));
-	m_pRenderer->Begin(clearColor, 1.0f);
-	
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
-	
-	m_pRenderer->SetShader(m_selectedShader);
-	m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-	m_pRenderer->SetSamplerState("sNormalSampler", 0);
 
-	constexpr int TBNMode = 0;
-	if (m_selectedShader == SHADERS::TBN)	m_pRenderer->SetConstant1i("mode", TBNMode);
+	if (m_useDeferredRendering)
+	{
+		// GEOMETRY - DEPTH PASS
+		//------------------------------------------------------------------------
+		const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		const float clearDepth = 1.0f;
+		const GBuffer& gBuffer = m_deferredRenderingPasses._GBuffer;
 
-	m_roomScene.Render(m_pRenderer, viewProj);
-	
+		m_pRenderer->SetShader(SHADERS::DEFERRED_GEOMETRY);
+		m_pRenderer->BindRenderTargets(gBuffer._diffuseRoughnessRT, gBuffer._specularMetallicRT, gBuffer._normalRT, gBuffer._positionRT);
+		m_pRenderer->SetSamplerState("sNormalSampler", 0);
+		m_pRenderer->Begin(clearColor, clearDepth);
+		m_pRenderer->Apply();
+
+		m_roomScene.Render(m_pRenderer, viewProj);
+#if 1
+		// DEFERRED LIGHTING PASS
+		//------------------------------------------------------------------------
+		const TextureID texDiffuseRoughness = m_pRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
+		const TextureID texSpecularMetallic = m_pRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
+		const TextureID texNormal			= m_pRenderer->GetRenderTargetTexture(gBuffer._normalRT);
+		const TextureID texPosition			= m_pRenderer->GetRenderTargetTexture(gBuffer._positionRT);
+
+		m_pRenderer->SetShader(SHADERS::DEFERRED_BRDF);
+		// m_pRenderer->UnbindRendertargets();	// ignore this for now
+		m_pRenderer->UnbindDepthStencil();
+		m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);	
+		m_pRenderer->Begin(clearColor, 0);
+		m_pRenderer->Apply();
+
+		m_pRenderer->SetBufferObj(GEOMETRY::QUAD);
+		//m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+		m_pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
+		//m_pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
+		//m_pRenderer->SetTexture("texNormals", texNormal);
+		//m_pRenderer->SetTexture("texPosition", texPosition);
+		//SendLightData();
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
+#endif
+	}
+	else
+	{
+		const float clearColor[4] = { 0.2f, 0.4f, 0.7f, 1.0f };
+		const float clearDepth = 1.0f;
+
+		// MAIN PASS
+		//------------------------------------------------------------------------
+		m_pRenderer->SetShader(m_selectedShader);	// forward brdf/phong
+		m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);
+		m_pRenderer->Begin(clearColor, clearDepth);
+		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+		m_pRenderer->SetSamplerState("sNormalSampler", 0);
+
+		constexpr int TBNMode = 0;
+		if (m_selectedShader == SHADERS::TBN)	m_pRenderer->SetConstant1i("mode", TBNMode);
+
+		m_roomScene.Render(m_pRenderer, viewProj);
+	}
+
+
 #if 1
 	// POST PROCESS PASS
 	//------------------------------------------------------------------------

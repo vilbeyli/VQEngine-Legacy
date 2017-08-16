@@ -154,6 +154,8 @@ enum SHADERS	// good enough for global namespace
 	TONEMAPPING,
 	FORWARD_BRDF,
 	SHADOWMAP_DEPTH,
+	DEFERRED_GEOMETRY,
+	DEFERRED_BRDF,	//todo: milestone3: flexible shaders -> reuse shader code.
 
 	SHADER_COUNT
 };

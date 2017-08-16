@@ -90,7 +90,7 @@ private:
 
 	void RenderLights(const XMMATRIX& viewProj) const;
 	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
-	void RenderCentralObjects(const XMMATRIX& viewProj)  const;
+	void RenderCentralObjects(const XMMATRIX& viewProj, bool sendMaterialData) const;
 // ----------------------------------------------------------------------
 	friend class SceneManager;
 	void ToggleFloorNormalMap();

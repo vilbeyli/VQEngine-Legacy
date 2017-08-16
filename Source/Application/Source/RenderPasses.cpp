@@ -20,7 +20,7 @@
 
 #include "Light.h"
 
-void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
+void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
 {
 	this->_shadowMapDimension = static_cast<int>(shadowMapSettings.dimension);
 
@@ -107,11 +107,10 @@ void DepthShadowPass::Initialize(Renderer* pRenderer, ID3D11Device* device, cons
 	_shadowViewport.MaxDepth = 1.f;
 }
 
-void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const
+void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const
 {
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-	pRenderer->UnbindRenderTarget();						// no render target
 	pRenderer->BindDepthStencil(_dsv);						// only depth stencil buffer
 	pRenderer->SetRasterizerState(_shadowRenderState);		// shadow render state: cull front faces, fill solid, clip dep
 	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
@@ -121,14 +120,15 @@ void DepthShadowPass::RenderDepth(Renderer* pRenderer, const std::vector<const L
 	pRenderer->SetConstant4x4f("proj", shadowLights.front()->GetProjectionMatrix());
 	pRenderer->Apply();
 	pRenderer->Begin(clearColor, 1.0f);
-	size_t idx = 0;
 	for (const GameObject* obj : ZPassObjects)
 	{
 		obj->RenderZ(pRenderer);
 	}
 }
 
-void PostProcessPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::PostProcess& postProcessSettings)
+
+
+void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings)
 {
 	_settings = postProcessSettings;
 	DXGI_SAMPLE_DESC smpDesc;
@@ -255,5 +255,54 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	pRenderer->SetTexture("ColorTexture", colorTex);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
+
+}
+
+
+
+void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
+{
+	Log::Info("Initializing GBuffer...");
+
+	DXGI_SAMPLE_DESC smpDesc;
+	smpDesc.Count = 1;
+	smpDesc.Quality = 0;
+
+	D3D11_TEXTURE2D_DESC RTDescriptor[2] = { {}, {} };
+	constexpr const DXGI_FORMAT Format[2] = { /*DXGI_FORMAT_R11G11B10_FLOAT*/ DXGI_FORMAT_R16G16B16A16_FLOAT , DXGI_FORMAT_R16G16B16A16_FLOAT };
+
+	for (int i = 0; i < 2; ++i)
+	{
+		RTDescriptor[i].Width = pRenderer->WindowWidth();
+		RTDescriptor[i].Height = pRenderer->WindowHeight();
+		RTDescriptor[i].MipLevels = 1;
+		RTDescriptor[i].ArraySize = 1;
+		RTDescriptor[i].Format = Format[i];
+		RTDescriptor[i].Usage = D3D11_USAGE_DEFAULT;
+		RTDescriptor[i].BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+		RTDescriptor[i].CPUAccessFlags = 0;
+		RTDescriptor[i].SampleDesc = smpDesc;
+		RTDescriptor[i].MiscFlags = 0;
+	}
+
+	D3D11_RENDER_TARGET_VIEW_DESC RTVDescriptor[2] = { {},{} };
+	for (int i = 0; i < 2; ++i)
+	{
+		RTVDescriptor[i].Format = Format[i];
+		RTVDescriptor[i].ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		RTVDescriptor[i].Texture2D.MipSlice = 0;
+	}
+	
+	constexpr size_t Float3TypeIndex = 0;		constexpr size_t Float4TypeIndex = 1;
+	this->_GBuffer._positionRT		   = pRenderer->AddRenderTarget(RTDescriptor[Float3TypeIndex], RTVDescriptor[Float3TypeIndex]);
+	this->_GBuffer._normalRT		   = pRenderer->AddRenderTarget(RTDescriptor[Float3TypeIndex], RTVDescriptor[Float3TypeIndex]);
+	this->_GBuffer._diffuseRoughnessRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
+	this->_GBuffer._specularMetallicRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
+
+	Log::Info("Done.");
+}
+
+void DeferredRenderingPasses::Render(Renderer * pRenderer)
+{
 
 }

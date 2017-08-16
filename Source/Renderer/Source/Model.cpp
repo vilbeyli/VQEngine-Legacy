@@ -90,7 +90,7 @@ void Material::SetMaterialConstants(Renderer* renderer, SHADERS shader) const
 		break;
 		
 	case SHADERS::FORWARD_BRDF:
-	/*case SHADERS::FORWARD_BRDF:*/
+	case SHADERS::DEFERRED_GEOMETRY:
 		renderer->SetConstant1f("metalness", metalness);
 		renderer->SetConstant1f("roughness", roughness);
 		break;

@@ -240,22 +240,24 @@ void Renderer::LoadShaders()
 		{ "TANGENT",	FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 },
 	};
-	Shader::s_shaders[SHADERS::FORWARD_PHONG      ] = AddShader("Forward_Phong"    , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::UNLIT              ] = AddShader("UnlitTextureColor", s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::TEXTURE_COORDINATES] = AddShader("TextureCoord"     , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::NORMAL             ]	= AddShader("Normal"           , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::TANGENT            ] = AddShader("Tangent"          , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::BINORMAL           ]	= AddShader("Binormal"         , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::LINE               ]	= AddShader("Line"             , s_shaderRoot, layout, true);
-	Shader::s_shaders[SHADERS::TBN                ]	= AddShader("TNB"              , s_shaderRoot, layout, true);
-	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"            , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"           , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"            , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"             , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"     , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"      , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::FORWARD_BRDF       ]	= AddShader("Forward_BRDF"     , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::SHADOWMAP_DEPTH    ]	= AddShader("DepthShader"      , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::FORWARD_PHONG      ] = AddShader("Forward_Phong"     , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::UNLIT              ] = AddShader("UnlitTextureColor" , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::TEXTURE_COORDINATES] = AddShader("TextureCoord"      , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::NORMAL             ]	= AddShader("Normal"            , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::TANGENT            ] = AddShader("Tangent"           , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::BINORMAL           ]	= AddShader("Binormal"          , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::LINE               ]	= AddShader("Line"              , s_shaderRoot, layout, true);
+	Shader::s_shaders[SHADERS::TBN                ]	= AddShader("TNB"               , s_shaderRoot, layout, true);
+	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"             , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"            , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"             , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"              , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"      , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"       , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::FORWARD_BRDF       ]	= AddShader("Forward_BRDF"      , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::SHADOWMAP_DEPTH    ]	= AddShader("DepthShader"       , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::DEFERRED_GEOMETRY  ]	= AddShader("Deferred_Geometry" , s_shaderRoot, layout);
+	Shader::s_shaders[SHADERS::DEFERRED_BRDF      ]	= AddShader("Deferred_BRDF"     , s_shaderRoot, layout);
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
 
@@ -275,11 +277,7 @@ std::stack<std::string> Renderer::UnloadShaders()
 void Renderer::ReloadShaders()
 {
 	Log::Info("Reloading Shaders...");
-	Sleep(100);	// wait for GPU to finish
-	
-	// get unloaded shaders and remove Shader::s_shaders[] (depth shader so far)
-	std::stack<std::string> fileNames = UnloadShaders();
-
+	UnloadShaders();
 	LoadShaders();
 	Log::Info("Done");
 }

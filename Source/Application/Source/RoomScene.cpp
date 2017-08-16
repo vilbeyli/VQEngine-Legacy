@@ -78,19 +78,22 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 		|| selectedShader == SHADERS::UNLIT 
 		|| selectedShader == SHADERS::NORMAL
 		|| selectedShader == SHADERS::FORWARD_BRDF
+		|| selectedShader == SHADERS::DEFERRED_GEOMETRY
 	);
 
-
-	m_skybox.Render(viewProj);
+	if(selectedShader != SHADERS::DEFERRED_GEOMETRY)
+		m_skybox.Render(viewProj);
 
 	pRenderer->SetShader(selectedShader);
-	m_sceneManager.SendLightData();
+	
+	if (selectedShader != SHADERS::DEFERRED_GEOMETRY)
+		m_sceneManager.SendLightData();
 	
 	m_room.Render(m_pRenderer, viewProj, bSendMaterialData);
 	
 	//if (selectedShader == SHADERS::FORWARD_BRDF) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
 	
-	RenderCentralObjects(viewProj);
+	RenderCentralObjects(viewProj, bSendMaterialData);
 	RenderLights(viewProj);
 }
 
@@ -392,20 +395,19 @@ void RoomScene::RenderLights(const XMMATRIX& viewProj) const
 	}
 }
 
-void RoomScene::RenderCentralObjects(const XMMATRIX& viewProj) const
+void RoomScene::RenderCentralObjects(const XMMATRIX& viewProj, bool bSendMaterialData) const
 {
 	const ShaderID shd = m_sceneManager.GetSelectedShader();
-	const bool sendMaterialData = shd == SHADERS::FORWARD_PHONG || shd == SHADERS::UNLIT || shd == SHADERS::NORMAL || shd == SHADERS::FORWARD_BRDF;
 
-	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj, sendMaterialData);
-	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj, sendMaterialData);
+	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj, bSendMaterialData);
+	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj, bSendMaterialData);
 
-	grid.Render(m_pRenderer, viewProj, sendMaterialData);
-	quad.Render(m_pRenderer, viewProj, sendMaterialData);
-	triangle.Render(m_pRenderer, viewProj, sendMaterialData);
-	cylinder.Render(m_pRenderer, viewProj, sendMaterialData);
-	cube.Render(m_pRenderer, viewProj, sendMaterialData);
-	sphere.Render(m_pRenderer, viewProj, sendMaterialData);
+	grid.Render(m_pRenderer, viewProj, bSendMaterialData);
+	quad.Render(m_pRenderer, viewProj, bSendMaterialData);
+	triangle.Render(m_pRenderer, viewProj, bSendMaterialData);
+	cylinder.Render(m_pRenderer, viewProj, bSendMaterialData);
+	cube.Render(m_pRenderer, viewProj, bSendMaterialData);
+	sphere.Render(m_pRenderer, viewProj, bSendMaterialData);
 }
 
 void RoomScene::ToggleFloorNormalMap()

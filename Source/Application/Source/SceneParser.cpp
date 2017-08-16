@@ -96,6 +96,14 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::R
 		//---------------------------------------------------------------
 		settings.shadowMap.dimension = stoi(line[1]);
 	}
+	else if (cmd == "deferredRendering")
+	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Shadow Map dimension
+		//---------------------------------------------------------------
+		settings.bUseDeferredRendering = sBoolTypeReflection.at(line[1]);
+	}
 	else if (cmd == "Tonemapping")
 	{
 		// Parameters

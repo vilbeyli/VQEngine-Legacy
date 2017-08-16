@@ -76,12 +76,13 @@ def traverse_folder(curr_folder):
         elif os.path.isfile(dir_entry):                           # consider files
             file_name = str(dir_entry).split('.')
             if len(file_name) == 2:                               # consider filename.ext files
-                if file_name[1] == 'cpp' or file_name[1] == 'h':
+                if file_name[1] == 'cpp' or file_name[1] == 'h' or file_name[1] == 'hlsl':
                     edit_headers(dir_entry)
     os.chdir("..\\")
     return
 
 # ENTRY POINT
+os.chdir("..\\")
 DIRS = os.listdir()                 # get the directories
 for entry in DIRS:                  # traverrse directories
     if os.path.isdir(entry) and entry[0] != '.': # only if its a directory and not hidden (git)

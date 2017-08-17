@@ -141,7 +141,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	const WCHAR* PSPath = pspath_w.c_str();
 
 	std::string info("\tCompiling  \""); info += m_name; info += "\"...\t";
-	OutputDebugString(info.c_str());
+	Log::Info(info);
 
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
@@ -248,8 +248,14 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 
 	// INPUT LAYOUT
 	//---------------------------------------------------------------------------
+#if 1
 	//setup the layout of the data that goes into the shader
 	std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(layouts.size());
+	D3D11_SHADER_DESC shaderDesc = {};
+	m_vsRefl->GetDesc(&shaderDesc);
+	shaderDesc.InputParameters;
+	D3D_PRIMITIVE primitiveDesc = shaderDesc.InputPrimitive;
+
 	UINT sz = static_cast<UINT>(layouts.size());
 	for (unsigned i = 0; i < layouts.size(); ++i)
 	{
@@ -272,7 +278,10 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		OutputDebugString("Error creating input layout");
 		assert(false);
 	}
-
+#else
+	// todo: get layout from reflection and handle cpu input layouts
+	// https://takinginitiative.wordpress.com/2011/12/11/directx-1011-basic-shader-reflection-automatic-input-layout-creation/
+#endif
 
 	// CBUFFERS & SHADER RESOURCES
 	//---------------------------------------------------------------------------

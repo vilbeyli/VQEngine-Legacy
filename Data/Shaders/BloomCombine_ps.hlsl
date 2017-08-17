@@ -21,7 +21,7 @@
 struct PSIn
 {
 	float4 position : SV_POSITION;
-	float2 texCoord : TEXCOORD0;
+	float2 uv		: TEXCOORD0;
 };
 
 Texture2D ColorTexture;
@@ -31,8 +31,8 @@ SamplerState BlurSampler;
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	float3 outColor;
-	const float3 color = ColorTexture.Sample(BlurSampler, In.texCoord);
-	const float3 bloom = BloomTexture.Sample(BlurSampler, In.texCoord);
+	const float3 color = ColorTexture.Sample(BlurSampler, In.uv);
+	const float3 bloom = BloomTexture.Sample(BlurSampler, In.uv);
 	
 #ifdef DO_BLOOM
 	if (length(bloom) != 0.0f)

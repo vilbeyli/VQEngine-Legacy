@@ -54,7 +54,7 @@ public:
 	template<class... Args>
 	static void Info(const char* format, Args&&... args)
 	{
-		char msg[256];	sprintf_s(msg, format, args...);
+		char msg[2048];	sprintf_s(msg, format, args...);
 		Info(std::string(msg));
 	}
 private:

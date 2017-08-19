@@ -10,7 +10,52 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "Source\Appli
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Renderer", "Source\Renderer\Renderer.vcxproj", "{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571DA824-A6F1-4944-8C39-85DC665C8A81}"
+	ProjectSection(SolutionItems) = preProject
+		Data\Shaders\Binormal_ps.hlsl = Data\Shaders\Binormal_ps.hlsl
+		Data\Shaders\Binormal_vs.hlsl = Data\Shaders\Binormal_vs.hlsl
+		Data\Shaders\Bloom_ps.hlsl = Data\Shaders\Bloom_ps.hlsl
+		Data\Shaders\Bloom_vs.hlsl = Data\Shaders\Bloom_vs.hlsl
+		Data\Shaders\BloomCombine_ps.hlsl = Data\Shaders\BloomCombine_ps.hlsl
+		Data\Shaders\BloomCombine_vs.hlsl = Data\Shaders\BloomCombine_vs.hlsl
+		Data\Shaders\Blur_ps.hlsl = Data\Shaders\Blur_ps.hlsl
+		Data\Shaders\Blur_vs.hlsl = Data\Shaders\Blur_vs.hlsl
+		Data\Shaders\Debug_ps.hlsl = Data\Shaders\Debug_ps.hlsl
+		Data\Shaders\Debug_vs.hlsl = Data\Shaders\Debug_vs.hlsl
+		Data\Shaders\deferred_brdf_ps.hlsl = Data\Shaders\deferred_brdf_ps.hlsl
+		Data\Shaders\deferred_brdf_vs.hlsl = Data\Shaders\deferred_brdf_vs.hlsl
+		Data\Shaders\deferred_geometry_ps.hlsl = Data\Shaders\deferred_geometry_ps.hlsl
+		Data\Shaders\deferred_geometry_vs.hlsl = Data\Shaders\deferred_geometry_vs.hlsl
+		Data\Shaders\DepthShader_ps.hlsl = Data\Shaders\DepthShader_ps.hlsl
+		Data\Shaders\DepthShader_vs.hlsl = Data\Shaders\DepthShader_vs.hlsl
+		Data\Shaders\forward_brdf_ps.hlsl = Data\Shaders\forward_brdf_ps.hlsl
+		Data\Shaders\forward_brdf_vs.hlsl = Data\Shaders\forward_brdf_vs.hlsl
+		Data\Shaders\forward_phong_ps.hlsl = Data\Shaders\forward_phong_ps.hlsl
+		Data\Shaders\Forward_Phong_vs.hlsl = Data\Shaders\Forward_Phong_vs.hlsl
+		Data\Shaders\Line_gs.hlsl = Data\Shaders\Line_gs.hlsl
+		Data\Shaders\Line_ps.hlsl = Data\Shaders\Line_ps.hlsl
+		Data\Shaders\Line_vs.hlsl = Data\Shaders\Line_vs.hlsl
+		Data\Shaders\Normal_ps.hlsl = Data\Shaders\Normal_ps.hlsl
+		Data\Shaders\Normal_vs.hlsl = Data\Shaders\Normal_vs.hlsl
+		Data\Shaders\Skybox_ps.hlsl = Data\Shaders\Skybox_ps.hlsl
+		Data\Shaders\Skybox_vs.hlsl = Data\Shaders\Skybox_vs.hlsl
+		Data\Shaders\Tangent_ps.hlsl = Data\Shaders\Tangent_ps.hlsl
+		Data\Shaders\Tangent_vs.hlsl = Data\Shaders\Tangent_vs.hlsl
+		Data\Shaders\TextureCoord_ps.hlsl = Data\Shaders\TextureCoord_ps.hlsl
+		Data\Shaders\TextureCoord_vs.hlsl = Data\Shaders\TextureCoord_vs.hlsl
+		Data\Shaders\TNB_gs.hlsl = Data\Shaders\TNB_gs.hlsl
+		Data\Shaders\TNB_ps.hlsl = Data\Shaders\TNB_ps.hlsl
+		Data\Shaders\TNB_vs.hlsl = Data\Shaders\TNB_vs.hlsl
+		Data\Shaders\Tonemapping_ps.hlsl = Data\Shaders\Tonemapping_ps.hlsl
+		Data\Shaders\Tonemapping_vs.hlsl = Data\Shaders\Tonemapping_vs.hlsl
+		Data\Shaders\UnlitTextureColor_ps.hlsl = Data\Shaders\UnlitTextureColor_ps.hlsl
+		Data\Shaders\UnlitTextureColor_vs.hlsl = Data\Shaders\UnlitTextureColor_vs.hlsl
+	EndProjectSection
+EndProject
 Global
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86

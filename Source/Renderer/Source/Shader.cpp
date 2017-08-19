@@ -21,11 +21,12 @@
 #include <fstream>
 #include <sstream>
 
-std::array<ShaderID, SHADERS::SHADER_COUNT> Shader::s_shaders;
 
 CPUConstant::CPUConstantPool CPUConstant::s_constants;
 size_t CPUConstant::s_nextConstIndex = 0;
 
+// HELPER FUNCTIONS & CONSTANTS
+// ============================================================================
 void OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName)
 {
 	char* compileErrors = (char*)errorMessage->GetBufferPointer();
@@ -43,7 +44,6 @@ void OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileNa
 	return;
 }
 
-
 void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath)
 {
 	if (errorMessage)
@@ -58,6 +58,18 @@ void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath)
 	// continue execution, make sure error is known
 	//assert(false);
 }
+
+static void(__cdecl ID3D11DeviceContext:: *SetShaderConstants[6])
+(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = {
+	&ID3D11DeviceContext::VSSetConstantBuffers,
+	&ID3D11DeviceContext::GSSetConstantBuffers,
+	&ID3D11DeviceContext::DSSetConstantBuffers,
+	&ID3D11DeviceContext::HSSetConstantBuffers,
+	&ID3D11DeviceContext::CSSetConstantBuffers,
+	&ID3D11DeviceContext::PSSetConstantBuffers };
+// ============================================================================
+
+std::array<ShaderID, SHADERS::SHADER_COUNT> Shader::s_shaders;
 
 Shader::Shader(const std::string& shaderFileName)
 	:
@@ -145,6 +157,9 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
+	ID3DInclude* const	includeHandler				= D3D_COMPILE_STANDARD_FILE_INCLUDE;		// use default include handler for using #include in shader files
+	const char*			shaderCompilerVersions[]	= { "vs_5_0", "gs_5_0", "", "", "", "ps_5_0" };
+
 #if defined( _DEBUG ) || defined ( FORCE_DEBUG )
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #else
@@ -156,9 +171,9 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	if (FAILED(D3DCompileFromFile(
 		VSPath,
 		NULL,
-		NULL,
+		includeHandler ,
 		"VSMain",
-		"vs_5_0",
+		shaderCompilerVersions[ShaderType::VS],
 		flags,
 		0,
 		&vsBlob,
@@ -175,9 +190,9 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		if (FAILED(D3DCompileFromFile(
 			GSPath,
 			NULL,
-			NULL,
+			includeHandler,
 			"GSMain",
-			"gs_5_0",
+			shaderCompilerVersions[ShaderType::GS],
 			flags,
 			0,
 			&gsBlob,
@@ -191,9 +206,9 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	if (FAILED(D3DCompileFromFile(
 		PSPath,
 		NULL,
-		NULL,
+		includeHandler,
 		"PSMain",
-		"ps_5_0",
+		shaderCompilerVersions[ShaderType::PS],
 		flags,
 		0,
 		&psBlob,
@@ -437,6 +452,7 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 	// CREATE CPU & GPU CONSTANT BUFFERS
 	//---------------------------------------------------------------------------------------
 	// CPU CBuffers
+	int constantBufferSlot = 0;
 	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
 	{
 		std::vector<CPUConstantID> cpuBuffers;
@@ -450,10 +466,19 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 			c._size = varDesc.Size;
 			c._data = new char[c._size];
 			memset(c._data, 0, c._size);
-			cpuBuffers.push_back(c_id);
+			m_constants.push_back(std::make_pair(constantBufferSlot, c_id));
+			
 		}
-		m_constants.push_back(cpuBuffers);
+		++constantBufferSlot;
 	}
+
+	//LogConstantBufferLayouts();
+	m_constantsUnsorted = m_constants;
+	std::sort(m_constants.begin(), m_constants.end(), [](const ConstantBufferMapping& lhs, const ConstantBufferMapping& rhs) {
+		const std::string& lstr = CPUConstant::Get(lhs.second)._name;	const std::string& rstr = CPUConstant::Get(rhs.second)._name;
+		return lstr <= rstr;
+	});
+	//LogConstantBufferLayouts();
 
 	// GPU CBuffer Description
 	D3D11_BUFFER_DESC cBufferDesc;
@@ -478,6 +503,19 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 		cBuffer.bufferSlot = cbLayout.bufSlot;
 		m_cBuffers.push_back(cBuffer);
 	}
+}
+
+void Shader::LogConstantBufferLayouts() const
+{
+	char inputTable[2048];
+	sprintf_s(inputTable, "\n%s ConstantBuffers: -----\n", this->m_name.c_str());
+	std::for_each(m_constants.begin(), m_constants.end(), [&inputTable](const ConstantBufferMapping& cMapping) {
+		char entry[32];
+		sprintf_s(entry, "(%d, %d)\t- %s\n", cMapping.first, cMapping.second, CPUConstant::Get(cMapping.second)._name.c_str());
+		strcat_s(inputTable, entry);
+	});
+	strcat_s(inputTable, "-----\n");
+	Log::Info(std::string(inputTable));
 }
 
 void Shader::RegisterConstantBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType type)
@@ -527,14 +565,6 @@ void Shader::ClearConstantBuffers()
 
 void Shader::UpdateConstants(ID3D11DeviceContext* context)
 {
-	static void(__cdecl ID3D11DeviceContext:: *SetShaderConstants[6])
-		(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = {
-		&ID3D11DeviceContext::VSSetConstantBuffers,
-		&ID3D11DeviceContext::GSSetConstantBuffers,
-		&ID3D11DeviceContext::DSSetConstantBuffers,
-		&ID3D11DeviceContext::HSSetConstantBuffers,
-		&ID3D11DeviceContext::CSSetConstantBuffers,
-		&ID3D11DeviceContext::PSSetConstantBuffers };
 	for (unsigned i = 0; i < m_cBuffers.size(); ++i)
 	{
 		ConstantBuffer& CB = m_cBuffers[i];
@@ -543,12 +573,14 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 			ID3D11Buffer* data = CB.data;
 			D3D11_MAPPED_SUBRESOURCE mappedResource;
 
-			// Map sub-resource to GPU - update contends - discard the sub-resource
+			// Map sub-resource to GPU - update contents - discard the sub-resource
 			context->Map(data, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 			char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
-			std::vector<CPUConstantID>& cpuConsts = m_constants[i];
-			for (const CPUConstantID& c_id : cpuConsts)
+			for (const ConstantBufferMapping& indexIDPair : m_constantsUnsorted)
 			{
+				if (indexIDPair.first != i) continue;
+				const int slotIndex = indexIDPair.first;
+				const CPUConstantID c_id = indexIDPair.second;
 				CPUConstant& c = CPUConstant::Get(c_id);
 				memcpy(bufferPos, c._data, c._size);
 				bufferPos += c._size;

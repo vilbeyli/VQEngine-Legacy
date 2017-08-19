@@ -161,7 +161,10 @@ enum SHADERS	// good enough for global namespace
 };
 
 
+// types
 using ShaderID = int;
+using GPU_ConstantBufferSlotIndex = int;
+using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
 
 class Shader
 {
@@ -187,29 +190,36 @@ private:
 	void CheckSignatures();
 	void SetConstantBuffers(ID3D11Device* device);
 
+	void LogConstantBufferLayouts() const;
+
 private:
 	static std::array<ShaderID, SHADERS::SHADER_COUNT>	s_shaders;
+
+	// members
+	std::vector<ConstantBuffer>			m_cBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx
+	ShaderID							m_id;
+
+	ID3D11VertexShader*					m_vertexShader;
+	ID3D11PixelShader*					m_pixelShader;
+	ID3D11GeometryShader*				m_geometryShader;
+	ID3D11HullShader*					m_hullShader;
+	ID3D11DomainShader*					m_domainShader;
+	ID3D11ComputeShader*				m_computeShader;
+
+	ID3D11ShaderReflection*				m_vsRefl;	// shader reflections, temporary?
+	ID3D11ShaderReflection*				m_psRefl;	// shader reflections, temporary?
+	ID3D11ShaderReflection*				m_gsRefl;	// shader reflections, temporary?
+
+	ID3D11InputLayout*					m_layout;
+
+	std::vector<ConstantBufferLayout>	m_CBLayouts;
+	std::vector<ConstantBufferMapping>	m_constants;
+	std::vector<ConstantBufferMapping>	m_constantsUnsorted;	// duplicate data...
+
+	std::vector<ShaderTexture>			m_textures;
+	std::vector<ShaderSampler>			m_samplers;
+
+	
 	const std::string									m_name;
-	ShaderID											m_id;
-
-	ID3D11VertexShader*									m_vertexShader;
-	ID3D11PixelShader*									m_pixelShader;
-	ID3D11GeometryShader*								m_geometryShader;
-	ID3D11HullShader*									m_hullShader;
-	ID3D11DomainShader*									m_domainShader;
-	ID3D11ComputeShader*								m_computeShader;
-
-	ID3D11ShaderReflection*								m_vsRefl;	// shader reflections, temporary?
-	ID3D11ShaderReflection*								m_psRefl;	// shader reflections, temporary?
-	ID3D11ShaderReflection*								m_gsRefl;	// shader reflections, temporary?
-
-	ID3D11InputLayout*									m_layout;
-
-	std::vector<ConstantBufferLayout>					m_CBLayouts;
-	std::vector<ConstantBuffer>							m_cBuffers;
-	std::vector<std::vector<CPUConstantID>>				m_constants;
-
-	std::vector<ShaderTexture>							m_textures;
-	std::vector<ShaderSampler>							m_samplers;
 };
 

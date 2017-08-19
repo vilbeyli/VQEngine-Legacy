@@ -854,34 +854,112 @@ void Renderer::SetConstant(const char * cName, const void * data)
 	//      and  here: https://developer.nvidia.com/content/constant-buffers-without-constant-pain-0
 
 	Shader* shader = m_shaders[m_state._activeShader];
-	bool found = false;
 
-	// todo: compare with unordered_map lookup
-	for (size_t i = 0; i < shader->m_constants.size() && !found; i++)	// for each cbuffer
+#if 0
+	// LINEAR LOOKUP
+	bool found = false;
+	for (const ConstantBufferMapping& bufferSlotIDPair : shader->m_constantsUnsorted)
 	{
-		std::vector<CPUConstantID>& cVector = shader->m_constants[i];
-		for (const CPUConstantID& c_id : cVector)	// linear search in constant buffers -> optimization: sort & binary search || unordered_map
+		const size_t GPUcBufferSlot = bufferSlotIDPair.first;
+		const CPUConstantID constID = bufferSlotIDPair.second;
+		CPUConstant& c = CPUConstant::Get(constID);
+		if (strcmp(cName, c._name.c_str()) == 0)		// if name matches
 		{
-			CPUConstant& c = CPUConstant::Get(c_id);
-			if (strcmp(cName, c._name.c_str()) == 0)		// if name matches
+			found = true;
+			if (memcmp(c._data, data, c._size) != 0)	// copy data if its not the same
 			{
-				found = true;
-				if (memcmp(c._data, data, c._size) != 0)	// copy data if its not the same
-				{
-					memcpy(c._data, data, c._size);
-					shader->m_cBuffers[i].dirty = true;
-					//break;	// ensures write on first occurance
-				}
+				memcpy(c._data, data, c._size);
+				shader->m_cBuffers[GPUcBufferSlot].dirty = true;
+				break;	// ensures write on first occurance
 			}
 		}
 	}
-
-#ifdef _DEBUG
-	if (!found)
+#else
+	// BINARY SEARCH 
+	auto& BinarySearch = [cName, &shader]()
 	{
-		Log::Error("Error: Constant not found: \"%s\" in Shader(Id=%d) \"%s\"\n", cName, m_state._activeShader, shader->Name().c_str());	
+		bool bKeepSearching = true;
+		size_t lowIndex  = 0;
+		size_t highIndex = shader->m_constants.size() - 1;
+		size_t currIndex = highIndex / 2;
+
+#if LOG_SEARCH
+		{
+			Log::Info("BinarySearch: %s", cName);
+			for (const auto& slotIndexPair : shader->m_constants)
+			{	// dump sorted buffer slot
+				const char* constantName = CPUConstant::Get(slotIndexPair.second)._name.c_str();
+				Log::Info(" GPU:%d | CPU:%d - %s", slotIndexPair.first, slotIndexPair.second, constantName);
+			}
+			Log::Info("--------------------------");
+		}
+#endif
+
+		while (bKeepSearching)
+		{
+			const ConstantBufferMapping& bufferSlotIDPair = shader->m_constants[currIndex];
+			const CPUConstantID constID = bufferSlotIDPair.second;
+			const CPUConstant& c = CPUConstant::Get(constID);
+			int res = strcmp(cName, c._name.c_str());
+#if LOG_SEARCH
+			Log::Info(" \"%s\" strcmp \"%s\" -> %d", cName, c._name.c_str(), res);
+#endif
+			if (res == 0)		
+			{	
+#if LOG_SEARCH
+				Log::Info("found: %s", c._name.c_str());
+#endif
+				return currIndex;
+			}
+
+			else if (res > 0)
+			{
+				lowIndex = currIndex;
+				currIndex = lowIndex + (highIndex - lowIndex + 1) / 2;
+#if LOG_SEARCH
+				{
+					const ConstantBufferMapping& bufferSlotIDPair = shader->m_constants[currIndex];
+					const CPUConstantID constID = bufferSlotIDPair.second;
+					const CPUConstant& c = CPUConstant::Get(constID);
+					Log::Info("looking next(%s)", c._name.c_str());
+				}
+#endif
+			}
+
+			else
+			{
+				highIndex = currIndex;
+				currIndex = lowIndex + (highIndex - lowIndex) / 2;
+#if LOG_SEARCH
+				{
+
+					const ConstantBufferMapping& bufferSlotIDPair = shader->m_constants[currIndex];
+					const CPUConstantID constID = bufferSlotIDPair.second;
+					const CPUConstant& c = CPUConstant::Get(constID);
+					Log::Info("looking previous(%s)", c._name.c_str());
+				}
+#endif
+			}
+
+			bKeepSearching = lowIndex < highIndex;
+		}
+
+		Log::Error("CONSTANT NOT FOUND");
+		return currIndex;
+	};
+
+	size_t bufferMappingIndex = BinarySearch();
+	const ConstantBufferMapping& bufferSlotIDPair = shader->m_constants[bufferMappingIndex];
+	const size_t GPUcBufferSlot = bufferSlotIDPair.first;
+	const CPUConstantID constID = bufferSlotIDPair.second;
+	CPUConstant& c = CPUConstant::Get(constID);
+	if (memcmp(c._data, data, c._size) != 0)	// copy data if its not the same
+	{
+		memcpy(c._data, data, c._size);
+		shader->m_cBuffers[GPUcBufferSlot].dirty = true;
 	}
 #endif
+
 }
 
 void Renderer::SetTexture(const char * texName, TextureID tex)
@@ -1081,18 +1159,26 @@ void Renderer::Apply()
 		const auto indexRTV = m_state._boundRenderTargets[0];
 		
 		// get the bound render target addresses
+#if 1
+		// todo: perf: this takes as much time as set constants in debug mode
 		std::vector<ID3D11RenderTargetView*> RTVs = [&]() {				
 			std::vector<ID3D11RenderTargetView*> v(m_state._boundRenderTargets.size(), nullptr);
 			size_t i = 0;
 			for (RenderTargetID hRT : m_state._boundRenderTargets) 
 				if(hRT >= 0) 
 					v[i++] = m_renderTargets[hRT]._renderTargetView;
-			return v;
+			return std::move(v);
 		}();
-
+#else
+		// this is slower ~2ms in debug
+		std::vector<ID3D11RenderTargetView*> RTVs;
+		for (RenderTargetID hRT : m_state._boundRenderTargets)
+			if (hRT >= 0)
+				RTVs.push_back(m_renderTargets[hRT]._renderTargetView);
+#endif
 		const auto indexDSV     = m_state._boundDepthStencil;
 		//ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &RTVs[0];
-		ID3D11RenderTargetView** RTV = &RTVs[0];
+		ID3D11RenderTargetView** RTV = RTVs.empty() ? nullptr : &RTVs[0];
 		DepthStencil*  DSV           = indexDSV == -1 ? nullptr : m_depthStencils[indexDSV];
 
 		m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);

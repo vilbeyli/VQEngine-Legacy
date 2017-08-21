@@ -195,7 +195,7 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 		//--------------------------------------------------------------
 		scene.cameraSettings.nearPlane	= stof(command[1]);
 		scene.cameraSettings.farPlane	= stof(command[2]);
-		scene.cameraSettings.fov		= stof(command[3]);
+		scene.cameraSettings.fovV		= stof(command[3]);
 		scene.cameraSettings.x          = stof(command[4]);
 		scene.cameraSettings.y          = stof(command[5]);
 		scene.cameraSettings.z          = stof(command[6]);

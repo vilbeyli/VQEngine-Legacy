@@ -58,11 +58,12 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 	}
 }
 
-void Skybox::Render(const XMMATRIX& viewProj) const
+void Skybox::Render(const XMMATRIX& viewProj, float fovH) const
 {
 	const XMMATRIX wvp = skydomeObj.m_transform.WorldTransformationMatrix() * viewProj;
 	pRenderer->SetShader(skydomeShader);
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);
+	pRenderer->SetConstant1f("fovH", fovH);
 	pRenderer->SetTexture("gSkybox", skydomeTex);
 	pRenderer->SetBufferObj(GEOMETRY::CUBE);
 	pRenderer->Apply();

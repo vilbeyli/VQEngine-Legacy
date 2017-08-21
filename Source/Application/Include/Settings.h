@@ -33,9 +33,14 @@ namespace Settings
 	};
 
 	struct Camera {
-		float		fov;
+		union
+		{
+			float		fovH;
+			float		fovV;
+		};
 		float		nearPlane;
 		float		farPlane;
+		float		aspect;
 		float		x, y, z;
 		float		yaw, pitch;
 	};

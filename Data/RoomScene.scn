@@ -1,4 +1,4 @@
-camera 1 1500 45   0 50 -190  0 15 
+camera 0.1 1500 60   0 50 -190  0 15 
 
 //   [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
 light       s         white      	true       300         70	     -70    35     0	   180  0  	65	 

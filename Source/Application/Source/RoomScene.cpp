@@ -70,6 +70,7 @@ void RoomScene::Update(float dt)
 }
 
 void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj);
+#include "Camera.h"
 void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
 	const ShaderID selectedShader = m_sceneManager.GetSelectedShader();
@@ -82,7 +83,7 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 	);
 
 	if(selectedShader != SHADERS::DEFERRED_GEOMETRY)
-		m_skybox.Render(viewProj);
+		m_skybox.Render(viewProj, m_sceneManager.m_pCamera->m_settings.fovH * DEG2RAD);
 
 	pRenderer->SetShader(selectedShader);
 	
@@ -304,7 +305,7 @@ void RoomScene::InitializeObjectArrays()
 
 
 	  //cubes.front().m_transform.Translate(0, 30, 0);
-	  cube.m_transform.SetPosition(0, 15, 0);
+	  cube.m_transform.SetPosition(0, 65, 0);
 	  cube.m_transform.SetXRotationDeg(90);
 	  cube.m_transform.RotateAroundGlobalXAxisDegrees(30);
 	  cube.m_transform.RotateAroundGlobalYAxisDegrees(30);

@@ -26,6 +26,8 @@ cbuffer perModel
 cbuffer frame
 {
 	matrix lightSpaceMat;	// array?
+	float fovH;
+	float panini;
 };
 
 
@@ -47,12 +49,28 @@ struct PSIn
     float2 texCoord		 : TEXCOORD4;
 };
 
+
+#include "Panini.hlsl"
+
 PSIn VSMain(VSIn In)
 {
 	const float4 pos = float4(In.position, 1);
 
 	PSIn Out;
 	Out.position		= mul(worldViewProj, pos);
+
+	// panini projection
+	const float2 screenPos	= Out.position.xy / Out.position.w;
+	const float  depth		= Out.position.z  / Out.position.w;
+	const float2 paniniScreenPosition = PaniniProjectionScreenPosition(screenPos, fovH);// *0.5f + 0.5f;
+
+	//if(D > 0.01f)
+	const float w = Out.position.w;
+	const float z = Out.position.z;
+	if(w > 0)
+	    Out.position = float4(paniniScreenPosition * w, z, w) * panini 
+	                 + float4(screenPos            * w, z, w) * (1.0f - panini);
+
 	Out.worldPos		= mul(world        , pos).xyz;
     Out.normal			= normalize(mul(normalMatrix, In.normal));
 	Out.lightSpacePos	= mul(lightSpaceMat, float4(Out.worldPos, 1));

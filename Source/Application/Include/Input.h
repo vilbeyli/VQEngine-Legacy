@@ -42,7 +42,7 @@ public:
 	void KeyUp(KeyCode);
 	void ButtonDown(KeyCode);
 	void ButtonUp(KeyCode);
-	void UpdateMousePos(long x, long y);
+	void UpdateMousePos(long x, long y, short scroll);
 
 	bool IsKeyDown(KeyCode) const;
 	bool IsKeyDown(const char*) const;
@@ -55,6 +55,8 @@ public:
 	bool IsKeyTriggered(const std::string&) const;
 	int  MouseDeltaX() const;
 	int  MouseDeltaY() const;
+	bool IsScrollUp() const;
+	bool IsScrollDown() const;
 
 	void Update();
 	const long* GetDelta() const;
@@ -70,5 +72,6 @@ private:
 	long m_mouseDelta[2];
 	long m_mousePos[2];
 	bool m_isConsumed;	// experimental
+	short m_mouseScroll;
 };
 

@@ -186,7 +186,8 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 		{
 			long xPosRelative = raw->data.mouse.lLastX;
 			long yPosRelative = raw->data.mouse.lLastY;
-			ENGINE->m_input->UpdateMousePos(xPosRelative, yPosRelative);
+			short scroll = raw->data.mouse.usButtonData;
+			ENGINE->m_input->UpdateMousePos(xPosRelative, yPosRelative, scroll);
 			SetCursorPos(s_rendererSettings.window.width/2, s_rendererSettings.window.height/2);
 			
 #ifdef LOG
@@ -211,7 +212,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 	// client area mouse - not good for first person camera
 	case WM_MOUSEMOVE:
 	{
-		ENGINE->m_input->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
+		ENGINE->m_input->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam), scroll);
 		break;
 	}
 #endif

@@ -36,7 +36,8 @@ constexpr int		MAX_SPOTS = 10;
 SceneManager::SceneManager()
 	:
 	m_pCamera(new Camera()),
-	m_roomScene(*this)
+	m_roomScene(*this),
+	m_bUsePaniniProjection(false)
 {}
 
 SceneManager::~SceneManager()
@@ -122,9 +123,14 @@ void SceneManager::SetCameraSettings(const Settings::Camera& cameraSettings, con
 	const auto& NEAR_PLANE = cameraSettings.nearPlane;
 	const auto& FAR_PLANE = cameraSettings.farPlane;
 	const float AspectRatio = static_cast<float>(windowSettings.width) / windowSettings.height;
-	
+	const float VerticalFoV = cameraSettings.fovV * DEG2RAD;
+
+	m_pCamera->m_settings = cameraSettings;
+	m_pCamera->m_settings.aspect = AspectRatio;
+
 	m_pCamera->SetOthoMatrix(windowSettings.width, windowSettings.height, NEAR_PLANE, FAR_PLANE);
-	m_pCamera->SetProjectionMatrix((float)XM_PIDIV4, AspectRatio, NEAR_PLANE, FAR_PLANE);
+	m_pCamera->SetProjectionMatrix(VerticalFoV, AspectRatio, NEAR_PLANE, FAR_PLANE);
+
 	m_pCamera->SetPosition(cameraSettings.x, cameraSettings.y, cameraSettings.z);
 
 	m_pCamera->m_yaw = m_pCamera->m_pitch = 0.0f;
@@ -148,7 +154,7 @@ void SceneManager::HandleInput()
 
 	if (ENGINE->INP()->IsKeyTriggered("R")) ReloadLevel();
 	if (ENGINE->INP()->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
-	if (ENGINE->INP()->IsKeyTriggered(";")) Log::Info("TODO: DebugShader");
+	if (ENGINE->INP()->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
 	if (ENGINE->INP()->IsKeyTriggered("'")) m_roomScene.ToggleFloorNormalMap();
 
 }
@@ -223,6 +229,9 @@ void SceneManager::Render() const
 		m_pRenderer->Begin(clearColor, clearDepth);
 		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 		m_pRenderer->SetSamplerState("sNormalSampler", 0);
+		m_pRenderer->SetConstant1f("fovH", m_pCamera->m_settings.fovH * DEG2RAD);
+		constexpr float f = 120.0f * DEG2RAD;
+		m_pRenderer->SetConstant1f("panini", m_bUsePaniniProjection ? 1.0f : 0.0f);
 
 		constexpr int TBNMode = 0;
 		if (m_selectedShader == SHADERS::TBN)	m_pRenderer->SetConstant1i("mode", TBNMode);

@@ -20,6 +20,7 @@
 #define _CAMERA_H
 
 #include "utils.h"
+#include "Settings.h"
 
 using namespace DirectX;
 
@@ -31,7 +32,8 @@ public:
 	~Camera(void);
 
 	void SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, float screenFar);
-	void SetProjectionMatrix(float fov, float screenAspect, float screenNear, float screenFar);
+	void SetProjectionMatrix(float fovy, float screenAspect, float screenNear, float screenFar);
+	void SetProjectionMatrixHFov(float fovx, float screenAspectInverse, float screenNear, float screenFar);
 
 	void Update(float dt);
 
@@ -49,6 +51,8 @@ public:
 	float AngularSpeedDeg;	// 40.0f
 	float MoveSpeed;		// 1000.0f
 
+	Settings::Camera m_settings;
+
 private:
 	void Move(const float dt);
 	void Rotate(const float dt);
@@ -58,7 +62,6 @@ private:
 	vec3		m_velocity;
 	friend class SceneManager;
 	float		m_yaw, m_pitch;
-
 	XMFLOAT4X4	m_viewMatrix;
 	XMFLOAT4X4	m_projectionMatrix;
 	XMFLOAT4X4	m_orthoMatrix;

@@ -25,7 +25,7 @@
 Camera::Camera()
 	:
 	MoveSpeed(1000.0f),
-	AngularSpeedDeg(40.0f),
+	AngularSpeedDeg(20.0f),
 	Drag(15.0f),
 	m_pitch(0.0f),
 	m_yaw(0.0f),
@@ -46,9 +46,75 @@ void Camera::SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, 
 	XMStoreFloat4x4(&m_orthoMatrix, XMMatrixOrthographicLH((float)screenWidth, (float)screenHeight, screenNear, screenFar));
 }
 
-void Camera::SetProjectionMatrix(float fov, float screenAspect, float screenNear, float screenFar)
+void Camera::SetProjectionMatrix(float fovy, float screenAspect, float screenNear, float screenFar)
 {
-	XMStoreFloat4x4(&m_projectionMatrix, XMMatrixPerspectiveFovLH(fov, screenAspect, screenNear, screenFar));
+	XMStoreFloat4x4(&m_projectionMatrix, XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar));
+	
+#if 0
+	const XMMATRIX projRef = XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar);
+	{
+		float FarZ = screenFar; float NearZ = screenNear;
+		float r = screenAspect;
+
+
+		float Height = 1.0f / tanf(fovy*0.5f);
+		float Width = Height / r;
+		float fRange = FarZ / (FarZ - NearZ);
+
+		XMMATRIX M;
+		M.r[0].m128_f32[0] = Width;
+		M.r[0].m128_f32[1] = 0.0f;
+		M.r[0].m128_f32[2] = 0.0f;
+		M.r[0].m128_f32[3] = 0.0f;
+
+		M.r[1].m128_f32[0] = 0.0f;
+		M.r[1].m128_f32[1] = Height;
+		M.r[1].m128_f32[2] = 0.0f;
+		M.r[1].m128_f32[3] = 0.0f;
+
+		M.r[2].m128_f32[0] = 0.0f;
+		M.r[2].m128_f32[1] = 0.0f;
+		M.r[2].m128_f32[2] = fRange;
+		M.r[2].m128_f32[3] = 1.0f;
+
+		M.r[3].m128_f32[0] = 0.0f;
+		M.r[3].m128_f32[1] = 0.0f;
+		M.r[3].m128_f32[2] = -fRange * NearZ;
+		M.r[3].m128_f32[3] = 0.0f;
+	}
+#endif
+}
+
+void Camera::SetProjectionMatrixHFov(float fovx, float screenAspectInverse, float screenNear, float screenFar)
+{	// horizonital FOV
+	const float FarZ = screenFar; float NearZ = screenNear;
+	const float r = screenAspectInverse;
+	
+	const float Width = 1.0f / tanf(fovx*0.5f);
+	const float Height = Width / r;
+	const float fRange = FarZ / (FarZ - NearZ);
+
+	XMMATRIX M;	
+	M.r[0].m128_f32[0] = Width;
+	M.r[0].m128_f32[1] = 0.0f;
+	M.r[0].m128_f32[2] = 0.0f;
+	M.r[0].m128_f32[3] = 0.0f;
+
+	M.r[1].m128_f32[0] = 0.0f;
+	M.r[1].m128_f32[1] = Height;
+	M.r[1].m128_f32[2] = 0.0f;
+	M.r[1].m128_f32[3] = 0.0f;
+
+	M.r[2].m128_f32[0] = 0.0f;
+	M.r[2].m128_f32[1] = 0.0f;
+	M.r[2].m128_f32[2] = fRange;
+	M.r[2].m128_f32[3] = 1.0f;
+
+	M.r[3].m128_f32[0] = 0.0f;
+	M.r[3].m128_f32[1] = 0.0f;
+	M.r[3].m128_f32[2] = -fRange * NearZ;
+	M.r[3].m128_f32[3] = 0.0f;
+	XMStoreFloat4x4(&m_projectionMatrix, M);
 }
 
 // updates View Matrix
@@ -104,6 +170,21 @@ void Camera::Update(float dt)
 	//----------------------------------------------------------------------
 	// end debug code 
 	//----------------------------------------------------------------------
+
+	static float gFoVx = 120.0f;
+	static float gFoVy = 45.0f;
+
+	float dFoV = 0.0f;
+	if (ENGINE->INP()->IsScrollDown()) dFoV = -5.0f;
+	if (ENGINE->INP()->IsScrollUp()  ) dFoV = +5.0f;
+	gFoVx += dFoV;
+	gFoVy += dFoV;
+
+	m_settings.fovH = gFoVx;
+
+	SetProjectionMatrixHFov(gFoVx * DEG2RAD, 1.0f / m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
+	//SetProjectionMatrix(gFoVy * DEG2RAD, m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
+	
 }
 
 

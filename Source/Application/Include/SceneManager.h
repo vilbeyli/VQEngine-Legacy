@@ -58,6 +58,8 @@ public:
 	void SendLightData() const;
 	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
 
+	shared_ptr<Camera>				m_pCamera;	// temp
+
 private:
 	friend struct ShadowMapPass;
 	void HandleInput();
@@ -68,7 +70,7 @@ private:
 	std::vector<SerializedScene>	m_serializedScenes;
 
 	Renderer*						m_pRenderer;
-	shared_ptr<Camera>				m_pCamera;
+	bool							m_bUsePaniniProjection;
 	//PathManager*					m_pPathManager; // unused
 
 	// rendering passes

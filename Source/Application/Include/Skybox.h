@@ -35,7 +35,7 @@ public:
 	static std::vector<Skybox> s_Presets;
 	static void InitializePresets(Renderer* pRenderer);
 	
-	void Render(const XMMATRIX& viewProj) const;
+	void Render(const XMMATRIX& viewProj, float fovH) const;
 
 	Skybox& Initialize(Renderer* renderer, const Texture& cubemapTexture, float scale, int shader);
 private:

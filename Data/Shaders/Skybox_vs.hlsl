@@ -33,12 +33,32 @@ struct PSIn
 
 cbuffer matrices {
 	matrix worldViewProj;
+	float fovH;
 };
+
+#include "Panini.hlsl"
 
 PSIn VSMain(VSIn In)
 {
+	const float4 projectedPos = mul(worldViewProj, In.position).xyww;
+	
 	PSIn Out;
 	Out.LPos = In.position;	// sample direction
-	Out.HPos = mul(worldViewProj, In.position).xyww;	// z=w makes depth 1 -> drawn at infinte
+	Out.HPos = projectedPos;	// z=w makes depth 1 -> drawn at infinte
+
+	// panini projection
+	const float2 screenPos	= projectedPos.xy / projectedPos.w;
+	const float  depth		= projectedPos.w  / projectedPos.w;
+	const float2 paniniScreenPosition = PaniniProjectionScreenPosition(screenPos, fovH);// *0.5f + 0.5f;
+
+	const float panini = 0.0f;
+#if 0
+	Out.HPos = float4(paniniScreenPosition * Out.HPos.w, Out.HPos.w, Out.HPos.w);
+#else
+	Out.HPos = float4(screenPos * Out.HPos.w, Out.HPos.w, Out.HPos.w);
+#endif
+	//Out.HPos = float4(paniniScreenPosition, depth, 1.0f) * Out.HPos.w * panini 
+	//	     + float4(screenPos           , depth, 1.0f) * Out.HPos.w * (1.0f - panini);
+
 	return Out;
 }

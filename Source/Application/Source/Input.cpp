@@ -21,7 +21,7 @@
 
 #include <algorithm>
 
-#define xLOG
+#define LOG
 
 
 const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
@@ -45,7 +45,8 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 
 Input::Input()
 	:
-	m_isConsumed(false)
+	m_isConsumed(false),
+	m_mouseScroll(0)
 {
 	memset(m_mouseDelta, 0, 2 * sizeof(long));
 	memset(m_mousePos  , 0, 2 * sizeof(long));
@@ -102,7 +103,7 @@ void Input::ButtonUp(KeyCode btn)
 	m_buttons[btn] = false;
 }
 
-void Input::UpdateMousePos(long x, long y)
+void Input::UpdateMousePos(long x, long y, short scroll)
 {
 #ifdef ENABLE_RAW_INPUT
 	m_mouseDelta[0] = x;
@@ -120,11 +121,23 @@ void Input::UpdateMousePos(long x, long y)
 #endif
 
 #if defined(_DEBUG) && defined(LOG)
-	Log::Info("Mouse Delta: (%d, %d)\tMouse Position: (%d, %d)", 
+	Log::Info("Mouse Delta: (%d, %d)\tMouse Position: (%d, %d)\tMouse Scroll: (%d)", 
 		m_mouseDelta[0], m_mouseDelta[1],
-		m_mousePos[0], m_mousePos[1]);
+		m_mousePos[0], m_mousePos[1],
+		(int)scroll);
 #endif
 	m_isConsumed = false;
+	m_mouseScroll = scroll;
+}
+
+bool Input::IsScrollUp() const
+{
+	return m_mouseScroll > 0;
+}
+
+bool Input::IsScrollDown() const
+{
+	return m_mouseScroll < 0;
 }
 
 bool Input::IsKeyDown(KeyCode key) const
@@ -182,6 +195,7 @@ void Input::Update()
 	memcpy(m_prevKeys, m_keys, sizeof(bool) * KEY_COUNT);
 	m_mouseDelta[0] = m_mouseDelta[1] = 0;
 	m_isConsumed = true;
+	m_mouseScroll = 0;
 }
 
 const long * Input::GetDelta() const

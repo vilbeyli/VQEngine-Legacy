@@ -58,18 +58,20 @@ struct PHONG_Surface
 
 // FUNCTIONS
 //----------------------------------------------------------
-inline float Attenuation(float2 coeffs, float dist)
+inline float Attenuation(float2 coeffs, float dist, bool phong)
 {
-#if 0
-	return 1.0f / (
-		1.0f
-		+ coeffs[0] * dist
-		+ coeffs[1] * dist * dist
-		);
-#else
+	if (phong)
+	{
+		return 1.0f / (
+			1.0f
+			+ coeffs[0] * dist
+			+ coeffs[1] * dist * dist
+			);
+	}
+
 	// quadratic attenuation (inverse square) is physically more accurate
+	// used for BRDF
 	return 1.0f / (dist * dist);
-#endif
 }
 
 // spotlight intensity calculataion

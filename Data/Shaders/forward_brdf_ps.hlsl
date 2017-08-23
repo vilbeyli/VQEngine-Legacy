@@ -36,7 +36,6 @@ struct PSIn
 	float2 texCoord		 : TEXCOORD4;
 };
 
-
 cbuffer SceneVariables
 {
 	float  pad0;
@@ -73,6 +72,7 @@ SamplerState sNormalSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
+	const bool bUsePhongAttenuation = false; // use brdf attenuation
 	// lighting & surface parameters
 	const float3 P = In.worldPos;
 	const float3 N = normalize(In.normal);
@@ -104,7 +104,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		for (int i = 0; i < lightCount; ++i)		
 		{
 			const float3 Wi       = normalize(lights[i].position - P);
-			const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P)) * lights[i].color * lights[i].brightness;
+			const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P), bUsePhongAttenuation) * lights[i].color * lights[i].brightness;
 			IdIs += BRDF(Wi, s, V, P) * radiance * dW;
 		}
 

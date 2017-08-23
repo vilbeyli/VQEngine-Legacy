@@ -59,6 +59,8 @@ PSIn VSMain(VSIn In)
 	PSIn Out;
 	Out.position		= mul(worldViewProj, pos);
 
+#if 0	// experimenting with panini projection, using unreal's implementation
+	// src: https://docs.unrealengine.com/latest/INT/Engine/Rendering/PostProcessEffects/PaniniProjection/
 	// panini projection
 	const float2 screenPos	= Out.position.xy / Out.position.w;
 	const float  depth		= Out.position.z  / Out.position.w;
@@ -70,6 +72,7 @@ PSIn VSMain(VSIn In)
 	if(w > 0)
 	    Out.position = float4(paniniScreenPosition * w, z, w) * panini 
 	                 + float4(screenPos            * w, z, w) * (1.0f - panini);
+#endif
 
 	Out.worldPos		= mul(world        , pos).xyz;
     Out.normal			= normalize(mul(normalMatrix, In.normal));

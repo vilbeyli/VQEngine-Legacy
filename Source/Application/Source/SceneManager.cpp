@@ -230,7 +230,6 @@ void SceneManager::Render() const
 		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 		m_pRenderer->SetSamplerState("sNormalSampler", 0);
 		m_pRenderer->SetConstant1f("fovH", m_pCamera->m_settings.fovH * DEG2RAD);
-		constexpr float f = 120.0f * DEG2RAD;
 		m_pRenderer->SetConstant1f("panini", m_bUsePaniniProjection ? 1.0f : 0.0f);
 
 		constexpr int TBNMode = 0;

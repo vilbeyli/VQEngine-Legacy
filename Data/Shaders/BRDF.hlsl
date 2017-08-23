@@ -114,7 +114,7 @@ inline float3 F_LambertDiffuse(float3 kd)
 	return kd / PI;
 }
 
-float3 BRDF(float3 Wi, Surface s, float3 V, float3 worldPos)
+float3 BRDF(float3 Wi, BRDF_Surface s, float3 V, float3 worldPos)
 {
 	// vectors
 	const float3 Wo = V;

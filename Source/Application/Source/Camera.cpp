@@ -49,40 +49,6 @@ void Camera::SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, 
 void Camera::SetProjectionMatrix(float fovy, float screenAspect, float screenNear, float screenFar)
 {
 	XMStoreFloat4x4(&m_projectionMatrix, XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar));
-	
-#if 0
-	const XMMATRIX projRef = XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar);
-	{
-		float FarZ = screenFar; float NearZ = screenNear;
-		float r = screenAspect;
-
-
-		float Height = 1.0f / tanf(fovy*0.5f);
-		float Width = Height / r;
-		float fRange = FarZ / (FarZ - NearZ);
-
-		XMMATRIX M;
-		M.r[0].m128_f32[0] = Width;
-		M.r[0].m128_f32[1] = 0.0f;
-		M.r[0].m128_f32[2] = 0.0f;
-		M.r[0].m128_f32[3] = 0.0f;
-
-		M.r[1].m128_f32[0] = 0.0f;
-		M.r[1].m128_f32[1] = Height;
-		M.r[1].m128_f32[2] = 0.0f;
-		M.r[1].m128_f32[3] = 0.0f;
-
-		M.r[2].m128_f32[0] = 0.0f;
-		M.r[2].m128_f32[1] = 0.0f;
-		M.r[2].m128_f32[2] = fRange;
-		M.r[2].m128_f32[3] = 1.0f;
-
-		M.r[3].m128_f32[0] = 0.0f;
-		M.r[3].m128_f32[1] = 0.0f;
-		M.r[3].m128_f32[2] = -fRange * NearZ;
-		M.r[3].m128_f32[3] = 0.0f;
-	}
-#endif
 }
 
 void Camera::SetProjectionMatrixHFov(float fovx, float screenAspectInverse, float screenNear, float screenFar)
@@ -171,7 +137,7 @@ void Camera::Update(float dt)
 	// end debug code 
 	//----------------------------------------------------------------------
 
-	static float gFoVx = 120.0f;
+	static float gFoVx = 90.0f;
 	static float gFoVy = 45.0f;
 
 	float dFoV = 0.0f;

@@ -20,6 +20,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Data\Shaders\BloomCombine_vs.hlsl = Data\Shaders\BloomCombine_vs.hlsl
 		Data\Shaders\Blur_ps.hlsl = Data\Shaders\Blur_ps.hlsl
 		Data\Shaders\Blur_vs.hlsl = Data\Shaders\Blur_vs.hlsl
+		Data\Shaders\BRDF.hlsl = Data\Shaders\BRDF.hlsl
 		Data\Shaders\Debug_ps.hlsl = Data\Shaders\Debug_ps.hlsl
 		Data\Shaders\Debug_vs.hlsl = Data\Shaders\Debug_vs.hlsl
 		Data\Shaders\deferred_brdf_ps.hlsl = Data\Shaders\deferred_brdf_ps.hlsl
@@ -32,11 +33,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Data\Shaders\forward_brdf_vs.hlsl = Data\Shaders\forward_brdf_vs.hlsl
 		Data\Shaders\forward_phong_ps.hlsl = Data\Shaders\forward_phong_ps.hlsl
 		Data\Shaders\Forward_Phong_vs.hlsl = Data\Shaders\Forward_Phong_vs.hlsl
+		Data\Shaders\FullScreenQuad_vs.hlsl = Data\Shaders\FullScreenQuad_vs.hlsl
+		LightingCommon.hlsl = LightingCommon.hlsl
 		Data\Shaders\Line_gs.hlsl = Data\Shaders\Line_gs.hlsl
 		Data\Shaders\Line_ps.hlsl = Data\Shaders\Line_ps.hlsl
 		Data\Shaders\Line_vs.hlsl = Data\Shaders\Line_vs.hlsl
 		Data\Shaders\Normal_ps.hlsl = Data\Shaders\Normal_ps.hlsl
 		Data\Shaders\Normal_vs.hlsl = Data\Shaders\Normal_vs.hlsl
+		Data\Shaders\Panini.hlsl = Data\Shaders\Panini.hlsl
 		Data\Shaders\Skybox_ps.hlsl = Data\Shaders\Skybox_ps.hlsl
 		Data\Shaders\Skybox_vs.hlsl = Data\Shaders\Skybox_vs.hlsl
 		Data\Shaders\Tangent_ps.hlsl = Data\Shaders\Tangent_ps.hlsl
@@ -53,9 +57,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 	EndProjectSection
 EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
@@ -92,5 +93,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

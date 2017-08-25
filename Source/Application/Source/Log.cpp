@@ -74,6 +74,14 @@ void Log::Error(const std::string & s)
 	if (sOutFile.is_open()) sOutFile << err;
 }
 
+void Log::String(const std::string & s)
+{
+	std::string str;
+	str += s;
+	OutputDebugString(str.c_str());
+	if (sOutFile.is_open()) sOutFile << str;
+}
+
 void Log::Info(const std::string & s)
 {
 	std::string info("\n----- INFO : ");

@@ -42,6 +42,7 @@ public:
 	static void Info(const std::string& s);
 	static void Error(ERROR_LOG errMode, const std::string& s);
 	static void Error(const std::string& s);
+	static void String(const std::string& s);
 
 	// functions for printf() style logging using variadic templates
 	template<class... Args> 
@@ -56,6 +57,13 @@ public:
 	{
 		char msg[2048];	sprintf_s(msg, format, args...);
 		Info(std::string(msg));
+	}
+
+	template<class... Args>
+	static void String(const char* format, Args&&... args)
+	{
+		char msg[2048];	sprintf_s(msg, format, args...);
+		String(std::string(msg));
 	}
 private:
 	static std::ofstream sOutFile;	

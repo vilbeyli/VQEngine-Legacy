@@ -18,6 +18,7 @@
 
 #pragma once
 
+// todo: reduce includes
 #include <d3d11.h>
 #include <DirectXMath.h>
 #include <d3dcompiler.h>
@@ -31,28 +32,15 @@
 
 using namespace DirectX;
 
-enum LayoutFormat
-{
-	FLOAT32_2 = DXGI_FORMAT_R32G32_FLOAT,
-	FLOAT32_3 = DXGI_FORMAT_R32G32B32_FLOAT,
-
-	LAYOUT_FORMAT_COUNT
-};
-
-struct InputLayout
-{
-	std::string		semanticName;
-	LayoutFormat	format;
-};
-
-// CONSTANT BUFFER MANAGEMENT
+// CONSTANT BUFFER STRUCTS/ENUMS
 //------------------------------------------------------------------
 // Current limitations: 
+//  todo: revise this
 //  - cbuffers with same names in different shaders (PS/VS/GS/...)
 //  - cbuffers with same names in the same shader (not tested)
 
 // used to map **SetShaderConstant(); function in Renderer::Apply()
-enum ShaderType
+enum EShaderType
 {
 	VS = 0,
 	GS,
@@ -64,14 +52,13 @@ enum ShaderType
 	COUNT
 };
 
-// information used to create GPU/CPU constant buffers
 struct ConstantBufferLayout
-{
+{	// information used to create GPU/CPU constant buffers
 	D3D11_SHADER_BUFFER_DESC					desc;
 	std::vector<D3D11_SHADER_VARIABLE_DESC>		variables;
 	std::vector<D3D11_SHADER_TYPE_DESC>			types;
 	unsigned									buffSize;
-	ShaderType									shdType;
+	EShaderType									shdType;
 	unsigned									bufSlot;
 };
 
@@ -110,7 +97,7 @@ public:
 // GPU side constant buffer
 struct ConstantBuffer
 {
-	ShaderType shdType;
+	EShaderType shdType;
 	unsigned	bufferSlot;
 	ID3D11Buffer* data;
 	bool dirty;
@@ -123,7 +110,7 @@ struct ShaderTexture
 {
 	std::string name;
 	unsigned bufferSlot;
-	ShaderType shdType;
+	EShaderType shdType;
 };
 
 
@@ -131,13 +118,26 @@ struct ShaderSampler
 {
 	std::string name;
 	unsigned bufferSlot;
-	ShaderType shdType;
+	EShaderType shdType;
 };
-
 //-------------------------------------------------------------
 
-enum SHADERS	// good enough for global namespace
+enum ELayoutFormat
 {
+	FLOAT32_2 = DXGI_FORMAT_R32G32_FLOAT,
+	FLOAT32_3 = DXGI_FORMAT_R32G32B32_FLOAT,
+
+	LAYOUT_FORMAT_COUNT
+};
+
+struct InputLayout
+{
+	std::string		semanticName;
+	ELayoutFormat	format;
+};
+
+enum SHADERS	
+{	// omit E from enum name for readability for shaders only
 	FORWARD_PHONG,
 	UNLIT,
 	TEXTURE_COORDINATES,
@@ -161,7 +161,6 @@ enum SHADERS	// good enough for global namespace
 };
 
 
-// types
 using ShaderID = int;
 using GPU_ConstantBufferSlotIndex = int;
 using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
@@ -169,7 +168,15 @@ using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstant
 class Shader
 {
 public:
+	// assumes shader file names are appended to the parameters. e.g.
+	//	if @shaderFileName == "ligting", shader files should be named as:
+	//	 - lighting_vs.hlsl
+	//	 - lighting_ps.hlsl
+	//	 - ...
 	Shader(const std::string& shaderFileName);
+
+	// individual files for shader types, together with type information
+	Shader(const std::vector<std::string>& shaderProgramFiles, const std::vector<EShaderType>& shaderTypes);
 	~Shader();
 
 	void ClearConstantBuffers();
@@ -184,11 +191,13 @@ public:
 
 private:
 	friend class Renderer;
-	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, ShaderType type);
-	void Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts, bool geoShader);
+	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, EShaderType type);
+	void CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths, const std::vector<InputLayout>& layouts);
 	void SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob);
 	void CheckSignatures();
 	void SetConstantBuffers(ID3D11Device* device);
+	
+	ID3D10Blob* Compile(const std::string& filename, const EShaderType& type);
 
 	void LogConstantBufferLayouts() const;
 

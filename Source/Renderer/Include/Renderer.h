@@ -100,7 +100,8 @@ public:
 	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return m_renderTargets[RT]._texture._id; }
 
 	// resource interface
-	ShaderID			AddShader(const std::string& shdFileName, const std::string& fileRoot, const std::vector<InputLayout>& layouts, bool geoShader = false);
+	ShaderID			AddShader(const std::string& shaderFileName , const std::vector<InputLayout>& layouts);
+	ShaderID			AddShader(const std::string& shaderName, const std::vector<std::string>& shaderFileNames, const std::vector<EShaderType>& shaderTypes, const std::vector<InputLayout>& layouts);
 	RasterizerStateID	AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip);
 	
 	// todo: return textureID to outside, return Texture& private
@@ -159,6 +160,8 @@ public:
 	void Apply();
 	
 private:
+	static std::vector<std::string> GetShaderPaths(const std::string& shaderFileName);
+
 	// shader hotswap
 	void PollShaderFiles();
 	void OnShaderChange(LPTSTR dir);

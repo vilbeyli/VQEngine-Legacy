@@ -18,8 +18,10 @@
 
 #include "Shader.h"
 #include "Log.h"
+#include "utils.h"
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 
 
 CPUConstant::CPUConstantPool CPUConstant::s_constants;
@@ -67,6 +69,15 @@ static void(__cdecl ID3D11DeviceContext:: *SetShaderConstants[6])
 	&ID3D11DeviceContext::HSSetConstantBuffers,
 	&ID3D11DeviceContext::CSSetConstantBuffers,
 	&ID3D11DeviceContext::PSSetConstantBuffers };
+
+static std::unordered_map <std::string, EShaderType > s_ShaderTypeStrLookup = {
+	{"vs", EShaderType::VS},
+	{"gs", EShaderType::GS},
+	{"ds", EShaderType::DS},
+	{"hs", EShaderType::HS},
+	{"cs", EShaderType::CS},
+	{"ps", EShaderType::PS}
+};
 // ============================================================================
 
 std::array<ShaderID, SHADERS::SHADER_COUNT> Shader::s_shaders;
@@ -80,6 +91,7 @@ Shader::Shader(const std::string& shaderFileName)
 	m_name(shaderFileName),
 	m_id(-1)
 {}
+
 
 Shader::~Shader(void)
 {
@@ -135,89 +147,40 @@ Shader::~Shader(void)
 	}
 }
 
-void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, const std::vector<InputLayout>& layouts, bool geoShader)
+void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths, const std::vector<InputLayout>& layouts)
 {
 	HRESULT result;
-	ID3D10Blob* errorMessage = nullptr;
-
-	// SHADER PATHS
-	//----------------------------------------------------------------------------
-	std::string vspath = shaderFileName + "_vs.hlsl";
-	std::string gspath = shaderFileName + "_gs.hlsl";
-	std::string pspath = shaderFileName + "_ps.hlsl";
-	std::wstring vspath_w(vspath.begin(), vspath.end());
-	std::wstring gspath_w(gspath.begin(), gspath.end());
-	std::wstring pspath_w(pspath.begin(), pspath.end());
-	const WCHAR* VSPath = vspath_w.c_str();
-	const WCHAR* GSPath = gspath_w.c_str();
-	const WCHAR* PSPath = pspath_w.c_str();
 
 	std::string info("\tCompiling  \""); info += m_name; info += "\"...\t";
 	Log::Info(info);
-
+	
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
-	ID3DInclude* const	includeHandler				= D3D_COMPILE_STANDARD_FILE_INCLUDE;		// use default include handler for using #include in shader files
-	const char*			shaderCompilerVersions[]	= { "vs_5_0", "gs_5_0", "", "", "", "ps_5_0" };
-
-#if defined( _DEBUG ) || defined ( FORCE_DEBUG )
-	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
-#endif
-
-	// vertex shader
-	ID3D10Blob* vsBlob = NULL;
-	if (FAILED(D3DCompileFromFile(
-		VSPath,
-		NULL,
-		includeHandler ,
-		"VSMain",
-		shaderCompilerVersions[ShaderType::VS],
-		flags,
-		0,
-		&vsBlob,
-		&errorMessage)))
+	union	
 	{
-		HandleCompileError(errorMessage, vspath);
-		return;
+		struct {
+			ID3D10Blob* vs;
+			ID3D10Blob* gs;
+			ID3D10Blob* ds;
+			ID3D10Blob* hs;
+			ID3D10Blob* cs;
+			ID3D10Blob* ps;
+		};
+		ID3D10Blob* of[EShaderType::COUNT] = { nullptr };
+	} blobs;
+
+	for (const auto& filePath : filePaths)
+	{	// example filePath: "rootPath/filename_vs.hlsl"
+		//                                      ^^----- shaderTypeStr
+		const std::vector<std::string> RootAndFileName = split(filePath, '.');
+		const std::string shaderTypeStr = { *(RootAndFileName[0].rbegin() + 1), *RootAndFileName[0].rbegin() };
+		const EShaderType type = s_ShaderTypeStrLookup.at(shaderTypeStr);
+
+		blobs.of[type] = Compile(filePath, type);
 	}
 
-	// geometry shader
-	ID3D10Blob* gsBlob = NULL;
-	if (geoShader)
-	{
-		if (FAILED(D3DCompileFromFile(
-			GSPath,
-			NULL,
-			includeHandler,
-			"GSMain",
-			shaderCompilerVersions[ShaderType::GS],
-			flags,
-			0,
-			&gsBlob,
-			&errorMessage)))
-		{
-			HandleCompileError(errorMessage, gspath);
-		}
-	}
-	// pixel shader
-	ID3D10Blob* psBlob = NULL;
-	if (FAILED(D3DCompileFromFile(
-		PSPath,
-		NULL,
-		includeHandler,
-		"PSMain",
-		shaderCompilerVersions[ShaderType::PS],
-		flags,
-		0,
-		&psBlob,
-		&errorMessage)))
-	{
-		HandleCompileError(errorMessage, pspath);
-	}
 	
-	SetReflections(vsBlob, psBlob, gsBlob);
+	SetReflections(blobs.vs, blobs.ps, blobs.gs);
 	//CheckSignatures();
 
 
@@ -225,8 +188,8 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	//---------------------------------------------------------------------------
 	//create vertex shader buffer
 	// TODO: specify which shaders to compile. some might not need pixel shader
-	result = device->CreateVertexShader(vsBlob->GetBufferPointer(), 
-										vsBlob->GetBufferSize(), 
+	result = device->CreateVertexShader(blobs.vs->GetBufferPointer(), 
+										blobs.vs->GetBufferSize(), 
 										NULL, 
 										&m_vertexShader);
 	if (FAILED(result))
@@ -236,8 +199,8 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	}
 
 	//create pixel shader buffer
-	result = device->CreatePixelShader(psBlob->GetBufferPointer(), 
-										psBlob->GetBufferSize(), 
+	result = device->CreatePixelShader( blobs.ps->GetBufferPointer(), 
+										blobs.ps->GetBufferSize(), 
 										NULL, 
 										&m_pixelShader);
 	if (FAILED(result))
@@ -247,10 +210,10 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	}
 
 	// create geo shader buffer
-	if (geoShader)
+	if (blobs.gs)
 	{
-		result = device->CreateGeometryShader(  gsBlob->GetBufferPointer(),
-												gsBlob->GetBufferSize(),
+		result = device->CreateGeometryShader(  blobs.gs->GetBufferPointer(),
+												blobs.gs->GetBufferSize(),
 												NULL,
 												&m_geometryShader);
 		if (FAILED(result))
@@ -285,8 +248,8 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 	}
 	result = device->CreateInputLayout(	inputLayout.data(), 
 										sz, 
-										vsBlob->GetBufferPointer(),
-										vsBlob->GetBufferSize(), 
+										blobs.vs->GetBufferPointer(),
+										blobs.vs->GetBufferSize(), 
 										&m_layout);
 	if (FAILED(result))
 	{
@@ -317,7 +280,7 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		{
 			ShaderSampler smp;
 			smp.name = shdInpDesc.Name;
-			smp.shdType = ShaderType::PS;
+			smp.shdType = EShaderType::PS;
 			smp.bufferSlot = smpSlot++;
 			m_samplers.push_back(smp);
 		}
@@ -325,24 +288,25 @@ void Shader::Compile(ID3D11Device* device, const std::string& shaderFileName, co
 		{
 			ShaderTexture tex;
 			tex.name = shdInpDesc.Name;
-			tex.shdType = ShaderType::PS;
+			tex.shdType = EShaderType::PS;
 			tex.bufferSlot = texSlot++;
 			m_textures.push_back(tex);
 		}
 	}
 
 	//release shader buffers
-	vsBlob->Release();
-	vsBlob = 0;
-
-	psBlob->Release();
-	psBlob = 0;
-
-	if (gsBlob)
-	{
-		gsBlob->Release();
-		gsBlob = 0;
-	}
+	if(blobs.vs)
+		blobs.vs->Release();
+	if(blobs.gs)
+		blobs.gs->Release();
+	if(blobs.ds)
+		blobs.ds->Release();
+	if(blobs.hs)
+		blobs.hs->Release();
+	if(blobs.cs)
+		blobs.cs->Release();
+	if(blobs.ps)
+		blobs.ps->Release();
 	OutputDebugString(" - Done.\n");
 }
 
@@ -445,9 +409,9 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 
 	// OBTAIN CBUFFER LAYOUT INFORMATION
 	//---------------------------------------------------------------------------------------
-	RegisterConstantBufferLayout(m_vsRefl, ShaderType::VS);
-	RegisterConstantBufferLayout(m_psRefl, ShaderType::PS);
-	if(m_gsRefl) RegisterConstantBufferLayout(m_gsRefl, ShaderType::GS);
+	RegisterConstantBufferLayout(m_vsRefl, EShaderType::VS);
+	RegisterConstantBufferLayout(m_psRefl, EShaderType::PS);
+	if(m_gsRefl) RegisterConstantBufferLayout(m_gsRefl, EShaderType::GS);
 
 	// CREATE CPU & GPU CONSTANT BUFFERS
 	//---------------------------------------------------------------------------------------
@@ -505,6 +469,45 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 	}
 }
 
+ID3D10Blob* Shader::Compile(const std::string & filePath, const EShaderType & type)
+{
+	// ---- statics veriables?
+	ID3DInclude* const	includeHandler = D3D_COMPILE_STANDARD_FILE_INCLUDE;		// use default include handler for using #include in shader files
+	
+	// compiler versions indexed by enum EShaderType;
+	const char*			shaderCompilerVersions[] = { "vs_5_0", "gs_5_0", "", "", "", "ps_5_0" };
+	const char*			shaderEntryPointNames[]  = { "VSMain", "GSMain", "DSMain", "HSMain", "CSMain", "PSMain" };
+	// ---- statics veriables?
+
+#if defined( _DEBUG ) || defined ( FORCE_DEBUG )
+	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS;
+#endif
+
+
+	const UnicodeString Path = filePath;
+	const WCHAR* PathStr = Path.GetUnicodePtr();
+	ID3D10Blob* errorMessage = nullptr;
+	ID3D10Blob* blob = NULL;
+	if (FAILED(D3DCompileFromFile(
+		PathStr,
+		NULL,
+		includeHandler,
+		shaderEntryPointNames[type],
+		shaderCompilerVersions[type],
+		flags,
+		0,
+		&blob,
+		&errorMessage)))
+	{
+		HandleCompileError(errorMessage, filePath);
+		return nullptr;
+	}
+	Log::String(filePath + "\n");
+	return blob;
+}
+
 void Shader::LogConstantBufferLayouts() const
 {
 	char inputTable[2048];
@@ -518,7 +521,7 @@ void Shader::LogConstantBufferLayouts() const
 	Log::Info(std::string(inputTable));
 }
 
-void Shader::RegisterConstantBufferLayout(ID3D11ShaderReflection* sRefl, ShaderType type)
+void Shader::RegisterConstantBufferLayout(ID3D11ShaderReflection* sRefl, EShaderType type)
 {
 	D3D11_SHADER_DESC desc;
 	sRefl->GetDesc(&desc);

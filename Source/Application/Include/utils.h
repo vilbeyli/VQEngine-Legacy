@@ -34,6 +34,7 @@ using namespace DirectX;
 
 // typedefs
 using VecPair = std::pair<XMVECTOR, XMVECTOR>;
+typedef wchar_t WCHAR;    // wc,   16-bit UNICODE character
 
 /// MATH WRAPPERS
 //===============================================================================================
@@ -138,6 +139,15 @@ template<class... Args> std::vector<std::string> split(const std::string& s, Arg
 }
 
 std::string	GetFileNameFromPath(const std::string&);
+
+struct UnicodeString
+{
+	std::string  str;
+	std::wstring wstr;
+
+	UnicodeString(const std::string& strIn);
+	const WCHAR* GetUnicodePtr() const;
+};
 
 /// RANDOM
 //===============================================================================================

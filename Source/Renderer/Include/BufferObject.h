@@ -18,21 +18,17 @@
 
 #pragma once
 
-#include <DirectXMath.h>
-#include <d3d11_1.h>
 #include "utils.h"
 
-using namespace DirectX;
-
-typedef int BufferID;
+struct ID3D11Buffer;
+struct ID3D11Device;
 
 struct Vertex
-{
+{	//44 Bytes in total
 	vec3 position;		//12
 	vec3 normal;		//12 
 	vec3 tangent;		//12
 	vec2 texCoords;		// 8
-	//44
 };
 
 class BufferObject	// todo: rename to PrimitiveAssembly?

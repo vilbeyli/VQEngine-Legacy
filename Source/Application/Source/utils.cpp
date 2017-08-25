@@ -30,6 +30,8 @@
 #include <cassert>
 #endif _DEBUG
 
+#include <winnt.h>
+
 using std::vector;
 using std::string;
 using std::cout;
@@ -226,4 +228,16 @@ const vec2 vec2::normalized() const
 {
 	XMVECTOR v = XMLoadFloat2(&_v);
 	return vec2(XMVector2Normalize(v));
+}
+
+
+UnicodeString::UnicodeString(const std::string& strIn) : str(strIn)
+{
+	auto stdWstr = std::wstring(str.begin(), str.end());
+	wstr = stdWstr.c_str();
+}
+
+const WCHAR * UnicodeString::GetUnicodePtr() const
+{
+	return wstr.c_str();
 }

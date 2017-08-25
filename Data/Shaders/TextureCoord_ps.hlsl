@@ -23,29 +23,9 @@ struct PSIn
 	float2 texCoord : TEXCOORD0;
 };
 
-cbuffer renderConsts
-{
-	float gammaCorrection;
-};
-
-cbuffer perObject
-{
-	float3 color;
-};
-
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	// gamma correction
-	bool gammaCorrect = gammaCorrection > 0.99f;
-	float gamma = 1.0/2.2;
-
-
 	float2 uv = In.texCoord;
 	float4 outColor = float4(uv,0,1);
-	
-
-	//if(gammaCorrect)
-	//	return pow(outColor, float4(gamma,gamma,gamma,1.0f));
-	//else
-		return outColor;
+	return outColor;
 }

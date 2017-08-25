@@ -18,6 +18,11 @@
 
 #include "BufferObject.h"
 
+#include <DirectXMath.h>
+#include <d3d11_1.h>
+
+using namespace DirectX;
+
 BufferObject::~BufferObject()
 {
 	if(m_vertices)

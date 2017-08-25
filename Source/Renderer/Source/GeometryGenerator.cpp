@@ -141,7 +141,7 @@ BufferObject* GeometryGenerator::Triangle()
 	bool writable = false;
 	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{
-		OutputDebugString("Error Triangle creation failed");
+		Log::Error("Triangle creation failed");
 		delete bufferObj;
 		bufferObj = nullptr;
 	}
@@ -196,7 +196,7 @@ BufferObject* GeometryGenerator::Quad()
 	bool writable = false;	
 	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{
-		OutputDebugString("Error Quad creation failed");
+		Log::Error("Quad creation failed");
 		delete bufferObj;
 		bufferObj = nullptr;
 	}
@@ -399,7 +399,7 @@ BufferObject* GeometryGenerator::Cube()
 	bool writable = false;	
 	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{
-		OutputDebugString("Error cube creation failed");
+		Log::Error("creating cube failed");
 		delete bufferObj;
 		bufferObj = nullptr;
 	}
@@ -423,7 +423,7 @@ BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsign
 
 		// vertices of ring
 		float dTheta = 2.0f*XM_PI / sliceCount;
-		for (UINT j = 0; j <= sliceCount; ++j)	// for each pice(slice) in horizontal slice
+		for (unsigned j = 0; j <= sliceCount; ++j)	// for each pice(slice) in horizontal slice
 		{
 			Vertex vertex;
 			float theta = j*dTheta;
@@ -476,11 +476,11 @@ BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsign
 	std::vector<unsigned> Indices;
 	// Add one because we duplicate the first and last vertex per ring
 	// since the texture coordinates are different.
-	UINT ringVertexCount = sliceCount + 1;
+	unsigned ringVertexCount = sliceCount + 1;
 	// Compute indices for each stack.
-	for (UINT i = 0; i < ringCount; ++i)
+	for (unsigned i = 0; i < ringCount; ++i)
 	{
-		for (UINT j = 0; j < sliceCount; ++j)
+		for (unsigned j = 0; j < sliceCount; ++j)
 		{
 			Indices.push_back(i*ringVertexCount + j);
 			Indices.push_back((i + 1)*ringVertexCount + j);
@@ -504,7 +504,7 @@ BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsign
 	bool writable = true;
 	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{
-		OutputDebugString("Error Grid creation failed");
+		Log::Error("Grid creation failed");
 		delete bufferObj;
 		bufferObj = nullptr;
 	}
@@ -618,7 +618,7 @@ BufferObject* GeometryGenerator::Grid(float width, float depth, unsigned m, unsi
 	bool writable = true;
 	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{
-		OutputDebugString("Error Grid creation failed");
+		Log::Error("Grid creation failed");
 		delete bufferObj;
 		bufferObj = nullptr;
 	}
@@ -639,14 +639,14 @@ BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float b
 	// Compute vertices for each stack ring starting at
 	// the bottom and moving up.
 	std::vector<Vertex> Vertices;
-	for (UINT i = 0; i < ringCount; ++i)
+	for (unsigned i = 0; i < ringCount; ++i)
 	{
 		float y = -0.5f*height + i*stackHeight;
 		float r = bottomRadius + i*radiusStep;
 
 		// vertices of ring
 		float dTheta = 2.0f*XM_PI / sliceCount;
-		for (UINT j = 0; j <= sliceCount; ++j)
+		for (unsigned j = 0; j <= sliceCount; ++j)
 		{
 			Vertex vertex;
 			float c = cosf(j*dTheta);
@@ -693,11 +693,11 @@ BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float b
 	std::vector<unsigned> Indices;
 	// Add one because we duplicate the first and last vertex per ring
 	// since the texture coordinates are different.
-	UINT ringVertexCount = sliceCount + 1;
+	unsigned ringVertexCount = sliceCount + 1;
 	// Compute indices for each stack.
-	for (UINT i = 0; i < stackCount; ++i)
+	for (unsigned i = 0; i < stackCount; ++i)
 	{
-		for (UINT j = 0; j < sliceCount; ++j)
+		for (unsigned j = 0; j < sliceCount; ++j)
 		{
 			Indices.push_back(i*ringVertexCount + j);
 			Indices.push_back((i + 1)*ringVertexCount + j);
@@ -711,12 +711,12 @@ BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float b
 	// CYLINDER TOP
 	//-----------------------------------------------------------
 	{
-		UINT baseIndex = (UINT)Vertices.size();
+		unsigned baseIndex = (unsigned)Vertices.size();
 		float y = 0.5f*height;
 		float dTheta = 2.0f*XM_PI / sliceCount;
 		// Duplicate cap ring vertices because the texture coordinates
 		// and normals differ.
-		for (UINT i = 0; i <= sliceCount; ++i)
+		for (unsigned i = 0; i <= sliceCount; ++i)
 		{
 			float x = topRadius*cosf(i*dTheta);
 			float z = topRadius*sinf(i*dTheta);
@@ -742,8 +742,8 @@ BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float b
 		Vertices.push_back(capCenter);
 
 		// Index of center vertex.
-		UINT centerIndex = (UINT)Vertices.size() - 1;
-		for (UINT i = 0; i < sliceCount; ++i)
+		unsigned centerIndex = (unsigned)Vertices.size() - 1;
+		for (unsigned i = 0; i < sliceCount; ++i)
 		{
 			Indices.push_back(centerIndex);
 			Indices.push_back(baseIndex + i + 1);
@@ -755,12 +755,12 @@ BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float b
 	// CYLINDER BOTTOM
 	//-----------------------------------------------------------
 	{
-		UINT baseIndex = (UINT)Vertices.size();
+		unsigned baseIndex = (unsigned)Vertices.size();
 		float y = -0.5f*height;
 		float dTheta = 2.0f*XM_PI / sliceCount;
 		// Duplicate cap ring vertices because the texture coordinates
 		// and normals differ.
-		for (UINT i = 0; i <= sliceCount; ++i)
+		for (unsigned i = 0; i <= sliceCount; ++i)
 		{
 			float x = bottomRadius*cosf(i*dTheta);
 			float z = bottomRadius*sinf(i*dTheta);
@@ -785,8 +785,8 @@ BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float b
 		Vertices.push_back(capCenter);
 
 		// Index of center vertex.
-		UINT centerIndex = (UINT)Vertices.size() - 1;
-		for (UINT i = 0; i < sliceCount; ++i)
+		unsigned centerIndex = (unsigned)Vertices.size() - 1;
+		for (unsigned i = 0; i < sliceCount; ++i)
 		{
 			Indices.push_back(centerIndex);
 			Indices.push_back(baseIndex + i);
@@ -807,7 +807,7 @@ BufferObject* GeometryGenerator::Cylinder(float height, float topRadius, float b
 	bool writable = true;
 	if (!bufferObj->FillGPUBuffers(m_device, writable))
 	{
-		OutputDebugString("Error Grid creation failed");
+		Log::Error("Grid creation failed");
 		delete bufferObj;
 		bufferObj = nullptr;
 	}

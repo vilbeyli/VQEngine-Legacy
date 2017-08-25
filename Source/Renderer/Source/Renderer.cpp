@@ -216,8 +216,8 @@ void Renderer::GeneratePrimitives()
 
 	// sphere parameters
 	const float sphRadius = 2.0f;
-	const unsigned sphRingCount = 40;
-	const unsigned sphSliceCount = 40;
+	const unsigned sphRingCount = 25;
+	const unsigned sphSliceCount = 15;
 
 	GeometryGenerator::SetDevice(m_device);
 	m_bufferObjects[TRIANGLE]	= GeometryGenerator::Triangle();
@@ -240,24 +240,40 @@ void Renderer::LoadShaders()
 		{ "TANGENT",	FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 },
 	};
-	Shader::s_shaders[SHADERS::FORWARD_PHONG      ] = AddShader("Forward_Phong"     , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::UNLIT              ] = AddShader("UnlitTextureColor" , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::TEXTURE_COORDINATES] = AddShader("TextureCoord"      , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::NORMAL             ]	= AddShader("Normal"            , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::TANGENT            ] = AddShader("Tangent"           , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::BINORMAL           ]	= AddShader("Binormal"          , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::LINE               ]	= AddShader("Line"              , s_shaderRoot, layout, true);
-	Shader::s_shaders[SHADERS::TBN                ]	= AddShader("TNB"               , s_shaderRoot, layout, true);
-	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"             , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"            , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"             , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"              , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"      , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"       , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::FORWARD_BRDF       ]	= AddShader("Forward_BRDF"      , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::SHADOWMAP_DEPTH    ]	= AddShader("DepthShader"       , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::DEFERRED_GEOMETRY  ]	= AddShader("Deferred_Geometry" , s_shaderRoot, layout);
-	Shader::s_shaders[SHADERS::DEFERRED_BRDF      ]	= AddShader("Deferred_BRDF"     , s_shaderRoot, layout);
+
+	const std::vector<std::string> TonemapShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
+	const std::vector<std::string> BlurShaders    = { "FullscreenQuad_vs", "Tonemapping_ps" };
+	const std::vector<std::string> BloomShaders   = { "FullscreenQuad_vs", "Tonemapping_ps" };
+	const std::vector<std::string> CombineShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
+	const std::vector<EShaderType> VS_PS  = { EShaderType::VS, EShaderType::PS };
+
+	Shader::s_shaders[SHADERS::FORWARD_PHONG      ] = AddShader("Forward_Phong"     , layout);
+	Shader::s_shaders[SHADERS::UNLIT              ] = AddShader("UnlitTextureColor" , layout);
+	Shader::s_shaders[SHADERS::TEXTURE_COORDINATES] = AddShader("TextureCoord"      , layout);
+	Shader::s_shaders[SHADERS::NORMAL             ]	= AddShader("Normal"            , layout);
+	Shader::s_shaders[SHADERS::TANGENT            ] = AddShader("Tangent"           , layout);
+	Shader::s_shaders[SHADERS::BINORMAL           ]	= AddShader("Binormal"          , layout);
+	Shader::s_shaders[SHADERS::LINE               ]	= AddShader("Line"              , layout);
+	Shader::s_shaders[SHADERS::TBN                ]	= AddShader("TNB"               , layout);
+	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"             , layout);
+	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"            , layout);
+#if 0
+	// todo: reduce number of shaders, fix the bug herre
+	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"             , BloomShaders  , VS_PS, layout);
+	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"              , BlurShaders   , VS_PS, layout);
+	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"      , CombineShaders, VS_PS, layout);
+	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"       , TonemapShaders, VS_PS, layout);
+#else
+	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"             , layout);
+	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"              , layout);
+	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"      , layout);
+	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"       , TonemapShaders, VS_PS, layout);
+#endif
+	Shader::s_shaders[SHADERS::FORWARD_BRDF       ]	= AddShader("Forward_BRDF"      , layout);
+	Shader::s_shaders[SHADERS::SHADOWMAP_DEPTH    ]	= AddShader("DepthShader"       , layout);
+	Shader::s_shaders[SHADERS::DEFERRED_GEOMETRY  ]	= AddShader("Deferred_Geometry" , layout);
+	Shader::s_shaders[SHADERS::DEFERRED_BRDF      ]	= AddShader("Deferred_BRDF"     , layout);
+
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
 
@@ -385,23 +401,36 @@ void Renderer::InitializeDefaultRasterizerStates()
 	}
 }
 
-ShaderID Renderer::AddShader(const std::string& shdFileName, 
-							 const std::string& fileRoot,
-							 const std::vector<InputLayout>& layouts,
-							 bool geoShader /*= false*/)
+ShaderID Renderer::AddShader(const std::string&	shaderFileName,	const std::vector<InputLayout>& layouts)
 {
-	const std::string path = fileRoot + shdFileName;
+	const std::vector<std::string> paths = GetShaderPaths(shaderFileName);
 
-	Shader* shader = new Shader(shdFileName);
-#if 0
-	if (shdFileName == "Forward_BRDF")
-		shader->Compile(m_device, path, layouts, geoShader);
-#else
-	shader->Compile(m_device, path, layouts, geoShader);
-#endif
+	Shader* shader = new Shader(shaderFileName);
+	shader->CompileShaders(m_device, paths, layouts);
 	m_shaders.push_back(shader);
 	shader->m_id = (static_cast<int>(m_shaders.size()) - 1);
 	return shader->ID();
+}
+
+ShaderID Renderer::AddShader(
+	const std::string&				shaderName,
+	const std::vector<std::string>& shaderFileNames, 
+	const std::vector<EShaderType>& shaderTypes, 
+	const std::vector<InputLayout>& layouts
+)
+{
+	std::vector<std::string> paths;
+	for (const auto& shaderFileName : shaderFileNames)
+	{
+		paths.push_back(std::string(s_shaderRoot + shaderFileName + ".hlsl"));
+	}
+
+	Shader* shader = new Shader(shaderName);
+	shader->CompileShaders(m_device, paths, layouts);
+	m_shaders.push_back(shader);
+	shader->m_id = (static_cast<int>(m_shaders.size()) - 1);
+	return shader->ID();
+	return ShaderID();
 }
 
 RasterizerStateID Renderer::AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip)
@@ -757,22 +786,22 @@ void Renderer::SetShader(ShaderID id)
 				//(m_deviceContext->*SetShaderResources[tex.shdType])(tex.bufferSlot, 1, nullSRV);
 				switch (tex.shdType)
 				{
-				case ShaderType::VS:
+				case EShaderType::VS:
 					m_deviceContext->VSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case ShaderType::GS:
+				case EShaderType::GS:
 					m_deviceContext->GSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case ShaderType::HS:
+				case EShaderType::HS:
 					m_deviceContext->HSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case ShaderType::DS:
+				case EShaderType::DS:
 					m_deviceContext->DSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case ShaderType::PS:
+				case EShaderType::PS:
 					m_deviceContext->PSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case ShaderType::CS:
+				case EShaderType::CS:
 					m_deviceContext->CSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
 				default:
@@ -855,7 +884,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 
 	Shader* shader = m_shaders[m_state._activeShader];
 
-#if 0
+#if 1
 	// LINEAR LOOKUP
 	bool found = false;
 	for (const ConstantBufferMapping& bufferSlotIDPair : shader->m_constantsUnsorted)
@@ -870,13 +899,13 @@ void Renderer::SetConstant(const char * cName, const void * data)
 			{
 				memcpy(c._data, data, c._size);
 				shader->m_cBuffers[GPUcBufferSlot].dirty = true;
-				break;	// ensures write on first occurance
+				break;	// ensures write on first ocurrance
 			}
 		}
 	}
 #else
 	// BINARY SEARCH 
-	auto& BinarySearch = [cName, &shader]()
+	const auto& BinarySearch = [cName, &shader]()
 	{
 		bool bKeepSearching = true;
 		size_t lowIndex  = 0;
@@ -928,7 +957,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 
 			else
 			{
-				highIndex = currIndex;
+				highIndex = currIndex - 1;
 				currIndex = lowIndex + (highIndex - lowIndex) / 2;
 #if LOG_SEARCH
 				{
@@ -944,7 +973,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 			bKeepSearching = lowIndex < highIndex;
 		}
 
-		Log::Error("CONSTANT NOT FOUND");
+		Log::Error("CONSTANT NOT FOUND: %s", cName);
 		return currIndex;
 	};
 
@@ -1191,6 +1220,37 @@ void Renderer::Apply()
 	{
 		Log::Error("Renderer::Apply() : Shader null...\n");
 	}
+}
+
+// try to open each file
+std::vector<std::string> Renderer::GetShaderPaths(const std::string& shaderFileName)
+{
+	const std::string path = s_shaderRoot + shaderFileName;
+	const std::string paths[] = {
+		path + "_vs.hlsl",
+		path + "_gs.hlsl",
+		path + "_ds.hlsl",
+		path + "_hs.hlsl",
+		path + "_cs.hlsl",
+		path + "_ps.hlsl",
+	};
+
+	std::vector<std::string> existingPaths;
+	for (size_t i = 0; i < EShaderType::COUNT; i++)
+	{
+		std::ifstream file(paths[i]);
+		if (file.is_open())
+		{
+			existingPaths.push_back(paths[i]);
+			file.close();
+		}
+	}
+
+	if (existingPaths.empty())
+	{
+		Log::Error("No suitable shader paths \"%s_xs\"", shaderFileName.c_str());
+	}
+	return std::move(existingPaths);
 }
 
 void Renderer::DrawIndexed(TOPOLOGY topology)

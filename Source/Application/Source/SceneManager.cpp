@@ -241,7 +241,7 @@ void SceneManager::Render() const
 		{
 			m_pRenderer->SetShader(SHADERS::TBN);
 			m_roomScene.cube.Render(m_pRenderer, viewProj, false);
-			m_roomScene.quad.Render(m_pRenderer, viewProj, false);
+			m_roomScene.sphere.Render(m_pRenderer, viewProj, false);
 
 			m_pRenderer->SetShader(m_selectedShader);
 		}

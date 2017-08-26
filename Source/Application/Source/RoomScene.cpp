@@ -232,12 +232,16 @@ void RoomScene::InitializeObjectArrays()
 			Material& mat = sph.m_model.m_material;
 
 			// col(-x->+x) -> metalness [0.0f, 1.0f]
-			mat.color = vec3(Color::red) / 2.0f;
+			mat.color = vec3(Color::red) / 1.5f;
 			mat.metalness = colStep;
 
 			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
 			const float roughnessLowClamp = 0.025f;
 			mat.roughness = rowStep < roughnessLowClamp ? roughnessLowClamp : rowStep;
+
+			const float shininessMax = 150.f;
+			const float shininessBase = shininessMax + 7.0f;
+			mat.shininess =  shininessBase - rowStep * shininessMax;
 
 			spheres.push_back(sph);
 		}
@@ -287,6 +291,7 @@ void RoomScene::InitializeObjectArrays()
 	    grid.m_model.m_material = Material();
 		grid.m_model.m_material.roughness = 0.02f;
 		grid.m_model.m_material.metalness = 0.6f;
+		grid.m_model.m_material.shininess = 40.f;
 	cylinder.m_model.m_material = Material();
 	cylinder.m_model.m_material.roughness = 0.3f;
 	cylinder.m_model.m_material.metalness = 0.3f;
@@ -313,9 +318,7 @@ void RoomScene::InitializeObjectArrays()
 	  cube.m_model.m_material.metalness = 0.6f;
 	  cube.m_model.m_material.roughness = 0.15f;
 }
-	 		  
-	 		  
-	 		  
+
 void RoomScene::UpdateCentralObj(const float dt)
 {
 	float t = ENGINE->GetTotalTime();

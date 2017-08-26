@@ -16,6 +16,8 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#define LOG_SEARCH 0
+
 #include "GeometryGenerator.h"
 #include "Renderer.h"
 #include "D3DManager.h"
@@ -884,7 +886,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 
 	Shader* shader = m_shaders[m_state._activeShader];
 
-#if 1
+#if 0
 	// LINEAR LOOKUP
 	bool found = false;
 	for (const ConstantBufferMapping& bufferSlotIDPair : shader->m_constantsUnsorted)
@@ -899,7 +901,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 			{
 				memcpy(c._data, data, c._size);
 				shader->m_cBuffers[GPUcBufferSlot].dirty = true;
-				break;	// ensures write on first ocurrance
+				break;	// ensures write on first occurrance
 			}
 		}
 	}
@@ -1113,23 +1115,6 @@ void Renderer::Begin(const float clearColor[4], const float depthValue)
 
 void Renderer::End()
 {
-	//auto* backBuffer = m_renderTargets[m_state._mainRenderTarget].GetTextureResource();
-	//
-	//auto* dst = backBuffer;
-	//auto* src = m_renderTargets[m_state._boundRenderTargets[0]].GetTextureResource();
-	//if (dst != src)
-	//{
-	//	// cannot copy entire final texture if sizes are not equal -> use copy subresource region
-		// m_deviceContext->CopyResource(backBuffer, m_renderTargets[m_state._boundRenderTarget].GetTextureResource());
-	//	
-	//	// bgra unorm
-	//	m_deviceContext->CopySubresourceRegion(
-	//		dst, 0,	 // dst: backbuffer[0]
-	//		0, 0, 0, // upper left (x,y,z)
-	//		src, 0,  // src: boundRT[0]
-	//		nullptr);
-	//}
-
 	m_Direct3D->EndFrame();
 	++m_frameCount;
 }

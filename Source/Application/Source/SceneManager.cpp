@@ -236,6 +236,8 @@ void SceneManager::Render() const
 		SendLightData();
 		m_roomScene.Render(m_pRenderer, viewProj);
 
+		// Tangent-Bitangent-Normal drawing
+		//------------------------------------------------------------------------
 		const bool bIsShaderTBN = true;
 		if (bIsShaderTBN)
 		{

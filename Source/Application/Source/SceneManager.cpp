@@ -144,7 +144,7 @@ void SceneManager::HandleInput()
 	if (ENGINE->INP()->IsKeyTriggered("F1")) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
 	if (ENGINE->INP()->IsKeyTriggered("F2")) m_selectedShader = SHADERS::NORMAL;
 	if (ENGINE->INP()->IsKeyTriggered("F3")) m_selectedShader = SHADERS::UNLIT;
-	if (ENGINE->INP()->IsKeyTriggered("F4"));// m_selectedShader = SHADERS::BINORMAL;
+	if (ENGINE->INP()->IsKeyTriggered("F4")) m_selectedShader = m_selectedShader == SHADERS::TBN ? SHADERS::FORWARD_BRDF : SHADERS::TBN;
 
 	if (ENGINE->INP()->IsKeyTriggered("F5"));
 	if (ENGINE->INP()->IsKeyTriggered("F6")) m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::FORWARD_BRDF : SHADERS::FORWARD_PHONG;
@@ -232,11 +232,19 @@ void SceneManager::Render() const
 		m_pRenderer->SetConstant1f("fovH", m_pCamera->m_settings.fovH * DEG2RAD);
 		m_pRenderer->SetConstant1f("panini", m_bUsePaniniProjection ? 1.0f : 0.0f);
 
-		constexpr int TBNMode = 0;
-		if (m_selectedShader == SHADERS::TBN)	m_pRenderer->SetConstant1i("mode", TBNMode);
 		
 		SendLightData();
 		m_roomScene.Render(m_pRenderer, viewProj);
+
+		const bool bIsShaderTBN = true;
+		if (bIsShaderTBN)
+		{
+			m_pRenderer->SetShader(SHADERS::TBN);
+			m_roomScene.cube.Render(m_pRenderer, viewProj, false);
+			m_roomScene.quad.Render(m_pRenderer, viewProj, false);
+
+			m_pRenderer->SetShader(m_selectedShader);
+		}
 	}
 
 

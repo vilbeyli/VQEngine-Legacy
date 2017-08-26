@@ -21,7 +21,7 @@ struct GSIn
 	float3 T : TANGENT;
 	float3 N : NORMAL;
 	float3 B : BINORMAL;
-	float3 wPos : POSITION;
+	float3 WorldPosition : POSITION;
 };
 
 struct PSIn
@@ -32,8 +32,7 @@ struct PSIn
 
 cbuffer renderConsts
 {
-	matrix view;
-	matrix proj;
+	matrix viewProj;
 	int mode;
 };
 
@@ -44,22 +43,21 @@ cbuffer renderConsts
 [maxvertexcount(6 * 3)]
 void GSMain(triangle GSIn gin[3], inout LineStream<PSIn> lineStream)
 {
-	const matrix vp = mul(proj, view);
 	PSIn Out[18];
 
 	for (int i = 0; i < 3; ++i)
 	{
-		const float scale = 0.1f;
-		const float4 VertPos = mul(vp, float4(gin[i].wPos + gin[i].N*0.001f, 1));
-		const float4 TPos    = mul(vp, float4(gin[i].wPos + gin[i].N*0.001f + gin[i].T*scale, 1));
-		const float4 NPos    = mul(vp, float4(gin[i].wPos + gin[i].N*0.001f + gin[i].N*scale, 1));
-		const float4 BPos    = mul(vp, float4(gin[i].wPos + gin[i].N*0.001f + gin[i].B*scale, 1));
+		const float scale = 1.0f;
+		const float4 VertPos = mul(viewProj, float4(gin[i].WorldPosition, 1));
+		const float4 TPos    = mul(viewProj, float4(gin[i].WorldPosition + gin[i].T*scale, 1));
+		const float4 NPos    = mul(viewProj, float4(gin[i].WorldPosition + gin[i].N*scale, 1));
+		const float4 BPos    = mul(viewProj, float4(gin[i].WorldPosition + gin[i].B*scale, 1));
 
-		const float3 red	= float3(1, 0, 0);
-		const float3 blue	= float3(0, 0, 1);
-		const float3 green	= float3(0, 1, 0);
+		const float3 red	= float3(1, 0, 0) * 50;	// bloom fun
+		const float3 blue	= float3(0, 0, 1) * 1.2;
+		const float3 green	= float3(0, 1, 0) * 2;
 
-		switch (mode)
+		switch (3)
 		{
 		case 0:
 		{

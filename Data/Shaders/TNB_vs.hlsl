@@ -29,16 +29,26 @@ struct GSIn
 	float3 T : TANGENT;
 	float3 N : NORMAL;
 	float3 B : BINORMAL;
-	float3 WPos : POSITION;
+	float3 WorldPosition : POSITION;
 };
 
 cbuffer perObj
 {
+	matrix normalMatrix;
 	matrix world;
 };
 
 GSIn VSMain(VSIn In)
 {
+	const float3 B = normalize(cross(In.normal, In.tangent));
+
+	GSIn Out;
+#if 1
+	Out.T	 = normalize(mul(normalMatrix, In.tangent));
+	Out.N	 = normalize(mul(normalMatrix, In.normal));
+	Out.B	 = normalize(mul(normalMatrix, B));
+#else
+	// study relationship between inverse-transpose vs float3x3
 	float3x3 rotMatrix =
 	{
 		world._11_12_13,
@@ -46,12 +56,10 @@ GSIn VSMain(VSIn In)
 		world._31_32_33
 	};
 
-	float3 B = normalize(cross(In.normal, In.tangent));
-
-	GSIn Out;
-	Out.T	 = mul(rotMatrix, In.tangent);
-	Out.N	 = mul(rotMatrix, In.normal);
-	Out.B	 = mul(rotMatrix, B);
-	Out.WPos = mul(world, float4(In.position, 1)).xyz;
+	Out.T	 = normalize(mul(rotMatrix, In.tangent));
+	Out.N	 = normalize(mul(rotMatrix, In.normal));
+	Out.B	 = normalize(mul(rotMatrix, B));
+#endif
+	Out.WorldPosition = mul(world, float4(In.position, 1)).xyz;
 	return Out;
 }

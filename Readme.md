@@ -51,7 +51,7 @@ You will get the following error message on build unless you have already copmil
 | **F1** |	TexCoord Shader |
 | **F2** |	Normals Shader |
 | **F3** |	Diffuse Color Shader |
-| **F4** |	Empty |
+| **F4** |	Toggle TBN Shader |
 | **F5** |	Empty |
 | **F6** |	Toggle Phong/BRDF Shaders |
 | **F7** |	Toggle Debug Shader |

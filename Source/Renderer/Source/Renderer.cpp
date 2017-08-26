@@ -1152,10 +1152,10 @@ void Renderer::Apply()
 		// ----------------------------------------
 		m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
 		m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
-		if (shader->m_geometryShader)	 m_deviceContext->GSSetShader(shader->m_geometryShader    , nullptr, 0);
-		if (shader->m_hullShader)	 m_deviceContext->HSSetShader(shader->m_hullShader   , nullptr, 0);
-		if (shader->m_domainShader)	 m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
-		if (shader->m_computeShader) m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
+		m_deviceContext->GSSetShader(shader->m_geometryShader    , nullptr, 0);
+		m_deviceContext->HSSetShader(shader->m_hullShader   , nullptr, 0);
+		m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
+		m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
 
 		// CONSTANT BUFFERS 
 		// ----------------------------------------

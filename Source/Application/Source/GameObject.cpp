@@ -68,10 +68,23 @@ void GameObject::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool Uplo
 
 	if(UploadMaterialDataToGPU) 
 		m_model.m_material.SetMaterialConstants(pRenderer, shader);
+
+	switch (shader)
+	{
+	case SHADERS::TBN:
+		pRenderer->SetConstant4x4f("world", world);
+		pRenderer->SetConstant4x4f("viewProj", viewProj);
+		pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
+		break;
+	default:
+		pRenderer->SetConstant4x4f("world", world);
+		pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
+		pRenderer->SetConstant4x4f("worldViewProj", wvp);
+		break;
+
+	}
+
 	pRenderer->SetBufferObj(m_model.m_mesh);
-	pRenderer->SetConstant4x4f("world", world);
-	pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
-	pRenderer->SetConstant4x4f("worldViewProj", wvp);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 }

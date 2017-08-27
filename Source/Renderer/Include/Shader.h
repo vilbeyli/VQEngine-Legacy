@@ -71,6 +71,7 @@ constexpr size_t MAX_CONSTANT_BUFFERS = 512;
 using CPUConstantID = int;
 struct CPUConstant
 {
+	friend class Renderer;
 	using CPUConstantPool = std::array<CPUConstant, MAX_CONSTANT_BUFFERS>;
 private:
 	static CPUConstantPool s_constants;
@@ -174,9 +175,6 @@ public:
 	//	 - lighting_ps.hlsl
 	//	 - ...
 	Shader(const std::string& shaderFileName);
-
-	// individual files for shader types, together with type information
-	Shader(const std::vector<std::string>& shaderProgramFiles, const std::vector<EShaderType>& shaderTypes);
 	~Shader();
 
 	void ClearConstantBuffers();

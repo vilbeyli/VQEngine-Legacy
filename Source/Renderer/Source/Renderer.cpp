@@ -289,6 +289,7 @@ std::stack<std::string> Renderer::UnloadShaders()
 		shd = nullptr;
 	}
 	m_shaders.clear();
+	CPUConstant::s_nextConstIndex = 0;
 	return fileNames;
 }
 
@@ -886,7 +887,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 
 	Shader* shader = m_shaders[m_state._activeShader];
 
-#if 0
+#if 1
 	// LINEAR LOOKUP
 	bool found = false;
 	for (const ConstantBufferMapping& bufferSlotIDPair : shader->m_constantsUnsorted)
@@ -901,11 +902,12 @@ void Renderer::SetConstant(const char * cName, const void * data)
 			{
 				memcpy(c._data, data, c._size);
 				shader->m_cBuffers[GPUcBufferSlot].dirty = true;
-				break;	// ensures write on first occurrance
+				break;	// ensures write on first occurrence
 			}
 		}
 	}
 #else
+	// TODO: Fix binary search algorithm...
 	// BINARY SEARCH 
 	const auto& BinarySearch = [cName, &shader]()
 	{
@@ -928,6 +930,9 @@ void Renderer::SetConstant(const char * cName, const void * data)
 
 		while (bKeepSearching)
 		{
+#if LOG_SEARCH
+			Log::Info("begin: low:%d\tcur:%d\thi:%d", lowIndex, currIndex, highIndex);
+#endif
 			const ConstantBufferMapping& bufferSlotIDPair = shader->m_constants[currIndex];
 			const CPUConstantID constID = bufferSlotIDPair.second;
 			const CPUConstant& c = CPUConstant::Get(constID);
@@ -963,7 +968,6 @@ void Renderer::SetConstant(const char * cName, const void * data)
 				currIndex = lowIndex + (highIndex - lowIndex) / 2;
 #if LOG_SEARCH
 				{
-
 					const ConstantBufferMapping& bufferSlotIDPair = shader->m_constants[currIndex];
 					const CPUConstantID constID = bufferSlotIDPair.second;
 					const CPUConstant& c = CPUConstant::Get(constID);
@@ -972,7 +976,10 @@ void Renderer::SetConstant(const char * cName, const void * data)
 #endif
 			}
 
-			bKeepSearching = lowIndex < highIndex;
+#if LOG_SEARCH
+			Log::Info("end: low:%d\tcur:%d\thi:%d\n", lowIndex, currIndex, highIndex);
+#endif
+			bKeepSearching = lowIndex < highIndex;// || ((currIndex == lowIndex) && (lowIndex == highIndex));
 		}
 
 		Log::Error("CONSTANT NOT FOUND: %s", cName);

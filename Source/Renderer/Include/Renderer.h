@@ -135,7 +135,7 @@ public:
 
 	void BindRenderTarget(RenderTargetID rtvID);
 	
-	template <typename... Args> 	inline void Renderer::BindRenderTargets(Args const&... renderTargetIDs) { m_state._boundRenderTargets = { renderTargetIDs... }; }
+	template <typename... Args> 	inline void BindRenderTargets(Args const&... renderTargetIDs) { m_state._boundRenderTargets = { renderTargetIDs... }; }
 
 	void BindDepthStencil(DepthStencilID dsvID);
 	void UnbindRenderTarget();

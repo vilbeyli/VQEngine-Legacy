@@ -31,7 +31,7 @@ const std::array<const char*, ERROR_LOG::ERR_LOG_COUNT> s_errorStrings =
 
 std::ofstream Log::sOutFile;
 
-const char* debugOutputPath = "Debug/debugLog.txt";
+const char* debugOutputPath = "LogFiles/debugLog.txt";
 void Log::Initialize(bool bEnableLogging)
 {
 	if (bEnableLogging)

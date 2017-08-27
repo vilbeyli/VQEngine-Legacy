@@ -61,6 +61,7 @@ Settings::Renderer SceneParser::ReadRendererSettings()
 		std::string	line;
 		while (getline(settingsFile, line))
 		{
+			if (line.empty()) continue;
 			if (line[0] == '/' || line[0] == '#')					// skip comments
 				continue;
 
@@ -243,7 +244,7 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
 		const float range      = stof(command[5]);
 		const float brightness = stof(command[4]);
-		const bool  castsShadows = sBoolTypeReflection.at(shadowing);
+		const bool  bCastsShadows = sBoolTypeReflection.at(shadowing);
 
 		if (lightType != "s" && lightType != "p" && lightType != "d")
 		{	// check light types
@@ -257,7 +258,7 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 			range,
 			brightness,
 			range,	// = spot angle
-			castsShadows
+			bCastsShadows
 		);
 		l._transform.SetPosition(stof(command[6]), stof(command[7]), stof(command[8]));
 		l._transform.RotateAroundGlobalXAxisDegrees(rotX);

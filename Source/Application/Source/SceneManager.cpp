@@ -55,7 +55,6 @@ void SceneManager::ReloadLevel()
 	// todo: unload and reload scene, initialize depth pass...
 }
 
-
 void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings)
 {
 #if 0
@@ -117,7 +116,6 @@ void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 	}
 }
 
-
 void SceneManager::SetCameraSettings(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings)
 {
 	const auto& NEAR_PLANE = cameraSettings.nearPlane;
@@ -137,6 +135,18 @@ void SceneManager::SetCameraSettings(const Settings::Camera& cameraSettings, con
 	m_pCamera->Rotate(cameraSettings.yaw, cameraSettings.pitch * DEG2RAD, 1.0f);
 }
 
+
+void SceneManager::ToggleLightingModel()
+{
+	//const bool bIsPhong = m_selectedShader == SHADERS::FORWARD_PHONG || 0;// SHADERS::DEFERRED_PHONG;
+	//const bool bIsBRDF = !bIsPhong;	// assumes only 2 shading models
+	if (!m_useDeferredRendering)
+	{
+		m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::FORWARD_BRDF : SHADERS::FORWARD_PHONG;
+	}
+}
+
+
 void SceneManager::HandleInput()
 {
 	//-------------------------------------------------------------------------------- SHADER CONFIGURATION ----------------------------------------------------------
@@ -146,8 +156,8 @@ void SceneManager::HandleInput()
 	if (ENGINE->INP()->IsKeyTriggered("F3")) m_selectedShader = SHADERS::UNLIT;
 	if (ENGINE->INP()->IsKeyTriggered("F4")) m_selectedShader = m_selectedShader == SHADERS::TBN ? SHADERS::FORWARD_BRDF : SHADERS::TBN;
 
-	if (ENGINE->INP()->IsKeyTriggered("F5"));
-	if (ENGINE->INP()->IsKeyTriggered("F6")) m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::FORWARD_BRDF : SHADERS::FORWARD_PHONG;
+	if (ENGINE->INP()->IsKeyTriggered("F5")) m_pRenderer->sEnableBlend = !m_pRenderer->sEnableBlend;
+	if (ENGINE->INP()->IsKeyTriggered("F6")) ToggleLightingModel();
 	if (ENGINE->INP()->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
 
 	if (ENGINE->INP()->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
@@ -192,7 +202,7 @@ void SceneManager::Render() const
 	m_pRenderer->Reset();
 	m_pRenderer->BindDepthStencil(0);
 	m_pRenderer->SetDepthStencilState(0);
-	m_pRenderer->SetRasterizerState(static_cast<int>(DEFAULT_RS_STATE::CULL_NONE));
+	m_pRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
 
 	if (m_useDeferredRendering)
@@ -215,7 +225,7 @@ void SceneManager::Render() const
 		}
 
 		// DEFERRED LIGHTING PASS
-		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_roomScene.m_lights);
+		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_pCamera.get(), m_roomScene.m_lights);
 	}
 	else
 	{
@@ -232,7 +242,6 @@ void SceneManager::Render() const
 		m_pRenderer->SetConstant1f("fovH", m_pCamera->m_settings.fovH * DEG2RAD);
 		m_pRenderer->SetConstant1f("panini", m_bUsePaniniProjection ? 1.0f : 0.0f);
 
-		
 		SendLightData();
 		m_roomScene.Render(m_pRenderer, viewProj);
 

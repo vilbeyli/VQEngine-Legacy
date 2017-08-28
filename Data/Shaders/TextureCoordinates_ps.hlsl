@@ -16,46 +16,14 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-//cbuffer perFrame
-//{
-//	//matrix world;
-//	matrix view;
-//	matrix	proj;
-//}
-
-cbuffer perModel
-{
-    matrix world;
-	matrix worldViewProj;
-}
-
-//cbuffer MatrixBuffer3
-//{
-//    matrix proj;
-//}
-
-struct VSIn
-{
-	float3 position : POSITION;
-	float3 normal	: NORMAL;
-	float3 tangent  : TANGENT0;
-	float2 texCoord : TEXCOORD0;
-};
-
 struct PSIn
 {
 	float4 position : SV_POSITION;
-	float3 normal	: NORMAL;
-	float2 texCoord : TEXCOORD0;
+	float2 uv		: TEXCOORD0;
 };
 
-PSIn VSMain(VSIn In)
+float4 PSMain(PSIn In) : SV_TARGET
 {
-	PSIn Out;
-	Out.position = mul(worldViewProj, float4(In.position, 1));
-	Out.normal = In.normal;	// is needed?
-	//Out.normal = float3(0,1,0);
-	Out.texCoord = In.texCoord;
-	
-	return Out;
+	const float4 outColor = float4(In.uv,0,1);
+	return outColor;
 }

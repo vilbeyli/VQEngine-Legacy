@@ -65,6 +65,9 @@ private:
 	void HandleInput();
 	void ReloadLevel();
 
+	//void ToggleTBNShader();
+	void ToggleLightingModel();	// BRDF / Phong
+
 private:
 	RoomScene						m_roomScene;	// todo: rethink scene management
 	std::vector<SerializedScene>	m_serializedScenes;

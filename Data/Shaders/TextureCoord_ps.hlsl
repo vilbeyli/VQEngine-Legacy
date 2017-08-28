@@ -19,13 +19,11 @@
 struct PSIn
 {
 	float4 position : SV_POSITION;
-	float3 normal	: NORMAL;
-	float2 texCoord : TEXCOORD0;
+	float2 uv		: TEXCOORD0;
 };
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	float2 uv = In.texCoord;
-	float4 outColor = float4(uv,0,1);
+	const float4 outColor = float4(In.uv,0,1);
 	return outColor;
 }

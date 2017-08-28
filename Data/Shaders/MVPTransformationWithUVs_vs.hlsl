@@ -16,31 +16,29 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-struct PSIn
+cbuffer perModel
 {
-	float4 position : SV_POSITION;
+	matrix worldViewProj;
+}
+
+struct VSIn
+{
+	float3 position : POSITION;
+	float3 normal	: NORMAL;
+	float3 tangent  : TANGENT0;
 	float2 texCoord : TEXCOORD0;
 };
 
-cbuffer perObject
+struct PSIn
 {
-	float3 diffuse;
-    float isDiffuseMap;
+	float4 position : SV_POSITION;
+	float2 uv		: TEXCOORD0;
 };
 
-Texture2D gDiffuseMap;
-SamplerState samAnisotropic
+PSIn VSMain(VSIn In)
 {
-    Filter = ANISOTROPIC;
-    MaxAnisotropy = 4;
-    AddressU = WRAP;
-    AddressV = WRAP;
-};
-
-float4 PSMain(PSIn In) : SV_TARGET
-{
-	float2 uv = In.texCoord;
-    float4 outColor = isDiffuseMap          * gDiffuseMap.Sample(samAnisotropic, uv) * float4(diffuse, 1) 
-                    + (1.0f - isDiffuseMap) * float4(diffuse,1);
-	return outColor;
+	PSIn Out;
+	Out.position = mul(worldViewProj, float4(In.position, 1));
+	Out.uv = In.texCoord;
+	return Out;
 }

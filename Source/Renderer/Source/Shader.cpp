@@ -307,7 +307,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 		blobs.cs->Release();
 	if(blobs.ps)
 		blobs.ps->Release();
-	OutputDebugString(" - Done.\n");
+	Log::String(" - Done.\n");
 }
 
 void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob)
@@ -319,18 +319,24 @@ void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* 
 		IID_ID3D11ShaderReflection,
 		(void**)&m_vsRefl)))
 	{
-		OutputDebugString("Error getting vertex shader reflection\n");
+		Log::Error("Cannot get vertex shader reflection");
 		assert(false);
 	}
 
 	// Pixel Shader
+	if (!psBlob)
+	{
+		Log::Error("No pixel shader compiled! - psblob = nullptr");
+		return;
+	}
+
 	if (FAILED(D3DReflect(
 		psBlob->GetBufferPointer(),
 		psBlob->GetBufferSize(),
 		IID_ID3D11ShaderReflection,
 		(void**)&m_psRefl)))
 	{
-		OutputDebugString("Error getting pixel shader reflection\n");
+		Log::Error("CAnnot get pixel shader reflection");
 		assert(false);
 	}
 
@@ -343,7 +349,7 @@ void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* 
 			IID_ID3D11ShaderReflection,
 			(void**)&m_gsRefl)))
 		{
-			OutputDebugString("Error getting pixel shader reflection\n");
+			Log::Error("Cant get geometry shader reflection");
 			assert(false);
 		}
 	}

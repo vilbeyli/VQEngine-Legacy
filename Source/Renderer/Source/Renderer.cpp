@@ -37,6 +37,8 @@ const char*			Renderer::s_shaderRoot		= "Data/Shaders/";
 const char*			Renderer::s_textureRoot		= "Data/Textures/";
 Settings::Renderer	Renderer::s_defaultSettings = Settings::Renderer();
 
+bool Renderer::sEnableBlend = false;
+
 Renderer::Renderer()
 	:
 	m_Direct3D(nullptr),
@@ -44,14 +46,21 @@ Renderer::Renderer()
 	m_deviceContext(nullptr),
 	m_mainCamera(nullptr),
 	m_bufferObjects     (std::vector<BufferObject*>     (GEOMETRY::MESH_TYPE_COUNT)      ),
-	m_rasterizerStates  (std::vector<RasterizerState*>  ((int)DEFAULT_RS_STATE::RS_COUNT)),
-	m_depthStencilStates(std::vector<DepthStencilState*>()                               )
+	m_rasterizerStates  (std::vector<RasterizerState*>  ((int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
+	m_depthStencilStates(std::vector<DepthStencilState*>()),
+	m_blendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT))
 	//,	m_ShaderHotswapPollWatcher("ShaderHotswapWatcher")
 {
-	for (int i=0; i<(int)DEFAULT_RS_STATE::RS_COUNT; ++i)
+	for (int i=0; i<(int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT; ++i)
 	{
 		m_rasterizerStates[i] = (RasterizerState*)malloc(sizeof(*m_rasterizerStates[i]));
 		memset(m_rasterizerStates[i], 0, sizeof(*m_rasterizerStates[i]));
+	}
+
+	for (int i = 0; i < (int)EDefaultBlendState::BLEND_STATE_COUNT; ++i)
+	{
+		m_blendStates[i].ptr = (ID3D11BlendState*)malloc(sizeof(*m_blendStates[i].ptr));
+		memset(m_blendStates[i].ptr, 0, sizeof(*m_blendStates[i].ptr));
 	}
 }
 
@@ -81,7 +90,6 @@ void Renderer::Exit()
 	m_textures.clear();
 	m_state._depthBufferTexture.Release();
 
-#if 1
 	for (Sampler& s : m_samplers)
 	{
 		if (s._samplerState)
@@ -91,22 +99,22 @@ void Renderer::Exit()
 		}
 	}
 
-	for (RenderTarget& rs : m_renderTargets)
+	for (RenderTarget& rt : m_renderTargets)
 	{
-		if (rs._renderTargetView)
+		if (rt.pRenderTargetView)
 		{
-			rs._renderTargetView->Release();
-			rs._renderTargetView = nullptr;
+			rt.pRenderTargetView->Release();
+			rt.pRenderTargetView = nullptr;
 		}
-		if (rs._texture._srv)
+		if (rt.texture._srv)
 		{
 			//rs._texture._srv->Release();
-			rs._texture._srv = nullptr;
+			rt.texture._srv = nullptr;
 		}
-		if (rs._texture._tex2D)
+		if (rt.texture._tex2D)
 		{
 			//rs._texture._tex2D->Release();
-			rs._texture._tex2D = nullptr;
+			rt.texture._tex2D = nullptr;
 		}
 	}
 
@@ -128,6 +136,15 @@ void Renderer::Exit()
 		}
 	}
 
+	for (BlendState& bs : m_blendStates)
+	{
+		if (bs.ptr)
+		{
+			bs.ptr->Release();
+			bs.ptr = nullptr;
+		}
+	}
+
 	for (DepthStencil*& ds : m_depthStencils)
 	{
 		if (ds)
@@ -136,7 +153,6 @@ void Renderer::Exit()
 			ds = nullptr;
 		}
 	}
-#endif
 
 	m_Direct3D->ReportLiveObjects("END EXIT\n");	// todo: ifdef debug & log_mem
 	if (m_Direct3D)
@@ -193,6 +209,8 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 	InitializeDefaultRasterizerStates();
 	m_Direct3D->ReportLiveObjects("Init Default RS ");
 
+	InitializeDefaultBlendStates();
+	m_Direct3D->ReportLiveObjects("Init Default BlendStates ");
 
 	GeneratePrimitives();
 	LoadShaders();
@@ -243,38 +261,40 @@ void Renderer::LoadShaders()
 		{ "TEXCOORD",	FLOAT32_2 },
 	};
 
-	const std::vector<std::string> TonemapShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
-	const std::vector<std::string> BlurShaders    = { "FullscreenQuad_vs", "Tonemapping_ps" };
-	const std::vector<std::string> BloomShaders   = { "FullscreenQuad_vs", "Tonemapping_ps" };
-	const std::vector<std::string> CombineShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
 	const std::vector<EShaderType> VS_PS  = { EShaderType::VS, EShaderType::PS };
+	const std::vector<std::string> TonemapShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
+	const std::vector<std::string> BlurShaders    = { "FullscreenQuad_vs", "Blur_ps" };
+	const std::vector<std::string> BloomShaders   = { "FullscreenQuad_vs", "Bloom_ps" };
+	const std::vector<std::string> CombineShaders = { "FullscreenQuad_vs", "BloomCombine_ps" };
 
-	Shader::s_shaders[SHADERS::FORWARD_PHONG      ] = AddShader("Forward_Phong"     , layout);
-	Shader::s_shaders[SHADERS::UNLIT              ] = AddShader("UnlitTextureColor" , layout);
-	Shader::s_shaders[SHADERS::TEXTURE_COORDINATES] = AddShader("TextureCoord"      , layout);
-	Shader::s_shaders[SHADERS::NORMAL             ]	= AddShader("Normal"            , layout);
-	Shader::s_shaders[SHADERS::TANGENT            ] = AddShader("Tangent"           , layout);
-	Shader::s_shaders[SHADERS::BINORMAL           ]	= AddShader("Binormal"          , layout);
-	Shader::s_shaders[SHADERS::LINE               ]	= AddShader("Line"              , layout);
-	Shader::s_shaders[SHADERS::TBN                ]	= AddShader("TNB"               , layout);
-	Shader::s_shaders[SHADERS::DEBUG              ]	= AddShader("Debug"             , layout);
-	Shader::s_shaders[SHADERS::SKYBOX             ]	= AddShader("Skybox"            , layout);
-#if 0
-	// todo: reduce number of shaders, fix the bug herre
-	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"             , BloomShaders  , VS_PS, layout);
-	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"              , BlurShaders   , VS_PS, layout);
-	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"      , CombineShaders, VS_PS, layout);
-	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"       , TonemapShaders, VS_PS, layout);
-#else
-	Shader::s_shaders[SHADERS::BLOOM              ]	= AddShader("Bloom"             , layout);
-	Shader::s_shaders[SHADERS::BLUR               ]	= AddShader("Blur"              , layout);
-	Shader::s_shaders[SHADERS::BLOOM_COMBINE      ]	= AddShader("BloomCombine"      , layout);
-	Shader::s_shaders[SHADERS::TONEMAPPING        ]	= AddShader("Tonemapping"       , TonemapShaders, VS_PS, layout);
-#endif
-	Shader::s_shaders[SHADERS::FORWARD_BRDF       ]	= AddShader("Forward_BRDF"      , layout);
-	Shader::s_shaders[SHADERS::SHADOWMAP_DEPTH    ]	= AddShader("DepthShader"       , layout);
-	Shader::s_shaders[SHADERS::DEFERRED_GEOMETRY  ]	= AddShader("Deferred_Geometry" , layout);
-	Shader::s_shaders[SHADERS::DEFERRED_BRDF      ]	= AddShader("Deferred_BRDF"     , layout);
+	const std::vector<std::string> TextureCoordinates = { "MVPTransformationWithUVs_vs", "TextureCoordinates_ps" };
+
+	const std::vector<std::string> DeferredBRDF_AmbientLight = { "deferred_brdf_vs", "deferred_brdf_ambient_ps" };
+	const std::vector<std::string> DeferredBRDF_PointLight   = { "deferred_brdf_vs", "deferred_brdf_pointLight_ps" };
+	// render cone?
+	const std::vector<std::string> DeferredBRDF_SpotLight    = { "MVPTransformationWithUVs_vs", "deferred_brdf_spotLight_ps" }; 
+
+
+	Shader::s_shaders[SHADERS::FORWARD_PHONG        ]	= AddShader("Forward_Phong"			, layout);
+	Shader::s_shaders[SHADERS::UNLIT                ]	= AddShader("UnlitTextureColor"		, layout);
+	Shader::s_shaders[SHADERS::TEXTURE_COORDINATES  ]	= AddShader("TextureCoordinates"	, TextureCoordinates, VS_PS, layout);
+	Shader::s_shaders[SHADERS::NORMAL               ]	= AddShader("Normal"				, layout);
+	Shader::s_shaders[SHADERS::TANGENT              ]	= AddShader("Tangent"				, layout);
+	Shader::s_shaders[SHADERS::BINORMAL             ]	= AddShader("Binormal"				, layout);
+	Shader::s_shaders[SHADERS::LINE                 ]	= AddShader("Line"					, layout);
+	Shader::s_shaders[SHADERS::TBN                  ]	= AddShader("TNB"					, layout);
+	Shader::s_shaders[SHADERS::DEBUG                ]	= AddShader("Debug"					, layout);
+	Shader::s_shaders[SHADERS::SKYBOX               ]	= AddShader("Skybox"				, layout);
+	Shader::s_shaders[SHADERS::BLOOM                ]	= AddShader("Bloom"					, BloomShaders  , VS_PS, layout);
+	Shader::s_shaders[SHADERS::BLUR                 ]	= AddShader("Blur"					, BlurShaders   , VS_PS, layout);
+	Shader::s_shaders[SHADERS::BLOOM_COMBINE        ]	= AddShader("BloomCombine"			, CombineShaders, VS_PS, layout);
+	Shader::s_shaders[SHADERS::TONEMAPPING          ]	= AddShader("Tonemapping"			, TonemapShaders, VS_PS, layout);
+	Shader::s_shaders[SHADERS::FORWARD_BRDF         ]	= AddShader("Forward_BRDF"			, layout);
+	Shader::s_shaders[SHADERS::SHADOWMAP_DEPTH      ]	= AddShader("DepthShader"			, layout);
+	Shader::s_shaders[SHADERS::DEFERRED_GEOMETRY    ]	= AddShader("Deferred_Geometry"		, layout);
+	Shader::s_shaders[SHADERS::DEFERRED_BRDF_AMBIENT]	= AddShader("Deferred_BRDF_Ambient"	, DeferredBRDF_AmbientLight, VS_PS, layout);
+	Shader::s_shaders[SHADERS::DEFERRED_BRDF_POINT  ]	= AddShader("Deferred_BRDF_Point"	, DeferredBRDF_PointLight  , VS_PS, layout);
+	Shader::s_shaders[SHADERS::DEFERRED_BRDF_SPOT   ]	= AddShader("Deferred_BRDF_Spot"	, DeferredBRDF_SpotLight   , VS_PS, layout);
 
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
@@ -355,15 +375,10 @@ void Renderer::InitializeDefaultDepthBuffer()
 	AddDepthStencilState(depthStencilDesc);
 }
 
-
 void Renderer::InitializeDefaultRasterizerStates()
 {
 	HRESULT hr;
 	const std::string err("Unable to create Rasterizer State: Cull ");
-
-	//ID3D11RasterizerState*& cullNone  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_NONE];
-	//ID3D11RasterizerState*& cullBack  = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_BACK];
-	//ID3D11RasterizerState*& cullFront = m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_FRONT];
 	
 	// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
 	D3D11_RASTERIZER_DESC rsDesc;
@@ -380,28 +395,50 @@ void Renderer::InitializeDefaultRasterizerStates()
 	rsDesc.MultisampleEnable		= true;
 	
 	rsDesc.CullMode = D3D11_CULL_BACK;
-	//hr = m_device->CreateRasterizerState(&rsDesc, &cullBack);
-	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_BACK]);
+	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_BACK]);
 	if (FAILED(hr))
 	{
 		Log::Error(err + "Back\n");
 	}
 
 	rsDesc.CullMode = D3D11_CULL_FRONT;
-	//hr = m_device->CreateRasterizerState(&rsDesc, &cullFront);
-	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_FRONT]);
+	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_FRONT]);
 	if (FAILED(hr))
 	{
 		Log::Error(err + "Front\n");
 	}
 
 	rsDesc.CullMode = D3D11_CULL_NONE;
-	//hr = m_device->CreateRasterizerState(&rsDesc, &cullNone);
-	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)DEFAULT_RS_STATE::CULL_NONE]);
+	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_NONE]);
 	if (FAILED(hr))
 	{
 		Log::Error(err + "None\n");
 	}
+}
+
+void Renderer::InitializeDefaultBlendStates()
+{
+	// todo: solve default blend state issue
+
+	D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
+	rtBlendDesc.BlendEnable = true;
+	rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
+	rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
+	rtBlendDesc.DestBlend = D3D11_BLEND_ONE;
+	rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ONE;
+	rtBlendDesc.RenderTargetWriteMask = 0;
+	rtBlendDesc.SrcBlend = D3D11_BLEND_ONE;
+	rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
+	
+	D3D11_BLEND_DESC desc = {};
+	desc.RenderTarget[0] = rtBlendDesc;
+
+	m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::ADDITIVE_COLOR].ptr));
+	m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::ALPHA_BLEND].ptr));
+	
+	rtBlendDesc.BlendEnable = false;
+	desc.RenderTarget[0] = rtBlendDesc;
+	m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::DISABLED].ptr));
 }
 
 ShaderID Renderer::AddShader(const std::string&	shaderFileName,	const std::vector<InputLayout>& layouts)
@@ -436,7 +473,7 @@ ShaderID Renderer::AddShader(
 	return ShaderID();
 }
 
-RasterizerStateID Renderer::AddRSState(RS_CULL_MODE cullMode, RS_FILL_MODE fillMode, bool enableDepthClip)
+RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool enableDepthClip)
 {
 	D3D11_RASTERIZER_DESC RSDesc;
 	ZeroMemory(&RSDesc, sizeof(D3D11_RASTERIZER_DESC));
@@ -696,7 +733,7 @@ void Renderer::InitializeDefaultRenderTarget()
 		Log::Error("Cannot get back buffer pointer in DefaultRenderTarget initialization");
 		return;
 	}
-	defaultRT._texture._tex2D = backBufferPtr;
+	defaultRT.texture._tex2D = backBufferPtr;
 	
 	D3D11_TEXTURE2D_DESC texDesc;		// get back buffer description
 	backBufferPtr->GetDesc(&texDesc);
@@ -706,17 +743,17 @@ void Renderer::InitializeDefaultRenderTarget()
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 	srvDesc.Texture2D.MostDetailedMip = 0;
-	m_device->CreateShaderResourceView(backBufferPtr, &srvDesc, &defaultRT._texture._srv);
+	m_device->CreateShaderResourceView(backBufferPtr, &srvDesc, &defaultRT.texture._srv);
 		
-	hr = m_device->CreateRenderTargetView(backBufferPtr, nullptr, &defaultRT._renderTargetView);
+	hr = m_device->CreateRenderTargetView(backBufferPtr, nullptr, &defaultRT.pRenderTargetView);
 	if (FAILED(hr))
 	{
 		Log::Error("Cannot create default render target view.");
 		return;
 	}
 
-	m_textures.push_back(defaultRT._texture);	// set texture ID by adding it -- TODO: remove duplicate data - dont add texture to vector
-	defaultRT._texture._id = static_cast<int>(m_textures.size() - 1);
+	m_textures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - dont add texture to vector
+	defaultRT.texture._id = static_cast<int>(m_textures.size() - 1);
 
 	m_renderTargets.push_back(defaultRT);
 	m_state._mainRenderTarget = static_cast<int>(m_renderTargets.size() - 1);
@@ -725,8 +762,8 @@ void Renderer::InitializeDefaultRenderTarget()
 RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
 {
 	RenderTarget newRenderTarget;
-	newRenderTarget._texture = GetTextureObject(CreateTexture2D(RTTextureDesc, true));
-	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget._texture._tex2D, &RTVDesc, &newRenderTarget._renderTargetView);
+	newRenderTarget.texture = GetTextureObject(CreateTexture2D(RTTextureDesc, true));
+	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget.texture._tex2D, &RTVDesc, &newRenderTarget.pRenderTargetView);
 	if (!SUCCEEDED(hr))
 	{
 		Log::Error(CANT_CREATE_RESOURCE, "Render Target View");
@@ -815,6 +852,9 @@ void Renderer::SetShader(ShaderID id)
 			ID3D11RenderTargetView* nullRTV[6] = { nullptr };
 			ID3D11DepthStencilView* nullDSV = { nullptr };
 			m_deviceContext->OMSetRenderTargets(6, nullRTV, nullDSV);
+
+			const float blendFactor[4] = { 1,1,1,1 };
+			m_deviceContext->OMSetBlendState(nullptr, blendFactor, 0xffffffff);
 
 		} // if not same shader
 	}	// if valid shader
@@ -1059,6 +1099,12 @@ void Renderer::SetRasterizerState(RasterizerStateID rsStateID)
 	m_state._activeRSState = rsStateID;
 }
 
+void Renderer::SetBlendState(BlendStateID blendStateID)
+{
+	assert(blendStateID > -1 && static_cast<size_t>(blendStateID) < m_blendStates.size());
+	m_state._activeBlendState = blendStateID;
+}
+
 void Renderer::SetDepthStencilState(DepthStencilStateID depthStencilStateID)
 {
 	assert(depthStencilStateID > -1 && static_cast<size_t>(depthStencilStateID) < m_depthStencilStates.size());
@@ -1099,7 +1145,7 @@ void Renderer::DrawLine()
 	SetConstant3f("p2", pos2);
 	SetConstant3f("color", Color::green.Value());
 	Apply();
-	Draw(TOPOLOGY::POINT_LIST);
+	Draw(EPrimitiveTopology::POINT_LIST);
 }
 
 void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
@@ -1108,7 +1154,7 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 	SetConstant3f("p2", pos2);
 	SetConstant3f("color", color);
 	Apply();
-	Draw(TOPOLOGY::POINT_LIST);
+	Draw(EPrimitiveTopology::POINT_LIST);
 }
 
 // todo: add stencil view params
@@ -1116,7 +1162,7 @@ void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
 	const RenderTargetID rtv = m_state._boundRenderTargets[0];
 	const DepthStencilID dsv = m_state._boundDepthStencil;
-	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv]._renderTargetView, clearColor);
+	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearColor);
 	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthStencils[dsv], D3D11_CLEAR_DEPTH, depthValue, 0);
 }
 
@@ -1142,12 +1188,12 @@ void Renderer::Apply()
 	if (shader)
 	{	// SHADER STAGES
 		// ----------------------------------------
-		m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
-		m_deviceContext->PSSetShader(shader->m_pixelShader , nullptr, 0);
-		m_deviceContext->GSSetShader(shader->m_geometryShader    , nullptr, 0);
-		m_deviceContext->HSSetShader(shader->m_hullShader   , nullptr, 0);
-		m_deviceContext->DSSetShader(shader->m_domainShader , nullptr, 0);
-		m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
+		m_deviceContext->VSSetShader(shader->m_vertexShader  , nullptr, 0);
+		m_deviceContext->PSSetShader(shader->m_pixelShader   , nullptr, 0);
+		m_deviceContext->GSSetShader(shader->m_geometryShader, nullptr, 0);
+		m_deviceContext->HSSetShader(shader->m_hullShader    , nullptr, 0);
+		m_deviceContext->DSSetShader(shader->m_domainShader  , nullptr, 0);
+		m_deviceContext->CSSetShader(shader->m_computeShader , nullptr, 0);
 
 		// CONSTANT BUFFERS 
 		// ----------------------------------------
@@ -1176,6 +1222,12 @@ void Renderer::Apply()
 
 		// OUTPUT MERGER
 		// ----------------------------------------
+		if (sEnableBlend)
+		{
+			const float blendFactor[4] = { 1,1,1,1 };
+			m_deviceContext->OMSetBlendState(m_blendStates[m_state._activeBlendState].ptr, blendFactor, 0xffffffff);
+		}
+
 		const auto indexDSState = m_state._activeDepthStencilState;
 		const auto indexRTV = m_state._boundRenderTargets[0];
 		
@@ -1187,7 +1239,7 @@ void Renderer::Apply()
 			size_t i = 0;
 			for (RenderTargetID hRT : m_state._boundRenderTargets) 
 				if(hRT >= 0) 
-					v[i++] = m_renderTargets[hRT]._renderTargetView;
+					v[i++] = m_renderTargets[hRT].pRenderTargetView;
 			return std::move(v);
 		}();
 #else
@@ -1195,7 +1247,7 @@ void Renderer::Apply()
 		std::vector<ID3D11RenderTargetView*> RTVs;
 		for (RenderTargetID hRT : m_state._boundRenderTargets)
 			if (hRT >= 0)
-				RTVs.push_back(m_renderTargets[hRT]._renderTargetView);
+				RTVs.push_back(m_renderTargets[hRT].pRenderTargetView);
 #endif
 		const auto indexDSV     = m_state._boundDepthStencil;
 		//ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &RTVs[0];
@@ -1245,13 +1297,13 @@ std::vector<std::string> Renderer::GetShaderPaths(const std::string& shaderFileN
 	return std::move(existingPaths);
 }
 
-void Renderer::DrawIndexed(TOPOLOGY topology)
+void Renderer::DrawIndexed(EPrimitiveTopology topology)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->DrawIndexed(m_bufferObjects[m_state._activeBuffer]->m_indexCount, 0, 0);
 }
 
-void Renderer::Draw(TOPOLOGY topology)
+void Renderer::Draw(EPrimitiveTopology topology)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->Draw(1, 0);

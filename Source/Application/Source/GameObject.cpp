@@ -96,7 +96,7 @@ void GameObject::RenderZ(Renderer * pRenderer) const
 		//m_model.m_mesh == GEOMETRY::TRIANGLE || 
 		//m_model.m_mesh == GEOMETRY::QUAD || 
 		//m_model.m_mesh == GEOMETRY::GRID;
-	const RasterizerStateID rasterizerState = bIs2DGeometry ? (int)DEFAULT_RS_STATE::CULL_NONE : (int)DEFAULT_RS_STATE::CULL_FRONT;
+	const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 
 	pRenderer->SetBufferObj(m_model.m_mesh);
 	pRenderer->SetRasterizerState(rasterizerState);

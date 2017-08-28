@@ -36,20 +36,20 @@ constexpr auto to_underlying(E e) noexcept
 	return static_cast<typename std::underlying_type_t<E>>(e);
 }
 
-enum class RS_CULL_MODE 
+enum class ERasterizerCullMode 
 {
 	FRONT = D3D11_CULL_FRONT,
 	NONE = D3D11_CULL_NONE,
 	BACK = D3D11_CULL_BACK
 };
 
-enum class RS_FILL_MODE
+enum class ERasterizerFillMode
 {
 	SOLID     = D3D11_FILL_SOLID,
 	WIREFRAME = D3D11_FILL_WIREFRAME,
 };
 
-enum class TOPOLOGY
+enum class EPrimitiveTopology
 {
 	POINT_LIST     = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
 	TRIANGLE_LIST  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,

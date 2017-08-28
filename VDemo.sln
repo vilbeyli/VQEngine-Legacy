@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26430.15
+VisualStudioVersion = 15.0.26730.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "Source\Application\Application.vcxproj", "{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -23,7 +23,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Data\Shaders\BRDF.hlsl = Data\Shaders\BRDF.hlsl
 		Data\Shaders\Debug_ps.hlsl = Data\Shaders\Debug_ps.hlsl
 		Data\Shaders\Debug_vs.hlsl = Data\Shaders\Debug_vs.hlsl
-		Data\Shaders\deferred_brdf_ps.hlsl = Data\Shaders\deferred_brdf_ps.hlsl
+		Data\Shaders\deferred_brdf_ambient_ps.hlsl = Data\Shaders\deferred_brdf_ambient_ps.hlsl
+		Data\Shaders\deferred_brdf_pointLight_ps.hlsl = Data\Shaders\deferred_brdf_pointLight_ps.hlsl
+		Data\Shaders\deferred_brdf_spotLight_ps.hlsl = Data\Shaders\deferred_brdf_spotLight_ps.hlsl
 		Data\Shaders\deferred_brdf_vs.hlsl = Data\Shaders\deferred_brdf_vs.hlsl
 		Data\Shaders\deferred_geometry_ps.hlsl = Data\Shaders\deferred_geometry_ps.hlsl
 		Data\Shaders\deferred_geometry_vs.hlsl = Data\Shaders\deferred_geometry_vs.hlsl
@@ -34,10 +36,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Data\Shaders\forward_phong_ps.hlsl = Data\Shaders\forward_phong_ps.hlsl
 		Data\Shaders\Forward_Phong_vs.hlsl = Data\Shaders\Forward_Phong_vs.hlsl
 		Data\Shaders\FullScreenQuad_vs.hlsl = Data\Shaders\FullScreenQuad_vs.hlsl
-		LightingCommon.hlsl = LightingCommon.hlsl
+		Data\Shaders\LightingCommon.hlsl = Data\Shaders\LightingCommon.hlsl
 		Data\Shaders\Line_gs.hlsl = Data\Shaders\Line_gs.hlsl
 		Data\Shaders\Line_ps.hlsl = Data\Shaders\Line_ps.hlsl
 		Data\Shaders\Line_vs.hlsl = Data\Shaders\Line_vs.hlsl
+		Data\Shaders\MVPTransformationWithUVs_vs.hlsl = Data\Shaders\MVPTransformationWithUVs_vs.hlsl
 		Data\Shaders\Normal_ps.hlsl = Data\Shaders\Normal_ps.hlsl
 		Data\Shaders\Normal_vs.hlsl = Data\Shaders\Normal_vs.hlsl
 		Data\Shaders\Panini.hlsl = Data\Shaders\Panini.hlsl
@@ -45,8 +48,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Data\Shaders\Skybox_vs.hlsl = Data\Shaders\Skybox_vs.hlsl
 		Data\Shaders\Tangent_ps.hlsl = Data\Shaders\Tangent_ps.hlsl
 		Data\Shaders\Tangent_vs.hlsl = Data\Shaders\Tangent_vs.hlsl
-		Data\Shaders\TextureCoord_ps.hlsl = Data\Shaders\TextureCoord_ps.hlsl
-		Data\Shaders\TextureCoord_vs.hlsl = Data\Shaders\TextureCoord_vs.hlsl
+		Data\Shaders\TextureCoordinates_ps.hlsl = Data\Shaders\TextureCoordinates_ps.hlsl
 		Data\Shaders\TNB_gs.hlsl = Data\Shaders\TNB_gs.hlsl
 		Data\Shaders\TNB_ps.hlsl = Data\Shaders\TNB_ps.hlsl
 		Data\Shaders\TNB_vs.hlsl = Data\Shaders\TNB_vs.hlsl
@@ -93,6 +95,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7FF49A1B-B23B-4DB1-8033-14FFE5B08CD5}
 	EndGlobalSection
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true

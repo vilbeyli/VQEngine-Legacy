@@ -77,7 +77,7 @@ struct DeferredRenderingPasses
 {
 	void InitializeGBuffer(Renderer* pRenderer);
 	void SetGeometryRenderingStates(Renderer* pRenderer) const;
-	void RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const std::vector<Light>& lights) const;
+	void RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const Camera* pCamera, const std::vector<Light>& lights) const;
 	GBuffer _GBuffer;
 
 };

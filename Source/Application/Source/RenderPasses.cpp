@@ -20,6 +20,8 @@
 
 #include "Light.h"
 
+#include "Camera.h"
+
 void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
 {
 	this->_shadowMapDimension = static_cast<int>(shadowMapSettings.dimension);
@@ -89,8 +91,8 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	this->_shadowSampler = pRenderer->CreateSamplerState(comparisonSamplerDesc);
 
 	// render states for front face culling 
-	this->_shadowRenderState = pRenderer->AddRSState(RS_CULL_MODE::FRONT, RS_FILL_MODE::SOLID, true);
-	this->_drawRenderState = pRenderer->AddRSState(RS_CULL_MODE::BACK, RS_FILL_MODE::SOLID, true);
+	this->_shadowRenderState = pRenderer->AddRasterizerState(ERasterizerCullMode::FRONT, ERasterizerFillMode::SOLID, true);
+	this->_drawRenderState   = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, true);
 
 	// shader
 	std::vector<InputLayout> layout = {
@@ -314,7 +316,7 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	pRenderer->Apply();
 }
 
-void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const std::vector<Light>& lights) const
+void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const Camera* pCamera, const std::vector<Light>& lights) const
 {
 	constexpr const float clearColor[4] = { 0,0,0,0 };
 	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
@@ -328,34 +330,39 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->Begin(clearColor, 0);
 	pRenderer->Apply();
 
-
 	// AMBIENT LIGHTING
+	const float ambient = 0.0005f;
 	// todo: set ambient occlusion texture
-	pRenderer->SetShader(SHADERS::DEFERRED_BRDF);
+	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_AMBIENT);
+	pRenderer->SetConstant1f("ambient", ambient);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetBufferObj(GEOMETRY::QUAD);
-
-
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 
-	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
-	pRenderer->SetTexture("texNormals", texNormal);
-	pRenderer->SetTexture("texPosition", texPosition);
-
-#if 0
-	//	SendLightData();	// scenemanager OR get lights themselves
 
 	// POINT LIGHTS
-	pRenderer->SetShader(SHADERS::DEFERRED_BRDF);
-	pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+#if 0
+	pRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
+
+	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_POINT);
+	pRenderer->SetConstant3f("cameraPos", pCamera->GetPositionF());
+	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
+	//pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
+	//pRenderer->SetTexture("texNormals", texNormal);
+	//pRenderer->SetTexture("texPosition", texPosition);
+	pRenderer->SetBufferObj(GEOMETRY::QUAD);
 
 	// for point lights
+	{
 
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
+		pRenderer->Apply();
+		pRenderer->DrawIndexed();
+	}
+#endif
 
 	// SPOT LIGHTS
+#if 0
 	pRenderer->SetShader(SHADERS::DEFERRED_BRDF);
 	pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 
@@ -366,4 +373,5 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 #endif
+	pRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 }

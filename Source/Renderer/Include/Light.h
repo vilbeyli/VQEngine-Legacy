@@ -20,9 +20,10 @@
 
 
 #include "Components/Transform.h"
-#include "Model.h"
 #include "Color.h"
 #include <DirectXMath.h>
+
+using BufferID = int; // watning: duplicate definition
 
 struct LightShaderSignature
 {
@@ -43,7 +44,7 @@ struct Light
 {
 	friend class Graphics;
 
-	enum class LightType
+	enum class ELightType
 	{
 		POINT = 0,
 		SPOT,
@@ -53,7 +54,7 @@ struct Light
 	};
 
 	Light();
-	Light(LightType type, 
+	Light(ELightType type, 
 			Color color, 
 			float range,
 			float brightness,
@@ -70,21 +71,21 @@ struct Light
 
 	//---------------------------------------------------------------------------------
 	
-	LightType	_type;
+	ELightType	_type;
 	Color		_color;
 	float		_range;
 	float		_brightness;	// 300.0f is a good default value
 	
 	bool		_castsShadow;
 
-	// point light attributes
-	union {
+	union 
+	{	// point light attributes
 		vec2 _attenuation;
-		vec2 _spotAngle;	// uses only X channel
+		vec2 _spotAngle;	// uses only X channel of the vec2
 	};	
 
 	Transform	_transform;
-	Model		_model;
+	BufferID	_renderMesh;
 };
 
 

@@ -37,7 +37,7 @@ const char*			Renderer::s_shaderRoot		= "Data/Shaders/";
 const char*			Renderer::s_textureRoot		= "Data/Textures/";
 Settings::Renderer	Renderer::s_defaultSettings = Settings::Renderer();
 
-bool Renderer::sEnableBlend = false;
+bool Renderer::sEnableBlend = true;
 
 Renderer::Renderer()
 	:
@@ -270,7 +270,7 @@ void Renderer::LoadShaders()
 	const std::vector<std::string> TextureCoordinates = { "MVPTransformationWithUVs_vs", "TextureCoordinates_ps" };
 
 	const std::vector<std::string> DeferredBRDF_AmbientLight = { "deferred_brdf_vs", "deferred_brdf_ambient_ps" };
-	const std::vector<std::string> DeferredBRDF_PointLight   = { "deferred_brdf_vs", "deferred_brdf_pointLight_ps" };
+	const std::vector<std::string> DeferredBRDF_PointLight   = { "MVPTransformationWithUVs_vs", "deferred_brdf_pointLight_ps" };
 	// render cone?
 	const std::vector<std::string> DeferredBRDF_SpotLight    = { "MVPTransformationWithUVs_vs", "deferred_brdf_spotLight_ps" }; 
 
@@ -426,7 +426,7 @@ void Renderer::InitializeDefaultBlendStates()
 	rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
 	rtBlendDesc.DestBlend = D3D11_BLEND_ONE;
 	rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ONE;
-	rtBlendDesc.RenderTargetWriteMask = 0;
+	rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 	rtBlendDesc.SrcBlend = D3D11_BLEND_ONE;
 	rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
 	
@@ -496,7 +496,6 @@ RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERa
 	return static_cast<RasterizerStateID>(m_rasterizerStates.size() - 1);
 }
 
-// assumes unique shader file names (even in different folders)
 // example params: "bricks_d.png", "Data/Textures/"
 TextureID Renderer::CreateTextureFromFile(const std::string& shdFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
@@ -1225,7 +1224,7 @@ void Renderer::Apply()
 		if (sEnableBlend)
 		{
 			const float blendFactor[4] = { 1,1,1,1 };
-			m_deviceContext->OMSetBlendState(m_blendStates[m_state._activeBlendState].ptr, blendFactor, 0xffffffff);
+			m_deviceContext->OMSetBlendState(m_blendStates[m_state._activeBlendState].ptr, nullptr, 0xffffffff);
 		}
 
 		const auto indexDSState = m_state._activeDepthStencilState;

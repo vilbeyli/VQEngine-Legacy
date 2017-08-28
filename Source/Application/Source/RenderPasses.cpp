@@ -17,10 +17,9 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "RenderPasses.h"
-
 #include "Light.h"
-
 #include "Camera.h"
+
 
 void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
 {
@@ -316,7 +315,7 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	pRenderer->Apply();
 }
 
-void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const Camera* pCamera, const std::vector<Light>& lights) const
+void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const std::vector<Light>& lights) const
 {
 	constexpr const float clearColor[4] = { 0,0,0,0 };
 	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
@@ -342,22 +341,40 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 
 
 	// POINT LIGHTS
-#if 0
+#if 1
+
+	const vec2 screenSize(pRenderer->WindowWidth(), pRenderer->WindowHeight());
 	pRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
 
 	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_POINT);
-	pRenderer->SetConstant3f("cameraPos", pCamera->GetPositionF());
+	pRenderer->SetConstant3f("CameraWorldPosition", sceneView.pCamera->GetPositionF());
+	pRenderer->SetConstant2f("ScreenSize", screenSize);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
-	//pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
-	//pRenderer->SetTexture("texNormals", texNormal);
-	//pRenderer->SetTexture("texPosition", texPosition);
-	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
+	pRenderer->SetTexture("texNormals", texNormal);
+	pRenderer->SetTexture("texPosition", texPosition);
+	pRenderer->SetBufferObj(GEOMETRY::SPHERE);
 
-	// for point lights
+	for(const Light& light : lights)
 	{
+		if (light._type == Light::ELightType::POINT)
+		{
+			const float& r   = light._range;	//bounding sphere radius
+			const vec3&  pos = light._transform._position;
+			const XMMATRIX world = {
+				r, 0, 0, 0,
+				0, r, 0, 0,
+				0, 0, r, 0,
+				pos.x(), pos.y(), pos.z(), 1,
+			};
 
-		pRenderer->Apply();
-		pRenderer->DrawIndexed();
+			const XMMATRIX wvp = world * sceneView.viewProj;
+			const LightShaderSignature lightData = light.ShaderSignature();
+			pRenderer->SetConstant4x4f("worldViewProj", wvp);
+			pRenderer->SetConstantStruct("light", &lightData);
+			pRenderer->Apply();
+			pRenderer->DrawIndexed();
+		}
 	}
 #endif
 

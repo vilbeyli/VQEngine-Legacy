@@ -28,11 +28,6 @@
 
 #define KEY_TRIG(k) ENGINE->INP()->IsKeyTriggered(k)
 
-
-constexpr int		MAX_LIGHTS = 20;
-constexpr int		MAX_SPOTS = 10;
-
-
 SceneManager::SceneManager()
 	:
 	m_pCamera(new Camera()),
@@ -179,10 +174,8 @@ void SceneManager::Update(float dt)
 
 void SceneManager::Render() const
 {
-	const XMMATRIX view = m_pCamera->GetViewMatrix();
-	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
-	const XMMATRIX viewProj = view * proj;
-	
+	const XMMATRIX viewProj = m_sceneView.viewProj;
+
 	// get shadow casters (todo: static/dynamic lights)
 	std::vector<const Light*> _shadowCasters;
 	for (const Light& light : m_roomScene.m_lights)
@@ -225,7 +218,7 @@ void SceneManager::Render() const
 		}
 
 		// DEFERRED LIGHTING PASS
-		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_pCamera.get(), m_roomScene.m_lights);
+		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_roomScene.m_lights);
 	}
 	else
 	{
@@ -285,26 +278,26 @@ void SceneManager::Render() const
 	m_pRenderer->End();
 }
 
-
-void SceneManager::SendLightData() const
+void SceneManager::PreRender()
 {
-	// SPOT & POINT LIGHTS
-	//--------------------------------------------------------------
-	const LightShaderSignature defaultLight = LightShaderSignature();
-	std::vector<LightShaderSignature> lights(MAX_LIGHTS, defaultLight);
-	std::vector<LightShaderSignature> spots(MAX_SPOTS, defaultLight);
-	unsigned spotCount = 0;
-	unsigned lightCount = 0;
+	// set scene view
+	const XMMATRIX view = m_pCamera->GetViewMatrix();
+	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
+	m_sceneView.viewProj = view * proj;
+	m_sceneView.pCamera = m_pCamera.get();
+
+	// gather scene lights
+	size_t spotCount = 0;	size_t lightCount = 0;
 	for (const Light& l : m_roomScene.m_lights)
 	{
 		switch (l._type)
 		{
-		case Light::LightType::POINT:
-			lights[lightCount] = l.ShaderSignature();
+		case Light::ELightType::POINT:
+			m_sceneLights.pointLights[lightCount] = l.ShaderSignature();
 			++lightCount;
 			break;
-		case Light::LightType::SPOT:
-			spots[spotCount] = l.ShaderSignature();
+		case Light::ELightType::SPOT:
+			m_sceneLights.spotLights[spotCount] = l.ShaderSignature();
 			++spotCount;
 			break;
 		default:
@@ -312,10 +305,20 @@ void SceneManager::SendLightData() const
 			break;
 		}
 	}
-	m_pRenderer->SetConstant1f("lightCount", static_cast<float>(lightCount));
-	m_pRenderer->SetConstant1f("spotCount" , static_cast<float>(spotCount));
-	m_pRenderer->SetConstantStruct("lights", static_cast<void*>(lights.data()));
-	m_pRenderer->SetConstantStruct("spots" , static_cast<void*>(spots.data()));
+	m_sceneLights.spotLightCount = spotCount;
+	m_sceneLights.pointLightCount = lightCount;
+}
+
+
+
+void SceneManager::SendLightData() const
+{
+	// SPOT & POINT LIGHTS
+	//--------------------------------------------------------------
+	m_pRenderer->SetConstant1f("lightCount", static_cast<float>(m_sceneLights.pointLightCount));
+	m_pRenderer->SetConstant1f("spotCount" , static_cast<float>(m_sceneLights.spotLightCount));
+	m_pRenderer->SetConstantStruct("lights", static_cast<const void*>(m_sceneLights.pointLights.data()));
+	m_pRenderer->SetConstantStruct("spots" , static_cast<const void*>(m_sceneLights.spotLights.data()));
 
 	// SHADOW MAPS
 	//--------------------------------------------------------------
@@ -329,8 +332,8 @@ void SceneManager::SendLightData() const
 	m_pRenderer->SetSamplerState("sShadowSampler", shadowSampler);
 
 #ifdef _DEBUG
-	if (lights.size() > MAX_LIGHTS)	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
-	if (spots.size() > MAX_SPOTS)	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
+	if (m_sceneLights.pointLightCount > m_sceneLights.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
+	if (m_sceneLights.spotLightCount  > m_sceneLights.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif
 }
 

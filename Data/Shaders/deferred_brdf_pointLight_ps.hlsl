@@ -27,7 +27,14 @@ struct PSIn
 
 cbuffer SceneVariables
 {
-	float3 cameraPos;
+	float3 CameraWorldPosition;
+	float pad0;
+	float2 ScreenSize;
+};
+
+cbuffer PerLightData
+{
+	Light light;
 };
 
 // GBuffer
@@ -44,13 +51,16 @@ SamplerState sNearestSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	// lighting & surface parameters
-	const float3 P = texPosition.Sample(sNearestSampler, In.uv);
-	const float3 N = texNormals.Sample(sNearestSampler, In.uv);
-	const float3 V = normalize(cameraPos - P);
+	const float2 uv = In.position.xy / ScreenSize;
 
-	const float4 diffuseRoughness = texDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
-	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sNearestSampler, In.uv);
+	// lighting & surface parameters
+	const float3 P = texPosition.Sample(sNearestSampler, uv);
+	const float3 N = texNormals.Sample(sNearestSampler, uv);
+	const float3 V = normalize(CameraWorldPosition - P);
+	const float3 L = light.position;
+
+	const float4 diffuseRoughness = texDiffuseRoughnessMap.Sample(sNearestSampler, uv);
+	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sNearestSampler, uv);
 
 	BRDF_Surface s;	
 	s.N = N;
@@ -60,8 +70,23 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.metalness = specularMetalness.a;
 	
 	// illumination
-	const float ambient = 0.2f;
-	const float3 Ia = s.diffuseColor * ambient;	// ambient
-	//return float4(Ia, 1.0f);
-	return float4(0, 0, 0.002, 1);// +float4(Ia * 0.00001, 1.0f);
+	const bool bUsePhongAttenuation = false;
+	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
+
+	// integrate the lighting equation
+	const float3 Wi = normalize(L - P);
+	const float3 radiance = Attenuation(light.attenuation, length(light.position - P), bUsePhongAttenuation)
+		* light.color
+		* light.brightness;
+
+	const int steps = 10;
+	const float dW = 1.0f / steps;
+	for (int iter = 0; iter < steps; ++iter)
+	{
+		IdIs += BRDF(Wi, s, V, P) * radiance * dW;
+	}
+	return float4(IdIs, 1.0f);
+	//return float4(IdIs * 0.000001f + float3(1,0,0), 1.0f);
+	//return float4(uv, 0, 1.0f);
+	//return float4(N, 1.0f);
 }

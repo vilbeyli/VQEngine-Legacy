@@ -161,10 +161,11 @@ public:
 	void UnbindDepthStencil();
 
 	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
-	inline void SetConstant3f(const char* cName, const vec3& float3) { SetConstant(cName, static_cast<const void*>(&float3.x())); }
-	inline void SetConstant1f(const char* cName, const float& data)  { SetConstant(cName, static_cast<const void*>(&data)); }
-	inline void SetConstant1i(const char* cName, const int& data)    { SetConstant(cName, static_cast<const void*>(&data)); }
-	inline void SetConstantStruct(const char * cName, void* data)    { SetConstant(cName, data); }
+	inline void SetConstant3f(const char* cName, const vec3& float3)	{ SetConstant(cName, static_cast<const void*>(&float3.x())); }
+	inline void SetConstant2f(const char* cName, const vec2& float2)	{ SetConstant(cName, static_cast<const void*>(&float2.x())); }
+	inline void SetConstant1f(const char* cName, const float& data)		{ SetConstant(cName, static_cast<const void*>(&data)); }
+	inline void SetConstant1i(const char* cName, const int& data)		{ SetConstant(cName, static_cast<const void*>(&data)); }
+	inline void SetConstantStruct(const char * cName, const void* data) { SetConstant(cName, data); }
 
 	void Begin(const float clearColor[4], const float depthValue);
 	void End();

@@ -35,6 +35,17 @@ class PathManager;
 
 struct Path;
 
+
+constexpr int MAX_POINT_LIGHT_COUNT = 20;
+constexpr int MAX_SPOT_LIGHT_COUNT = 10;
+struct SceneLightData
+{
+	std::array<LightShaderSignature, MAX_POINT_LIGHT_COUNT> pointLights;
+	std::array<LightShaderSignature, MAX_SPOT_LIGHT_COUNT>  spotLights;
+	size_t pointLightCount;
+	size_t spotLightCount;
+};
+
 struct SerializedScene
 {
 	Settings::Camera	cameraSettings;
@@ -54,11 +65,14 @@ public:
 
 	void Update(float dt);
 	void Render() const;
+	void PreRender();
 
 	void SendLightData() const;
+	void SendDeferredDynamicLightData() const;
 	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
 
 	shared_ptr<Camera>				m_pCamera;	// temp
+	SceneView						m_sceneView;
 
 private:
 	friend struct ShadowMapPass;
@@ -71,6 +85,8 @@ private:
 private:
 	RoomScene						m_roomScene;	// todo: rethink scene management
 	std::vector<SerializedScene>	m_serializedScenes;
+
+	SceneLightData					m_sceneLights;
 
 	Renderer*						m_pRenderer;
 	bool							m_bUsePaniniProjection;

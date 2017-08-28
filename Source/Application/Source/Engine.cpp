@@ -186,6 +186,7 @@ bool Engine::Update()
 
 void Engine::Render()
 {
+	m_sceneManager->PreRender();
 	m_sceneManager->Render();
 }
 

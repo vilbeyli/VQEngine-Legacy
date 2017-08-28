@@ -21,6 +21,13 @@
 #include "Renderer.h"
 #include <array>
 
+
+struct SceneView
+{
+	XMMATRIX viewProj;
+	Camera*  pCamera;
+};
+
 struct ShadowMapPass
 {
 	void Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings);
@@ -77,7 +84,7 @@ struct DeferredRenderingPasses
 {
 	void InitializeGBuffer(Renderer* pRenderer);
 	void SetGeometryRenderingStates(Renderer* pRenderer) const;
-	void RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const Camera* pCamera, const std::vector<Light>& lights) const;
+	void RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const std::vector<Light>& lights) const;
 	GBuffer _GBuffer;
 
 };

@@ -210,11 +210,11 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 		//--------------------------------------------------------------
 		// | Light Type	| Color	| Shadowing? |  Brightness | Spot.Angle OR Point.Range | Position3 | Rotation3
 		//--------------------------------------------------------------
-		static const std::unordered_map<std::string, Light::LightType>	sLightTypeLookup
+		static const std::unordered_map<std::string, Light::ELightType>	sLightTypeLookup
 		{ 
-			{"s", Light::LightType::SPOT },
-			{"p", Light::LightType::POINT},
-			{"d", Light::LightType::DIRECTIONAL}
+			{"s", Light::ELightType::SPOT },
+			{"p", Light::ELightType::POINT},
+			{"d", Light::ELightType::DIRECTIONAL}
 		};
 
 		static const std::unordered_map<std::string, const Color&>		sColorLookup

@@ -103,8 +103,8 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 void RoomScene::InitializeLights(SerializedScene& scene)
 {
 	m_lights = std::move(scene.lights);
-	m_lights[1]._color = m_lights[1]._model.m_material.color = vec3(m_lights[1]._color) * 3.0f;
-	m_lights[2]._color = m_lights[2]._model.m_material.color = vec3(m_lights[2]._color) * 2.0f;
+	m_lights[1]._color = vec3(m_lights[1]._color) * 3.0f;
+	m_lights[2]._color = vec3(m_lights[2]._color) * 2.0f;
 	m_lights[3]._color = vec3(m_lights[3]._color) * 1.5f;
 	
 	// hard-coded scales for now
@@ -123,8 +123,8 @@ void RoomScene::InitializeLights(SerializedScene& scene)
 		float z = RandF(-10.0f, 20.0f);
 		l._transform.SetPosition(x, y, z);
 		l._transform.SetUniformScale(0.1f);
-		l._model.m_mesh = GEOMETRY::SPHERE;
-		l._model.m_material.color = l._color = rndColor;
+		l._renderMesh = GEOMETRY::SPHERE;
+		l._color = rndColor;
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
 		m_lights.push_back(l);
 	}
@@ -387,10 +387,10 @@ void RoomScene::RenderLights(const XMMATRIX& viewProj) const
 	m_pRenderer->SetShader(SHADERS::UNLIT);
 	for (const Light& light : m_lights)
 	{
-		m_pRenderer->SetBufferObj(light._model.m_mesh);
+		m_pRenderer->SetBufferObj(light._renderMesh);
 		const XMMATRIX world = light._transform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world  * viewProj;
-		const vec3 color = light._model.m_material.color.Value();
+		const vec3 color = light._color.Value();
 		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
 		m_pRenderer->SetConstant3f("diffuse", color);
 		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);

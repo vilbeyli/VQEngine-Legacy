@@ -47,22 +47,23 @@ const std::map<unsigned, std::pair<float, float>> rangeAttenuationMap_ =
 	{ 3250, std::make_pair(0.0014f, 0.00007f)},
 };
 
-static const std::unordered_map<Light::LightType, GEOMETRY>		sLightTypeMeshLookup
+static const std::unordered_map<Light::ELightType, GEOMETRY>		sLightTypeMeshLookup
 {
-	{ Light::LightType::SPOT       , GEOMETRY::CYLINDER },
-	{ Light::LightType::POINT      , GEOMETRY::SPHERE },
-	{ Light::LightType::DIRECTIONAL, GEOMETRY::SPHERE }
+	{ Light::ELightType::SPOT       , GEOMETRY::CYLINDER },
+	{ Light::ELightType::POINT      , GEOMETRY::SPHERE },
+	{ Light::ELightType::DIRECTIONAL, GEOMETRY::SPHERE }
 };
 
 Light::Light()
 	:
-	_type(LightType::POINT),
+	_type(ELightType::POINT),
 	_color(Color::white),
 	_range(50),	// phong
 	_brightness(300.0f),
 	_castsShadow(false),
 	_spotAngle(vec2()),
-	_attenuation(vec2())
+	_attenuation(vec2()),
+	_renderMesh(sLightTypeMeshLookup.at(ELightType::POINT))
 {
 	SetLightRange(_range);
 }
@@ -76,10 +77,10 @@ Light::Light(const Light& l)
 	_castsShadow(l._castsShadow),
 	_spotAngle(l._spotAngle),
 	_transform(l._transform),
-	_model(l._model)
+	_renderMesh(l._renderMesh)
 {}
 
-Light::Light(LightType type, Color color, float range, float brightness, float spotAngle, bool castsShadows) 
+Light::Light(ELightType type, Color color, float range, float brightness, float spotAngle, bool castsShadows) 
 	:
 	_type(type),
 	_color(color),
@@ -89,19 +90,18 @@ Light::Light(LightType type, Color color, float range, float brightness, float s
 {
 	switch (_type)
 	{
-	case LightType::POINT:
+	case ELightType::POINT:
 		SetLightRange(_range);
 		break;
-	case LightType::SPOT:
+	case ELightType::SPOT:
 		_spotAngle.x() = spotAngle;
 		break;
-	case LightType::DIRECTIONAL:
+	case ELightType::DIRECTIONAL:
 		Log::Error("todo: directional lights...");
 		break;
 	}
 
-	_model.m_material.color = color;
-	_model.m_mesh = sLightTypeMeshLookup.at(_type);
+	_renderMesh = sLightTypeMeshLookup.at(_type);
 }
 
 Light::~Light()
@@ -133,9 +133,9 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 	XMMATRIX LSpaceMat = XMMatrixIdentity();
 	switch (_type)
 	{
-	case LightType::POINT:
+	case ELightType::POINT:
 		break;
-	case LightType::SPOT:
+	case ELightType::SPOT:
 	{
 		XMVECTOR pos = _transform._position;
 		XMMATRIX view = GetViewMatrix();
@@ -161,12 +161,12 @@ XMMATRIX Light::GetViewMatrix() const
 	const XMMATRIX ViewMatarix = [&]() -> XMMATRIX {
 		switch (_type)
 		{
-		case LightType::POINT:
+		case ELightType::POINT:
 		{
 			return XMMatrixIdentity();
 		}
 		
-		case LightType::SPOT:
+		case ELightType::SPOT:
 		{
 			XMVECTOR up		= vec3::Back;
 			XMVECTOR lookAt = vec3::Up;
@@ -190,12 +190,12 @@ XMMATRIX Light::GetProjectionMatrix() const
 	const XMMATRIX proj = [&]() -> const XMMATRIX{
 		switch (_type)
 		{
-		case LightType::POINT:
+		case ELightType::POINT:
 		{
 			return XMMatrixIdentity();
 		}
 			
-		case LightType::SPOT:
+		case ELightType::SPOT:
 		{
 			return XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 500.0f);
 		}	
@@ -212,7 +212,7 @@ XMMATRIX Light::GetProjectionMatrix() const
 LightShaderSignature Light::ShaderSignature() const
 {
 	const vec3 spotDirection = [&]() -> const vec3 {
-		if (_type == LightType::SPOT)
+		if (_type == ELightType::SPOT)
 		{
 			return XMVector3TransformCoord(vec3::Up, _transform.RotationMatrix());
 		}

@@ -1,38 +1,21 @@
 # DX11Renderer - VDemo | DirectX11 & C++11 Real-Time Renderer
 
-This project started as the DirectX 11 Renderer module for my [3D-Animation project](https://www.youtube.com/watch?v=Rt-h-bMA8Xc) at [DigiPen Institute of Technology](https://www.digipen.edu/).
-Now, this repo serves as a DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
+A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
 ![](Screenshots/fixedTonemappingGamma.PNG)
+<center><i>BRDF - HDR</i></center>
 
-## Milestones
 
-See [all Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones).
+## Prerequisites
+
+ - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - probably the latest version
+  
+   Note: if the linker throws the error `1>LINK : fatal error LNK1158: cannot run 'rc.exe'` do the following:
+   - Copy `rc.exe` and `rcdll.dll` 
+   from `C:\Program Files (x86)\Windows Kits\10\bin\10.0.15063.0\x64` to `C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin`
  
- ***Completed***
 
-*v0.1 : July15-2017*
- - Vertex-Geometry-Pixel Shader Pipeline
- - Simple Shader Reflection
- - Phong Lighting
- - Simple Shadow Maps
- - Normal Maps
- - Diffuse Textures
- - Procedural Geometry: Cube, Sphere, Cylinder, Grid
- 
- ***In Development***
- 
- *v0.2*
- - BRDF
- - Bloom
- - Cubemap - skybox
- - Image-Based Lighting
- - Deferred Rendering
- - AO
- - Improved Shadow Map
-
-
-## Compiling Instructions & Dependencies (to be automated - in progress)
+## Build Instructions (to be automated - in progress)
 
 Navigate to `Source\3rdParty\DirectXTex` and compile the solution `DirectXTex_Desktop_2015.sln` with the *platform settings that match that of this project's*. 
 This will generate the lib file that is required to compile the DX11Renderer project.
@@ -62,3 +45,30 @@ You will get the following error message on build unless you have already copmil
 | **'** | Toggle Floor Normal Map |
 | **ESC** |	Exit App |
  
+
+
+## Milestones
+
+See [all Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones).
+ 
+ ***Completed***
+
+*v0.1 : July15-2017*
+ - Vertex-Geometry-Pixel Shader Pipeline
+ - Simple Shader Reflection
+ - Phong Lighting
+ - Simple Shadow Maps
+ - Normal Maps
+ - Diffuse Textures
+ - Procedural Geometry: Cube, Sphere, Cylinder, Grid
+ 
+ ***In Development***
+ 
+ *v0.2*
+ - BRDF
+ - Bloom
+ - Cubemap - skybox
+ - Image-Based Lighting
+ - Deferred Rendering
+ - AO
+ - Improved Shadow Map

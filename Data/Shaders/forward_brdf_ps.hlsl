@@ -93,31 +93,27 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 Ia = s.diffuseColor * ambient;	// ambient
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
 
-	// integrate the lighting equation
-	const int steps = 10;
-	const float dW = 1.0f / steps;
-	for (int iter = 0; iter < steps; ++iter)
+	
+	// POINT Lights
+	// brightness default: 300
+	//---------------------------------
+	for (int i = 0; i < lightCount; ++i)		
 	{
-		// POINT Lights
-		// brightness default: 300
-		//---------------------------------
-		for (int i = 0; i < lightCount; ++i)		
-		{
-			const float3 Wi       = normalize(lights[i].position - P);
-			const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P), bUsePhongAttenuation) * lights[i].color * lights[i].brightness;
-			IdIs += BRDF(Wi, s, V, P) * radiance * dW;
-		}
-
-		// SPOT Lights (shadow)
-		// todo: intensity/brightness
-		//---------------------------------
-		for (int j = 0; j < spotCount; ++j)			
-		{
-			const float3 Wi       = normalize(spots[j].position - P);
-			const float3 radiance = Intensity(spots[j], P) * spots[j].color;
-			IdIs += BRDF(Wi, s, V, P) * radiance * ShadowTest(P, In.lightSpacePos, gShadowMap, sShadowSampler) * dW;
-		}
+		const float3 Wi       = normalize(lights[i].position - P);
+		const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P), bUsePhongAttenuation) * lights[i].color * lights[i].brightness;
+		IdIs += BRDF(Wi, s, V, P) * radiance;
 	}
+
+	// SPOT Lights (shadow)
+	// todo: intensity/brightness
+	//---------------------------------
+	for (int j = 0; j < spotCount; ++j)			
+	{
+		const float3 Wi       = normalize(spots[j].position - P);
+		const float3 radiance = Intensity(spots[j], P) * spots[j].color;
+		IdIs += BRDF(Wi, s, V, P) * radiance * ShadowTest(P, In.lightSpacePos, gShadowMap, sShadowSampler);
+	}
+	
 	
 	const float3 illumination = Ia + IdIs;
 	return float4(illumination, 1);

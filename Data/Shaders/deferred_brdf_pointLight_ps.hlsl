@@ -79,12 +79,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 		* light.color
 		* light.brightness;
 
-	const int steps = 10;
-	const float dW = 1.0f / steps;
-	for (int iter = 0; iter < steps; ++iter)
-	{
-		IdIs += BRDF(Wi, s, V, P) * radiance * dW;
-	}
+	IdIs += BRDF(Wi, s, V, P) * radiance;
+	
 	return float4(IdIs, 1.0f);
 	//return float4(IdIs * 0.000001f + float3(1,0,0), 1.0f);
 	//return float4(uv, 0, 1.0f);

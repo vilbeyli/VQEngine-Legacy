@@ -20,6 +20,8 @@
 #include "Light.h"
 #include "Camera.h"
 
+#include "SceneManager.h"
+
 
 void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
 {
@@ -300,6 +302,10 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	this->_GBuffer._diffuseRoughnessRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
 	this->_GBuffer._specularMetallicRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
 
+	// http://download.nvidia.com/developer/presentations/2004/6800_Leagues/6800_Leagues_Deferred_Shading.pdf
+	// Option: trade storage for computation
+	//  - Store pos.z     and compute xy from z + window.xy
+	//	- Store normal.xy and compute z = sqrt(1 - x^2 - y^2)
 	Log::Info("Done.");
 }
 
@@ -315,9 +321,10 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	pRenderer->Apply();
 }
 
-void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const std::vector<Light>& lights) const
+void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const SceneLightData& lights) const
 {
 	constexpr const float clearColor[4] = { 0,0,0,0 };
+	const vec2 screenSize(pRenderer->WindowWidth(), pRenderer->WindowHeight());
 	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
 	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer._diffuseRoughnessRT);
 	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer._specularMetallicRT);
@@ -339,22 +346,25 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 
-
-	// POINT LIGHTS
-#if 1
-
-	const vec2 screenSize(pRenderer->WindowWidth(), pRenderer->WindowHeight());
+	// DIFFUSE & SPECULAR LIGHTING
+	// draw fullscreen quad for lighting for now. Will add light volumes
+	// as the scene gets more complex or depending on performance needs.
 	pRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
 
-	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_POINT);
+#ifdef USE_LIGHT_VOLUMES
+#if 0
+
 	pRenderer->SetConstant3f("CameraWorldPosition", sceneView.pCamera->GetPositionF());
 	pRenderer->SetConstant2f("ScreenSize", screenSize);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);
 	pRenderer->SetTexture("texPosition", texPosition);
-	pRenderer->SetBufferObj(GEOMETRY::SPHERE);
 
+	// POINT LIGHTS
+	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_POINT);
+	pRenderer->SetBufferObj(GEOMETRY::SPHERE);
+	//pRenderer->SetRasterizerState(ERasterizerCullMode::)
 	for(const Light& light : lights)
 	{
 		if (light._type == Light::ELightType::POINT)
@@ -390,5 +400,37 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 #endif
+
+#else
+	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_LIGHTING);
+	
+	// SPOT & POINT LIGHTS
+	//--------------------------------------------------------------
+	pRenderer->SetConstant1f("lightCount", static_cast<float>(lights.pointLightCount));
+	pRenderer->SetConstant1f("spotCount" , static_cast<float>(lights.spotLightCount));
+	pRenderer->SetConstantStruct("lights", static_cast<const void*>(lights.pointLights.data()));
+	pRenderer->SetConstantStruct("spots" , static_cast<const void*>(lights.spotLights.data()));
+
+	// SHADOW MAPS
+	//--------------------------------------------------------------
+	// first light is spot: single shadow map support for now
+	//const Light& caster     = lights.pointLights[0];
+	//TextureID shadowMap     = m_shadowMapPass._shadowMap;
+	//SamplerID shadowSampler = m_shadowMapPass._shadowSampler;
+	//
+	//pRenderer->SetConstant4x4f("lightSpaceMat", caster.GetLightSpaceMatrix()); // todo: support for more than 1 shadow caster
+	//
+	//pRenderer->SetTexture("gShadowMap", shadowMap);
+	//pRenderer->SetSamplerState("sShadowSampler", shadowSampler);
+	pRenderer->SetConstant3f("CameraWorldPosition", sceneView.pCamera->GetPositionF());
+	pRenderer->SetConstant2f("ScreenSize", screenSize);
+	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
+	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
+	pRenderer->SetTexture("texNormals", texNormal);
+	pRenderer->SetTexture("texPosition", texPosition);
+	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+#endif	// light volumes
 	pRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 }

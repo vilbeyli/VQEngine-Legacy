@@ -75,18 +75,30 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.specularColor = specularMetalness.rgb;
 	s.roughness = diffuseRoughness.a;
 	s.metalness = specularMetalness.a;
-    return float4(0, 0, 0, 0);
-#if 0	
+
+#if 1
+	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
+
+	// POINT Lights
+	// brightness default: 300
+	//---------------------------------
+	for (int i = 0; i < lightCount; ++i)		
+	{
+		const float3 Wi       = normalize(lights[i].position - P);
+		const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P), false) * lights[i].color * lights[i].brightness;
+		IdIs += BRDF(Wi, s, V, P) * radiance;
+	}
+
 	// SPOT Lights (shadow)
 	// todo: intensity/brightness
 	//---------------------------------
-	for (int j = 0; j < spotCount; ++j)			
-	{
-		const float3 Wi       = normalize(spots[j].position - P);
-		const float3 radiance = Intensity(spots[j], P) * spots[j].color;
-		IdIs += BRDF(Wi, s, V, P) * radiance * ShadowTest(P, In.lightSpacePos) * dW;
-	}
-
+	//for (int j = 0; j < spotCount; ++j)			
+	//{
+	//	const float3 Wi       = normalize(spots[j].position - P);
+	//	const float3 radiance = Intensity(spots[j], P) * spots[j].color;
+	//	IdIs += BRDF(Wi, s, V, P) * radiance * ShadowTest(P, In.lightSpacePos);
+	//}
+	
 	const float3 illumination = IdIs;
 	return float4(illumination, 1);
 #endif

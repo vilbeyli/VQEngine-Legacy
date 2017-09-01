@@ -218,7 +218,7 @@ void SceneManager::Render() const
 		}
 
 		// DEFERRED LIGHTING PASS
-		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_roomScene.m_lights);
+		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_sceneLights);
 	}
 	else
 	{
@@ -322,7 +322,7 @@ void SceneManager::SendLightData() const
 
 	// SHADOW MAPS
 	//--------------------------------------------------------------
-	// first light is spot: single shadaw map support for now
+	// first light is spot: single shadow map support for now
 	const Light& caster = m_roomScene.m_lights[0];
 	TextureID shadowMap = m_shadowMapPass._shadowMap;
 	SamplerID shadowSampler = m_shadowMapPass._shadowSampler;

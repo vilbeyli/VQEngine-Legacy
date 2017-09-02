@@ -75,19 +75,19 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
 	const ShaderID selectedShader = m_sceneManager.GetSelectedShader();
 	const bool bSendMaterialData = (
-		   selectedShader == SHADERS::FORWARD_PHONG 
-		|| selectedShader == SHADERS::UNLIT 
-		|| selectedShader == SHADERS::NORMAL
-		|| selectedShader == SHADERS::FORWARD_BRDF
-		|| selectedShader == SHADERS::DEFERRED_GEOMETRY
+		   selectedShader == EShaders::FORWARD_PHONG 
+		|| selectedShader == EShaders::UNLIT 
+		|| selectedShader == EShaders::NORMAL
+		|| selectedShader == EShaders::FORWARD_BRDF
+		|| selectedShader == EShaders::DEFERRED_GEOMETRY
 	);
 
-	if(selectedShader != SHADERS::DEFERRED_GEOMETRY)
+	if(selectedShader != EShaders::DEFERRED_GEOMETRY)
 		m_skybox.Render(viewProj, m_sceneManager.m_pCamera->m_settings.fovH * DEG2RAD);
 
 	pRenderer->SetShader(selectedShader);
 	
-	if (selectedShader != SHADERS::DEFERRED_GEOMETRY)
+	if (selectedShader != EShaders::DEFERRED_GEOMETRY)
 		m_sceneManager.SendLightData();
 	
 	m_room.Render(m_pRenderer, viewProj, bSendMaterialData);
@@ -384,7 +384,7 @@ void RoomScene::UpdateCentralObj(const float dt)
 void RoomScene::RenderLights(const XMMATRIX& viewProj) const
 {
 	m_pRenderer->Reset();	// is reset necessary?
-	m_pRenderer->SetShader(SHADERS::UNLIT);
+	m_pRenderer->SetShader(EShaders::UNLIT);
 	for (const Light& light : m_lights)
 	{
 		m_pRenderer->SetBufferObj(light._renderMesh);
@@ -591,7 +591,7 @@ void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj)
 	//obj.m_transform.SetXRotationDeg(30.0f);
 	obj.m_transform.SetUniformScale(5.0f);
 	//-------------------------------------------------------------------
-	pRenderer->SetShader(SHADERS::FORWARD_BRDF);
+	pRenderer->SetShader(EShaders::FORWARD_BRDF);
 	obj.Render(pRenderer, viewProj, true);
 	
 

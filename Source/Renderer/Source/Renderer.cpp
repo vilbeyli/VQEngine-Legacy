@@ -270,33 +270,33 @@ void Renderer::LoadShaders()
 	const std::vector<std::string> TextureCoordinates = { "MVPTransformationWithUVs_vs", "TextureCoordinates_ps" };
 
 	const std::vector<std::string> DeferredBRDF_AmbientLight = { "deferred_brdf_vs", "deferred_brdf_ambient_ps" };
-	const std::vector<std::string> DeferredBRDF_LightingFSQ = { "deferred_brdf_vs", "deferred_brdf_lighting_ps" };
+	const std::vector<std::string> DeferredBRDF_LightingFSQ  = { "deferred_brdf_vs", "deferred_brdf_lighting_ps" };
 	const std::vector<std::string> DeferredBRDF_PointLight   = { "MVPTransformationWithUVs_vs", "deferred_brdf_pointLight_ps" };
 	// render cone?
 	const std::vector<std::string> DeferredBRDF_SpotLight    = { "MVPTransformationWithUVs_vs", "deferred_brdf_spotLight_ps" }; 
 
 
-	Shader::s_shaders[SHADERS::FORWARD_PHONG			]	= AddShader("Forward_Phong"			, layout);
-	Shader::s_shaders[SHADERS::UNLIT					]	= AddShader("UnlitTextureColor"		, layout);
-	Shader::s_shaders[SHADERS::TEXTURE_COORDINATES		]	= AddShader("TextureCoordinates"	, TextureCoordinates, VS_PS, layout);
-	Shader::s_shaders[SHADERS::NORMAL					]	= AddShader("Normal"				, layout);
-	Shader::s_shaders[SHADERS::TANGENT					]	= AddShader("Tangent"				, layout);
-	Shader::s_shaders[SHADERS::BINORMAL					]	= AddShader("Binormal"				, layout);
-	Shader::s_shaders[SHADERS::LINE						]	= AddShader("Line"					, layout);
-	Shader::s_shaders[SHADERS::TBN						]	= AddShader("TNB"					, layout);
-	Shader::s_shaders[SHADERS::DEBUG					]	= AddShader("Debug"					, layout);
-	Shader::s_shaders[SHADERS::SKYBOX					]	= AddShader("Skybox"				, layout);
-	Shader::s_shaders[SHADERS::BLOOM					]	= AddShader("Bloom"					, BloomShaders  , VS_PS, layout);
-	Shader::s_shaders[SHADERS::BLUR						]	= AddShader("Blur"					, BlurShaders   , VS_PS, layout);
-	Shader::s_shaders[SHADERS::BLOOM_COMBINE			]	= AddShader("BloomCombine"			, CombineShaders, VS_PS, layout);
-	Shader::s_shaders[SHADERS::TONEMAPPING				]	= AddShader("Tonemapping"			, TonemapShaders, VS_PS, layout);
-	Shader::s_shaders[SHADERS::FORWARD_BRDF				]	= AddShader("Forward_BRDF"			, layout);
-	Shader::s_shaders[SHADERS::SHADOWMAP_DEPTH			]	= AddShader("DepthShader"			, layout);
-	Shader::s_shaders[SHADERS::DEFERRED_GEOMETRY		]	= AddShader("Deferred_Geometry"		, layout);
-	Shader::s_shaders[SHADERS::DEFERRED_BRDF_AMBIENT	]	= AddShader("Deferred_BRDF_Ambient"	, DeferredBRDF_AmbientLight, VS_PS, layout);
-	Shader::s_shaders[SHADERS::DEFERRED_BRDF_LIGHTING	]	= AddShader("Deferred_BRDF_Lighting", DeferredBRDF_LightingFSQ , VS_PS, layout);
-	Shader::s_shaders[SHADERS::DEFERRED_BRDF_POINT		]	= AddShader("Deferred_BRDF_Point"	, DeferredBRDF_PointLight  , VS_PS, layout);
-	Shader::s_shaders[SHADERS::DEFERRED_BRDF_SPOT		]	= AddShader("Deferred_BRDF_Spot"	, DeferredBRDF_SpotLight   , VS_PS, layout);
+	Shader::s_shaders[EShaders::FORWARD_PHONG			]	= AddShader("Forward_Phong"			, layout);
+	Shader::s_shaders[EShaders::UNLIT					]	= AddShader("UnlitTextureColor"		, layout);
+	Shader::s_shaders[EShaders::TEXTURE_COORDINATES		]	= AddShader("TextureCoordinates"	, TextureCoordinates, VS_PS, layout);
+	Shader::s_shaders[EShaders::NORMAL					]	= AddShader("Normal"				, layout);
+	Shader::s_shaders[EShaders::TANGENT					]	= AddShader("Tangent"				, layout);
+	Shader::s_shaders[EShaders::BINORMAL				]	= AddShader("Binormal"				, layout);
+	Shader::s_shaders[EShaders::LINE					]	= AddShader("Line"					, layout);
+	Shader::s_shaders[EShaders::TBN						]	= AddShader("TNB"					, layout);
+	Shader::s_shaders[EShaders::DEBUG					]	= AddShader("Debug"					, layout);
+	Shader::s_shaders[EShaders::SKYBOX					]	= AddShader("Skybox"				, layout);
+	Shader::s_shaders[EShaders::BLOOM					]	= AddShader("Bloom"					, BloomShaders  , VS_PS, layout);
+	Shader::s_shaders[EShaders::BLUR					]	= AddShader("Blur"					, BlurShaders   , VS_PS, layout);
+	Shader::s_shaders[EShaders::BLOOM_COMBINE			]	= AddShader("BloomCombine"			, CombineShaders, VS_PS, layout);
+	Shader::s_shaders[EShaders::TONEMAPPING				]	= AddShader("Tonemapping"			, TonemapShaders, VS_PS, layout);
+	Shader::s_shaders[EShaders::FORWARD_BRDF			]	= AddShader("Forward_BRDF"			, layout);
+	Shader::s_shaders[EShaders::SHADOWMAP_DEPTH			]	= AddShader("DepthShader"			, layout);
+	Shader::s_shaders[EShaders::DEFERRED_GEOMETRY		]	= AddShader("Deferred_Geometry"		, layout);
+	Shader::s_shaders[EShaders::DEFERRED_BRDF_AMBIENT	]	= AddShader("Deferred_BRDF_Ambient"	, DeferredBRDF_AmbientLight, VS_PS, layout);
+	Shader::s_shaders[EShaders::DEFERRED_BRDF_LIGHTING	]	= AddShader("Deferred_BRDF_Lighting", DeferredBRDF_LightingFSQ , VS_PS, layout);
+	Shader::s_shaders[EShaders::DEFERRED_BRDF_POINT		]	= AddShader("Deferred_BRDF_Point"	, DeferredBRDF_PointLight  , VS_PS, layout);
+	Shader::s_shaders[EShaders::DEFERRED_BRDF_SPOT		]	= AddShader("Deferred_BRDF_Spot"	, DeferredBRDF_SpotLight   , VS_PS, layout);
 
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }

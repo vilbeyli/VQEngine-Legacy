@@ -59,7 +59,7 @@ struct Material
 	Material(const vec3& diffuse, const vec3& specular, float shininess);
 	Material();
 	~Material();
-	void SetMaterialConstants(Renderer* renderer, SHADERS shader) const;
+	void SetMaterialConstants(Renderer* renderer, EShaders shader) const;
 };
 
 class Model

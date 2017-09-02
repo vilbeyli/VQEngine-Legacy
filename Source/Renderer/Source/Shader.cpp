@@ -80,7 +80,7 @@ static std::unordered_map <std::string, EShaderType > s_ShaderTypeStrLookup = {
 };
 // ============================================================================
 
-std::array<ShaderID, SHADERS::SHADER_COUNT> Shader::s_shaders;
+std::array<ShaderID, EShaders::SHADER_COUNT> Shader::s_shaders;
 
 Shader::Shader(const std::string& shaderFileName)
 	:

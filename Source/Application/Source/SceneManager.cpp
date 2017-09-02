@@ -58,7 +58,7 @@ void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 	m_useDeferredRendering	= rendererSettings.bUseDeferredRendering;
 	m_isAmbientOcclusionOn	= rendererSettings.bAmbientOcclusion;
 	m_pRenderer				= renderer;
-	m_selectedShader		= m_useDeferredRendering ? SHADERS::DEFERRED_GEOMETRY : SHADERS::FORWARD_BRDF;
+	m_selectedShader		= m_useDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
 	m_debugRender			= false;
 	
 	if (m_useDeferredRendering)
@@ -137,7 +137,7 @@ void SceneManager::ToggleLightingModel()
 	//const bool bIsBRDF = !bIsPhong;	// assumes only 2 shading models
 	if (!m_useDeferredRendering)
 	{
-		m_selectedShader = m_selectedShader == SHADERS::FORWARD_PHONG ? SHADERS::FORWARD_BRDF : SHADERS::FORWARD_PHONG;
+		m_selectedShader = m_selectedShader == EShaders::FORWARD_PHONG ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
 	}
 }
 
@@ -146,10 +146,10 @@ void SceneManager::HandleInput()
 {
 	//-------------------------------------------------------------------------------- SHADER CONFIGURATION ----------------------------------------------------------
 	//----------------------------------------------------------------------------------------------------------------------------------------------------------------
-	if (ENGINE->INP()->IsKeyTriggered("F1")) m_selectedShader = SHADERS::TEXTURE_COORDINATES;
-	if (ENGINE->INP()->IsKeyTriggered("F2")) m_selectedShader = SHADERS::NORMAL;
-	if (ENGINE->INP()->IsKeyTriggered("F3")) m_selectedShader = SHADERS::UNLIT;
-	if (ENGINE->INP()->IsKeyTriggered("F4")) m_selectedShader = m_selectedShader == SHADERS::TBN ? SHADERS::FORWARD_BRDF : SHADERS::TBN;
+	if (ENGINE->INP()->IsKeyTriggered("F1")) m_selectedShader = EShaders::TEXTURE_COORDINATES;
+	if (ENGINE->INP()->IsKeyTriggered("F2")) m_selectedShader = EShaders::NORMAL;
+	if (ENGINE->INP()->IsKeyTriggered("F3")) m_selectedShader = EShaders::UNLIT;
+	if (ENGINE->INP()->IsKeyTriggered("F4")) m_selectedShader = m_selectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
 
 	if (ENGINE->INP()->IsKeyTriggered("F5")) m_pRenderer->sEnableBlend = !m_pRenderer->sEnableBlend;
 	if (ENGINE->INP()->IsKeyTriggered("F6")) ToggleLightingModel();
@@ -243,7 +243,7 @@ void SceneManager::Render() const
 		const bool bIsShaderTBN = true;
 		if (bIsShaderTBN)
 		{
-			m_pRenderer->SetShader(SHADERS::TBN);
+			m_pRenderer->SetShader(EShaders::TBN);
 			m_roomScene.cube.Render(m_pRenderer, viewProj, false);
 			m_roomScene.sphere.Render(m_pRenderer, viewProj, false);
 
@@ -268,7 +268,7 @@ void SceneManager::Render() const
 		//RenderCentralObjects(view, proj);
 		//m_selectedShader = prevShader;
 
-		m_pRenderer->SetShader(SHADERS::DEBUG);
+		m_pRenderer->SetShader(EShaders::DEBUG);
 		m_pRenderer->SetTexture("t_shadowMap", m_shadowMapPass._shadowMap);	// todo: decide shader naming 
 		m_pRenderer->SetBufferObj(GEOMETRY::QUAD);
 		m_pRenderer->Apply();

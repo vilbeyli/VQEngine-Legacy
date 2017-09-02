@@ -101,7 +101,7 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 		{ "NORMAL",		FLOAT32_3 },
 		{ "TANGENT",	FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 } };
-	this->_shadowShader = SHADERS::SHADOWMAP_DEPTH;
+	this->_shadowShader = EShaders::SHADOWMAP_DEPTH;
 
 	ZeroMemory(&_shadowViewport, sizeof(D3D11_VIEWPORT));
 	_shadowViewport.Height = static_cast<float>(_shadowMapDimension);
@@ -194,10 +194,10 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	if (_bloomPass._isEnabled)
 	{
 		const Settings::PostProcess::Bloom& s = _settings.bloom;
-		const float brightnessThreshold = SHADERS::FORWARD_BRDF == pRenderer->GetActiveShader() ? s.threshold_brdf : s.threshold_phong;
+		const float brightnessThreshold = EShaders::FORWARD_BRDF == pRenderer->GetActiveShader() ? s.threshold_brdf : s.threshold_phong;
 
 		// bright filter
-		pRenderer->SetShader(SHADERS::BLOOM);
+		pRenderer->SetShader(EShaders::BLOOM);
 		pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
 		pRenderer->UnbindDepthStencil();
 		pRenderer->SetBufferObj(GEOMETRY::QUAD);
@@ -209,7 +209,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 
 		// blur
 		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
-		pRenderer->SetShader(SHADERS::BLUR);
+		pRenderer->SetShader(EShaders::BLUR);
 		for (int i = 0; i < s.blurPassCount; ++i)
 		{
 			const int isHorizontal = i % 2;
@@ -232,7 +232,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 		// additive blend combine
 		const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._colorRT);
 		const TextureID bloomTex = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[0]);
-		pRenderer->SetShader(SHADERS::BLOOM_COMBINE);
+		pRenderer->SetShader(EShaders::BLOOM_COMBINE);
 		pRenderer->BindRenderTarget(_bloomPass._finalRT);
 		pRenderer->Apply();
 		pRenderer->SetTexture("ColorTexture", colorTex);
@@ -249,7 +249,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// ======================================================================================
 	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._isEnabled ? _bloomPass._finalRT : _worldRenderTarget);
 	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
-	pRenderer->SetShader(SHADERS::TONEMAPPING);
+	pRenderer->SetShader(EShaders::TONEMAPPING);
 	pRenderer->SetBufferObj(GEOMETRY::QUAD);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
 	pRenderer->SetConstant1f("exposure", _settings.toneMapping.exposure);
@@ -314,7 +314,7 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	const float clearDepth = 1.0f;
 
-	pRenderer->SetShader(SHADERS::DEFERRED_GEOMETRY);
+	pRenderer->SetShader(EShaders::DEFERRED_GEOMETRY);
 	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT, _GBuffer._positionRT);
 	pRenderer->SetSamplerState("sNormalSampler", 0);
 	pRenderer->Begin(clearColor, clearDepth);
@@ -324,7 +324,7 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const SceneLightData& lights) const
 {
 	constexpr const float clearColor[4] = { 0,0,0,0 };
-	const vec2 screenSize(pRenderer->WindowWidth(), pRenderer->WindowHeight());
+	const vec2 screenSize(static_cast<float>(pRenderer->WindowWidth()), static_cast<float>(pRenderer->WindowHeight()));
 	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
 	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer._diffuseRoughnessRT);
 	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer._specularMetallicRT);
@@ -339,7 +339,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	// AMBIENT LIGHTING
 	const float ambient = 0.0005f;
 	// todo: set ambient occlusion texture
-	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_AMBIENT);
+	pRenderer->SetShader(EShaders::DEFERRED_BRDF_AMBIENT);
 	pRenderer->SetConstant1f("ambient", ambient);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetBufferObj(GEOMETRY::QUAD);
@@ -402,7 +402,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 #endif
 
 #else
-	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_LIGHTING);
+	pRenderer->SetShader(EShaders::DEFERRED_BRDF_LIGHTING);
 	
 	// SPOT & POINT LIGHTS
 	//--------------------------------------------------------------

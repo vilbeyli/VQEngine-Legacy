@@ -77,20 +77,20 @@ Material::Material()
 
 Material::~Material(){}
 
-void Material::SetMaterialConstants(Renderer* renderer, SHADERS shader) const
+void Material::SetMaterialConstants(Renderer* renderer, EShaders shader) const
 {
 	renderer->SetConstant3f("diffuse", color.Value());
 	renderer->SetConstant1f("alpha", alpha);
 	renderer->SetConstant3f("specular", specular);
 	switch(shader)
 	{
-	case SHADERS::FORWARD_PHONG:
+	case EShaders::FORWARD_PHONG:
 	/*case SHADERS::FORWARD_PHONG:*/	// Todo: deferred
 		renderer->SetConstant1f("shininess", shininess);
 		break;
 		
-	case SHADERS::FORWARD_BRDF:
-	case SHADERS::DEFERRED_GEOMETRY:
+	case EShaders::FORWARD_BRDF:
+	case EShaders::DEFERRED_GEOMETRY:
 		renderer->SetConstant1f("metalness", metalness);
 		renderer->SetConstant1f("roughness", roughness);
 		break;

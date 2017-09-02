@@ -137,7 +137,7 @@ struct InputLayout
 	ELayoutFormat	format;
 };
 
-enum SHADERS	
+enum EShaders	
 {	// omit E from enum name for readability for shaders only
 	FORWARD_PHONG,
 	UNLIT,
@@ -203,7 +203,7 @@ private:
 	void LogConstantBufferLayouts() const;
 
 private:
-	static std::array<ShaderID, SHADERS::SHADER_COUNT>	s_shaders;
+	static std::array<ShaderID, EShaders::SHADER_COUNT>	s_shaders;
 
 	// members
 	std::vector<ConstantBuffer>			m_cBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx

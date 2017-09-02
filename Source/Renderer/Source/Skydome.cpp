@@ -33,7 +33,7 @@ void Skydome::Render(const XMMATRIX& view, const XMMATRIX& proj) const
 	pRenderer->SetConstant1f("isDiffuseMap", 1.0f);
 	pRenderer->SetTexture("gDiffuseMap", skydomeTex);
 	pRenderer->SetConstant3f("diffuse", vec3(1.0f, 1.0f, 1.0f));	// must set this or yellow?
-	pRenderer->SetBufferObj(GEOMETRY::SPHERE);
+	pRenderer->SetBufferObj(EGeometry::SPHERE);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 }

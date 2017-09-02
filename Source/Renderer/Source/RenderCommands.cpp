@@ -46,8 +46,8 @@ static void(__cdecl ID3D11DeviceContext:: *SetShaderResources[6])
 
 void SetTextureCommand::SetResource(Renderer * pRenderer)
 {
-	assert(texID >= 0);
-	(pRenderer->m_deviceContext->*SetShaderResources[shdTex.shdType])(shdTex.bufferSlot, 1, &pRenderer->m_textures[texID]._srv);
+	assert(textureID >= 0);
+	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, 1, &pRenderer->m_textures[textureID]._srv);
 }
 
 static void(__cdecl ID3D11DeviceContext:: *SetSampler[6])
@@ -64,5 +64,5 @@ static void(__cdecl ID3D11DeviceContext:: *SetSampler[6])
 void SetSamplerCommand::SetResource(Renderer * pRenderer)
 {
 	assert(samplerID >= 0);
-	(pRenderer->m_deviceContext->*SetSampler[shdSampler.shdType])(shdSampler.bufferSlot, 1, &pRenderer->m_samplers[samplerID]._samplerState);
+	(pRenderer->m_deviceContext->*SetSampler[shaderSampler.shdType])(shaderSampler.bufferSlot, 1, &pRenderer->m_samplers[samplerID]._samplerState);
 }

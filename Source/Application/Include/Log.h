@@ -21,7 +21,7 @@
 #include <string>
 #include <fstream>
 
-enum ERROR_LOG
+enum EErrorLog
 {
 	CANT_OPEN_FILE,
 	CANT_CREATE_RESOURCE,
@@ -40,7 +40,7 @@ public:
 	static void Exit();
 
 	static void Info(const std::string& s);
-	static void Error(ERROR_LOG errMode, const std::string& s);
+	static void Error(EErrorLog errMode, const std::string& s);
 	static void Error(const std::string& s);
 	static void String(const std::string& s);
 

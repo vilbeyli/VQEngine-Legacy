@@ -18,11 +18,11 @@
 
 #include "Light.h"
 #include "GameObject.h"
-#include "Components/Transform.h"
+
+#include "Log.h"
 
 #include <iostream>
 #include <unordered_map>
-#include "Mesh.h"
 
 using std::cout;
 using std::endl;
@@ -47,11 +47,11 @@ const std::map<unsigned, std::pair<float, float>> rangeAttenuationMap_ =
 	{ 3250, std::make_pair(0.0014f, 0.00007f)},
 };
 
-static const std::unordered_map<Light::ELightType, GEOMETRY>		sLightTypeMeshLookup
+static const std::unordered_map<Light::ELightType, EGeometry>		sLightTypeMeshLookup
 {
-	{ Light::ELightType::SPOT       , GEOMETRY::CYLINDER },
-	{ Light::ELightType::POINT      , GEOMETRY::SPHERE },
-	{ Light::ELightType::DIRECTIONAL, GEOMETRY::SPHERE }
+	{ Light::ELightType::SPOT       , EGeometry::CYLINDER },
+	{ Light::ELightType::POINT      , EGeometry::SPHERE },
+	{ Light::ELightType::DIRECTIONAL, EGeometry::SPHERE }
 };
 
 Light::Light()

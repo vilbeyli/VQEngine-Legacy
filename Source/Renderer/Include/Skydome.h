@@ -17,10 +17,9 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
-#include <GameObject.h>
-#include <memory>
 
-// forward decl
+#include "GameObject.h"
+
 class Renderer;
 
 class Skydome
@@ -32,7 +31,7 @@ public:
 	void Render(const XMMATRIX& view, const XMMATRIX& proj) const;
 	void Initialize(Renderer* renderer_in, const char* tex, float scale, int shader);
 private:
-	GameObject	skydomeObj;
+	GameObject	skydomeObj;	// do we need a gameobj really ?
 	TextureID	skydomeTex;
 	ShaderID	skydomeShader;
 	Renderer*	pRenderer;

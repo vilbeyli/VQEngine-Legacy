@@ -18,23 +18,42 @@
 
 #pragma once
 
-#include "Shader.h"
+#include "utils.h"
 
-class Renderer;
-
-struct SetTextureCommand
+template<typename T>
+class Track
 {
-	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
+public:
+	Track() = delete;
+	Track(T* data, const T& beginVal, const T& endVal, float period)
+		:
+		_totalTime(0.0f),
+		_period(period),
+		_data(data),
+		_valueBegin(beginVal),
+		_valueEnd(endVal)
+	{}
 
-	TextureID		textureID;
-	ShaderTexture	shaderTexture;
+	void Update(float dt);
+
+private:
+	float _totalTime;
+	float _period;
+
+	T* _data;
+	T _valueBegin;
+	T _valueEnd;
 };
 
-struct SetSamplerCommand
+struct Animation
 {
-	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
+	// lerping tracks
+	std::vector<Track<float>> _fTracks;
+	std::vector<Track<vec3>>  _vTracks;
 
-	SamplerID		samplerID;
-	ShaderSampler	shaderSampler;
+	void Update(float dt)
+	{
+		for (auto& t : _fTracks) t.Update(dt);
+		for (auto& t : _vTracks) t.Update(dt);
+	}
 };
-

@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include "Components/Transform.h"
-
 namespace Settings
 {
 	//Settings() { memset(this, 0, sizeof(*this)); }

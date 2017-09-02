@@ -28,7 +28,7 @@
 #endif
 
 class Renderer;
-using ShaderID = int;
+//using ShaderID = int;
 
 class GameObject
 {

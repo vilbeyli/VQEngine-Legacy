@@ -22,7 +22,6 @@
 #include <string>
 #include <vector>
 #include <DirectXMath.h>
-#include "Log.h"
 
 using namespace DirectX;
 

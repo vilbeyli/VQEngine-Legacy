@@ -16,10 +16,9 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
-#include <GameObject.h>
-#include <memory>
 
-// forward decl
+#include "GameObject.h"
+
 class Renderer;
 
 enum SKYBOX_PRESETS
@@ -39,7 +38,7 @@ public:
 
 	Skybox& Initialize(Renderer* renderer, const Texture& cubemapTexture, float scale, int shader);
 private:
-	GameObject	skydomeObj;
+	GameObject	skydomeObj;	// do we really need a gameobj?
 	TextureID	skydomeTex;
 	ShaderID	skydomeShader;
 	Renderer*	pRenderer;

@@ -17,66 +17,34 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
-#include "D3DManager.h"
-#include "Shader.h"
-#include "Texture.h"
-#include "Settings.h"
-
-#include "Mesh.h"
-#include "GameObject.h"
-
 #include "RenderCommands.h"
-#include "WorkerPool.h"
+#include "RenderingEnums.h"
+#include "Texture.h"
+#include "Shader.h"
+#include "Color.h"
 
-#include <memory>
+#include "utils.h"
+//#include "WorkerPool.h"
+
+#include <string>
+#include <vector>
 #include <stack>
+#include <queue>
 
-// forward declarations
-class D3DManager;
-struct ID3D11Device;
-struct ID3D11DeviceContext;
 class BufferObject;
 class Camera;
-class Shader;
-struct Light;
+class D3DManager;
 
-namespace DirectX { class ScratchImage; }
+namespace Settings { struct Renderer; }
+namespace DirectX  { class ScratchImage; }
 
+
+// todo struct?
 using Viewport = D3D11_VIEWPORT;
-
-// typedefs
-using ShaderID            = int;
-using BufferID            = int;
-using TextureID           = int;
-using SamplerID           = int;
-using RasterizerStateID   = int;
-using BlendStateID		  = int;
-using DepthStencilStateID = int;
-using RenderTargetID	  = int;
-using DepthStencilID	  = int;
-
 using RasterizerState   = ID3D11RasterizerState;
 using DepthStencilState = ID3D11DepthStencilState;
-
-using DepthStencil		= ID3D11DepthStencilView;	// todo struct?
-
-enum EDefaultRasterizerState
-{
-	CULL_NONE = 0,
-	CULL_FRONT,
-	CULL_BACK,
-
-	RASTERIZER_STATE_COUNT
-};
-
-enum EDefaultBlendState
-{
-	DISABLED,
-	ADDITIVE_COLOR,
-	ALPHA_BLEND,
-
-	BLEND_STATE_COUNT
-};
+using DepthStencil		= ID3D11DepthStencilView;
+using RenderTargetIDs	= std::vector<RenderTargetID>;
 
 struct BlendState
 {
@@ -93,113 +61,153 @@ struct RenderTarget
 	ID3D11RenderTargetView*		pRenderTargetView;
 };
 
+struct StateObjects
+{
+	ShaderID			_activeShader;
+	BufferID			_activeBuffer;
+	RasterizerStateID	_activeRSState;
+	DepthStencilStateID	_activeDepthStencilState;
+	RenderTargetIDs		_boundRenderTargets;
+	DepthStencilID		_boundDepthStencil;
+	RenderTargetID		_mainRenderTarget;
+	BlendStateID		_activeBlendState;
+	Texture				_depthBufferTexture;
+};
+
 class Renderer
 {
 	friend class Engine;		// two main components have private access 
 	friend class SceneManager;	// to Renderer mainly for the private functions
+	friend class Shader;		// shader load/unload
 
 	friend struct SetTextureCommand;
 	friend struct SetSamplerCommand;	// todo: refactor commands - dont use friend for commands
 
 public:
+	// use > tabs w/ 4spaces
 	Renderer();
 	~Renderer();
-	bool Initialize(HWND hwnd, const Settings::Renderer& settings);
-	void Exit();
+	bool		Initialize(HWND hwnd, const Settings::Renderer& settings);
+	void		Exit();
+	inline void ReloadShaders() { Shader::ReloadShaders(this); }
 
-	// getters
-	inline HWND				GetWindow()		const { return m_Direct3D->WindowHandle(); };
-	inline float			AspectRatio()	const { return m_Direct3D->AspectRatio();  };
-	inline unsigned			WindowHeight()	const { return m_Direct3D->WindowHeight(); };
-	inline unsigned			WindowWidth()	const { return m_Direct3D->WindowWidth();  };
+	// GETTERS
+	//----------------------------------------------------------------------------------
+	HWND					GetWindow()		const; 
+	float					AspectRatio()	const;
+	unsigned				WindowHeight()	const;
+	unsigned				WindowWidth()	const;
 	inline RenderTargetID	GetDefaultRenderTarget() const	                { return m_state._mainRenderTarget; }
 	inline DepthStencilID	GetDefaultDepthStencil() const	                { return m_state._boundDepthStencil; }
 	inline TextureID		GetDefaultRenderTargetTexture() const           { return m_renderTargets[m_state._mainRenderTarget].texture._id; }
 	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return m_renderTargets[RT].texture._id; }
+	const StateObjects&		GetState() const;
 
-	// resource initialization 
-	ShaderID				AddShader(const std::string& shaderFileName , const std::vector<InputLayout>& layouts);
-	ShaderID				AddShader(const std::string& shaderName, const std::vector<std::string>& shaderFileNames, const std::vector<EShaderType>& shaderTypes, const std::vector<InputLayout>& layouts);
-	TextureID				CreateTextureFromFile(const std::string& shdFileName, const std::string& fileRoot = s_textureRoot);
-	const Texture&			CreateTexture2D(int widht, int height);
-	TextureID				CreateTexture2D(D3D11_TEXTURE2D_DESC& textureDesc, bool initializeSRV);
-	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles);
+
+	// RESOURCE INITIALIZATION (testing readability of function definitions)
+	//----------------------------------------------------------------------------------
+	ShaderID				AddShader(	const std::string&				shaderFileName, 
+										const std::vector<InputLayout>& layouts			
+							);
+
+	ShaderID				AddShader(	const std::string&				shaderName, 
+										const std::vector<std::string>&	shaderFileNames, 
+										const std::vector<EShaderType>&	shaderTypes, 
+										const std::vector<InputLayout>&	layouts
+							);
+
+	//						example params:			"bricks_d.png", "Data/Textures/"
+	TextureID				CreateTextureFromFile(	const std::string&	shdFileName, 
+													const std::string&	fileRoot = s_textureRoot
+							);
+
+	const Texture&			CreateTexture2D(	int widht, 
+												int height
+							);
+
+	TextureID				CreateTexture2D(	D3D11_TEXTURE2D_DESC&	textureDesc, 
+												bool					initializeSRV
+							);
+
+	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles
+							);
 	
-	SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC& samplerDesc);
-	RasterizerStateID		AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool enableDepthClip);
-	DepthStencilStateID		AddDepthStencilState();	// todo params
-	DepthStencilStateID		AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
-	BlendStateID			AddBlendState();
+	SamplerID				CreateSamplerState(	D3D11_SAMPLER_DESC&	samplerDesc
+							);
 
-	RenderTargetID			AddRenderTarget(D3D11_TEXTURE2D_DESC& RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
-	DepthStencilID			AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface);
+	RasterizerStateID		AddRasterizerState(	ERasterizerCullMode cullMode, 
+												ERasterizerFillMode fillMode, 
+												bool				bEnableDepthClip
+							);
+
+	DepthStencilStateID		AddDepthStencilState(
+							);	// todo params
+
+	DepthStencilStateID		AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC&	dsDesc
+							);
+
+	BlendStateID			AddBlendState( // todo params
+							);
+
+	RenderTargetID			AddRenderTarget(	D3D11_TEXTURE2D_DESC&			RTTextureDesc, 
+												D3D11_RENDER_TARGET_VIEW_DESC&	RTVDesc
+							);
+
+	DepthStencilID			AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, 
+											ID3D11Texture2D*&					 surface
+											);
 	
 
-	// pipeline state management
+	// PIPELINE STATE MANAGEMENT
+	//----------------------------------------------------------------------------------
 	const Shader*			GetShader(ShaderID shader_id) const;
 	const Texture&			GetTextureObject(TextureID) const;
 	const TextureID			GetTexture(const std::string name) const;
 	inline const ShaderID	GetActiveShader() const { return m_state._activeShader; }
 
-	void SetViewport(const unsigned width, const unsigned height);
-	void SetViewport(const D3D11_VIEWPORT& viewport);
-	void SetCamera(Camera* m_camera);
-	void SetShader(ShaderID);
-	void SetBufferObj(int BufferID);
-	void SetTexture(const char* texName, TextureID tex);
-	void SetSamplerState(const char* texName, SamplerID sampler);
-	void SetRasterizerState(RasterizerStateID rsStateID);
-	void SetBlendState(BlendStateID blendStateID);
-	void SetDepthStencilState(DepthStencilStateID depthStencilStateID);
+	void					SetViewport(const unsigned width, const unsigned height);
+	void					SetViewport(const D3D11_VIEWPORT& viewport);
+	void					SetCamera(Camera* m_camera);
+	void					SetShader(ShaderID);
+	void					SetBufferObj(int BufferID);
+	void					SetTexture(const char* texName, TextureID tex);
+	void					SetSamplerState(const char* texName, SamplerID sampler);
+	void					SetRasterizerState(RasterizerStateID rsStateID);
+	void					SetBlendState(BlendStateID blendStateID);
+	void					SetDepthStencilState(DepthStencilStateID depthStencilStateID);
 
-	void BindRenderTarget(RenderTargetID rtvID);
-	template <typename... Args> 	inline void BindRenderTargets(Args const&... renderTargetIDs) { m_state._boundRenderTargets = { renderTargetIDs... }; }
+	template <typename... Args> 	
+	inline void				BindRenderTargets(Args const&... renderTargetIDs) { m_state._boundRenderTargets = { renderTargetIDs... }; }
+	void					BindRenderTarget(RenderTargetID rtvID);
 
-	void BindDepthStencil(DepthStencilID dsvID);
+	void					BindDepthStencil(DepthStencilID dsvID);
 
-	void UnbindRenderTarget();
-	void UnbindDepthStencil();
+	void					UnbindRenderTarget();
+	void					UnbindDepthStencil();
 
-	void SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
-	inline void SetConstant3f(const char* cName, const vec3& float3)	{ SetConstant(cName, static_cast<const void*>(&float3.x())); }
-	inline void SetConstant2f(const char* cName, const vec2& float2)	{ SetConstant(cName, static_cast<const void*>(&float2.x())); }
-	inline void SetConstant1f(const char* cName, const float& data)		{ SetConstant(cName, static_cast<const void*>(&data)); }
-	inline void SetConstant1i(const char* cName, const int& data)		{ SetConstant(cName, static_cast<const void*>(&data)); }
-	inline void SetConstantStruct(const char * cName, const void* data) { SetConstant(cName, data); }
+	void					SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
+	inline void				SetConstant3f(const char* cName, const vec3& float3)	{ SetConstant(cName, static_cast<const void*>(&float3.x())); }
+	inline void				SetConstant2f(const char* cName, const vec2& float2)	{ SetConstant(cName, static_cast<const void*>(&float2.x())); }
+	inline void				SetConstant1f(const char* cName, const float& data)		{ SetConstant(cName, static_cast<const void*>(&data)); }
+	inline void				SetConstant1i(const char* cName, const int& data)		{ SetConstant(cName, static_cast<const void*>(&data)); }
+	inline void				SetConstantStruct(const char * cName, const void* data) { SetConstant(cName, data); }
 
-	void Begin(const float clearColor[4], const float depthValue);
-	void End();
-	void Reset();
+	void					Begin(const float clearColor[4], const float depthValue);
+	void					End();
+	void					Reset();
 
-	void Apply();
+	void					Apply();
 
-	// draw functions
-	void DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
-	void Draw(EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
-	void DrawLine();
-	void DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
-	
+	// DRAW FUNCTIONS
+	//----------------------------------------------------------------------------------
+	void					DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
+	void					Draw(EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
+	void					DrawLine();
+	void					DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
+
 private:
-	static std::vector<std::string> GetShaderPaths(const std::string& shaderFileName);
-
-	// shader hotswap
-	void PollShaderFiles();
-	void OnShaderChange(LPTSTR dir);
-
-	// init / load
-	void GeneratePrimitives();
-	
-	void LoadShaders();
-	std::stack<std::string> UnloadShaders();
-	void ReloadShaders();
-
-	void InitializeDefaultRenderTarget();
-	void InitializeDefaultDepthBuffer();
-	void InitializeDefaultRasterizerStates();
-	void InitializeDefaultBlendStates();
-
-	void SetConstant(const char* cName, const void* data);
-	//=======================================================================================================================================================
+	void					SetConstant(const char* cName, const void* data);
+//==================================================================================================================================================
 public:
 	static const char*				s_shaderRoot;
 	static const char*				s_textureRoot;
@@ -230,19 +238,7 @@ private:
 
 	Viewport						m_viewPort;
 
-	using RenderTargetIDs = std::vector<RenderTargetID>;
-	struct StateObjects
-	{
-		ShaderID			_activeShader;
-		BufferID			_activeBuffer;
-		RasterizerStateID	_activeRSState;
-		DepthStencilStateID	_activeDepthStencilState;
-		RenderTargetIDs		_boundRenderTargets;
-		DepthStencilID		_boundDepthStencil;
-		RenderTargetID		_mainRenderTarget;
-		BlendStateID		_activeBlendState;
-		Texture				_depthBufferTexture;
-	} m_state;
+	StateObjects					m_state;
 	
 	// performance counters
 	unsigned long long				m_frameCount;

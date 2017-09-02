@@ -20,11 +20,15 @@
 #include "SceneParser.h"
 #include "Engine.h"			
 #include "Input.h"
+#include "utils.h"
+#include "BaseSystem.h"	// only for renderer settings... maybe store in renderer?
+#include "Log.h"
+
+
 #include "Renderer.h"
 #include "Camera.h"
-#include "utils.h"
 #include "Light.h"
-#include "BaseSystem.h"	// only for renderer settings... maybe store in renderer?
+
 
 #define KEY_TRIG(k) ENGINE->INP()->IsKeyTriggered(k)
 
@@ -270,7 +274,7 @@ void SceneManager::Render() const
 
 		m_pRenderer->SetShader(EShaders::DEBUG);
 		m_pRenderer->SetTexture("t_shadowMap", m_shadowMapPass._shadowMap);	// todo: decide shader naming 
-		m_pRenderer->SetBufferObj(GEOMETRY::QUAD);
+		m_pRenderer->SetBufferObj(EGeometry::QUAD);
 		m_pRenderer->Apply();
 		m_pRenderer->DrawIndexed();
 	}

@@ -18,19 +18,15 @@
 
 #pragma once
 
-// todo: reduce includes
-#include <d3d11.h>
-#include <DirectXMath.h>
+#include "RenderingEnums.h"
+
 #include <d3dcompiler.h>
+
 #include <string>
-#include <vector>
-#include <queue>
 #include <array>
 #include <tuple>
-
-#include "Log.h"
-
-using namespace DirectX;
+#include <vector>
+#include <stack>
 
 // CONSTANT BUFFER STRUCTS/ENUMS
 //------------------------------------------------------------------
@@ -39,18 +35,6 @@ using namespace DirectX;
 //  - cbuffers with same names in different shaders (PS/VS/GS/...)
 //  - cbuffers with same names in the same shader (not tested)
 
-// used to map **SetShaderConstant(); function in Renderer::Apply()
-enum EShaderType
-{
-	VS = 0,
-	GS,
-	DS,
-	HS,
-	CS,
-	PS,
-
-	COUNT
-};
 
 struct ConstantBufferLayout
 {	// information used to create GPU/CPU constant buffers
@@ -64,30 +48,33 @@ struct ConstantBufferLayout
 
 
 
-// CPU side constant buffer
+// Cached (CPU) constant buffer
 // -------------------------------------------------------------------
 #define EQUALITY_OPTIMIZED
 constexpr size_t MAX_CONSTANT_BUFFERS = 512;
+
 using CPUConstantID = int;
+
 struct CPUConstant
 {
-	friend class Renderer;
 	using CPUConstantPool = std::array<CPUConstant, MAX_CONSTANT_BUFFERS>;
-private:
-	static CPUConstantPool s_constants;
-	static size_t s_nextConstIndex;
+	using CPUConstantRefIDPair = std::tuple<CPUConstant&, CPUConstantID>;
 
-public:
-	inline static CPUConstant& Get(int id) { return s_constants[id]; }
+	friend class Renderer;
+	friend class Shader;
 	
-	static std::tuple<CPUConstant&, CPUConstantID> GetNextAvailable();
-	static void CleanUp();	// call once
-	
-	CPUConstant() : _name(), _size(0), _data(nullptr){}
+	inline static	CPUConstant&			Get(int id) { return s_constants[id]; }
+	static			CPUConstantRefIDPair	GetNextAvailable();
+	static			void					CleanUp();	// call once
 
+	CPUConstant() : _name(), _size(0), _data(nullptr) {}
 	std::string _name;
 	size_t		_size;
 	void*		_data;
+
+private:
+	static CPUConstantPool	s_constants;
+	static size_t			s_nextConstIndex;
 
 #ifdef EQUALITY_OPTIMIZED
 	inline bool operator==(const CPUConstant& c) const { return (((this->_data == c._data) && this->_size == c._size) && this->_name == c._name); }
@@ -123,67 +110,30 @@ struct ShaderSampler
 };
 //-------------------------------------------------------------
 
-enum ELayoutFormat
-{
-	FLOAT32_2 = DXGI_FORMAT_R32G32_FLOAT,
-	FLOAT32_3 = DXGI_FORMAT_R32G32B32_FLOAT,
-
-	LAYOUT_FORMAT_COUNT
-};
-
 struct InputLayout
 {
 	std::string		semanticName;
 	ELayoutFormat	format;
 };
 
-enum EShaders	
-{	// omit E from enum name for readability for shaders only
-	FORWARD_PHONG,
-	UNLIT,
-	TEXTURE_COORDINATES,
-	NORMAL,
-	TANGENT,
-	BINORMAL,
-	LINE,
-	TBN,
-	DEBUG,
-	SKYBOX,
-	BLOOM,
-	BLUR,
-	BLOOM_COMBINE,
-	TONEMAPPING,
-	FORWARD_BRDF,
-	SHADOWMAP_DEPTH,
-	DEFERRED_GEOMETRY,
-	DEFERRED_BRDF_AMBIENT,
-	DEFERRED_BRDF_LIGHTING,
-	DEFERRED_BRDF_POINT,
-	DEFERRED_BRDF_SPOT,
-
-	SHADER_COUNT
-};
-
-
-using ShaderID = int;
 using GPU_ConstantBufferSlotIndex = int;
 using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
+using ShaderArray = std::array<ShaderID, EShaders::SHADER_COUNT>;
 
 class Shader
 {
+	friend class Renderer;
 public:
-	// assumes shader file names are appended to the parameters. e.g.
-	//	if @shaderFileName == "ligting", shader files should be named as:
-	//	 - lighting_vs.hlsl
-	//	 - lighting_ps.hlsl
-	//	 - ...
+	static const ShaderArray&		Get() { return s_shaders; }
+	static void						LoadShaders(Renderer* pRenderer);
+	static std::stack<std::string>	UnloadShaders(Renderer* pRenderer);
+	static void						ReloadShaders(Renderer* pRenderer);
+	
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
 	void ClearConstantBuffers();
-
 	void UpdateConstants(ID3D11DeviceContext* context);
-
 
 	const std::string&							Name() const;
 	ShaderID									ID() const;
@@ -191,7 +141,6 @@ public:
 	const std::vector<ConstantBuffer>&			GetConstantBuffers() const;
 
 private:
-	friend class Renderer;
 	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, EShaderType type);
 	void CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths, const std::vector<InputLayout>& layouts);
 	void SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob);
@@ -203,9 +152,9 @@ private:
 	void LogConstantBufferLayouts() const;
 
 private:
-	static std::array<ShaderID, EShaders::SHADER_COUNT>	s_shaders;
+	static ShaderArray s_shaders;
 
-	// members
+	const std::string					m_name;
 	std::vector<ConstantBuffer>			m_cBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx
 	ShaderID							m_id;
 
@@ -228,8 +177,6 @@ private:
 
 	std::vector<ShaderTexture>			m_textures;
 	std::vector<ShaderSampler>			m_samplers;
-
 	
-	const std::string									m_name;
 };
 

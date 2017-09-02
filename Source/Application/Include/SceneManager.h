@@ -17,18 +17,19 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
-#include "Settings.h"
 #include "Renderer.h"
+#include "RenderPasses.h"
+
 #include <vector>
 #include <memory>
+
+using std::shared_ptr;
 
 // scenes
 #include "RoomScene.h"
 
-#include "RenderPasses.h"
 
-
-using std::shared_ptr;
+namespace Settings { struct Camera; struct Window; }
 
 class Camera;
 class PathManager;

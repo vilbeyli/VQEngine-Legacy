@@ -18,7 +18,6 @@
 
 #pragma once
 
-// forward decl
 class BufferObject;
 struct ID3D11Device;
 

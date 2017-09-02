@@ -22,11 +22,6 @@
 #include "Texture.h"
 #include "Shader.h"
 
-#include <string>
-#include <memory>
-
-typedef int BufferID;
-
 class Renderer;
 
 struct Material

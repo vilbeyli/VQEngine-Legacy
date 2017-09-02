@@ -22,7 +22,7 @@
 #include <Windows.h>
 #include <cassert>
 
-const std::array<const char*, ERROR_LOG::ERR_LOG_COUNT> s_errorStrings =
+const std::array<const char*, EErrorLog::ERR_LOG_COUNT> s_errorStrings =
 {
 	"Can't open file ",
 	"Creating rendering resource: ",
@@ -43,7 +43,7 @@ void Log::Initialize(bool bEnableLogging)
 		}
 		else
 		{
-			Error(ERROR_LOG::CANT_OPEN_FILE, debugOutputPath);
+			Error(EErrorLog::CANT_OPEN_FILE, debugOutputPath);
 		}
 	}
 }
@@ -58,7 +58,7 @@ void Log::Exit()
 }
 
 
-void Log::Error(ERROR_LOG errMode, const std::string& s)
+void Log::Error(EErrorLog errMode, const std::string& s)
 {
 	std::string err("\n***** ERROR: ");
 	err += s_errorStrings[errMode] + s;

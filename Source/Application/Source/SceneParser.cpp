@@ -19,13 +19,15 @@
 #include "SceneParser.h"
 #include "utils.h"
 #include "SceneManager.h"
+#include "Log.h"
+
+#include "Color.h"
+
 
 #include <fstream>
-
 #include <unordered_map>
 #include <algorithm>
 
-#include "Color.h"
 
 const char* file_root		= "Data\\";
 const char* scene_file		= "RoomScene.scn";
@@ -219,19 +221,19 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 
 		static const std::unordered_map<std::string, const Color&>		sColorLookup
 		{
-			{"orange"    , Color::s_palette[ static_cast<int>(COLOR_VLAUE::ORANGE     )]},
-			{"black"     , Color::s_palette[ static_cast<int>(COLOR_VLAUE::BLACK      )]},
-			{"white"     , Color::s_palette[ static_cast<int>(COLOR_VLAUE::WHITE      )]},
-			{"red"       , Color::s_palette[ static_cast<int>(COLOR_VLAUE::RED        )]},
-			{"green"     , Color::s_palette[ static_cast<int>(COLOR_VLAUE::GREEN      )]},
-			{"blue"      , Color::s_palette[ static_cast<int>(COLOR_VLAUE::BLUE       )]},
-			{"yellow"    , Color::s_palette[ static_cast<int>(COLOR_VLAUE::YELLOW     )]},
-			{"magenta"   , Color::s_palette[ static_cast<int>(COLOR_VLAUE::MAGENTA    )]},
-			{"cyan"      , Color::s_palette[ static_cast<int>(COLOR_VLAUE::CYAN       )]},
-			{"gray"      , Color::s_palette[ static_cast<int>(COLOR_VLAUE::GRAY       )]},
-			{"light_gray", Color::s_palette[ static_cast<int>(COLOR_VLAUE::LIGHT_GRAY )]},
-			{"orange"    , Color::s_palette[ static_cast<int>(COLOR_VLAUE::ORANGE     )]},
-			{"purple"    , Color::s_palette[ static_cast<int>(COLOR_VLAUE::PURPLE     )]}
+			{"orange"    , Color::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
+			{"black"     , Color::s_palette[ static_cast<int>(EColorValue::BLACK      )]},
+			{"white"     , Color::s_palette[ static_cast<int>(EColorValue::WHITE      )]},
+			{"red"       , Color::s_palette[ static_cast<int>(EColorValue::RED        )]},
+			{"green"     , Color::s_palette[ static_cast<int>(EColorValue::GREEN      )]},
+			{"blue"      , Color::s_palette[ static_cast<int>(EColorValue::BLUE       )]},
+			{"yellow"    , Color::s_palette[ static_cast<int>(EColorValue::YELLOW     )]},
+			{"magenta"   , Color::s_palette[ static_cast<int>(EColorValue::MAGENTA    )]},
+			{"cyan"      , Color::s_palette[ static_cast<int>(EColorValue::CYAN       )]},
+			{"gray"      , Color::s_palette[ static_cast<int>(EColorValue::GRAY       )]},
+			{"light_gray", Color::s_palette[ static_cast<int>(EColorValue::LIGHT_GRAY )]},
+			{"orange"    , Color::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
+			{"purple"    , Color::s_palette[ static_cast<int>(EColorValue::PURPLE     )]}
 		};
 
 		const bool bCommandHasRotationEntry = command.size() > 9;

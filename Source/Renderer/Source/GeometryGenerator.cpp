@@ -19,6 +19,8 @@
 #include "GeometryGenerator.h"
 #include "BufferObject.h"
 
+#include "Log.h"
+
 #include <vector>
 
 using std::vector;

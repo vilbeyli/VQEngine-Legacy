@@ -19,9 +19,10 @@
 #include "RenderPasses.h"
 #include "Light.h"
 #include "Camera.h"
+#include "D3DManager.h"
 
 #include "SceneManager.h"
-
+#include "Log.h"
 
 void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
 {
@@ -67,7 +68,7 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	HRESULT hr = device->CreateShaderResourceView(shadowMap._tex2D, &srvDesc, &shadowMap._srv);
 	if (FAILED(hr))
 	{
-		Log::Error(ERROR_LOG::CANT_CREATE_RESOURCE, "Cannot create SRV in InitilizeDepthPass\n");
+		Log::Error(EErrorLog::CANT_CREATE_RESOURCE, "Cannot create SRV in InitilizeDepthPass\n");
 
 	}
 
@@ -200,7 +201,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 		pRenderer->SetShader(EShaders::BLOOM);
 		pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
 		pRenderer->UnbindDepthStencil();
-		pRenderer->SetBufferObj(GEOMETRY::QUAD);
+		pRenderer->SetBufferObj(EGeometry::QUAD);
 		pRenderer->Apply();
 		pRenderer->SetTexture("worldRenderTarget", worldTexture);
 		pRenderer->SetConstant1f("BrightnessThreshold", brightnessThreshold);
@@ -250,7 +251,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._isEnabled ? _bloomPass._finalRT : _worldRenderTarget);
 	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
 	pRenderer->SetShader(EShaders::TONEMAPPING);
-	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
 	pRenderer->SetConstant1f("exposure", _settings.toneMapping.exposure);
 	pRenderer->SetConstant1f("isHDR", isHDR);
@@ -342,7 +343,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->SetShader(EShaders::DEFERRED_BRDF_AMBIENT);
 	pRenderer->SetConstant1f("ambient", ambient);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
-	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 
@@ -428,7 +429,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);
 	pRenderer->SetTexture("texPosition", texPosition);
-	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 #endif	// light volumes

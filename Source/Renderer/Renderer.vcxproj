@@ -86,6 +86,8 @@
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(VC_SourcePath);</SourcePath>
+    <EnableCppCoreCheck>false</EnableCppCoreCheck>
+    <EnableExperimentalCppCoreCheck>false</EnableExperimentalCppCoreCheck>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(ProjectDir)Include;$(SolutionDir)Source\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(IncludePath)</IncludePath>
@@ -168,6 +170,7 @@
     <ClInclude Include="Include\Texture.h" />
     <ClInclude Include="Include\Skydome.h" />
     <ClInclude Include="Include\RenderCommands.h" />
+    <ClInclude Include="RenderingEnums.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

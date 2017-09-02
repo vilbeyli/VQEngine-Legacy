@@ -21,8 +21,8 @@
 #include <vector>
 #include <string>
 
-#include "Settings.h"
-#include "SceneManager.h"
+namespace Settings { struct Renderer; }
+struct SerializedScene;
 
 class SceneParser
 {

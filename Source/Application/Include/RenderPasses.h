@@ -18,8 +18,20 @@
 
 #pragma once
 
-#include "Renderer.h"
+#include "RenderingEnums.h"
+#include "Settings.h"
+
 #include <array>
+#include <vector>
+
+#include <DirectXMath.h> // todo wrap utils/math
+using namespace DirectX;
+
+class Camera;
+class Renderer;
+class GameObject;
+struct Light;
+struct ID3D11Device;
 
 struct SceneLightData;
 struct SceneView
@@ -30,8 +42,17 @@ struct SceneView
 
 struct ShadowMapPass
 {
-	void Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings);
-	void RenderShadowMaps(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const;
+	void Initialize(
+		Renderer*					pRenderer, 
+		ID3D11Device*				device, 
+		const Settings::ShadowMap&	shadowMapSettings
+	);
+	
+	void RenderShadowMaps(
+		Renderer*						pRenderer, 
+		const std::vector<const Light*> shadowLights, 
+		const std::vector<GameObject*> ZPassObjects
+	) const;
 	
 	unsigned				_shadowMapDimension;
 	TextureID				_shadowMap;
@@ -45,8 +66,14 @@ struct ShadowMapPass
 
 struct BloomPass
 {
-	BloomPass() : _blurSampler(-1), _colorRT(-1), _brightRT(-1), _blurPingPong({ -1, -1 }), _isEnabled(true) {}
 	inline void ToggleBloomPass() { _isEnabled = !_isEnabled; }
+	BloomPass() : 
+		_blurSampler(-1), 
+		_colorRT(-1), 
+		_brightRT(-1), 
+		_blurPingPong({ -1, -1 }), 
+		_isEnabled(true) 
+	{}
 
 	SamplerID						_blurSampler;
 	RenderTargetID					_colorRT;
@@ -63,7 +90,10 @@ struct TonemappingCombinePass
 
 struct PostProcessPass
 {
-	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
+	void Initialize(
+		Renderer*						pRenderer, 
+		const Settings::PostProcess&	postProcessSettings
+	);
 	void Render(Renderer* pRenderer) const;
 
 	RenderTargetID				_worldRenderTarget;
@@ -84,6 +114,12 @@ struct DeferredRenderingPasses
 {
 	void InitializeGBuffer(Renderer* pRenderer);
 	void SetGeometryRenderingStates(Renderer* pRenderer) const;
-	void RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const SceneLightData& lights) const;
+	void RenderLightingPass(
+		Renderer*				pRenderer, 
+		const RenderTargetID	target, 
+		const SceneView&		sceneView, 
+		const SceneLightData&	lights
+	) const;
+
 	GBuffer _GBuffer;
 };

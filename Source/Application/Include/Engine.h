@@ -20,17 +20,17 @@
 
 #include <windows.h>
 #include "PerfTimer.h"
-#include "Settings.h"
 #include "WorkerPool.h"
 
 #include <memory>
 using std::shared_ptr;
 using std::unique_ptr;
 
-// forward decl
+
+namespace Settings { struct Renderer; }
+
 class Renderer;
 class Input;
-class PerfTimer;
 class SceneParser;
 class SceneManager;
 

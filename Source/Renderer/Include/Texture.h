@@ -19,12 +19,16 @@
 #pragma once
 
 #include <string>
-#include <d3d11.h>
 
 using TextureID = int;
 using SamplerID = int;
 
 class Renderer;
+struct ID3D11ShaderResourceView;
+struct ID3D11SamplerState;
+struct D3D11_TEXTURE2D_DESC;
+struct ID3D11Texture3D;
+struct ID3D11Texture2D;
 
 struct Texture
 {

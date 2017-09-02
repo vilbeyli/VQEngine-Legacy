@@ -18,6 +18,8 @@
 
 #pragma once
 
+// this will be populated in milestone3
+
 struct Vertex;
 
 // refactor mesh
@@ -29,17 +31,4 @@ class Mesh
 	//unsigned numVertices;
 	//unsigned* indices;
 	//unsigned numIndices;
-};
-
-enum GEOMETRY
-{
-	TRIANGLE = 0,
-	QUAD,
-	CUBE,
-	CYLINDER,
-	SPHERE,
-	GRID,
-	BONE,
-
-	MESH_TYPE_COUNT
 };

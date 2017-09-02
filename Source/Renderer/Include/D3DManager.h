@@ -18,16 +18,8 @@
 
 #pragma once
 
-// DX11 library linking
-#pragma comment(lib, "d3d11.lib")		// contains all the Direct3D functionality
-#pragma comment(lib, "dxgi.lib")		// tools to interface with the hardware
-#pragma comment(lib, "d3dcompiler.lib")	// functionality for compiling shaders
-
 #include <d3d11.h>
-#include <DirectXMath.h>
 #include <string>
-
-using namespace DirectX;
 
 // auto convert for enum classes: https://stackoverflow.com/questions/8357240/how-to-automatically-convert-strongly-typed-enum-into-int/8357462#8357462
 template<typename E>
@@ -35,28 +27,6 @@ constexpr auto to_underlying(E e) noexcept
 {
 	return static_cast<typename std::underlying_type_t<E>>(e);
 }
-
-enum class ERasterizerCullMode 
-{
-	FRONT = D3D11_CULL_FRONT,
-	NONE = D3D11_CULL_NONE,
-	BACK = D3D11_CULL_BACK
-};
-
-enum class ERasterizerFillMode
-{
-	SOLID     = D3D11_FILL_SOLID,
-	WIREFRAME = D3D11_FILL_WIREFRAME,
-};
-
-enum class EPrimitiveTopology
-{
-	POINT_LIST     = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
-	TRIANGLE_LIST  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-	LINE_LIST      = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
-
-	TOPOLOGY_COUNT
-};
 
 class D3DManager
 {

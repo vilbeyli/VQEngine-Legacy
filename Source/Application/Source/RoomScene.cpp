@@ -123,7 +123,7 @@ void RoomScene::InitializeLights(SerializedScene& scene)
 		float z = RandF(-10.0f, 20.0f);
 		l._transform.SetPosition(x, y, z);
 		l._transform.SetUniformScale(0.1f);
-		l._renderMesh = GEOMETRY::SPHERE;
+		l._renderMesh = EGeometry::SPHERE;
 		l._color = rndColor;
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
 		m_lights.push_back(l);
@@ -158,7 +158,7 @@ void RoomScene::InitializeObjectArrays()
 
 				// set material
 				cube.m_model.m_material.color = color;
-				cube.m_model.m_mesh = GEOMETRY::CUBE;
+				cube.m_model.m_mesh = EGeometry::CUBE;
 				//cube.m_model.m_material = Material::RandomMaterial();
 				//cube.m_model.m_material.normalMap.id = m_pRenderer->AddTexture("bricks_n.png");
 				cube.m_model.m_material.normalMap = m_pRenderer->CreateTextureFromFile("simple_normalmap.png");
@@ -186,7 +186,7 @@ void RoomScene::InitializeObjectArrays()
 			GameObject sph;
 			sph.m_transform = pos;
 			sph.m_transform.Translate(vec3::Up * (sphHeight[1] * ((float)i / (float)numSph) + sphHeight[1]));
-			sph.m_model.m_mesh = GEOMETRY::SPHERE;
+			sph.m_model.m_mesh = EGeometry::SPHERE;
 			sph.m_model.m_material = Material::gold;
 
 			// set materials
@@ -227,7 +227,7 @@ void RoomScene::InitializeObjectArrays()
 			GameObject sph;
 			sph.m_transform = pos;
 			sph.m_transform.SetUniformScale(2.5f);
-			sph.m_model.m_mesh = GEOMETRY::SPHERE;
+			sph.m_model.m_mesh = EGeometry::SPHERE;
 
 			Material& mat = sph.m_model.m_material;
 
@@ -281,12 +281,12 @@ void RoomScene::InitializeObjectArrays()
 	quad.m_transform.SetUniformScale(4.0f);
 
 
-	    grid.m_model.m_mesh = GEOMETRY::GRID;
-	cylinder.m_model.m_mesh = GEOMETRY::CYLINDER;
-	triangle.m_model.m_mesh = GEOMETRY::TRIANGLE;
-	    quad.m_model.m_mesh = GEOMETRY::QUAD;
-		cube.m_model.m_mesh = GEOMETRY::CUBE;
-	 sphere.m_model.m_mesh = GEOMETRY::SPHERE;
+	    grid.m_model.m_mesh = EGeometry::GRID;
+	cylinder.m_model.m_mesh = EGeometry::CYLINDER;
+	triangle.m_model.m_mesh = EGeometry::TRIANGLE;
+	    quad.m_model.m_mesh = EGeometry::QUAD;
+		cube.m_model.m_mesh = EGeometry::CUBE;
+	 sphere.m_model.m_mesh = EGeometry::SPHERE;
 
 	    grid.m_model.m_material = Material();
 		grid.m_model.m_material.roughness = 0.02f;
@@ -565,12 +565,12 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		wallF.m_model.m_material.normalMap = pRenderer->CreateTextureFromFile("190_norm.JPG");
 	}
 
-	wallL.m_model.m_mesh = GEOMETRY::CUBE;
-	wallR.m_model.m_mesh = GEOMETRY::CUBE;
-	wallF.m_model.m_mesh = GEOMETRY::CUBE;
-	ceiling.m_model.m_mesh = GEOMETRY::CUBE;
+	wallL.m_model.m_mesh = EGeometry::CUBE;
+	wallR.m_model.m_mesh = EGeometry::CUBE;
+	wallF.m_model.m_mesh = EGeometry::CUBE;
+	ceiling.m_model.m_mesh = EGeometry::CUBE;
 #endif
-	floor.m_model.m_mesh = GEOMETRY::CUBE;
+	floor.m_model.m_mesh = EGeometry::CUBE;
 }
 
 
@@ -580,7 +580,7 @@ void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj)
 {
 	// todo: show minimal demonstration of renderer
 	GameObject obj;										// create object
-	obj.m_model.m_mesh = GEOMETRY::SPHERE;				// set material
+	obj.m_model.m_mesh = EGeometry::SPHERE;				// set material
 	obj.m_model.m_material.color = Color::cyan;
 	obj.m_model.m_material.alpha = 1.0f;
 	obj.m_model.m_material.specular = 90.0f;
@@ -695,7 +695,7 @@ void SceneManager::InitializePhysicsObjects()
 	// ANCHOR POINTS
 	const float anchorScale = 0.3f;
 
-	m_anchor1.m_model.m_mesh = GEOMETRY::SPHERE;
+	m_anchor1.m_model.m_mesh = EGeometry::SPHERE;
 	m_anchor1.m_model.m_material.color = Color::white;
 	m_anchor1.m_model.m_material.shininess = 90.0f;
 	m_anchor1.m_model.m_material.normalMap._id = m_pRenderer->CreateTextureFromFile("bricks_n.png");
@@ -707,7 +707,7 @@ void SceneManager::InitializePhysicsObjects()
 	//m_anchor2.m_model.m_material.color = Color::orange;
 	//m_anchor2.m_transform.SetPosition(-10.0f, 4.0f, +4.0f);
 
-	m_anchor2.m_model.m_mesh = GEOMETRY::SPHERE;
+	m_anchor2.m_model.m_mesh = EGeometry::SPHERE;
 	m_anchor2.m_model.m_material.color = Color::white;
 	m_anchor2.m_model.m_material.shininess = 90.0f;
 	//m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
@@ -721,7 +721,7 @@ void SceneManager::InitializePhysicsObjects()
 	auto& mat = m_physObj.m_model.m_material;
 	auto& msh = m_physObj.m_model.m_mesh;
 	auto& tfm = m_physObj.m_transform;
-	msh = GEOMETRY::CUBE;
+	msh = EGeometry::CUBE;
 	mat.color = Color::white;
 	//mat.normalMap.id	= m_renderer->AddTexture("bricks_n.png");
 	mat.diffuseMap._id = m_pRenderer->CreateTextureFromFile("bricks_d.png");
@@ -730,7 +730,7 @@ void SceneManager::InitializePhysicsObjects()
 	tfm.SetPosition(0.0f, 10.0f, 0.0f);
 	tfm.SetRotationDeg(15.0f, 0.0f, 0.0f);
 	tfm.SetScale(1.5f, 0.5f, 0.5f);
-	m_physObj.m_rb.InitPhysicsVertices(GEOMETRY::CUBE, m_physObj.m_transform.GetScaleF3());
+	m_physObj.m_rb.InitPhysicsVertices(EGeometry::CUBE, m_physObj.m_transform.GetScaleF3());
 	m_physObj.m_rb.SetMassUniform(1.0f);
 	m_physObj.m_rb.EnablePhysics = m_physObj.m_rb.EnableGravity = true;
 

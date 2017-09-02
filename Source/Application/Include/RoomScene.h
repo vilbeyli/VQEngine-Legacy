@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "Animation.h"
 #include "GameObject.h"
 #include "Skydome.h"
 #include "Skybox.h"
@@ -26,51 +27,6 @@
 struct SerializedScene;
 class SceneManager;
 class Renderer;
-
-//-------------------------------------------------------------
-
-// animation prototype, currently only used here.
-// todo: animation class
-
-template<typename T>
-class Track
-{
-public:
-	Track() = delete;
-	Track(T* data, const T& beginVal, const T& endVal, float period)
-		:
-		_totalTime(0.0f),
-		_period(period),
-		_data(data),
-		_valueBegin(beginVal),
-		_valueEnd(endVal)
-	{}
-
-	void Update(float dt);
-
-private:
-	float _totalTime;
-	float _period;
-
-	T* _data;
-	T _valueBegin;
-	T _valueEnd;
-};
-
-struct Animation
-{
-	// lerping tracks
-	std::vector<Track<float>> _fTracks;
-	std::vector<Track<vec3>>  _vTracks;
-
-	void Update(float dt)
-	{
-		for (auto& t : _fTracks) t.Update(dt);
-		for (auto& t : _vTracks) t.Update(dt);
-	}
-};
-
-//-------------------------------------------------------------
 
 class RoomScene
 {

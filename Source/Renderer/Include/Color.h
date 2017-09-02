@@ -26,7 +26,7 @@
 
 using namespace DirectX;
 
-enum class COLOR_VLAUE
+enum class EColorValue
 {
 	BLACK = 0,
 	WHITE,
@@ -47,7 +47,7 @@ enum class COLOR_VLAUE
 
 struct Color
 {
-	using ColorPalette = std::array < const Color, static_cast<int>(COLOR_VLAUE::COUNT)>;
+	using ColorPalette = std::array < const Color, static_cast<int>(EColorValue::COUNT)>;
 
 public:
 	Color();

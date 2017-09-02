@@ -18,8 +18,11 @@
 
 #define LOG_SEARCH 0
 
-#include "GeometryGenerator.h"
 #include "Renderer.h"
+#include "Settings.h"
+#include "Mesh.h"
+
+#include "GeometryGenerator.h"
 #include "D3DManager.h"
 #include "BufferObject.h"
 #include "Shader.h"
@@ -29,15 +32,140 @@
 #include "utils.h"
 #include "Camera.h"
 #include "DirectXTex.h"
+#include "D3DManager.h"
 
 #include <mutex>
 #include <cassert>
 
+// HELPER FUNCTIONS
+//=======================================================================================================================================================
+std::vector<std::string> GetShaderPaths(const std::string& shaderFileName)
+{	// try to open each file
+	const std::string path = Renderer::s_shaderRoot + shaderFileName;
+	const std::string paths[] = {
+		path + "_vs.hlsl",
+		path + "_gs.hlsl",
+		path + "_ds.hlsl",
+		path + "_hs.hlsl",
+		path + "_cs.hlsl",
+		path + "_ps.hlsl",
+	};
+
+	std::vector<std::string> existingPaths;
+	for (size_t i = 0; i < EShaderType::COUNT; i++)
+	{
+		std::ifstream file(paths[i]);
+		if (file.is_open())
+		{
+			existingPaths.push_back(paths[i]);
+			file.close();
+		}
+	}
+
+	if (existingPaths.empty())
+	{
+		Log::Error("No suitable shader paths \"%s_xs\"", shaderFileName.c_str());
+	}
+	return std::move(existingPaths);
+}
+
+void PollShaderFiles()
+{
+	// Concerns:
+	// separate thread sharing window resources like context and d3d11device
+	// might not perform as expected
+	// link: https://www.opengl.org/discussion_boards/showthread.php/185980-recompile-the-shader-on-runtime-like-hot-plug-the-new-compiled-shader
+	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
+	Log::Info("Thread here : PollStarted.\n");
+	Sleep(800);
+
+#if 0
+	static HANDLE dwChangeHandle;
+	DWORD dwWaitStatus;
+	LPTSTR lpDir = "Data/Shaders/";
+
+	dwChangeHandle = FindFirstChangeNotification(
+		lpDir,                         // directory to watch 
+		TRUE,                         // do not watch subtree 
+		FILE_NOTIFY_CHANGE_FILE_NAME); // watch file name changes 
+
+	if (dwChangeHandle == INVALID_HANDLE_VALUE)
+	{
+		Log::Error("FindFirstChangeNotification function failed.\n");
+		;// ExitProcess(GetLastError());
+	}
+
+	while (TRUE)
+	{
+		//	Wait for notification.
+		Log::Info("\nWaiting for notification...\n");
+
+		dwWaitStatus = WaitForSingleObject(dwChangeHandle,
+			INFINITE);
+
+		switch (dwWaitStatus)
+		{
+		case WAIT_OBJECT_0:
+
+			//A file was created, renamed, or deleted in the directory.
+			//Refresh this directory and restart the notification.
+
+			OnShaderChange(lpDir);
+			if (FindNextChangeNotification(dwChangeHandle) == FALSE)
+			{
+				Log::Error("FindNextChangeNotification function failed.\n");
+				ExitProcess(GetLastError());
+			}
+			break;
+
+		case WAIT_OBJECT_0 + 1:
+
+			// A directory was created, renamed, or deleted.
+			// Refresh the tree and restart the notification.
+
+			//RefreshTree(lpDrive);
+			/*if (FindNextChangeNotification(dwChangeHandles[1]) == FALSE)
+			{
+			printf("\n ERROR: FindNextChangeNotification function failed.\n");
+			ExitProcess(GetLastError());
+			}*/
+			break;
+
+		case WAIT_TIMEOUT:
+
+			//A timeout occurred, this would happen if some value other 
+			//than INFINITE is used in the Wait call and no changes occur.
+			//In a single-threaded environment you might not want an
+			//INFINITE wait.
+
+			OutputDebugString("\nNo changes in the timeout period.\n");
+			break;
+
+		default:
+			OutputDebugString("\n ERROR: Unhandled dwWaitStatus.\n");
+			ExitProcess(GetLastError());
+			break;
+		}
+	}
+	OutputDebugString("Done.\n");
+#endif
+}
+
+void OnShaderChange(LPTSTR dir)
+{
+	Log::Info("OnShaderChange(%s)\n\n", dir);
+	// we know that a change occurred in the 'dir' directory. Read source again
+	// works		: create file, delete file
+	// doesnt work	: modify file
+	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
+}
+//=======================================================================================================================================================
+
+
 const char*			Renderer::s_shaderRoot		= "Data/Shaders/";
 const char*			Renderer::s_textureRoot		= "Data/Textures/";
 Settings::Renderer	Renderer::s_defaultSettings = Settings::Renderer();
-
-bool Renderer::sEnableBlend = true;
+bool				Renderer::sEnableBlend = true;
 
 Renderer::Renderer()
 	:
@@ -45,7 +173,7 @@ Renderer::Renderer()
 	m_device(nullptr),
 	m_deviceContext(nullptr),
 	m_mainCamera(nullptr),
-	m_bufferObjects     (std::vector<BufferObject*>     (GEOMETRY::MESH_TYPE_COUNT)      ),
+	m_bufferObjects     (std::vector<BufferObject*>     (EGeometry::MESH_TYPE_COUNT)      ),
 	m_rasterizerStates  (std::vector<RasterizerState*>  ((int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
 	m_depthStencilStates(std::vector<DepthStencilState*>()),
 	m_blendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT))
@@ -81,7 +209,7 @@ void Renderer::Exit()
 
 	CPUConstant::CleanUp();
 	
-	UnloadShaders();
+	Shader::UnloadShaders(this);
 
 	for (Texture& tex : m_textures)
 	{
@@ -162,8 +290,13 @@ void Renderer::Exit()
 		m_Direct3D = nullptr;
 	}
 
-	Log::Info("---------------------------\n");
+	Log::Info("---------------------------");
 }
+
+float	 Renderer::AspectRatio()	const { return m_Direct3D->AspectRatio(); };
+unsigned Renderer::WindowHeight()	const { return m_Direct3D->WindowHeight(); };
+unsigned Renderer::WindowWidth()	const { return m_Direct3D->WindowWidth(); };
+HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };
 
 const Shader* Renderer::GetShader(ShaderID shader_id) const
 {
@@ -174,6 +307,8 @@ const Shader* Renderer::GetShader(ShaderID shader_id) const
 
 bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 {
+	// DIRECT3D 11
+	//--------------------------------------------------------------------
 	s_defaultSettings = settings;
 	m_Direct3D = new D3DManager();
 	if (!m_Direct3D)
@@ -200,247 +335,219 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 	m_device		= m_Direct3D->m_device;
 	m_deviceContext = m_Direct3D->m_deviceContext;
 
-	InitializeDefaultRenderTarget();
+	// DEFAULT RENDER TARGET
+	//--------------------------------------------------------------------
+	{
+		RenderTarget defaultRT;
+
+		ID3D11Texture2D* backBufferPtr;
+		HRESULT hr = m_Direct3D->m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
+		if (FAILED(hr))
+		{
+			Log::Error("Cannot get back buffer pointer in DefaultRenderTarget initialization");
+			return false; 
+		}
+		defaultRT.texture._tex2D = backBufferPtr;
+
+		D3D11_TEXTURE2D_DESC texDesc;		// get back buffer description
+		backBufferPtr->GetDesc(&texDesc);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;	// create shader resource view from back buffer desc
+		srvDesc.Format = texDesc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		m_device->CreateShaderResourceView(backBufferPtr, &srvDesc, &defaultRT.texture._srv);
+
+		hr = m_device->CreateRenderTargetView(backBufferPtr, nullptr, &defaultRT.pRenderTargetView);
+		if (FAILED(hr))
+		{
+			Log::Error("Cannot create default render target view.");
+			return false;
+		}
+
+		m_textures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - dont add texture to vector
+		defaultRT.texture._id = static_cast<int>(m_textures.size() - 1);
+
+		m_renderTargets.push_back(defaultRT);
+		m_state._mainRenderTarget = static_cast<int>(m_renderTargets.size() - 1);
+	}
 	m_Direct3D->ReportLiveObjects("Init Default RT\n");
 
-	InitializeDefaultDepthBuffer();
+
+	// DEFAULT DEPTH TARGET
+	//--------------------------------------------------------------------
+	{
+		// Set up the description of the depth buffer.
+		DXGI_FORMAT depthFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		D3D11_TEXTURE2D_DESC depthBufferDesc = {};
+		depthBufferDesc.Width = Renderer::s_defaultSettings.window.width;
+		depthBufferDesc.Height = Renderer::s_defaultSettings.window.height;
+		depthBufferDesc.MipLevels = 1;
+		depthBufferDesc.ArraySize = 1;
+		depthBufferDesc.Format = depthFormat;
+		depthBufferDesc.SampleDesc.Count = 1;
+		depthBufferDesc.SampleDesc.Quality = 0;
+		depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+		depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;	// todo: D3D11_BIND_SHADER_RESOURCE | find a way to read depth buffer for SSAO
+		depthBufferDesc.CPUAccessFlags = 0;
+		depthBufferDesc.MiscFlags = 0;
+
+		// Create the texture for the depth buffer using the filled out description.
+		HRESULT result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_state._depthBufferTexture._tex2D);
+
+		// depth stencil view and shader resource view for the shadow map (^ BindFlags)
+		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+		dsvDesc.Format = depthFormat;
+		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		dsvDesc.Texture2D.MipSlice = 0;
+		AddDepthStencil(dsvDesc, m_state._depthBufferTexture._tex2D);
+
+
+		D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+		ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+
+		// Set up the description of the stencil state.
+		depthStencilDesc.DepthEnable = true;
+		depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+		depthStencilDesc.StencilEnable = false;
+		depthStencilDesc.StencilReadMask = 0xFF;
+		depthStencilDesc.StencilWriteMask = 0xFF;
+
+		// Stencil operations if pixel is front-facing.
+		depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+		depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+		depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+		depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+		// Stencil operations if pixel is back-facing.
+		depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+		depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+		depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+		depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+		AddDepthStencilState(depthStencilDesc);
+	}
 	m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
 
-	InitializeDefaultRasterizerStates();
+	// DEFAULT RASTERIZER STATES
+	//--------------------------------------------------------------------
+	{	
+		HRESULT hr;
+		const std::string err("Unable to create Rasterizer State: Cull ");
+
+		// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
+		D3D11_RASTERIZER_DESC rsDesc;
+		ZeroMemory(&rsDesc, sizeof(D3D11_RASTERIZER_DESC));
+
+		rsDesc.FillMode = D3D11_FILL_SOLID;
+		rsDesc.FrontCounterClockwise = false;
+		rsDesc.DepthBias = 0;
+		rsDesc.ScissorEnable = false;
+		rsDesc.DepthBiasClamp = 0;
+		rsDesc.SlopeScaledDepthBias = 0.0f;
+		rsDesc.DepthClipEnable = true;
+		rsDesc.AntialiasedLineEnable = true;
+		rsDesc.MultisampleEnable = true;
+
+		rsDesc.CullMode = D3D11_CULL_BACK;
+		hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_BACK]);
+		if (FAILED(hr))
+		{
+			Log::Error(err + "Back\n");
+		}
+
+		rsDesc.CullMode = D3D11_CULL_FRONT;
+		hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_FRONT]);
+		if (FAILED(hr))
+		{
+			Log::Error(err + "Front\n");
+		}
+
+		rsDesc.CullMode = D3D11_CULL_NONE;
+		hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_NONE]);
+		if (FAILED(hr))
+		{
+			Log::Error(err + "None\n");
+		}
+	}
 	m_Direct3D->ReportLiveObjects("Init Default RS ");
 
-	InitializeDefaultBlendStates();
+
+	// DEFAULT BLEND STATES
+	//--------------------------------------------------------------------
+	{
+		// todo: solve default blend state issue
+
+		D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
+		rtBlendDesc.BlendEnable = true;
+		rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
+		rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
+		rtBlendDesc.DestBlend = D3D11_BLEND_ONE;
+		rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ONE;
+		rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		rtBlendDesc.SrcBlend = D3D11_BLEND_ONE;
+		rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
+
+		D3D11_BLEND_DESC desc = {};
+		desc.RenderTarget[0] = rtBlendDesc;
+
+		m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::ADDITIVE_COLOR].ptr));
+		m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::ALPHA_BLEND].ptr));
+
+		rtBlendDesc.BlendEnable = false;
+		desc.RenderTarget[0] = rtBlendDesc;
+		m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::DISABLED].ptr));
+	}
 	m_Direct3D->ReportLiveObjects("Init Default BlendStates ");
 
-	GeneratePrimitives();
-	LoadShaders();
+
+	// PRIMITIVES
+	//--------------------------------------------------------------------
+	{
+		// cylinder parameters
+		const float	 cylHeight = 3.1415f;
+		const float	 cylTopRadius = 1.0f;
+		const float	 cylBottomRadius = 1.0f;
+		const unsigned cylSliceCount = 120;
+		const unsigned cylStackCount = 100;
+
+		// grid parameters
+		const float gridWidth = 1.0f;
+		const float gridDepth = 1.0f;
+		const unsigned gridFinenessH = 100;
+		const unsigned gridFinenessV = 100;
+
+		// sphere parameters
+		const float sphRadius = 2.0f;
+		const unsigned sphRingCount = 25;
+		const unsigned sphSliceCount = 15;
+
+		GeometryGenerator::SetDevice(m_device);
+		m_bufferObjects[TRIANGLE] = GeometryGenerator::Triangle();
+		m_bufferObjects[QUAD] = GeometryGenerator::Quad();
+		m_bufferObjects[CUBE] = GeometryGenerator::Cube();
+		m_bufferObjects[GRID] = GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV);
+		m_bufferObjects[CYLINDER] = GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount);
+		m_bufferObjects[SPHERE] = GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount);
+		m_bufferObjects[BONE] = GeometryGenerator::Sphere(sphRadius / 40, 10, 10);
+	}
+
+	// SHADERS
+	//--------------------------------------------------------------------
+	Shader::LoadShaders(this);
 	m_Direct3D->ReportLiveObjects("Shader loaded");
 
 	return true;
 }
 
-void Renderer::GeneratePrimitives()
+
+
+
+const StateObjects& Renderer::GetState() const
 {
-	// cylinder parameters
-	const float	 cylHeight = 3.1415f;
-	const float	 cylTopRadius = 1.0f;
-	const float	 cylBottomRadius = 1.0f;
-	const unsigned cylSliceCount = 120;
-	const unsigned cylStackCount = 100;
-
-	// grid parameters
-	const float gridWidth = 1.0f;
-	const float gridDepth = 1.0f;
-	const unsigned gridFinenessH = 100;
-	const unsigned gridFinenessV = 100;
-
-	// sphere parameters
-	const float sphRadius = 2.0f;
-	const unsigned sphRingCount = 25;
-	const unsigned sphSliceCount = 15;
-
-	GeometryGenerator::SetDevice(m_device);
-	m_bufferObjects[TRIANGLE]	= GeometryGenerator::Triangle();
-	m_bufferObjects[QUAD]		= GeometryGenerator::Quad();
-	m_bufferObjects[CUBE]		= GeometryGenerator::Cube();
-	m_bufferObjects[GRID]		= GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV);
-	m_bufferObjects[CYLINDER]	= GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount);
-	m_bufferObjects[SPHERE]		= GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount);
-	m_bufferObjects[BONE]		= GeometryGenerator::Sphere(sphRadius/40, 10, 10);
-}
-
-void Renderer::LoadShaders()
-{
-	Log::Info("\r------------------------ COMPILING SHADERS ------------------------ \n");
-	
-	// todo: layouts from reflection?
-	const std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 },
-	};
-
-	const std::vector<EShaderType> VS_PS  = { EShaderType::VS, EShaderType::PS };
-	const std::vector<std::string> TonemapShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
-	const std::vector<std::string> BlurShaders    = { "FullscreenQuad_vs", "Blur_ps" };
-	const std::vector<std::string> BloomShaders   = { "FullscreenQuad_vs", "Bloom_ps" };
-	const std::vector<std::string> CombineShaders = { "FullscreenQuad_vs", "BloomCombine_ps" };
-
-	const std::vector<std::string> TextureCoordinates = { "MVPTransformationWithUVs_vs", "TextureCoordinates_ps" };
-
-	const std::vector<std::string> DeferredBRDF_AmbientLight = { "deferred_brdf_vs", "deferred_brdf_ambient_ps" };
-	const std::vector<std::string> DeferredBRDF_LightingFSQ  = { "deferred_brdf_vs", "deferred_brdf_lighting_ps" };
-	const std::vector<std::string> DeferredBRDF_PointLight   = { "MVPTransformationWithUVs_vs", "deferred_brdf_pointLight_ps" };
-	// render cone?
-	const std::vector<std::string> DeferredBRDF_SpotLight    = { "MVPTransformationWithUVs_vs", "deferred_brdf_spotLight_ps" }; 
-
-
-	Shader::s_shaders[EShaders::FORWARD_PHONG			]	= AddShader("Forward_Phong"			, layout);
-	Shader::s_shaders[EShaders::UNLIT					]	= AddShader("UnlitTextureColor"		, layout);
-	Shader::s_shaders[EShaders::TEXTURE_COORDINATES		]	= AddShader("TextureCoordinates"	, TextureCoordinates, VS_PS, layout);
-	Shader::s_shaders[EShaders::NORMAL					]	= AddShader("Normal"				, layout);
-	Shader::s_shaders[EShaders::TANGENT					]	= AddShader("Tangent"				, layout);
-	Shader::s_shaders[EShaders::BINORMAL				]	= AddShader("Binormal"				, layout);
-	Shader::s_shaders[EShaders::LINE					]	= AddShader("Line"					, layout);
-	Shader::s_shaders[EShaders::TBN						]	= AddShader("TNB"					, layout);
-	Shader::s_shaders[EShaders::DEBUG					]	= AddShader("Debug"					, layout);
-	Shader::s_shaders[EShaders::SKYBOX					]	= AddShader("Skybox"				, layout);
-	Shader::s_shaders[EShaders::BLOOM					]	= AddShader("Bloom"					, BloomShaders  , VS_PS, layout);
-	Shader::s_shaders[EShaders::BLUR					]	= AddShader("Blur"					, BlurShaders   , VS_PS, layout);
-	Shader::s_shaders[EShaders::BLOOM_COMBINE			]	= AddShader("BloomCombine"			, CombineShaders, VS_PS, layout);
-	Shader::s_shaders[EShaders::TONEMAPPING				]	= AddShader("Tonemapping"			, TonemapShaders, VS_PS, layout);
-	Shader::s_shaders[EShaders::FORWARD_BRDF			]	= AddShader("Forward_BRDF"			, layout);
-	Shader::s_shaders[EShaders::SHADOWMAP_DEPTH			]	= AddShader("DepthShader"			, layout);
-	Shader::s_shaders[EShaders::DEFERRED_GEOMETRY		]	= AddShader("Deferred_Geometry"		, layout);
-	Shader::s_shaders[EShaders::DEFERRED_BRDF_AMBIENT	]	= AddShader("Deferred_BRDF_Ambient"	, DeferredBRDF_AmbientLight, VS_PS, layout);
-	Shader::s_shaders[EShaders::DEFERRED_BRDF_LIGHTING	]	= AddShader("Deferred_BRDF_Lighting", DeferredBRDF_LightingFSQ , VS_PS, layout);
-	Shader::s_shaders[EShaders::DEFERRED_BRDF_POINT		]	= AddShader("Deferred_BRDF_Point"	, DeferredBRDF_PointLight  , VS_PS, layout);
-	Shader::s_shaders[EShaders::DEFERRED_BRDF_SPOT		]	= AddShader("Deferred_BRDF_Spot"	, DeferredBRDF_SpotLight   , VS_PS, layout);
-
-	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
-}
-
-std::stack<std::string> Renderer::UnloadShaders()
-{
-	std::stack<std::string> fileNames;
-	for (Shader*& shd : m_shaders)
-	{
-		fileNames.push(shd->m_name);
-		delete shd;
-		shd = nullptr;
-	}
-	m_shaders.clear();
-	CPUConstant::s_nextConstIndex = 0;
-	return fileNames;
-}
-
-void Renderer::ReloadShaders()
-{
-	Log::Info("Reloading Shaders...");
-	UnloadShaders();
-	LoadShaders();
-	Log::Info("Done");
-}
-
-void Renderer::InitializeDefaultDepthBuffer()
-{
-	// Set up the description of the depth buffer.
-	DXGI_FORMAT depthFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	D3D11_TEXTURE2D_DESC depthBufferDesc = {};
-	depthBufferDesc.Width = m_Direct3D->m_wndWidth;
-	depthBufferDesc.Height = m_Direct3D->m_wndHeight;
-	depthBufferDesc.MipLevels = 1;
-	depthBufferDesc.ArraySize = 1;
-	depthBufferDesc.Format = depthFormat;
-	depthBufferDesc.SampleDesc.Count = 1;
-	depthBufferDesc.SampleDesc.Quality = 0;
-	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;	// todo: D3D11_BIND_SHADER_RESOURCE | find a way to read depth buffer for SSAO
-	depthBufferDesc.CPUAccessFlags = 0;
-	depthBufferDesc.MiscFlags = 0;
-
-	// Create the texture for the depth buffer using the filled out description.
-	HRESULT result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_state._depthBufferTexture._tex2D);
-
-	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-	dsvDesc.Format = depthFormat;
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Texture2D.MipSlice = 0;
-	AddDepthStencil(dsvDesc, m_state._depthBufferTexture._tex2D);
-
-
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
-
-	// Set up the description of the stencil state.
-	depthStencilDesc.DepthEnable = true;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-
-	depthStencilDesc.StencilEnable = false;
-	depthStencilDesc.StencilReadMask = 0xFF;
-	depthStencilDesc.StencilWriteMask = 0xFF;
-
-	// Stencil operations if pixel is front-facing.
-	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	// Stencil operations if pixel is back-facing.
-	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	AddDepthStencilState(depthStencilDesc);
-}
-
-void Renderer::InitializeDefaultRasterizerStates()
-{
-	HRESULT hr;
-	const std::string err("Unable to create Rasterizer State: Cull ");
-	
-	// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
-	D3D11_RASTERIZER_DESC rsDesc;
-	ZeroMemory(&rsDesc, sizeof(D3D11_RASTERIZER_DESC));
-
-	rsDesc.FillMode					= D3D11_FILL_SOLID;
-	rsDesc.FrontCounterClockwise	= false;
-	rsDesc.DepthBias				= 0;
-	rsDesc.ScissorEnable			= false;
-	rsDesc.DepthBiasClamp			= 0;
-	rsDesc.SlopeScaledDepthBias		= 0.0f;
-	rsDesc.DepthClipEnable			= true;
-	rsDesc.AntialiasedLineEnable	= true;
-	rsDesc.MultisampleEnable		= true;
-	
-	rsDesc.CullMode = D3D11_CULL_BACK;
-	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_BACK]);
-	if (FAILED(hr))
-	{
-		Log::Error(err + "Back\n");
-	}
-
-	rsDesc.CullMode = D3D11_CULL_FRONT;
-	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_FRONT]);
-	if (FAILED(hr))
-	{
-		Log::Error(err + "Front\n");
-	}
-
-	rsDesc.CullMode = D3D11_CULL_NONE;
-	hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_NONE]);
-	if (FAILED(hr))
-	{
-		Log::Error(err + "None\n");
-	}
-}
-
-void Renderer::InitializeDefaultBlendStates()
-{
-	// todo: solve default blend state issue
-
-	D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
-	rtBlendDesc.BlendEnable = true;
-	rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
-	rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
-	rtBlendDesc.DestBlend = D3D11_BLEND_ONE;
-	rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ONE;
-	rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-	rtBlendDesc.SrcBlend = D3D11_BLEND_ONE;
-	rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
-	
-	D3D11_BLEND_DESC desc = {};
-	desc.RenderTarget[0] = rtBlendDesc;
-
-	m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::ADDITIVE_COLOR].ptr));
-	m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::ALPHA_BLEND].ptr));
-	
-	rtBlendDesc.BlendEnable = false;
-	desc.RenderTarget[0] = rtBlendDesc;
-	m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::DISABLED].ptr));
+	return m_state;
 }
 
 ShaderID Renderer::AddShader(const std::string&	shaderFileName,	const std::vector<InputLayout>& layouts)
@@ -588,7 +695,7 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 		DirectX::ScratchImage* img = &faceImages[cubeMapFaceIndex];
 		if (!SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
 		{
-			Log::Error(ERROR_LOG::CANT_OPEN_FILE, textureFileNames[cubeMapFaceIndex]);
+			Log::Error(EErrorLog::CANT_OPEN_FILE, textureFileNames[cubeMapFaceIndex]);
 			continue;
 		}
 
@@ -655,7 +762,7 @@ SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)
 	HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &pSamplerState);
 	if (FAILED(hr))
 	{
-		Log::Error(ERROR_LOG::CANT_CREATE_RESOURCE, "Cannot create sampler state\n");
+		Log::Error(EErrorLog::CANT_CREATE_RESOURCE, "Cannot create sampler state\n");
 	}
 
 	Sampler out;
@@ -721,43 +828,6 @@ DepthStencilStateID Renderer::AddDepthStencilState(const D3D11_DEPTH_STENCIL_DES
 
 	m_depthStencilStates.push_back(newDSState);
 	return static_cast<DepthStencilStateID>(m_depthStencilStates.size() - 1);
-}
-
-void Renderer::InitializeDefaultRenderTarget()
-{
-	RenderTarget defaultRT;
-
-	ID3D11Texture2D* backBufferPtr;
-	HRESULT hr = m_Direct3D->m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
-	if (FAILED(hr))
-	{
-		Log::Error("Cannot get back buffer pointer in DefaultRenderTarget initialization");
-		return;
-	}
-	defaultRT.texture._tex2D = backBufferPtr;
-	
-	D3D11_TEXTURE2D_DESC texDesc;		// get back buffer description
-	backBufferPtr->GetDesc(&texDesc);
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;	// create shader resource view from back buffer desc
-	srvDesc.Format = texDesc.Format;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
-	srvDesc.Texture2D.MostDetailedMip = 0;
-	m_device->CreateShaderResourceView(backBufferPtr, &srvDesc, &defaultRT.texture._srv);
-		
-	hr = m_device->CreateRenderTargetView(backBufferPtr, nullptr, &defaultRT.pRenderTargetView);
-	if (FAILED(hr))
-	{
-		Log::Error("Cannot create default render target view.");
-		return;
-	}
-
-	m_textures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - dont add texture to vector
-	defaultRT.texture._id = static_cast<int>(m_textures.size() - 1);
-
-	m_renderTargets.push_back(defaultRT);
-	m_state._mainRenderTarget = static_cast<int>(m_renderTargets.size() - 1);
 }
 
 RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
@@ -1053,8 +1123,8 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 		{
 			found = true;
 			SetTextureCommand cmd;
-			cmd.texID = tex;
-			cmd.shdTex = shader->m_textures[i];
+			cmd.textureID = tex;
+			cmd.shaderTexture = shader->m_textures[i];
 			m_setTextureCmds.push(cmd);
 		}
 	}
@@ -1081,7 +1151,7 @@ void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 			found = true;
 			SetSamplerCommand cmd;
 			cmd.samplerID = samplerID;
-			cmd.shdSampler = sampler;
+			cmd.shaderSampler = sampler;
 			m_setSamplerCmds.push(cmd);
 		}
 	}
@@ -1267,37 +1337,6 @@ void Renderer::Apply()
 	}
 }
 
-// try to open each file
-std::vector<std::string> Renderer::GetShaderPaths(const std::string& shaderFileName)
-{
-	const std::string path = s_shaderRoot + shaderFileName;
-	const std::string paths[] = {
-		path + "_vs.hlsl",
-		path + "_gs.hlsl",
-		path + "_ds.hlsl",
-		path + "_hs.hlsl",
-		path + "_cs.hlsl",
-		path + "_ps.hlsl",
-	};
-
-	std::vector<std::string> existingPaths;
-	for (size_t i = 0; i < EShaderType::COUNT; i++)
-	{
-		std::ifstream file(paths[i]);
-		if (file.is_open())
-		{
-			existingPaths.push_back(paths[i]);
-			file.close();
-		}
-	}
-
-	if (existingPaths.empty())
-	{
-		Log::Error("No suitable shader paths \"%s_xs\"", shaderFileName.c_str());
-	}
-	return std::move(existingPaths);
-}
-
 void Renderer::DrawIndexed(EPrimitiveTopology topology)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
@@ -1309,97 +1348,3 @@ void Renderer::Draw(EPrimitiveTopology topology)
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->Draw(1, 0);
 }
-
-
-
-void Renderer::PollShaderFiles()
-{
-	// Concerns:
-	// separate thread sharing window resources like context and d3d11device
-	// might not perform as expected
-	// link: https://www.opengl.org/discussion_boards/showthread.php/185980-recompile-the-shader-on-runtime-like-hot-plug-the-new-compiled-shader
-	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
-	Log::Info("Thread here : PollStarted.\n");
-	Sleep(800);
-
-#if 0
-	static HANDLE dwChangeHandle;
-	DWORD dwWaitStatus;
-	LPTSTR lpDir = "Data/Shaders/";
-
-	dwChangeHandle = FindFirstChangeNotification(
-		lpDir,                         // directory to watch 
-		TRUE,                         // do not watch subtree 
-		FILE_NOTIFY_CHANGE_FILE_NAME); // watch file name changes 
-
-	if (dwChangeHandle == INVALID_HANDLE_VALUE)
-	{
-		Log::Error("FindFirstChangeNotification function failed.\n");
-		;// ExitProcess(GetLastError());
-	}
-
-	while (TRUE)
-	{
-		//	Wait for notification.
-		Log::Info("\nWaiting for notification...\n");
-
-		dwWaitStatus = WaitForSingleObject(dwChangeHandle,
-			INFINITE);
-
-		switch (dwWaitStatus)
-		{
-		case WAIT_OBJECT_0:
-
-			//A file was created, renamed, or deleted in the directory.
-			//Refresh this directory and restart the notification.
-
-			OnShaderChange(lpDir);
-			if (FindNextChangeNotification(dwChangeHandle) == FALSE)
-			{
-				Log::Error("FindNextChangeNotification function failed.\n");
-				ExitProcess(GetLastError());
-			}
-			break;
-
-		case WAIT_OBJECT_0 + 1:
-
-			// A directory was created, renamed, or deleted.
-			// Refresh the tree and restart the notification.
-
-			//RefreshTree(lpDrive);
-			/*if (FindNextChangeNotification(dwChangeHandles[1]) == FALSE)
-			{
-			printf("\n ERROR: FindNextChangeNotification function failed.\n");
-			ExitProcess(GetLastError());
-			}*/
-			break;
-
-		case WAIT_TIMEOUT:
-
-			//A timeout occurred, this would happen if some value other 
-			//than INFINITE is used in the Wait call and no changes occur.
-			//In a single-threaded environment you might not want an
-			//INFINITE wait.
-
-			OutputDebugString("\nNo changes in the timeout period.\n");
-			break;
-
-		default:
-			OutputDebugString("\n ERROR: Unhandled dwWaitStatus.\n");
-			ExitProcess(GetLastError());
-			break;
-		}
-	}
-	OutputDebugString("Done.\n");
-#endif
-}
-
-void Renderer::OnShaderChange(LPTSTR dir)
-{
-	Log::Info("OnShaderChange(%s)\n\n", dir);
-	// we know that a change occurred in the 'dir' directory. Read source again
-	// works		: create file, delete file
-	// doesnt work	: modify file
-	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
-}
-

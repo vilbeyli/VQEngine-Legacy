@@ -23,7 +23,7 @@
 #include "Color.h"
 #include <DirectXMath.h>
 
-using BufferID = int; // watning: duplicate definition
+using BufferID = int; // warning: duplicate definition
 
 struct LightShaderSignature
 {

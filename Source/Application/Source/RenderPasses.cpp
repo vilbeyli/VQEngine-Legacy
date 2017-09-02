@@ -16,12 +16,15 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+
 #include "RenderPasses.h"
-#include "Light.h"
+#include "Engine.h"
+#include "GameObject.h"
+
+#include "Renderer.h"
 #include "Camera.h"
 #include "D3DManager.h"
 
-#include "SceneManager.h"
 #include "Log.h"
 
 void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
@@ -415,7 +418,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	// SHADOW MAPS
 	//--------------------------------------------------------------
 	// first light is spot: single shadow map support for now
-	//const Light& caster     = lights.pointLights[0];
+	//const Light& caster     = lights.spotLights[0];
 	//TextureID shadowMap     = m_shadowMapPass._shadowMap;
 	//SamplerID shadowSampler = m_shadowMapPass._shadowSampler;
 	//
@@ -424,7 +427,6 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	//pRenderer->SetTexture("gShadowMap", shadowMap);
 	//pRenderer->SetSamplerState("sShadowSampler", shadowSampler);
 	pRenderer->SetConstant3f("CameraWorldPosition", sceneView.pCamera->GetPositionF());
-	pRenderer->SetConstant2f("ScreenSize", screenSize);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);

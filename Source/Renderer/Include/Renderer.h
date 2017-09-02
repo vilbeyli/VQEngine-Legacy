@@ -218,9 +218,7 @@ public:
 	D3DManager*						m_Direct3D;
 
 	static bool						sEnableBlend; //temp
-private:
-	Camera*							m_mainCamera;
-	
+private:	
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
 	std::vector<Texture>			m_textures;

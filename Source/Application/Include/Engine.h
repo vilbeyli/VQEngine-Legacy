@@ -22,6 +22,9 @@
 #include "PerfTimer.h"
 #include "WorkerPool.h"
 
+#include "RenderPasses.h"
+#include "Light.h"
+
 #include <memory>
 using std::shared_ptr;
 using std::unique_ptr;
@@ -37,47 +40,92 @@ class SceneManager;
 class PathManager;		// unused
 class PhysicsEngine;	// unused
 
+
+constexpr int MAX_POINT_LIGHT_COUNT = 20;
+constexpr int MAX_SPOT_LIGHT_COUNT = 10;
+struct SceneLightData
+{
+	std::array<LightShaderSignature, MAX_POINT_LIGHT_COUNT> pointLights;
+	std::array<LightShaderSignature, MAX_SPOT_LIGHT_COUNT>  spotLights;
+	size_t pointLightCount;
+	size_t spotLightCount;
+};
+
+
 class Engine
 {
 	friend class BaseSystem;
 
 public:
+	static const Settings::Renderer& InitializeRendererSettingsFromFile();
+	static Engine*	GetEngine();
+
 	~Engine();
 
-	bool Initialize(HWND hwnd, const Settings::Renderer& windowSettings);
+	bool			Initialize(HWND hwnd);
+	bool			Load();
 
-	void Pause();
-	void Unpause();
-	float TotalTime() const;
+	void			Pause();
+	void			Unpause();
+	float			TotalTime() const;
 
-	bool Update();
-	void Render();
+	bool			UpdateAndRender();
+	void			Render();
 
-	void Exit();
+	void			Exit();
 
-	shared_ptr<const Input>		 INP() const;
-	inline float GetTotalTime() const { return m_timer->TotalTime(); }
+	const Input*	INP() const;
+	inline float	GetTotalTime() const { return m_timer->TotalTime(); }
+	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
+	void			ToggleLightingModel();	// BRDF / Phong
 
-	static Engine* GetEngine();
 
 private:
 	Engine();
 
 	void TogglePause();
 	void CalcFrameStats();
+	bool HandleInput();
+	void PreRender();
+
+	void SendLightData() const;
+	void RenderLights() const;
 
 //--------------------------------------------------------------
 
 private:
 	static Engine*					s_instance;
+	static Settings::Renderer		s_rendererSettings;
 	
-	std::shared_ptr<Input>			m_input;
-	std::shared_ptr<Renderer>		m_renderer;
-	std::shared_ptr<SceneManager>	m_sceneManager;
-	std::shared_ptr<PerfTimer>		m_timer;
+	Input*							m_input;
+	Renderer*						m_pRenderer;
+	SceneManager*					m_sceneManager;
+	PerfTimer*						m_timer;
+	shared_ptr<Camera>				m_pCamera;	// support only 1 main camera for now
 
 	bool							m_isPaused;
 	WorkerPool						m_workerPool;
+
+	SceneView						m_sceneView;
+	SceneLightData					m_sceneLights;
+	std::vector<Light>				m_lights;
+
+	bool							m_bUsePaniniProjection;
+	//PathManager*					m_pPathManager; // unused
+
+	// rendering passes
+	SamplerID						m_normalSampler;
+	ShadowMapPass					m_shadowMapPass;
+	PostProcessPass					m_postProcessPass;
+	// Lighting pass?
+	bool							m_useDeferredRendering;
+	bool							m_isAmbientOcclusionOn;
+	DeferredRenderingPasses			m_deferredRenderingPasses;
+
+	ShaderID						m_selectedShader;
+	bool							m_debugRender;
+
+	std::vector<GameObject*>		m_ZPassObjects;
 };
 
 #define ENGINE Engine::GetEngine()

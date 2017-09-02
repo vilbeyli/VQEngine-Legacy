@@ -16,11 +16,6 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-//cbuffer perFrame
-//{
-//	matrix view;
-//	matrix	proj;
-//}
 cbuffer perModel
 {
     matrix worldViewProj;

@@ -37,7 +37,7 @@ public:
 	void Reset();
 	void Start();
 	void Stop();
-	void Tick();	
+	float Tick();	
 
 private:
 	double m_secPerCount;
@@ -68,7 +68,7 @@ public:
 	void Reset();
 	void Start();
 	void Stop();
-	void Tick();
+	float Tick();
 private:
 	Vtime_t		baseTime,		
 				prevTime,

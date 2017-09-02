@@ -18,7 +18,8 @@
 
 #pragma once
 #include "Renderer.h"
-#include "RenderPasses.h"
+
+#include "Settings.h"
 
 #include <vector>
 #include <memory>
@@ -28,24 +29,12 @@ using std::shared_ptr;
 // scenes
 #include "RoomScene.h"
 
-
-namespace Settings { struct Camera; struct Window; }
-
 class Camera;
 class PathManager;
 
+struct SceneView;
 struct Path;
 
-
-constexpr int MAX_POINT_LIGHT_COUNT = 20;
-constexpr int MAX_SPOT_LIGHT_COUNT = 10;
-struct SceneLightData
-{
-	std::array<LightShaderSignature, MAX_POINT_LIGHT_COUNT> pointLights;
-	std::array<LightShaderSignature, MAX_SPOT_LIGHT_COUNT>  spotLights;
-	size_t pointLightCount;
-	size_t spotLightCount;
-};
 
 struct SerializedScene
 {
@@ -57,53 +46,22 @@ struct SerializedScene
 class SceneManager
 {
 	friend class SceneParser;
+	friend class Engine;	// temp hack until gameObject array refactoring
 public:
-	SceneManager();
+	SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights);	// lights passed down to RoomScene
 	~SceneManager();
 
-	void Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings);
-	void SetCameraSettings(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings);
+	void Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings, shared_ptr<Camera> pCamera);
 
 	void Update(float dt);
-	void Render() const;
-	void PreRender();
+	void Render(Renderer* pRenderer, const SceneView& sceneView) const;
 
-	void SendLightData() const;
-	void SendDeferredDynamicLightData() const;
-	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
-
-	shared_ptr<Camera>				m_pCamera;	// temp
-	SceneView						m_sceneView;
-
-private:
-	friend struct ShadowMapPass;
-	void HandleInput();
 	void ReloadLevel();
-
-	//void ToggleTBNShader();
-	void ToggleLightingModel();	// BRDF / Phong
+private:
+	void HandleInput();
 
 private:
+	shared_ptr<Camera>				m_sceneCamera;
 	RoomScene						m_roomScene;	// todo: rethink scene management
 	std::vector<SerializedScene>	m_serializedScenes;
-
-	SceneLightData					m_sceneLights;
-
-	Renderer*						m_pRenderer;
-	bool							m_bUsePaniniProjection;
-	//PathManager*					m_pPathManager; // unused
-
-	// rendering passes
-	SamplerID						m_normalSampler;
-	ShadowMapPass					m_shadowMapPass;
-	PostProcessPass					m_postProcessPass;
-	// Lighting pass?
-	bool							m_useDeferredRendering;
-	bool							m_isAmbientOcclusionOn;
-	DeferredRenderingPasses			m_deferredRenderingPasses;
-
-	ShaderID						m_selectedShader;
-	bool							m_debugRender;
-
-	std::vector<GameObject*>		m_ZPassObjects;
 };

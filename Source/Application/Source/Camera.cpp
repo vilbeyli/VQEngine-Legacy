@@ -40,6 +40,23 @@ Camera::Camera()
 Camera::~Camera(void)
 {}
 
+void Camera::ConfigureCamera(const Settings::Camera & cameraSettings, const Settings::Window& windowSettings)
+{
+	const auto& NEAR_PLANE = cameraSettings.nearPlane;
+	const auto& FAR_PLANE = cameraSettings.farPlane;
+	const float AspectRatio = static_cast<float>(windowSettings.width) / windowSettings.height;
+	const float VerticalFoV = cameraSettings.fovV * DEG2RAD;
+
+	m_settings = cameraSettings;
+	m_settings.aspect = AspectRatio;
+
+	SetOthoMatrix(windowSettings.width, windowSettings.height, NEAR_PLANE, FAR_PLANE);
+	SetProjectionMatrix(VerticalFoV, AspectRatio, NEAR_PLANE, FAR_PLANE);
+
+	SetPosition(cameraSettings.x, cameraSettings.y, cameraSettings.z);
+	Rotate(cameraSettings.yaw, cameraSettings.pitch * DEG2RAD, 1.0f);
+}
+
 
 void Camera::SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, float screenFar)
 {

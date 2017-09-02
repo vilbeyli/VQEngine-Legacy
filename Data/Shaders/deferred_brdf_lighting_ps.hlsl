@@ -35,7 +35,7 @@ struct PSIn
 cbuffer SceneVariables
 {
 	float  pad0;
-	float3 cameraPos;
+	float3 CameraWorldPosition;
 
 	float  lightCount;
 	float  spotCount;
@@ -64,7 +64,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 P = texPosition.Sample(sNearestSampler, In.uv);
 	const float3 N = texNormals.Sample(sNearestSampler, In.uv);
 	//const float3 T = normalize(In.tangent);
-	const float3 V = normalize(cameraPos - P);
+	const float3 V = normalize(CameraWorldPosition - P);
 	const float ambient = 0.00005f;
 
 	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
@@ -90,16 +90,18 @@ float4 PSMain(PSIn In) : SV_TARGET
 		IdIs += BRDF(Wi, s, V, P) * radiance;
 	}
 
+#if 0
 	// SPOT Lights (shadow)
 	// todo: intensity/brightness
 	//---------------------------------
-	//for (int j = 0; j < spotCount; ++j)			
-	//{
-	//	const float3 Wi       = normalize(spots[j].position - P);
-	//	const float3 radiance = Intensity(spots[j], P) * spots[j].color;
-	//	IdIs += BRDF(Wi, s, V, P) * radiance * ShadowTest(P, In.lightSpacePos) * dW;
-	//}
-	
+	for (int j = 0; j < spotCount; ++j)			
+	{
+		const float3 Wi       = normalize(spots[j].position - P);
+		const float3 radiance = Intensity(spots[j], P) * spots[j].color;
+		IdIs += BRDF(Wi, s, V, P) * radiance * ShadowTest(P, In.lightSpacePos, texShadowMap, sShadowSampler) * dW;
+	}
+#endif
+
 	const float3 illumination = IdIs;
 	return float4(illumination, 1);
 #endif

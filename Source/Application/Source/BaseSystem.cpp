@@ -30,7 +30,7 @@
 #include <cassert>
 #endif
 
-Settings::Renderer BaseSystem::s_rendererSettings;
+Settings::Renderer Engine::Engine::s_rendererSettings;
 
 BaseSystem::BaseSystem()
 {
@@ -45,23 +45,21 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
+	const Settings::Renderer& rendererSettings = Engine::InitializeRendererSettingsFromFile();
+	InitWindow(rendererSettings);
 
-	s_rendererSettings = SceneParser::ReadRendererSettings();
-
-	int width, height;
-	InitWindow(width, height);
-
-	if (!ENGINE->Initialize(m_hwnd, s_rendererSettings))
+	if (!ENGINE->Initialize(m_hwnd))
 	{
 		Log::Error("cannot initialize engine. Exiting..");
 		return false;
 	}
 
-	//if (!ENGINE->Load())
-	//{
-	//	Log::Error("cannot load engine. Exiting..");
-	//	return false;
-	//}
+	if (!ENGINE->Load())
+	{
+		Log::Error("cannot load engine. Exiting..");
+		return false;
+	}
+
 	Log::Info("Engine initialization and asset loading successful.\n");
 	return true;
 }	
@@ -71,8 +69,8 @@ void BaseSystem::Run()
 	ENGINE->m_timer->Reset();
 	MSG msg = { };
 	
-	bool done = false;
-	while (!done)
+	bool bExitApp = false;
+	while (!bExitApp)
 	{
 		// todo: keep dragging main window
 		// game engine architecture
@@ -84,8 +82,8 @@ void BaseSystem::Run()
 		}
 		else
 		{
-			if (msg.message == WM_QUIT)	done = true;
-			else						done = !ENGINE->Update();
+			if (msg.message == WM_QUIT)	bExitApp = true;
+			else						bExitApp = ENGINE->UpdateAndRender();
 		}
 	}
 }
@@ -188,7 +186,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 			long yPosRelative = raw->data.mouse.lLastY;
 			short scroll = raw->data.mouse.usButtonData;
 			ENGINE->m_input->UpdateMousePos(xPosRelative, yPosRelative, scroll);
-			SetCursorPos(s_rendererSettings.window.width/2, s_rendererSettings.window.height/2);
+			SetCursorPos(Engine::s_rendererSettings.window.width/2, Engine::s_rendererSettings.window.height/2);
 			
 #ifdef LOG
 			char szTempOutput[1024];
@@ -226,8 +224,15 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 	return 0;
 }
 
-void BaseSystem::InitWindow(int& width, int& height)
+void BaseSystem::UpdateWindowDimensions(int w, int h)
 {
+	m_windowHeight = h;
+	m_windowWidth  = w;
+}
+
+void BaseSystem::InitWindow(const Settings::Renderer& rendererSettings)
+{
+	int width, height;
 	int posX, posY;				// window position
 	gp_appHandle	= this;		// global handle		
 
@@ -252,7 +257,7 @@ void BaseSystem::InitWindow(int& width, int& height)
 	height	= GetSystemMetrics(SM_CYSCREEN);
 
 	// set screen settings
-	if (s_rendererSettings.window.fullscreen)
+	if (rendererSettings.window.fullscreen)
 	{
 		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
@@ -267,8 +272,8 @@ void BaseSystem::InitWindow(int& width, int& height)
 	}
 	else
 	{
-		width  = s_rendererSettings.window.width;
-		height = s_rendererSettings.window.height;
+		width  = rendererSettings.window.width;
+		height = rendererSettings.window.height;
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
 		posY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
@@ -314,7 +319,7 @@ void BaseSystem::ShutdownWindows()
 {
 	ShowCursor(true);
 
-	if (s_rendererSettings.window.fullscreen)
+	if (Engine::s_rendererSettings.window.fullscreen)
 	{
 		ChangeDisplaySettings(NULL, 0);
 	}

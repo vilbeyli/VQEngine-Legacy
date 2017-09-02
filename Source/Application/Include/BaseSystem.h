@@ -29,7 +29,6 @@
 class BaseSystem
 {
 public:
-	static Settings::Renderer	s_rendererSettings;
 	BaseSystem();
 	BaseSystem(const BaseSystem&);
 	~BaseSystem();
@@ -39,9 +38,10 @@ public:
 	void Exit();
 
 	LRESULT CALLBACK MessageHandler(HWND, UINT, WPARAM, LPARAM);
+	void UpdateWindowDimensions(int w, int h);
 
 private:
-	void InitWindow(int&, int&);
+	void InitWindow(const Settings::Renderer& rendererSettings);
 	void ShutdownWindows();
 	void InitRawInputDevices();
 
@@ -49,6 +49,7 @@ private:
 	LPCSTR				m_appName;
 	HINSTANCE			m_hInstance;
 	HWND				m_hwnd;
+	int					m_windowWidth, m_windowHeight;
 };
 
 // The WndProc function and ApplicationHandle pointer are also included in this class file so we can redirect 

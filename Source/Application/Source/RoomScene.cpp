@@ -48,9 +48,10 @@ enum class WALLS
 	CEILING
 };
 
-RoomScene::RoomScene(SceneManager& sceneMan)
+RoomScene::RoomScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	:
-	m_sceneManager(sceneMan)
+	m_sceneManager(sceneMan),
+	m_lights(lights)
 {}
 
 void RoomScene::Load(Renderer* pRenderer, SerializedScene& scene)
@@ -70,10 +71,11 @@ void RoomScene::Update(float dt)
 }
 
 void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj);
+
 #include "Camera.h"
-void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
+void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
 {
-	const ShaderID selectedShader = m_sceneManager.GetSelectedShader();
+	const ShaderID selectedShader = ENGINE->GetSelectedShader();
 	const bool bSendMaterialData = (
 		   selectedShader == EShaders::FORWARD_PHONG 
 		|| selectedShader == EShaders::UNLIT 
@@ -83,19 +85,12 @@ void RoomScene::Render(Renderer* pRenderer, const XMMATRIX& viewProj) const
 	);
 
 	if(selectedShader != EShaders::DEFERRED_GEOMETRY)
-		m_skybox.Render(viewProj, m_sceneManager.m_pCamera->m_settings.fovH * DEG2RAD);
+		m_skybox.Render(sceneView.viewProj, sceneView.pCamera->m_settings.fovH * DEG2RAD);
 
-	pRenderer->SetShader(selectedShader);
+	pRenderer->SetShader(selectedShader);	// necessary?
 	
-	if (selectedShader != EShaders::DEFERRED_GEOMETRY)
-		m_sceneManager.SendLightData();
-	
-	m_room.Render(m_pRenderer, viewProj, bSendMaterialData);
-	
-	//if (selectedShader == SHADERS::FORWARD_BRDF) m_pRenderer->SetRasterizerState((int)DEFAULT_RS_STATE::CULL_BACK);
-	
-	RenderCentralObjects(viewProj, bSendMaterialData);
-	RenderLights(viewProj);
+	m_room.Render(m_pRenderer, sceneView.viewProj, bSendMaterialData);
+	RenderCentralObjects(sceneView.viewProj, bSendMaterialData);
 }
 
 
@@ -379,29 +374,9 @@ void RoomScene::UpdateCentralObj(const float dt)
 }
 
 
-
-
-void RoomScene::RenderLights(const XMMATRIX& viewProj) const
-{
-	m_pRenderer->Reset();	// is reset necessary?
-	m_pRenderer->SetShader(EShaders::UNLIT);
-	for (const Light& light : m_lights)
-	{
-		m_pRenderer->SetBufferObj(light._renderMesh);
-		const XMMATRIX world = light._transform.WorldTransformationMatrix();
-		const XMMATRIX worldViewProj = world  * viewProj;
-		const vec3 color = light._color.Value();
-		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
-		m_pRenderer->SetConstant3f("diffuse", color);
-		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
-}
-
 void RoomScene::RenderCentralObjects(const XMMATRIX& viewProj, bool bSendMaterialData) const
 {
-	const ShaderID shd = m_sceneManager.GetSelectedShader();
+	const ShaderID shd = ENGINE->GetSelectedShader();
 
 	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj, bSendMaterialData);
 	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj, bSendMaterialData);
@@ -421,38 +396,6 @@ void RoomScene::ToggleFloorNormalMap()
 	nMap = nMap == m_pRenderer->GetTexture("185_norm.JPG") ? -1 : m_pRenderer->CreateTextureFromFile("185_norm.JPG");
 	m_room.floor.m_model.m_material.normalMap = nMap;
 }
-
-void RoomScene::RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const
-{
-#ifdef ENABLE_ANIMATION
-	// already coming from previous state
-	// ----------------------------------
-	//	m_renderer->SetShader(m_selectedShader);
-	//	m_renderer->SetConstant4x4f("view", view);
-	//	m_renderer->SetConstant4x4f("proj", proj);
-	//	m_renderer->SetConstant1f("gammaCorrection", m_gammaCorrection ? 1.0f : 0.0f);
-	//	m_renderer->SetConstant3f("cameraPos", camPos_real);
-	//	SendLightData();
-	// ----------------------------------
-	const float time = ENGINE->TotalTime();
-	const vec3 camPos = m_pCamera->GetPositionF();
-
-	//m_renderer->SetShader(m_selectedShader);
-	//m_renderer->SetConstant3f("cameraPos", camPos);
-	//SendLightData();
-	//m_animationLerp.Render(m_renderer, view, proj, time);
-
-	m_pRenderer->Reset();
-	m_pRenderer->SetShader(m_selectedShader);
-	m_pRenderer->SetConstant3f("cameraPos", camPos);
-	SendLightData();
-
-	m_model.Render(m_pRenderer, view, proj);
-#endif
-}
-
-
-
 
 void RoomScene::Room::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool sendMaterialData) const
 {

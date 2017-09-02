@@ -27,15 +27,17 @@
 struct SerializedScene;
 class SceneManager;
 class Renderer;
+struct SceneView;
 
 class RoomScene
 {
+	friend class Engine;	// temp hack until gameObject array refactoring
 public:
 	void Load(Renderer* pRenderer, SerializedScene& scene);
 	void Update(float dt);
-	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
+	void Render(Renderer* pRenderer, const SceneView& sceneView) const;
 
-	RoomScene(SceneManager& sceneMan);
+	RoomScene(SceneManager& sceneMan, std::vector<Light>& lights);
 	~RoomScene() = default;
 
 private:
@@ -44,7 +46,6 @@ private:
 
 	void UpdateCentralObj(const float dt);
 
-	void RenderLights(const XMMATRIX& viewProj) const;
 	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
 	void RenderCentralObjects(const XMMATRIX& viewProj, bool sendMaterialData) const;
 // ----------------------------------------------------------------------
@@ -55,7 +56,7 @@ private:
 	Renderer*			m_pRenderer;
 	Skydome				m_skydome;
 	Skybox				m_skybox;
-	std::vector<Light>	m_lights;
+	std::vector<Light>&	m_lights;
 
 	struct Room {
 		friend class RoomScene;

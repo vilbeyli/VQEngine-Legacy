@@ -24,12 +24,16 @@
 
 using namespace DirectX;
 
+namespace Settings { struct Camera; struct Window; }
+
 class Input;
 class Camera
 {
 public:
 	Camera();
 	~Camera(void);
+
+	void ConfigureCamera(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings);
 
 	void SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, float screenFar);
 	void SetProjectionMatrix(float fovy, float screenAspect, float screenNear, float screenFar);

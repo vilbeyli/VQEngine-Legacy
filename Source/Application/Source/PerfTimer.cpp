@@ -121,7 +121,7 @@ double PerfTimer::CurrentTime()
 	return m_currTime * m_secPerCount;
 }
 
-void PerfTimer::Tick()
+float PerfTimer::Tick()
 {
 	if (m_stopped)
 	{
@@ -196,19 +196,22 @@ void PerfTimer::Stop()
 	}
 }
 
-void PerfTimer::Tick()
+float PerfTimer::Tick()
 {
 	if (isStopped)
 	{
 		dt = duration_t::zero();
-		return;
+		return dt.count();
 	}
+
 	Vtime_t now = GetNow();
 	currTime = now;
 	dt = currTime - prevTime;
 
 	prevTime = currTime;
 	dt = dt.count() < 0.0f ? dt.zero() : dt;	// make sure dt >= 0 (is this necessary?)
+
+	return dt.count();
 }
 
 #endif;

@@ -172,7 +172,6 @@ Renderer::Renderer()
 	m_Direct3D(nullptr),
 	m_device(nullptr),
 	m_deviceContext(nullptr),
-	m_mainCamera(nullptr),
 	m_bufferObjects     (std::vector<BufferObject*>     (EGeometry::MESH_TYPE_COUNT)      ),
 	m_rasterizerStates  (std::vector<RasterizerState*>  ((int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
 	m_depthStencilStates(std::vector<DepthStencilState*>()),
@@ -970,12 +969,6 @@ void Renderer::SetBufferObj(int BufferID)
 }
 
 
-
-void Renderer::SetCamera(Camera* cam)
-{
-	m_mainCamera = cam;
-}
-
 void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 {
 	// maybe read from SIMD registers?
@@ -1017,6 +1010,11 @@ void Renderer::SetConstant(const char * cName, const void * data)
 			}
 		}
 	}
+	if (!found)
+	{
+		Log::Error("CONSTANT NOT FOUND: %s", cName);
+	}
+
 #else
 	// TODO: Fix binary search algorithm...
 	// BINARY SEARCH 

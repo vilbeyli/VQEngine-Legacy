@@ -316,7 +316,7 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	this->_GBuffer._normalRT		   = pRenderer->AddRenderTarget(RTDescriptor[Float3TypeIndex], RTVDescriptor[Float3TypeIndex]);
 	this->_GBuffer._diffuseRoughnessRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
 	this->_GBuffer._specularMetallicRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
-
+	this->_GBuffer.bInitialized = true;
 	// http://download.nvidia.com/developer/presentations/2004/6800_Leagues/6800_Leagues_Deferred_Shading.pdf
 	// Option: trade storage for computation
 	//  - Store pos.z     and compute xy from z + window.xy

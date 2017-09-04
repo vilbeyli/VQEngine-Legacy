@@ -128,6 +128,7 @@ public:
 	static void						LoadShaders(Renderer* pRenderer);
 	static std::stack<std::string>	UnloadShaders(Renderer* pRenderer);
 	static void						ReloadShaders(Renderer* pRenderer);
+	static bool						IsForwardPassShader(ShaderID shader);
 	
 	Shader(const std::string& shaderFileName);
 	~Shader();

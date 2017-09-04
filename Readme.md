@@ -38,6 +38,7 @@ You will get the following error message on build unless you have already copmil
 | **F5** |	Empty |
 | **F6** |	Toggle Phong/BRDF Shaders |
 | **F7** |	Toggle Debug Shader |
+| **F8** |	Toggle Forward/Deferred Rendering |
 | **F9** |	Toggle Bloom |
 | **Backspace** | Pause App |
 | **R** | Reset Camera |

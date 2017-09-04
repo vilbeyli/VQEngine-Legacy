@@ -68,6 +68,7 @@ public:
 	inline float	GetTotalTime() const { return m_timer->TotalTime(); }
 	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
 	void			ToggleLightingModel();	// BRDF / Phong
+	void			ToggleRenderingPath();	// Forward / Deferred
 
 	void			SendLightData() const;
 	

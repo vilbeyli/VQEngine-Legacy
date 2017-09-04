@@ -84,6 +84,11 @@ static std::unordered_map <std::string, EShaderType > s_ShaderTypeStrLookup = {
 
 std::array<ShaderID, EShaders::SHADER_COUNT> Shader::s_shaders;
 
+bool Shader::IsForwardPassShader(ShaderID shader)
+{
+	return shader == EShaders::FORWARD_BRDF ||	shader == EShaders::FORWARD_PHONG;
+}
+
 void Shader::LoadShaders(Renderer* pRenderer)
 {
 	Log::Info("\r------------------------ COMPILING SHADERS ------------------------ \n");

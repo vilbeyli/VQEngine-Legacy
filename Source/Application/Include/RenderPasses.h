@@ -106,6 +106,7 @@ struct PostProcessPass
 
 struct GBuffer
 {
+	bool			bInitialized = false;
 	RenderTargetID	_diffuseRoughnessRT;
 	RenderTargetID	_specularMetallicRT;
 	RenderTargetID	_normalRT;

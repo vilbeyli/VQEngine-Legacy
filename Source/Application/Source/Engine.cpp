@@ -90,6 +90,19 @@ void Engine::ToggleLightingModel()
 	}
 }
 
+void Engine::ToggleRenderingPath()
+{
+	m_useDeferredRendering = !m_useDeferredRendering;
+
+	// initialize GBuffer if its not initialized, i.e., 
+	// Renderer started in forward mode and we're toggling deferred for the first time
+	if (!m_deferredRenderingPasses._GBuffer.bInitialized && m_useDeferredRendering)
+	{	
+		m_deferredRenderingPasses.InitializeGBuffer(m_pRenderer);
+	}
+	Log::Info("Toggle Rendering Path: %s Rendering enabled", m_useDeferredRendering ? "Deferred" : "Forward");
+}
+
 void Engine::Pause()
 {
 	m_isPaused = true;
@@ -245,6 +258,7 @@ bool Engine::HandleInput()
 	if (m_input->IsKeyTriggered("F5")) m_pRenderer->sEnableBlend = !m_pRenderer->sEnableBlend;
 	if (m_input->IsKeyTriggered("F6")) ToggleLightingModel();
 	if (m_input->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
+	if (m_input->IsKeyTriggered("F8")) ToggleRenderingPath();
 
 	if (m_input->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
 
@@ -406,16 +420,17 @@ void Engine::Render()
 		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_sceneLightData);
 		m_pRenderer->EndEvent();
 
-		//RenderLights();
+		// LIGHT SOURCES
+		m_pRenderer->BindDepthTarget(m_worldDepthTarget);
+		RenderLights();
 
 		// SKYBOX
 		if (m_activeSkybox != ESkyboxPresets::SKYBOX_PRESET_COUNT)
 		{
 			m_pRenderer->SetDepthStencilState(m_deferredRenderingPasses._skyboxStencilState);
-			m_pRenderer->BindDepthTarget(m_worldDepthTarget);
 			Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
-			m_pRenderer->UnbindDepthTarget();
 			m_pRenderer->SetDepthStencilState(m_defaultDepthStencilState);
+			m_pRenderer->UnbindDepthTarget();
 		}
 		
 	}
@@ -455,25 +470,29 @@ void Engine::Render()
 		m_sceneManager->Render(m_pRenderer, m_sceneView);
 		m_pRenderer->EndEvent();
 
-		// Tangent-Bitangent-Normal drawing
-		//------------------------------------------------------------------------
-		const bool bIsShaderTBN = true;
-		if (bIsShaderTBN)
-		{
-			m_pRenderer->BeginEvent("Draw TBN Vectors");
-			m_pRenderer->SetShader(EShaders::TBN);
-			m_sceneManager->m_roomScene.cube.Render(m_pRenderer, viewProj, false);
-			m_sceneManager->m_roomScene.sphere.Render(m_pRenderer, viewProj, false);
-
-			m_pRenderer->SetShader(m_selectedShader);
-			m_pRenderer->EndEvent();
-		}
-
 		RenderLights();
 	}
 	m_pRenderer->EndEvent();	// lighting pass
 
+	// Tangent-Bitangent-Normal drawing
+	//------------------------------------------------------------------------
+	const bool bIsShaderTBN = true;
+	if (bIsShaderTBN)
+	{
+		m_pRenderer->BeginEvent("Draw TBN Vectors");
+		if (m_useDeferredRendering)
+			m_pRenderer->BindDepthTarget(m_worldDepthTarget);
 
+		m_pRenderer->SetShader(EShaders::TBN);
+		m_sceneManager->m_roomScene.cube.Render(m_pRenderer, viewProj, false);
+		m_sceneManager->m_roomScene.sphere.Render(m_pRenderer, viewProj, false);
+
+		if (m_useDeferredRendering)
+			m_pRenderer->UnbindDepthTarget();
+
+		m_pRenderer->SetShader(m_selectedShader);
+		m_pRenderer->EndEvent();
+	}
 
 #if 1
 	// POST PROCESS PASS

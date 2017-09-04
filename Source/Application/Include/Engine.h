@@ -21,6 +21,7 @@
 #include <windows.h>
 #include "PerfTimer.h"
 #include "WorkerPool.h"
+#include "DataStructures.h"
 
 #include "RenderPasses.h"
 #include "Light.h"
@@ -40,18 +41,6 @@ class SceneManager;
 
 class PathManager;		// unused
 class PhysicsEngine;	// unused
-
-
-constexpr int MAX_POINT_LIGHT_COUNT = 20;
-constexpr int MAX_SPOT_LIGHT_COUNT = 10;
-struct SceneLightData
-{
-	std::array<LightShaderSignature, MAX_POINT_LIGHT_COUNT> pointLights;
-	std::array<LightShaderSignature, MAX_SPOT_LIGHT_COUNT>  spotLights;
-	size_t pointLightCount;
-	size_t spotLightCount;
-};
-
 
 class Engine
 {
@@ -87,6 +76,8 @@ private:
 	void TogglePause();
 	void CalcFrameStats();
 	bool HandleInput();
+
+	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 	void PreRender();
 
 	void SendLightData() const;
@@ -112,7 +103,7 @@ private:
 	//--------------------------------------------------------
 	shared_ptr<Camera>				m_pCamera;	// support only 1 main camera for now
 	SceneView						m_sceneView;
-	SceneLightData					m_sceneLights;
+	SceneLightData					m_sceneLightData;
 	std::vector<Light>				m_lights;
 	ESkyboxPresets					m_activeSkybox;
 

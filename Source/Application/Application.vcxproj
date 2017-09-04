@@ -179,6 +179,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\Animation.h" />
+    <ClInclude Include="Include\DataStructures.h" />
+    <ClInclude Include="Include\HandleTypedefs.h" />
     <ClInclude Include="Include\Quaternion.h" />
     <ClInclude Include="Include\SceneManager.h" />
     <ClInclude Include="Include\PerfTimer.h" />

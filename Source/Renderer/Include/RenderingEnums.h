@@ -103,9 +103,6 @@ enum EGeometry
 	MESH_TYPE_COUNT
 };
 
-
-
-
 enum EShaders
 {	
 	FORWARD_PHONG,
@@ -133,13 +130,4 @@ enum EShaders
 	SHADER_COUNT
 };
 
-
-using ShaderID = int;
-using InputBufferID = int;
-using TextureID = int;
-using SamplerID = int;
-using RasterizerStateID = int;
-using BlendStateID = int;
-using DepthStencilStateID = int;
-using RenderTargetID = int;
-using DepthTargetID = int;
+#include "HandleTypedefs.h"

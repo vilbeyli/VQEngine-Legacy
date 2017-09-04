@@ -21,24 +21,11 @@
 
 #include "Components/Transform.h"
 #include "Color.h"
+
+#include "DataStructures.h"
 #include <DirectXMath.h>
 
 using InputBufferID = int; // warning: duplicate definition
-
-struct LightShaderSignature
-{
-	vec3 position;
-	float pad1;
-	vec3 color;
-	float brightness;
-
-	vec3 spotDir;
-	float halfAngle;
-
-	vec2 attenuation;
-	float range;
-	float pad3;
-};
 
 struct Light
 {

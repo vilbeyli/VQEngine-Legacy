@@ -351,10 +351,10 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->DrawIndexed();
 
 	// DIFFUSE & SPECULAR LIGHTING
-	// draw fullscreen quad for lighting for now. Will add light volumes
-	// as the scene gets more complex or depending on performance needs.
 	pRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
 
+	// draw fullscreen quad for lighting for now. Will add light volumes
+	// as the scene gets more complex or depending on performance needs.
 #ifdef USE_LIGHT_VOLUMES
 #if 0
 
@@ -426,6 +426,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	//
 	//pRenderer->SetTexture("gShadowMap", shadowMap);
 	//pRenderer->SetSamplerState("sShadowSampler", shadowSampler);
+
 	pRenderer->SetConstant3f("CameraWorldPosition", sceneView.pCamera->GetPositionF());
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
@@ -435,5 +436,6 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 #endif	// light volumes
+
 	pRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 }

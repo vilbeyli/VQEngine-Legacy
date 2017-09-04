@@ -273,25 +273,22 @@ void Engine::SendLightData() const
 {
 	// SPOT & POINT LIGHTS
 	//--------------------------------------------------------------
-	m_pRenderer->SetConstant1f("lightCount", static_cast<float>(m_sceneLights.pointLightCount));
-	m_pRenderer->SetConstant1f("spotCount", static_cast<float>(m_sceneLights.spotLightCount));
-	m_pRenderer->SetConstantStruct("lights", static_cast<const void*>(m_sceneLights.pointLights.data()));
-	m_pRenderer->SetConstantStruct("spots", static_cast<const void*>(m_sceneLights.spotLights.data()));
+	m_pRenderer->SetConstant1f("lightCount", static_cast<float>(m_sceneLightData.pointLightCount));
+	m_pRenderer->SetConstant1f("spotCount", static_cast<float>(m_sceneLightData.spotLightCount));
+	m_pRenderer->SetConstantStruct("lights", static_cast<const void*>(m_sceneLightData.pointLights.data()));
+	m_pRenderer->SetConstantStruct("spots", static_cast<const void*>(m_sceneLightData.spotLights.data()));
 
 	// SHADOW MAPS
 	//--------------------------------------------------------------
 	// first light is spot: single shadow map support for now
-	const Light& caster = m_lights[0];
-	TextureID shadowMap = m_shadowMapPass._shadowMap;
-	SamplerID shadowSampler = m_shadowMapPass._shadowSampler;
-
-	m_pRenderer->SetConstant4x4f("lightSpaceMat", caster.GetLightSpaceMatrix());
-	m_pRenderer->SetTexture("gShadowMap", shadowMap);
-	m_pRenderer->SetSamplerState("sShadowSampler", shadowSampler);
+	const ShadowCasterData& caster = m_sceneLightData.shadowCasterData[0];
+	m_pRenderer->SetConstant4x4f("lightSpaceMat", caster.lightSpaceMatrix);
+	m_pRenderer->SetTexture("gShadowMap", caster.shadowMap);
+	m_pRenderer->SetSamplerState("sShadowSampler", caster.shadowSampler);
 
 #ifdef _DEBUG
-	if (m_sceneLights.pointLightCount > m_sceneLights.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
-	if (m_sceneLights.spotLightCount > m_sceneLights.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
+	if (m_sceneLightData.pointLightCount > m_sceneLightData.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
+	if (m_sceneLightData.spotLightCount > m_sceneLightData.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif
 }
 
@@ -314,7 +311,7 @@ bool Engine::UpdateAndRender()
 	return bExitApp;
 }
 
-
+// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 void Engine::PreRender()
 {
 	// set scene view
@@ -330,11 +327,11 @@ void Engine::PreRender()
 		switch (l._type)
 		{
 		case Light::ELightType::POINT:
-			m_sceneLights.pointLights[lightCount] = l.ShaderSignature();
+			m_sceneLightData.pointLights[lightCount] = l.ShaderSignature();
 			++lightCount;
 			break;
 		case Light::ELightType::SPOT:
-			m_sceneLights.spotLights[spotCount] = l.ShaderSignature();
+			m_sceneLightData.spotLights[spotCount] = l.ShaderSignature();
 			++spotCount;
 			break;
 		default:
@@ -342,8 +339,12 @@ void Engine::PreRender()
 			break;
 		}
 	}
-	m_sceneLights.spotLightCount = spotCount;
-	m_sceneLights.pointLightCount = lightCount;
+	m_sceneLightData.spotLightCount = spotCount;
+	m_sceneLightData.pointLightCount = lightCount;
+
+	m_sceneLightData.shadowCasterData[0].shadowMap = m_shadowMapPass._shadowMap;
+	m_sceneLightData.shadowCasterData[0].shadowSampler = m_shadowMapPass._shadowSampler;
+	m_sceneLightData.shadowCasterData[0].lightSpaceMatrix = m_lights[0].GetLightSpaceMatrix();
 }
 
 
@@ -365,7 +366,7 @@ void Engine::Render()
 	m_pRenderer->UnbindRenderTarget();	// unbind the back render target | every pass has their own render targets
 	m_shadowMapPass.RenderShadowMaps(m_pRenderer, _shadowCasters, m_ZPassObjects);
 
-	// LIGHTING pass
+	// LIGHTING PASS
 	//------------------------------------------------------------------------
 	m_pRenderer->Reset();
 	m_pRenderer->BindDepthTarget(0);
@@ -374,7 +375,7 @@ void Engine::Render()
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
 
 	if (m_useDeferredRendering)
-	{
+	{	// DEFERRED
 		const GBuffer& gBuffer = m_deferredRenderingPasses._GBuffer;
 		const TextureID texNormal = m_pRenderer->GetRenderTargetTexture(gBuffer._normalRT);
 		const TextureID texDiffuseRoughness = m_pRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
@@ -393,10 +394,12 @@ void Engine::Render()
 		}
 
 		// DEFERRED LIGHTING PASS
-		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_sceneLights);
+		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_sceneLightData);
+
+		// TODO: skybox
 	}
 	else
-	{
+	{	// FORWARD
 		const float clearColor[4] = { 0.2f, 0.4f, 0.3f, 1.0f };
 		const float clearDepth = 1.0f;
 

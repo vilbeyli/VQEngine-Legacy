@@ -69,7 +69,9 @@ public:
 	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
 	void			ToggleLightingModel();	// BRDF / Phong
 
-	void SendLightData() const;
+	void			SendLightData() const;
+	
+	inline DepthTargetID	GetWorldDepthTarget() const { return m_worldDepthTarget; }
 
 private:
 	Engine();
@@ -110,16 +112,22 @@ private:
 	bool							m_bUsePaniniProjection;
 	//PathManager*					m_pPathManager; // unused
 
-	// rendering passes
+	// rendering 
 	//--------------------------------------------------------
+	ShaderID						m_selectedShader;
+	
+	DepthStencilStateID				m_defaultDepthStencilState;
+	DepthTargetID					m_worldDepthTarget;
 	SamplerID						m_normalSampler;
+
 	ShadowMapPass					m_shadowMapPass;
-	PostProcessPass					m_postProcessPass;
+	
 	bool							m_useDeferredRendering;
 	bool							m_isAmbientOcclusionOn;
 	DeferredRenderingPasses			m_deferredRenderingPasses;
 
-	ShaderID						m_selectedShader;
+	PostProcessPass					m_postProcessPass;
+	
 	bool							m_debugRender;
 
 	std::vector<GameObject*>		m_ZPassObjects;

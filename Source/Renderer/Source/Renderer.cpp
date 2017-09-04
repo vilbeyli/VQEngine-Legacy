@@ -400,33 +400,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 		dsvDesc.Format = depthFormat;
 		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		dsvDesc.Texture2D.MipSlice = 0;
-		AddDepthTarget(dsvDesc, m_state._depthBufferTexture._tex2D);
-
-
-		D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-		ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
-
-		// Set up the description of the stencil state.
-		depthStencilDesc.DepthEnable = true;
-		depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-		depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-
-		depthStencilDesc.StencilEnable = false;
-		depthStencilDesc.StencilReadMask = 0xFF;
-		depthStencilDesc.StencilWriteMask = 0xFF;
-
-		// Stencil operations if pixel is front-facing.
-		depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-		depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-		depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-		// Stencil operations if pixel is back-facing.
-		depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-		depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-		depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-		AddDepthStencilState(depthStencilDesc);
+		AddDepthTarget(dsvDesc, m_state._depthBufferTexture._tex2D);	// assumes index 0
 	}
 	m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
 
@@ -772,7 +746,7 @@ SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)
 	return out._id;
 }
 
-DepthStencilStateID Renderer::AddDepthStencilState()
+DepthStencilStateID Renderer::AddDepthStencilState(bool bEnableDepth, bool bEnableStencil)
 {
 	DepthStencilState* newDSState = (DepthStencilState*)malloc(sizeof(DepthStencilState));
 
@@ -781,11 +755,11 @@ DepthStencilStateID Renderer::AddDepthStencilState()
 	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
 
 	// Set up the description of the stencil state.
-	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthEnable = bEnableDepth;
 	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 
-	depthStencilDesc.StencilEnable = false;
+	depthStencilDesc.StencilEnable = bEnableStencil;
 	depthStencilDesc.StencilReadMask = 0xFF;
 	depthStencilDesc.StencilWriteMask = 0xFF;
 
@@ -1222,13 +1196,40 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 	Draw(EPrimitiveTopology::POINT_LIST);
 }
 
-// todo: add stencil view params
 void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
 	const RenderTargetID rtv = m_state._boundRenderTargets[0];
 	const DepthTargetID dsv = m_state._boundDepthTarget;
 	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearColor);
 	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv], D3D11_CLEAR_DEPTH, depthValue, 0);
+}
+
+void Renderer::Begin(const ClearCommand & clearCmd)
+{
+	if (clearCmd.bDoClearColor)
+	{
+		const RenderTargetID rtv = m_state._boundRenderTargets[0];
+		if (rtv >= 0)	m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearCmd.clearColor.data());
+		else			Log::Error("Begin called with clear color command without a render target bound to pipeline!");
+	}
+
+	const bool bClearDepthStencil = clearCmd.bDoClearDepth || clearCmd.bDoClearStencil;
+	if (bClearDepthStencil)
+	{
+		const DepthTargetID dsv = m_state._boundDepthTarget;
+		UINT clearFlag = [&]() -> UINT	{
+			if (clearCmd.bDoClearDepth && clearCmd.bDoClearStencil)
+				return D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL;
+
+			if (clearCmd.bDoClearDepth)
+				return D3D11_CLEAR_DEPTH;
+
+			return D3D11_CLEAR_STENCIL;
+		}();
+
+		if (dsv >= 0)	m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv], clearFlag, clearCmd.clearDepth, clearCmd.clearStencil);
+		else			Log::Error("Begin called with clear depth_stencil command without a depth target bound to pipeline!");
+	}
 }
 
 void Renderer::End()

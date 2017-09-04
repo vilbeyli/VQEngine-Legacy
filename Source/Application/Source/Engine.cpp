@@ -83,8 +83,7 @@ Engine * Engine::GetEngine()
 
 void Engine::ToggleLightingModel()
 {
-	//const bool bIsPhong = m_selectedShader == SHADERS::FORWARD_PHONG || 0;// SHADERS::DEFERRED_PHONG;
-	//const bool bIsBRDF = !bIsPhong;	// assumes only 2 shading models
+	// enable toggling only on forward rendering for now
 	if (!m_useDeferredRendering)
 	{
 		m_selectedShader = m_selectedShader == EShaders::FORWARD_PHONG ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
@@ -109,7 +108,6 @@ float Engine::TotalTime() const
 const Settings::Renderer& Engine::InitializeRendererSettingsFromFile()
 {
 	s_rendererSettings = SceneParser::ReadRendererSettings();
-	
 	return s_rendererSettings;
 }
 
@@ -140,17 +138,24 @@ bool Engine::Initialize(HWND hwnd)
 		return false;
 	}
 
+	// render passes
 	m_useDeferredRendering = s_rendererSettings.bUseDeferredRendering;
 	if (m_useDeferredRendering)
 	{
 		m_deferredRenderingPasses.InitializeGBuffer(m_pRenderer);
 	}
-	m_selectedShader = m_useDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
-
 	m_isAmbientOcclusionOn = s_rendererSettings.bAmbientOcclusion;
 	m_debugRender = false;
+	m_selectedShader = m_useDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
+	
+	// default states
+	const bool bDepthWrite = true;
+	const bool bStencilWrite = false;
+	m_defaultDepthStencilState = m_pRenderer->AddDepthStencilState(bDepthWrite, bStencilWrite);
+	m_worldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
 	Skybox::InitializePresets(m_pRenderer);
+
 	return true;
 }
 
@@ -232,66 +237,22 @@ bool Engine::HandleInput()
 	if (m_input->IsKeyTriggered(0x08)) // Key backspace
 		TogglePause();
 
-	if (ENGINE->INP()->IsKeyTriggered("F1")) m_selectedShader = EShaders::TEXTURE_COORDINATES;
-	if (ENGINE->INP()->IsKeyTriggered("F2")) m_selectedShader = EShaders::NORMAL;
-	if (ENGINE->INP()->IsKeyTriggered("F3")) m_selectedShader = EShaders::UNLIT;
-	if (ENGINE->INP()->IsKeyTriggered("F4")) m_selectedShader = m_selectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
-	m_pRenderer->SetShader(0);
-	if (ENGINE->INP()->IsKeyTriggered("F5")) m_pRenderer->sEnableBlend = !m_pRenderer->sEnableBlend;
-	if (ENGINE->INP()->IsKeyTriggered("F6")) ToggleLightingModel();
-	if (ENGINE->INP()->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
+	if (m_input->IsKeyTriggered("F1")) m_selectedShader = EShaders::TEXTURE_COORDINATES;
+	if (m_input->IsKeyTriggered("F2")) m_selectedShader = EShaders::NORMAL;
+	if (m_input->IsKeyTriggered("F3")) m_selectedShader = EShaders::UNLIT;
+	if (m_input->IsKeyTriggered("F4")) m_selectedShader = m_selectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
 
-	if (ENGINE->INP()->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
+	if (m_input->IsKeyTriggered("F5")) m_pRenderer->sEnableBlend = !m_pRenderer->sEnableBlend;
+	if (m_input->IsKeyTriggered("F6")) ToggleLightingModel();
+	if (m_input->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
 
-	if (ENGINE->INP()->IsKeyTriggered("R")) m_sceneManager->ReloadLevel();
-	if (ENGINE->INP()->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
-	if (ENGINE->INP()->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
+	if (m_input->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
+
+	if (m_input->IsKeyTriggered("R")) m_sceneManager->ReloadLevel();
+	if (m_input->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
+	if (m_input->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
 
 	return true;
-}
-
-void Engine::RenderLights() const
-{
-	m_pRenderer->BeginEvent("Render Lights Pass");
-	m_pRenderer->Reset();	// is reset necessary?
-	m_pRenderer->SetShader(EShaders::UNLIT);
-	for (const Light& light : m_lights)
-	{
-		m_pRenderer->SetBufferObj(light._renderMesh);
-		const XMMATRIX world = light._transform.WorldTransformationMatrix();
-		const XMMATRIX worldViewProj = world  * m_sceneView.viewProj;
-		const vec3 color = light._color.Value();
-		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
-		m_pRenderer->SetConstant3f("diffuse", color);
-		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
-	}
-	m_pRenderer->EndEvent();
-}
-
-
-void Engine::SendLightData() const
-{
-	// SPOT & POINT LIGHTS
-	//--------------------------------------------------------------
-	m_pRenderer->SetConstant1f("lightCount", static_cast<float>(m_sceneLightData.pointLightCount));
-	m_pRenderer->SetConstant1f("spotCount", static_cast<float>(m_sceneLightData.spotLightCount));
-	m_pRenderer->SetConstantStruct("lights", static_cast<const void*>(m_sceneLightData.pointLights.data()));
-	m_pRenderer->SetConstantStruct("spots", static_cast<const void*>(m_sceneLightData.spotLights.data()));
-
-	// SHADOW MAPS
-	//--------------------------------------------------------------
-	// first light is spot: single shadow map support for now
-	const ShadowCasterData& caster = m_sceneLightData.shadowCasterData[0];
-	m_pRenderer->SetConstant4x4f("lightSpaceMat", caster.lightSpaceMatrix);
-	m_pRenderer->SetTexture("texShadowMap", caster.shadowMap);
-	m_pRenderer->SetSamplerState("sShadowSampler", caster.shadowSampler);
-
-#ifdef _DEBUG
-	if (m_sceneLightData.pointLightCount > m_sceneLightData.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
-	if (m_sceneLightData.spotLightCount > m_sceneLightData.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
-#endif
 }
 
 bool Engine::UpdateAndRender()
@@ -349,6 +310,48 @@ void Engine::PreRender()
 	m_sceneLightData.shadowCasterData[0].lightSpaceMatrix = m_lights[0].GetLightSpaceMatrix();
 }
 
+void Engine::RenderLights() const
+{
+	m_pRenderer->BeginEvent("Render Lights Pass");
+	m_pRenderer->Reset();	// is reset necessary?
+	m_pRenderer->SetShader(EShaders::UNLIT);
+	for (const Light& light : m_lights)
+	{
+		m_pRenderer->SetBufferObj(light._renderMesh);
+		const XMMATRIX world = light._transform.WorldTransformationMatrix();
+		const XMMATRIX worldViewProj = world  * m_sceneView.viewProj;
+		const vec3 color = light._color.Value();
+		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
+		m_pRenderer->SetConstant3f("diffuse", color);
+		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
+	}
+	m_pRenderer->EndEvent();
+}
+
+void Engine::SendLightData() const
+{
+	// SPOT & POINT LIGHTS
+	//--------------------------------------------------------------
+	m_pRenderer->SetConstant1f("lightCount", static_cast<float>(m_sceneLightData.pointLightCount));
+	m_pRenderer->SetConstant1f("spotCount", static_cast<float>(m_sceneLightData.spotLightCount));
+	m_pRenderer->SetConstantStruct("lights", static_cast<const void*>(m_sceneLightData.pointLights.data()));
+	m_pRenderer->SetConstantStruct("spots", static_cast<const void*>(m_sceneLightData.spotLights.data()));
+
+	// SHADOW MAPS
+	//--------------------------------------------------------------
+	// first light is spot: single shadow map support for now
+	const ShadowCasterData& caster = m_sceneLightData.shadowCasterData[0];
+	m_pRenderer->SetConstant4x4f("lightSpaceMat", caster.lightSpaceMatrix);
+	m_pRenderer->SetTexture("texShadowMap", caster.shadowMap);
+	m_pRenderer->SetSamplerState("sShadowSampler", caster.shadowSampler);
+
+#ifdef _DEBUG
+	if (m_sceneLightData.pointLightCount > m_sceneLightData.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
+	if (m_sceneLightData.spotLightCount > m_sceneLightData.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
+#endif
+}
 
 void Engine::Render()
 {	
@@ -374,8 +377,6 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	m_pRenderer->BeginEvent(m_useDeferredRendering ? "Deferred Lighting Pass" : "Forward Lighting Pass");
 	m_pRenderer->Reset();
-	m_pRenderer->BindDepthTarget(0);
-	m_pRenderer->SetDepthStencilState(0);
 	m_pRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
 
@@ -410,17 +411,24 @@ void Engine::Render()
 		// SKYBOX
 		if (m_activeSkybox != ESkyboxPresets::SKYBOX_PRESET_COUNT)
 		{
+			m_pRenderer->SetDepthStencilState(m_deferredRenderingPasses._skyboxStencilState);
+			m_pRenderer->BindDepthTarget(m_worldDepthTarget);
 			Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
+			m_pRenderer->UnbindDepthTarget();
+			m_pRenderer->SetDepthStencilState(m_defaultDepthStencilState);
 		}
 		
 	}
+
+
 	else
 	{	// FORWARD
 		const float clearColor[4] = { 0.2f, 0.4f, 0.3f, 1.0f };
 		const float clearDepth = 1.0f;
 
-		// MAIN PASS
 		m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);
+		m_pRenderer->BindDepthTarget(0);
+		m_pRenderer->SetDepthStencilState(m_defaultDepthStencilState);
 		m_pRenderer->Begin(clearColor, clearDepth);
 
 		// SKYBOX
@@ -435,6 +443,7 @@ void Engine::Render()
 			m_pRenderer->Apply();						// apply to bind depth stencil
 		}
 
+		// LIGHTING
 		m_pRenderer->BeginEvent("Lighting Pass");
 		m_pRenderer->SetShader(m_selectedShader);	// forward brdf/phong
 		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());

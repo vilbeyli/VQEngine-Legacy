@@ -140,7 +140,8 @@ public:
 												bool				bEnableDepthClip
 							);
 
-	DepthStencilStateID		AddDepthStencilState(
+	DepthStencilStateID		AddDepthStencilState(	bool bEnableDepth, 
+													bool bEnableStencil
 							);	// todo params
 
 	DepthStencilStateID		AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC&	dsDesc
@@ -191,6 +192,7 @@ public:
 	inline void				SetConstantStruct(const char * cName, const void* data) { SetConstant(cName, data); }
 
 	void					Begin(const float clearColor[4], const float depthValue);
+	void					Begin(const ClearCommand& clearCmd);
 	void					End();
 	void					Reset();
 

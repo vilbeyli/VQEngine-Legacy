@@ -322,23 +322,83 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	//  - Store pos.z     and compute xy from z + window.xy
 	//	- Store normal.xy and compute z = sqrt(1 - x^2 - y^2)
 	Log::Info("Done.");
+
+	{	// Geometry depth stencil state descriptor
+		D3D11_DEPTH_STENCILOP_DESC dsOpDesc = {};
+		dsOpDesc.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+		dsOpDesc.StencilDepthFailOp = D3D11_STENCIL_OP_INCR_SAT;
+		dsOpDesc.StencilPassOp = D3D11_STENCIL_OP_INCR_SAT;
+		dsOpDesc.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+		D3D11_DEPTH_STENCIL_DESC desc = {};
+		desc.FrontFace = dsOpDesc;
+		
+		//dsOpDesc.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+		desc.BackFace = dsOpDesc;
+
+		desc.DepthEnable = true;
+		desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		desc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+		desc.StencilEnable = true;
+		desc.StencilReadMask  = 0xFF;
+		desc.StencilWriteMask = 0xFF;
+
+		_geometryStencilState = pRenderer->AddDepthStencilState(desc);
+	}
+
+	{	// Skybox depth stencil state descriptor
+		D3D11_DEPTH_STENCILOP_DESC dsOpDesc = {};
+		dsOpDesc.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+		dsOpDesc.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+		dsOpDesc.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+		dsOpDesc.StencilFunc = D3D11_COMPARISON_EQUAL;
+
+		D3D11_DEPTH_STENCIL_DESC desc = {};
+		desc.FrontFace = dsOpDesc;
+
+		dsOpDesc.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+		desc.BackFace = dsOpDesc;
+
+		desc.DepthEnable = false;
+
+		desc.StencilEnable = true;
+		desc.StencilReadMask = 0xFF;
+		desc.StencilWriteMask = 0x00;
+
+		_skyboxStencilState = pRenderer->AddDepthStencilState(desc);
+	}
 }
 
 void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) const
 {
-	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	const float clearDepth = 1.0f;
+	const bool bDoClearColor = true;
+	const bool bDoClearDepth = true;
+	const bool bDoClearStencil = true;
+	ClearCommand clearCmd(
+		bDoClearColor	, bDoClearDepth	, bDoClearStencil,
+		{ 0, 0, 0, 0 }	, 1				, 0
+	);
 
 	pRenderer->SetShader(EShaders::DEFERRED_GEOMETRY);
 	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT, _GBuffer._positionRT);
+	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
+	pRenderer->SetDepthStencilState(_geometryStencilState); 
 	pRenderer->SetSamplerState("sNormalSampler", 0);
-	pRenderer->Begin(clearColor, clearDepth);
+	pRenderer->Begin(clearCmd);
 	pRenderer->Apply();
 }
 
 void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const SceneLightData& lights) const
 {
-	constexpr const float clearColor[4] = { 0,0,0,0 };
+	const bool bDoClearColor = true;
+	const bool bDoClearDepth = false;
+	const bool bDoClearStencil = false;
+	ClearCommand clearCmd(
+		bDoClearColor, bDoClearDepth, bDoClearStencil,
+		{ 0, 0, 0, 0 }, 1, 0
+	);
+
 	const vec2 screenSize(static_cast<float>(pRenderer->WindowWidth()), static_cast<float>(pRenderer->WindowHeight()));
 	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
 	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer._diffuseRoughnessRT);
@@ -348,7 +408,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
 	pRenderer->BindRenderTarget(target);
-	pRenderer->Begin(clearColor, 0);
+	pRenderer->Begin(clearCmd);
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING

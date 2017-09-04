@@ -124,4 +124,6 @@ struct DeferredRenderingPasses
 	) const;
 
 	GBuffer _GBuffer;
+	DepthStencilStateID _geometryStencilState;
+	DepthStencilStateID _skyboxStencilState;
 };

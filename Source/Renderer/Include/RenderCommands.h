@@ -22,6 +22,9 @@
 
 class Renderer;
 
+
+// inheritance?
+
 struct SetTextureCommand
 {
 	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
@@ -38,3 +41,23 @@ struct SetSamplerCommand
 	ShaderSampler	shaderSampler;
 };
 
+struct ClearCommand
+{
+	ClearCommand(bool doClearColor                          , bool doClearDepth    , bool doClearStencil, 
+				const std::array<float, 4>& clearColorValues, float clearDepthValue, unsigned char clearStencilValue) :
+		bDoClearColor(doClearColor),
+		bDoClearDepth(doClearDepth),
+		bDoClearStencil(doClearStencil),
+		clearColor(clearColorValues),
+		clearDepth(clearDepthValue),
+		clearStencil(clearStencilValue)
+	{}
+
+	bool					bDoClearColor;
+	bool					bDoClearDepth;
+	bool					bDoClearStencil;
+
+	std::array<float, 4>	clearColor;
+	float					clearDepth;
+	unsigned char			clearStencil;
+};

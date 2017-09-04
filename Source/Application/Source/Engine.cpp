@@ -252,6 +252,7 @@ bool Engine::HandleInput()
 
 void Engine::RenderLights() const
 {
+	m_pRenderer->BeginEvent("Render Lights Pass");
 	m_pRenderer->Reset();	// is reset necessary?
 	m_pRenderer->SetShader(EShaders::UNLIT);
 	for (const Light& light : m_lights)
@@ -266,6 +267,7 @@ void Engine::RenderLights() const
 		m_pRenderer->Apply();
 		m_pRenderer->DrawIndexed();
 	}
+	m_pRenderer->EndEvent();
 }
 
 
@@ -283,7 +285,7 @@ void Engine::SendLightData() const
 	// first light is spot: single shadow map support for now
 	const ShadowCasterData& caster = m_sceneLightData.shadowCasterData[0];
 	m_pRenderer->SetConstant4x4f("lightSpaceMat", caster.lightSpaceMatrix);
-	m_pRenderer->SetTexture("gShadowMap", caster.shadowMap);
+	m_pRenderer->SetTexture("texShadowMap", caster.shadowMap);
 	m_pRenderer->SetSamplerState("sShadowSampler", caster.shadowSampler);
 
 #ifdef _DEBUG
@@ -363,11 +365,14 @@ void Engine::Render()
 
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
+	m_pRenderer->BeginEvent("Shadow Pass");
 	m_pRenderer->UnbindRenderTarget();	// unbind the back render target | every pass has their own render targets
 	m_shadowMapPass.RenderShadowMaps(m_pRenderer, _shadowCasters, m_ZPassObjects);
+	m_pRenderer->EndEvent();
 
 	// LIGHTING PASS
 	//------------------------------------------------------------------------
+	m_pRenderer->BeginEvent(m_useDeferredRendering ? "Deferred Lighting Pass" : "Forward Lighting Pass");
 	m_pRenderer->Reset();
 	m_pRenderer->BindDepthTarget(0);
 	m_pRenderer->SetDepthStencilState(0);
@@ -384,8 +389,10 @@ void Engine::Render()
 		const TextureID texDepthTexture = m_pRenderer->m_state._depthBufferTexture._id;
 
 		// GEOMETRY - DEPTH PASS
+		m_pRenderer->BeginEvent("Geometry Pass");
 		m_deferredRenderingPasses.SetGeometryRenderingStates(m_pRenderer);
 		m_sceneManager->Render(m_pRenderer, m_sceneView);
+		m_pRenderer->EndEvent();
 
 		// AMBIENT OCCLUSION  PASS
 		if (m_isAmbientOcclusionOn)
@@ -394,9 +401,18 @@ void Engine::Render()
 		}
 
 		// DEFERRED LIGHTING PASS
+		m_pRenderer->BeginEvent("Lighting Pass");
 		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_sceneLightData);
+		m_pRenderer->EndEvent();
 
-		// TODO: skybox
+		//RenderLights();
+
+		// SKYBOX
+		if (m_activeSkybox != ESkyboxPresets::SKYBOX_PRESET_COUNT)
+		{
+			Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
+		}
+		
 	}
 	else
 	{	// FORWARD
@@ -419,6 +435,7 @@ void Engine::Render()
 			m_pRenderer->Apply();						// apply to bind depth stencil
 		}
 
+		m_pRenderer->BeginEvent("Lighting Pass");
 		m_pRenderer->SetShader(m_selectedShader);	// forward brdf/phong
 		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 		m_pRenderer->SetSamplerState("sNormalSampler", 0);
@@ -427,21 +444,26 @@ void Engine::Render()
 
 		SendLightData();
 		m_sceneManager->Render(m_pRenderer, m_sceneView);
+		m_pRenderer->EndEvent();
 
 		// Tangent-Bitangent-Normal drawing
 		//------------------------------------------------------------------------
 		const bool bIsShaderTBN = true;
 		if (bIsShaderTBN)
 		{
+			m_pRenderer->BeginEvent("Draw TBN Vectors");
 			m_pRenderer->SetShader(EShaders::TBN);
 			m_sceneManager->m_roomScene.cube.Render(m_pRenderer, viewProj, false);
 			m_sceneManager->m_roomScene.sphere.Render(m_pRenderer, viewProj, false);
 
 			m_pRenderer->SetShader(m_selectedShader);
+			m_pRenderer->EndEvent();
 		}
-	}
 
-	RenderLights();
+		RenderLights();
+	}
+	m_pRenderer->EndEvent();	// lighting pass
+
 
 
 #if 1
@@ -454,17 +476,13 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	if (m_debugRender)
 	{
-		// TBN test
-		//auto prevShader = m_selectedShader;
-		//m_selectedShader = m_renderData->TNBShader;
-		//RenderCentralObjects(view, proj);
-		//m_selectedShader = prevShader;
-
+		m_pRenderer->BeginEvent("Debug Pass");
 		m_pRenderer->SetShader(EShaders::DEBUG);
 		m_pRenderer->SetTexture("t_shadowMap", m_shadowMapPass._shadowMap);	// todo: decide shader naming 
 		m_pRenderer->SetBufferObj(EGeometry::QUAD);
 		m_pRenderer->Apply();
 		m_pRenderer->DrawIndexed();
+		m_pRenderer->EndEvent();
 	}
 #endif
 	m_pRenderer->End();

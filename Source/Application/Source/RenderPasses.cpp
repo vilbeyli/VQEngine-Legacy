@@ -190,6 +190,8 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 
 void PostProcessPass::Render(Renderer * pRenderer) const
 {
+	pRenderer->BeginEvent("Post Processing");
+
 	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
 
 	// ======================================================================================
@@ -201,6 +203,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 		const float brightnessThreshold = EShaders::FORWARD_BRDF == pRenderer->GetActiveShader() ? s.threshold_brdf : s.threshold_phong;
 
 		// bright filter
+		pRenderer->BeginEvent("Bloom Bright Filter");
 		pRenderer->SetShader(EShaders::BLOOM);
 		pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
 		pRenderer->UnbindDepthTarget();
@@ -210,9 +213,11 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 		pRenderer->SetConstant1f("BrightnessThreshold", brightnessThreshold);
 		pRenderer->Apply();
 		pRenderer->DrawIndexed();
+		pRenderer->EndEvent();
 
 		// blur
 		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
+		pRenderer->BeginEvent("Bloom Blur Pass");
 		pRenderer->SetShader(EShaders::BLUR);
 		for (int i = 0; i < s.blurPassCount; ++i)
 		{
@@ -232,10 +237,12 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 			pRenderer->Apply();
 			pRenderer->DrawIndexed();
 		}
+		pRenderer->EndEvent();
 
 		// additive blend combine
 		const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._colorRT);
 		const TextureID bloomTex = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[0]);
+		pRenderer->BeginEvent("Bloom Combine");
 		pRenderer->SetShader(EShaders::BLOOM_COMBINE);
 		pRenderer->BindRenderTarget(_bloomPass._finalRT);
 		pRenderer->Apply();
@@ -244,6 +251,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 		pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);
 		pRenderer->Apply();
 		pRenderer->DrawIndexed();
+		pRenderer->EndEvent();
 	}
 
 
@@ -253,6 +261,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	// ======================================================================================
 	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._isEnabled ? _bloomPass._finalRT : _worldRenderTarget);
 	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
+	pRenderer->BeginEvent("Tonemapping");
 	pRenderer->SetShader(EShaders::TONEMAPPING);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
@@ -262,7 +271,9 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	pRenderer->SetTexture("ColorTexture", colorTex);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
+	pRenderer->EndEvent();
 
+	pRenderer->EndEvent();	// Post Process
 }
 
 
@@ -343,12 +354,14 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	// AMBIENT LIGHTING
 	const float ambient = 0.0005f;
 	// todo: set ambient occlusion texture
+	pRenderer->BeginEvent("Ambient Pass");
 	pRenderer->SetShader(EShaders::DEFERRED_BRDF_AMBIENT);
 	pRenderer->SetConstant1f("ambient", ambient);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
+	pRenderer->EndEvent();
 
 	// DIFFUSE & SPECULAR LIGHTING
 	pRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
@@ -407,27 +420,10 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 
 #else
 	pRenderer->SetShader(EShaders::DEFERRED_BRDF_LIGHTING);
-	
-	// SPOT & POINT LIGHTS
-	//--------------------------------------------------------------
-	pRenderer->SetConstant1f("lightCount", static_cast<float>(lights.pointLightCount));
-	pRenderer->SetConstant1f("spotCount" , static_cast<float>(lights.spotLightCount));
-	pRenderer->SetConstantStruct("lights", static_cast<const void*>(lights.pointLights.data()));
-	pRenderer->SetConstantStruct("spots" , static_cast<const void*>(lights.spotLights.data()));
-
-	// SHADOW MAPS
-	//--------------------------------------------------------------
-	// first light is spot: single shadow map support for now
-	//const Light& caster     = lights.spotLights[0];
-	//TextureID shadowMap     = m_shadowMapPass._shadowMap;
-	//SamplerID shadowSampler = m_shadowMapPass._shadowSampler;
-	//
-	//pRenderer->SetConstant4x4f("lightSpaceMat", caster.GetLightSpaceMatrix()); // todo: support for more than 1 shadow caster
-	//
-	//pRenderer->SetTexture("gShadowMap", shadowMap);
-	//pRenderer->SetSamplerState("sShadowSampler", shadowSampler);
+	ENGINE->SendLightData();
 
 	pRenderer->SetConstant3f("CameraWorldPosition", sceneView.pCamera->GetPositionF());
+	pRenderer->SetSamplerState("sNearestSampler", 0);	// todo: nearest sampler
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);

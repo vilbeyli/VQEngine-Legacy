@@ -34,6 +34,7 @@ struct PSIn
 
 cbuffer SceneVariables
 {
+	matrix lightSpaceMat; // [arr?]
 	float  pad0;
 	float3 CameraWorldPosition;
 
@@ -43,7 +44,7 @@ cbuffer SceneVariables
 
 	Light lights[LIGHT_COUNT];
 	Light spots[SPOT_COUNT];
-	//	float ambient;
+	
 };
 
 
@@ -90,15 +91,16 @@ float4 PSMain(PSIn In) : SV_TARGET
 		IdIs += BRDF(Wi, s, V, P) * radiance;
 	}
 
-#if 0
+#if 1
 	// SPOT Lights (shadow)
-	// todo: intensity/brightness
 	//---------------------------------
-	for (int j = 0; j < spotCount; ++j)			
+	float4 lightSpacePos = mul(lightSpaceMat, float4(P,1));
+	for (int j = 0; j < spotCount; ++j)
 	{
 		const float3 Wi       = normalize(spots[j].position - P);
 		const float3 radiance = Intensity(spots[j], P) * spots[j].color;
-		IdIs += BRDF(Wi, s, V, P) * radiance * ShadowTest(P, In.lightSpacePos, texShadowMap, sShadowSampler) * dW;
+		const float3 shadowing = ShadowTest(P, lightSpacePos, texShadowMap, sShadowSampler);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
 	}
 #endif
 

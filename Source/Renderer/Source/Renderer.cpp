@@ -1248,7 +1248,7 @@ void Renderer::Apply()
 	unsigned offset = 0;
 	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_state._activeInputBuffer]->m_vertexBuffer, &stride, &offset);
 	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_state._activeInputBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-	if (shader)						 m_deviceContext->IASetInputLayout(shader->m_layout);
+	if (shader)							  m_deviceContext->IASetInputLayout(shader->m_layout);
 
 	if (shader)
 	{	// SHADER STAGES
@@ -1329,6 +1329,21 @@ void Renderer::Apply()
 	{
 		Log::Error("Renderer::Apply() : Shader null...\n");
 	}
+}
+
+void Renderer::BeginEvent(const std::string & marker)
+{
+#if _DEBUG
+	UnicodeString umarker(marker);
+	m_Direct3D->m_annotation->BeginEvent(umarker.GetUnicodePtr());
+#endif
+}
+
+void Renderer::EndEvent()
+{
+#if _DEBUG
+	m_Direct3D->m_annotation->EndEvent();
+#endif
 }
 
 void Renderer::DrawIndexed(EPrimitiveTopology topology)

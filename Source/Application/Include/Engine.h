@@ -69,6 +69,7 @@ public:
 	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
 	void			ToggleLightingModel();	// BRDF / Phong
 
+	void SendLightData() const;
 
 private:
 	Engine();
@@ -80,7 +81,6 @@ private:
 	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 	void PreRender();
 
-	void SendLightData() const;
 	void RenderLights() const;
 
 //--------------------------------------------------------------

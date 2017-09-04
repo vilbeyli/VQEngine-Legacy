@@ -196,6 +196,8 @@ public:
 
 	void					Apply();
 
+	void					BeginEvent(const std::string& marker);
+	void					EndEvent();
 	// DRAW FUNCTIONS
 	//----------------------------------------------------------------------------------
 	void					DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);

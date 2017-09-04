@@ -31,10 +31,11 @@ D3DManager::D3DManager()
 	m_wndHeight = m_wndWidth	= 0;
 }
 
+D3DManager::~D3DManager(){}
+float	 D3DManager::AspectRatio() const { return static_cast<float>(m_wndWidth) / static_cast<float>(m_wndHeight); }
+unsigned D3DManager::WindowWidth() const { return m_wndWidth; }
+unsigned D3DManager::WindowHeight() const { return m_wndHeight; }
 
-D3DManager::~D3DManager()
-{
-}
 
 bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hwnd, const bool FULL_SCREEN, DXGI_FORMAT FrameBufferFormat)
 {
@@ -174,25 +175,35 @@ void D3DManager::Shutdown()
 	if (m_deviceContext)
 	{
 		m_deviceContext->Release();
-		m_deviceContext = 0;
+		m_deviceContext = nullptr;
 	}
 
 	if (m_device)
 	{
 		m_device->Release();
-		m_device = 0;
+		m_device = nullptr;
 	}
 
 	if (m_swapChain)
 	{
 		m_swapChain->Release();
-		m_swapChain = 0;
+		m_swapChain = nullptr;
 	}
-
+#if _DEBUG
+	if (m_annotation)
+	{
+		m_annotation->Release();
+		m_annotation = nullptr;
+	}
+	
+	if (m_debug)
+	{
+		m_debug->Release();
+		m_debug = nullptr;
+	}
+#endif
 	return;
 }
-
-
 
 void D3DManager::EndFrame()
 {
@@ -214,34 +225,16 @@ void D3DManager::GetVideoCardInfo(char* cardName, int& memory)
 	return;
 }
 
-float D3DManager::AspectRatio() const
-{
-	return static_cast<float>(m_wndWidth) / static_cast<float>(m_wndHeight);
-}
-
-unsigned D3DManager::WindowWidth() const
-{
-	return m_wndWidth;
-}
-
-unsigned D3DManager::WindowHeight() const
-{
-	return m_wndHeight;
-}
-
 void D3DManager::ReportLiveObjects(const std::string& LogHeader /*= ""*/) const
 {
+#ifdef _DEBUG
 	return;	// todo:
 	if (!LogHeader.empty())
 		Log::Info(LogHeader);
 
-	ID3D11Debug* debugDevice = nullptr;
-	HRESULT hr = m_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&debugDevice);
-	
-	hr = debugDevice->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
-
-	debugDevice->Release();
-	debugDevice = nullptr;
+	HRESULT hr = m_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&m_debug);
+	hr = m_debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+#endif
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------------
@@ -325,18 +318,19 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 		return false;
 	}
 
+#ifdef _DEBUG
 	// Direct3D SDK Debug Layer Tricks
-	// src: https://blogs.msdn.microsoft.com/chuckw/2012/11/30/direct3d-sdk-debug-layer-tricks/
-	ID3D11Debug* d3dDebug = nullptr;
-	if ( SUCCEEDED(m_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&d3dDebug)) )
+	//------------------------------------------------------------------------------------------
+	// src1: https://blogs.msdn.microsoft.com/chuckw/2012/11/30/direct3d-sdk-debug-layer-tricks/
+	// src2: http://seanmiddleditch.com/direct3d-11-debug-api-tricks/
+	//------------------------------------------------------------------------------------------
+	if ( SUCCEEDED(m_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&m_debug)) )
 	{
 		ID3D11InfoQueue* d3dInfoQueue = nullptr;
-		if (SUCCEEDED(d3dDebug->QueryInterface(__uuidof(ID3D11InfoQueue), (void**)&d3dInfoQueue)))
+		if (SUCCEEDED(m_debug->QueryInterface(__uuidof(ID3D11InfoQueue), (void**)&d3dInfoQueue)))
 		{
-#ifdef _DEBUG	// move top?
 			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
 			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
-#endif
 			D3D11_MESSAGE_ID hide[] =
 			{
 				D3D11_MESSAGE_ID_DEVICE_DRAW_RENDERTARGETVIEW_NOT_SET,
@@ -350,149 +344,14 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 			d3dInfoQueue->AddStorageFilterEntries(&filter);
 			d3dInfoQueue->Release();
 		}
-		d3dDebug->Release();
 	}
 
-	return true;
-}
-
-bool D3DManager::InitializeDepthBuffer(int scrWidth, int scrHeight, ID3D11Texture2D* depthStencilBuffer)
-{
-
-	HRESULT result;
-	D3D11_TEXTURE2D_DESC depthBufferDesc;
-
-	// Initialize the description of the depth buffer.
-	ZeroMemory(&depthBufferDesc, sizeof(depthBufferDesc));
-
-	// Set up the description of the depth buffer.
-	depthBufferDesc.Width = scrWidth;
-	depthBufferDesc.Height = scrHeight;
-	depthBufferDesc.MipLevels = 1;
-	depthBufferDesc.ArraySize = 1;
-	depthBufferDesc.Format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-	depthBufferDesc.SampleDesc.Count = 1;
-	depthBufferDesc.SampleDesc.Quality = 0;
-	depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-	depthBufferDesc.CPUAccessFlags = 0;
-	depthBufferDesc.MiscFlags = 0;
-
-	// Create the texture for the depth buffer using the filled out description.
-	result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &depthStencilBuffer);
-	if (FAILED(result))
+	if ( FAILED(m_deviceContext->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)&m_annotation)) )
 	{
+		Log::Error("Can't Query(ID3DUserDefinedAnnotation)");
 		return false;
 	}
+#endif
 
 	return true;
 }
-
-//bool D3DManager::InitStencilView(D3D11_TEXTURE2D_DESC tex2DDesc)
-//{
-//#if 0
-//	HRESULT result;
-//	D3D11_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc;
-//
-//	// Initialize the depth stencil view.
-//	ZeroMemory(&depthStencilViewDesc, sizeof(depthStencilViewDesc));
-//
-//	// Set up the depth stencil view description.
-//	depthStencilViewDesc.Format = tex2DDesc.Format;
-//	depthStencilViewDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-//	depthStencilViewDesc.Texture2D.MipSlice = 0;
-//
-//	// Create the depth stencil view.
-//	result = m_device->CreateDepthStencilView(m_depthStencilBuffer, &depthStencilViewDesc, &m_depthStencilView);
-//	if (FAILED(result))
-//	{
-//		return false;
-//	}
-//#endif
-//	return true;
-//}
-//
-//D3D11_VIEWPORT D3DManager::InitializeViewport(int scrWidth, int scrHeight)
-//{
-//	D3D11_VIEWPORT viewport;
-//	viewport.Width = (float)scrWidth;
-//	viewport.Height = (float)scrHeight;
-//	viewport.MinDepth = 0.0f;
-//	viewport.MaxDepth = 1.0f;
-//	viewport.TopLeftX = 0.0f;
-//	viewport.TopLeftY = 0.0f;
-//	return viewport;
-//}
-//
-//bool D3DManager::InitAlphaBlending()
-//{
-//	HRESULT result;
-//	D3D11_BLEND_DESC blendStateDesc;
-//
-//	ZeroMemory(&blendStateDesc, sizeof(blendStateDesc));
-//
-//	// initialize/clear description
-//	blendStateDesc.RenderTarget[0].BlendEnable				= TRUE;
-//	blendStateDesc.RenderTarget[0].SrcBlend					= D3D11_BLEND_SRC_ALPHA;
-//	blendStateDesc.RenderTarget[0].DestBlend				= D3D11_BLEND_INV_SRC_ALPHA;
-//	blendStateDesc.RenderTarget[0].BlendOp					= D3D11_BLEND_OP_ADD;
-//	blendStateDesc.RenderTarget[0].SrcBlendAlpha			= D3D11_BLEND_ONE;
-//	blendStateDesc.RenderTarget[0].DestBlendAlpha			= D3D11_BLEND_ZERO;
-//	blendStateDesc.RenderTarget[0].BlendOpAlpha				= D3D11_BLEND_OP_ADD;
-//	blendStateDesc.RenderTarget[0].RenderTargetWriteMask	= 0x0f;
-//
-//	// create blend states
-//	result = m_device->CreateBlendState(&blendStateDesc, &m_alphaEnableBlendState);
-//	if (FAILED(result))
-//	{
-//		return false;
-//	}
-//
-//	blendStateDesc.RenderTarget[0].BlendEnable = FALSE;
-//	result = m_device->CreateBlendState(&blendStateDesc, &m_alphaDisableBlendState);
-//	if (FAILED(result))
-//	{
-//		return false;
-//	}
-//
-//	return true;
-//}
-//
-//bool D3DManager::InitZBuffer()
-//{
-//	HRESULT result;
-//	D3D11_DEPTH_STENCIL_DESC depthDisabledStencilDesc;
-//
-//	// clear the desciprtion;
-//	ZeroMemory(&depthDisabledStencilDesc, sizeof(depthDisabledStencilDesc));
-//
-//	// Set up the description of the stencil state.
-//	depthDisabledStencilDesc.DepthEnable = false;
-//	depthDisabledStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-//	depthDisabledStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
-//
-//	depthDisabledStencilDesc.StencilEnable = true;
-//	depthDisabledStencilDesc.StencilReadMask = 0xFF;
-//	depthDisabledStencilDesc.StencilWriteMask = 0xFF;
-//
-//	// Stencil operations if pixel is front-facing.
-//	depthDisabledStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-//	depthDisabledStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-//	depthDisabledStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-//	depthDisabledStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-//
-//	// Stencil operations if pixel is back-facing.
-//	depthDisabledStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-//	depthDisabledStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-//	depthDisabledStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-//	depthDisabledStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-//
-//	// create blend states
-//	result = m_device->CreateDepthStencilState(&depthDisabledStencilDesc, &m_depthDisabledStencilState);
-//	if (FAILED(result))
-//	{
-//		return false;
-//	}
-//
-//	return true;
-//}

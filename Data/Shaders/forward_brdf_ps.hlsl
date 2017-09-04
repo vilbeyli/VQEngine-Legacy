@@ -63,9 +63,9 @@ cbuffer SurfaceMaterial
 	float  metalness;
 };
 
-Texture2D gDiffuseMap;
-Texture2D gNormalMap;
-Texture2D gShadowMap;
+Texture2D gDiffuseMap; // todo: gTextureName -> texTextureName
+Texture2D gNormalMap;  // todo: gTextureName -> texTextureName
+Texture2D texShadowMap;
 
 SamplerState sShadowSampler;
 SamplerState sNormalSampler;
@@ -111,7 +111,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	{
 		const float3 Wi       = normalize(spots[j].position - P);
 		const float3 radiance = Intensity(spots[j], P) * spots[j].color;
-		const float shadowing = ShadowTest(P, In.lightSpacePos, gShadowMap, sShadowSampler);
+		const float shadowing = ShadowTest(P, In.lightSpacePos, texShadowMap, sShadowSampler);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
 	}
 	

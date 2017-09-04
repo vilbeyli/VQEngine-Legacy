@@ -64,13 +64,16 @@ void Skybox::Render(const XMMATRIX& viewProj) const
 {
 	assert(pRenderer);	// assert we initialized the skybox object
 	const XMMATRIX wvp = viewProj;
+
+	pRenderer->BeginEvent("Skybox Pass");
 	pRenderer->SetShader(skydomeShader);
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);
 	pRenderer->SetTexture("gSkybox", skydomeTex);
-	pRenderer->SetSamplerState("samTriLinearSam", 0);	// uses default sampler state
+	pRenderer->SetSamplerState("samTriLinearSam", 0);	// uses default sampler state | todo: enum samplers
 	pRenderer->SetBufferObj(EGeometry::CUBE);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
+	pRenderer->EndEvent();
 }
 
 

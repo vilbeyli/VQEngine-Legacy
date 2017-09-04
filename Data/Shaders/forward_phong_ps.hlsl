@@ -59,9 +59,10 @@ cbuffer SufaceMaterial
 	float isNormalMap;
 };
 
-Texture2D gDiffuseMap;
-Texture2D gNormalMap;
-Texture2D gShadowMap;
+Texture2D gDiffuseMap; // todo: gTextureName -> texTextureName
+Texture2D gNormalMap;  // todo: gTextureName -> texTextureName
+Texture2D texShadowMap;
+
 
 SamplerState sShadowSampler;
 SamplerState sNormalSampler;
@@ -112,12 +113,12 @@ float4 PSMain(PSIn In) : SV_TARGET
 		IdIs += Phong(lights[i], s, V, In.worldPos) * Attenuation(lights[i].attenuation, length(lights[i].position - In.worldPos), bUsePhongAttenuation);
 
 	for (int j = 0; j < spotCount; ++j)		// SPOT Lights
-		IdIs += Phong(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos) * ShadowTest(In.worldPos, In.lightSpacePos, gShadowMap, sShadowSampler);
+		IdIs += Phong(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos) * ShadowTest(In.worldPos, In.lightSpacePos, texShadowMap, sShadowSampler);
 
 	float3 illumination = Ia + IdIs;
 	
 	// --- debug --- 
-	// illumination += ShadowTestDebug(In.worldPos, In.lightSpacePos, illumination, gShadowMap, sShadowSampler);
+	// illumination += ShadowTestDebug(In.worldPos, In.lightSpacePos, illumination, texShadowMap, sShadowSampler);
 	// --- debug --- 
 	return float4(illumination, 1);	
 }

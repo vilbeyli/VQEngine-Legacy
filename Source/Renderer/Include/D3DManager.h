@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include <d3d11.h>
+#include <d3d11_1.h>
 #include <string>
 
 // auto convert for enum classes: https://stackoverflow.com/questions/8357240/how-to-automatically-convert-strongly-typed-enum-into-int/8357462#8357462
@@ -52,7 +52,6 @@ public:
 
 private:
 	bool InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator, DXGI_FORMAT FrameBufferFormat);
-	bool InitializeDepthBuffer(int scrWidth, int scrHeight, ID3D11Texture2D* depthStencilBuffer);
 
 private:
 	bool						m_vsync_enabled;
@@ -65,7 +64,12 @@ private:
 	ID3D11Device*				m_device;			// shared ptr
 	ID3D11DeviceContext*		m_deviceContext;
 	
-	
 	unsigned					m_wndWidth, m_wndHeight;
+
+
+#if _DEBUG
+	ID3D11Debug*				m_debug;
+	ID3DUserDefinedAnnotation*	m_annotation;
+#endif
 };
 

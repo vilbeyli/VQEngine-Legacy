@@ -36,179 +36,21 @@ Engine::Engine()
 	:
 	m_pRenderer(new Renderer()),
 	m_input(new Input()),
+	m_timer(new PerfTimer()),
 	m_sceneManager(new SceneManager(m_pCamera, m_lights)),
 	m_pCamera(new Camera()),
-	m_timer(new PerfTimer()),
+	m_activeSkybox(ESkyboxPresets::SKYBOX_PRESET_COUNT),	// default: none
 	m_bUsePaniniProjection(false)
 {}
 
 Engine::~Engine(){}
 
-const Settings::Renderer& Engine::InitializeRendererSettingsFromFile()
-{
-	s_rendererSettings = SceneParser::ReadRendererSettings();
-	
-	return s_rendererSettings;
-}
-
-bool Engine::Initialize(HWND hwnd)
-{
-	if (!m_pRenderer || !m_input || !m_sceneManager || !m_timer)
-	{
-		Log::Error("Nullptr Engine::Init()\n");
-		return false;
-	}
-
-	// INITIALIZE SYSTEMS
-	//--------------------------------------------------------------
-	const bool bEnableLogging = true;	// todo: read from settings
-	Log::Initialize(bEnableLogging);
-	
-	constexpr size_t workerCount = 1;
-	m_workerPool.Initialize(workerCount);
-		
-	m_input->Initialize();
-	
-
-	// INITIALIZE RENDERING
-	//--------------------------------------------------------------
-	if (!m_pRenderer->Initialize(hwnd, s_rendererSettings))
-	{
-		Log::Error("Cannot initialize Renderer.\n");
-		return false;
-	}
-
-	m_useDeferredRendering = s_rendererSettings.bUseDeferredRendering;
-	if (m_useDeferredRendering)
-	{
-		m_deferredRenderingPasses.InitializeGBuffer(m_pRenderer);
-	}
-	m_selectedShader = m_useDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
-
-	m_isAmbientOcclusionOn = s_rendererSettings.bAmbientOcclusion;
-	m_debugRender = false;
-
-	Skybox::InitializePresets(m_pRenderer);
-	return true;
-}
-
-bool Engine::Load()
-{
-	bool bLoadSuccess = false;
-	m_sceneManager->Load(m_pRenderer, nullptr, s_rendererSettings, m_pCamera);
-	{	// RENDER PASS INITIALIZATION
-		// todo: static game object array in gameobj.h 
-		m_shadowMapPass.Initialize(m_pRenderer, m_pRenderer->m_device, s_rendererSettings.shadowMap);
-		//renderer->m_Direct3D->ReportLiveObjects();
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.floor);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallL);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallR);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallF);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.ceiling);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.quad);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.grid);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.cylinder);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.triangle);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.cube);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.sphere);
-		for (GameObject& obj : m_sceneManager->m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
-		for (GameObject& obj : m_sceneManager->m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
-
-		m_postProcessPass.Initialize(m_pRenderer, s_rendererSettings.postProcess);
-
-		// Samplers
-		D3D11_SAMPLER_DESC normalSamplerDesc = {};
-		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-		normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-		normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-		normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		normalSamplerDesc.MinLOD = 0.f;
-		normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-		normalSamplerDesc.MipLODBias = 0.f;
-		normalSamplerDesc.MaxAnisotropy = 0;
-		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-		m_normalSampler = m_pRenderer->CreateSamplerState(normalSamplerDesc);
-	}
-
-	bLoadSuccess = true;
-	return bLoadSuccess;
-}
 
 void Engine::TogglePause()
 {
 	m_isPaused = !m_isPaused;
 }
 
-void Engine::CalcFrameStats()
-{
-	static long  frameCount = 0;
-	static float timeElaped = -0.9f;
-	constexpr float UpdateInterval = 0.5f;
-
-	++frameCount;
-	if (m_timer->TotalTime() - timeElaped >= UpdateInterval)
-	{
-		float fps = static_cast<float>(frameCount);	// #frames / 1.0f
-		float frameTime = 1000.0f / fps;			// milliseconds
-
-		std::ostringstream stats;
-		stats.precision(2);
-		stats	<< "VDemo | "
-				<< "dt: " << frameTime << "ms "; 
-		stats.precision(4);
-		stats	<< "FPS: " << fps;
-		SetWindowText(m_pRenderer->GetWindow(), stats.str().c_str());
-		frameCount = 0;
-		timeElaped += UpdateInterval;
-	}
-}
-
-void Engine::RenderLights() const
-{
-	m_pRenderer->Reset();	// is reset necessary?
-	m_pRenderer->SetShader(EShaders::UNLIT);
-	//	for (const Light& light : m_lights)
-	//	{
-	//		m_pRenderer->SetBufferObj(light._renderMesh);
-	//		const XMMATRIX world = light._transform.WorldTransformationMatrix();
-	//		const XMMATRIX worldViewProj = world  * viewProj;
-	//		const vec3 color = light._color.Value();
-	//		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
-	//		m_pRenderer->SetConstant3f("diffuse", color);
-	//		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
-	//		m_pRenderer->Apply();
-	//		m_pRenderer->DrawIndexed();
-	//	}
-}
-
-
-bool Engine::HandleInput()
-{
-	if (m_input->IsKeyDown(VK_ESCAPE))
-	{
-		return false;
-	}
-
-	if (m_input->IsKeyTriggered(0x08)) // Key backspace
-		TogglePause();
-
-	if (ENGINE->INP()->IsKeyTriggered("F1")) m_selectedShader = EShaders::TEXTURE_COORDINATES;
-	if (ENGINE->INP()->IsKeyTriggered("F2")) m_selectedShader = EShaders::NORMAL;
-	if (ENGINE->INP()->IsKeyTriggered("F3")) m_selectedShader = EShaders::UNLIT;
-	if (ENGINE->INP()->IsKeyTriggered("F4")) m_selectedShader = m_selectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
-	m_pRenderer->SetShader(0);
-	if (ENGINE->INP()->IsKeyTriggered("F5")) m_pRenderer->sEnableBlend = !m_pRenderer->sEnableBlend;
-	if (ENGINE->INP()->IsKeyTriggered("F6")) ToggleLightingModel();
-	if (ENGINE->INP()->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
-
-	if (ENGINE->INP()->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
-
-	if (ENGINE->INP()->IsKeyTriggered("R")) m_sceneManager->ReloadLevel();
-	if (ENGINE->INP()->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
-	if (ENGINE->INP()->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
-
-	return true;
-}
 
 void Engine::Exit()
 {
@@ -264,6 +106,168 @@ float Engine::TotalTime() const
 	return m_timer->TotalTime();
 }
 
+const Settings::Renderer& Engine::InitializeRendererSettingsFromFile()
+{
+	s_rendererSettings = SceneParser::ReadRendererSettings();
+	
+	return s_rendererSettings;
+}
+
+bool Engine::Initialize(HWND hwnd)
+{
+	if (!m_pRenderer || !m_input || !m_sceneManager || !m_timer)
+	{
+		Log::Error("Nullptr Engine::Init()\n");
+		return false;
+	}
+
+	// INITIALIZE SYSTEMS
+	//--------------------------------------------------------------
+	const bool bEnableLogging = true;	// todo: read from settings
+	Log::Initialize(bEnableLogging);
+	
+	constexpr size_t workerCount = 1;
+	m_workerPool.Initialize(workerCount);
+		
+	m_input->Initialize();
+	
+
+	// INITIALIZE RENDERING
+	//--------------------------------------------------------------
+	if (!m_pRenderer->Initialize(hwnd, s_rendererSettings))
+	{
+		Log::Error("Cannot initialize Renderer.\n");
+		return false;
+	}
+
+	m_useDeferredRendering = s_rendererSettings.bUseDeferredRendering;
+	if (m_useDeferredRendering)
+	{
+		m_deferredRenderingPasses.InitializeGBuffer(m_pRenderer);
+	}
+	m_selectedShader = m_useDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
+
+	m_isAmbientOcclusionOn = s_rendererSettings.bAmbientOcclusion;
+	m_debugRender = false;
+
+	Skybox::InitializePresets(m_pRenderer);
+	return true;
+}
+
+bool Engine::Load()
+{
+	bool bLoadSuccess = false;
+	m_sceneManager->Load(m_pRenderer, nullptr, s_rendererSettings, m_pCamera);
+	{	// RENDER PASS INITIALIZATION
+		// todo: static game object array in gameobj.h or engine.h
+		m_shadowMapPass.Initialize(m_pRenderer, m_pRenderer->m_device, s_rendererSettings.shadowMap);
+		//renderer->m_Direct3D->ReportLiveObjects();
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.floor);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallL);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallR);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallF);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.ceiling);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.quad);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.grid);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.cylinder);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.triangle);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.cube);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.sphere);
+		for (GameObject& obj : m_sceneManager->m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
+		for (GameObject& obj : m_sceneManager->m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
+
+		m_postProcessPass.Initialize(m_pRenderer, s_rendererSettings.postProcess);
+
+		// Samplers
+		D3D11_SAMPLER_DESC normalSamplerDesc = {};
+		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		normalSamplerDesc.MinLOD = 0.f;
+		normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+		normalSamplerDesc.MipLODBias = 0.f;
+		normalSamplerDesc.MaxAnisotropy = 0;
+		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+		m_normalSampler = m_pRenderer->CreateSamplerState(normalSamplerDesc);
+	}
+
+	m_activeSkybox = m_sceneManager->GetSceneSkybox();
+
+	bLoadSuccess = true;
+	return bLoadSuccess;
+}
+
+void Engine::CalcFrameStats()
+{
+	static long  frameCount = 0;
+	static float timeElaped = -0.9f;
+	constexpr float UpdateInterval = 0.5f;
+
+	++frameCount;
+	if (m_timer->TotalTime() - timeElaped >= UpdateInterval)
+	{
+		float fps = static_cast<float>(frameCount);	// #frames / 1.0f
+		float frameTime = 1000.0f / fps;			// milliseconds
+
+		std::ostringstream stats;
+		stats.precision(2);
+		stats	<< "VDemo | "
+				<< "dt: " << frameTime << "ms "; 
+		stats.precision(4);
+		stats	<< "FPS: " << fps;
+		SetWindowText(m_pRenderer->GetWindow(), stats.str().c_str());
+		frameCount = 0;
+		timeElaped += UpdateInterval;
+	}
+}
+
+bool Engine::HandleInput()
+{
+	if (m_input->IsKeyDown(VK_ESCAPE))
+	{
+		return false;
+	}
+
+	if (m_input->IsKeyTriggered(0x08)) // Key backspace
+		TogglePause();
+
+	if (ENGINE->INP()->IsKeyTriggered("F1")) m_selectedShader = EShaders::TEXTURE_COORDINATES;
+	if (ENGINE->INP()->IsKeyTriggered("F2")) m_selectedShader = EShaders::NORMAL;
+	if (ENGINE->INP()->IsKeyTriggered("F3")) m_selectedShader = EShaders::UNLIT;
+	if (ENGINE->INP()->IsKeyTriggered("F4")) m_selectedShader = m_selectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
+	m_pRenderer->SetShader(0);
+	if (ENGINE->INP()->IsKeyTriggered("F5")) m_pRenderer->sEnableBlend = !m_pRenderer->sEnableBlend;
+	if (ENGINE->INP()->IsKeyTriggered("F6")) ToggleLightingModel();
+	if (ENGINE->INP()->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
+
+	if (ENGINE->INP()->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
+
+	if (ENGINE->INP()->IsKeyTriggered("R")) m_sceneManager->ReloadLevel();
+	if (ENGINE->INP()->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
+	if (ENGINE->INP()->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
+
+	return true;
+}
+
+void Engine::RenderLights() const
+{
+	m_pRenderer->Reset();	// is reset necessary?
+	m_pRenderer->SetShader(EShaders::UNLIT);
+	for (const Light& light : m_lights)
+	{
+		m_pRenderer->SetBufferObj(light._renderMesh);
+		const XMMATRIX world = light._transform.WorldTransformationMatrix();
+		const XMMATRIX worldViewProj = world  * m_sceneView.viewProj;
+		const vec3 color = light._color.Value();
+		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
+		m_pRenderer->SetConstant3f("diffuse", color);
+		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+		m_pRenderer->Apply();
+		m_pRenderer->DrawIndexed();
+	}
+}
+
 
 void Engine::SendLightData() const
 {
@@ -317,7 +321,7 @@ void Engine::PreRender()
 	const XMMATRIX view = m_pCamera->GetViewMatrix();
 	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
 	m_sceneView.viewProj = view * proj;
-	m_sceneView.pCamera = m_pCamera.get();
+	m_sceneView.pCamera = m_pCamera;
 
 	// gather scene lights
 	size_t spotCount = 0;	size_t lightCount = 0;
@@ -346,7 +350,7 @@ void Engine::PreRender()
 void Engine::Render()
 {	
 	const XMMATRIX& viewProj = m_sceneView.viewProj;
-
+	
 	// get shadow casters (todo: static/dynamic lights)
 	std::vector<const Light*> _shadowCasters;
 	for (const Light& light : m_sceneManager->m_roomScene.m_lights)
@@ -364,7 +368,7 @@ void Engine::Render()
 	// LIGHTING pass
 	//------------------------------------------------------------------------
 	m_pRenderer->Reset();
-	m_pRenderer->BindDepthStencil(0);
+	m_pRenderer->BindDepthTarget(0);
 	m_pRenderer->SetDepthStencilState(0);
 	m_pRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
@@ -393,14 +397,26 @@ void Engine::Render()
 	}
 	else
 	{
-		const float clearColor[4] = { 0.2f, 0.4f, 0.7f, 1.0f };
+		const float clearColor[4] = { 0.2f, 0.4f, 0.3f, 1.0f };
 		const float clearDepth = 1.0f;
 
 		// MAIN PASS
-		//------------------------------------------------------------------------
-		m_pRenderer->SetShader(m_selectedShader);	// forward brdf/phong
 		m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);
 		m_pRenderer->Begin(clearColor, clearDepth);
+
+		// SKYBOX
+		// if we're not rendering the skybox, call apply() to unbind
+		// shadow light depth target so we can bind it in the lighting pass
+		// otherwise, skybox render pass will take care of it
+		if (m_activeSkybox != ESkyboxPresets::SKYBOX_PRESET_COUNT)	Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
+		else
+		{
+			// todo: this might be costly, profile this
+			m_pRenderer->SetShader(m_selectedShader);	// set shader so apply won't complain 
+			m_pRenderer->Apply();						// apply to bind depth stencil
+		}
+
+		m_pRenderer->SetShader(m_selectedShader);	// forward brdf/phong
 		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 		m_pRenderer->SetSamplerState("sNormalSampler", 0);
 		m_pRenderer->SetConstant1f("fovH", m_pCamera->m_settings.fovH * DEG2RAD);
@@ -411,18 +427,18 @@ void Engine::Render()
 
 		// Tangent-Bitangent-Normal drawing
 		//------------------------------------------------------------------------
-		//const bool bIsShaderTBN = true;
-		//if (bIsShaderTBN)
-		//{
-		//	m_pRenderer->SetShader(EShaders::TBN);
-		//	m_roomScene.cube.Render(m_pRenderer, viewProj, false);
-		//	m_roomScene.sphere.Render(m_pRenderer, viewProj, false);
-		//
-		//	m_pRenderer->SetShader(m_selectedShader);
-		//}
+		const bool bIsShaderTBN = true;
+		if (bIsShaderTBN)
+		{
+			m_pRenderer->SetShader(EShaders::TBN);
+			m_sceneManager->m_roomScene.cube.Render(m_pRenderer, viewProj, false);
+			m_sceneManager->m_roomScene.sphere.Render(m_pRenderer, viewProj, false);
+
+			m_pRenderer->SetShader(m_selectedShader);
+		}
 	}
 
-	//RenderLights(viewProj);
+	RenderLights();
 
 
 #if 1

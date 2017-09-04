@@ -51,6 +51,8 @@ public:
 	SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights);	// lights passed down to RoomScene
 	~SceneManager();
 
+	ESkyboxPresets GetSceneSkybox() const;
+
 	void Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings, shared_ptr<Camera> pCamera);
 
 	void Update(float dt);

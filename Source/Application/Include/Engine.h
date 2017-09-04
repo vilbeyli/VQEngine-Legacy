@@ -24,6 +24,7 @@
 
 #include "RenderPasses.h"
 #include "Light.h"
+#include "Skybox.h"
 
 #include <memory>
 using std::shared_ptr;
@@ -97,27 +98,32 @@ private:
 	static Engine*					s_instance;
 	static Settings::Renderer		s_rendererSettings;
 	
+	bool							m_isPaused;
+
+	// systems
+	//--------------------------------------------------------
 	Input*							m_input;
 	Renderer*						m_pRenderer;
 	SceneManager*					m_sceneManager;
 	PerfTimer*						m_timer;
-	shared_ptr<Camera>				m_pCamera;	// support only 1 main camera for now
-
-	bool							m_isPaused;
 	WorkerPool						m_workerPool;
 
+	// scene
+	//--------------------------------------------------------
+	shared_ptr<Camera>				m_pCamera;	// support only 1 main camera for now
 	SceneView						m_sceneView;
 	SceneLightData					m_sceneLights;
 	std::vector<Light>				m_lights;
+	ESkyboxPresets					m_activeSkybox;
 
 	bool							m_bUsePaniniProjection;
 	//PathManager*					m_pPathManager; // unused
 
 	// rendering passes
+	//--------------------------------------------------------
 	SamplerID						m_normalSampler;
 	ShadowMapPass					m_shadowMapPass;
 	PostProcessPass					m_postProcessPass;
-	// Lighting pass?
 	bool							m_useDeferredRendering;
 	bool							m_isAmbientOcclusionOn;
 	DeferredRenderingPasses			m_deferredRenderingPasses;

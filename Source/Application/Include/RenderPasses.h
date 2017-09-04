@@ -23,6 +23,8 @@
 
 #include <array>
 #include <vector>
+#include <memory>
+using std::shared_ptr;
 
 #include <DirectXMath.h> // todo wrap utils/math
 using namespace DirectX;
@@ -36,8 +38,8 @@ struct ID3D11Device;
 struct SceneLightData;
 struct SceneView
 {
-	XMMATRIX viewProj;
-	Camera*  pCamera;
+	XMMATRIX			viewProj;
+	shared_ptr<Camera>  pCamera;
 };
 
 struct ShadowMapPass
@@ -61,7 +63,7 @@ struct ShadowMapPass
 	RasterizerStateID		_drawRenderState;
 	RasterizerStateID		_shadowRenderState;
 	D3D11_VIEWPORT			_shadowViewport;
-	DepthStencilID			_dsv;
+	DepthTargetID			_shadowDepthTarget;
 };
 
 struct BloomPass

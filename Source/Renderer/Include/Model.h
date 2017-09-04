@@ -64,7 +64,7 @@ public:
 	~Model() {}
 
 public:
-	BufferID m_mesh;
+	InputBufferID m_mesh;
 	Material m_material;
 };
 

@@ -21,7 +21,7 @@
 
 class Renderer;
 
-enum SKYBOX_PRESETS
+enum ESkyboxPresets
 {
 	NIGHT_SKY = 0,
 
@@ -34,11 +34,10 @@ public:
 	static std::vector<Skybox> s_Presets;
 	static void InitializePresets(Renderer* pRenderer);
 	
-	void Render(const XMMATRIX& viewProj, float fovH) const;
+	void Render(const XMMATRIX& viewProj) const;
 
-	Skybox& Initialize(Renderer* renderer, const Texture& cubemapTexture, float scale, int shader);
+	Skybox& Initialize(Renderer* renderer, const Texture& cubemapTexture, int shader);
 private:
-	GameObject	skydomeObj;	// do we really need a gameobj?
 	TextureID	skydomeTex;
 	ShaderID	skydomeShader;
 	Renderer*	pRenderer;

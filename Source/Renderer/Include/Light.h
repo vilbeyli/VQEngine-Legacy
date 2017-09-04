@@ -23,7 +23,7 @@
 #include "Color.h"
 #include <DirectXMath.h>
 
-using BufferID = int; // warning: duplicate definition
+using InputBufferID = int; // warning: duplicate definition
 
 struct LightShaderSignature
 {
@@ -71,21 +71,20 @@ struct Light
 
 	//---------------------------------------------------------------------------------
 	
-	ELightType	_type;
-	Color		_color;
-	float		_range;
-	float		_brightness;	// 300.0f is a good default value
-	
-	bool		_castsShadow;
+	ELightType		_type;
+	Color			_color;
+	float			_range;
+	float			_brightness;	// 300.0f is a good default value
+	bool			_castsShadow;
 
 	union 
 	{	// point light attributes
-		vec2 _attenuation;
-		vec2 _spotAngle;	// uses only X channel of the vec2
+		vec2		_attenuation;
+		vec2		_spotAngle;	// uses only X channel of the vec2
 	};	
 
-	Transform	_transform;
-	BufferID	_renderMesh;
+	Transform		_transform;
+	InputBufferID	_renderMesh;
 };
 
 

@@ -135,11 +135,11 @@ enum EShaders
 
 
 using ShaderID = int;
-using BufferID = int;
+using InputBufferID = int;
 using TextureID = int;
 using SamplerID = int;
 using RasterizerStateID = int;
 using BlendStateID = int;
 using DepthStencilStateID = int;
 using RenderTargetID = int;
-using DepthStencilID = int;
+using DepthTargetID = int;

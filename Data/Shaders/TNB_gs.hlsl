@@ -53,7 +53,7 @@ void GSMain(triangle GSIn gin[3], inout LineStream<PSIn> lineStream)
 		const float4 NPos    = mul(viewProj, float4(gin[i].WorldPosition + gin[i].N*scale, 1));
 		const float4 BPos    = mul(viewProj, float4(gin[i].WorldPosition + gin[i].B*scale, 1));
 
-		const float3 red	= float3(1, 0, 0) * 50;	// bloom fun
+		const float3 red	= float3(1, 0, 0) * 1.8;	// bloom fun
 		const float3 blue	= float3(0, 0, 1) * 1.2;
 		const float3 green	= float3(0, 1, 0) * 2;
 

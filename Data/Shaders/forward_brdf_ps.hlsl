@@ -111,9 +111,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	{
 		const float3 Wi       = normalize(spots[j].position - P);
 		const float3 radiance = Intensity(spots[j], P) * spots[j].color;
-		IdIs += BRDF(Wi, s, V, P) * radiance * ShadowTest(P, In.lightSpacePos, gShadowMap, sShadowSampler);
+		const float shadowing = ShadowTest(P, In.lightSpacePos, gShadowMap, sShadowSampler);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
 	}
-	
 	
 	const float3 illumination = Ia + IdIs;
 	return float4(illumination, 1);

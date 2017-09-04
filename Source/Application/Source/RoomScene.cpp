@@ -61,7 +61,7 @@ void RoomScene::Load(Renderer* pRenderer, SerializedScene& scene)
 	InitializeLights(scene);
 	InitializeObjectArrays();
 
-	m_skybox = Skybox::s_Presets[SKYBOX_PRESETS::NIGHT_SKY];
+	m_skybox = ESkyboxPresets::NIGHT_SKY;
 }
 
 void RoomScene::Update(float dt)
@@ -72,7 +72,6 @@ void RoomScene::Update(float dt)
 
 void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj);
 
-#include "Camera.h"
 void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
 {
 	const ShaderID selectedShader = ENGINE->GetSelectedShader();
@@ -84,11 +83,6 @@ void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
 		|| selectedShader == EShaders::DEFERRED_GEOMETRY
 	);
 
-	if(selectedShader != EShaders::DEFERRED_GEOMETRY)
-		m_skybox.Render(sceneView.viewProj, sceneView.pCamera->m_settings.fovH * DEG2RAD);
-
-	pRenderer->SetShader(selectedShader);	// necessary?
-	
 	m_room.Render(m_pRenderer, sceneView.viewProj, bSendMaterialData);
 	RenderCentralObjects(sceneView.viewProj, bSendMaterialData);
 }

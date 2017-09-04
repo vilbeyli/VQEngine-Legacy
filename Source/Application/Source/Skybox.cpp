@@ -28,53 +28,55 @@ const  FilePaths s_filePaths = []{
 	// 4: FRONT		5: BACK
 	//------------------------------------------------------------------------------------------------------
 
-	FilePaths paths(SKYBOX_PRESETS::SKYBOX_PRESET_COUNT * 6);	// use as an array to access using enum
+	FilePaths paths(ESkyboxPresets::SKYBOX_PRESET_COUNT * 6);	// use as an array to access using enum
 	
 	// night sky by: Hazel Whorley
-	paths[SKYBOX_PRESETS::NIGHT_SKY + 0] = "night_sky/nightsky_rt.png";
-	paths[SKYBOX_PRESETS::NIGHT_SKY + 1] = "night_sky/nightsky_lf.png";
-	paths[SKYBOX_PRESETS::NIGHT_SKY + 2] = "night_sky/nightsky_up.png";
-	paths[SKYBOX_PRESETS::NIGHT_SKY + 3] = "night_sky/nightsky_dn.png";
-	paths[SKYBOX_PRESETS::NIGHT_SKY + 4] = "night_sky/nightsky_ft.png";
-	paths[SKYBOX_PRESETS::NIGHT_SKY + 5] = "night_sky/nightsky_bk.png";
+	paths[ESkyboxPresets::NIGHT_SKY + 0] = "night_sky/nightsky_rt.png";
+	paths[ESkyboxPresets::NIGHT_SKY + 1] = "night_sky/nightsky_lf.png";
+	paths[ESkyboxPresets::NIGHT_SKY + 2] = "night_sky/nightsky_up.png";
+	paths[ESkyboxPresets::NIGHT_SKY + 3] = "night_sky/nightsky_dn.png";
+	paths[ESkyboxPresets::NIGHT_SKY + 4] = "night_sky/nightsky_ft.png";
+	paths[ESkyboxPresets::NIGHT_SKY + 5] = "night_sky/nightsky_bk.png";
 
 	// other cubemap presets
-
+	// ...
 	return paths;
 }();
 
-std::vector<Skybox> Skybox::s_Presets(SKYBOX_PRESETS::SKYBOX_PRESET_COUNT);
+std::vector<Skybox> Skybox::s_Presets(ESkyboxPresets::SKYBOX_PRESET_COUNT);
 
 void Skybox::InitializePresets(Renderer* pRenderer)
 {
-	{
+	{	// NIGHTSKY
 		Skybox skybox;
 		
-		const auto offsetIter = s_filePaths.begin() + SKYBOX_PRESETS::NIGHT_SKY;
+		const auto offsetIter = s_filePaths.begin() + ESkyboxPresets::NIGHT_SKY;
 		const FilePaths filePaths = FilePaths(offsetIter, offsetIter + 6);
 		
 		Texture skydomeTex = pRenderer->GetTextureObject(pRenderer->CreateCubemapTexture(filePaths));
-		s_Presets[SKYBOX_PRESETS::NIGHT_SKY] = skybox.Initialize(pRenderer, skydomeTex, 1.0f, EShaders::SKYBOX);
+		s_Presets[ESkyboxPresets::NIGHT_SKY] = skybox.Initialize(pRenderer, skydomeTex, EShaders::SKYBOX);
 	}
+
+	// ...
 }
 
-void Skybox::Render(const XMMATRIX& viewProj, float fovH) const
+void Skybox::Render(const XMMATRIX& viewProj) const
 {
-	const XMMATRIX wvp = skydomeObj.m_transform.WorldTransformationMatrix() * viewProj;
+	assert(pRenderer);	// assert we initialized the skybox object
+	const XMMATRIX wvp = viewProj;
 	pRenderer->SetShader(skydomeShader);
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);
-	pRenderer->SetConstant1f("fovH", fovH);
 	pRenderer->SetTexture("gSkybox", skydomeTex);
+	pRenderer->SetSamplerState("samTriLinearSam", 0);	// uses default sampler state
 	pRenderer->SetBufferObj(EGeometry::CUBE);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 }
 
 
-Skybox& Skybox::Initialize(Renderer* renderer, const Texture& cubemapTexture, float scale, int shader)
+Skybox& Skybox::Initialize(Renderer* renderer, const Texture& cubemapTexture, int shader)
 {
 	pRenderer = renderer;
-	skydomeObj.m_transform.SetUniformScale(scale);
 	skydomeTex = cubemapTexture._id;
 	skydomeShader = shader;
 	return *this;

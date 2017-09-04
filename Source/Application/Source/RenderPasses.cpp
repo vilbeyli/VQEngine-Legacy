@@ -60,7 +60,7 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;			// check format
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2D.MipSlice = 0;
-	this->_dsv = pRenderer->AddDepthStencil(dsvDesc, shadowMap._tex2D);
+	this->_shadowDepthTarget = pRenderer->AddDepthTarget(dsvDesc, shadowMap._tex2D);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 	ZeroMemory(&srvDesc, sizeof(srvDesc));
@@ -97,7 +97,7 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 
 	// render states for front face culling 
 	this->_shadowRenderState = pRenderer->AddRasterizerState(ERasterizerCullMode::FRONT, ERasterizerFillMode::SOLID, true);
-	this->_drawRenderState   = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, true);
+	this->_drawRenderState   = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK , ERasterizerFillMode::SOLID, true);
 
 	// shader
 	std::vector<InputLayout> layout = {
@@ -118,7 +118,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 {
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-	pRenderer->BindDepthStencil(_dsv);						// only depth stencil buffer
+	pRenderer->BindDepthTarget(_shadowDepthTarget);						// only depth stencil buffer
 	pRenderer->SetRasterizerState(_shadowRenderState);		// shadow render state: cull front faces, fill solid, clip dep
 	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
 	pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
@@ -203,7 +203,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 		// bright filter
 		pRenderer->SetShader(EShaders::BLOOM);
 		pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
-		pRenderer->UnbindDepthStencil();
+		pRenderer->UnbindDepthTarget();
 		pRenderer->SetBufferObj(EGeometry::QUAD);
 		pRenderer->Apply();
 		pRenderer->SetTexture("worldRenderTarget", worldTexture);
@@ -335,7 +335,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	const TextureID texPosition = pRenderer->GetRenderTargetTexture(_GBuffer._positionRT);
 
 	// pRenderer->UnbindRendertargets();	// ignore this for now
-	pRenderer->UnbindDepthStencil();
+	pRenderer->UnbindDepthTarget();
 	pRenderer->BindRenderTarget(target);
 	pRenderer->Begin(clearColor, 0);
 	pRenderer->Apply();

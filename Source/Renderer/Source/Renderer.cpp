@@ -272,7 +272,7 @@ void Renderer::Exit()
 		}
 	}
 
-	for (DepthStencil*& ds : m_depthStencils)
+	for (DepthStencil*& ds : m_depthTargets)
 	{
 		if (ds)
 		{
@@ -400,7 +400,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 		dsvDesc.Format = depthFormat;
 		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		dsvDesc.Texture2D.MipSlice = 0;
-		AddDepthStencil(dsvDesc, m_state._depthBufferTexture._tex2D);
+		AddDepthTarget(dsvDesc, m_state._depthBufferTexture._tex2D);
 
 
 		D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
@@ -544,7 +544,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 
 
 
-const StateObjects& Renderer::GetState() const
+const PipelineState& Renderer::GetState() const
 {
 	return m_state;
 }
@@ -844,7 +844,7 @@ RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D
 	return static_cast<int>(m_renderTargets.size() - 1);
 }
 
-DepthStencilID Renderer::AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface)
+DepthTargetID Renderer::AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface)
 {
 	DepthStencil* newDSV; 
 	newDSV =  (DepthStencil*)malloc(sizeof(DepthStencil));
@@ -857,8 +857,8 @@ DepthStencilID Renderer::AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& ds
 		return -1;
 	}
 
-	m_depthStencils.push_back(newDSV);
-	return static_cast<int>(m_depthStencils.size() - 1);
+	m_depthTargets.push_back(newDSV);
+	return static_cast<int>(m_depthTargets.size() - 1);
 }
 
 const Texture& Renderer::GetTextureObject(TextureID id) const
@@ -928,10 +928,6 @@ void Renderer::SetShader(ShaderID id)
 
 		} // if not same shader
 	}	// if valid shader
-	else
-	{
-		//Log::("Warning: invalid shader is active\n");
-	}
 
 	if (id != m_state._activeShader)
 	{
@@ -943,7 +939,7 @@ void Renderer::SetShader(ShaderID id)
 void Renderer::Reset()
 {
 	m_state._activeShader = -1;
-	m_state._activeBuffer = -1;
+	m_state._activeInputBuffer = -1;
 }
 
 
@@ -965,7 +961,7 @@ void Renderer::SetViewport(const D3D11_VIEWPORT & viewport)
 void Renderer::SetBufferObj(int BufferID)
 {
 	assert(BufferID >= 0);
-	m_state._activeBuffer = BufferID;
+	m_state._activeInputBuffer = BufferID;
 }
 
 
@@ -1187,10 +1183,10 @@ void Renderer::BindRenderTarget(RenderTargetID rtvID)
 	m_state._boundRenderTargets = { rtvID };
 }
 
-void Renderer::BindDepthStencil(DepthStencilID dsvID)
+void Renderer::BindDepthTarget(DepthTargetID dsvID)
 {
-	assert(dsvID > -1 && static_cast<size_t>(dsvID) < m_depthStencils.size());
-	m_state._boundDepthStencil = dsvID;
+	assert(dsvID > -1 && static_cast<size_t>(dsvID) < m_depthTargets.size());
+	m_state._boundDepthTarget = dsvID;
 }
 
 void Renderer::UnbindRenderTarget()
@@ -1198,9 +1194,9 @@ void Renderer::UnbindRenderTarget()
 	m_state._boundRenderTargets = { -1, -1, -1, -1, -1, -1 };
 }
 
-void Renderer::UnbindDepthStencil()
+void Renderer::UnbindDepthTarget()
 {
-	m_state._boundDepthStencil = -1;
+	m_state._boundDepthTarget = -1;
 }
 
 // temp
@@ -1230,9 +1226,9 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
 	const RenderTargetID rtv = m_state._boundRenderTargets[0];
-	const DepthStencilID dsv = m_state._boundDepthStencil;
+	const DepthTargetID dsv = m_state._boundDepthTarget;
 	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearColor);
-	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthStencils[dsv], D3D11_CLEAR_DEPTH, depthValue, 0);
+	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv], D3D11_CLEAR_DEPTH, depthValue, 0);
 }
 
 void Renderer::End()
@@ -1250,8 +1246,8 @@ void Renderer::Apply()
 	// ----------------------------------------
 	unsigned stride = sizeof(Vertex);	// layout?
 	unsigned offset = 0;
-	if (m_state._activeBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_state._activeBuffer]->m_vertexBuffer, &stride, &offset);
-	if (m_state._activeBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_state._activeBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_state._activeInputBuffer]->m_vertexBuffer, &stride, &offset);
+	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_state._activeInputBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
 	if (shader)						 m_deviceContext->IASetInputLayout(shader->m_layout);
 
 	if (shader)
@@ -1318,10 +1314,10 @@ void Renderer::Apply()
 			if (hRT >= 0)
 				RTVs.push_back(m_renderTargets[hRT].pRenderTargetView);
 #endif
-		const auto indexDSV     = m_state._boundDepthStencil;
+		const auto indexDSV     = m_state._boundDepthTarget;
 		//ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &RTVs[0];
 		ID3D11RenderTargetView** RTV = RTVs.empty() ? nullptr : &RTVs[0];
-		DepthStencil*  DSV           = indexDSV == -1 ? nullptr : m_depthStencils[indexDSV];
+		DepthStencil*  DSV           = indexDSV == -1 ? nullptr : m_depthTargets[indexDSV];
 
 		m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
 		
@@ -1338,7 +1334,7 @@ void Renderer::Apply()
 void Renderer::DrawIndexed(EPrimitiveTopology topology)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
-	m_deviceContext->DrawIndexed(m_bufferObjects[m_state._activeBuffer]->m_indexCount, 0, 0);
+	m_deviceContext->DrawIndexed(m_bufferObjects[m_state._activeInputBuffer]->m_indexCount, 0, 0);
 }
 
 void Renderer::Draw(EPrimitiveTopology topology)

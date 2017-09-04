@@ -61,14 +61,14 @@ struct RenderTarget
 	ID3D11RenderTargetView*		pRenderTargetView;
 };
 
-struct StateObjects
+struct PipelineState
 {
 	ShaderID			_activeShader;
-	BufferID			_activeBuffer;
+	InputBufferID		_activeInputBuffer;
 	RasterizerStateID	_activeRSState;
 	DepthStencilStateID	_activeDepthStencilState;
 	RenderTargetIDs		_boundRenderTargets;
-	DepthStencilID		_boundDepthStencil;
+	DepthTargetID		_boundDepthTarget;
 	RenderTargetID		_mainRenderTarget;
 	BlendStateID		_activeBlendState;
 	Texture				_depthBufferTexture;
@@ -87,9 +87,9 @@ public:
 	// use > tabs w/ 4spaces
 	Renderer();
 	~Renderer();
-	bool		Initialize(HWND hwnd, const Settings::Renderer& settings);
-	void		Exit();
-	inline void ReloadShaders() { Shader::ReloadShaders(this); }
+	bool					Initialize(HWND hwnd, const Settings::Renderer& settings);
+	void					Exit();
+	inline void				ReloadShaders() { Shader::ReloadShaders(this); }
 
 	// GETTERS
 	//----------------------------------------------------------------------------------
@@ -98,10 +98,10 @@ public:
 	unsigned				WindowHeight()	const;
 	unsigned				WindowWidth()	const;
 	inline RenderTargetID	GetDefaultRenderTarget() const	                { return m_state._mainRenderTarget; }
-	inline DepthStencilID	GetDefaultDepthStencil() const	                { return m_state._boundDepthStencil; }
+	inline DepthTargetID	GetDefaultDepthStencil() const	                { return m_state._boundDepthTarget; }
 	inline TextureID		GetDefaultRenderTargetTexture() const           { return m_renderTargets[m_state._mainRenderTarget].texture._id; }
 	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return m_renderTargets[RT].texture._id; }
-	const StateObjects&		GetState() const;
+	const PipelineState&	GetState() const;
 
 
 	// RESOURCE INITIALIZATION (testing readability of function definitions)
@@ -153,7 +153,7 @@ public:
 												D3D11_RENDER_TARGET_VIEW_DESC&	RTVDesc
 							);
 
-	DepthStencilID			AddDepthStencil(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, 
+	DepthTargetID			AddDepthTarget(	const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, 
 											ID3D11Texture2D*&					 surface
 											);
 	
@@ -167,7 +167,6 @@ public:
 
 	void					SetViewport(const unsigned width, const unsigned height);
 	void					SetViewport(const D3D11_VIEWPORT& viewport);
-	void					SetCamera(Camera* m_camera);
 	void					SetShader(ShaderID);
 	void					SetBufferObj(int BufferID);
 	void					SetTexture(const char* texName, TextureID tex);
@@ -179,11 +178,10 @@ public:
 	template <typename... Args> 	
 	inline void				BindRenderTargets(Args const&... renderTargetIDs) { m_state._boundRenderTargets = { renderTargetIDs... }; }
 	void					BindRenderTarget(RenderTargetID rtvID);
-
-	void					BindDepthStencil(DepthStencilID dsvID);
+	void					BindDepthTarget(DepthTargetID dsvID);
 
 	void					UnbindRenderTarget();
-	void					UnbindDepthStencil();
+	void					UnbindDepthTarget();
 
 	void					SetConstant4x4f(const char* cName, const XMMATRIX& matrix);
 	inline void				SetConstant3f(const char* cName, const vec3& float3)	{ SetConstant(cName, static_cast<const void*>(&float3.x())); }
@@ -232,11 +230,11 @@ private:
 	std::vector<BlendState>			m_blendStates;
 
 	std::vector<RenderTarget>		m_renderTargets;
-	std::vector<DepthStencil*>		m_depthStencils;
+	std::vector<DepthStencil*>		m_depthTargets;
 
 	Viewport						m_viewPort;
 
-	StateObjects					m_state;
+	PipelineState					m_state;
 	
 	// performance counters
 	unsigned long long				m_frameCount;

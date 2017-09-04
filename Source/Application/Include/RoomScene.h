@@ -54,8 +54,8 @@ private:
 
 	SceneManager&		m_sceneManager;
 	Renderer*			m_pRenderer;
-	Skydome				m_skydome;
-	Skybox				m_skybox;
+	Skydome				m_skydome;	// todo: remove?
+	ESkyboxPresets		m_skybox;
 	std::vector<Light>&	m_lights;
 
 	struct Room {

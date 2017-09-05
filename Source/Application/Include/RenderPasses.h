@@ -128,3 +128,9 @@ struct DeferredRenderingPasses
 	DepthStencilStateID _geometryStencilState;
 	DepthStencilStateID _skyboxStencilState;
 };
+
+struct DebugPass
+{
+	void Initialize(Renderer* pRenderer);
+	RasterizerStateID _scissorsRasterizer;
+};

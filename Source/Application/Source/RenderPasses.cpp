@@ -96,8 +96,8 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	this->_shadowSampler = pRenderer->CreateSamplerState(comparisonSamplerDesc);
 
 	// render states for front face culling 
-	this->_shadowRenderState = pRenderer->AddRasterizerState(ERasterizerCullMode::FRONT, ERasterizerFillMode::SOLID, true);
-	this->_drawRenderState   = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK , ERasterizerFillMode::SOLID, true);
+	this->_shadowRenderState = pRenderer->AddRasterizerState(ERasterizerCullMode::FRONT, ERasterizerFillMode::SOLID, true, false);
+	this->_drawRenderState   = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK , ERasterizerFillMode::SOLID, true, false);
 
 	// shader
 	std::vector<InputLayout> layout = {
@@ -494,4 +494,9 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 #endif	// light volumes
 
 	pRenderer->SetBlendState(EDefaultBlendState::DISABLED);
+}
+
+void DebugPass::Initialize(Renderer * pRenderer)
+{
+	_scissorsRasterizer = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, false, true);
 }

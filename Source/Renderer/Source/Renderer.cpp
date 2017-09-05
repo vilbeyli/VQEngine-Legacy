@@ -555,14 +555,14 @@ ShaderID Renderer::AddShader(
 	return ShaderID();
 }
 
-RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool enableDepthClip)
+RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors)
 {
-	D3D11_RASTERIZER_DESC RSDesc;
-	ZeroMemory(&RSDesc, sizeof(D3D11_RASTERIZER_DESC));
+	D3D11_RASTERIZER_DESC RSDesc = {};
 
 	RSDesc.CullMode = static_cast<D3D11_CULL_MODE>(cullMode);
 	RSDesc.FillMode = static_cast<D3D11_FILL_MODE>(fillMode);
-	RSDesc.DepthClipEnable = enableDepthClip;
+	RSDesc.DepthClipEnable = bEnableDepthClip;
+	RSDesc.ScissorEnable = bEnableScissors;
 	// todo: add params, scissors, multisample, antialiased line
 	
 
@@ -1148,6 +1148,18 @@ void Renderer::SetDepthStencilState(DepthStencilStateID depthStencilStateID)
 {
 	assert(depthStencilStateID > -1 && static_cast<size_t>(depthStencilStateID) < m_depthStencilStates.size());
 	m_state._activeDepthStencilState = depthStencilStateID;
+}
+
+void Renderer::SetScissorsRect(int left, int right, int top, int bottom)
+{
+	D3D11_RECT rects[1];
+	rects[0].left = left;
+	rects[0].right = right;
+	rects[0].top = top;
+	rects[0].bottom = bottom;
+	
+	// only called from debug for now, so immediate api call. rethink: make this command?
+	m_deviceContext->RSSetScissorRects(1, rects);
 }
 
 void Renderer::BindRenderTarget(RenderTargetID rtvID)

@@ -158,7 +158,7 @@ bool Engine::Initialize(HWND hwnd)
 		m_deferredRenderingPasses.InitializeGBuffer(m_pRenderer);
 	}
 	m_isAmbientOcclusionOn = s_rendererSettings.bAmbientOcclusion;
-	m_debugRender = false;
+	m_debugRender = true;
 	m_selectedShader = m_useDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
 	
 	// default states
@@ -195,6 +195,7 @@ bool Engine::Load()
 		for (GameObject& obj : m_sceneManager->m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
 
 		m_postProcessPass.Initialize(m_pRenderer, s_rendererSettings.postProcess);
+		m_debugPass.Initialize(m_pRenderer);
 
 		// Samplers
 		D3D11_SAMPLER_DESC normalSamplerDesc = {};
@@ -504,11 +505,30 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	if (m_debugRender)
 	{
+		const int screenWidth = s_rendererSettings.window.width;
+		const int screenHeight = s_rendererSettings.window.height;
+
+		// TODO: calculate scales and transform each quad into appropriate position in NDC space [0,1]
+		// y coordinate is upside-down, region covering the 70% <-> 90% of screen height 
+		const float topPct = 0.7f;	const float botPct = 0.9f;	
+		const vec2 heightPercentageMarks(topPct, botPct);
+
+		const int rectTop = 0;// * topPct;
+		const int rectBot = screenHeight;// * botPct;
+
+		const float scl = 0.2f;
+		XMVECTOR scale = vec3(scl, scl, scl);
+		XMVECTOR translation = vec3(-0.2, -0.3, 0);
+		XMMATRIX transform = XMMatrixAffineTransformation(scale, vec3::Zero, XMQuaternionIdentity(), translation);
+
 		m_pRenderer->BeginEvent("Debug Pass");
 		m_pRenderer->SetShader(EShaders::DEBUG);
 		m_pRenderer->SetTexture("t_shadowMap", m_shadowMapPass._shadowMap);	// todo: decide shader naming 
+		m_pRenderer->SetConstant4x4f("screenSpaceTransformation", transform);
 		m_pRenderer->SetBufferObj(EGeometry::QUAD);
+		m_pRenderer->SetRasterizerState(m_debugPass._scissorsRasterizer);
 		m_pRenderer->Apply();
+		m_pRenderer->SetScissorsRect(0, screenWidth, rectTop, rectBot);
 		m_pRenderer->DrawIndexed();
 		m_pRenderer->EndEvent();
 	}

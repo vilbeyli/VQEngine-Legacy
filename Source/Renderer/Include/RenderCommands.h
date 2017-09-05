@@ -61,3 +61,8 @@ struct ClearCommand
 	float					clearDepth;
 	unsigned char			clearStencil;
 };
+
+struct SetScissorsCommand
+{	// currently not used
+	int left, right, top, bottom;
+};

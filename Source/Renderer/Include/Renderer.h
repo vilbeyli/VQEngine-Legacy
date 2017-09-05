@@ -137,7 +137,8 @@ public:
 
 	RasterizerStateID		AddRasterizerState(	ERasterizerCullMode cullMode, 
 												ERasterizerFillMode fillMode, 
-												bool				bEnableDepthClip
+												bool bEnableDepthClip, 
+												bool bEnableScissors
 							);
 
 	DepthStencilStateID		AddDepthStencilState(	bool bEnableDepth, 
@@ -175,6 +176,7 @@ public:
 	void					SetRasterizerState(RasterizerStateID rsStateID);
 	void					SetBlendState(BlendStateID blendStateID);
 	void					SetDepthStencilState(DepthStencilStateID depthStencilStateID);
+	void					SetScissorsRect(int left, int right, int top, int bottom);
 
 	template <typename... Args> 	
 	inline void				BindRenderTargets(Args const&... renderTargetIDs) { m_state._boundRenderTargets = { renderTargetIDs... }; }

@@ -30,16 +30,15 @@ struct PSIn
 	float2 texCoord : TEXCOORD;
 };
 
+cbuffer perTexture
+{
+	matrix screenSpaceTransformation;
+};
+
 PSIn VSMain(VSIn In)
 {
 	PSIn psIn;
-
-	// todo: program this for many textures
-	float2 screenCoord = In.position * 0.2f;	// shrink texture
-	screenCoord.y -= 0.7f;						// lower a bit
-	screenCoord.x -= 0.5f;						
-
-	psIn.position = float4(float3(screenCoord, 0.0f), 1.0f);
+	psIn.position = mul(screenSpaceTransformation, float4(float3(In.position.xy, 0.0f), 1.0f) );
 	psIn.texCoord = In.texCoord;
 	return psIn;
 }

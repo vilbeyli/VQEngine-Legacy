@@ -128,6 +128,7 @@ private:
 	DeferredRenderingPasses			m_deferredRenderingPasses;
 
 	PostProcessPass					m_postProcessPass;
+	DebugPass						m_debugPass;
 	
 	bool							m_debugRender;
 

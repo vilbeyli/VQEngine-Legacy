@@ -13,17 +13,6 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
    Note: if the linker throws the error `1>LINK : fatal error LNK1158: cannot run 'rc.exe'` do the following:
    - Copy `rc.exe` and `rcdll.dll` 
    from `C:\Program Files (x86)\Windows Kits\10\bin\10.0.15063.0\x64` to `C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin`
- 
-
-## Build Instructions (to be automated - in progress)
-
-Navigate to `Source\3rdParty\DirectXTex` and compile the solution `DirectXTex_Desktop_2015.sln` with the *platform settings that match that of this project's*. 
-This will generate the lib file that is required to compile the DX11Renderer project.
-
- - The project uses [DirectXTex](https://github.com/Microsoft/DirectXTex) for textures. Current project settings
-look for a `DirectXTex.lib` file in `3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)`. 
-You will get the following error message on build unless you have already copmiled the DirectXTex library:  
-    > `2>LINK : fatal error LNK1104: cannot open file 'DirectXTex.lib'`
 
 ## Controls
 

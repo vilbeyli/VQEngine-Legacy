@@ -104,6 +104,13 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
+IF EXIST $(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
+echo DirectXTex.lib already built. ) ELSE (
+echo Building dependency library: DirectXTex... 
+devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -114,6 +121,13 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
+IF EXIST $(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
+echo DirectXTex.lib already built. ) ELSE (
+echo Building dependency library: DirectXTex... 
+devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -128,6 +142,13 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <PreBuildEvent>
+      <Command>SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
+IF EXIST $(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
+echo DirectXTex.lib already built. ) ELSE (
+echo Building dependency library: DirectXTex... 
+devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -142,6 +163,13 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
+    <PreBuildEvent>
+      <Command>SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
+IF EXIST $(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
+echo DirectXTex.lib already built. ) ELSE (
+echo Building dependency library: DirectXTex... 
+devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Source\RenderCommands.cpp" />

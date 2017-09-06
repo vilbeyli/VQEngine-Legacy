@@ -88,6 +88,10 @@ void Engine::ToggleLightingModel()
 	{
 		m_selectedShader = m_selectedShader == EShaders::FORWARD_PHONG ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
 	}
+	else
+	{
+		Log::Info("Deferred mode only supports BRDF Lighting model...");
+	}
 }
 
 void Engine::ToggleRenderingPath()
@@ -101,6 +105,10 @@ void Engine::ToggleRenderingPath()
 		m_deferredRenderingPasses.InitializeGBuffer(m_pRenderer);
 	}
 	Log::Info("Toggle Rendering Path: %s Rendering enabled", m_useDeferredRendering ? "Deferred" : "Forward");
+
+	// if we just turned deferred rendering off, clear the gbuffer textures
+	if(!m_useDeferredRendering)
+		m_deferredRenderingPasses.ClearGBuffer(m_pRenderer);
 }
 
 void Engine::Pause()
@@ -153,7 +161,7 @@ bool Engine::Initialize(HWND hwnd)
 
 	// render passes
 	m_useDeferredRendering = s_rendererSettings.bUseDeferredRendering;
-	if (m_useDeferredRendering)
+	if (m_useDeferredRendering || true)	// initialize G buffer nevertheless
 	{
 		m_deferredRenderingPasses.InitializeGBuffer(m_pRenderer);
 	}
@@ -433,7 +441,6 @@ void Engine::Render()
 			m_pRenderer->SetDepthStencilState(m_defaultDepthStencilState);
 			m_pRenderer->UnbindDepthTarget();
 		}
-		
 	}
 
 
@@ -464,8 +471,10 @@ void Engine::Render()
 		m_pRenderer->SetShader(m_selectedShader);	// forward brdf/phong
 		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 		m_pRenderer->SetSamplerState("sNormalSampler", 0);
+#if 0
 		m_pRenderer->SetConstant1f("fovH", m_pCamera->m_settings.fovH * DEG2RAD);
 		m_pRenderer->SetConstant1f("panini", m_bUsePaniniProjection ? 1.0f : 0.0f);
+#endif
 
 		SendLightData();
 		m_sceneManager->Render(m_pRenderer, m_sceneView);
@@ -505,31 +514,53 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	if (m_debugRender)
 	{
-		const int screenWidth = s_rendererSettings.window.width;
+		const int screenWidth  = s_rendererSettings.window.width;
 		const int screenHeight = s_rendererSettings.window.height;
-
+		const float aspectRatio = static_cast<float>(screenWidth) / screenHeight;
+#if 0
 		// TODO: calculate scales and transform each quad into appropriate position in NDC space [0,1]
 		// y coordinate is upside-down, region covering the 70% <-> 90% of screen height 
-		const float topPct = 0.7f;	const float botPct = 0.9f;	
-		const vec2 heightPercentageMarks(topPct, botPct);
-
+		const float topPct = 0.7f;	const float botPct = 0.9f;
 		const int rectTop = 0;// * topPct;
 		const int rectBot = screenHeight;// * botPct;
+		//m_pRenderer->SetRasterizerState(m_debugPass._scissorsRasterizer);
+		//m_pRenderer->SetScissorsRect(0, screenWidth, rectTop, rectBot);
+#endif
+		// debug texture strip draw settings
+		const int bottomPaddingPx = 0;	 // offset from bottom of the screen
+		const int heightPx        = 128; // height for every texture
+		const int paddingPx       = 0;	 // padding between debug textures
+		const vec2 fullscreenTextureScaledDownSize((float)heightPx * aspectRatio, (float)heightPx);
+		const vec2 squareTextureScaledDownSize    ((float)heightPx              , (float)heightPx);
 
-		const float scl = 0.2f;
-		XMVECTOR scale = vec3(scl, scl, scl);
-		XMVECTOR translation = vec3(-0.2, -0.3, 0);
-		XMMATRIX transform = XMMatrixAffineTransformation(scale, vec3::Zero, XMQuaternionIdentity(), translation);
+		// Textures to draw
+		TextureID tShadowMap		 = m_shadowMapPass._shadowMap;
+		TextureID tBloomFilter		 = m_pRenderer->GetRenderTargetTexture(m_postProcessPass._bloomPass._brightRT);
+		TextureID tDiffuseRoughness  = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._diffuseRoughnessRT);
+		TextureID tSpecularMetallic  = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._positionRT);
+		TextureID tNormals			 = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._normalRT);
+
+		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
+			std::vector<DrawQuadOnScreenCommand> c
+			{	//		Pixel Dimensions		     Screen Position (offset below)		Texture
+				{ fullscreenTextureScaledDownSize, vec2(0.0f, (float)bottomPaddingPx),	tDiffuseRoughness },
+				{ fullscreenTextureScaledDownSize, vec2(0.0f, (float)bottomPaddingPx),	tSpecularMetallic },
+				{ fullscreenTextureScaledDownSize, vec2(0.0f, (float)bottomPaddingPx),	tNormals },
+				{ squareTextureScaledDownSize    , vec2(0.0f, (float)bottomPaddingPx),	tShadowMap },
+				{ fullscreenTextureScaledDownSize, vec2(0.0f, (float)bottomPaddingPx),	tBloomFilter },
+			};
+			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
+				c[i].bottomLeftCornerScreenCoordinates.x() = c[i-1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;
+			return c;
+		}();
 
 		m_pRenderer->BeginEvent("Debug Pass");
 		m_pRenderer->SetShader(EShaders::DEBUG);
-		m_pRenderer->SetTexture("t_shadowMap", m_shadowMapPass._shadowMap);	// todo: decide shader naming 
-		m_pRenderer->SetConstant4x4f("screenSpaceTransformation", transform);
-		m_pRenderer->SetBufferObj(EGeometry::QUAD);
-		m_pRenderer->SetRasterizerState(m_debugPass._scissorsRasterizer);
-		m_pRenderer->Apply();
-		m_pRenderer->SetScissorsRect(0, screenWidth, rectTop, rectBot);
-		m_pRenderer->DrawIndexed();
+		for (const DrawQuadOnScreenCommand& cmd : quadCmds)
+		{
+			const bool bIsDepthTarget = cmd.dimensionsInPixels == squareTextureScaledDownSize;	// square texture assumed depth texture for now
+			m_pRenderer->DrawQuadOnScreen(cmd.dimensionsInPixels, cmd.bottomLeftCornerScreenCoordinates, cmd.texture, bIsDepthTarget);
+		}
 		m_pRenderer->EndEvent();
 	}
 #endif

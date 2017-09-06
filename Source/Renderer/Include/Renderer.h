@@ -206,6 +206,10 @@ public:
 	//----------------------------------------------------------------------------------
 	void					DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
 	void					Draw(EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
+	
+	// assumes (0, 0) is Bottom Left corner of the screen.
+	void DrawQuadOnScreen(const vec2& dimensions, const vec2& bottomLeftCornerCoordinates, const TextureID texture, const bool bIsDepthTexture);
+	
 	void					DrawLine();
 	void					DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
 

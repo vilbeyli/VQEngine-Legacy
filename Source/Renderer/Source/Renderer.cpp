@@ -1208,6 +1208,29 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 	Draw(EPrimitiveTopology::POINT_LIST);
 }
 
+// assumes (0, 0) is Bottom Left corner of the screen.
+void Renderer::DrawQuadOnScreen(const vec2& dimensions, const vec2& bottomLeftCornerCoordinates, const TextureID texture, const bool bIsDepthTexture)
+{																// warning:
+	const int screenWidth =  s_defaultSettings.window.width;	// 2 copies of renderer settings, one here on in Engine
+	const int screenHeight = s_defaultSettings.window.height;	// dynamic window size change might break things...
+	const float& dimx = dimensions.x();
+	const float& dimy = dimensions.y();
+	const float posx = bottomLeftCornerCoordinates.x() * 2.0f - screenWidth;	// NDC is [-1, 1] ; if (0,0) is given
+	const float posy = bottomLeftCornerCoordinates.y() * 2.0f - screenHeight;	// texture is drawn in bottom left corner of the screen
+	const vec2 posCenter( (posx + dimx)/screenWidth, (posy + dimy) / screenHeight);
+
+	const XMVECTOR scale = vec3(dimx / screenWidth, dimy / screenHeight, 0.0f);
+	const XMVECTOR translation = vec3(posCenter.x(), posCenter.y(), 0);
+	const XMMATRIX transformation = XMMatrixAffineTransformation(scale, vec3::Zero, XMQuaternionIdentity(), translation);
+
+	SetConstant4x4f("screenSpaceTransformation", transformation);
+	SetConstant1f("isDepthTexture", bIsDepthTexture ? 1.0f : 0.0f);
+	SetTexture("inputTexture", texture);
+	SetBufferObj(EGeometry::QUAD);
+	Apply();
+	DrawIndexed();
+}
+
 void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
 	const RenderTargetID rtv = m_state._boundRenderTargets[0];
@@ -1220,9 +1243,11 @@ void Renderer::Begin(const ClearCommand & clearCmd)
 {
 	if (clearCmd.bDoClearColor)
 	{
-		const RenderTargetID rtv = m_state._boundRenderTargets[0];
-		if (rtv >= 0)	m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearCmd.clearColor.data());
-		else			Log::Error("Begin called with clear color command without a render target bound to pipeline!");
+		for (const RenderTargetID rtv : m_state._boundRenderTargets)
+		{
+			if (rtv >= 0)	m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearCmd.clearColor.data());
+			else			Log::Error("Begin called with clear color command without a render target bound to pipeline!");
+		}
 	}
 
 	const bool bClearDepthStencil = clearCmd.bDoClearDepth || clearCmd.bDoClearStencil;

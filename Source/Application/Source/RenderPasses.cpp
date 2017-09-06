@@ -370,6 +370,19 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	}
 }
 
+void DeferredRenderingPasses::ClearGBuffer(Renderer* pRenderer)
+{
+	const bool bDoClearColor = true;
+	const bool bDoClearDepth = false;
+	const bool bDoClearStencil = false;
+	ClearCommand clearCmd(
+		bDoClearColor, bDoClearDepth, bDoClearStencil,
+		{ 0, 0, 0, 0 }, 0, 0
+	);
+	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT, _GBuffer._positionRT);
+	pRenderer->Begin(clearCmd);
+}
+
 void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) const
 {
 	const bool bDoClearColor = true;

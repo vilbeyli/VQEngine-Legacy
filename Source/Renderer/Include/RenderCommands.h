@@ -19,6 +19,7 @@
 #pragma once
 
 #include "Shader.h"
+#include "utils.h"
 
 class Renderer;
 
@@ -65,4 +66,12 @@ struct ClearCommand
 struct SetScissorsCommand
 {	// currently not used
 	int left, right, top, bottom;
+};
+
+struct DrawQuadOnScreenCommand
+{
+	DrawQuadOnScreenCommand(const vec2& d, const vec2& bl, const TextureID tex) : dimensionsInPixels(d), bottomLeftCornerScreenCoordinates(bl), texture(tex) {}
+	vec2 dimensionsInPixels;
+	vec2 bottomLeftCornerScreenCoordinates;	// (0, 0) is bottom left corner of the screen
+	TextureID texture;
 };

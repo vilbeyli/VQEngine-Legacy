@@ -116,6 +116,7 @@ struct GBuffer
 struct DeferredRenderingPasses
 {
 	void InitializeGBuffer(Renderer* pRenderer);
+	void ClearGBuffer(Renderer* pRenderer);
 	void SetGeometryRenderingStates(Renderer* pRenderer) const;
 	void RenderLightingPass(
 		Renderer*				pRenderer, 

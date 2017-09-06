@@ -70,6 +70,7 @@ struct vec3
 	operator XMVECTOR() const;
 	operator XMFLOAT3() const;
 	bool operator ==(const vec3&) const;
+	inline vec3& operator +=(const vec3& v) { *this = *this + v; return *this; };
 
 	float& x();
 	float& y();
@@ -111,6 +112,8 @@ struct vec2
 
 	operator XMVECTOR() const;
 	operator XMFLOAT2() const;
+	bool operator ==(const vec2&) const;
+	inline vec2& operator +=(const vec2& v) { *this = *this + v; return *this; };
 
 	float& x();
 	float& y();

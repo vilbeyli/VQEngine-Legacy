@@ -429,10 +429,11 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 	};
 #endif
 
+	const float thickness = 3.7f;
 	// FLOOR
 	{
 		Transform& tf = floor.m_transform;
-		tf.SetScale(floorWidth, 0.1f, floorDepth);
+		tf.SetScale(floorWidth, thickness, floorDepth);
 		tf.SetPosition(0, -wallHieght + YOffset, 0);
 
 		Material& mat = floor.m_model.m_material;
@@ -449,7 +450,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 	// CEILING
 	{
 		Transform& tf = ceiling.m_transform;
-		tf.SetScale(floorWidth, 0.1f, floorDepth);
+		tf.SetScale(floorWidth, thickness, floorDepth);
 		tf.SetPosition(0, wallHieght + YOffset, 0);
 
 		//ceiling.m_model.m_material.color		= Color::purple;
@@ -462,7 +463,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 	// RIGHT WALL
 	{
 		Transform& tf = wallR.m_transform;
-		tf.SetScale(floorDepth, 0.1f, wallHieght);
+		tf.SetScale(floorDepth, thickness, wallHieght);
 		tf.SetPosition(floorWidth, YOffset, 0);
 		tf.SetXRotationDeg(90.0f);
 		tf.RotateAroundGlobalYAxisDegrees(-90);
@@ -478,7 +479,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 	// LEFT WALL
 	{
 		Transform& tf = wallL.m_transform;
-		tf.SetScale(floorDepth, 0.1f, wallHieght);
+		tf.SetScale(floorDepth, thickness, wallHieght);
 		tf.SetPosition(-floorWidth, YOffset, 0);
 		tf.SetXRotationDeg(-90.0f);
 		tf.RotateAroundGlobalYAxisDegrees(-90.0f);
@@ -492,7 +493,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 	// WALL
 	{
 		Transform& tf = wallF.m_transform;
-		tf.SetScale(floorWidth, 0.1f, wallHieght);
+		tf.SetScale(floorWidth, thickness, wallHieght);
 		tf.SetPosition(0, YOffset, floorDepth);
 		tf.SetXRotationDeg(-90.0f);
 		//wallF.m_model.m_material.color		= Color::gray;

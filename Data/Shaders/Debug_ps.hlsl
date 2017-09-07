@@ -42,6 +42,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float depthExponent = 300;
 	float4 color = inputTexture.Sample(samAnisotropic, In.texCoord);
 	if (isDepthTexture > 0)
+	{
+		color.yzw = float3(color.x, color.x, color.x);
 		color = pow(color, float4(depthExponent, depthExponent, depthExponent, 1));
+	}
 	return color;
 }

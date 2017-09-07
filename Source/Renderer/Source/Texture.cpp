@@ -50,8 +50,7 @@ bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Render
 	
 	if (initializeSRV)
 	{
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-		ZeroMemory(&srvDesc, sizeof(srvDesc));
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Format = descriptor.Format;
 		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;	// array maybe? check descriptor.
 		srvDesc.Texture2D.MipLevels = 1;

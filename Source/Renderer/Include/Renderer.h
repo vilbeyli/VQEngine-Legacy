@@ -43,7 +43,6 @@ namespace DirectX  { class ScratchImage; }
 using Viewport = D3D11_VIEWPORT;
 using RasterizerState   = ID3D11RasterizerState;
 using DepthStencilState = ID3D11DepthStencilState;
-using DepthStencil		= ID3D11DepthStencilView;
 using RenderTargetIDs	= std::vector<RenderTargetID>;
 
 struct BlendState
@@ -61,6 +60,13 @@ struct RenderTarget
 	ID3D11RenderTargetView*		pRenderTargetView;
 };
 
+struct DepthTarget
+{
+	//--------------------------------------------
+	Texture						texture;
+	ID3D11DepthStencilView*		pDepthStencilView;
+};
+
 struct PipelineState
 {
 	ShaderID			_activeShader;
@@ -71,7 +77,7 @@ struct PipelineState
 	DepthTargetID		_boundDepthTarget;
 	RenderTargetID		_mainRenderTarget;
 	BlendStateID		_activeBlendState;
-	Texture				_depthBufferTexture;
+	TextureID			_depthBufferTexture;
 };
 
 class Renderer
@@ -98,9 +104,10 @@ public:
 	unsigned				WindowHeight()	const;
 	unsigned				WindowWidth()	const;
 	inline RenderTargetID	GetDefaultRenderTarget() const	                { return m_state._mainRenderTarget; }
-	inline DepthTargetID	GetDefaultDepthStencil() const	                { return m_state._boundDepthTarget; }
+	inline DepthTargetID	GetBoundDepthTarget() const	                    { return m_state._boundDepthTarget; }
 	inline TextureID		GetDefaultRenderTargetTexture() const           { return m_renderTargets[m_state._mainRenderTarget].texture._id; }
 	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return m_renderTargets[RT].texture._id; }
+	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const   { return m_depthTargets[DT].texture._id; }
 	const PipelineState&	GetState() const;
 
 
@@ -132,8 +139,14 @@ public:
 	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles
 							);
 	
+	TextureID CreateDepthTexture( unsigned width, 
+												unsigned height, 
+												bool bDepthOnly
+							);
+
 	SamplerID				CreateSamplerState(	D3D11_SAMPLER_DESC&	samplerDesc
 							);
+
 
 	RasterizerStateID		AddRasterizerState(	ERasterizerCullMode cullMode, 
 												ERasterizerFillMode fillMode, 
@@ -155,8 +168,8 @@ public:
 												D3D11_RENDER_TARGET_VIEW_DESC&	RTVDesc
 							);
 
-	DepthTargetID			AddDepthTarget(	const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, 
-											ID3D11Texture2D*&					 surface
+	DepthTargetID AddDepthTarget(	const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, 
+											Texture& surface
 											);
 	
 
@@ -208,7 +221,7 @@ public:
 	void					Draw(EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
 	
 	// assumes (0, 0) is Bottom Left corner of the screen.
-	void DrawQuadOnScreen(const vec2& dimensions, const vec2& bottomLeftCornerCoordinates, const TextureID texture, const bool bIsDepthTexture);
+	void					DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd);
 	
 	void					DrawLine();
 	void					DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
@@ -240,7 +253,7 @@ private:
 	std::vector<BlendState>			m_blendStates;
 
 	std::vector<RenderTarget>		m_renderTargets;
-	std::vector<DepthStencil*>		m_depthTargets;
+	std::vector<DepthTarget>		m_depthTargets;
 
 	Viewport						m_viewPort;
 

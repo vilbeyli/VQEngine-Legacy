@@ -39,41 +39,17 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
 
 	// create shadow map texture for the pixel shader stage
-	const bool bInitializeSRV = false;
-	D3D11_TEXTURE2D_DESC shadowMapDesc;
-	ZeroMemory(&shadowMapDesc, sizeof(D3D11_TEXTURE2D_DESC));
-	shadowMapDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-	shadowMapDesc.MipLevels = 1;
-	shadowMapDesc.ArraySize = 1;
-	shadowMapDesc.SampleDesc.Count = 1;
-	shadowMapDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-	shadowMapDesc.Height = static_cast<UINT>(_shadowMapDimension);
-	shadowMapDesc.Width = static_cast<UINT>(_shadowMapDimension);
-	this->_shadowMap = pRenderer->CreateTexture2D(shadowMapDesc, bInitializeSRV);
-
-	// careful: removing const qualified from texture. rethink this
+	const bool bDepthOnly = true;	// do we need stencil in depth map?
+	TextureID shadowMapID = pRenderer->CreateDepthTexture(static_cast<unsigned>(_shadowMapDimension), static_cast<unsigned>(_shadowMapDimension), bDepthOnly);
+	_shadowMap = shadowMapID;
 	Texture& shadowMap = const_cast<Texture&>(pRenderer->GetTextureObject(_shadowMap));
 
-	// depth stencil view and shader resource view for the shadow map (^ BindFlags)
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-	ZeroMemory(&dsvDesc, sizeof(dsvDesc));
-	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;			// check format
+	// depth stencil view
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+	dsvDesc.Format = bDepthOnly ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_D24_UNORM_S8_UINT;
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2D.MipSlice = 0;
-	this->_shadowDepthTarget = pRenderer->AddDepthTarget(dsvDesc, shadowMap._tex2D);
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	ZeroMemory(&srvDesc, sizeof(srvDesc));
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	srvDesc.Texture2D.MipLevels = 1;
-
-	HRESULT hr = device->CreateShaderResourceView(shadowMap._tex2D, &srvDesc, &shadowMap._srv);
-	if (FAILED(hr))
-	{
-		Log::Error(EErrorLog::CANT_CREATE_RESOURCE, "Cannot create SRV in InitilizeDepthPass\n");
-
-	}
+	this->_shadowDepthTarget = pRenderer->AddDepthTarget(dsvDesc, shadowMap);
 
 	// comparison sampler
 	D3D11_SAMPLER_DESC comparisonSamplerDesc;
@@ -118,7 +94,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 {
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-	pRenderer->BindDepthTarget(_shadowDepthTarget);						// only depth stencil buffer
+	pRenderer->BindDepthTarget(_shadowDepthTarget);			// only depth stencil buffer
 	pRenderer->SetRasterizerState(_shadowRenderState);		// shadow render state: cull front faces, fill solid, clip dep
 	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
 	pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer

@@ -215,7 +215,6 @@ void Renderer::Exit()
 		tex.Release();
 	}
 	m_textures.clear();
-	m_state._depthBufferTexture.Release();
 
 	for (Sampler& s : m_samplers)
 	{
@@ -272,12 +271,12 @@ void Renderer::Exit()
 		}
 	}
 
-	for (DepthStencil*& ds : m_depthTargets)
+	for (DepthTarget& dt : m_depthTargets)
 	{
-		if (ds)
+		if (dt.pDepthStencilView)
 		{
-			ds->Release();
-			ds = nullptr;
+			dt.pDepthStencilView->Release();
+			dt.pDepthStencilView = nullptr;
 		}
 	}
 
@@ -378,29 +377,17 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 	//--------------------------------------------------------------------
 	{
 		// Set up the description of the depth buffer.
-		DXGI_FORMAT depthFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		D3D11_TEXTURE2D_DESC depthBufferDesc = {};
-		depthBufferDesc.Width = Renderer::s_defaultSettings.window.width;
-		depthBufferDesc.Height = Renderer::s_defaultSettings.window.height;
-		depthBufferDesc.MipLevels = 1;
-		depthBufferDesc.ArraySize = 1;
-		depthBufferDesc.Format = depthFormat;
-		depthBufferDesc.SampleDesc.Count = 1;
-		depthBufferDesc.SampleDesc.Quality = 0;
-		depthBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-		depthBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;	// todo: D3D11_BIND_SHADER_RESOURCE | find a way to read depth buffer for SSAO
-		depthBufferDesc.CPUAccessFlags = 0;
-		depthBufferDesc.MiscFlags = 0;
+		const DXGI_FORMAT depthTargetFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-		// Create the texture for the depth buffer using the filled out description.
-		HRESULT result = m_device->CreateTexture2D(&depthBufferDesc, NULL, &m_state._depthBufferTexture._tex2D);
+		m_state._depthBufferTexture = CreateDepthTexture(Renderer::s_defaultSettings.window.width, Renderer::s_defaultSettings.window.height, false);
+		Texture& depthTexture = static_cast<Texture>(GetTextureObject(m_state._depthBufferTexture));
 
 		// depth stencil view and shader resource view for the shadow map (^ BindFlags)
 		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-		dsvDesc.Format = depthFormat;
+		dsvDesc.Format = depthTargetFormat;
 		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		dsvDesc.Texture2D.MipSlice = 0;
-		AddDepthTarget(dsvDesc, m_state._depthBufferTexture._tex2D);	// assumes index 0
+		AddDepthTarget(dsvDesc, depthTexture);	// assumes index 0
 	}
 	m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
 
@@ -729,6 +716,33 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	return cubemapOut._id;
 }
 
+TextureID Renderer::CreateDepthTexture(unsigned width, unsigned height, bool bDepthOnly)
+{
+	D3D11_TEXTURE2D_DESC depthTextureDescriptor = {};
+	depthTextureDescriptor.Format = bDepthOnly ? DXGI_FORMAT_R32_TYPELESS : DXGI_FORMAT_R24G8_TYPELESS;
+	depthTextureDescriptor.MipLevels = 1;
+	depthTextureDescriptor.ArraySize = 1;
+	depthTextureDescriptor.SampleDesc.Count = 1;
+	depthTextureDescriptor.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
+	depthTextureDescriptor.Height = height;
+	depthTextureDescriptor.Width  = width;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = bDepthOnly ? DXGI_FORMAT_R32_FLOAT : DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;	// array maybe? check descriptor.
+	srvDesc.Texture2D.MipLevels = 1;
+
+	Texture tex;	
+	tex._width  = width;
+	tex._height = height;
+	m_device->CreateTexture2D(&depthTextureDescriptor, nullptr, &tex._tex2D);;
+	m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+
+	m_textures.push_back(tex);
+	m_textures.back()._id = static_cast<int>(m_textures.size() - 1);
+	return m_textures.back()._id;
+}
+
 SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)
 {
 	ID3D11SamplerState*	pSamplerState;
@@ -818,20 +832,20 @@ RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D
 	return static_cast<int>(m_renderTargets.size() - 1);
 }
 
-DepthTargetID Renderer::AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, ID3D11Texture2D*& surface)
+DepthTargetID Renderer::AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, Texture& depthTexture)
 {
-	DepthStencil* newDSV; 
-	newDSV =  (DepthStencil*)malloc(sizeof(DepthStencil));
-	memset(newDSV, 0, sizeof(*newDSV));
+	DepthTarget newDepthTarget;
+	newDepthTarget.pDepthStencilView = (ID3D11DepthStencilView*)malloc(sizeof(*newDepthTarget.pDepthStencilView));
+	memset(newDepthTarget.pDepthStencilView, 0, sizeof(*newDepthTarget.pDepthStencilView));
 
-	HRESULT hr = m_device->CreateDepthStencilView(surface, &dsvDesc, &newDSV);
+	HRESULT hr = m_device->CreateDepthStencilView(depthTexture._tex2D, &dsvDesc, &newDepthTarget.pDepthStencilView);
 	if (FAILED(hr))
 	{
 		Log::Error(CANT_CREATE_RESOURCE, "Depth Stencil Target View");
 		return -1;
 	}
-
-	m_depthTargets.push_back(newDSV);
+	newDepthTarget.texture = depthTexture;
+	m_depthTargets.push_back(newDepthTarget);
 	return static_cast<int>(m_depthTargets.size() - 1);
 }
 
@@ -1209,14 +1223,14 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 }
 
 // assumes (0, 0) is Bottom Left corner of the screen.
-void Renderer::DrawQuadOnScreen(const vec2& dimensions, const vec2& bottomLeftCornerCoordinates, const TextureID texture, const bool bIsDepthTexture)
+void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 {																// warning:
 	const int screenWidth =  s_defaultSettings.window.width;	// 2 copies of renderer settings, one here on in Engine
 	const int screenHeight = s_defaultSettings.window.height;	// dynamic window size change might break things...
-	const float& dimx = dimensions.x();
-	const float& dimy = dimensions.y();
-	const float posx = bottomLeftCornerCoordinates.x() * 2.0f - screenWidth;	// NDC is [-1, 1] ; if (0,0) is given
-	const float posy = bottomLeftCornerCoordinates.y() * 2.0f - screenHeight;	// texture is drawn in bottom left corner of the screen
+	const float& dimx = cmd.dimensionsInPixels.x();
+	const float& dimy = cmd.dimensionsInPixels.y();
+	const float posx = cmd.bottomLeftCornerScreenCoordinates.x() * 2.0f - screenWidth;	// NDC is [-1, 1] ; if (0,0) is given
+	const float posy = cmd.bottomLeftCornerScreenCoordinates.y() * 2.0f - screenHeight;	// texture is drawn in bottom left corner of the screen
 	const vec2 posCenter( (posx + dimx)/screenWidth, (posy + dimy) / screenHeight);
 
 	const XMVECTOR scale = vec3(dimx / screenWidth, dimy / screenHeight, 0.0f);
@@ -1224,8 +1238,8 @@ void Renderer::DrawQuadOnScreen(const vec2& dimensions, const vec2& bottomLeftCo
 	const XMMATRIX transformation = XMMatrixAffineTransformation(scale, vec3::Zero, XMQuaternionIdentity(), translation);
 
 	SetConstant4x4f("screenSpaceTransformation", transformation);
-	SetConstant1f("isDepthTexture", bIsDepthTexture ? 1.0f : 0.0f);
-	SetTexture("inputTexture", texture);
+	SetConstant1f("isDepthTexture", cmd.bIsDepthTexture ? 1.0f : 0.0f);
+	SetTexture("inputTexture", cmd.texture);
 	SetBufferObj(EGeometry::QUAD);
 	Apply();
 	DrawIndexed();
@@ -1236,7 +1250,7 @@ void Renderer::Begin(const float clearColor[4], const float depthValue)
 	const RenderTargetID rtv = m_state._boundRenderTargets[0];
 	const DepthTargetID dsv = m_state._boundDepthTarget;
 	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearColor);
-	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv], D3D11_CLEAR_DEPTH, depthValue, 0);
+	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv].pDepthStencilView, D3D11_CLEAR_DEPTH, depthValue, 0);
 }
 
 void Renderer::Begin(const ClearCommand & clearCmd)
@@ -1264,7 +1278,7 @@ void Renderer::Begin(const ClearCommand & clearCmd)
 			return D3D11_CLEAR_STENCIL;
 		}();
 
-		if (dsv >= 0)	m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv], clearFlag, clearCmd.clearDepth, clearCmd.clearStencil);
+		if (dsv >= 0)	m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv].pDepthStencilView, clearFlag, clearCmd.clearDepth, clearCmd.clearStencil);
 		else			Log::Error("Begin called with clear depth_stencil command without a depth target bound to pipeline!");
 	}
 }
@@ -1354,8 +1368,8 @@ void Renderer::Apply()
 #endif
 		const auto indexDSV     = m_state._boundDepthTarget;
 		//ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &RTVs[0];
-		ID3D11RenderTargetView** RTV = RTVs.empty() ? nullptr : &RTVs[0];
-		DepthStencil*  DSV           = indexDSV == -1 ? nullptr : m_depthTargets[indexDSV];
+		ID3D11RenderTargetView** RTV = RTVs.empty()   ? nullptr : &RTVs[0];
+		ID3D11DepthStencilView*  DSV = indexDSV == -1 ? nullptr : m_depthTargets[indexDSV].pDepthStencilView;
 
 		m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
 		

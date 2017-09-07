@@ -70,8 +70,8 @@ struct SetScissorsCommand
 
 struct DrawQuadOnScreenCommand
 {
-	DrawQuadOnScreenCommand(const vec2& d, const vec2& bl, const TextureID tex) : dimensionsInPixels(d), bottomLeftCornerScreenCoordinates(bl), texture(tex) {}
 	vec2 dimensionsInPixels;
 	vec2 bottomLeftCornerScreenCoordinates;	// (0, 0) is bottom left corner of the screen
 	TextureID texture;
+	bool bIsDepthTexture;
 };

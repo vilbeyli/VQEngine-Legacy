@@ -207,9 +207,9 @@ bool Engine::Load()
 
 		// Samplers
 		D3D11_SAMPLER_DESC normalSamplerDesc = {};
-		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-		normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-		normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 		normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		normalSamplerDesc.MinLOD = 0.f;
 		normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
@@ -410,7 +410,7 @@ void Engine::Render()
 		const TextureID texDiffuseRoughness = m_pRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
 		const TextureID texSpecularMetallic = m_pRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
 		const TextureID texPosition = m_pRenderer->GetRenderTargetTexture(gBuffer._positionRT);
-		const TextureID texDepthTexture = m_pRenderer->m_state._depthBufferTexture._id;
+		const TextureID texDepthTexture = m_pRenderer->m_state._depthBufferTexture;
 
 		// GEOMETRY - DEPTH PASS
 		m_pRenderer->BeginEvent("Geometry Pass");
@@ -470,7 +470,7 @@ void Engine::Render()
 		m_pRenderer->BeginEvent("Lighting Pass");
 		m_pRenderer->SetShader(m_selectedShader);	// forward brdf/phong
 		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-		m_pRenderer->SetSamplerState("sNormalSampler", 0);
+		m_pRenderer->SetSamplerState("sNormalSampler", m_normalSampler);
 #if 0
 		m_pRenderer->SetConstant1f("fovH", m_pCamera->m_settings.fovH * DEG2RAD);
 		m_pRenderer->SetConstant1f("panini", m_bUsePaniniProjection ? 1.0f : 0.0f);
@@ -534,20 +534,22 @@ void Engine::Render()
 		const vec2 squareTextureScaledDownSize    ((float)heightPx              , (float)heightPx);
 
 		// Textures to draw
-		TextureID tShadowMap		 = m_shadowMapPass._shadowMap;
-		TextureID tBloomFilter		 = m_pRenderer->GetRenderTargetTexture(m_postProcessPass._bloomPass._brightRT);
+		TextureID tShadowMap		 = m_pRenderer->GetDepthTargetTexture(m_shadowMapPass._shadowDepthTarget);
+		TextureID tBlurredBloom		 = m_pRenderer->GetRenderTargetTexture(m_postProcessPass._bloomPass._blurPingPong[0]);
 		TextureID tDiffuseRoughness  = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._diffuseRoughnessRT);
-		TextureID tSpecularMetallic  = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._positionRT);
+		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
+		TextureID tSceneDepth		 = m_pRenderer->GetDepthTargetTexture(0);
 		TextureID tNormals			 = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._normalRT);
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
+			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);
 			std::vector<DrawQuadOnScreenCommand> c
-			{	//		Pixel Dimensions		     Screen Position (offset below)		Texture
-				{ fullscreenTextureScaledDownSize, vec2(0.0f, (float)bottomPaddingPx),	tDiffuseRoughness },
-				{ fullscreenTextureScaledDownSize, vec2(0.0f, (float)bottomPaddingPx),	tSpecularMetallic },
-				{ fullscreenTextureScaledDownSize, vec2(0.0f, (float)bottomPaddingPx),	tNormals },
-				{ squareTextureScaledDownSize    , vec2(0.0f, (float)bottomPaddingPx),	tShadowMap },
-				{ fullscreenTextureScaledDownSize, vec2(0.0f, (float)bottomPaddingPx),	tBloomFilter },
+			{	//		Pixel Dimensions	 Screen Position (offset below)		Texture
+				{ fullscreenTextureScaledDownSize,	screenPosition,		tSceneDepth			, true},
+				{ fullscreenTextureScaledDownSize,	screenPosition,		tDiffuseRoughness	, false},
+				{ fullscreenTextureScaledDownSize,	screenPosition,		tNormals			, false},
+				{ squareTextureScaledDownSize    ,	screenPosition,		tShadowMap			, true},
+				{ fullscreenTextureScaledDownSize,	screenPosition,		tBlurredBloom		, false},
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
 				c[i].bottomLeftCornerScreenCoordinates.x() = c[i-1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;
@@ -558,8 +560,7 @@ void Engine::Render()
 		m_pRenderer->SetShader(EShaders::DEBUG);
 		for (const DrawQuadOnScreenCommand& cmd : quadCmds)
 		{
-			const bool bIsDepthTarget = cmd.dimensionsInPixels == squareTextureScaledDownSize;	// square texture assumed depth texture for now
-			m_pRenderer->DrawQuadOnScreen(cmd.dimensionsInPixels, cmd.bottomLeftCornerScreenCoordinates, cmd.texture, bIsDepthTarget);
+			m_pRenderer->DrawQuadOnScreen(cmd);
 		}
 		m_pRenderer->EndEvent();
 	}

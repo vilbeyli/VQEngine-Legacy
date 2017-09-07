@@ -482,7 +482,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 		// sphere parameters
 		const float sphRadius = 2.0f;
 		const unsigned sphRingCount = 25;
-		const unsigned sphSliceCount = 15;
+		const unsigned sphSliceCount = 25;
 
 		GeometryGenerator::SetDevice(m_device);
 		m_bufferObjects[TRIANGLE] = GeometryGenerator::Triangle();

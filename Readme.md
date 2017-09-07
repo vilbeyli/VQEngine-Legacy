@@ -2,7 +2,7 @@
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
-![](Screenshots/fixedTonemappingGamma.PNG)
+![](Screenshots/deferred.PNG)
 <center><i>BRDF - HDR</i></center>
 
 
@@ -20,10 +20,10 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 | :---: | :--- |
 | **WASD** |	Camera Movement |
 | **numpad::468239** |	Shadow Caster Light Movement |
-| **F1** |	TexCoord Shader |
-| **F2** |	Normals Shader |
-| **F3** |	Diffuse Color Shader |
-| **F4** |	Toggle TBN Shader |
+| **F1** |	TexCoord Shader (Forward Rendering Only) |
+| **F2** |	Normals Shader (Forward Rendering Only) |
+| **F3** |	Diffuse Color Shader (Forward Rendering Only) |
+| **F4** |	Toggle TBN Shader (Forward Rendering Only) |
 | **F5** |	Empty |
 | **F6** |	Toggle Phong/BRDF Shaders |
 | **F7** |	Toggle Debug Shader |

@@ -98,6 +98,6 @@ void Material::SetMaterialConstants(Renderer* renderer, EShaders shader) const
 
 	renderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0.0f : 1.0f);
 	renderer->SetConstant1f("isNormalMap" , normalMap  == -1 ? 0.0f : 1.0f);
-	if (diffuseMap>=0) renderer->SetTexture("gDiffuseMap", diffuseMap);
-	if ( normalMap>=0) renderer->SetTexture("gNormalMap" , normalMap);
+	if (diffuseMap>=0) renderer->SetTexture("texDiffuseMap", diffuseMap);
+	if ( normalMap>=0) renderer->SetTexture("texNormalMap" , normalMap);
 }

@@ -18,6 +18,7 @@
 
 #include "GameObject.h"
 #include "Renderer.h"
+#include "RenderPasses.h"
 
 GameObject::GameObject()
 #ifdef ENABLE_PHY_CODE
@@ -60,11 +61,11 @@ GameObject& GameObject::operator=(const GameObject& obj)
 	return *this;
 }
 
-void GameObject::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool UploadMaterialDataToGPU) const
+void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const
 {
 	const EShaders shader = static_cast<EShaders>(pRenderer->GetActiveShader());
 	const XMMATRIX world = m_transform.WorldTransformationMatrix();
-	const XMMATRIX wvp = world * viewProj;
+	const XMMATRIX wvp = world * sceneView.viewProj;
 
 	if(UploadMaterialDataToGPU) 
 		m_model.m_material.SetMaterialConstants(pRenderer, shader);
@@ -73,8 +74,13 @@ void GameObject::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool Uplo
 	{
 	case EShaders::TBN:
 		pRenderer->SetConstant4x4f("world", world);
-		pRenderer->SetConstant4x4f("viewProj", viewProj);
+		pRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
 		pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
+		break;
+	case EShaders::DEFERRED_GEOMETRY:
+		pRenderer->SetConstant4x4f("worldView", world * sceneView.view);
+		pRenderer->SetConstant4x4f("normalViewMatrix", m_transform.NormalMatrix(world) * sceneView.view);
+		pRenderer->SetConstant4x4f("worldViewProj", wvp);
 		break;
 	default:
 		pRenderer->SetConstant4x4f("world", world);

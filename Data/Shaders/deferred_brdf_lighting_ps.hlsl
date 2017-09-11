@@ -35,8 +35,10 @@ struct PSIn
 cbuffer SceneVariables
 {
 	matrix lightSpaceMat; // [arr?]
-	float  pad0;
-	float3 CameraWorldPosition;
+	//float  pad0;
+	//float3 CameraWorldPosition;
+	matrix matView;
+	matrix matViewToWorld;
 
 	float  lightCount;
 	float  spotCount;
@@ -61,11 +63,14 @@ SamplerState sNearestSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	// lighting & surface parameters
+	// lighting & surface parameters (View Space Lighting)
 	const float3 P = texPosition.Sample(sNearestSampler, In.uv);
 	const float3 N = texNormals.Sample(sNearestSampler, In.uv);
 	//const float3 T = normalize(In.tangent);
-	const float3 V = normalize(CameraWorldPosition - P);
+	const float3 V = normalize(- P);
+	
+	const float3 Pw = mul(matViewToWorld, float4(P, 1)).xyz;
+
 	const float ambient = 0.00005f;
 
 	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
@@ -86,20 +91,25 @@ float4 PSMain(PSIn In) : SV_TARGET
 	//---------------------------------
 	for (int i = 0; i < lightCount; ++i)		
 	{
-		const float3 Wi       = normalize(lights[i].position - P);
-		const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P), false) * lights[i].color * lights[i].brightness;
+		const float3 Lv       = mul(matView, float4(lights[i].position, 1));
+		const float3 Wi       = normalize(Lv - P);
+		const float3 radiance = 
+			Attenuation(lights[i].attenuation, length(lights[i].position - Pw), false) 
+			* lights[i].color 
+			* lights[i].brightness;
 		IdIs += BRDF(Wi, s, V, P) * radiance;
 	}
 
 #if 1
 	// SPOT Lights (shadow)
 	//---------------------------------
-	float4 lightSpacePos = mul(lightSpaceMat, float4(P,1));
+	float4 lightSpacePos = mul(lightSpaceMat, float4(Pw,1));
 	for (int j = 0; j < spotCount; ++j)
 	{
-		const float3 Wi       = normalize(spots[j].position - P);
-		const float3 radiance = Intensity(spots[j], P) * spots[j].color;
-		const float3 shadowing = ShadowTest(P, lightSpacePos, texShadowMap, sShadowSampler);
+		const float3 Lv        = mul(matView, float4(spots[j].position, 1));
+		const float3 Wi        = normalize(Lv - P);
+		const float3 radiance  = Intensity(spots[j], Pw) * spots[j].color;
+		const float3 shadowing = ShadowTest(Pw, lightSpacePos, texShadowMap, sShadowSampler);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
 	}
 #endif

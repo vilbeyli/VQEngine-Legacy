@@ -301,10 +301,12 @@ bool Engine::UpdateAndRender()
 void Engine::PreRender()
 {
 	// set scene view
-	const XMMATRIX view = m_pCamera->GetViewMatrix();
-	const XMMATRIX proj = m_pCamera->GetProjectionMatrix();
+	const XMMATRIX view			= m_pCamera->GetViewMatrix();
+	const XMMATRIX viewInverse	= m_pCamera->GetViewInverseMatrix();
+	const XMMATRIX proj			= m_pCamera->GetProjectionMatrix();
 	m_sceneView.viewProj = view * proj;
-	m_sceneView.pCamera = m_pCamera;
+	m_sceneView.view = view;
+	m_sceneView.viewToWorld = viewInverse;
 
 	// gather scene lights
 	size_t spotCount = 0;	size_t lightCount = 0;
@@ -494,8 +496,8 @@ void Engine::Render()
 			m_pRenderer->BindDepthTarget(m_worldDepthTarget);
 
 		m_pRenderer->SetShader(EShaders::TBN);
-		m_sceneManager->m_roomScene.cube.Render(m_pRenderer, viewProj, false);
-		m_sceneManager->m_roomScene.sphere.Render(m_pRenderer, viewProj, false);
+		m_sceneManager->m_roomScene.cube.Render(m_pRenderer, m_sceneView, false);
+		m_sceneManager->m_roomScene.sphere.Render(m_pRenderer, m_sceneView, false);
 
 		if (m_useDeferredRendering)
 			m_pRenderer->UnbindDepthTarget();

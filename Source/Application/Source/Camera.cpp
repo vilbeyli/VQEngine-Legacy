@@ -181,6 +181,37 @@ XMMATRIX Camera::GetViewMatrix() const
 	return XMLoadFloat4x4(&m_viewMatrix);
 }
 
+XMMATRIX Camera::GetViewInverseMatrix() const
+{
+	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+	XMVECTOR pos = m_pos;
+	XMMATRIX MRot = RotMatrix();
+
+	XMVECTOR dir	= XMVector3Normalize(lookAt - pos);
+	XMVECTOR wing	= XMVector3Cross(up, dir);
+	XMMATRIX R = XMMatrixIdentity(); 
+	R.r[0] = wing;
+	R.r[1] = up;
+	R.r[2] = dir;
+	R.r[0].m128_f32[3] = R.r[1].m128_f32[3] = R.r[2].m128_f32[3] = 0;
+	//R = XMMatrixTranspose(R);
+	
+	XMMATRIX T = XMMatrixIdentity();
+	T.r[3] = pos;
+	T.r[3].m128_f32[3] = 1.0;
+	
+	XMMATRIX viewInverse = R * T;	// this is for ViewMatrix
+	//	orienting our model using this, we want the inverse of viewmat
+	// XMMATRIX rotMatrix = XMMatrixTranspose(R) * T.inverse();
+
+	XMMATRIX view = XMLoadFloat4x4(&m_viewMatrix);
+	XMVECTOR det = XMMatrixDeterminant(view);
+	XMMATRIX test = XMMatrixInverse(&det, view);
+
+	return test;
+}
+
 XMMATRIX Camera::GetProjectionMatrix() const
 {
 	return  XMLoadFloat4x4(&m_projectionMatrix);

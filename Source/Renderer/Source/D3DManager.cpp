@@ -319,7 +319,7 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 	}
 
 #ifdef _DEBUG
-	// Direct3D SDK Debug Layer Tricks
+	// Direct3D SDK Debug Layer
 	//------------------------------------------------------------------------------------------
 	// src1: https://blogs.msdn.microsoft.com/chuckw/2012/11/30/direct3d-sdk-debug-layer-tricks/
 	// src2: http://seanmiddleditch.com/direct3d-11-debug-api-tricks/

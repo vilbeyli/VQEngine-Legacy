@@ -28,7 +28,7 @@
 #endif
 
 class Renderer;
-//using ShaderID = int;
+struct SceneView;
 
 class GameObject
 {
@@ -39,7 +39,7 @@ public:
 
 	GameObject& operator=(const GameObject& obj);
 
-	void Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool UploadMaterialDataToGPU) const;
+	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const;
 	void RenderZ(Renderer* pRenderer) const;
 
 public:

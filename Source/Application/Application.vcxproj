@@ -70,25 +70,25 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)..\Renderer\Include;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)..\Renderer\Include;$(SolutionDir)Source\Utilities\Include</IncludePath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)</LibraryPath>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)..\Renderer\Include;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)..\Renderer\Include;$(SolutionDir)Source\Utilities\Include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)</LibraryPath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)..\Renderer\Include;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)..\Renderer\Include;$(SolutionDir)Source\Utilities\Include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)</LibraryPath>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)..\Renderer\Include;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Include;$(ProjectDir)..\Renderer\Include;$(SolutionDir)Source\Utilities\Include</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)</LibraryPath>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
@@ -159,11 +159,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Source\RenderPasses.cpp" />
+    <ClCompile Include="Source\SceneParser.cpp" />
     <ClCompile Include="Source\Skybox.cpp" />
     <ClCompile Include="Source\RoomScene.cpp" />
-    <ClCompile Include="Source\Log.cpp" />
-    <ClCompile Include="Source\SceneParser.cpp" />
-    <ClCompile Include="Source\Quaternion.cpp" />
     <ClCompile Include="Source\SceneManager.cpp" />
     <ClCompile Include="Source\PerfTimer.cpp" />
     <ClCompile Include="Source\GameObject.cpp" />
@@ -174,14 +172,12 @@
     <ClCompile Include="Source\Input.cpp" />
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\BaseSystem.cpp" />
-    <ClCompile Include="Source\utils.cpp" />
     <ClCompile Include="Source\WorkerPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\Animation.h" />
     <ClInclude Include="Include\DataStructures.h" />
     <ClInclude Include="Include\HandleTypedefs.h" />
-    <ClInclude Include="Include\Quaternion.h" />
     <ClInclude Include="Include\SceneManager.h" />
     <ClInclude Include="Include\PerfTimer.h" />
     <ClInclude Include="Include\GameObject.h" />
@@ -189,7 +185,6 @@
     <ClInclude Include="Include\Camera.h" />
     <ClInclude Include="Include\SceneParser.h" />
     <ClInclude Include="Include\Settings.h" />
-    <ClInclude Include="Include\Log.h" />
     <ClInclude Include="Include\RoomScene.h" />
     <ClInclude Include="Include\Skybox.h" />
     <ClInclude Include="Include\RenderPasses.h" />
@@ -199,12 +194,14 @@
     <ClInclude Include="Include\Input.h" />
     <ClInclude Include="Include\resource.h" />
     <ClInclude Include="Include\SystemDefs.h" />
-    <ClInclude Include="Include\utils.h" />
     <ClInclude Include="Include\WorkerPool.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Renderer\Renderer.vcxproj">
       <Project>{eaf3c9db-a325-40fc-bdb4-7ee2e0756b00}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Utilities\Utilities.vcxproj">
+      <Project>{19aeca67-f607-4dcc-847b-a6196c924945}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

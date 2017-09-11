@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.10
+VisualStudioVersion = 15.0.26730.12
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "Source\Application\Application.vcxproj", "{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -66,6 +66,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Data\settings.ini = Data\settings.ini
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Utilities", "Source\Utilities\Utilities.vcxproj", "{19AECA67-F607-4DCC-847B-A6196C924945}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -100,6 +102,18 @@ Global
 		{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}.Release|x64.Build.0 = Release|x64
 		{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}.Release|x86.ActiveCfg = Release|Win32
 		{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}.Release|x86.Build.0 = Release|Win32
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Debug|x64.ActiveCfg = Debug|x64
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Debug|x64.Build.0 = Debug|x64
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Debug|x86.ActiveCfg = Debug|Win32
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Debug|x86.Build.0 = Debug|Win32
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Profile|x64.ActiveCfg = Release|x64
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Profile|x64.Build.0 = Release|x64
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Profile|x86.ActiveCfg = Release|Win32
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Profile|x86.Build.0 = Release|Win32
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Release|x64.ActiveCfg = Release|x64
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Release|x64.Build.0 = Release|x64
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Release|x86.ActiveCfg = Release|Win32
+		{19AECA67-F607-4DCC-847B-A6196C924945}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -18,9 +18,9 @@
 
 #include "SceneParser.h"
 #include "utils.h"
-#include "SceneManager.h"
 #include "Log.h"
 
+#include "SceneManager.h"
 #include "Color.h"
 
 

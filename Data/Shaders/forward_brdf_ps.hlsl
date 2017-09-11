@@ -63,8 +63,8 @@ cbuffer SurfaceMaterial
 	float  metalness;
 };
 
-Texture2D gDiffuseMap; // todo: gTextureName -> texTextureName
-Texture2D gNormalMap;  // todo: gTextureName -> texTextureName
+Texture2D texDiffuseMap;
+Texture2D texNormalMap;
 Texture2D texShadowMap;
 
 SamplerState sShadowSampler;
@@ -73,17 +73,18 @@ SamplerState sNormalSampler;
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	const bool bUsePhongAttenuation = false; // use brdf attenuation
-	// lighting & surface parameters
+	
+	// lighting & surface parameters (World Space)
 	const float3 P = In.worldPos;
 	const float3 N = normalize(In.normal);
 	const float3 T = normalize(In.tangent);
 	const float3 V = normalize(cameraPos - P);
 	const float ambient = 0.00005f;
 
-	BRDF_Surface s;	// surface 
-	s.N = (isNormalMap)* UnpackNormals(gNormalMap, sNormalSampler, In.texCoord, N, T) +
+	BRDF_Surface s;
+	s.N = (isNormalMap)* UnpackNormals(texNormalMap, sNormalSampler, In.texCoord, N, T) +
 		(1.0f - isNormalMap) * N;
-	s.diffuseColor = diffuse *  (isDiffuseMap          * gDiffuseMap.Sample(sShadowSampler, In.texCoord).xyz +
+	s.diffuseColor = diffuse *  (isDiffuseMap          * texDiffuseMap.Sample(sShadowSampler, In.texCoord).xyz +
 		(1.0f - isDiffuseMap)   * float3(1,1,1));
 	s.specularColor = specular;
 	s.roughness = roughness;
@@ -105,7 +106,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 
 	// SPOT Lights (shadow)
-	// todo: intensity/brightness
 	//---------------------------------
 	for (int j = 0; j < spotCount; ++j)			
 	{

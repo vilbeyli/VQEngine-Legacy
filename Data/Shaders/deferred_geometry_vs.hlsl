@@ -28,16 +28,16 @@ struct VSIn
 struct PSIn
 {
 	float4 position			: SV_POSITION;
-	float3 worldPosition	: POSITION0;
-	float3 worldNormal		: NORMAL;
-	float3 worldTangent		: TANGENT;
+	float3 viewPosition		: POSITION0;
+	float3 viewNormal		: NORMAL;
+	float3 viewTangent		: TANGENT;
 	float2 uv				: TEXCOORD1;
 };
 
 cbuffer perModel
 {
-	matrix world;
-	matrix normalMatrix;
+	matrix worldView;
+	matrix normalViewMatrix;
 	matrix worldViewProj;
 };
 
@@ -47,9 +47,9 @@ PSIn VSMain(VSIn In)
 
 	PSIn Out;
 	Out.position		= mul(worldViewProj, pos);
-	Out.worldPosition	= mul(world, pos).xyz;
-	Out.worldNormal		= normalize(mul(normalMatrix, In.normal));
-	Out.worldTangent	= normalize(mul(normalMatrix, In.tangent));
+	Out.viewPosition	= mul(worldView, pos).xyz;
+	Out.viewNormal		= normalize(mul(normalViewMatrix, In.normal));
+	Out.viewTangent		= normalize(mul(normalViewMatrix, In.tangent));
 	Out.uv				= In.uv;
 	return Out;
 }

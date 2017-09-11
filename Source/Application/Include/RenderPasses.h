@@ -39,7 +39,8 @@ struct SceneLightData;
 struct SceneView
 {
 	XMMATRIX			viewProj;
-	shared_ptr<Camera>  pCamera;
+	XMMATRIX			view;
+	XMMATRIX			viewToWorld;
 };
 
 struct ShadowMapPass
@@ -134,4 +135,12 @@ struct DebugPass
 {
 	void Initialize(Renderer* pRenderer);
 	RasterizerStateID _scissorsRasterizer;
+};
+
+// Blizzard Dev Paper: http://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf
+struct AmbientOcclusionPass
+{
+	void BilateralBlurPass();
+
+
 };

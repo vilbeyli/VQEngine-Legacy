@@ -58,7 +58,6 @@ PSIn VSMain(VSIn In)
 
 	PSIn Out;
 	Out.position		= mul(worldViewProj, pos);
-
 #if 0	// experimenting with panini projection, using unreal's implementation
 	// src: https://docs.unrealengine.com/latest/INT/Engine/Rendering/PostProcessEffects/PaniniProjection/
 	// panini projection

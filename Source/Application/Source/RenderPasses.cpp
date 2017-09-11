@@ -471,7 +471,8 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->SetShader(EShaders::DEFERRED_BRDF_LIGHTING);
 	ENGINE->SendLightData();
 
-	pRenderer->SetConstant3f("CameraWorldPosition", sceneView.pCamera->GetPositionF());
+	pRenderer->SetConstant4x4f("matView", sceneView.view);
+	pRenderer->SetConstant4x4f("matViewToWorld", sceneView.viewToWorld);
 	pRenderer->SetSamplerState("sNearestSampler", 0);	// todo: nearest sampler
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);

@@ -83,8 +83,8 @@ void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
 		|| selectedShader == EShaders::DEFERRED_GEOMETRY
 	);
 
-	m_room.Render(m_pRenderer, sceneView.viewProj, bSendMaterialData);
-	RenderCentralObjects(sceneView.viewProj, bSendMaterialData);
+	m_room.Render(m_pRenderer, sceneView, bSendMaterialData);
+	RenderCentralObjects(sceneView, bSendMaterialData);
 }
 
 
@@ -368,19 +368,19 @@ void RoomScene::UpdateCentralObj(const float dt)
 }
 
 
-void RoomScene::RenderCentralObjects(const XMMATRIX& viewProj, bool bSendMaterialData) const
+void RoomScene::RenderCentralObjects(const SceneView& sceneView, bool sendMaterialData) const
 {
 	const ShaderID shd = ENGINE->GetSelectedShader();
 
-	for (const auto& cube : cubes) cube.Render(m_pRenderer, viewProj, bSendMaterialData);
-	for (const auto& sph : spheres) sph.Render(m_pRenderer, viewProj, bSendMaterialData);
+	for (const auto& cube : cubes) cube.Render(m_pRenderer, sceneView, sendMaterialData);
+	for (const auto& sph : spheres) sph.Render(m_pRenderer, sceneView, sendMaterialData);
 
-	grid.Render(m_pRenderer, viewProj, bSendMaterialData);
-	quad.Render(m_pRenderer, viewProj, bSendMaterialData);
-	triangle.Render(m_pRenderer, viewProj, bSendMaterialData);
-	cylinder.Render(m_pRenderer, viewProj, bSendMaterialData);
-	cube.Render(m_pRenderer, viewProj, bSendMaterialData);
-	sphere.Render(m_pRenderer, viewProj, bSendMaterialData);
+	grid.Render(m_pRenderer, sceneView, sendMaterialData);
+	quad.Render(m_pRenderer, sceneView, sendMaterialData);
+	triangle.Render(m_pRenderer, sceneView, sendMaterialData);
+	cylinder.Render(m_pRenderer, sceneView, sendMaterialData);
+	cube.Render(m_pRenderer, sceneView, sendMaterialData);
+	sphere.Render(m_pRenderer, sceneView, sendMaterialData);
 }
 
 void RoomScene::ToggleFloorNormalMap()
@@ -391,13 +391,13 @@ void RoomScene::ToggleFloorNormalMap()
 	m_room.floor.m_model.m_material.normalMap = nMap;
 }
 
-void RoomScene::Room::Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool sendMaterialData) const
+void RoomScene::Room::Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const
 {
-	floor.Render(pRenderer, viewProj, sendMaterialData);
-	wallL.Render(pRenderer, viewProj, sendMaterialData);
-	wallR.Render(pRenderer, viewProj, sendMaterialData);
-	wallF.Render(pRenderer, viewProj, sendMaterialData);
-	ceiling.Render(pRenderer, viewProj, sendMaterialData);
+	floor.Render(pRenderer, sceneView, sendMaterialData);
+	wallL.Render(pRenderer, sceneView, sendMaterialData);
+	wallR.Render(pRenderer, sceneView, sendMaterialData);
+	wallF.Render(pRenderer, sceneView, sendMaterialData);
+	ceiling.Render(pRenderer, sceneView, sendMaterialData);
 }
 
 void RoomScene::Room::Initialize(Renderer* pRenderer)
@@ -516,6 +516,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 
 void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj)
 {
+#if 0
 	// todo: show minimal demonstration of renderer
 	GameObject obj;										// create object
 	obj.m_model.m_mesh = EGeometry::SPHERE;				// set material
@@ -532,7 +533,7 @@ void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj)
 	pRenderer->SetShader(EShaders::FORWARD_BRDF);
 	obj.Render(pRenderer, viewProj, true);
 	
-
+#endif
 }
 
 

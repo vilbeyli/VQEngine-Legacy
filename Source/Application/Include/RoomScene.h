@@ -47,7 +47,7 @@ private:
 	void UpdateCentralObj(const float dt);
 
 	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
-	void RenderCentralObjects(const XMMATRIX& viewProj, bool sendMaterialData) const;
+	void RenderCentralObjects(const SceneView& sceneView, bool sendMaterialData) const;
 // ----------------------------------------------------------------------
 	friend class SceneManager;
 	void ToggleFloorNormalMap();
@@ -60,7 +60,7 @@ private:
 
 	struct Room {
 		friend class RoomScene;
-		void Render(Renderer* pRenderer, const XMMATRIX& viewProj, bool sendMaterialData) const;
+		void Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const;
 		void Initialize(Renderer* pRenderer);
 #if 0
 		// union -> deleted dtor??

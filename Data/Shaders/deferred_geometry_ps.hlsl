@@ -24,9 +24,9 @@
 struct PSIn
 {
 	float4 position			: SV_POSITION;
-	float3 worldPosition	: POSITION0;
-	float3 worldNormal		: NORMAL;
-	float3 worldTangent		: TANGENT;
+	float3 viewPosition	: POSITION0;
+	float3 viewNormal		: NORMAL;
+	float3 viewTangent		: TANGENT;
 	float2 uv				: TEXCOORD1;
 };
 
@@ -40,13 +40,8 @@ struct PSOut	// G-BUFFER
 
 // CBUFFERS
 //---------------------------------------------------------
-cbuffer SceneVariables
-{
-	float  pad0;
-	float3 cameraPos;
-};
 
-cbuffer SurfaceMaterial
+cbuffer SurfaceMaterial	// todo: use BRDF_Surface struct (match on CPU side)
 {
 	float3 diffuse;
 	float  alpha;
@@ -61,19 +56,19 @@ cbuffer SurfaceMaterial
 
 // TEXTURES & SAMPLERS
 //---------------------------------------------------------
-Texture2D gDiffuseMap;
-Texture2D gNormalMap;
+Texture2D texDiffuseMap;
+Texture2D texNormalMap;
 
 SamplerState sNormalSampler;
 
-inline float3 UnpackNormals(float2 uv, float3 worldNormal, float3 worldTangent)
+inline float3 UnpackNormals(float2 uv, float3 viewNormal, float3 viewTangent)
 {
 	// uncompressed normal in tangent space
-	float3 SampledNormal = gNormalMap.Sample(sNormalSampler, uv).xyz;
+	float3 SampledNormal = texNormalMap.Sample(sNormalSampler, uv).xyz;
 	SampledNormal = normalize(SampledNormal * 2.0f - 1.0f);
 
-	const float3 T = normalize(worldTangent - dot(worldNormal, worldTangent) * worldNormal);
-	const float3 N = normalize(worldNormal);
+	const float3 T = normalize(viewTangent - dot(viewNormal, viewTangent) * viewNormal);
+	const float3 N = normalize(viewNormal);
 	const float3 B = normalize(cross(T, N));
 	const float3x3 TBN = float3x3(T, B, N);
 	return mul(SampledNormal, TBN);
@@ -93,14 +88,14 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	PSOut GBuffer;
 
 	// lighting & surface parameters
-	const float3 P = In.worldPosition;
-	const float3 N = normalize(In.worldNormal);
-	const float3 T = normalize(In.worldTangent);
-	const float3 V = normalize(cameraPos - P);
+	const float3 P = In.viewPosition;
+	const float3 N = normalize(In.viewNormal);
+	const float3 T = normalize(In.viewTangent);
+	const float3 V = normalize(-P);
 
-	Surface s;	// surface 
+	Surface s;
 	s.N				= (isNormalMap) * UnpackNormals(In.uv, N, T) +	(1.0f - isNormalMap) * N;
-	s.diffuseColor	= diffuse *  (isDiffuseMap * gDiffuseMap.Sample(sNormalSampler, In.uv).xyz +
+	s.diffuseColor	= diffuse *  (isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, In.uv).xyz +
 					(1.0f - isDiffuseMap)   * diffuse);
 	s.specularColor = specular;
 	s.roughness = roughness;

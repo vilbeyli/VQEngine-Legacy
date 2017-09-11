@@ -43,6 +43,7 @@ public:
 
 	vec3 GetPositionF() const;
 	XMMATRIX GetViewMatrix() const;
+	XMMATRIX GetViewInverseMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
 	XMMATRIX GetOrthoMatrix() const;
 	XMMATRIX RotMatrix() const;

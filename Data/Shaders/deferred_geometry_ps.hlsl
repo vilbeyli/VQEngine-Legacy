@@ -16,10 +16,13 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "LightingCommon.hlsl"
+
 #define PI		3.14159265359f
 #define EPSILON 0.000000000001f
 
 #define _DEBUG
+
 
 struct PSIn
 {
@@ -38,50 +41,15 @@ struct PSOut	// G-BUFFER
 	float3 position			 : SV_TARGET3;
 };
 
-// CBUFFERS
-//---------------------------------------------------------
-
-cbuffer SurfaceMaterial	// todo: use BRDF_Surface struct (match on CPU side)
+cbuffer cbSurfaceMaterial
 {
-	float3 diffuse;
-	float  alpha;
-
-	float3 specular;
-	float  roughness;
-
-	float  isDiffuseMap;
-	float  isNormalMap;
-	float  metalness;
+    SurfaceMaterial surfaceMaterial;
 };
 
-// TEXTURES & SAMPLERS
-//---------------------------------------------------------
 Texture2D texDiffuseMap;
 Texture2D texNormalMap;
 
 SamplerState sNormalSampler;
-
-inline float3 UnpackNormals(float2 uv, float3 viewNormal, float3 viewTangent)
-{
-	// uncompressed normal in tangent space
-	float3 SampledNormal = texNormalMap.Sample(sNormalSampler, uv).xyz;
-	SampledNormal = normalize(SampledNormal * 2.0f - 1.0f);
-
-	const float3 T = normalize(viewTangent - dot(viewNormal, viewTangent) * viewNormal);
-	const float3 N = normalize(viewNormal);
-	const float3 B = normalize(cross(T, N));
-	const float3x3 TBN = float3x3(T, B, N);
-	return mul(SampledNormal, TBN);
-}
-
-struct Surface
-{
-	float3 N;
-	float  roughness;
-	float3 diffuseColor;
-	float  metalness;
-	float3 specularColor;
-};
 
 PSOut PSMain(PSIn In) : SV_TARGET
 {
@@ -93,13 +61,13 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 T = normalize(In.viewTangent);
 	const float3 V = normalize(-P);
 
-	Surface s;
-	s.N				= (isNormalMap) * UnpackNormals(In.uv, N, T) +	(1.0f - isNormalMap) * N;
-	s.diffuseColor	= diffuse *  (isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, In.uv).xyz +
-					(1.0f - isDiffuseMap)   * diffuse);
-	s.specularColor = specular;
-	s.roughness = roughness;
-	s.metalness = metalness;
+    BRDF_Surface s;
+	s.N				= (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.uv, N, T) +	(1.0f - surfaceMaterial.isNormalMap) * N;
+	s.diffuseColor	= surfaceMaterial.diffuse *  (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, In.uv).xyz +
+					(1.0f - surfaceMaterial.isDiffuseMap)   * surfaceMaterial.diffuse);
+	s.specularColor = surfaceMaterial.specular;
+    s.roughness = surfaceMaterial.roughness;
+	s.metalness = surfaceMaterial.metalness;
 
 	GBuffer.diffuseRoughness	= float4(s.diffuseColor, s.roughness);
 	GBuffer.specularMetalness	= float4(s.specularColor, s.metalness);

@@ -22,6 +22,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <random>
 
 #include <atlbase.h>
 #include <atlconv.h>
@@ -88,8 +89,9 @@ std::vector<std::string> split(const std::string & s, const std::vector<char>& d
 
 float RandF(float l, float h)
 {
-	float n = (float)rand() / RAND_MAX;
-	return l + n*(h - l);
+	thread_local std::mt19937_64 generator(std::random_device{}());
+	std::uniform_real_distribution<float> distribution(l, h);
+	return distribution(generator);
 }
 
 // [)
@@ -114,27 +116,6 @@ std::string GetFileNameFromPath(const std::string& path)
 	string name = tokens[tokens.size()-1];
 	return name;
 }
-
-//bool isNormalMap(const string& fileName)
-//{
-//	// nrm_texfile.png
-//	string noExt = split(fileName, '.')[0];		// nrm_texfile
-//	vector<string> tokens = split(noExt, '_');	// <nrm, texfile>
-//	return tokens[0] == "nrm";		// does 'nrm' exist in tokens? normal map : diffuse map;
-//}
-
-//std::string GetTextureNameFromDirectory(const std::string& dir)
-//{
-//	vector<string> tokens = split(dir, '\\');
-//	string texName = tokens[tokens.size() - 1];
-//	if (texName == dir)
-//	{
-//		tokens = split(dir, '/');
-//		texName = tokens[tokens.size() - 1];
-//	}
-//	std::transform(texName.begin(), texName.end(), texName.begin(), ::tolower);
-//	return texName;
-//}
 
 //---------------------------------------------------------------------------------
 

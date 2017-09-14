@@ -45,22 +45,22 @@ enum class EColorValue
 };
 
 
-struct Color
+struct LinearColor
 {
-	using ColorPalette = std::array < const Color, static_cast<int>(EColorValue::COUNT)>;
+	using ColorPalette = std::array < const LinearColor, static_cast<int>(EColorValue::COUNT)>;
 
 public:
-	Color();
-	Color(const vec3&);
-	Color(float r, float g, float b);
-	Color& operator=(const Color&);
-	Color& operator=(const vec3&);
+	LinearColor();
+	LinearColor(const vec3&);
+	LinearColor(float r, float g, float b);
+	LinearColor& operator=(const LinearColor&);
+	LinearColor& operator=(const vec3&);
 
 	vec3 Value() const { return value; }
 	static const ColorPalette Palette();
 	static vec3 RandColorF3();
 	static XMVECTOR RandColorV();
-	static Color	RandColor();
+	static LinearColor	RandColor();
 
 	operator vec3() const { return value; }
 
@@ -68,7 +68,7 @@ public:
 	//static std::string GetNameByColor(Color c);
 
 public:
-	static const Color black, white, red, green, blue, magenta, yellow, cyan, gray, light_gray, orange, purple;
+	static const LinearColor black, white, red, green, blue, magenta, yellow, cyan, gray, light_gray, orange, purple;
 	static const ColorPalette s_palette;
 private:
 	vec3 value;

@@ -27,6 +27,8 @@
 
 #include "Log.h"
 
+#include <array>
+
 void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
 {
 	this->_shadowMapDimension = static_cast<int>(shadowMapSettings.dimension);
@@ -123,8 +125,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 
 	DXGI_FORMAT format = _settings.HDREnabled ? HDR_Format : LDR_Format;
 
-	D3D11_TEXTURE2D_DESC rtDesc;
-	ZeroMemory(&rtDesc, sizeof(rtDesc));
+	D3D11_TEXTURE2D_DESC rtDesc = {};
 	rtDesc.Width = pRenderer->WindowWidth();
 	rtDesc.Height = pRenderer->WindowHeight();
 	rtDesc.MipLevels = 1;
@@ -136,8 +137,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	rtDesc.SampleDesc = smpDesc;
 	rtDesc.MiscFlags = 0;
 
-	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc;
-	ZeroMemory(&RTVDesc, sizeof(RTVDesc));
+	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
 	RTVDesc.Format = format;
 	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	RTVDesc.Texture2D.MipSlice = 0;
@@ -149,8 +149,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_bloomPass._blurPingPong[0] = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->_bloomPass._blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 
-	D3D11_SAMPLER_DESC blurSamplerDesc;
-	ZeroMemory(&blurSamplerDesc, sizeof(blurSamplerDesc));
+	D3D11_SAMPLER_DESC blurSamplerDesc = {};
 	blurSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	blurSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 	blurSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -489,4 +488,142 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 void DebugPass::Initialize(Renderer * pRenderer)
 {
 	_scissorsRasterizer = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, false, true);
+}
+
+constexpr size_t SSAO_SAMPLE_KERNEL_SIZE = 64;
+void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
+{
+	// CREATE SAMPLE KERNEL + NOISE TEXTURE & SAMPLER
+	//--------------------------------------------------------------------
+	constexpr size_t NOISE_KERNEL_SIZE = 4;
+
+	for (size_t i = 0; i < SSAO_SAMPLE_KERNEL_SIZE; i++)
+	{
+		// get a random direction in tangent space - z-up.
+		// As the sample kernel will be oriented along the surface normal, 
+		// the resulting sample vectors will all end up in the hemisphere.
+		vec3 sample(
+			RandF(0, 1) * 2.0f - 1.0f,	// [-1, 1]
+			RandF(0, 1) * 2.0f - 1.0f,	// [-1, 1]
+			RandF(0, 1)	// hemisphere	   [ 0, 1]
+		);
+		sample.normalize();
+		sample = sample * RandF(0, 1);	// scale to distribute samples within the hemisphere
+
+		// scale vectors with a power curve based on i to make samples close to center of the
+		// hemisphere more significant. think of it as i selects where we sample the hemisphere
+		// from, which starts from outer region of the hemisphere and as it increases, we 
+		// sample closer to the normal direction. 
+		// https://john-chapman-graphics.blogspot.nl/2013/01/ssao-tutorial.html
+		float scale = static_cast<float>(i) / SSAO_SAMPLE_KERNEL_SIZE;
+		scale = lerp(0.1f, 1.0f, scale * scale);
+		sample = sample * scale;
+
+		this->sampleKernel.push_back(sample);
+	}
+
+	// create a square noise texture using random directions
+	for (size_t i = 0; i < NOISE_KERNEL_SIZE * NOISE_KERNEL_SIZE; i++)
+	{
+		vec4 noise(
+			RandF(0, 1) * 2.0f - 1.0f,
+			RandF(0, 1) * 2.0f - 1.0f,
+			RandF(0, 1),
+			0.0f
+		);
+		this->noiseKernel.push_back(noise);
+	}
+	this->noiseTexture = pRenderer->CreateTexture2D(NOISE_KERNEL_SIZE, NOISE_KERNEL_SIZE, this->noiseKernel.data());
+
+	D3D11_SAMPLER_DESC noiseSamplerDesc = {};
+	noiseSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	noiseSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	noiseSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	noiseSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	this->noiseSampler = pRenderer->CreateSamplerState(noiseSamplerDesc);
+
+	// RENDER TARGET
+	//--------------------------------------------------------------------
+	const DXGI_FORMAT format = DXGI_FORMAT_R32_FLOAT;
+
+	D3D11_TEXTURE2D_DESC rtDesc = {};
+	rtDesc.Width = pRenderer->WindowWidth();
+	rtDesc.Height = pRenderer->WindowHeight();
+	rtDesc.MipLevels = 1;
+	rtDesc.ArraySize = 1;
+	rtDesc.Format = format;	
+	rtDesc.Usage = D3D11_USAGE_DEFAULT;
+	rtDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	rtDesc.CPUAccessFlags = 0;
+	rtDesc.SampleDesc = { 1, 0 };
+	rtDesc.MiscFlags = 0;
+
+	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+	RTVDesc.Format = format;
+	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	RTVDesc.Texture2D.MipSlice = 0;
+
+	this->renderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+}
+
+struct SSAOConstants
+{
+	XMFLOAT4X4 matProjection;
+	vec2 screenSize;
+	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * 3> samples;
+};
+void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const TextureID texPositions, const SceneView& sceneView)
+{
+	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
+	
+	XMFLOAT4X4 proj = {};
+	XMStoreFloat4x4(&proj, sceneView.projection);
+	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * 3> samples;
+
+	size_t idx = 0;
+	for (const vec3& v : sampleKernel)
+	{
+		samples[idx++] = v.x();
+		samples[idx++] = v.y();
+		samples[idx++] = v.z();
+	}
+
+	SSAOConstants ssaoConsts = {
+		proj,
+		vec2(pRenderer->WindowWidth(), pRenderer->WindowHeight()),
+		samples
+	};
+
+	pRenderer->BeginEvent("Occlusion Pass");
+
+	pRenderer->SetShader(EShaders::SSAO);
+	pRenderer->BindRenderTarget(this->renderTarget);
+	pRenderer->UnbindDepthTarget();
+	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
+	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
+	pRenderer->SetTexture("texViewPositions", texPositions);
+	pRenderer->SetTexture("texNoise", this->noiseTexture);
+	pRenderer->SetTexture("texDepth", depthTexture);
+	pRenderer->SetConstantStruct("SSAO_constants", &ssaoConsts);
+	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+	
+	pRenderer->EndEvent();
+}
+
+void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer)
+{
+	pRenderer->UnbindRenderTarget();
+	return;
+	pRenderer->BeginEvent("Blur Pass");
+	pRenderer->SetShader(EShaders::BILATERAL_BLUR);
+	
+	//pRenderer->BindRenderTarget(this->renderTarget);
+
+	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+
+	pRenderer->EndEvent();
 }

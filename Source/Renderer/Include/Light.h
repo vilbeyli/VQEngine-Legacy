@@ -42,7 +42,7 @@ struct Light
 
 	Light();
 	Light(ELightType type, 
-			Color color, 
+			LinearColor color, 
 			float range,
 			float brightness,
 			float spotAngle,
@@ -59,7 +59,7 @@ struct Light
 	//---------------------------------------------------------------------------------
 	
 	ELightType		_type;
-	Color			_color;
+	LinearColor			_color;
 	float			_range;
 	float			_brightness;	// 300.0f is a good default value
 	bool			_castsShadow;

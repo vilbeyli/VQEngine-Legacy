@@ -219,21 +219,21 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 			{"d", Light::ELightType::DIRECTIONAL}
 		};
 
-		static const std::unordered_map<std::string, const Color&>		sColorLookup
+		static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
 		{
-			{"orange"    , Color::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
-			{"black"     , Color::s_palette[ static_cast<int>(EColorValue::BLACK      )]},
-			{"white"     , Color::s_palette[ static_cast<int>(EColorValue::WHITE      )]},
-			{"red"       , Color::s_palette[ static_cast<int>(EColorValue::RED        )]},
-			{"green"     , Color::s_palette[ static_cast<int>(EColorValue::GREEN      )]},
-			{"blue"      , Color::s_palette[ static_cast<int>(EColorValue::BLUE       )]},
-			{"yellow"    , Color::s_palette[ static_cast<int>(EColorValue::YELLOW     )]},
-			{"magenta"   , Color::s_palette[ static_cast<int>(EColorValue::MAGENTA    )]},
-			{"cyan"      , Color::s_palette[ static_cast<int>(EColorValue::CYAN       )]},
-			{"gray"      , Color::s_palette[ static_cast<int>(EColorValue::GRAY       )]},
-			{"light_gray", Color::s_palette[ static_cast<int>(EColorValue::LIGHT_GRAY )]},
-			{"orange"    , Color::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
-			{"purple"    , Color::s_palette[ static_cast<int>(EColorValue::PURPLE     )]}
+			{"orange"    , LinearColor::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
+			{"black"     , LinearColor::s_palette[ static_cast<int>(EColorValue::BLACK      )]},
+			{"white"     , LinearColor::s_palette[ static_cast<int>(EColorValue::WHITE      )]},
+			{"red"       , LinearColor::s_palette[ static_cast<int>(EColorValue::RED        )]},
+			{"green"     , LinearColor::s_palette[ static_cast<int>(EColorValue::GREEN      )]},
+			{"blue"      , LinearColor::s_palette[ static_cast<int>(EColorValue::BLUE       )]},
+			{"yellow"    , LinearColor::s_palette[ static_cast<int>(EColorValue::YELLOW     )]},
+			{"magenta"   , LinearColor::s_palette[ static_cast<int>(EColorValue::MAGENTA    )]},
+			{"cyan"      , LinearColor::s_palette[ static_cast<int>(EColorValue::CYAN       )]},
+			{"gray"      , LinearColor::s_palette[ static_cast<int>(EColorValue::GRAY       )]},
+			{"light_gray", LinearColor::s_palette[ static_cast<int>(EColorValue::LIGHT_GRAY )]},
+			{"orange"    , LinearColor::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
+			{"purple"    , LinearColor::s_palette[ static_cast<int>(EColorValue::PURPLE     )]}
 		};
 
 		const bool bCommandHasRotationEntry = command.size() > 9;

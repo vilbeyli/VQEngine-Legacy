@@ -67,8 +67,13 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 	const XMMATRIX world = m_transform.WorldTransformationMatrix();
 	const XMMATRIX wvp = world * sceneView.viewProj;
 
-	if(UploadMaterialDataToGPU) 
-		m_model.m_material.SetMaterialConstants(pRenderer, shader);
+	if (UploadMaterialDataToGPU)
+	{
+		if (shader == EShaders::FORWARD_BRDF || shader == EShaders::DEFERRED_GEOMETRY)
+			m_model.mBRDF_Material.SetMaterialConstants(pRenderer, shader);
+		else
+			m_model.mBlinnPhong_Material.SetMaterialConstants(pRenderer, shader);
+	}
 
 	switch (shader)
 	{
@@ -90,7 +95,7 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 
 	}
 
-	pRenderer->SetBufferObj(m_model.m_mesh);
+	pRenderer->SetBufferObj(m_model.mMesh);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 }
@@ -104,7 +109,7 @@ void GameObject::RenderZ(Renderer * pRenderer) const
 		//m_model.m_mesh == GEOMETRY::GRID;
 	const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 
-	pRenderer->SetBufferObj(m_model.m_mesh);
+	pRenderer->SetBufferObj(m_model.mMesh);
 	pRenderer->SetRasterizerState(rasterizerState);
 	pRenderer->SetConstant4x4f("world", world);
 	pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));

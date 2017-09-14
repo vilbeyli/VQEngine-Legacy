@@ -39,6 +39,21 @@ struct Light
 	float  pad3;
 };
 
+// CPU - GPU struct for both lighting models
+struct SurfaceMaterial
+{
+    float3 diffuse;
+    float alpha;
+
+    float3 specular;
+    float roughness;
+
+    float isDiffuseMap;
+    float isNormalMap;
+    float metalness;
+    float shininess;
+};
+
 struct BRDF_Surface
 {
 	float3 N;

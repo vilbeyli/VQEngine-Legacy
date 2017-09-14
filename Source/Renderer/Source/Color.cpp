@@ -22,31 +22,31 @@
 
 using std::make_pair;
 
-const Color Color::black		= vec3(0.0f, 0.0f, 0.0f);
-const Color Color::white		= vec3(1.0f, 1.0f, 1.0f);
-const Color Color::red			= vec3(1.0f, 0.0f, 0.0f);
-const Color Color::green		= vec3(0.0f, 1.0f, 0.0f);
-const Color Color::blue			= vec3(0.0f, 0.0f, 1.0f);
-const Color Color::yellow		= vec3(1.0f, 1.0f, 0.0f);
-const Color Color::magenta		= vec3(1.0f, 0.0f, 1.0f);
-const Color Color::cyan			= vec3(0.0f, 1.0f, 1.0f);
-const Color Color::gray			= vec3(0.3f, 0.3f, 0.3f);
-const Color Color::light_gray	= vec3(0.45f, 0.45f, 0.45f);
-const Color Color::orange		= vec3(1.0f, 0.5f, 0.0f);
-const Color Color::purple		= vec3(0.31f, 0.149f, 0.513f);
+const LinearColor LinearColor::black		= vec3(0.0f, 0.0f, 0.0f);
+const LinearColor LinearColor::white		= vec3(1.0f, 1.0f, 1.0f);
+const LinearColor LinearColor::red			= vec3(1.0f, 0.0f, 0.0f);
+const LinearColor LinearColor::green		= vec3(0.0f, 1.0f, 0.0f);
+const LinearColor LinearColor::blue			= vec3(0.0f, 0.0f, 1.0f);
+const LinearColor LinearColor::yellow		= vec3(1.0f, 1.0f, 0.0f);
+const LinearColor LinearColor::magenta		= vec3(1.0f, 0.0f, 1.0f);
+const LinearColor LinearColor::cyan			= vec3(0.0f, 1.0f, 1.0f);
+const LinearColor LinearColor::gray			= vec3(0.3f, 0.3f, 0.3f);
+const LinearColor LinearColor::light_gray	= vec3(0.45f, 0.45f, 0.45f);
+const LinearColor LinearColor::orange		= vec3(1.0f, 0.5f, 0.0f);
+const LinearColor LinearColor::purple		= vec3(0.31f, 0.149f, 0.513f);
 
-const Color::ColorPalette Color::s_palette = {
-	Color::black,	Color::white,
-	Color::red,		Color::green,		Color::blue,
-	Color::yellow,	Color::magenta,		Color::cyan,
-	Color::gray,	Color::light_gray,
-	Color::orange,	Color::purple
+const LinearColor::ColorPalette LinearColor::s_palette = {
+	LinearColor::black,	LinearColor::white,
+	LinearColor::red,		LinearColor::green,		LinearColor::blue,
+	LinearColor::yellow,	LinearColor::magenta,		LinearColor::cyan,
+	LinearColor::gray,	LinearColor::light_gray,
+	LinearColor::orange,	LinearColor::purple
 };
 
 
 ;
 
-Color::Color() 
+LinearColor::LinearColor() 
 	: 
 	value(white.Value())
 {}
@@ -57,47 +57,47 @@ Color::Color()
 //	return s_palette;
 //}
 
-const Color::ColorPalette Color::Palette()
+const LinearColor::ColorPalette LinearColor::Palette()
 {
 	return s_palette;
 }
 
-vec3 Color::RandColorF3()
+vec3 LinearColor::RandColorF3()
 {
 	size_t i = RandU(0, Palette().size());
 	return s_palette[i].Value();
 }
 
-XMVECTOR Color::RandColorV()
+XMVECTOR LinearColor::RandColorV()
 {
 	size_t i = RandU(0, Palette().size());
 	return s_palette[i].Value();
 }
 
-Color Color::RandColor()
+LinearColor LinearColor::RandColor()
 {
 	return s_palette[RandU(0, Palette().size())];
 }
 
 
 
-Color::Color(const vec3& val)
+LinearColor::LinearColor(const vec3& val)
 	: 
 	value(val)
 {}
 
-Color::Color(float r, float g, float b)
+LinearColor::LinearColor(float r, float g, float b)
 	:
 	value(vec3(r, g, b))
 {}
 
-Color & Color::operator=(const Color & rhs)
+LinearColor & LinearColor::operator=(const LinearColor & rhs)
 {
 	this->value = rhs.Value();
 	return *this;
 }
 
-Color & Color::operator=(const vec3& flt)
+LinearColor & LinearColor::operator=(const vec3& flt)
 {
 	this->value = flt;
 	return *this;

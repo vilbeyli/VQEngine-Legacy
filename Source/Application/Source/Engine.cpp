@@ -184,6 +184,7 @@ bool Engine::Load()
 {
 	bool bLoadSuccess = false;
 	m_sceneManager->Load(m_pRenderer, nullptr, s_rendererSettings, m_pCamera);
+	
 	{	// RENDER PASS INITIALIZATION
 		// todo: static game object array in gameobj.h or engine.h
 		m_shadowMapPass.Initialize(m_pRenderer, m_pRenderer->m_device, s_rendererSettings.shadowMap);
@@ -204,6 +205,7 @@ bool Engine::Load()
 
 		m_postProcessPass.Initialize(m_pRenderer, s_rendererSettings.postProcess);
 		m_debugPass.Initialize(m_pRenderer);
+		m_SSAOPass.Initialize(m_pRenderer);
 
 		// Samplers
 		D3D11_SAMPLER_DESC normalSamplerDesc = {};
@@ -307,6 +309,7 @@ void Engine::PreRender()
 	m_sceneView.viewProj = view * proj;
 	m_sceneView.view = view;
 	m_sceneView.viewToWorld = viewInverse;
+	m_sceneView.projection = proj;
 
 	// gather scene lights
 	size_t spotCount = 0;	size_t lightCount = 0;
@@ -400,7 +403,6 @@ void Engine::Render()
 
 	// LIGHTING PASS
 	//------------------------------------------------------------------------
-	m_pRenderer->BeginEvent(m_useDeferredRendering ? "Deferred Lighting Pass" : "Forward Lighting Pass");
 	m_pRenderer->Reset();
 	m_pRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
 	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
@@ -423,7 +425,10 @@ void Engine::Render()
 		// AMBIENT OCCLUSION  PASS
 		if (m_isAmbientOcclusionOn)
 		{
-			// TODO: implement
+			m_pRenderer->BeginEvent("Ambient Occlusion Pass");
+			m_SSAOPass.RenderOcclusion(m_pRenderer, texNormal, texPosition, m_sceneView);
+			m_SSAOPass.BilateralBlurPass(m_pRenderer);
+			m_pRenderer->EndEvent();
 		}
 
 		// DEFERRED LIGHTING PASS
@@ -448,6 +453,7 @@ void Engine::Render()
 
 	else
 	{	// FORWARD
+		m_selectedShader = m_selectedShader == EShaders::DEFERRED_GEOMETRY ? EShaders::FORWARD_BRDF : m_selectedShader;
 		const float clearColor[4] = { 0.2f, 0.4f, 0.3f, 1.0f };
 		const float clearDepth = 1.0f;
 
@@ -484,7 +490,6 @@ void Engine::Render()
 
 		RenderLights();
 	}
-	m_pRenderer->EndEvent();	// lighting pass
 
 	// Tangent-Bitangent-Normal drawing
 	//------------------------------------------------------------------------
@@ -542,16 +547,18 @@ void Engine::Render()
 		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
 		TextureID tSceneDepth		 = m_pRenderer->GetDepthTargetTexture(0);
 		TextureID tNormals			 = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._normalRT);
+		TextureID tAO				 = m_pRenderer->GetRenderTargetTexture(m_SSAOPass.renderTarget);
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);
 			std::vector<DrawQuadOnScreenCommand> c
-			{	//		Pixel Dimensions	 Screen Position (offset below)		Texture
-				{ fullscreenTextureScaledDownSize,	screenPosition,		tSceneDepth			, true},
-				{ fullscreenTextureScaledDownSize,	screenPosition,		tDiffuseRoughness	, false},
-				{ fullscreenTextureScaledDownSize,	screenPosition,		tNormals			, false},
-				{ squareTextureScaledDownSize    ,	screenPosition,		tShadowMap			, true},
-				{ fullscreenTextureScaledDownSize,	screenPosition,		tBlurredBloom		, false},
+			{	//		Pixel Dimensions	 Screen Position (offset below)	  Texture			DepthTexture?
+				{ fullscreenTextureScaledDownSize,	screenPosition,			tSceneDepth			, true},
+				{ fullscreenTextureScaledDownSize,	screenPosition,			tDiffuseRoughness	, false},
+				{ fullscreenTextureScaledDownSize,	screenPosition,			tNormals			, false},
+				{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
+				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
+				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
 				c[i].bottomLeftCornerScreenCoordinates.x() = c[i-1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;

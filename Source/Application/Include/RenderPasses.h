@@ -21,6 +21,8 @@
 #include "RenderingEnums.h"
 #include "Settings.h"
 
+#include "utils.h"
+
 #include <array>
 #include <vector>
 #include <memory>
@@ -41,6 +43,7 @@ struct SceneView
 	XMMATRIX			viewProj;
 	XMMATRIX			view;
 	XMMATRIX			viewToWorld;
+	XMMATRIX			projection;
 };
 
 struct ShadowMapPass
@@ -137,10 +140,17 @@ struct DebugPass
 	RasterizerStateID _scissorsRasterizer;
 };
 
-// Blizzard Dev Paper: http://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf
+// learnopengl:			https://learnopengl.com/#!Advanced-Lighting/SSAO
+// Blizzard Dev Paper:	http://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf
 struct AmbientOcclusionPass
 {
-	void BilateralBlurPass();
+	void Initialize(Renderer* pRenderer);
+	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const TextureID texPositions, const SceneView& sceneView);
+	void BilateralBlurPass(Renderer* pRenderer);
 
-
+	std::vector<vec3>	sampleKernel;
+	std::vector<vec4>	noiseKernel;
+	TextureID			noiseTexture;
+	SamplerID			noiseSampler;
+	RenderTargetID		renderTarget;
 };

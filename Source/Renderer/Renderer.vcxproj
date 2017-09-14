@@ -172,6 +172,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Material.cpp" />
     <ClCompile Include="Source\RenderCommands.cpp" />
     <ClCompile Include="Source\Skydome.cpp" />
     <ClCompile Include="Source\Light.cpp" />
@@ -198,6 +199,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     <ClInclude Include="Include\Texture.h" />
     <ClInclude Include="Include\Skydome.h" />
     <ClInclude Include="Include\RenderCommands.h" />
+    <ClInclude Include="Material.h" />
     <ClInclude Include="RenderingEnums.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

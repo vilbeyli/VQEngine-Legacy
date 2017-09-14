@@ -57,7 +57,7 @@ static const std::unordered_map<Light::ELightType, EGeometry>		sLightTypeMeshLoo
 Light::Light()
 	:
 	_type(ELightType::POINT),
-	_color(Color::white),
+	_color(LinearColor::white),
 	_range(50),	// phong
 	_brightness(300.0f),
 	_castsShadow(false),
@@ -80,7 +80,7 @@ Light::Light(const Light& l)
 	_renderMesh(l._renderMesh)
 {}
 
-Light::Light(ELightType type, Color color, float range, float brightness, float spotAngle, bool castsShadows) 
+Light::Light(ELightType type, LinearColor color, float range, float brightness, float spotAngle, bool castsShadows) 
 	:
 	_type(type),
 	_color(color),

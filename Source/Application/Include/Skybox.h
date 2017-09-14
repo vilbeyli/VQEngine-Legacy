@@ -20,6 +20,7 @@
 #include "GameObject.h"
 
 class Renderer;
+struct Texture;
 
 enum ESkyboxPresets
 {

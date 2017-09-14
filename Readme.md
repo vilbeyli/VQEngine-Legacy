@@ -2,7 +2,7 @@
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
-![](Screenshots/deferred.PNG)
+![](Data/Screenshots/deferred.PNG)
 <center><i>BRDF - HDR</i></center>
 
 

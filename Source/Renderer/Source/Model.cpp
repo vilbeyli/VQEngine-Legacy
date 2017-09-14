@@ -17,87 +17,18 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Model.h"
-#include "Renderer.h"
 
-
-const Material Material::ruby = Material(	vec3(0.61424f, 0.04136f, 0.04136f),		// diffuse
-											vec3(0.727811f, 0.626959f, 0.626959f),	// specular
-											76.8f);									// shininess
-
-
-const Material Material::jade = Material(	vec3(0.54f, 0.89f, 0.63f),				// diffuse
-											vec3(0.316228f, 0.316228f, 0.316228f),	// specular
-											12.8f);									// shininess
-
-
-const Material Material::bronze = Material(	vec3(0.714f, 0.4284f, 0.18144f),		// diffuse
-											vec3(0.393548f, 0.271906f, 0.166721f),	// specular
-											25.6f);									// shininess
-
-
-const Material Material::gold = Material(	vec3(0.75164f, 0.60648f, 0.22648f),		// diffuse
-											vec3(0.628281f, 0.555802f, 0.366065f),	// specular
-											51.2f);									// shininess
-
-
-Material Material::RandomMaterial()
+void Model::SetDiffuseColor(const LinearColor & diffuseColor)
 {
-	float r = RandF(0.0f, 1.0f);
-	if (r >= 0.0000f && r < 0.1999f) return ruby;
-	if (r >= 0.2000f && r < 0.3999f) return gold;
-	if (r >= 0.4000f && r < 0.5999f) return bronze;
-	if (r >= 0.6000f && r < 0.7999f) return jade;
-	else return Material();
+	mBlinnPhong_Material.diffuse = mBRDF_Material.diffuse = diffuseColor;
 }
 
-Material::Material(const vec3 & diffuse_in, const vec3 & specular_in, float shininess_in)
-	:
-	alpha(1.0f),
-	diffuseMap(-1),
-	normalMap(-1),
-	roughness(0.3f),
-	metalness(0.0f)
+void Model::SetNormalMap(const TextureID normalMap)
 {
-	color = diffuse_in;
-	specular = specular_in;
-	shininess = shininess_in;
+	mBlinnPhong_Material.normalMap = mBRDF_Material.normalMap = normalMap;
 }
 
-Material::Material()
-	:
-	color(Color::white),
-	alpha(1.0f),
-	specular(Color::white.Value()),
-	shininess(90.0f),	// phong
-	roughness(0.4f),	// brdf
-	metalness(0.01f),	// brdf
-	diffuseMap(-1),
-	normalMap(-1)
-{}
-
-Material::~Material(){}
-
-void Material::SetMaterialConstants(Renderer* renderer, EShaders shader) const
+void Model::SetDiffuseMap(const TextureID diffuseMap)
 {
-	renderer->SetConstant3f("diffuse", color.Value());
-	renderer->SetConstant1f("alpha", alpha);
-	renderer->SetConstant3f("specular", specular);
-	switch(shader)
-	{
-	case EShaders::FORWARD_PHONG:
-	/*case SHADERS::FORWARD_PHONG:*/	// Todo: deferred
-		renderer->SetConstant1f("shininess", shininess);
-		break;
-		
-	case EShaders::FORWARD_BRDF:
-	case EShaders::DEFERRED_GEOMETRY:
-		renderer->SetConstant1f("metalness", metalness);
-		renderer->SetConstant1f("roughness", roughness);
-		break;
-	}
-
-	renderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0.0f : 1.0f);
-	renderer->SetConstant1f("isNormalMap" , normalMap  == -1 ? 0.0f : 1.0f);
-	if (diffuseMap>=0) renderer->SetTexture("texDiffuseMap", diffuseMap);
-	if ( normalMap>=0) renderer->SetTexture("texNormalMap" , normalMap);
+	mBlinnPhong_Material.diffuseMap = mBRDF_Material.diffuseMap = diffuseMap;
 }

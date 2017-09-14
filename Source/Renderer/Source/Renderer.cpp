@@ -617,18 +617,43 @@ TextureID Renderer::CreateTextureFromFile(const std::string& shdFileName, const 
 
 }
 
-const Texture & Renderer::CreateTexture2D(int widht, int height)
+TextureID Renderer::CreateTexture2D(int width, int height, void* data /* = nullptr */)
 {
-	Texture tex;
-	assert(false); // todo
-	//m_device->CreateTexture2D(
-	//	&DESC,
-	//	nullptr,
-	//	&tex.tex2D
-	//);
+	const DXGI_FORMAT format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 
+	Texture tex;
+	tex._width = width;
+	tex._height = height;
+	
+	D3D11_TEXTURE2D_DESC desc = {};
+	desc.Format = format;
+	desc.Height = height;
+	desc.Width = width;
+	desc.ArraySize = 1;
+	desc.MipLevels = 1;
+	desc.SampleDesc = { 1, 0 };
+	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA dataDesc = {};
+	dataDesc.pSysMem = data;
+	dataDesc.SysMemPitch = sizeof(vec4) * width;
+	dataDesc.SysMemSlicePitch = 0;
+
+	m_device->CreateTexture2D(&desc, &dataDesc, &tex._tex2D);
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+
+	m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+
+	tex._id = static_cast<int>(m_textures.size());
 	m_textures.push_back(tex);
-	return m_textures.back();
+	return m_textures.back()._id;
 }
 
 TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc, bool initializeSRV)
@@ -1208,7 +1233,7 @@ void Renderer::DrawLine()
 
 	SetConstant3f("p1", pos1);
 	SetConstant3f("p2", pos2);
-	SetConstant3f("color", Color::green.Value());
+	SetConstant3f("color", LinearColor::green.Value());
 	Apply();
 	Draw(EPrimitiveTopology::POINT_LIST);
 }
@@ -1248,7 +1273,7 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
 	const RenderTargetID rtv = m_state._boundRenderTargets[0];
-	const DepthTargetID dsv = m_state._boundDepthTarget;
+	const DepthTargetID dsv = m_state._boundDepthTarget;	// assumes a single depth target bound
 	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearColor);
 	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv].pDepthStencilView, D3D11_CLEAR_DEPTH, depthValue, 0);
 }
@@ -1318,18 +1343,20 @@ void Renderer::Apply()
 
 		// SHADER RESOURCES
 		// ----------------------------------------
-		while (m_setTextureCmds.size() > 0)
-		{
-			SetTextureCommand& cmd = m_setTextureCmds.front();
-			cmd.SetResource(this);
-			m_setTextureCmds.pop();
-		}
 
 		while (m_setSamplerCmds.size() > 0)
 		{
 			SetSamplerCommand& cmd = m_setSamplerCmds.front();
 			cmd.SetResource(this);
 			m_setSamplerCmds.pop();
+		}
+
+		// todo: set texture array?
+		while (m_setTextureCmds.size() > 0)
+		{
+			SetTextureCommand& cmd = m_setTextureCmds.front();
+			cmd.SetResource(this);
+			m_setTextureCmds.pop();
 		}
 
 		// RASTERIZER

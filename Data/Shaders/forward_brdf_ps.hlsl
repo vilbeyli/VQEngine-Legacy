@@ -50,17 +50,9 @@ cbuffer SceneVariables
 	//	float ambient;
 };
 
-cbuffer SurfaceMaterial
+cbuffer cbSurfaceMaterial
 {
-	float3 diffuse;
-	float  alpha;
-
-	float3 specular;
-	float  roughness;
-
-	float  isDiffuseMap;
-	float  isNormalMap;
-	float  metalness;
+    SurfaceMaterial surfaceMaterial;
 };
 
 Texture2D texDiffuseMap;
@@ -82,13 +74,12 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float ambient = 0.00005f;
 
 	BRDF_Surface s;
-	s.N = (isNormalMap)* UnpackNormals(texNormalMap, sNormalSampler, In.texCoord, N, T) +
-		(1.0f - isNormalMap) * N;
-	s.diffuseColor = diffuse *  (isDiffuseMap          * texDiffuseMap.Sample(sShadowSampler, In.texCoord).xyz +
-		(1.0f - isDiffuseMap)   * float3(1,1,1));
-	s.specularColor = specular;
-	s.roughness = roughness;
-	s.metalness = metalness;
+    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.texCoord, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
+    s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, In.texCoord).xyz +
+					(1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
+    s.specularColor = surfaceMaterial.specular;
+    s.roughness = surfaceMaterial.roughness;
+    s.metalness = surfaceMaterial.metalness;
 
 	// illumination
 	const float3 Ia = s.diffuseColor * ambient;	// ambient

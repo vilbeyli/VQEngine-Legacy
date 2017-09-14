@@ -128,8 +128,9 @@ public:
 													const std::string&	fileRoot = s_textureRoot
 							);
 
-	const Texture&			CreateTexture2D(	int widht, 
-												int height
+	TextureID				CreateTexture2D(	int widht, 
+												int height,
+												void* data = nullptr
 							);
 
 	TextureID				CreateTexture2D(	D3D11_TEXTURE2D_DESC&	textureDesc, 
@@ -139,7 +140,7 @@ public:
 	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles
 							);
 	
-	TextureID CreateDepthTexture( unsigned width, 
+	TextureID				CreateDepthTexture( unsigned width, 
 												unsigned height, 
 												bool bDepthOnly
 							);
@@ -224,7 +225,7 @@ public:
 	void					DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd);
 	
 	void					DrawLine();
-	void					DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = Color().Value());
+	void					DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = LinearColor().Value());
 
 private:
 	void					SetConstant(const char* cName, const void* data);

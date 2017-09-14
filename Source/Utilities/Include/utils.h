@@ -128,6 +128,52 @@ struct vec2
 };
 
 
+struct vec4
+{
+#if 0
+	static const XMVECTOR Zero;
+	static const XMVECTOR Up;
+	static const XMVECTOR Down;
+	static const XMVECTOR Left;
+	static const XMVECTOR Right;
+
+	static const vec4 ZeroF2;
+	static const vec4 UpF2;
+	static const vec4 DownF2;
+	static const vec4 LeftF2;
+	static const vec4 RightF2;
+
+	vec4();
+	vec4(const vec3& v_in);
+	vec4(const vec4& v_in);
+	vec4(float, float);
+	vec4(float);
+	vec4(const XMFLOAT3& f3);
+	vec4(const XMFLOAT2& f2);
+	vec4(const XMVECTOR& v_in);
+
+	operator XMVECTOR() const;
+	operator XMFLOAT2() const;
+	bool operator ==(const vec4&) const;
+	inline vec4& operator +=(const vec4& v) { *this = *this + v; return *this; };
+
+	float& x();
+	float& y();
+
+	float& x() const;
+	float& y() const;
+
+	void normalize();
+	const vec4 normalized() const;
+
+	XMFLOAT2 _v;
+#endif
+	//union 
+	float x, y, z, w;
+	vec4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+};
+
+
 /// STRING PROCESSING
 //===============================================================================================
 std::vector<std::string> split(const char* s,			char c = ' ');
@@ -150,6 +196,8 @@ struct UnicodeString
 	UnicodeString(const std::string& strIn);
 	const WCHAR* GetUnicodePtr() const;
 };
+
+float inline lerp(float low, float high, float t) { return low + (high - low) * t; }
 
 /// RANDOM
 //===============================================================================================

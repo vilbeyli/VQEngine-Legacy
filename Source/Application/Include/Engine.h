@@ -129,6 +129,7 @@ private:
 
 	PostProcessPass					m_postProcessPass;
 	DebugPass						m_debugPass;
+	AmbientOcclusionPass			m_SSAOPass;
 	
 	bool							m_debugRender;
 

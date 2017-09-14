@@ -47,22 +47,15 @@ cbuffer SceneConstants
 	//	float ambient;
 };
 
-cbuffer SufaceMaterial
+cbuffer cbSurfaceMaterial
 {
-	float3 diffuse;
-	float alpha;
-
-	float3 specular;
-	float shininess;
-
-	float isDiffuseMap;
-	float isNormalMap;
+    SurfaceMaterial surfaceMaterial;
 };
 
-Texture2D gDiffuseMap; // todo: gTextureName -> texTextureName
-Texture2D gNormalMap;  // todo: gTextureName -> texTextureName
-Texture2D texShadowMap;
 
+Texture2D texDiffuseMap;
+Texture2D texNormalMap;
+Texture2D texShadowMap;
 
 SamplerState sShadowSampler;
 SamplerState sNormalSampler;
@@ -93,18 +86,23 @@ float3 Phong(Light light, PHONG_Surface s, float3 V, float3 worldPos)
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	const bool bUsePhongAttenuation = true;
+
 	// lighting & surface parameters
 	float3 N = normalize(In.normal);
 	float3 T = normalize(In.tangent);
 	float3 V = normalize(cameraPos - In.worldPos);
 	const float ambient = 0.005f;
+
 	PHONG_Surface s;
-	s.N = (isNormalMap)        * UnpackNormals(gNormalMap, sNormalSampler, In.texCoord, N, T) +
-		  (1.0f - isNormalMap) * N;
-	s.diffuseColor = diffuse *  (isDiffuseMap          * gDiffuseMap.Sample(sShadowSampler, In.texCoord).xyz +
-		                        (1.0f - isDiffuseMap)  * float3(1,1,1));
-	s.specularColor = specular;
-	s.shininess = shininess;
+    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.texCoord, N, T) +
+		  (1.0f - surfaceMaterial.isNormalMap) * N;
+    
+	s.diffuseColor = (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sShadowSampler, In.texCoord).xyz +
+		             (1.0f - surfaceMaterial.isDiffuseMap) * float3(1, 1, 1)
+	) * surfaceMaterial.diffuse;
+
+	s.specularColor = surfaceMaterial.specular;
+    s.shininess = surfaceMaterial.shininess;
 
 	// illumination
 	float3 Ia = s.diffuseColor * ambient;	// ambient

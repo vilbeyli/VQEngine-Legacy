@@ -18,53 +18,20 @@
 
 #pragma once
 
-#include "Color.h"
-#include "Texture.h"
-#include "Shader.h"
-
-class Renderer;
-
-struct Material
-{
-#if 0
-	union
-	{
-		Color	albedo;
-		Color	color;
-	};
-#else
-	Color		color;
-#endif
-	float		alpha;	
-	vec3		specular;
-	float		roughness;
-
-	// store brdf/phong both for being able to togge between different lighting models
-	float		metalness;	// cook-torrence brdf
-	float		shininess;	// phong
-
-	TextureID	diffuseMap;
-	TextureID	normalMap;
-
-	// phong default materials
-	static const Material jade, ruby, bronze, gold;
-	static Material RandomMaterial();
-
-
-	Material(const vec3& diffuse, const vec3& specular, float shininess);
-	Material();
-	~Material();
-	void SetMaterialConstants(Renderer* renderer, EShaders shader) const;
-};
+#include "Material.h"
 
 class Model
 {
 public:
-	Model() : m_mesh(-1) {}
+	Model() : mMesh(-1) {}
 	~Model() {}
 
-public:
-	InputBufferID m_mesh;
-	Material m_material;
-};
+	void SetDiffuseColor(const LinearColor& diffuseColor);
+	void SetNormalMap(const TextureID normalMap);
+	void SetDiffuseMap(const TextureID diffuseMap);
 
+public:
+	InputBufferID		mMesh;
+	BRDF_Material		mBRDF_Material;
+	BlinnPhong_Material mBlinnPhong_Material;
+};

@@ -103,7 +103,7 @@ void Shader::LoadShaders(Renderer* pRenderer)
 
 	const std::vector<EShaderType> VS_PS  = { EShaderType::VS, EShaderType::PS };
 	const std::vector<std::string> TonemapShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
-	const std::vector<std::string> BlurShaders    = { "FullscreenQuad_vs", "Blur_ps" };
+	const std::vector<std::string> BlurShaders    = { "FullscreenQuad_vs", "Blur_ps" };	// compute?
 	const std::vector<std::string> BloomShaders   = { "FullscreenQuad_vs", "Bloom_ps" };
 	const std::vector<std::string> CombineShaders = { "FullscreenQuad_vs", "BloomCombine_ps" };
 
@@ -115,17 +115,19 @@ void Shader::LoadShaders(Renderer* pRenderer)
 	// render cone?
 	const std::vector<std::string> DeferredBRDF_SpotLight    = { "MVPTransformationWithUVs_vs", "deferred_brdf_spotLight_ps" }; 
 
+	const std::vector<std::string> AmbientOcclusionShaders = { "FullscreenQuad_vs", "SSAO_ps" };
+	const std::vector<std::string> BilateralBlurShaders   = { "FullscreenQuad_vs", "BilateralBlur_ps" };	// compute?
 
 	s_shaders[EShaders::FORWARD_PHONG			]	= pRenderer->AddShader("Forward_Phong"			, layout);
 	s_shaders[EShaders::UNLIT					]	= pRenderer->AddShader("UnlitTextureColor"		, layout);
-	s_shaders[EShaders::TEXTURE_COORDINATES		]	= pRenderer->AddShader("TextureCoordinates"	, TextureCoordinates, VS_PS, layout);
-	s_shaders[EShaders::NORMAL					]	= pRenderer->AddShader("Normal"				, layout);
+	s_shaders[EShaders::TEXTURE_COORDINATES		]	= pRenderer->AddShader("TextureCoordinates"		, TextureCoordinates, VS_PS, layout);
+	s_shaders[EShaders::NORMAL					]	= pRenderer->AddShader("Normal"					, layout);
 	s_shaders[EShaders::TANGENT					]	= pRenderer->AddShader("Tangent"				, layout);
 	s_shaders[EShaders::BINORMAL				]	= pRenderer->AddShader("Binormal"				, layout);
 	s_shaders[EShaders::LINE					]	= pRenderer->AddShader("Line"					, layout);
 	s_shaders[EShaders::TBN						]	= pRenderer->AddShader("TNB"					, layout);
 	s_shaders[EShaders::DEBUG					]	= pRenderer->AddShader("Debug"					, layout);
-	s_shaders[EShaders::SKYBOX					]	= pRenderer->AddShader("Skybox"				, layout);
+	s_shaders[EShaders::SKYBOX					]	= pRenderer->AddShader("Skybox"					, layout);
 	s_shaders[EShaders::BLOOM					]	= pRenderer->AddShader("Bloom"					, BloomShaders  , VS_PS, layout);
 	s_shaders[EShaders::BLUR					]	= pRenderer->AddShader("Blur"					, BlurShaders   , VS_PS, layout);
 	s_shaders[EShaders::BLOOM_COMBINE			]	= pRenderer->AddShader("BloomCombine"			, CombineShaders, VS_PS, layout);
@@ -133,10 +135,12 @@ void Shader::LoadShaders(Renderer* pRenderer)
 	s_shaders[EShaders::FORWARD_BRDF			]	= pRenderer->AddShader("Forward_BRDF"			, layout);
 	s_shaders[EShaders::SHADOWMAP_DEPTH			]	= pRenderer->AddShader("DepthShader"			, layout);
 	s_shaders[EShaders::DEFERRED_GEOMETRY		]	= pRenderer->AddShader("Deferred_Geometry"		, layout);
-	s_shaders[EShaders::DEFERRED_BRDF_AMBIENT	]	= pRenderer->AddShader("Deferred_BRDF_Ambient"	, DeferredBRDF_AmbientLight, VS_PS, layout);
-	s_shaders[EShaders::DEFERRED_BRDF_LIGHTING	]	= pRenderer->AddShader("Deferred_BRDF_Lighting", DeferredBRDF_LightingFSQ , VS_PS, layout);
-	s_shaders[EShaders::DEFERRED_BRDF_POINT		]	= pRenderer->AddShader("Deferred_BRDF_Point"	, DeferredBRDF_PointLight  , VS_PS, layout);
-	s_shaders[EShaders::DEFERRED_BRDF_SPOT		]	= pRenderer->AddShader("Deferred_BRDF_Spot"	, DeferredBRDF_SpotLight   , VS_PS, layout);
+	s_shaders[EShaders::DEFERRED_BRDF_AMBIENT	]	= pRenderer->AddShader("Deferred_BRDF_Ambient"	, DeferredBRDF_AmbientLight	, VS_PS, layout);
+	s_shaders[EShaders::DEFERRED_BRDF_LIGHTING	]	= pRenderer->AddShader("Deferred_BRDF_Lighting" , DeferredBRDF_LightingFSQ	, VS_PS, layout);
+	s_shaders[EShaders::DEFERRED_BRDF_POINT		]	= pRenderer->AddShader("Deferred_BRDF_Point"	, DeferredBRDF_PointLight	, VS_PS, layout);
+	s_shaders[EShaders::DEFERRED_BRDF_SPOT		]	= pRenderer->AddShader("Deferred_BRDF_Spot"		, DeferredBRDF_SpotLight	, VS_PS, layout);
+	s_shaders[EShaders::SSAO					]	= pRenderer->AddShader("SSAO"					, AmbientOcclusionShaders	, VS_PS, layout);
+	s_shaders[EShaders::BILATERAL_BLUR			]	= pRenderer->AddShader("Bilateral Blur"			, BilateralBlurShaders		, VS_PS, layout);
 
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }

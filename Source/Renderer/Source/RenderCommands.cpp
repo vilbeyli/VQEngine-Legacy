@@ -33,7 +33,12 @@
 //	&ID3D11DeviceContext::PSSetConstantBuffers
 //};
 
-static void(__cdecl ID3D11DeviceContext:: *SetShaderResources[6])
+#ifdef _WIN64
+#define CALLING_CONVENTION __cdecl
+#else	// _WIN32
+#define CALLING_CONVENTION __stdcall
+#endif
+static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[6])
 (UINT StartSlot, UINT NumViews, ID3D11ShaderResourceView *const *ppShaderResourceViews) =
 {
 	&ID3D11DeviceContext::VSSetShaderResources,
@@ -50,7 +55,7 @@ void SetTextureCommand::SetResource(Renderer * pRenderer)
 	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, 1, &pRenderer->m_textures[textureID]._srv);
 }
 
-static void(__cdecl ID3D11DeviceContext:: *SetSampler[6])
+static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[6])
 (UINT StartSlot, UINT NumViews, ID3D11SamplerState* const *ppShaderResourceViews) =
 {
 	&ID3D11DeviceContext::VSSetSamplers,

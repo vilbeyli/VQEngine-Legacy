@@ -42,15 +42,29 @@ class SceneManager;
 class PathManager;		// unused
 class PhysicsEngine;	// unused
 
-class Engine
+#ifdef _WIN32
+// usage of XMMATRIX in Engine class causes alignment warning: Engine might not 
+// be on 16-byte boundary. To fix this, we declare that we want to align the 
+// Engine class to 16-byte boundary. We also override new/delete functions to
+// allocate and free aligned memory
+#define ALIGNMENT __declspec(align(16))
+#else
+#define ALIGNMENT
+#endif
+
+ALIGNMENT class Engine
 {
 	friend class BaseSystem;
 
 public:
 	static const Settings::Renderer& InitializeRendererSettingsFromFile();
 	static Engine*	GetEngine();
-
 	~Engine();
+
+#ifdef _WIN32
+	void*			operator new(size_t size) { return _mm_malloc(size, 16); }
+	void			operator delete(void* p)  { _mm_free(p); }
+#endif
 
 	bool			Initialize(HWND hwnd);
 	bool			Load();

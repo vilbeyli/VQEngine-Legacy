@@ -63,7 +63,13 @@ void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath)
 	//assert(false);
 }
 
-static void(__cdecl ID3D11DeviceContext:: *SetShaderConstants[6])
+#ifdef _WIN64
+#define CALLING_CONVENTION __cdecl
+#else	// _WIN32
+#define CALLING_CONVENTION __stdcall
+#endif
+
+static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderConstants[6])
 (UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = {
 	&ID3D11DeviceContext::VSSetConstantBuffers,
 	&ID3D11DeviceContext::GSSetConstantBuffers,

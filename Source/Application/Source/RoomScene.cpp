@@ -92,9 +92,9 @@ void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
 void RoomScene::InitializeLights(SerializedScene& scene)
 {
 	m_lights = std::move(scene.lights);
-	m_lights[1]._color = vec3(m_lights[1]._color) * 3.0f;
-	m_lights[2]._color = vec3(m_lights[2]._color) * 2.0f;
-	m_lights[3]._color = vec3(m_lights[3]._color) * 1.5f;
+	m_lights[1]._color = vec3(m_lights[1]._color) * 3.0f * 0;
+	m_lights[2]._color = vec3(m_lights[2]._color) * 2.0f * 0;
+	m_lights[3]._color = vec3(m_lights[3]._color) * 1.5f * 0;
 	
 	// hard-coded scales for now
 	m_lights[0]._transform.SetUniformScale(0.8f);
@@ -302,6 +302,16 @@ void RoomScene::InitializeObjectArrays()
 	  cube.m_model.mBRDF_Material.normalMap = m_pRenderer->CreateTextureFromFile("BumpMapTexturePreview.png");
 	  cube.m_model.mBRDF_Material.metalness = 0.6f;
 	  cube.m_model.mBRDF_Material.roughness = 0.15f;
+
+
+	  Plane2.m_model.mMesh = EGeometry::QUAD;
+	  Plane2.m_transform.SetPosition(-300, 0, 0);
+	  Plane2.m_transform.SetUniformScale(100);
+	  Plane2.m_transform.RotateAroundGlobalXAxisDegrees(90);
+
+	  obj2.m_model.mMesh = EGeometry::SPHERE;
+	  obj2.m_transform.SetPosition(-300, 10, 0);
+	  obj2.m_transform.SetUniformScale(10);
 }
 
 void RoomScene::UpdateCentralObj(const float dt)
@@ -377,6 +387,9 @@ void RoomScene::RenderCentralObjects(const SceneView& sceneView, bool sendMateri
 	cylinder.Render(m_pRenderer, sceneView, sendMaterialData);
 	cube.Render(m_pRenderer, sceneView, sendMaterialData);
 	sphere.Render(m_pRenderer, sceneView, sendMaterialData);
+
+	Plane2.Render(m_pRenderer, sceneView, sendMaterialData);
+	obj2.Render(m_pRenderer, sceneView, sendMaterialData);
 }
 
 void RoomScene::ToggleFloorNormalMap()

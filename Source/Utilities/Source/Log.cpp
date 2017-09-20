@@ -84,7 +84,7 @@ void Log::String(const std::string & s)
 
 void Log::Info(const std::string & s)
 {
-	std::string info("\n----- INFO : ");
+	std::string info("----- INFO: ");
 	info += s; info += "\n";
 	OutputDebugString(info.c_str());
 	if (sOutFile.is_open()) sOutFile << info;

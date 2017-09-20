@@ -16,31 +16,32 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "LightingCommon.hlsl"
-#include "BRDF.hlsl"
-
 struct PSIn
 {
-	float4 position		 : SV_POSITION;
-	float2 uv			 : TEXCOORD0;
+	float4 position : SV_POSITION;
+	float2 uv		: TEXCOORD0;
 };
 
-cbuffer SceneVariables
+Texture2D tOcclusion;
+SamplerState BlurSampler;
+
+cbuffer cb
 {
-	float ambientFactor;
+	float2 inputTextureDimensions;
 };
 
-
-Texture2D tDiffuseRoughnessMap;
-Texture2D tAmbientOcclusion;
-
-SamplerState sNearestSampler;
-
-float4 PSMain(PSIn In) : SV_TARGET
+float PSMain(PSIn In) : SV_TARGET
 {
-	const float3 diffuseColor     = tDiffuseRoughnessMap.Sample(sNearestSampler, In.uv).rgb;
-	const float  ambientOcclusion = tAmbientOcclusion.Sample(sNearestSampler, In.uv).r;
-	
-	const float3 Ia = diffuseColor * ambientOcclusion * ambientFactor;
-	return float4(Ia, 1.0f);
+	const float2 texelSize = 1.0f / inputTextureDimensions;
+
+	float result = 0.0f;
+	for (int x = -2; x < 2; ++x)
+	{
+		for (int y = -2; y < 2; ++y)
+		{
+			const float2 offset = float2(x, y) * texelSize;
+			result += tOcclusion.Sample(BlurSampler, In.uv + offset).r;
+		}
+	}
+	return result / 16;	// =4x4 kernel size
 }

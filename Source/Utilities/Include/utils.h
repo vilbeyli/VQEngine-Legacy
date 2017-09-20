@@ -171,6 +171,8 @@ struct vec4
 	//union 
 	float x, y, z, w;
 	vec4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
+	vec4(const vec3& v3) : x(v3.x()), y(v3.y()), z(v3.z()), w(0.0f) {}
+	vec4(const vec3& v3, float _w) : x(v3.x()), y(v3.y()), z(v3.z()), w(_w) {}
 };
 
 

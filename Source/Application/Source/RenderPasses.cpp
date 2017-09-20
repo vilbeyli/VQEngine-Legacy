@@ -377,7 +377,7 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	pRenderer->Apply();
 }
 
-void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const SceneLightData& lights) const
+void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const SceneLightData& lights, const TextureID tSSAO) const
 {
 	const bool bDoClearColor = true;
 	const bool bDoClearDepth = false;
@@ -387,7 +387,9 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 		{ 0, 0, 0, 0 }, 1, 0
 	);
 
-	const vec2 screenSize(static_cast<float>(pRenderer->WindowWidth()), static_cast<float>(pRenderer->WindowHeight()));
+	const bool bAmbientOcclusionOn = tSSAO == -1;
+
+	const vec2 screenSize = pRenderer->GetWindowDimensionsAsFloat2();
 	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
 	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer._diffuseRoughnessRT);
 	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer._specularMetallicRT);
@@ -401,11 +403,11 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 
 	// AMBIENT LIGHTING
 	const float ambient = 0.0005f;
-	// todo: set ambient occlusion texture
 	pRenderer->BeginEvent("Ambient Pass");
 	pRenderer->SetShader(EShaders::DEFERRED_BRDF_AMBIENT);
-	pRenderer->SetConstant1f("ambient", ambient);
-	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
+	pRenderer->SetConstant1f("ambientFactor", ambient);
+	pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
+	pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
@@ -493,19 +495,20 @@ void DebugPass::Initialize(Renderer * pRenderer)
 constexpr size_t SSAO_SAMPLE_KERNEL_SIZE = 64;
 void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 {
-	// CREATE SAMPLE KERNEL + NOISE TEXTURE & SAMPLER
+	// CREATE SAMPLE KERNEL
 	//--------------------------------------------------------------------
 	constexpr size_t NOISE_KERNEL_SIZE = 4;
 
+	// src: https://john-chapman-graphics.blogspot.nl/2013/01/ssao-tutorial.html
 	for (size_t i = 0; i < SSAO_SAMPLE_KERNEL_SIZE; i++)
 	{
 		// get a random direction in tangent space - z-up.
 		// As the sample kernel will be oriented along the surface normal, 
 		// the resulting sample vectors will all end up in the hemisphere.
 		vec3 sample(
-			RandF(0, 1) * 2.0f - 1.0f,	// [-1, 1]
-			RandF(0, 1) * 2.0f - 1.0f,	// [-1, 1]
-			RandF(0, 1)	// hemisphere	   [ 0, 1]
+			RandF(-1, 1),
+			RandF(-1, 1),
+			RandF(0, 1)	// hemisphere
 		);
 		sample.normalize();
 		sample = sample * RandF(0, 1);	// scale to distribute samples within the hemisphere
@@ -514,7 +517,6 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 		// hemisphere more significant. think of it as i selects where we sample the hemisphere
 		// from, which starts from outer region of the hemisphere and as it increases, we 
 		// sample closer to the normal direction. 
-		// https://john-chapman-graphics.blogspot.nl/2013/01/ssao-tutorial.html
 		float scale = static_cast<float>(i) / SSAO_SAMPLE_KERNEL_SIZE;
 		scale = lerp(0.1f, 1.0f, scale * scale);
 		sample = sample * scale;
@@ -522,19 +524,23 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 		this->sampleKernel.push_back(sample);
 	}
 
-	// create a square noise texture using random directions
+	// CREATE NOISE TEXTURE & SAMPLER
+	//--------------------------------------------------------------------
 	for (size_t i = 0; i < NOISE_KERNEL_SIZE * NOISE_KERNEL_SIZE; i++)
-	{
-		vec4 noise(
-			RandF(0, 1) * 2.0f - 1.0f,
-			RandF(0, 1) * 2.0f - 1.0f,
-			RandF(0, 1),
-			0.0f
+	{	// create a square noise texture using random directions
+		vec3 noise(
+			RandF(-1, 1),
+			RandF(-1, 1),
+			0 // noise rotates the kernel around z-axis
 		);
-		this->noiseKernel.push_back(noise);
+		this->noiseKernel.push_back(vec4(noise.normalized()));
 	}
 	this->noiseTexture = pRenderer->CreateTexture2D(NOISE_KERNEL_SIZE, NOISE_KERNEL_SIZE, this->noiseKernel.data());
 
+	// The tiling of the texture causes the orientation of the kernel to be repeated and 
+	// introduces regularity into the result. By keeping the texture size small we can make 
+	// this regularity occur at a high frequency, which can then be removed with a blur step 
+	// that preserves the low-frequency detail of the image.
 	D3D11_SAMPLER_DESC noiseSamplerDesc = {};
 	noiseSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 	noiseSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -563,13 +569,17 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	RTVDesc.Texture2D.MipSlice = 0;
 
-	this->renderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->blurRenderTarget		= pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->radius = 25.0f;
+
 }
 
 struct SSAOConstants
 {
 	XMFLOAT4X4 matProjection;
 	vec2 screenSize;
+	float radius;
 	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * 3> samples;
 };
 void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const TextureID texPositions, const SceneView& sceneView)
@@ -590,20 +600,21 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 
 	SSAOConstants ssaoConsts = {
 		proj,
-		vec2(pRenderer->WindowWidth(), pRenderer->WindowHeight()),
+		pRenderer->GetWindowDimensionsAsFloat2(),
+		this->radius,
 		samples
 	};
 
 	pRenderer->BeginEvent("Occlusion Pass");
 
 	pRenderer->SetShader(EShaders::SSAO);
-	pRenderer->BindRenderTarget(this->renderTarget);
+	pRenderer->BindRenderTarget(this->occlusionRenderTarget);
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
 	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
 	pRenderer->SetTexture("texViewPositions", texPositions);
 	pRenderer->SetTexture("texNoise", this->noiseTexture);
-	pRenderer->SetTexture("texDepth", depthTexture);
+	//pRenderer->SetTexture("texDepth", depthTexture);
 	pRenderer->SetConstantStruct("SSAO_constants", &ssaoConsts);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
@@ -621,6 +632,24 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer)
 	
 	//pRenderer->BindRenderTarget(this->renderTarget);
 
+	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+
+	pRenderer->EndEvent();
+}
+
+void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
+{
+	const TextureID texOcclusion = pRenderer->GetRenderTargetTexture(this->occlusionRenderTarget);
+	const vec2 texDimensions = pRenderer->GetWindowDimensionsAsFloat2();
+
+	pRenderer->BeginEvent("Blur Pass");
+
+	pRenderer->SetShader(EShaders::GAUSSIAN_BLUR_4x4);
+	pRenderer->BindRenderTarget(this->blurRenderTarget);
+	pRenderer->SetTexture("tOcclusion", texOcclusion);
+	pRenderer->SetConstant2f("inputTextureDimensions", texDimensions);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();

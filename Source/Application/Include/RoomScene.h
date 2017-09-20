@@ -95,6 +95,9 @@ private:
 	GameObject cube;
 	GameObject sphere;
 
+	GameObject Plane2;
+	GameObject obj2;
+
 	std::vector<Animation> m_animations;
 };
 

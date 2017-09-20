@@ -293,7 +293,8 @@ void Renderer::Exit()
 
 float	 Renderer::AspectRatio()	const { return m_Direct3D->AspectRatio(); };
 unsigned Renderer::WindowHeight()	const { return m_Direct3D->WindowHeight(); };
-unsigned Renderer::WindowWidth()	const { return m_Direct3D->WindowWidth(); };
+unsigned Renderer::WindowWidth()	const { return m_Direct3D->WindowWidth(); }
+vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(static_cast<float>(this->WindowWidth()), static_cast<float>(this->WindowHeight())); }
 HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };
 
 const Shader* Renderer::GetShader(ShaderID shader_id) const

@@ -123,10 +123,11 @@ struct DeferredRenderingPasses
 	void ClearGBuffer(Renderer* pRenderer);
 	void SetGeometryRenderingStates(Renderer* pRenderer) const;
 	void RenderLightingPass(
-		Renderer*				pRenderer, 
-		const RenderTargetID	target, 
-		const SceneView&		sceneView, 
-		const SceneLightData&	lights
+		Renderer* pRenderer, 
+		const RenderTargetID target, 
+		const SceneView& sceneView, 
+		const SceneLightData& lights, 
+		const TextureID tSSAO
 	) const;
 
 	GBuffer _GBuffer;
@@ -147,10 +148,14 @@ struct AmbientOcclusionPass
 	void Initialize(Renderer* pRenderer);
 	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const TextureID texPositions, const SceneView& sceneView);
 	void BilateralBlurPass(Renderer* pRenderer);
+	void GaussianBlurPass(Renderer* pRenderer);	// Gaussian 4x4 kernel
 
 	std::vector<vec3>	sampleKernel;
 	std::vector<vec4>	noiseKernel;
 	TextureID			noiseTexture;
 	SamplerID			noiseSampler;
-	RenderTargetID		renderTarget;
+	RenderTargetID		occlusionRenderTarget;
+	RenderTargetID		blurRenderTarget;
+
+	float radius;
 };

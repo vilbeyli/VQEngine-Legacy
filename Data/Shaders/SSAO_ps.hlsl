@@ -22,7 +22,7 @@
 struct PSIn
 {
 	float4 position		 : SV_POSITION;
-	float2 uv			 : TEXCOORD0;
+    noperspective float2 uv : TEXCOORD0;
 };
 
 
@@ -30,6 +30,7 @@ struct SceneVariables
 {
 	matrix matProjection;
 	float2 screenSize;
+	float  radius;
 	float3 samples[KERNEL_SIZE];
 };
 
@@ -44,6 +45,8 @@ Texture2D<float4> texNoise;
 Texture2D texDepth;
 
 SamplerState sNoiseSampler;
+
+#define ENABLE_RANGE_CHECK
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
@@ -61,21 +64,36 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3x3 TBN = float3x3(T, B, N);
 
 	float occlusion = 0.0;
-	float radius = 0.5f;
 	for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
-        float3 kernelSample = mul(SSAO_constants.samples[i], TBN); // From tangent to view-space
-		kernelSample = P + kernelSample * radius;
+		float3 kernelSample = mul(SSAO_constants.samples[i], TBN); // From tangent to view-space
+        kernelSample = P + kernelSample * SSAO_constants.radius;
 
-		// get the screenspace position of sample
+		// get the screenspace position of the sample
 		float4 offset = float4(kernelSample, 1.0f);
-        offset = mul(offset, SSAO_constants.matProjection);
+		offset = mul(SSAO_constants.matProjection, offset);
 		offset.xyz /= offset.w;
-		offset.xyz = offset.xyz * 0.5f + 0.5f;	// [0, 1]
+		offset.xy  = offset.xy * 0.5f + 0.5f;	// [0, 1]
+		offset.xy *= float2(1.0f, -1.0f);
 		
+#if 0
+		// reconstruct viewspace depth from depth-buffer
 		const float  D = texDepth.Sample(sNoiseSampler, uv + offset.xy).r;
-		occlusion += (D >= kernelSample.z + DEPTH_BIAS ? 1.0f : 0.0f);
+#else
+		// read view space depth 
+		const float  D = texViewPositions.Sample(sNoiseSampler, offset.xy).z;
+#endif
+
+
+#ifdef ENABLE_RANGE_CHECK
+        const float rangeCheck = smoothstep(0.01f, 1.0f, SSAO_constants.radius / abs(P.z - D));
+#else
+		const float rangeCheck = 1.0f;
+#endif
+
+		occlusion += (D < kernelSample.z + DEPTH_BIAS ? 1.0f : 0.0f) * rangeCheck;
 	}
+	occlusion = 1.0 - (occlusion / KERNEL_SIZE);
 
 	return occlusion.xxxx;
 }

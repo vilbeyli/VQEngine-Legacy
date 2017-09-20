@@ -200,6 +200,9 @@ bool Engine::Load()
 		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.triangle);
 		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.cube);
 		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.sphere);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.obj2);
+		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.Plane2);
+
 		for (GameObject& obj : m_sceneManager->m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
 		for (GameObject& obj : m_sceneManager->m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
 
@@ -276,6 +279,10 @@ bool Engine::HandleInput()
 	if (m_input->IsKeyTriggered("R")) m_sceneManager->ReloadLevel();
 	if (m_input->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
 	if (m_input->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
+
+	if (m_input->IsScrollUp())	 { m_SSAOPass.radius += 1.0f; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
+	if (m_input->IsScrollDown()) { m_SSAOPass.radius -= 1.0f; if (m_SSAOPass.radius < 1.001) m_SSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
+	
 
 	return true;
 }
@@ -427,13 +434,15 @@ void Engine::Render()
 		{
 			m_pRenderer->BeginEvent("Ambient Occlusion Pass");
 			m_SSAOPass.RenderOcclusion(m_pRenderer, texNormal, texPosition, m_sceneView);
-			m_SSAOPass.BilateralBlurPass(m_pRenderer);
+			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
+			m_SSAOPass.GaussianBlurPass(m_pRenderer);
 			m_pRenderer->EndEvent();
 		}
 
 		// DEFERRED LIGHTING PASS
+		const TextureID tSSAO = m_isAmbientOcclusionOn ? m_pRenderer->GetRenderTargetTexture(m_SSAOPass.blurRenderTarget) : -1;
 		m_pRenderer->BeginEvent("Lighting Pass");
-		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_sceneLightData);
+		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_sceneLightData, tSSAO);
 		m_pRenderer->EndEvent();
 
 		// LIGHT SOURCES
@@ -547,7 +556,7 @@ void Engine::Render()
 		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
 		TextureID tSceneDepth		 = m_pRenderer->GetDepthTargetTexture(0);
 		TextureID tNormals			 = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._normalRT);
-		TextureID tAO				 = m_pRenderer->GetRenderTargetTexture(m_SSAOPass.renderTarget);
+		TextureID tAO				 = m_pRenderer->GetRenderTargetTexture(m_SSAOPass.blurRenderTarget);
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);

@@ -158,8 +158,8 @@ void Camera::Update(float dt)
 	static float gFoVy = 45.0f;
 
 	float dFoV = 0.0f;
-	if (ENGINE->INP()->IsScrollDown()) dFoV = -5.0f;
-	if (ENGINE->INP()->IsScrollUp()  ) dFoV = +5.0f;
+	//if (ENGINE->INP()->IsScrollDown()) dFoV = -5.0f;
+	//if (ENGINE->INP()->IsScrollUp()  ) dFoV = +5.0f;
 	gFoVx += dFoV;
 	gFoVy += dFoV;
 

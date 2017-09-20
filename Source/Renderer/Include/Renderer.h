@@ -103,6 +103,7 @@ public:
 	float					AspectRatio()	const;
 	unsigned				WindowHeight()	const;
 	unsigned				WindowWidth()	const;
+	vec2					GetWindowDimensionsAsFloat2() const;
 	inline RenderTargetID	GetDefaultRenderTarget() const	                { return m_state._mainRenderTarget; }
 	inline DepthTargetID	GetBoundDepthTarget() const	                    { return m_state._boundDepthTarget; }
 	inline TextureID		GetDefaultRenderTargetTexture() const           { return m_renderTargets[m_state._mainRenderTarget].texture._id; }

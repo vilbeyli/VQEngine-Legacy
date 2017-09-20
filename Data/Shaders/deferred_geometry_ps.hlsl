@@ -27,7 +27,7 @@
 struct PSIn
 {
 	float4 position			: SV_POSITION;
-	float3 viewPosition	: POSITION0;
+	float3 viewPosition		: POSITION0;
 	float3 viewNormal		: NORMAL;
 	float3 viewTangent		: TANGENT;
 	float2 uv				: TEXCOORD1;

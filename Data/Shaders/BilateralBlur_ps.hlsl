@@ -25,15 +25,16 @@ struct PSIn
 Texture2D InputTexture;
 SamplerState BlurSampler;
 
-cbuffer constants 
-{
-	int isHorizontal;
-	int textureWidth;
-	int textureHeight;
-};
+//cbuffer constants 
+//{
+//	int isHorizontal;
+//	int textureWidth;
+//	int textureHeight;
+//};
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
+#if 0
 	const float4 color = InputTexture.Sample(BlurSampler, In.texCoord);
 	const float2 texOffset = float2(1.0f, 1.0f) / float2(textureWidth, textureHeight);
 	
@@ -61,4 +62,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 
 	return float4(result, 1.0f);
+#endif
+	// TODO: implement bilateral blur
+    return 1.0f.xxxx;
 }

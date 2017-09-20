@@ -8,11 +8,12 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 ## Prerequisites
 
- - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - probably the latest version
+ - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - probably the latest version. Also latest Visual Studio.
   
    Note: if the linker throws the error `1>LINK : fatal error LNK1158: cannot run 'rc.exe'` do the following:
    - Copy `rc.exe` and `rcdll.dll` 
    from `C:\Program Files (x86)\Windows Kits\10\bin\10.0.15063.0\x64` to `C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin`
+
 
 ## Controls
 
@@ -37,15 +38,17 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
  
 
 
-## Milestones
+## Milestones & Future
 
-See [all Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones).
+Future Plans / In-Development: https://github.com/vilbeyli/DX11Renderer/issues
+
+See [active Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones).
  
  ***Completed***
 
 *v0.1 : July15-2017*
  - Vertex-Geometry-Pixel Shader Pipeline
- - Simple Shader Reflection
+ - Shader Reflection
  - Phong Lighting
  - Simple Shadow Maps
  - Normal Maps
@@ -54,11 +57,13 @@ See [all Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones).
  
  ***In Development***
  
- *v0.2*
+ *v0.2* - Expected: Early October
  - BRDF
  - Bloom
- - Cubemap - skybox
+ - Cubemap Textures
+ - Skybox
  - Image-Based Lighting
  - Deferred Rendering
- - AO
- - Improved Shadow Map
+ - SSAO
+ - Improved Shadow Maps
+ - Anti-Aliasing

@@ -402,7 +402,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
-	const float ambient = 0.0005f;
+	const float ambient = 0.05f;
 	pRenderer->BeginEvent("Ambient Pass");
 	pRenderer->SetShader(EShaders::DEFERRED_BRDF_AMBIENT);
 	pRenderer->SetConstant1f("ambientFactor", ambient);
@@ -571,8 +571,8 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 
 	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->blurRenderTarget		= pRenderer->AddRenderTarget(rtDesc, RTVDesc);
-	this->radius = 25.0f;
-
+	this->radius = 4.0f;
+	this->intensity = 2.5f;
 }
 
 struct SSAOConstants
@@ -580,6 +580,7 @@ struct SSAOConstants
 	XMFLOAT4X4 matProjection;
 	vec2 screenSize;
 	float radius;
+	float intensity;
 	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * 3> samples;
 };
 void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const TextureID texPositions, const SceneView& sceneView)
@@ -602,6 +603,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 		proj,
 		pRenderer->GetWindowDimensionsAsFloat2(),
 		this->radius,
+		this->intensity,
 		samples
 	};
 

@@ -158,4 +158,5 @@ struct AmbientOcclusionPass
 	RenderTargetID		blurRenderTarget;
 
 	float radius;
+	float intensity;
 };

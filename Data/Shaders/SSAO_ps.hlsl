@@ -19,6 +19,9 @@
 #define KERNEL_SIZE 64
 #define DEPTH_BIAS 0.025
 
+#define ENABLE_RANGE_CHECK
+
+
 struct PSIn
 {
 	float4 position		 : SV_POSITION;
@@ -31,6 +34,7 @@ struct SceneVariables
 	matrix matProjection;
 	float2 screenSize;
 	float  radius;
+	float  intensity;
 	float3 samples[KERNEL_SIZE];
 };
 
@@ -46,12 +50,12 @@ Texture2D texDepth;
 
 SamplerState sNoiseSampler;
 
-#define ENABLE_RANGE_CHECK
-
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	const float2 uv = In.uv;
 	const float3 N = texViewSpaceNormals.Sample(sNoiseSampler, uv).xyz;
+	if(dot(N, N) < 0.001) return 0.0f.xxxx;
+
 	const float3 P = texViewPositions.Sample(sNoiseSampler, uv).xyz;
 
 	// tile noise texture (4x4) over whole screen by scaling UV coords (textures wrap)
@@ -95,5 +99,5 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 	occlusion = 1.0 - (occlusion / KERNEL_SIZE);
 
-	return occlusion.xxxx;
+    return pow(occlusion, SSAO_constants.intensity).xxxx;
 }

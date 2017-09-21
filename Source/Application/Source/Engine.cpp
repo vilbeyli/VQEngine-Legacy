@@ -280,9 +280,18 @@ bool Engine::HandleInput()
 	if (m_input->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
 	if (m_input->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
 
-	if (m_input->IsScrollUp())	 { m_SSAOPass.radius += 1.0f; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
-	if (m_input->IsScrollDown()) { m_SSAOPass.radius -= 1.0f; if (m_SSAOPass.radius < 1.001) m_SSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
-	
+	if (m_input->IsKeyDown("Shift"))
+	{
+		const float step = 0.1f;
+		if (m_input->IsScrollUp())   { m_SSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", m_SSAOPass.intensity); }
+		if (m_input->IsScrollDown()) { m_SSAOPass.intensity -= step; if (m_SSAOPass.intensity < 1.001) m_SSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", m_SSAOPass.intensity); }
+	}
+	else
+	{
+		const float step = 0.5f;
+		if (m_input->IsScrollUp())   { m_SSAOPass.radius += step; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
+		if (m_input->IsScrollDown()) { m_SSAOPass.radius -= step; if (m_SSAOPass.radius < 1.001) m_SSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
+	}
 
 	return true;
 }
@@ -488,10 +497,6 @@ void Engine::Render()
 		m_pRenderer->SetShader(m_selectedShader);	// forward brdf/phong
 		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 		m_pRenderer->SetSamplerState("sNormalSampler", m_normalSampler);
-#if 0
-		m_pRenderer->SetConstant1f("fovH", m_pCamera->m_settings.fovH * DEG2RAD);
-		m_pRenderer->SetConstant1f("panini", m_bUsePaniniProjection ? 1.0f : 0.0f);
-#endif
 
 		SendLightData();
 		m_sceneManager->Render(m_pRenderer, m_sceneView);
@@ -568,6 +573,7 @@ void Engine::Render()
 				{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
+				//{ vec2(1600, 900),	vec2(0,0),			tAO					, false},
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
 				c[i].bottomLeftCornerScreenCoordinates.x() = c[i-1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;

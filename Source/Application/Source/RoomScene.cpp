@@ -31,7 +31,7 @@ constexpr size_t	RAND_LIGHT_COUNT	= 0;
 constexpr size_t	CUBE_ROW_COUNT		= 21;
 constexpr size_t	CUBE_COLUMN_COUNT	= 4;
 constexpr size_t	CUBE_COUNT			= CUBE_ROW_COUNT * CUBE_COLUMN_COUNT;
-constexpr float		CUBE_DISTANCE		= 4.0f * 2.2f;
+constexpr float		CUBE_DISTANCE		= 4.0f * 1.4f;
 
 //constexpr size_t	CUBE_ROW_COUNT		= 20;
 //constexpr size_t	CUBE_ROW_COUNT		= 20;
@@ -141,8 +141,10 @@ void RoomScene::InitializeObjectArrays()
 
 				// set transform
 				float x, y, z;	// position
-				x = i * CUBE_DISTANCE - CUBE_ROW_COUNT * CUBE_DISTANCE / 2;		y = 5.0f;	z = j * CUBE_DISTANCE - CUBE_COLUMN_COUNT * CUBE_DISTANCE / 2;
-				cube.m_transform.SetPosition(x, y, z + 550);
+				x = i * CUBE_DISTANCE - CUBE_ROW_COUNT * CUBE_DISTANCE / 2;		
+				y = 5.0f + cubes.size();	
+				z = j * CUBE_DISTANCE - CUBE_COLUMN_COUNT * CUBE_DISTANCE / 2;
+				cube.m_transform.SetPosition(x, y, z + 350);
 				cube.m_transform.SetUniformScale(4.0f);
 
 				// set material
@@ -212,7 +214,7 @@ void RoomScene::InitializeObjectArrays()
 
 			// offset to center the grid
 			const float offsetDim = -static_cast<float>(gridDimension) * r / 2 + r/2.0f;
-			const vec3 offset = vec3(col * r, 0.0f, row * r) + vec3(offsetDim, 0.0f, offsetDim);
+			const vec3 offset = vec3(col * r, -1.0f, row * r) + vec3(offsetDim, 0.0f, offsetDim);
 
 			const vec3 pos = origin + offset;
 
@@ -251,8 +253,8 @@ void RoomScene::InitializeObjectArrays()
 	cube.m_transform.SetUniformScale(5.0f);
 	--i;
 
-	cylinder.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	cylinder.m_transform.SetUniformScale(4.0f);
+	cylinder.m_transform.SetPosition(xCoord, 0.0f, distToEachOther * i);
+	cylinder.m_transform.SetUniformScale(7.0f);
 	--i;
 
 
@@ -450,8 +452,8 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		floor.m_model.mBRDF_Material.metalness = 0.0f;
 
 		//mat = Material::bronze;
-		floor.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("185.JPG"));
-		floor.m_model.SetNormalMap(pRenderer->CreateTextureFromFile("185_norm.JPG"));
+		//floor.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("185.JPG"));
+		//floor.m_model.SetNormalMap(pRenderer->CreateTextureFromFile("185_norm.JPG"));
 		//floor.m_model.SetNormalMap(pRenderer->CreateTextureFromFile("BumpMapTexturePreview.JPG"));
 	}
 #if 1

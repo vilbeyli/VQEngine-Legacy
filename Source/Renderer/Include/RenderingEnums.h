@@ -47,6 +47,7 @@ enum class EPrimitiveTopology
 	TOPOLOGY_COUNT
 };
 
+// default states
 enum EDefaultRasterizerState
 {
 	CULL_NONE = 0,
@@ -65,7 +66,22 @@ enum EDefaultBlendState
 	BLEND_STATE_COUNT
 };
 
+enum EDefaultSamplerState
+{
+	POINT_SAMPLER,
+	WRAP_SAMPLER,
 
+	DEFAULT_SAMPLER_COUNT
+};
+
+
+enum EDefaultDepthStencilState
+{
+	DEPTH_STENCIL_W,
+	// add more as needed
+
+	DEPTH_STENCIL_STATE_COUNT
+};
 
 enum ELayoutFormat
 {

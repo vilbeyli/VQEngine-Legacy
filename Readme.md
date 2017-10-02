@@ -30,6 +30,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 | **F7** |	Toggle Debug Shader |
 | **F8** |	Toggle Forward/Deferred Rendering |
 | **F9** |	Toggle Bloom |
+| **;** |	Toggle Ambient Occlusion |
 | **Backspace** | Pause App |
 | **R** | Reset Camera |
 | **\\** | Reload Shaders |

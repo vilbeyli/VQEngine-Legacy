@@ -153,6 +153,7 @@ struct AmbientOcclusionPass
 	std::vector<vec3>	sampleKernel;
 	std::vector<vec4>	noiseKernel;
 	TextureID			noiseTexture;
+	TextureID			whiteTexture4x4;
 	SamplerID			noiseSampler;
 	RenderTargetID		occlusionRenderTarget;
 	RenderTargetID		blurRenderTarget;

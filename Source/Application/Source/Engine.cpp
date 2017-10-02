@@ -172,7 +172,6 @@ bool Engine::Initialize(HWND hwnd)
 	// default states
 	const bool bDepthWrite = true;
 	const bool bStencilWrite = false;
-	m_defaultDepthStencilState = m_pRenderer->AddDepthStencilState(bDepthWrite, bStencilWrite);
 	m_worldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
 	Skybox::InitializePresets(m_pRenderer);
@@ -215,7 +214,7 @@ bool Engine::Load()
 		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 		normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 		normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 		normalSamplerDesc.MinLOD = 0.f;
 		normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 		normalSamplerDesc.MipLODBias = 0.f;
@@ -275,22 +274,26 @@ bool Engine::HandleInput()
 	if (m_input->IsKeyTriggered("F8")) ToggleRenderingPath();
 
 	if (m_input->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
+	if (m_input->IsKeyTriggered(";")) m_isAmbientOcclusionOn = !m_isAmbientOcclusionOn;
 
 	if (m_input->IsKeyTriggered("R")) m_sceneManager->ReloadLevel();
 	if (m_input->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
-	if (m_input->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
+	//if (m_input->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
 
-	if (m_input->IsKeyDown("Shift"))
+	if (m_isAmbientOcclusionOn)
 	{
-		const float step = 0.1f;
-		if (m_input->IsScrollUp())   { m_SSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", m_SSAOPass.intensity); }
-		if (m_input->IsScrollDown()) { m_SSAOPass.intensity -= step; if (m_SSAOPass.intensity < 1.001) m_SSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", m_SSAOPass.intensity); }
-	}
-	else
-	{
-		const float step = 0.5f;
-		if (m_input->IsScrollUp())   { m_SSAOPass.radius += step; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
-		if (m_input->IsScrollDown()) { m_SSAOPass.radius -= step; if (m_SSAOPass.radius < 1.001) m_SSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
+		if (m_input->IsKeyDown("Shift"))
+		{
+			const float step = 0.1f;
+			if (m_input->IsScrollUp()) { m_SSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", m_SSAOPass.intensity); }
+			if (m_input->IsScrollDown()) { m_SSAOPass.intensity -= step; if (m_SSAOPass.intensity < 1.001) m_SSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", m_SSAOPass.intensity); }
+		}
+		else
+		{
+			const float step = 0.5f;
+			if (m_input->IsScrollUp()) { m_SSAOPass.radius += step; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
+			if (m_input->IsScrollDown()) { m_SSAOPass.radius -= step; if (m_SSAOPass.radius < 1.001) m_SSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
+		}
 	}
 
 	return true;
@@ -304,7 +307,7 @@ bool Engine::UpdateAndRender()
 	{
 		CalcFrameStats();
 
-		m_pCamera->Update(dt);
+		m_pCamera->Update(dt);		// maybe in scene?
 		m_sceneManager->Update(dt);
 
 		PreRender();
@@ -449,7 +452,7 @@ void Engine::Render()
 		}
 
 		// DEFERRED LIGHTING PASS
-		const TextureID tSSAO = m_isAmbientOcclusionOn ? m_pRenderer->GetRenderTargetTexture(m_SSAOPass.blurRenderTarget) : -1;
+		const TextureID tSSAO = m_isAmbientOcclusionOn ? m_pRenderer->GetRenderTargetTexture(m_SSAOPass.blurRenderTarget) : m_SSAOPass.whiteTexture4x4;
 		m_pRenderer->BeginEvent("Lighting Pass");
 		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_sceneLightData, tSSAO);
 		m_pRenderer->EndEvent();
@@ -463,7 +466,7 @@ void Engine::Render()
 		{
 			m_pRenderer->SetDepthStencilState(m_deferredRenderingPasses._skyboxStencilState);
 			Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
-			m_pRenderer->SetDepthStencilState(m_defaultDepthStencilState);
+			m_pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_W);
 			m_pRenderer->UnbindDepthTarget();
 		}
 	}
@@ -477,7 +480,7 @@ void Engine::Render()
 
 		m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);
 		m_pRenderer->BindDepthTarget(0);
-		m_pRenderer->SetDepthStencilState(m_defaultDepthStencilState);
+		m_pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_W);
 		m_pRenderer->Begin(clearColor, clearDepth);
 
 		// SKYBOX
@@ -561,7 +564,7 @@ void Engine::Render()
 		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
 		TextureID tSceneDepth		 = m_pRenderer->GetDepthTargetTexture(0);
 		TextureID tNormals			 = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._normalRT);
-		TextureID tAO				 = m_pRenderer->GetRenderTargetTexture(m_SSAOPass.blurRenderTarget);
+		TextureID tAO				 = m_isAmbientOcclusionOn ? m_pRenderer->GetRenderTargetTexture(m_SSAOPass.blurRenderTarget) : m_SSAOPass.whiteTexture4x4;
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);

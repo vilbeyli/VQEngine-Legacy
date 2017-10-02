@@ -49,6 +49,7 @@ Texture2D<float4> texNoise;
 Texture2D texDepth;
 
 SamplerState sNoiseSampler;
+SamplerState sPointSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
@@ -71,7 +72,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
 		float3 kernelSample = mul(SSAO_constants.samples[i], TBN); // From tangent to view-space
-        kernelSample = P + kernelSample * SSAO_constants.radius;
+		kernelSample = P + kernelSample * SSAO_constants.radius;
 
 		// get the screenspace position of the sample
 		float4 offset = float4(kernelSample, 1.0f);
@@ -90,12 +91,12 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 
 #ifdef ENABLE_RANGE_CHECK
-        const float rangeCheck = smoothstep(0.01f, 1.0f, SSAO_constants.radius / abs(P.z - D));
+		const float rangeCheck = smoothstep(0.01f, 1.0f, SSAO_constants.radius / abs(P.z - D));
 #else
 		const float rangeCheck = 1.0f;
 #endif
 
-		occlusion += (D < kernelSample.z + DEPTH_BIAS ? 1.0f : 0.0f) * rangeCheck;
+		occlusion += (D < kernelSample.z - DEPTH_BIAS ? 1.0f : 0.0f) * rangeCheck;
 	}
 	occlusion = 1.0 - (occlusion / KERNEL_SIZE);
 

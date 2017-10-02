@@ -75,9 +75,9 @@ struct PipelineState
 	DepthStencilStateID	_activeDepthStencilState;
 	RenderTargetIDs		_boundRenderTargets;
 	DepthTargetID		_boundDepthTarget;
-	RenderTargetID		_mainRenderTarget;
+	RenderTargetID		_mainRenderTarget;		// this doesn't belong here
 	BlendStateID		_activeBlendState;
-	TextureID			_depthBufferTexture;
+	TextureID			_depthBufferTexture;	// ^
 };
 
 class Renderer
@@ -110,6 +110,11 @@ public:
 	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return m_renderTargets[RT].texture._id; }
 	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const   { return m_depthTargets[DT].texture._id; }
 	const PipelineState&	GetState() const;
+
+	const Shader*			GetShader(ShaderID shader_id) const;
+	const Texture&			GetTextureObject(TextureID) const;
+	const TextureID			GetTexture(const std::string name) const;
+	inline const ShaderID	GetActiveShader() const { return m_state._activeShader; }
 
 
 	// RESOURCE INITIALIZATION (testing readability of function definitions)
@@ -173,15 +178,9 @@ public:
 	DepthTargetID AddDepthTarget(	const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, 
 											Texture& surface
 											);
-	
 
 	// PIPELINE STATE MANAGEMENT
 	//----------------------------------------------------------------------------------
-	const Shader*			GetShader(ShaderID shader_id) const;
-	const Texture&			GetTextureObject(TextureID) const;
-	const TextureID			GetTexture(const std::string name) const;
-	inline const ShaderID	GetActiveShader() const { return m_state._activeShader; }
-
 	void					SetViewport(const unsigned width, const unsigned height);
 	void					SetViewport(const D3D11_VIEWPORT& viewport);
 	void					SetShader(ShaderID);
@@ -222,8 +221,7 @@ public:
 	void					DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
 	void					Draw(EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
 	
-	// assumes (0, 0) is Bottom Left corner of the screen.
-	void					DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd);
+	void					DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd); // BottomLeft<x,y> = (0,0)
 	
 	void					DrawLine();
 	void					DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = LinearColor().Value());

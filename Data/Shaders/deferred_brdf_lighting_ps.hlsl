@@ -71,8 +71,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 	
 	const float3 Pw = mul(matViewToWorld, float4(P, 1)).xyz;
 
-	const float ambient = 0.00005f;
-
 	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
 	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sNearestSampler, In.uv);
 

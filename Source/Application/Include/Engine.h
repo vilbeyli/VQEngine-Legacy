@@ -131,7 +131,6 @@ private:
 	//--------------------------------------------------------
 	ShaderID						m_selectedShader;
 	
-	DepthStencilStateID				m_defaultDepthStencilState;
 	DepthTargetID					m_worldDepthTarget;
 	SamplerID						m_normalSampler;
 

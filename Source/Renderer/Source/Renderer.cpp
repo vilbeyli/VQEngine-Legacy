@@ -174,7 +174,7 @@ Renderer::Renderer()
 	m_deviceContext(nullptr),
 	m_bufferObjects     (std::vector<BufferObject*>     (EGeometry::MESH_TYPE_COUNT)      ),
 	m_rasterizerStates  (std::vector<RasterizerState*>  ((int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
-	m_depthStencilStates(std::vector<DepthStencilState*>()),
+	m_depthStencilStates(std::vector<DepthStencilState*>(EDefaultDepthStencilState::DEPTH_STENCIL_STATE_COUNT)),
 	m_blendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT))
 	//,	m_ShaderHotswapPollWatcher("ShaderHotswapWatcher")
 {
@@ -195,9 +195,6 @@ Renderer::~Renderer(){}
 
 void Renderer::Exit()
 {
-	// C-style resource release - not using smart pointers
-	// todo: compare performance
-
 	//m_Direct3D->ReportLiveObjects("BEGIN EXIT");
 	for (BufferObject*& bo : m_bufferObjects)
 	{
@@ -399,8 +396,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 		const std::string err("Unable to create Rasterizer State: Cull ");
 
 		// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
-		D3D11_RASTERIZER_DESC rsDesc;
-		ZeroMemory(&rsDesc, sizeof(D3D11_RASTERIZER_DESC));
+		D3D11_RASTERIZER_DESC rsDesc = {};
 
 		rsDesc.FillMode = D3D11_FILL_SOLID;
 		rsDesc.FrontCounterClockwise = false;
@@ -439,8 +435,6 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 	// DEFAULT BLEND STATES
 	//--------------------------------------------------------------------
 	{
-		// todo: solve default blend state issue
-
 		D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
 		rtBlendDesc.BlendEnable = true;
 		rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
@@ -462,6 +456,44 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 		m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::DISABLED].ptr));
 	}
 	m_Direct3D->ReportLiveObjects("Init Default BlendStates ");
+
+
+
+	// DEFAULT DEPTHSTENCIL SATATES
+	//--------------------------------------------------------------------
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+
+	// Set up the description of the stencil state.
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+	depthStencilDesc.StencilEnable = true;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
+
+	// Stencil operations if pixel is front-facing.
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Stencil operations if pixel is back-facing.
+	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Create the depth stencil state.
+	result = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_W]);
+	if (FAILED(result))
+	{
+		Log::Error(CANT_CRERATE_RENDER_STATE, "Default Depth Stencil State");
+		return false;
+	}
+
+	
 
 
 	// PRIMITIVES

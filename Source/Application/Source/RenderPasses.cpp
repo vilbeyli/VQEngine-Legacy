@@ -402,7 +402,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
-	const float ambient = 0.05f;
+	const float ambient = 0.01f;
 	pRenderer->BeginEvent("Ambient Pass");
 	pRenderer->SetShader(EShaders::DEFERRED_BRDF_AMBIENT);
 	pRenderer->SetConstant1f("ambientFactor", ambient);
@@ -537,6 +537,10 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	}
 	this->noiseTexture = pRenderer->CreateTexture2D(NOISE_KERNEL_SIZE, NOISE_KERNEL_SIZE, this->noiseKernel.data());
 
+	const float whiteValue = 1.0f;
+	std::vector<vec4> white4x4 = std::vector<vec4>(16, vec4(whiteValue, 0, 0, 1));
+	this->whiteTexture4x4 = pRenderer->CreateTexture2D(4, 4, white4x4.data());
+
 	// The tiling of the texture causes the orientation of the kernel to be repeated and 
 	// introduces regularity into the result. By keeping the texture size small we can make 
 	// this regularity occur at a high frequency, which can then be removed with a blur step 
@@ -571,8 +575,8 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 
 	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->blurRenderTarget		= pRenderer->AddRenderTarget(rtDesc, RTVDesc);
-	this->radius = 4.0f;
-	this->intensity = 2.5f;
+	this->radius = 6.5f;
+	this->intensity = 5.0f;
 }
 
 struct SSAOConstants

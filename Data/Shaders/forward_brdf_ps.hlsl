@@ -71,7 +71,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 N = normalize(In.normal);
 	const float3 T = normalize(In.tangent);
 	const float3 V = normalize(cameraPos - P);
-	const float ambient = 0.00005f;
+	const float ambient = 0.01f;
 
 	BRDF_Surface s;
     s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.texCoord, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;

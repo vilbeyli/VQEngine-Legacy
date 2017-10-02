@@ -30,16 +30,16 @@ const LinearColor LinearColor::blue			= vec3(0.0f, 0.0f, 1.0f);
 const LinearColor LinearColor::yellow		= vec3(1.0f, 1.0f, 0.0f);
 const LinearColor LinearColor::magenta		= vec3(1.0f, 0.0f, 1.0f);
 const LinearColor LinearColor::cyan			= vec3(0.0f, 1.0f, 1.0f);
-const LinearColor LinearColor::gray			= vec3(0.3f, 0.3f, 0.3f);
+const LinearColor LinearColor::gray			= vec3(0.2f, 0.2f, 0.2f);
 const LinearColor LinearColor::light_gray	= vec3(0.45f, 0.45f, 0.45f);
 const LinearColor LinearColor::orange		= vec3(1.0f, 0.5f, 0.0f);
 const LinearColor LinearColor::purple		= vec3(0.31f, 0.149f, 0.513f);
 
 const LinearColor::ColorPalette LinearColor::s_palette = {
-	LinearColor::black,	LinearColor::white,
-	LinearColor::red,		LinearColor::green,		LinearColor::blue,
+	LinearColor::black,		LinearColor::white,
+	LinearColor::red,		LinearColor::green,			LinearColor::blue,
 	LinearColor::yellow,	LinearColor::magenta,		LinearColor::cyan,
-	LinearColor::gray,	LinearColor::light_gray,
+	LinearColor::gray,		LinearColor::light_gray,
 	LinearColor::orange,	LinearColor::purple
 };
 

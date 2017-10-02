@@ -92,9 +92,9 @@ void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
 void RoomScene::InitializeLights(SerializedScene& scene)
 {
 	m_lights = std::move(scene.lights);
-	m_lights[1]._color = vec3(m_lights[1]._color) * 3.0f * 0;
-	m_lights[2]._color = vec3(m_lights[2]._color) * 2.0f * 0;
-	m_lights[3]._color = vec3(m_lights[3]._color) * 1.5f * 0;
+	m_lights[1]._color = vec3(m_lights[1]._color) * 3.0f;// * 0;
+	m_lights[2]._color = vec3(m_lights[2]._color) * 2.0f;// * 0;
+	m_lights[3]._color = vec3(m_lights[3]._color) * 1.5f;// * 0;
 	
 	// hard-coded scales for now
 	m_lights[0]._transform.SetUniformScale(0.8f);
@@ -185,7 +185,7 @@ void RoomScene::InitializeObjectArrays()
 			// set materials brdf
 			const float baseSpecular = 5.0f;
 			const float step = 15.0f;
-			sph.m_model.mBRDF_Material.diffuse = BlinnPhong_Material::gold.diffuse;
+			sph.m_model.mBRDF_Material.diffuse = LinearColor::gray;
 			sph.m_model.mBRDF_Material.specular = vec3( baseSpecular + (static_cast<float>(i) / numSph) * step)._v;
 			//sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * baseSpecular)._v : vec3((static_cast<float>(numSph - i) / numSph) * baseSpecular)._v;
 			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;

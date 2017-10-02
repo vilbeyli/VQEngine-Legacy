@@ -2,8 +2,8 @@
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
-![](Data/Screenshots/deferred.PNG)
-<center><i>BRDF - HDR</i></center>
+![](Data/Screenshots/ssao.PNG)
+<center><i>BRDF, HDR, SSAO, Bloom</i></center>
 
 
 ## Prerequisites
@@ -14,6 +14,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
    - Copy `rc.exe` and `rcdll.dll` 
    from `C:\Program Files (x86)\Windows Kits\10\bin\10.0.15063.0\x64` to `C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin`
 
+Suggested latest Visual Studio.
 
 ## Controls
 

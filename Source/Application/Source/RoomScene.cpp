@@ -229,7 +229,7 @@ void RoomScene::InitializeObjectArrays()
 			mat0.metalness = colStep;
 
 			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
-			const float roughnessLowClamp = 0.025f;
+			const float roughnessLowClamp = 0.065f;
 			mat0.roughness = rowStep < roughnessLowClamp ? roughnessLowClamp : rowStep;
 
 			BlinnPhong_Material& mat1 = sph.m_model.mBlinnPhong_Material;

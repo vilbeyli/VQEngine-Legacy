@@ -41,9 +41,9 @@ SceneManager::SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights)
 SceneManager::~SceneManager()
 {}
 
-ESkyboxPresets SceneManager::GetSceneSkybox() const
+ESkyboxPreset SceneManager::GetSceneSkybox() const
 {
-	return m_roomScene.m_skybox;
+	return m_roomScene.GetSkybox();
 }
 
 

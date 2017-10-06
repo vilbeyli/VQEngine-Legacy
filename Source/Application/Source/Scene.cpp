@@ -15,30 +15,11 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
+#include "Scene.h"
 
-#pragma once
-
-#include "Components/Transform.h"
-#include "Model.h"
-
-class Renderer;
-struct SceneView;
-
-class GameObject
-{
-public:
-	GameObject();
-	~GameObject();
-	GameObject(const GameObject& obj);
-
-	GameObject& operator=(const GameObject& obj);
-
-	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const;
-	void RenderZ(Renderer* pRenderer) const;
-
-	void Clear();
-public:
-	Transform	mTransform;
-	Model		mModel;
-};
-
+Scene::Scene(SceneManager& sceneManager, std::vector<Light>& lights)
+	:
+	mSceneManager(sceneManager),
+	mLights(lights),
+	mpRenderer(nullptr)	// pRenderer is initialized at Load()
+{}

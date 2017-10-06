@@ -50,18 +50,17 @@ enum class WALLS
 
 RoomScene::RoomScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	:
-	m_sceneManager(sceneMan),
-	m_lights(lights)
+	Scene(sceneMan, lights)
 {}
 
 void RoomScene::Load(Renderer* pRenderer, SerializedScene& scene)
 {
-	m_pRenderer = pRenderer;
+	mpRenderer = pRenderer;
 	m_room.Initialize(pRenderer);
 	InitializeLights(scene);
 	InitializeObjectArrays();
 
-	m_skybox = ESkyboxPresets::NIGHT_SKY;
+	m_skybox = ESkyboxPreset::NIGHT_SKY;
 }
 
 void RoomScene::Update(float dt)
@@ -83,7 +82,7 @@ void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
 		|| selectedShader == EShaders::DEFERRED_GEOMETRY
 	);
 
-	m_room.Render(m_pRenderer, sceneView, bSendMaterialData);
+	m_room.Render(mpRenderer, sceneView, bSendMaterialData);
 	RenderCentralObjects(sceneView, bSendMaterialData);
 }
 
@@ -91,16 +90,16 @@ void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
  		  
 void RoomScene::InitializeLights(SerializedScene& scene)
 {
-	m_lights = std::move(scene.lights);
-	m_lights[1]._color = vec3(m_lights[1]._color) * 3.0f;// * 0;
-	m_lights[2]._color = vec3(m_lights[2]._color) * 2.0f;// * 0;
-	m_lights[3]._color = vec3(m_lights[3]._color) * 1.5f;// * 0;
+	mLights = std::move(scene.lights);
+	mLights[1]._color = vec3(mLights[1]._color) * 3.0f;// * 0;
+	mLights[2]._color = vec3(mLights[2]._color) * 2.0f;// * 0;
+	mLights[3]._color = vec3(mLights[3]._color) * 1.5f;// * 0;
 	
 	// hard-coded scales for now
-	m_lights[0]._transform.SetUniformScale(0.8f);
-	m_lights[1]._transform.SetUniformScale(0.3f);
-	m_lights[2]._transform.SetUniformScale(0.4f);
-	m_lights[3]._transform.SetUniformScale(0.5f);
+	mLights[0]._transform.SetUniformScale(0.8f);
+	mLights[1]._transform.SetUniformScale(0.3f);
+	mLights[2]._transform.SetUniformScale(0.4f);
+	mLights[3]._transform.SetUniformScale(0.5f);
 
 	for (size_t i = 0; i < RAND_LIGHT_COUNT; i++)
 	{
@@ -115,11 +114,11 @@ void RoomScene::InitializeLights(SerializedScene& scene)
 		l._renderMesh = EGeometry::SPHERE;
 		l._color = rndColor;
 		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
-		m_lights.push_back(l);
+		mLights.push_back(l);
 	}
 
 	Animation anim;
-	anim._fTracks.push_back(Track<float>(&m_lights[1]._brightness, 40.0f, 800.0f, 3.0f));
+	anim._fTracks.push_back(Track<float>(&mLights[1]._brightness, 40.0f, 800.0f, 3.0f));
 	m_animations.push_back(anim);
 }
 	 		  
@@ -144,15 +143,15 @@ void RoomScene::InitializeObjectArrays()
 				x = i * CUBE_DISTANCE - CUBE_ROW_COUNT * CUBE_DISTANCE / 2;		
 				y = 5.0f + cubes.size();	
 				z = j * CUBE_DISTANCE - CUBE_COLUMN_COUNT * CUBE_DISTANCE / 2;
-				cube.m_transform.SetPosition(x, y, z + 350);
-				cube.m_transform.SetUniformScale(4.0f);
+				cube.mTransform.SetPosition(x, y, z + 350);
+				cube.mTransform.SetUniformScale(4.0f);
 
 				// set material
-				cube.m_model.SetDiffuseColor(color);
-				cube.m_model.SetNormalMap(m_pRenderer->CreateTextureFromFile("simple_normalmap.png"));
+				cube.mModel.SetDiffuseColor(color);
+				cube.mModel.SetNormalMap(mpRenderer->CreateTextureFromFile("simple_normalmap.png"));
 
 				// set model
-				cube.m_model.mMesh = EGeometry::CUBE;
+				cube.mModel.mMesh = EGeometry::CUBE;
 
 				cubes.push_back(cube);
 			}
@@ -175,23 +174,23 @@ void RoomScene::InitializeObjectArrays()
 			vec3 pos = rotQ.TransformVector(radius);
 
 			GameObject sph;
-			sph.m_transform = pos;
-			sph.m_transform.Translate(vec3::Up * (sphHeight[1] * ((float)i / (float)numSph) + sphHeight[1]));
-			sph.m_model.mMesh = EGeometry::SPHERE;
+			sph.mTransform = pos;
+			sph.mTransform.Translate(vec3::Up * (sphHeight[1] * ((float)i / (float)numSph) + sphHeight[1]));
+			sph.mModel.mMesh = EGeometry::SPHERE;
 
 			// set materials blinn-phong
-			sph.m_model.mBlinnPhong_Material = BlinnPhong_Material::gold;
+			sph.mModel.mBlinnPhong_Material = BlinnPhong_Material::gold;
 
 			// set materials brdf
 			const float baseSpecular = 5.0f;
 			const float step = 15.0f;
-			sph.m_model.mBRDF_Material.diffuse = LinearColor::gray;
-			sph.m_model.mBRDF_Material.specular = vec3( baseSpecular + (static_cast<float>(i) / numSph) * step)._v;
+			sph.mModel.mBRDF_Material.diffuse = LinearColor::gray;
+			sph.mModel.mBRDF_Material.specular = vec3( baseSpecular + (static_cast<float>(i) / numSph) * step)._v;
 			//sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * baseSpecular)._v : vec3((static_cast<float>(numSph - i) / numSph) * baseSpecular)._v;
 			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;
 
-			sph.m_model.mBRDF_Material.roughness = 0.2f;
-			sph.m_model.mBRDF_Material.metalness = 1.0f - static_cast<float>(i) / static_cast<float>(numSph);
+			sph.mModel.mBRDF_Material.roughness = 0.2f;
+			sph.mModel.mBRDF_Material.metalness = 1.0f - static_cast<float>(i) / static_cast<float>(numSph);
 
 			spheres.push_back(sph);
 		}
@@ -219,20 +218,20 @@ void RoomScene::InitializeObjectArrays()
 			const vec3 pos = origin + offset;
 
 			GameObject sph;
-			sph.m_transform = pos;
-			sph.m_transform.SetUniformScale(2.5f);
-			sph.m_model.mMesh = EGeometry::SPHERE;
+			sph.mTransform = pos;
+			sph.mTransform.SetUniformScale(2.5f);
+			sph.mModel.mMesh = EGeometry::SPHERE;
 
-			BRDF_Material&		 mat0 = sph.m_model.mBRDF_Material;
+			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			// col(-x->+x) -> metalness [0.0f, 1.0f]
-			sph.m_model.SetDiffuseColor(LinearColor(vec3(LinearColor::red) / 1.5f));
+			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::red) / 1.5f));
 			mat0.metalness = colStep;
 
 			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
 			const float roughnessLowClamp = 0.065f;
 			mat0.roughness = rowStep < roughnessLowClamp ? roughnessLowClamp : rowStep;
 
-			BlinnPhong_Material& mat1 = sph.m_model.mBlinnPhong_Material;
+			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;
 			const float shininessBase = shininessMax + 7.0f;
 			mat1.shininess =  shininessBase - rowStep * shininessMax;
@@ -244,76 +243,76 @@ void RoomScene::InitializeObjectArrays()
 	int i = 3;
 	const float xCoord = 85.0f;
 	const float distToEachOther = -30.0f;
-	grid.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	grid.m_transform.SetUniformScale(30);
-	grid.m_transform.RotateAroundGlobalZAxisDegrees(45);
+	grid.mTransform.SetPosition(xCoord, 5.0f, distToEachOther * i);
+	grid.mTransform.SetUniformScale(30);
+	grid.mTransform.RotateAroundGlobalZAxisDegrees(45);
 	--i;
 
-	cube.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	cube.m_transform.SetUniformScale(5.0f);
+	cube.mTransform.SetPosition(xCoord, 5.0f, distToEachOther * i);
+	cube.mTransform.SetUniformScale(5.0f);
 	--i;
 
-	cylinder.m_transform.SetPosition(xCoord, 0.0f, distToEachOther * i);
-	cylinder.m_transform.SetUniformScale(7.0f);
+	cylinder.mTransform.SetPosition(xCoord, 0.0f, distToEachOther * i);
+	cylinder.mTransform.SetUniformScale(7.0f);
 	--i;
 
 
-	sphere.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
+	sphere.mTransform.SetPosition(xCoord, 5.0f, distToEachOther * i);
 	//sphere.m_transform.SetPosition(0, 20.0f, 0);
 	//sphere.m_transform.SetUniformScale(5.0f);
 	--i;
 
-	triangle.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	triangle.m_transform.SetXRotationDeg(30.0f);
-	triangle.m_transform.RotateAroundGlobalYAxisDegrees(30.0f);
-	triangle.m_transform.SetUniformScale(4.0f);
+	triangle.mTransform.SetPosition(xCoord, 5.0f, distToEachOther * i);
+	triangle.mTransform.SetXRotationDeg(30.0f);
+	triangle.mTransform.RotateAroundGlobalYAxisDegrees(30.0f);
+	triangle.mTransform.SetUniformScale(4.0f);
 	--i;
 
-	quad.m_transform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	quad.m_transform.SetXRotationDeg(30);
-	quad.m_transform.RotateAroundGlobalYAxisDegrees(30);
-	quad.m_transform.SetUniformScale(4.0f);
+	quad.mTransform.SetPosition(xCoord, 5.0f, distToEachOther * i);
+	quad.mTransform.SetXRotationDeg(30);
+	quad.mTransform.RotateAroundGlobalYAxisDegrees(30);
+	quad.mTransform.SetUniformScale(4.0f);
 
 
-	    grid.m_model.mMesh = EGeometry::GRID;
-	cylinder.m_model.mMesh = EGeometry::CYLINDER;
-	triangle.m_model.mMesh = EGeometry::TRIANGLE;
-	    quad.m_model.mMesh = EGeometry::QUAD;
-		cube.m_model.mMesh = EGeometry::CUBE;
-	 sphere.m_model.mMesh = EGeometry::SPHERE;
+	    grid.mModel.mMesh = EGeometry::GRID;
+	cylinder.mModel.mMesh = EGeometry::CYLINDER;
+	triangle.mModel.mMesh = EGeometry::TRIANGLE;
+	    quad.mModel.mMesh = EGeometry::QUAD;
+		cube.mModel.mMesh = EGeometry::CUBE;
+	 sphere.mModel.mMesh = EGeometry::SPHERE;
 
-		grid.m_model.mBRDF_Material.roughness = 0.02f;
-		grid.m_model.mBRDF_Material.metalness = 0.6f;
-		grid.m_model.mBlinnPhong_Material.shininess = 40.f;
-	cylinder.m_model.mBRDF_Material.roughness = 0.3f;
-	cylinder.m_model.mBRDF_Material.metalness = 0.3f;
-		cube.m_model.mBRDF_Material.roughness = 0.6f;
-		cube.m_model.mBRDF_Material.metalness = 0.6f;
-	  sphere.m_model.mBRDF_Material.roughness = 0.3f;
-	  sphere.m_model.mBRDF_Material.metalness = 1.0f;
-	  sphere.m_model.SetDiffuseColor(LinearColor(0.04f, 0.04f, 0.04f));
-	  sphere.m_transform.SetUniformScale(2.5f);
+		grid.mModel.mBRDF_Material.roughness = 0.02f;
+		grid.mModel.mBRDF_Material.metalness = 0.6f;
+		grid.mModel.mBlinnPhong_Material.shininess = 40.f;
+	cylinder.mModel.mBRDF_Material.roughness = 0.3f;
+	cylinder.mModel.mBRDF_Material.metalness = 0.3f;
+		cube.mModel.mBRDF_Material.roughness = 0.6f;
+		cube.mModel.mBRDF_Material.metalness = 0.6f;
+	  sphere.mModel.mBRDF_Material.roughness = 0.3f;
+	  sphere.mModel.mBRDF_Material.metalness = 1.0f;
+	  sphere.mModel.SetDiffuseColor(LinearColor(0.04f, 0.04f, 0.04f));
+	  sphere.mTransform.SetUniformScale(2.5f);
 
 
 
 	  //cubes.front().m_transform.Translate(0, 30, 0);
-	  cube.m_transform.SetPosition(0, 65, 0);
-	  cube.m_transform.SetXRotationDeg(90);
-	  cube.m_transform.RotateAroundGlobalXAxisDegrees(30);
-	  cube.m_transform.RotateAroundGlobalYAxisDegrees(30);
-	  cube.m_model.mBRDF_Material.normalMap = m_pRenderer->CreateTextureFromFile("BumpMapTexturePreview.png");
-	  cube.m_model.mBRDF_Material.metalness = 0.6f;
-	  cube.m_model.mBRDF_Material.roughness = 0.15f;
+	  cube.mTransform.SetPosition(0, 65, 0);
+	  cube.mTransform.SetXRotationDeg(90);
+	  cube.mTransform.RotateAroundGlobalXAxisDegrees(30);
+	  cube.mTransform.RotateAroundGlobalYAxisDegrees(30);
+	  cube.mModel.mBRDF_Material.normalMap = mpRenderer->CreateTextureFromFile("BumpMapTexturePreview.png");
+	  cube.mModel.mBRDF_Material.metalness = 0.6f;
+	  cube.mModel.mBRDF_Material.roughness = 0.15f;
 
 
-	  Plane2.m_model.mMesh = EGeometry::QUAD;
-	  Plane2.m_transform.SetPosition(-300, 0, 0);
-	  Plane2.m_transform.SetUniformScale(100);
-	  Plane2.m_transform.RotateAroundGlobalXAxisDegrees(90);
+	  Plane2.mModel.mMesh = EGeometry::QUAD;
+	  Plane2.mTransform.SetPosition(-300, 0, 0);
+	  Plane2.mTransform.SetUniformScale(100);
+	  Plane2.mTransform.RotateAroundGlobalXAxisDegrees(90);
 
-	  obj2.m_model.mMesh = EGeometry::SPHERE;
-	  obj2.m_transform.SetPosition(-300, 10, 0);
-	  obj2.m_transform.SetUniformScale(10);
+	  obj2.mModel.mMesh = EGeometry::SPHERE;
+	  obj2.mTransform.SetPosition(-300, 10, 0);
+	  obj2.mTransform.SetUniformScale(10);
 }
 
 void RoomScene::UpdateCentralObj(const float dt)
@@ -330,7 +329,7 @@ void RoomScene::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown(98))  tr += vec3::Back; 	// Key: Numpad2
 	if (ENGINE->INP()->IsKeyDown(105)) tr += vec3::Up; 		// Key: Numpad9
 	if (ENGINE->INP()->IsKeyDown(99))  tr += vec3::Down; 	// Key: Numpad3
-	m_lights[0]._transform.Translate(dt * tr * moveSpeed);
+	mLights[0]._transform.Translate(dt * tr * moveSpeed);
 
 
 	float angle = (dt * XM_PI * 0.08f) + (sinf(t) * sinf(dt * XM_PI * 0.03f));
@@ -344,7 +343,7 @@ void RoomScene::UpdateCentralObj(const float dt)
 		{
 			const vec3 rotAxis = vec3::Up;
 			const vec3 rotPoint = vec3::Zero;
-			sph.m_transform.RotateAroundPointAndAxis(rotAxis, angle, rotPoint);
+			sph.mTransform.RotateAroundPointAndAxis(rotAxis, angle, rotPoint);
 		}
 		//const vec3 pos = sph.m_transform._position;
 		//const float sinx = sinf(pos._v.x / 3.5f);
@@ -356,7 +355,7 @@ void RoomScene::UpdateCentralObj(const float dt)
 
 	// rotate cubes
 	const float cubeRotSpeed = 100.0f; // degs/s
-	cube.m_transform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
+	cube.mTransform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
 
 	for (int i = 0; i <  CUBE_ROW_COUNT; ++i)
 	{
@@ -371,7 +370,7 @@ void RoomScene::UpdateCentralObj(const float dt)
 	}
 
 #ifdef ROTATE_SHADOW_LIGHT
-	m_lights[0]._transform.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);
+	mLights[0]._transform.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);
 #endif
 }
 
@@ -380,26 +379,26 @@ void RoomScene::RenderCentralObjects(const SceneView& sceneView, bool sendMateri
 {
 	const ShaderID shd = ENGINE->GetSelectedShader();
 
-	for (const auto& cube : cubes) cube.Render(m_pRenderer, sceneView, sendMaterialData);
-	for (const auto& sph : spheres) sph.Render(m_pRenderer, sceneView, sendMaterialData);
+	for (const auto& cube : cubes) cube.Render(mpRenderer, sceneView, sendMaterialData);
+	for (const auto& sph : spheres) sph.Render(mpRenderer, sceneView, sendMaterialData);
 
-	grid.Render(m_pRenderer, sceneView, sendMaterialData);
-	quad.Render(m_pRenderer, sceneView, sendMaterialData);
-	triangle.Render(m_pRenderer, sceneView, sendMaterialData);
-	cylinder.Render(m_pRenderer, sceneView, sendMaterialData);
-	cube.Render(m_pRenderer, sceneView, sendMaterialData);
-	sphere.Render(m_pRenderer, sceneView, sendMaterialData);
+	grid.Render(mpRenderer, sceneView, sendMaterialData);
+	quad.Render(mpRenderer, sceneView, sendMaterialData);
+	triangle.Render(mpRenderer, sceneView, sendMaterialData);
+	cylinder.Render(mpRenderer, sceneView, sendMaterialData);
+	cube.Render(mpRenderer, sceneView, sendMaterialData);
+	sphere.Render(mpRenderer, sceneView, sendMaterialData);
 
-	Plane2.Render(m_pRenderer, sceneView, sendMaterialData);
-	obj2.Render(m_pRenderer, sceneView, sendMaterialData);
+	Plane2.Render(mpRenderer, sceneView, sendMaterialData);
+	obj2.Render(mpRenderer, sceneView, sendMaterialData);
 }
 
 void RoomScene::ToggleFloorNormalMap()
 {
-	TextureID nMap = m_room.floor.m_model.mBRDF_Material.normalMap;
+	TextureID nMap = m_room.floor.mModel.mBRDF_Material.normalMap;
 
-	nMap = nMap == m_pRenderer->GetTexture("185_norm.JPG") ? -1 : m_pRenderer->CreateTextureFromFile("185_norm.JPG");
-	m_room.floor.m_model.mBRDF_Material.normalMap = nMap;
+	nMap = nMap == mpRenderer->GetTexture("185_norm.JPG") ? -1 : mpRenderer->CreateTextureFromFile("185_norm.JPG");
+	m_room.floor.mModel.mBRDF_Material.normalMap = nMap;
 }
 
 void RoomScene::Room::Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const
@@ -443,13 +442,13 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 	const float thickness = 3.7f;
 	// FLOOR
 	{
-		Transform& tf = floor.m_transform;
+		Transform& tf = floor.mTransform;
 		tf.SetScale(floorWidth, thickness, floorDepth);
 		tf.SetPosition(0, -wallHieght + YOffset, 0);
 
-		floor.m_model.mBlinnPhong_Material.shininess = 20.0f;
-		floor.m_model.mBRDF_Material.roughness = 0.8f;
-		floor.m_model.mBRDF_Material.metalness = 0.0f;
+		floor.mModel.mBlinnPhong_Material.shininess = 20.0f;
+		floor.mModel.mBRDF_Material.roughness = 0.8f;
+		floor.mModel.mBRDF_Material.metalness = 0.0f;
 
 		//mat = Material::bronze;
 		//floor.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("185.JPG"));
@@ -459,57 +458,57 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 #if 1
 	// CEILING
 	{
-		Transform& tf = ceiling.m_transform;
+		Transform& tf = ceiling.mTransform;
 		tf.SetScale(floorWidth, thickness, floorDepth);
 		tf.SetPosition(0, wallHieght + YOffset, 0);
 
-		ceiling.m_model.mBlinnPhong_Material.shininess = 20.0f;
+		ceiling.mModel.mBlinnPhong_Material.shininess = 20.0f;
 	}
 
 	// RIGHT WALL
 	{
-		Transform& tf = wallR.m_transform;
+		Transform& tf = wallR.mTransform;
 		tf.SetScale(floorDepth, thickness, wallHieght);
 		tf.SetPosition(floorWidth, YOffset, 0);
 		tf.SetXRotationDeg(90.0f);
 		tf.RotateAroundGlobalYAxisDegrees(-90);
 		//tf.RotateAroundGlobalXAxisDegrees(-180.0f);
 
-		wallR.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("190.JPG"));
-		wallR.m_model.SetNormalMap(pRenderer->CreateTextureFromFile("190_norm.JPG"));
+		wallR.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("190.JPG"));
+		wallR.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("190_norm.JPG"));
 	}
 
 	// LEFT WALL
 	{
-		Transform& tf = wallL.m_transform;
+		Transform& tf = wallL.mTransform;
 		tf.SetScale(floorDepth, thickness, wallHieght);
 		tf.SetPosition(-floorWidth, YOffset, 0);
 		tf.SetXRotationDeg(-90.0f);
 		tf.RotateAroundGlobalYAxisDegrees(-90.0f);
 		//tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
 
-		wallL.m_model.mBlinnPhong_Material.shininess = 60.0f;
-		wallL.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("190.JPG"));
-		wallL.m_model.SetNormalMap(pRenderer->CreateTextureFromFile("190_norm.JPG"));
+		wallL.mModel.mBlinnPhong_Material.shininess = 60.0f;
+		wallL.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("190.JPG"));
+		wallL.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("190_norm.JPG"));
 	}
 	// WALL
 	{
-		Transform& tf = wallF.m_transform;
+		Transform& tf = wallF.mTransform;
 		tf.SetScale(floorWidth, thickness, wallHieght);
 		tf.SetPosition(0, YOffset, floorDepth);
 		tf.SetXRotationDeg(-90.0f);
 
-		wallF.m_model.mBlinnPhong_Material.shininess = 90.0f;
-		wallF.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("190.JPG"));
-		wallF.m_model.SetNormalMap(pRenderer->CreateTextureFromFile("190_norm.JPG"));
+		wallF.mModel.mBlinnPhong_Material.shininess = 90.0f;
+		wallF.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("190.JPG"));
+		wallF.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("190_norm.JPG"));
 	}
 
-	wallL.m_model.mMesh = EGeometry::CUBE;
-	wallR.m_model.mMesh = EGeometry::CUBE;
-	wallF.m_model.mMesh = EGeometry::CUBE;
-	ceiling.m_model.mMesh = EGeometry::CUBE;
+	wallL.mModel.mMesh = EGeometry::CUBE;
+	wallR.mModel.mMesh = EGeometry::CUBE;
+	wallF.mModel.mMesh = EGeometry::CUBE;
+	ceiling.mModel.mMesh = EGeometry::CUBE;
 #endif
-	floor.m_model.mMesh = EGeometry::CUBE;
+	floor.mModel.mMesh = EGeometry::CUBE;
 }
 
 
@@ -604,7 +603,7 @@ void SceneManager::UpdateAnimatedModel(const float dt)
 																														//if (ENGINE->INP()->IsKeyTriggered(13)) AnimatedModel::ENABLE_VQS = !AnimatedModel::ENABLE_VQS;				// Key: Enter
 		if (ENGINE->INP()->IsKeyTriggered(13)) m_model.m_isAnimPlaying = !m_model.m_isAnimPlaying;						// Key: Enter
 		if (ENGINE->INP()->IsKeyTriggered(32)) m_model.GoReachTheObject();												// Key: Space
-		m_model.m_IKEngine.UpdateTargetPosition(m_anchor1.m_transform.GetPositionF3());
+		m_model.m_IKEngine.UpdateTargetPosition(m_anchor1.mTransform.GetPositionF3());
 		if (ENGINE->INP()->IsKeyTriggered(107)) m_model.m_animSpeed += 0.1f;											// +
 		if (ENGINE->INP()->IsKeyTriggered(109)) m_model.m_animSpeed -= 0.1f;											// -
 
@@ -635,42 +634,42 @@ void SceneManager::InitializePhysicsObjects()
 	// ANCHOR POINTS
 	const float anchorScale = 0.3f;
 
-	m_anchor1.m_model.mMesh = EGeometry::SPHERE;
-	m_anchor1.m_model.mBRDF_Material.diffuse = LinearColor::white;
-	m_anchor1.m_model.mBRDF_Material.shininess = 90.0f;
-	m_anchor1.m_model.mBRDF_Material.normalMap._id = m_pRenderer->CreateTextureFromFile("bricks_n.png");
-	m_anchor1.m_model.mBRDF_Material.normalMap._name = "bricks_n.png";	// todo: rethink this
-	m_anchor1.m_transform.SetRotationDeg(15.0f, .0f, .0f);
-	m_anchor1.m_transform.SetPosition(-20.0f, 25.0f, 2.0f);
-	m_anchor1.m_transform.SetUniformScale(anchorScale);
+	m_anchor1.mModel.mMesh = EGeometry::SPHERE;
+	m_anchor1.mModel.mBRDF_Material.diffuse = LinearColor::white;
+	m_anchor1.mModel.mBRDF_Material.shininess = 90.0f;
+	m_anchor1.mModel.mBRDF_Material.normalMap._id = mpRenderer->CreateTextureFromFile("bricks_n.png");
+	m_anchor1.mModel.mBRDF_Material.normalMap._name = "bricks_n.png";	// todo: rethink this
+	m_anchor1.mTransform.SetRotationDeg(15.0f, .0f, .0f);
+	m_anchor1.mTransform.SetPosition(-20.0f, 25.0f, 2.0f);
+	m_anchor1.mTransform.SetUniformScale(anchorScale);
 	//m_anchor2 = m_anchor1;
 	//m_anchor2.m_model.m_material.color = Color::orange;
 	//m_anchor2.m_transform.SetPosition(-10.0f, 4.0f, +4.0f);
 
-	m_anchor2.m_model.mMesh = EGeometry::SPHERE;
-	m_anchor2.m_model.mBRDF_Material.diffuse = LinearColor::white;
-	m_anchor2.m_model.mBRDF_Material.shininess = 90.0f;
+	m_anchor2.mModel.mMesh = EGeometry::SPHERE;
+	m_anchor2.mModel.mBRDF_Material.diffuse = LinearColor::white;
+	m_anchor2.mModel.mBRDF_Material.shininess = 90.0f;
 	//m_material.diffuseMap.id = m_renderer->AddTexture("bricks_d.png");
-	m_anchor2.m_model.mBRDF_Material.normalMap._id = m_pRenderer->CreateTextureFromFile("bricks_n.png");
-	m_anchor2.m_model.mBRDF_Material.normalMap._name = "bricks_n.png";	// todo: rethink this
-	m_anchor2.m_transform.SetRotationDeg(15.0f, .0f, .0f);
-	m_anchor2.m_transform.SetPosition(20.0f, 25.0f, 2.0f);
-	m_anchor2.m_transform.SetUniformScale(anchorScale);
+	m_anchor2.mModel.mBRDF_Material.normalMap._id = mpRenderer->CreateTextureFromFile("bricks_n.png");
+	m_anchor2.mModel.mBRDF_Material.normalMap._name = "bricks_n.png";	// todo: rethink this
+	m_anchor2.mTransform.SetRotationDeg(15.0f, .0f, .0f);
+	m_anchor2.mTransform.SetPosition(20.0f, 25.0f, 2.0f);
+	m_anchor2.mTransform.SetUniformScale(anchorScale);
 
 	// PHYSICS OBJECT REFERENCE
-	auto& mat = m_physObj.m_model.mBRDF_Material;
-	auto& msh = m_physObj.m_model.mMesh;
-	auto& tfm = m_physObj.m_transform;
+	auto& mat = m_physObj.mModel.mBRDF_Material;
+	auto& msh = m_physObj.mModel.mMesh;
+	auto& tfm = m_physObj.mTransform;
 	msh = EGeometry::CUBE;
 	mat.diffuse = LinearColor::white;
 	//mat.normalMap.id	= m_renderer->AddTexture("bricks_n.png");
-	mat.diffuseMap._id = m_pRenderer->CreateTextureFromFile("bricks_d.png");
+	mat.diffuseMap._id = mpRenderer->CreateTextureFromFile("bricks_d.png");
 	mat.normalMap._name = "bricks_n.png";	// todo: rethink this
 	mat.shininess = 65.0f;
 	tfm.SetPosition(0.0f, 10.0f, 0.0f);
 	tfm.SetRotationDeg(15.0f, 0.0f, 0.0f);
 	tfm.SetScale(1.5f, 0.5f, 0.5f);
-	m_physObj.m_rb.InitPhysicsVertices(EGeometry::CUBE, m_physObj.m_transform.GetScaleF3());
+	m_physObj.m_rb.InitPhysicsVertices(EGeometry::CUBE, m_physObj.mTransform.GetScaleF3());
 	m_physObj.m_rb.SetMassUniform(1.0f);
 	m_physObj.m_rb.EnablePhysics = m_physObj.m_rb.EnableGravity = true;
 
@@ -680,7 +679,7 @@ void SceneManager::InitializePhysicsObjects()
 	const float brickOffset = 5.0f;
 	for (size_t i = 0; i < numBricks; i++)
 	{
-		m_physObj.m_transform.SetPosition(i * brickOffset - (numBricks / 2) * brickOffset, height, 0.0f);
+		m_physObj.mTransform.SetPosition(i * brickOffset - (numBricks / 2) * brickOffset, height, 0.0f);
 		m_vPhysObj.push_back(m_physObj);
 	}
 
@@ -693,8 +692,8 @@ void SceneManager::InitializePhysicsObjects()
 
 #ifdef ENABLE_VPHYSICS
 // ANCHOR MOVEMENT
-if (!ENGINE->INP()->IsKeyDown(17))	m_anchor1.m_transform.Translate(tr * dt * moveSpeed); // Key: Ctrl
-else								m_anchor2.m_transform.Translate(tr * dt * moveSpeed);
+if (!ENGINE->INP()->IsKeyDown(17))	m_anchor1.mTransform.Translate(tr * dt * moveSpeed); // Key: Ctrl
+else								m_anchor2.mTransform.Translate(tr * dt * moveSpeed);
 //m_anchor1.m_transform.Rotate(global_U * dt * rotSpeed);
 
 // ANCHOR TOGGLE
@@ -748,45 +747,45 @@ UpdateAnchors(dt);
 #endif
 #ifdef ENABLE_VPHYSICS
 // draw anchor 1 sphere
-m_pRenderer->SetBufferObj(m_anchor1.m_model.mMesh);
+mpRenderer->SetBufferObj(m_anchor1.mModel.mMesh);
 if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
-m_anchor1.m_model.mBRDF_Material.SetMaterialConstants(m_pRenderer, TODO);
-XMMATRIX world = m_anchor1.m_transform.WorldTransformationMatrix();
-XMMATRIX nrmMatrix = m_anchor1.m_transform.NormalMatrix(world);
-m_pRenderer->SetConstant4x4f("world", world);
-m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-m_pRenderer->Apply();
-m_pRenderer->DrawIndexed();
+m_anchor1.mModel.mBRDF_Material.SetMaterialConstants(mpRenderer, TODO);
+XMMATRIX world = m_anchor1.mTransform.WorldTransformationMatrix();
+XMMATRIX nrmMatrix = m_anchor1.mTransform.NormalMatrix(world);
+mpRenderer->SetConstant4x4f("world", world);
+mpRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+mpRenderer->Apply();
+mpRenderer->DrawIndexed();
 
 // draw anchor 2 sphere
-m_pRenderer->SetBufferObj(m_anchor2.m_model.mMesh);
+mpRenderer->SetBufferObj(m_anchor2.mModel.mMesh);
 if (m_selectedShader == m_renderData->phongShader || m_selectedShader == m_renderData->normalShader)
-m_anchor2.m_model.mBRDF_Material.SetMaterialConstants(m_pRenderer, TODO);
-world = m_anchor2.m_transform.WorldTransformationMatrix();
-nrmMatrix = m_anchor2.m_transform.NormalMatrix(world);
-m_pRenderer->SetConstant4x4f("world", world);
-m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-m_pRenderer->Apply();
-m_pRenderer->DrawIndexed();
+m_anchor2.mModel.mBRDF_Material.SetMaterialConstants(mpRenderer, TODO);
+world = m_anchor2.mTransform.WorldTransformationMatrix();
+nrmMatrix = m_anchor2.mTransform.NormalMatrix(world);
+mpRenderer->SetConstant4x4f("world", world);
+mpRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+mpRenderer->Apply();
+mpRenderer->DrawIndexed();
 
 // DRAW GRAVITY TEST OBJ
 //----------------------
 // materials
-m_pRenderer->SetBufferObj(m_physObj.m_model.mMesh);
-m_physObj.m_model.mBRDF_Material.SetMaterialConstants(m_pRenderer, TODO);
+mpRenderer->SetBufferObj(m_physObj.mModel.mMesh);
+m_physObj.mModel.mBRDF_Material.SetMaterialConstants(mpRenderer, TODO);
 
 // render bricks
 for (const auto& pObj : m_vPhysObj)
 {
-	world = pObj.m_transform.WorldTransformationMatrix();
-	nrmMatrix = pObj.m_transform.NormalMatrix(world);
-	m_pRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
-	m_pRenderer->SetConstant4x4f("world", world);
-	m_pRenderer->Apply();
-	m_pRenderer->DrawIndexed();
+	world = pObj.mTransform.WorldTransformationMatrix();
+	nrmMatrix = pObj.mTransform.NormalMatrix(world);
+	mpRenderer->SetConstant4x4f("nrmMatrix", nrmMatrix);
+	mpRenderer->SetConstant4x4f("world", world);
+	mpRenderer->Apply();
+	mpRenderer->DrawIndexed();
 }
 
-m_springSys.RenderSprings(m_pRenderer, view, proj);
+m_springSys.RenderSprings(mpRenderer, view, proj);
 #endif
 
 
@@ -799,14 +798,14 @@ m_springSys.RenderSprings(m_pRenderer, view, proj);
 //	//// shuffling won't rearrange data, just the means of indexing.
 //	//char info[256];
 //	//sprintf_s(info, "Shuffle(L1:(%f, %f, %f)\tL2:(%f, %f, %f)\n",
-//	//	m_lights[0]._transform.GetPositionF3().x, m_lights[0]._transform.GetPositionF3().y,	m_lights[0]._transform.GetPositionF3().z,
-//	//	m_lights[1]._transform.GetPositionF3().x, m_lights[1]._transform.GetPositionF3().y, m_lights[1]._transform.GetPositionF3().z);
+//	//	mLights[0]._transform.GetPositionF3().x, mLights[0]._transform.GetPositionF3().y,	mLights[0]._transform.GetPositionF3().z,
+//	//	mLights[1]._transform.GetPositionF3().x, mLights[1]._transform.GetPositionF3().y, mLights[1]._transform.GetPositionF3().z);
 //	//OutputDebugString(info);
 //	//static auto engine = std::default_random_engine{};
-//	//std::shuffle(std::begin(m_lights), std::end(m_lights), engine);
+//	//std::shuffle(std::begin(mLights), std::end(mLights), engine);
 
 //	//// randomize all lights
-//	//for (Light& l : m_lights)
+//	//for (Light& l : mLights)
 //	//{
 //	//	size_t i = rand() % Color::Palette().size();
 //	//	Color c = Color::Color::Palette()[i];
@@ -815,9 +814,9 @@ m_springSys.RenderSprings(m_pRenderer, view, proj);
 //	//}
 
 //	// randomize all lights except 1 and 2
-//	for (unsigned j = 3; j<m_lights.size(); ++j)
+//	for (unsigned j = 3; j<mLights.size(); ++j)
 //	{
-//		Light& l = m_lights[j];
+//		Light& l = mLights[j];
 //		size_t i = rand() % Color::Palette().size();
 //		Color c = Color::Color::Palette()[i];
 //		l.color_ = c;

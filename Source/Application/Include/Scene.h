@@ -15,27 +15,36 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
-
 #pragma once
 
-#include <vector>
-#include <string>
+#include "Settings.h"
+#include "Light.h"
+#include "GameObject.h"
 
-namespace Settings { struct Renderer; }
 struct SerializedScene;
+class SceneManager;
+class Renderer;
+struct SceneView;
 
-class SceneParser
+// Base class for scenes
+class Scene
 {
 public:
-	SceneParser();
-	~SceneParser();
+	Scene(SceneManager& sceneManager, std::vector<Light>& lights);
+	~Scene() = default;
 
-	static Settings::Renderer ReadRendererSettings();
-	static void ParseSetting(const std::vector<std::string>& line, Settings::Renderer& settings);
+	virtual void Load(Renderer* pRenderer, SerializedScene& scene) = 0;
+	virtual void Update(float dt) = 0;
+	virtual void Render(Renderer* pRenderer, const SceneView& sceneView) const = 0;
 
-	static SerializedScene ReadScene();
-	static void ParseScene(const std::vector<std::string>& command, SerializedScene& scene);
-private:
-
+	SceneManager&		mSceneManager;
+	Renderer*			mpRenderer;
+	std::vector<Light>&	mLights;
 };
 
+struct SerializedScene
+{
+	Settings::Camera		cameraSettings;
+	std::vector<Light>		lights;
+	std::vector<GameObject> objects;
+};

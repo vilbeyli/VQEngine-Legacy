@@ -28,33 +28,33 @@ const  FilePaths s_filePaths = []{
 	// 4: FRONT		5: BACK
 	//------------------------------------------------------------------------------------------------------
 
-	FilePaths paths(ESkyboxPresets::SKYBOX_PRESET_COUNT * 6);	// use as an array to access using enum
+	FilePaths paths(ESkyboxPreset::SKYBOX_PRESET_COUNT * 6);	// use as an array to access using enum
 	
 	// night sky by: Hazel Whorley
-	paths[ESkyboxPresets::NIGHT_SKY + 0] = "night_sky/nightsky_rt.png";
-	paths[ESkyboxPresets::NIGHT_SKY + 1] = "night_sky/nightsky_lf.png";
-	paths[ESkyboxPresets::NIGHT_SKY + 2] = "night_sky/nightsky_up.png";
-	paths[ESkyboxPresets::NIGHT_SKY + 3] = "night_sky/nightsky_dn.png";
-	paths[ESkyboxPresets::NIGHT_SKY + 4] = "night_sky/nightsky_ft.png";
-	paths[ESkyboxPresets::NIGHT_SKY + 5] = "night_sky/nightsky_bk.png";
+	paths[ESkyboxPreset::NIGHT_SKY + 0] = "night_sky/nightsky_rt.png";
+	paths[ESkyboxPreset::NIGHT_SKY + 1] = "night_sky/nightsky_lf.png";
+	paths[ESkyboxPreset::NIGHT_SKY + 2] = "night_sky/nightsky_up.png";
+	paths[ESkyboxPreset::NIGHT_SKY + 3] = "night_sky/nightsky_dn.png";
+	paths[ESkyboxPreset::NIGHT_SKY + 4] = "night_sky/nightsky_ft.png";
+	paths[ESkyboxPreset::NIGHT_SKY + 5] = "night_sky/nightsky_bk.png";
 
 	// other cubemap presets
 	// ...
 	return paths;
 }();
 
-std::vector<Skybox> Skybox::s_Presets(ESkyboxPresets::SKYBOX_PRESET_COUNT);
+std::vector<Skybox> Skybox::s_Presets(ESkyboxPreset::SKYBOX_PRESET_COUNT);
 
 void Skybox::InitializePresets(Renderer* pRenderer)
 {
 	{	// NIGHTSKY
 		Skybox skybox;
 		
-		const auto offsetIter = s_filePaths.begin() + ESkyboxPresets::NIGHT_SKY;
+		const auto offsetIter = s_filePaths.begin() + ESkyboxPreset::NIGHT_SKY;
 		const FilePaths filePaths = FilePaths(offsetIter, offsetIter + 6);
 		
 		Texture skydomeTex = pRenderer->GetTextureObject(pRenderer->CreateCubemapTexture(filePaths));
-		s_Presets[ESkyboxPresets::NIGHT_SKY] = skybox.Initialize(pRenderer, skydomeTex, EShaders::SKYBOX);
+		s_Presets[ESkyboxPreset::NIGHT_SKY] = skybox.Initialize(pRenderer, skydomeTex, EShaders::SKYBOX);
 	}
 
 	// ...

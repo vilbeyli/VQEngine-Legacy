@@ -23,7 +23,7 @@
 GameObject::GameObject()
 #ifdef ENABLE_PHY_CODE
 	:
-	m_rb(m_transform)
+	m_rb(mTransform)
 #endif
 {
 #ifdef ENABLE_PHY_CODE
@@ -40,11 +40,11 @@ GameObject::~GameObject()
 GameObject::GameObject(const GameObject & obj)
 #ifdef ENABLE_PHY_CODE
 	:
-	m_rb(m_transform)
+	m_rb(mTransform)
 #endif
 {
-	m_transform = obj.m_transform;
-	m_model = obj.m_model;
+	mTransform = obj.mTransform;
+	mModel = obj.mModel;
 #ifdef ENABLE_PHY_CODE
 	m_rb = obj.m_rb;
 	m_rb.UpdateVertPositions();
@@ -53,10 +53,10 @@ GameObject::GameObject(const GameObject & obj)
 
 GameObject& GameObject::operator=(const GameObject& obj)
 {
-	m_transform = obj.m_transform;
-	m_model = obj.m_model;
+	mTransform = obj.mTransform;
+	mModel = obj.mModel;
 #ifdef ENABLE_PHY_CODE
-	m_rb		= RigidBody(m_transform);
+	m_rb		= RigidBody(mTransform);
 #endif
 	return *this;
 }
@@ -64,15 +64,15 @@ GameObject& GameObject::operator=(const GameObject& obj)
 void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const
 {
 	const EShaders shader = static_cast<EShaders>(pRenderer->GetActiveShader());
-	const XMMATRIX world = m_transform.WorldTransformationMatrix();
+	const XMMATRIX world = mTransform.WorldTransformationMatrix();
 	const XMMATRIX wvp = world * sceneView.viewProj;
 
 	if (UploadMaterialDataToGPU)
 	{
 		if (shader == EShaders::FORWARD_BRDF || shader == EShaders::DEFERRED_GEOMETRY)
-			m_model.mBRDF_Material.SetMaterialConstants(pRenderer, shader);
+			mModel.mBRDF_Material.SetMaterialConstants(pRenderer, shader);
 		else
-			m_model.mBlinnPhong_Material.SetMaterialConstants(pRenderer, shader);
+			mModel.mBlinnPhong_Material.SetMaterialConstants(pRenderer, shader);
 	}
 
 	switch (shader)
@@ -80,41 +80,47 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 	case EShaders::TBN:
 		pRenderer->SetConstant4x4f("world", world);
 		pRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
-		pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
+		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 		break;
 	case EShaders::DEFERRED_GEOMETRY:
 		pRenderer->SetConstant4x4f("worldView", world * sceneView.view);
-		pRenderer->SetConstant4x4f("normalViewMatrix", m_transform.NormalMatrix(world) * sceneView.view);
+		pRenderer->SetConstant4x4f("normalViewMatrix", mTransform.NormalMatrix(world) * sceneView.view);
 		pRenderer->SetConstant4x4f("worldViewProj", wvp);
 		break;
 	default:
 		pRenderer->SetConstant4x4f("world", world);
-		pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
+		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 		pRenderer->SetConstant4x4f("worldViewProj", wvp);
 		break;
 
 	}
 
-	pRenderer->SetBufferObj(m_model.mMesh);
+	pRenderer->SetBufferObj(mModel.mMesh);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 }
 
 void GameObject::RenderZ(Renderer * pRenderer) const
 {
-	const XMMATRIX world = m_transform.WorldTransformationMatrix();
+	const XMMATRIX world = mTransform.WorldTransformationMatrix();
 	const bool bIs2DGeometry = false;	// todo: fix self shadowing 2D geometry
 		//m_model.m_mesh == GEOMETRY::TRIANGLE || 
 		//m_model.m_mesh == GEOMETRY::QUAD || 
 		//m_model.m_mesh == GEOMETRY::GRID;
 	const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 
-	pRenderer->SetBufferObj(m_model.mMesh);
+	pRenderer->SetBufferObj(mModel.mMesh);
 	pRenderer->SetRasterizerState(rasterizerState);
 	pRenderer->SetConstant4x4f("world", world);
-	pRenderer->SetConstant4x4f("normalMatrix", m_transform.NormalMatrix(world));
+	pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
+}
+
+void GameObject::Clear()
+{
+	mTransform = Transform();
+	mModel = Model();
 }
 
 

@@ -18,22 +18,26 @@
 
 #pragma once
 
-#include "GameObject.h"
+#include <vector>
+#include <string>
 
-class Renderer;
+#include "Scene.h"
 
-class Skydome
+namespace Settings { struct Renderer; }
+
+
+class SceneParser
 {
 public:
-	Skydome();
-	~Skydome();
+	SceneParser();
+	~SceneParser();
 
-	void Render(const XMMATRIX& view, const XMMATRIX& proj) const;
-	void Initialize(Renderer* renderer_in, const char* tex, float scale, int shader);
+	static Settings::Renderer ReadRendererSettings();
+	static void ParseSetting(const std::vector<std::string>& line, Settings::Renderer& settings);
+
+	static SerializedScene ReadScene();
+	static void ParseScene(const std::vector<std::string>& command, SerializedScene& scene);
 private:
-	GameObject	skydomeObj;	// do we need a gameobj really ?
-	TextureID	skydomeTex;
-	ShaderID	skydomeShader;
-	Renderer*	pRenderer;
+
 };
 

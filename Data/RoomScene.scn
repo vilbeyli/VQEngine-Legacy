@@ -6,8 +6,9 @@ light       p         orange       	false      900         60	      0     30    
 light       p         cyan      	false      200         84	      60    25    -2 	   
 light       p         red        	false      300         60	    -140   100   140       
 
-//TODO            model        origin     r   W x H   
-object_grid   cube       0    0    0    4   20  4   
-object_grid   sphere     0    0    0    4   7   7   
-
-
+object begin
+Mesh cube
+//BRDF
+//Phong
+//Transform
+object end

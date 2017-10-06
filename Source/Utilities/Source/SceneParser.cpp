@@ -20,9 +20,7 @@
 #include "utils.h"
 #include "Log.h"
 
-#include "SceneManager.h"
 #include "Color.h"
-
 
 #include <fstream>
 #include <unordered_map>
@@ -33,7 +31,7 @@ const char* file_root		= "Data\\";
 const char* scene_file		= "RoomScene.scn";
 const char* settings_file	= "settings.ini";	
 
-std::unordered_map<std::string, bool> sBoolTypeReflection
+const std::unordered_map<std::string, bool> sBoolTypeReflection
 {
 	{"true", true},		{"false", false},
 	{"yes", true},		{"no", false},
@@ -168,7 +166,7 @@ SerializedScene SceneParser::ReadScene()
 	}
 	else
 	{
-		Log::Error( "Parser: Unknown setting command\n");
+		Log::Error( "Parser: Unknown setting command");
 	}
 
 	sceneFile.close();
@@ -177,6 +175,10 @@ SerializedScene SceneParser::ReadScene()
 
 void SceneParser::ParseScene(const std::vector<std::string>& command, SerializedScene& scene)
 {
+	// state tracking
+	static bool bIsReadingGameObject = false;	
+	static GameObject obj;
+
 	if (command.empty())
 	{
 		Log::Error("Empty Command.");
@@ -192,7 +194,7 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 			Log::Info("camera input parameter count != 4");
 			assert(command.size() == 9);
 		}
-		// Parameters: 3
+		// #Parameters: 3
 		//--------------------------------------------------------------
 		// |  Near Plane	| Far Plane	|	Field of View	| Position | Rotation
 		//--------------------------------------------------------------
@@ -208,7 +210,7 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 	
 	else if (cmd == "light")
 	{
-		// Parameters: 11
+		// #Parameters: 11
 		//--------------------------------------------------------------
 		// | Light Type	| Color	| Shadowing? |  Brightness | Spot.Angle OR Point.Range | Position3 | Rotation3
 		//--------------------------------------------------------------
@@ -268,21 +270,138 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 		l._transform.RotateAroundGlobalZAxisDegrees(rotZ);
 		scene.lights.push_back(l);
 	}
-
-	else if (cmd == "object_grid")
+	else if (cmd == "object")
 	{
-#if 0	
-		// Parameters
+		// #Parameters: 2
 		//--------------------------------------------------------------
-		// |  |   | 
+		// begin/end
 		//--------------------------------------------------------------
-#else
-		Log::Error("TODO: parse object grid info to build scene from file\n");
-#endif
-	}
+		const std::string objCmd = GetLowercased(command[1]);
+		if (objCmd == "begin")
+		{
+			if (bIsReadingGameObject)
+			{
+				Log::Error(" expecting \"object end\" before starting a new object definition");
+				return;
+			}
+			bIsReadingGameObject = true;
+		}
 
+		if (objCmd == "end")
+		{
+			if (!bIsReadingGameObject)
+			{
+				Log::Error(" expecting \"object begin\" before ending an object definition");
+				return;
+			}
+			bIsReadingGameObject = false;
+			scene.objects.push_back(obj);
+			obj.Clear();
+		}
+	}
+	else if (cmd == "mesh")
+	{
+		// #Parameters: 1
+		//--------------------------------------------------------------
+		// Mesh Name: Cube/Quad/Sphere/Grid/...
+		//--------------------------------------------------------------
+		if (!bIsReadingGameObject)
+		{
+			Log::Error(" Creating mesh without defining a game object (missing cmd: \"%s\"", "object begin");
+			return;
+		}
+		static const std::unordered_map<std::string, EGeometry>		sMeshLookup
+		{
+			{"triangle" , EGeometry::TRIANGLE	},
+			{"quad"     , EGeometry::QUAD		},
+			{"cube"     , EGeometry::CUBE		},
+			{"sphere"   , EGeometry::SPHERE		},
+			{"grid"     , EGeometry::GRID		},
+			{"cylinder" , EGeometry::CYLINDER	}
+			// todo: assimp mesh
+		};
+		const std::string mesh = GetLowercased(command[1]);
+		obj.mModel.mMesh = sMeshLookup.at(mesh);
+	}
+	else if (cmd == "brdf")
+	{
+		Log::Info("Todo: brdf mat");
+		return;
+		// #Parameters: todo
+		//--------------------------------------------------------------
+		// todo
+		//--------------------------------------------------------------
+		if (!bIsReadingGameObject)
+		{
+			Log::Error(" Creating BRDF Material without defining a game object (missing cmd: \"%s\"", "object begin");
+			return;
+		}
+
+		BRDF_Material& mat = obj.mModel.mBRDF_Material;
+		//const std::string mesh = GetLowercased(command[1]);
+
+
+		
+	}
+	else if (cmd == "blinnphong")
+	{
+		Log::Info("Todo: blinnphong mat");
+		return;
+		// #Parameters: todo
+		//--------------------------------------------------------------
+		// todo
+		//--------------------------------------------------------------
+		if (!bIsReadingGameObject)
+		{
+			Log::Error(" Creating BlinnPhong Material without defining a game object (missing cmd: \"%s\"", "object begin");
+			return;
+		}
+
+		BlinnPhong_Material& mat = obj.mModel.mBlinnPhong_Material;
+		//const std::string mesh = GetLowercased(command[1]);
+
+	}
+	else if (cmd == "transform")
+	{
+		Log::Info("Todo: transform");
+		return;
+		// #Parameters: 7-9
+		//--------------------------------------------------------------
+		// Position(3), Rotation(3), UniformScale(1)/Scale(3)
+		//--------------------------------------------------------------
+		if (!bIsReadingGameObject)
+		{
+			Log::Error(" Creating Transform without defining a game object (missing cmd: \"%s\"", "object begin");
+			return;
+		}
+		
+		Transform& tf = obj.mTransform;
+		float x	= stof(command[1]);
+		float y = stof(command[2]);
+		float z = stof(command[3]);
+		tf.SetPosition(x, y, z);
+
+		float rotX = stof(command[4]);
+		float rotY = stof(command[5]);
+		float rotZ = stof(command[6]);
+		tf.SetXRotationDeg(rotX);
+		tf.SetYRotationDeg(rotY);
+		tf.SetZRotationDeg(rotZ);
+
+		float sclX = stof(command[7]);
+		if (command.size() <= 8)
+		{
+			tf.SetUniformScale(sclX);
+		}
+		else
+		{
+			float sclY = stof(command[8]);
+			float sclZ = stof(command[9]);
+			tf.SetScale(sclX, sclY, sclZ);
+		}
+	}
 	else
 	{
-		Log::Error("Parser: Unknown command\n");
+		Log::Error("Parser: Unknown command \"%s\"", cmd);
 	}
 }

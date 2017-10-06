@@ -158,12 +158,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Scene.cpp" />
     <ClCompile Include="Source\RenderPasses.cpp" />
-    <ClCompile Include="Source\SceneParser.cpp" />
     <ClCompile Include="Source\Skybox.cpp" />
-    <ClCompile Include="Source\RoomScene.cpp" />
+    <ClCompile Include="Scenes\RoomScene.cpp" />
     <ClCompile Include="Source\SceneManager.cpp" />
-    <ClCompile Include="Source\PerfTimer.cpp" />
     <ClCompile Include="Source\GameObject.cpp" />
     <ClCompile Include="Source\Camera.cpp" />
     <ClCompile Include="Source\Components\Component.cpp" />
@@ -179,15 +178,14 @@
     <ClInclude Include="Include\DataStructures.h" />
     <ClInclude Include="Include\HandleTypedefs.h" />
     <ClInclude Include="Include\SceneManager.h" />
-    <ClInclude Include="Include\PerfTimer.h" />
     <ClInclude Include="Include\GameObject.h" />
     <ClInclude Include="Include\BaseSystem.h" />
     <ClInclude Include="Include\Camera.h" />
-    <ClInclude Include="Include\SceneParser.h" />
     <ClInclude Include="Include\Settings.h" />
-    <ClInclude Include="Include\RoomScene.h" />
+    <ClInclude Include="Scenes\RoomScene.h" />
     <ClInclude Include="Include\Skybox.h" />
     <ClInclude Include="Include\RenderPasses.h" />
+    <ClInclude Include="Include\Scene.h" />
     <ClInclude Include="Source\Components\Component.h" />
     <ClInclude Include="Source\Components\Transform.h" />
     <ClInclude Include="Include\Engine.h" />

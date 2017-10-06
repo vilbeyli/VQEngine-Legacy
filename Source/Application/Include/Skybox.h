@@ -22,7 +22,7 @@
 class Renderer;
 struct Texture;
 
-enum ESkyboxPresets
+enum ESkyboxPreset
 {
 	NIGHT_SKY = 0,
 

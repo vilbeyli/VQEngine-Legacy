@@ -39,8 +39,9 @@ Engine::Engine()
 	m_timer(new PerfTimer()),
 	m_sceneManager(new SceneManager(m_pCamera, m_lights)),
 	m_pCamera(new Camera()),
-	m_activeSkybox(ESkyboxPresets::SKYBOX_PRESET_COUNT),	// default: none
+	m_activeSkybox(ESkyboxPreset::SKYBOX_PRESET_COUNT),	// default: none
 	m_bUsePaniniProjection(false)
+	//,mObjectPool(1024)
 {}
 
 Engine::~Engine(){}
@@ -406,7 +407,7 @@ void Engine::Render()
 	
 	// get shadow casters (todo: static/dynamic lights)
 	std::vector<const Light*> _shadowCasters;
-	for (const Light& light : m_sceneManager->m_roomScene.m_lights)
+	for (const Light& light : m_sceneManager->m_roomScene.mLights)
 	{
 		if (light._castsShadow)
 			_shadowCasters.push_back(&light);
@@ -462,7 +463,7 @@ void Engine::Render()
 		RenderLights();
 
 		// SKYBOX
-		if (m_activeSkybox != ESkyboxPresets::SKYBOX_PRESET_COUNT)
+		if (m_activeSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)
 		{
 			m_pRenderer->SetDepthStencilState(m_deferredRenderingPasses._skyboxStencilState);
 			Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
@@ -487,7 +488,7 @@ void Engine::Render()
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
-		if (m_activeSkybox != ESkyboxPresets::SKYBOX_PRESET_COUNT)	Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
+		if (m_activeSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)	Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
 		else
 		{
 			// todo: this might be costly, profile this

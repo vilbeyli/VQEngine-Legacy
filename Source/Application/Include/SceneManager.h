@@ -19,15 +19,17 @@
 #pragma once
 #include "Renderer.h"
 
-#include "Settings.h"
+#include "SceneParser.h"
 
 #include <vector>
 #include <memory>
 
 using std::shared_ptr;
 
+// todo: move header to cpp
 // scenes
-#include "RoomScene.h"
+#include "../Scenes/RoomScene.h"
+//#include "../Scenes/IBL_Scene.h"
 
 class Camera;
 class PathManager;
@@ -35,13 +37,6 @@ class PathManager;
 struct SceneView;
 struct Path;
 
-
-struct SerializedScene
-{
-	Settings::Camera	cameraSettings;
-	std::vector<Light>	lights;
-	// objects?
-};
 
 class SceneManager
 {
@@ -51,7 +46,7 @@ public:
 	SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights);	// lights passed down to RoomScene
 	~SceneManager();
 
-	ESkyboxPresets GetSceneSkybox() const;
+	ESkyboxPreset GetSceneSkybox() const;
 
 	void Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings, shared_ptr<Camera> pCamera);
 
@@ -65,5 +60,6 @@ private:
 private:
 	shared_ptr<Camera>				m_sceneCamera;
 	RoomScene						m_roomScene;	// todo: rethink scene management
+	// new scene
 	std::vector<SerializedScene>	m_serializedScenes;
 };

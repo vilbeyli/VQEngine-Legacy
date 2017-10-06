@@ -29,9 +29,6 @@
     <ClCompile Include="Source\BufferObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Color.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -41,13 +38,10 @@
     <ClCompile Include="Source\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Skydome.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\RenderCommands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Material.cpp">
+    <ClCompile Include="Source\Material.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -70,9 +64,6 @@
     <ClInclude Include="Include\D3DManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Color.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Include\BufferObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -82,16 +73,13 @@
     <ClInclude Include="Include\Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Skydome.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Include\RenderCommands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderingEnums.h">
+    <ClInclude Include="Include\Material.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Material.h">
+    <ClInclude Include="Include\RenderingEnums.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

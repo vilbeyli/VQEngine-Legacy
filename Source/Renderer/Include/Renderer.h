@@ -82,8 +82,9 @@ struct PipelineState
 
 class Renderer
 {
-	friend class Engine;		// two main components have private access 
-	friend class SceneManager;	// to Renderer mainly for the private functions
+	// two main components have private access to Renderer mainly for the private functions
+	friend class Engine;		
+	friend class SceneManager;
 	friend class Shader;		// shader load/unload
 
 	friend struct SetTextureCommand;

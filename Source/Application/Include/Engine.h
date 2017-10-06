@@ -42,6 +42,13 @@ class SceneManager;
 class PathManager;		// unused
 class PhysicsEngine;	// unused
 
+
+struct ObjectPool
+{
+	std::vector<GameObject> pool;
+
+};
+
 #ifdef _WIN32
 // usage of XMMATRIX in Engine class causes alignment warning: Engine might not 
 // be on 16-byte boundary. To fix this, we declare that we want to align the 
@@ -122,7 +129,7 @@ private:
 	SceneView						m_sceneView;
 	SceneLightData					m_sceneLightData;
 	std::vector<Light>				m_lights;
-	ESkyboxPresets					m_activeSkybox;
+	ESkyboxPreset					m_activeSkybox;
 
 	bool							m_bUsePaniniProjection;
 	//PathManager*					m_pPathManager; // unused
@@ -137,14 +144,16 @@ private:
 	ShadowMapPass					m_shadowMapPass;
 	
 	bool							m_useDeferredRendering;
-	bool							m_isAmbientOcclusionOn;
 	DeferredRenderingPasses			m_deferredRenderingPasses;
 
-	PostProcessPass					m_postProcessPass;
-	DebugPass						m_debugPass;
+	bool							m_isAmbientOcclusionOn;
 	AmbientOcclusionPass			m_SSAOPass;
+
+	PostProcessPass					m_postProcessPass;
 	
 	bool							m_debugRender;
+	DebugPass						m_debugPass;
+	
 
 	std::vector<GameObject*>		m_ZPassObjects;
 };

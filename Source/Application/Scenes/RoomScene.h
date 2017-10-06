@@ -18,45 +18,35 @@
 
 #pragma once
 
+#include "Scene.h"
 #include "Animation.h"
 #include "GameObject.h"
-#include "Skydome.h"
 #include "Skybox.h"
-#include "Light.h"
 
-struct SerializedScene;
-class SceneManager;
-class Renderer;
-struct SceneView;
 
-class RoomScene
+class RoomScene : public Scene
 {
 	friend class Engine;	// temp hack until gameObject array refactoring
 public:
-	void Load(Renderer* pRenderer, SerializedScene& scene);
-	void Update(float dt);
-	void Render(Renderer* pRenderer, const SceneView& sceneView) const;
+	void Load(Renderer* pRenderer, SerializedScene& scene) override;
+	void Update(float dt) override;
+	void Render(Renderer* pRenderer, const SceneView& sceneView) const override;
 
 	RoomScene(SceneManager& sceneMan, std::vector<Light>& lights);
 	~RoomScene() = default;
 
+	inline ESkyboxPreset GetSkybox() const { return m_skybox; }
+
 private:
 	void InitializeLights(SerializedScene& scene);
 	void InitializeObjectArrays();
-
 	void UpdateCentralObj(const float dt);
-
-	void RenderAnimated(const XMMATRIX& view, const XMMATRIX& proj) const;
 	void RenderCentralObjects(const SceneView& sceneView, bool sendMaterialData) const;
 // ----------------------------------------------------------------------
-	friend class SceneManager;
+	
 	void ToggleFloorNormalMap();
 
-	SceneManager&		m_sceneManager;
-	Renderer*			m_pRenderer;
-	Skydome				m_skydome;	// todo: remove?
-	ESkyboxPresets		m_skybox;
-	std::vector<Light>&	m_lights;
+	ESkyboxPreset		m_skybox;
 
 	struct Room {
 		friend class RoomScene;

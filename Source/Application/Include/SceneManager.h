@@ -29,7 +29,7 @@ using std::shared_ptr;
 // todo: move scene headers to cpp
 // scenes
 #include "../Scenes/RoomScene.h"
-//#include "../Scenes/IBL_Scene.h"
+#include "../Scenes/SSAOTestScene.h"
 
 class Camera;
 class PathManager;
@@ -44,11 +44,11 @@ class SceneManager
 	friend class Engine;	// temp hack until gameObject array refactoring
 public:
 	SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights);	// lights passed down to RoomScene
-	~SceneManager();
+	~SceneManager() = default;
 
 	ESkyboxPreset GetSceneSkybox() const;
 
-	bool Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings, shared_ptr<Camera> pCamera);
+	bool Load(Renderer* renderer, PathManager* pathMan, const Settings::Engine& settings, shared_ptr<Camera> pCamera);
 
 	void Update(float dt);
 	void Render(Renderer* pRenderer, const SceneView& sceneView) const;
@@ -58,8 +58,11 @@ private:
 	void HandleInput();
 
 private:
-	shared_ptr<Camera>				m_sceneCamera;
-	RoomScene						m_roomScene;	// todo: rethink scene management
-	// new scene
-	std::vector<SerializedScene>	m_serializedScenes;
+	shared_ptr<Camera>		mpSceneCamera;
+
+	RoomScene				mRoomScene;	// todo: rethink scene management
+	SSAOTestScene			mSSAOTestScene;
+
+	SerializedScene			mSerializedScene;
+	Scene*					mpActiveScene;
 };

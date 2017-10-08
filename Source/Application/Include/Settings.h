@@ -68,4 +68,9 @@ namespace Settings
 		bool		bAmbientOcclusion;
 		PostProcess postProcess;
 	};
+
+	struct Engine {
+		Renderer renderer;
+		int levelToLoad;
+	};
 };

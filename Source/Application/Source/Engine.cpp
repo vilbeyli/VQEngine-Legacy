@@ -30,64 +30,77 @@
 
 #include <sstream>
 
-Engine* Engine::s_instance = nullptr;
+Engine* Engine::sInstance = nullptr;
 
 Engine::Engine()
 	:
-	m_pRenderer(new Renderer()),
-	m_input(new Input()),
-	m_timer(new PerfTimer()),
-	m_sceneManager(new SceneManager(m_pCamera, m_lights)),
+	mpRenderer(new Renderer()),
+	mpInput(new Input()),
+	mpTimer(new PerfTimer()),
+	mpSceneManager(new SceneManager(m_pCamera, mLights)),
 	m_pCamera(new Camera()),
-	m_activeSkybox(ESkyboxPreset::SKYBOX_PRESET_COUNT),	// default: none
-	m_bUsePaniniProjection(false)
+	mActiveSkybox(ESkyboxPreset::SKYBOX_PRESET_COUNT),	// default: none
+	mbUsePaniniProjection(false)
 	//,mObjectPool(1024)
 {}
 
 Engine::~Engine(){}
 
-
-void Engine::TogglePause()
+void Engine::CalcFrameStats()
 {
-	m_isPaused = !m_isPaused;
+	static long  frameCount = 0;
+	static float timeElaped = -0.9f;
+	constexpr float UpdateInterval = 0.5f;
+
+	++frameCount;
+	if (mpTimer->TotalTime() - timeElaped >= UpdateInterval)
+	{
+		float fps = static_cast<float>(frameCount);	// #frames / 1.0f
+		float frameTime = 1000.0f / fps;			// milliseconds
+
+		std::ostringstream stats;
+		stats.precision(2);
+		stats << "VDemo | "
+			<< "dt: " << frameTime << "ms ";
+		stats.precision(4);
+		stats << "FPS: " << fps;
+		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
+		frameCount = 0;
+		timeElaped += UpdateInterval;
+	}
 }
 
 
 void Engine::Exit()
 {
-	m_pRenderer->Exit();
+	mpRenderer->Exit();
 
-	m_workerPool.Terminate();
+	mWorkerPool.Terminate();
 
 	Log::Exit();
-	if (s_instance)
+	if (sInstance)
 	{
-		delete s_instance;
-		s_instance = nullptr;
+		delete sInstance;
+		sInstance = nullptr;
 	}
-}
-
-const Input* Engine::INP() const
-{
-	return m_input;
 }
 
 Engine * Engine::GetEngine()
 {
-	if (s_instance == nullptr)
+	if (sInstance == nullptr)
 	{
-		s_instance = new Engine();
+		sInstance = new Engine();
 	}
 
-	return s_instance;
+	return sInstance;
 }
 
 void Engine::ToggleLightingModel()
 {
 	// enable toggling only on forward rendering for now
-	if (!m_useDeferredRendering)
+	if (!mUseDeferredRendering)
 	{
-		m_selectedShader = m_selectedShader == EShaders::FORWARD_PHONG ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
+		mSelectedShader = mSelectedShader == EShaders::FORWARD_PHONG ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
 	}
 	else
 	{
@@ -97,45 +110,40 @@ void Engine::ToggleLightingModel()
 
 void Engine::ToggleRenderingPath()
 {
-	m_useDeferredRendering = !m_useDeferredRendering;
+	mUseDeferredRendering = !mUseDeferredRendering;
 
 	// initialize GBuffer if its not initialized, i.e., 
 	// Renderer started in forward mode and we're toggling deferred for the first time
-	if (!m_deferredRenderingPasses._GBuffer.bInitialized && m_useDeferredRendering)
+	if (!mDeferredRenderingPasses._GBuffer.bInitialized && mUseDeferredRendering)
 	{	
-		m_deferredRenderingPasses.InitializeGBuffer(m_pRenderer);
+		mDeferredRenderingPasses.InitializeGBuffer(mpRenderer);
 	}
-	Log::Info("Toggle Rendering Path: %s Rendering enabled", m_useDeferredRendering ? "Deferred" : "Forward");
+	Log::Info("Toggle Rendering Path: %s Rendering enabled", mUseDeferredRendering ? "Deferred" : "Forward");
 
 	// if we just turned deferred rendering off, clear the gbuffer textures
-	if(!m_useDeferredRendering)
-		m_deferredRenderingPasses.ClearGBuffer(m_pRenderer);
+	if(!mUseDeferredRendering)
+		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
 }
 
 void Engine::Pause()
 {
-	m_isPaused = true;
+	mbIsPaused = true;
 }
 
 void Engine::Unpause()
 {
-	m_isPaused = false;
+	mbIsPaused = false;
 }
 
-float Engine::TotalTime() const
+const Settings::Engine& Engine::ReadSettingsFromFile()
 {
-	return m_timer->TotalTime();
-}
-
-const Settings::Renderer& Engine::InitializeRendererSettingsFromFile()
-{
-	s_rendererSettings = SceneParser::ReadRendererSettings();
-	return s_rendererSettings;
+	sEngineSettings = SceneParser::ReadSettings("settings.ini");
+	return sEngineSettings;
 }
 
 bool Engine::Initialize(HWND hwnd)
 {
-	if (!m_pRenderer || !m_input || !m_sceneManager || !m_timer)
+	if (!mpRenderer || !mpInput || !mpSceneManager || !mpTimer)
 	{
 		Log::Error("Nullptr Engine::Init()\n");
 		return false;
@@ -144,45 +152,38 @@ bool Engine::Initialize(HWND hwnd)
 	// INITIALIZE SYSTEMS
 	//--------------------------------------------------------------
 	const bool bEnableLogging = true;	// todo: read from settings
-	Log::Initialize(bEnableLogging);
-	
 	constexpr size_t workerCount = 1;
-	m_workerPool.Initialize(workerCount);
-		
-	m_input->Initialize();
-	
+	const Settings::Renderer& rendererSettings = sEngineSettings.renderer;
 
-	// INITIALIZE RENDERING
-	//--------------------------------------------------------------
-	if (!m_pRenderer->Initialize(hwnd, s_rendererSettings))
+	Log::Initialize(bEnableLogging);
+	mWorkerPool.Initialize(workerCount);
+	mpInput->Initialize();
+	if (!mpRenderer->Initialize(hwnd, rendererSettings))
 	{
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
 	}
 
-	// render passes
-	m_useDeferredRendering = s_rendererSettings.bUseDeferredRendering;
-	if (m_useDeferredRendering || true)	// initialize G buffer nevertheless
-	{
-		m_deferredRenderingPasses.InitializeGBuffer(m_pRenderer);
-	}
-	m_isAmbientOcclusionOn = s_rendererSettings.bAmbientOcclusion;
-	m_debugRender = true;
-	m_selectedShader = m_useDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
-	
-	// default states
-	const bool bDepthWrite = true;
-	const bool bStencilWrite = false;
-	m_worldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
-	Skybox::InitializePresets(m_pRenderer);
+	// INITIALIZE RENDERING
+	//--------------------------------------------------------------
+	// render passes
+	mUseDeferredRendering = rendererSettings.bUseDeferredRendering;
+	mDeferredRenderingPasses.InitializeGBuffer(mpRenderer);
+	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
+	mDebugRender = true;
+	mSelectedShader = mUseDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
+	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
+
+	Skybox::InitializePresets(mpRenderer);
 
 	return true;
 }
 
 bool Engine::Load()
 {
-	const bool bLoadSuccess = m_sceneManager->Load(m_pRenderer, nullptr, s_rendererSettings, m_pCamera);
+	const Settings::Renderer& rendererSettings = sEngineSettings.renderer;
+	const bool bLoadSuccess = mpSceneManager->Load(mpRenderer, nullptr, sEngineSettings, m_pCamera);
 	if (!bLoadSuccess)
 	{
 		Log::Error("Engine couldn't load scene.");
@@ -190,24 +191,33 @@ bool Engine::Load()
 	}
 
 	{	// RENDER PASS INITIALIZATION
-		// todo: static game object array in gameobj.h or engine.h
-		m_shadowMapPass.Initialize(m_pRenderer, m_pRenderer->m_device, s_rendererSettings.shadowMap);
+		mShadowMapPass.Initialize(mpRenderer, mpRenderer->m_device, rendererSettings.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.floor);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallL);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallR);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallF);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.ceiling);
-		for (GameObject& obj : m_sceneManager->m_roomScene.objects) m_ZPassObjects.push_back(&obj);
 
-		//m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.obj2);
-		//m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.Plane2);
-		//for (GameObject& obj : m_sceneManager->m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
-		for (GameObject& obj : m_sceneManager->m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
+		// Shadow Pass
+		switch(sEngineSettings.levelToLoad)
+		{
+		case 0:		// Room Scene
+		{
+			mpSceneManager->mRoomScene.GetShadowCasterObjects(mZPassObjects);
+		} break;
+		case 1:		// SSAOTest Scene
+		{
+			//mZPassObjects.push_back(&mSceneManager->mRoomScene.obj2);
+			//mZPassObjects.push_back(&mSceneManager->mRoomScene.Plane2);
+			//for (GameObject& obj : mSceneManager->mRoomScene.cubes)	mZPassObjects.push_back(&obj);
+		} break;
 
-		m_postProcessPass.Initialize(m_pRenderer, s_rendererSettings.postProcess);
-		m_debugPass.Initialize(m_pRenderer);
-		m_SSAOPass.Initialize(m_pRenderer);
+		default:
+			Log::Info("Unknown level = %d", sEngineSettings.levelToLoad);
+			break;
+		}
+		
+
+
+		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
+		mDebugPass.Initialize(mpRenderer);
+		mSSAOPass.Initialize(mpRenderer);
 
 		// Samplers
 		D3D11_SAMPLER_DESC normalSamplerDesc = {};
@@ -220,76 +230,53 @@ bool Engine::Load()
 		normalSamplerDesc.MipLODBias = 0.f;
 		normalSamplerDesc.MaxAnisotropy = 0;
 		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-		m_normalSampler = m_pRenderer->CreateSamplerState(normalSamplerDesc);
+		mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
 	}
-	m_activeSkybox = m_sceneManager->GetSceneSkybox();
+	mActiveSkybox = mpSceneManager->GetSceneSkybox();
 	return true;
 }
 
-void Engine::CalcFrameStats()
-{
-	static long  frameCount = 0;
-	static float timeElaped = -0.9f;
-	constexpr float UpdateInterval = 0.5f;
-
-	++frameCount;
-	if (m_timer->TotalTime() - timeElaped >= UpdateInterval)
-	{
-		float fps = static_cast<float>(frameCount);	// #frames / 1.0f
-		float frameTime = 1000.0f / fps;			// milliseconds
-
-		std::ostringstream stats;
-		stats.precision(2);
-		stats	<< "VDemo | "
-				<< "dt: " << frameTime << "ms "; 
-		stats.precision(4);
-		stats	<< "FPS: " << fps;
-		SetWindowText(m_pRenderer->GetWindow(), stats.str().c_str());
-		frameCount = 0;
-		timeElaped += UpdateInterval;
-	}
-}
 
 bool Engine::HandleInput()
 {
-	if (m_input->IsKeyDown(VK_ESCAPE))
+	if (mpInput->IsKeyDown(VK_ESCAPE))
 	{
 		return false;
 	}
 
-	if (m_input->IsKeyTriggered(0x08)) // Key backspace
+	if (mpInput->IsKeyTriggered(0x08)) // Key backspace
 		TogglePause();
 
-	if (m_input->IsKeyTriggered("F1")) m_selectedShader = EShaders::TEXTURE_COORDINATES;
-	if (m_input->IsKeyTriggered("F2")) m_selectedShader = EShaders::NORMAL;
-	if (m_input->IsKeyTriggered("F3")) m_selectedShader = EShaders::UNLIT;
-	if (m_input->IsKeyTriggered("F4")) m_selectedShader = m_selectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
+	if (mpInput->IsKeyTriggered("F1")) mSelectedShader = EShaders::TEXTURE_COORDINATES;
+	if (mpInput->IsKeyTriggered("F2")) mSelectedShader = EShaders::NORMAL;
+	if (mpInput->IsKeyTriggered("F3")) mSelectedShader = EShaders::UNLIT;
+	if (mpInput->IsKeyTriggered("F4")) mSelectedShader = mSelectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
 
-	if (m_input->IsKeyTriggered("F5")) m_pRenderer->sEnableBlend = !m_pRenderer->sEnableBlend;
-	if (m_input->IsKeyTriggered("F6")) ToggleLightingModel();
-	if (m_input->IsKeyTriggered("F7")) m_debugRender = !m_debugRender;
-	if (m_input->IsKeyTriggered("F8")) ToggleRenderingPath();
+	if (mpInput->IsKeyTriggered("F5")) mpRenderer->sEnableBlend = !mpRenderer->sEnableBlend;
+	if (mpInput->IsKeyTriggered("F6")) ToggleLightingModel();
+	if (mpInput->IsKeyTriggered("F7")) mDebugRender = !mDebugRender;
+	if (mpInput->IsKeyTriggered("F8")) ToggleRenderingPath();
 
-	if (m_input->IsKeyTriggered("F9")) m_postProcessPass._bloomPass.ToggleBloomPass();
-	if (m_input->IsKeyTriggered(";")) m_isAmbientOcclusionOn = !m_isAmbientOcclusionOn;
+	if (mpInput->IsKeyTriggered("F9")) mPostProcessPass._bloomPass.ToggleBloomPass();
+	if (mpInput->IsKeyTriggered(";")) mbIsAmbientOcclusionOn = !mbIsAmbientOcclusionOn;
 
-	if (m_input->IsKeyTriggered("R")) m_sceneManager->ReloadLevel();
-	if (m_input->IsKeyTriggered("\\")) m_pRenderer->ReloadShaders();
+	if (mpInput->IsKeyTriggered("R")) mpSceneManager->ReloadLevel();
+	if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
 	//if (m_input->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
 
-	if (m_isAmbientOcclusionOn)
+	if (mbIsAmbientOcclusionOn)
 	{
-		if (m_input->IsKeyDown("Shift"))
+		if (mpInput->IsKeyDown("Shift"))
 		{
 			const float step = 0.1f;
-			if (m_input->IsScrollUp()) { m_SSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", m_SSAOPass.intensity); }
-			if (m_input->IsScrollDown()) { m_SSAOPass.intensity -= step; if (m_SSAOPass.intensity < 1.001) m_SSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", m_SSAOPass.intensity); }
+			if (mpInput->IsScrollUp()) { mSSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
+			if (mpInput->IsScrollDown()) { mSSAOPass.intensity -= step; if (mSSAOPass.intensity < 1.001) mSSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
 		}
 		else
 		{
 			const float step = 0.5f;
-			if (m_input->IsScrollUp()) { m_SSAOPass.radius += step; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
-			if (m_input->IsScrollDown()) { m_SSAOPass.radius -= step; if (m_SSAOPass.radius < 1.001) m_SSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", m_SSAOPass.radius); }
+			if (mpInput->IsScrollUp()) { mSSAOPass.radius += step; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
+			if (mpInput->IsScrollDown()) { mSSAOPass.radius -= step; if (mSSAOPass.radius < 1.001) mSSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
 		}
 	}
 
@@ -298,20 +285,20 @@ bool Engine::HandleInput()
 
 bool Engine::UpdateAndRender()
 {
-	const float dt = m_timer->Tick();
+	const float dt = mpTimer->Tick();
 	const bool bExitApp = !HandleInput();
-	if (!m_isPaused)
+	if (!mbIsPaused)
 	{
 		CalcFrameStats();
 
 		m_pCamera->Update(dt);		// maybe in scene?
-		m_sceneManager->Update(dt);
+		mpSceneManager->Update(dt);
 
 		PreRender();
 		Render();
 	}
 
-	m_input->Update();	// update previous state after frame;
+	mpInput->Update();	// update previous state after frame;
 	return bExitApp;
 }
 
@@ -322,23 +309,23 @@ void Engine::PreRender()
 	const XMMATRIX view			= m_pCamera->GetViewMatrix();
 	const XMMATRIX viewInverse	= m_pCamera->GetViewInverseMatrix();
 	const XMMATRIX proj			= m_pCamera->GetProjectionMatrix();
-	m_sceneView.viewProj = view * proj;
-	m_sceneView.view = view;
-	m_sceneView.viewToWorld = viewInverse;
-	m_sceneView.projection = proj;
+	mSceneView.viewProj = view * proj;
+	mSceneView.view = view;
+	mSceneView.viewToWorld = viewInverse;
+	mSceneView.projection = proj;
 
 	// gather scene lights
 	size_t spotCount = 0;	size_t lightCount = 0;
-	for (const Light& l : m_lights)
+	for (const Light& l : mLights)
 	{
 		switch (l._type)
 		{
 		case Light::ELightType::POINT:
-			m_sceneLightData.pointLights[lightCount] = l.ShaderSignature();
+			mSceneLightData.pointLights[lightCount] = l.ShaderSignature();
 			++lightCount;
 			break;
 		case Light::ELightType::SPOT:
-			m_sceneLightData.spotLights[spotCount] = l.ShaderSignature();
+			mSceneLightData.spotLights[spotCount] = l.ShaderSignature();
 			++spotCount;
 			break;
 		default:
@@ -346,64 +333,70 @@ void Engine::PreRender()
 			break;
 		}
 	}
-	m_sceneLightData.spotLightCount = spotCount;
-	m_sceneLightData.pointLightCount = lightCount;
+	mSceneLightData.spotLightCount = spotCount;
+	mSceneLightData.pointLightCount = lightCount;
 
-	m_sceneLightData.shadowCasterData[0].shadowMap = m_shadowMapPass._shadowMap;
-	m_sceneLightData.shadowCasterData[0].shadowSampler = m_shadowMapPass._shadowSampler;
-	m_sceneLightData.shadowCasterData[0].lightSpaceMatrix = m_lights[0].GetLightSpaceMatrix();
+	if (spotCount > 0)	// temp hack: assume 1 spot light casting shadows
+	{
+		mSceneLightData.shadowCasterData[0].shadowMap = mShadowMapPass._shadowMap;
+		mSceneLightData.shadowCasterData[0].shadowSampler = mShadowMapPass._shadowSampler;
+		mSceneLightData.shadowCasterData[0].lightSpaceMatrix = mLights[0].GetLightSpaceMatrix();
+	}
 }
 
 void Engine::RenderLights() const
 {
-	m_pRenderer->BeginEvent("Render Lights Pass");
-	m_pRenderer->Reset();	// is reset necessary?
-	m_pRenderer->SetShader(EShaders::UNLIT);
-	for (const Light& light : m_lights)
+	mpRenderer->BeginEvent("Render Lights Pass");
+	mpRenderer->Reset();	// is reset necessary?
+	mpRenderer->SetShader(EShaders::UNLIT);
+	for (const Light& light : mLights)
 	{
-		m_pRenderer->SetBufferObj(light._renderMesh);
+		mpRenderer->SetBufferObj(light._renderMesh);
 		const XMMATRIX world = light._transform.WorldTransformationMatrix();
-		const XMMATRIX worldViewProj = world  * m_sceneView.viewProj;
+		const XMMATRIX worldViewProj = world  * mSceneView.viewProj;
 		const vec3 color = light._color.Value();
-		m_pRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
-		m_pRenderer->SetConstant3f("diffuse", color);
-		m_pRenderer->SetConstant1f("isDiffuseMap", 0.0f);
-		m_pRenderer->Apply();
-		m_pRenderer->DrawIndexed();
+		mpRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
+		mpRenderer->SetConstant3f("diffuse", color);
+		mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+		mpRenderer->Apply();
+		mpRenderer->DrawIndexed();
 	}
-	m_pRenderer->EndEvent();
+	mpRenderer->EndEvent();
 }
 
 void Engine::SendLightData() const
 {
 	// SPOT & POINT LIGHTS
 	//--------------------------------------------------------------
-	m_pRenderer->SetConstant1f("lightCount", static_cast<float>(m_sceneLightData.pointLightCount));
-	m_pRenderer->SetConstant1f("spotCount", static_cast<float>(m_sceneLightData.spotLightCount));
-	m_pRenderer->SetConstantStruct("lights", static_cast<const void*>(m_sceneLightData.pointLights.data()));
-	m_pRenderer->SetConstantStruct("spots", static_cast<const void*>(m_sceneLightData.spotLights.data()));
+	mpRenderer->SetConstant1f("lightCount", static_cast<float>(mSceneLightData.pointLightCount));
+	mpRenderer->SetConstant1f("spotCount", static_cast<float>(mSceneLightData.spotLightCount));
+	mpRenderer->SetConstantStruct("lights", static_cast<const void*>(mSceneLightData.pointLights.data()));
+	mpRenderer->SetConstantStruct("spots", static_cast<const void*>(mSceneLightData.spotLights.data()));
 
 	// SHADOW MAPS
 	//--------------------------------------------------------------
 	// first light is spot: single shadow map support for now
-	const ShadowCasterData& caster = m_sceneLightData.shadowCasterData[0];
-	m_pRenderer->SetConstant4x4f("lightSpaceMat", caster.lightSpaceMatrix);
-	m_pRenderer->SetTexture("texShadowMap", caster.shadowMap);
-	m_pRenderer->SetSamplerState("sShadowSampler", caster.shadowSampler);
+	if (mSceneLightData.spotLightCount > 0)
+	{
+		const ShadowCasterData& caster = mSceneLightData.shadowCasterData[0];
+		mpRenderer->SetConstant4x4f("lightSpaceMat", caster.lightSpaceMatrix);
+		mpRenderer->SetTexture("texShadowMap", caster.shadowMap);
+		mpRenderer->SetSamplerState("sShadowSampler", caster.shadowSampler);
+	}
 
 #ifdef _DEBUG
-	if (m_sceneLightData.pointLightCount > m_sceneLightData.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
-	if (m_sceneLightData.spotLightCount > m_sceneLightData.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
+	if (mSceneLightData.pointLightCount > mSceneLightData.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
+	if (mSceneLightData.spotLightCount > mSceneLightData.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif
 }
 
 void Engine::Render()
 {	
-	const XMMATRIX& viewProj = m_sceneView.viewProj;
+	const XMMATRIX& viewProj = mSceneView.viewProj;
 	
 	// get shadow casters (todo: static/dynamic lights)
 	std::vector<const Light*> _shadowCasters;
-	for (const Light& light : m_sceneManager->m_roomScene.mLights)
+	for (const Light& light : mpSceneManager->mRoomScene.mLights)
 	{
 		if (light._castsShadow)
 			_shadowCasters.push_back(&light);
@@ -412,109 +405,109 @@ void Engine::Render()
 
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
-	m_pRenderer->BeginEvent("Shadow Pass");
-	m_pRenderer->UnbindRenderTarget();	// unbind the back render target | every pass has their own render targets
-	m_shadowMapPass.RenderShadowMaps(m_pRenderer, _shadowCasters, m_ZPassObjects);
-	m_pRenderer->EndEvent();
+	mpRenderer->BeginEvent("Shadow Pass");
+	mpRenderer->UnbindRenderTarget();	// unbind the back render target | every pass has their own render targets
+	mShadowMapPass.RenderShadowMaps(mpRenderer, _shadowCasters, mZPassObjects);
+	mpRenderer->EndEvent();
 
 	// LIGHTING PASS
 	//------------------------------------------------------------------------
-	m_pRenderer->Reset();
-	m_pRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
-	m_pRenderer->SetViewport(m_pRenderer->WindowWidth(), m_pRenderer->WindowHeight());
+	mpRenderer->Reset();
+	mpRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
+	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 
-	if (m_useDeferredRendering)
+	if (mUseDeferredRendering)
 	{	// DEFERRED
-		const GBuffer& gBuffer = m_deferredRenderingPasses._GBuffer;
-		const TextureID texNormal = m_pRenderer->GetRenderTargetTexture(gBuffer._normalRT);
-		const TextureID texDiffuseRoughness = m_pRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
-		const TextureID texSpecularMetallic = m_pRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
-		const TextureID texPosition = m_pRenderer->GetRenderTargetTexture(gBuffer._positionRT);
-		const TextureID texDepthTexture = m_pRenderer->m_state._depthBufferTexture;
+		const GBuffer& gBuffer = mDeferredRenderingPasses._GBuffer;
+		const TextureID texNormal = mpRenderer->GetRenderTargetTexture(gBuffer._normalRT);
+		const TextureID texDiffuseRoughness = mpRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
+		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
+		const TextureID texPosition = mpRenderer->GetRenderTargetTexture(gBuffer._positionRT);
+		const TextureID texDepthTexture = mpRenderer->m_state._depthBufferTexture;
 
 		// GEOMETRY - DEPTH PASS
-		m_pRenderer->BeginEvent("Geometry Pass");
-		m_deferredRenderingPasses.SetGeometryRenderingStates(m_pRenderer);
-		m_sceneManager->Render(m_pRenderer, m_sceneView);
-		m_pRenderer->EndEvent();
+		mpRenderer->BeginEvent("Geometry Pass");
+		mDeferredRenderingPasses.SetGeometryRenderingStates(mpRenderer);
+		mpSceneManager->Render(mpRenderer, mSceneView);
+		mpRenderer->EndEvent();
 
 		// AMBIENT OCCLUSION  PASS
-		if (m_isAmbientOcclusionOn)
+		if (mbIsAmbientOcclusionOn)
 		{
-			m_pRenderer->BeginEvent("Ambient Occlusion Pass");
-			m_SSAOPass.RenderOcclusion(m_pRenderer, texNormal, texPosition, m_sceneView);
+			mpRenderer->BeginEvent("Ambient Occlusion Pass");
+			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, texPosition, mSceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
-			m_SSAOPass.GaussianBlurPass(m_pRenderer);
-			m_pRenderer->EndEvent();
+			mSSAOPass.GaussianBlurPass(mpRenderer);
+			mpRenderer->EndEvent();
 		}
 
 		// DEFERRED LIGHTING PASS
-		const TextureID tSSAO = m_isAmbientOcclusionOn ? m_pRenderer->GetRenderTargetTexture(m_SSAOPass.blurRenderTarget) : m_SSAOPass.whiteTexture4x4;
-		m_pRenderer->BeginEvent("Lighting Pass");
-		m_deferredRenderingPasses.RenderLightingPass(m_pRenderer, m_postProcessPass._worldRenderTarget, m_sceneView, m_sceneLightData, tSSAO);
-		m_pRenderer->EndEvent();
+		const TextureID tSSAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
+		mpRenderer->BeginEvent("Lighting Pass");
+		mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO);
+		mpRenderer->EndEvent();
 
 		// LIGHT SOURCES
-		m_pRenderer->BindDepthTarget(m_worldDepthTarget);
+		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		RenderLights();
 
 		// SKYBOX
-		if (m_activeSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)
+		if (mActiveSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)
 		{
-			m_pRenderer->SetDepthStencilState(m_deferredRenderingPasses._skyboxStencilState);
-			Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
-			m_pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_W);
-			m_pRenderer->UnbindDepthTarget();
+			mpRenderer->SetDepthStencilState(mDeferredRenderingPasses._skyboxStencilState);
+			Skybox::s_Presets[mActiveSkybox].Render(mSceneView.viewProj);
+			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_W);
+			mpRenderer->UnbindDepthTarget();
 		}
 	}
 
 
 	else
 	{	// FORWARD
-		m_selectedShader = m_selectedShader == EShaders::DEFERRED_GEOMETRY ? EShaders::FORWARD_BRDF : m_selectedShader;
+		mSelectedShader = mSelectedShader == EShaders::DEFERRED_GEOMETRY ? EShaders::FORWARD_BRDF : mSelectedShader;
 		const float clearColor[4] = { 0.2f, 0.4f, 0.3f, 1.0f };
 		const float clearDepth = 1.0f;
 
 		// AMBIENT OCCLUSION  PASS
-		if (m_isAmbientOcclusionOn && false)
+		if (mbIsAmbientOcclusionOn && false)
 		{
-			m_pRenderer->BeginEvent("Z-PrePass");
+			mpRenderer->BeginEvent("Z-PrePass");
 			// todo: z-prepass + normals
-			m_pRenderer->EndEvent();
+			mpRenderer->EndEvent();
 
-			m_pRenderer->BeginEvent("Ambient Occlusion Pass");
+			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			//m_SSAOPass.RenderOcclusion(m_pRenderer, texNormal, texPosition, m_sceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
-			m_SSAOPass.GaussianBlurPass(m_pRenderer);
-			m_pRenderer->EndEvent();
+			mSSAOPass.GaussianBlurPass(mpRenderer);
+			mpRenderer->EndEvent();
 		}
 
-		m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);
-		m_pRenderer->BindDepthTarget(0);
-		m_pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_W);
-		m_pRenderer->Begin(clearColor, clearDepth);
+		mpRenderer->BindRenderTarget(mPostProcessPass._worldRenderTarget);
+		mpRenderer->BindDepthTarget(mWorldDepthTarget);
+		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_W);
+		mpRenderer->Begin(clearColor, clearDepth);
 
 		// SKYBOX
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
-		if (m_activeSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)	Skybox::s_Presets[m_activeSkybox].Render(m_sceneView.viewProj);
+		if (mActiveSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)	Skybox::s_Presets[mActiveSkybox].Render(mSceneView.viewProj);
 		else
 		{
 			// todo: this might be costly, profile this
-			m_pRenderer->SetShader(m_selectedShader);	// set shader so apply won't complain 
-			m_pRenderer->Apply();						// apply to bind depth stencil
+			mpRenderer->SetShader(mSelectedShader);	// set shader so apply won't complain 
+			mpRenderer->Apply();						// apply to bind depth stencil
 		}
 
 		// LIGHTING
-		m_pRenderer->BeginEvent("Lighting Pass");
-		m_pRenderer->SetShader(m_selectedShader);	// forward brdf/phong
-		m_pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-		m_pRenderer->SetSamplerState("sNormalSampler", m_normalSampler);
+		mpRenderer->BeginEvent("Lighting Pass");
+		mpRenderer->SetShader(mSelectedShader);	// forward brdf/phong
+		mpRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+		mpRenderer->SetSamplerState("sNormalSampler", mNormalSampler);
 
 		SendLightData();
-		m_sceneManager->Render(m_pRenderer, m_sceneView);
-		m_pRenderer->EndEvent();
+		mpSceneManager->Render(mpRenderer, mSceneView);
+		mpRenderer->EndEvent();
 
 		RenderLights();
 	}
@@ -524,37 +517,38 @@ void Engine::Render()
 	const bool bIsShaderTBN = true;
 	if (bIsShaderTBN)
 	{
-		m_pRenderer->BeginEvent("Draw TBN Vectors");
-		if (m_useDeferredRendering)
-			m_pRenderer->BindDepthTarget(m_worldDepthTarget);
+		mpRenderer->BeginEvent("Draw TBN Vectors");
+		if (mUseDeferredRendering)
+			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 
 		constexpr bool bSendMaterial = false;
-		m_pRenderer->SetShader(EShaders::TBN);
-		for (const GameObject& obj : m_sceneManager->m_roomScene.objects)
+		mpRenderer->SetShader(EShaders::TBN);
+		for (const GameObject& obj : mpSceneManager->mRoomScene.objects)
 		{
 			if (obj.mRenderSettings.bRenderTBN)
-				obj.Render(m_pRenderer, m_sceneView, bSendMaterial);
+				obj.Render(mpRenderer, mSceneView, bSendMaterial);
 		}
 
-		if (m_useDeferredRendering)
-			m_pRenderer->UnbindDepthTarget();
+		if (mUseDeferredRendering)
+			mpRenderer->UnbindDepthTarget();
 
-		m_pRenderer->SetShader(m_selectedShader);
-		m_pRenderer->EndEvent();
+		mpRenderer->SetShader(mSelectedShader);
+		mpRenderer->EndEvent();
 	}
 
 #if 1
 	// POST PROCESS PASS
 	//------------------------------------------------------------------------
-	m_postProcessPass.Render(m_pRenderer);
+	mPostProcessPass.Render(mpRenderer);
 
 
 	// DEBUG PASS
 	//------------------------------------------------------------------------
-	if (m_debugRender)
+	if (mDebugRender)
 	{
-		const int screenWidth  = s_rendererSettings.window.width;
-		const int screenHeight = s_rendererSettings.window.height;
+		const Settings::Renderer& rendererSettings = sEngineSettings.renderer;
+		const int screenWidth  = rendererSettings.window.width;
+		const int screenHeight = rendererSettings.window.height;
 		const float aspectRatio = static_cast<float>(screenWidth) / screenHeight;
 #if 0
 		// TODO: calculate scales and transform each quad into appropriate position in NDC space [0,1]
@@ -573,13 +567,13 @@ void Engine::Render()
 		const vec2 squareTextureScaledDownSize    ((float)heightPx              , (float)heightPx);
 
 		// Textures to draw
-		TextureID tShadowMap		 = m_pRenderer->GetDepthTargetTexture(m_shadowMapPass._shadowDepthTarget);
-		TextureID tBlurredBloom		 = m_pRenderer->GetRenderTargetTexture(m_postProcessPass._bloomPass._blurPingPong[0]);
-		TextureID tDiffuseRoughness  = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._diffuseRoughnessRT);
+		TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._shadowDepthTarget);
+		TextureID tBlurredBloom		 = mpRenderer->GetRenderTargetTexture(mPostProcessPass._bloomPass._blurPingPong[0]);
+		TextureID tDiffuseRoughness  = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
 		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
-		TextureID tSceneDepth		 = m_pRenderer->GetDepthTargetTexture(0);
-		TextureID tNormals			 = m_pRenderer->GetRenderTargetTexture(m_deferredRenderingPasses._GBuffer._normalRT);
-		TextureID tAO				 = m_isAmbientOcclusionOn ? m_pRenderer->GetRenderTargetTexture(m_SSAOPass.blurRenderTarget) : m_SSAOPass.whiteTexture4x4;
+		TextureID tSceneDepth		 = mpRenderer->GetDepthTargetTexture(0);
+		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
+		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);
@@ -598,15 +592,15 @@ void Engine::Render()
 			return c;
 		}();
 
-		m_pRenderer->BeginEvent("Debug Pass");
-		m_pRenderer->SetShader(EShaders::DEBUG);
+		mpRenderer->BeginEvent("Debug Pass");
+		mpRenderer->SetShader(EShaders::DEBUG);
 		for (const DrawQuadOnScreenCommand& cmd : quadCmds)
 		{
-			m_pRenderer->DrawQuadOnScreen(cmd);
+			mpRenderer->DrawQuadOnScreen(cmd);
 		}
-		m_pRenderer->EndEvent();
+		mpRenderer->EndEvent();
 	}
 #endif
-	m_pRenderer->End();
+	mpRenderer->End();
 }
 

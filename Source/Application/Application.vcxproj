@@ -172,6 +172,7 @@
     <ClCompile Include="Source\Main.cpp" />
     <ClCompile Include="Source\BaseSystem.cpp" />
     <ClCompile Include="Source\WorkerPool.cpp" />
+    <ClCompile Include="Scenes\SSAOTestScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\Animation.h" />
@@ -193,6 +194,7 @@
     <ClInclude Include="Include\resource.h" />
     <ClInclude Include="Include\SystemDefs.h" />
     <ClInclude Include="Include\WorkerPool.h" />
+    <ClInclude Include="Scenes\SSAOTestScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Renderer\Renderer.vcxproj">

@@ -210,6 +210,17 @@ void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
 	for (const auto& obj : objects) obj.Render(mpRenderer, sceneView, bSendMaterialData);
 }
 
+void RoomScene::GetShadowCasterObjects(std::vector<GameObject*>& casters)
+{
+	casters.push_back(&m_room.floor);
+	casters.push_back(&m_room.wallL);
+	casters.push_back(&m_room.wallR);
+	casters.push_back(&m_room.wallF);
+	casters.push_back(&m_room.ceiling);
+	for (GameObject& obj : objects) casters.push_back(&obj);
+	for (GameObject& obj : spheres)	casters.push_back(&obj);
+}
+
 
 	 		  
 void RoomScene::InitializeObjectArrays(SerializedScene& scene)

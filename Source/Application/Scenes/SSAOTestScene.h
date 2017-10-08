@@ -15,29 +15,17 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
-
 #pragma once
-
-#include <vector>
-#include <string>
-
 #include "Scene.h"
-
-namespace Settings { struct Renderer; }
-
-
-class SceneParser
+class SSAOTestScene : public Scene
 {
 public:
-	SceneParser();
-	~SceneParser();
+	void Load(Renderer* pRenderer, SerializedScene& scene) override;
+	void Update(float dt) override;
+	void Render(Renderer* pRenderer, const SceneView& sceneView) const override;
+	void GetShadowCasterObjects(std::vector<GameObject*>& casters) override;
 
-	static Settings::Engine ReadSettings(const std::string& settingsFileName);
-	static void ParseSetting(const std::vector<std::string>& line, Settings::Engine& settings);
-
-	static SerializedScene ReadScene(const std::string& sceneFileName);
-	static void ParseScene(const std::vector<std::string>& command, SerializedScene& scene);
-private:
-
+	SSAOTestScene(SceneManager& sceneMan, std::vector<Light>& lights);
+	~SSAOTestScene() = default;
 };
 

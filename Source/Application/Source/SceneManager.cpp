@@ -29,45 +29,52 @@
 #include "Camera.h"
 #include "Light.h"
 
-
-#define KEY_TRIG(k) ENGINE->INP()->IsKeyTriggered(k)
+const char* sceneNames[] = 
+{
+	"Room.scn",
+	"SSAOTest.scn"
+};
 
 SceneManager::SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights)
 	:
-	m_sceneCamera(pCam),
-	m_roomScene(*this, lights)
-{}
-
-SceneManager::~SceneManager()
+	mpSceneCamera(pCam),
+	mRoomScene(*this, lights),
+	mSSAOTestScene(*this, lights),
+	mpActiveScene(nullptr)
 {}
 
 ESkyboxPreset SceneManager::GetSceneSkybox() const
 {
-	return m_roomScene.GetSkybox();
+	//return mRoomScene.GetSkybox();
+	return ESkyboxPreset::NIGHT_SKY;
 }
-
 
 void SceneManager::ReloadLevel()
 {
-	const SerializedScene&		scene            =  m_serializedScenes.back();	// load last level
-	const Settings::Renderer&	rendererSettings = Engine::InitializeRendererSettingsFromFile();
+	// todo: rethink this
+	const SerializedScene&		scene            = mSerializedScene;
+	const Settings::Renderer&	rendererSettings = Engine::ReadSettingsFromFile().renderer;
 	Log::Info("Reloading Level...");
 
-	m_sceneCamera->ConfigureCamera(scene.cameraSettings, rendererSettings.window);
+	mpSceneCamera->ConfigureCamera(scene.cameraSettings, rendererSettings.window);
 	// only camera reset for now
 	// todo: unload and reload scene, initialize depth pass...
 }
 
-bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings, shared_ptr<Camera> pCamera)
+bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Engine& settings, shared_ptr<Camera> pCamera)
 {
-	m_sceneCamera = pCamera;
-	m_serializedScenes.push_back(SceneParser::ReadScene());
-	
-	SerializedScene& scene = m_serializedScenes.back();	// non-const because lights are std::move()d for roomscene loading
-	if (scene.loadSuccess == '1')
+	mpSceneCamera = pCamera;
+
+	mSerializedScene = SceneParser::ReadScene(sceneNames[settings.levelToLoad]);	
+	if (mSerializedScene.loadSuccess == '1')
 	{
-		m_roomScene.Load(renderer, scene);
-		m_sceneCamera->ConfigureCamera(scene.cameraSettings, rendererSettings.window);
+		mpSceneCamera->ConfigureCamera(mSerializedScene.cameraSettings, settings.renderer.window);
+		switch (settings.levelToLoad)
+		{
+		case 0:	mRoomScene.Load(renderer, mSerializedScene); mpActiveScene = &mRoomScene; break;
+		case 1:	mSSAOTestScene.Load(renderer, mSerializedScene); mpActiveScene = &mSSAOTestScene; break;
+		default:	break;
+		}
 		return true;
 	}
 	return false;
@@ -82,13 +89,13 @@ void SceneManager::HandleInput()
 void SceneManager::Update(float dt)
 {
 	HandleInput();
-	m_roomScene.Update(dt);
+	mpActiveScene->Update(dt);
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
 void SceneManager::Render(Renderer* pRenderer, const SceneView& sceneView) const
 {
-	m_roomScene.Render(pRenderer, sceneView);
+	mpActiveScene->Render(pRenderer, sceneView);
 }
 
 

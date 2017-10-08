@@ -36,10 +36,12 @@ public:
 	virtual void Load(Renderer* pRenderer, SerializedScene& scene) = 0;
 	virtual void Update(float dt) = 0;
 	virtual void Render(Renderer* pRenderer, const SceneView& sceneView) const = 0;
+	virtual void GetShadowCasterObjects(std::vector<GameObject*>& casters) = 0;
 
-	SceneManager&		mSceneManager;
-	Renderer*			mpRenderer;
-	std::vector<Light>&	mLights;
+	SceneManager&			mSceneManager;
+	Renderer*				mpRenderer;
+	std::vector<Light>&		mLights;
+	std::vector<GameObject> objects;
 };
 
 struct SerializedScene

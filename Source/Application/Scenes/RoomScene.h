@@ -26,11 +26,11 @@
 
 class RoomScene : public Scene
 {
-	friend class Engine;	// temp hack until gameObject array refactoring
 public:
 	void Load(Renderer* pRenderer, SerializedScene& scene) override;
 	void Update(float dt) override;
 	void Render(Renderer* pRenderer, const SceneView& sceneView) const override;
+	void GetShadowCasterObjects(std::vector<GameObject*>& casters) override;
 
 	RoomScene(SceneManager& sceneMan, std::vector<Light>& lights);
 	~RoomScene() = default;
@@ -76,16 +76,14 @@ private:
 	} m_room;
 
 	std::vector<GameObject> spheres;
-	
+	std::vector<Animation> m_animations;
+
+
+
 	/// todo: move to ao test scene
 	// std::vector<GameObject> cubes; 
 	//GameObject Plane2;
 	//GameObject obj2;
-
-	std::vector<GameObject> objects;
-
-
-	std::vector<Animation> m_animations;
 };
 
 

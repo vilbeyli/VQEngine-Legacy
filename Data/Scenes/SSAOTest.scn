@@ -20,3 +20,18 @@ camera 0.1 1500 75   0 50 -190  0 15
 // objects
 // =======
 
+object begin
+mesh quad
+transform 0 0 0 90 0 0 40
+object end
+
+
+object begin
+mesh cube
+transform 10 0 0 45 0 45 5
+object end
+
+object begin
+mesh sphere
+transform -10 0 0 0 0 45 5
+object end

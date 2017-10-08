@@ -30,7 +30,7 @@
 #include <cassert>
 #endif
 
-Settings::Renderer Engine::Engine::s_rendererSettings;
+Settings::Engine Engine::sEngineSettings;
 
 BaseSystem::BaseSystem()
 {
@@ -45,7 +45,7 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
-	const Settings::Renderer& rendererSettings = Engine::InitializeRendererSettingsFromFile();
+	const Settings::Renderer& rendererSettings = Engine::ReadSettingsFromFile().renderer;
 	InitWindow(rendererSettings);
 
 	if (!ENGINE->Initialize(m_hwnd))
@@ -66,7 +66,7 @@ bool BaseSystem::Init()
 
 void BaseSystem::Run()
 {
-	ENGINE->m_timer->Reset();
+	ENGINE->mpTimer->Reset();
 	MSG msg = { };
 	
 	bool bExitApp = false;
@@ -96,6 +96,7 @@ void BaseSystem::Exit()
 
 LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
 {
+	const Settings::Renderer& setting = Engine::sEngineSettings.renderer;
 	switch (umsg)
 	{
 	// application active/inactive
@@ -135,13 +136,13 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 	// keyboard
 	case WM_KEYDOWN:
 	{
-		ENGINE->m_input->KeyDown((KeyCode)wparam);
+		ENGINE->mpInput->KeyDown((KeyCode)wparam);
 		break;
 	}
 
 	case WM_KEYUP:
 	{
-		ENGINE->m_input->KeyUp((KeyCode)wparam);
+		ENGINE->mpInput->KeyUp((KeyCode)wparam);
 		break;
 	}
 
@@ -150,7 +151,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
 	{
-		ENGINE->m_input->KeyDown((KeyCode)wparam);
+		ENGINE->mpInput->KeyDown((KeyCode)wparam);
 		break;
 	}
 
@@ -158,7 +159,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 	case WM_RBUTTONUP:
 	case WM_LBUTTONUP:
 	{
-		ENGINE->m_input->KeyUp((KeyCode)wparam);
+		ENGINE->mpInput->KeyUp((KeyCode)wparam);
 		break;
 	}
 
@@ -185,8 +186,8 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 			long xPosRelative = raw->data.mouse.lLastX;
 			long yPosRelative = raw->data.mouse.lLastY;
 			short scroll = raw->data.mouse.usButtonData;
-			ENGINE->m_input->UpdateMousePos(xPosRelative, yPosRelative, scroll);
-			SetCursorPos(Engine::s_rendererSettings.window.width/2, Engine::s_rendererSettings.window.height/2);
+			ENGINE->mpInput->UpdateMousePos(xPosRelative, yPosRelative, scroll);
+			SetCursorPos(setting.window.width/2, setting.window.height/2);
 			
 #ifdef LOG
 			char szTempOutput[1024];
@@ -210,7 +211,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 	// client area mouse - not good for first person camera
 	case WM_MOUSEMOVE:
 	{
-		ENGINE->m_input->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam), scroll);
+		ENGINE->mpInput->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam), scroll);
 		break;
 	}
 #endif
@@ -319,7 +320,7 @@ void BaseSystem::ShutdownWindows()
 {
 	ShowCursor(true);
 
-	if (Engine::s_rendererSettings.window.fullscreen)
+	if (Engine::sEngineSettings.renderer.window.fullscreen)
 	{
 		ChangeDisplaySettings(NULL, 0);
 	}

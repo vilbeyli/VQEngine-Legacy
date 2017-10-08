@@ -94,6 +94,8 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<GameObject*> ZPassObjects) const
 {
+	if (shadowLights.empty()) return;
+
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	pRenderer->BindDepthTarget(_shadowDepthTarget);			// only depth stencil buffer

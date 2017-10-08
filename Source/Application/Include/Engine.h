@@ -64,41 +64,41 @@ ALIGNMENT class Engine
 	friend class BaseSystem;
 
 public:
-	static const Settings::Renderer& InitializeRendererSettingsFromFile();
-	static Engine*	GetEngine();
+	static const Settings::Engine& ReadSettingsFromFile();
+	static Engine*			GetEngine();
 	~Engine();
 
 #ifdef _WIN32
-	void*			operator new(size_t size) { return _mm_malloc(size, 16); }
-	void			operator delete(void* p)  { _mm_free(p); }
+	void*					operator new(size_t size) { return _mm_malloc(size, 16); }
+	void					operator delete(void* p)  { _mm_free(p); }
 #endif
 
-	bool			Initialize(HWND hwnd);
-	bool			Load();
+	bool					Initialize(HWND hwnd);
+	bool					Load();
+	void					Exit();
 
-	void			Pause();
-	void			Unpause();
-	float			TotalTime() const;
 
-	bool			UpdateAndRender();
-	void			Render();
+	bool					UpdateAndRender();
+	void					Render();
 
-	void			Exit();
-
-	const Input*	INP() const;
-	inline float	GetTotalTime() const { return m_timer->TotalTime(); }
-	inline ShaderID GetSelectedShader() const { return m_selectedShader; }
-	void			ToggleLightingModel();	// BRDF / Phong
-	void			ToggleRenderingPath();	// Forward / Deferred
-
-	void			SendLightData() const;
 	
-	inline DepthTargetID	GetWorldDepthTarget() const { return m_worldDepthTarget; }
+
+	inline const Input*		INP() const { return mpInput; }
+	inline float			GetTotalTime() const { return mpTimer->TotalTime(); }
+	inline ShaderID			GetSelectedShader() const { return mSelectedShader; }
+	void					ToggleLightingModel();	// BRDF / Blinn-Phong
+	void					ToggleRenderingPath();	// Forward / Deferred
+	void					Pause();
+	void					Unpause();
+
+	void					SendLightData() const;
+	
+	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
 
 private:
 	Engine();
 
-	void TogglePause();
+	inline void TogglePause() { mbIsPaused = !mbIsPaused; }
 	void CalcFrameStats();
 	bool HandleInput();
 
@@ -110,52 +110,51 @@ private:
 //--------------------------------------------------------------
 
 private:
-	static Engine*					s_instance;
-	static Settings::Renderer		s_rendererSettings;
+	static Engine*					sInstance;
+	static Settings::Engine			sEngineSettings;
 	
-	bool							m_isPaused;
+	bool							mbIsPaused;
 
 	// systems
 	//--------------------------------------------------------
-	Input*							m_input;
-	Renderer*						m_pRenderer;
-	SceneManager*					m_sceneManager;
-	PerfTimer*						m_timer;
-	WorkerPool						m_workerPool;
+	Input*							mpInput;
+	Renderer*						mpRenderer;
+	SceneManager*					mpSceneManager;
+	PerfTimer*						mpTimer;
+	WorkerPool						mWorkerPool;
 
 	// scene
 	//--------------------------------------------------------
 	shared_ptr<Camera>				m_pCamera;	// support only 1 main camera for now
-	SceneView						m_sceneView;
-	SceneLightData					m_sceneLightData;
-	std::vector<Light>				m_lights;
-	ESkyboxPreset					m_activeSkybox;
+	SceneView						mSceneView;
+	SceneLightData					mSceneLightData;
+	std::vector<Light>				mLights;
+	ESkyboxPreset					mActiveSkybox;
 
-	bool							m_bUsePaniniProjection;
-	//PathManager*					m_pPathManager; // unused
+	bool							mbUsePaniniProjection;
 
 	// rendering 
 	//--------------------------------------------------------
-	ShaderID						m_selectedShader;
+	ShaderID						mSelectedShader;
 	
-	DepthTargetID					m_worldDepthTarget;
-	SamplerID						m_normalSampler;
+	DepthTargetID					mWorldDepthTarget;
+	SamplerID						mNormalSampler;
 
-	ShadowMapPass					m_shadowMapPass;
+	ShadowMapPass					mShadowMapPass;
 	
-	bool							m_useDeferredRendering;
-	DeferredRenderingPasses			m_deferredRenderingPasses;
+	bool							mUseDeferredRendering;
+	DeferredRenderingPasses			mDeferredRenderingPasses;
 
-	bool							m_isAmbientOcclusionOn;
-	AmbientOcclusionPass			m_SSAOPass;
+	bool							mbIsAmbientOcclusionOn;
+	AmbientOcclusionPass			mSSAOPass;
 
-	PostProcessPass					m_postProcessPass;
+	PostProcessPass					mPostProcessPass;
 	
-	bool							m_debugRender;
-	DebugPass						m_debugPass;
+	bool							mDebugRender;
+	DebugPass						mDebugPass;
 	
 
-	std::vector<GameObject*>		m_ZPassObjects;
+	std::vector<GameObject*>		mZPassObjects;
 };
 
 #define ENGINE Engine::GetEngine()

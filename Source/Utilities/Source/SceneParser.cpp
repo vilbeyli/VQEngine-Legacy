@@ -27,12 +27,8 @@
 #include <algorithm>
 
 
-const char* file_root		= "Data\\";
-const char* settings_file	= "settings.ini";	
-const char* scene_files[] = {
-	"Scenes\\Room.scn",
-	"Scenes\\SSAOTest.scn"
-};
+const std::string file_root		= "Data\\";
+const std::string scene_root	= "Data\\Scenes\\";
 
 const std::unordered_map<std::string, bool> sBoolTypeReflection
 {
@@ -53,11 +49,11 @@ SceneParser::SceneParser(){}
 
 SceneParser::~SceneParser(){}
 
-Settings::Renderer SceneParser::ReadRendererSettings()
+Settings::Engine SceneParser::ReadSettings(const std::string& settingsFileName)
 {
-	Settings::Renderer s;
-	
-	std::string filePath = std::string(file_root) + std::string(settings_file);
+	const std::string filePath = file_root + settingsFileName;
+	Settings::Engine setting;
+
 	std::ifstream settingsFile(filePath.c_str());
 	if (settingsFile.is_open())
 	{
@@ -69,7 +65,7 @@ Settings::Renderer SceneParser::ReadRendererSettings()
 				continue;
 
 			std::vector<std::string> command = split(line, ' ');	// ignore whitespace
-			ParseSetting(command, s);								// process command
+			ParseSetting(command, setting);							// process command
 		}
 	}
 	else
@@ -77,10 +73,10 @@ Settings::Renderer SceneParser::ReadRendererSettings()
 		Log::Error("Settings.ini can't be opened.");
 	}
 
-	return s;
+	return setting;
 }
 
-void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::Renderer& settings)
+void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::Engine& settings)
 {
 	if (line.empty())
 	{
@@ -95,20 +91,20 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::R
 		//---------------------------------------------------------------
 		// | Window Width	|  Window Height	| Fullscreen?	| VSYNC?
 		//---------------------------------------------------------------
-		settings.window.width      = stoi(line[1]);
-		settings.window.height     = stoi(line[2]);
-		settings.window.fullscreen = stoi(line[3]);
-		settings.window.vsync      = stoi(line[4]);
+		settings.renderer.window.width      = stoi(line[1]);
+		settings.renderer.window.height     = stoi(line[2]);
+		settings.renderer.window.fullscreen = stoi(line[3]);
+		settings.renderer.window.vsync      = stoi(line[4]);
 	}
-	else if (cmd == "Bloom")
+	else if (cmd == "bloom")
 	{
 		// Parameters
 		//---------------------------------------------------------------
 		// | Bloom Threshold BRDF | Bloom Threshold PHONG | BlurPassCount
 		//---------------------------------------------------------------
-		settings.postProcess.bloom.threshold_brdf  = stof(line[1]);
-		settings.postProcess.bloom.threshold_phong = stof(line[2]);
-		settings.postProcess.bloom.blurPassCount   = stoi(line[3]);
+		settings.renderer.postProcess.bloom.threshold_brdf  = stof(line[1]);
+		settings.renderer.postProcess.bloom.threshold_phong = stof(line[2]);
+		settings.renderer.postProcess.bloom.blurPassCount   = stoi(line[3]);
 	}
 	else if (cmd == "shadowMap")
 	{
@@ -116,23 +112,23 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::R
 		//---------------------------------------------------------------
 		// | Shadow Map dimension
 		//---------------------------------------------------------------
-		settings.shadowMap.dimension = stoi(line[1]);
+		settings.renderer.shadowMap.dimension = stoi(line[1]);
 	}
 	else if (cmd == "deferredRendering")
 	{
-		settings.bUseDeferredRendering = sBoolTypeReflection.at(line[1]);
+		settings.renderer.bUseDeferredRendering = sBoolTypeReflection.at(line[1]);
 	}
 	else if (cmd == "ambientOcclusion")
 	{
-		settings.bAmbientOcclusion= sBoolTypeReflection.at(line[1]);
+		settings.renderer.bAmbientOcclusion= sBoolTypeReflection.at(line[1]);
 	}
-	else if (cmd == "Tonemapping")
+	else if (cmd == "tonemapping")
 	{
 		// Parameters
 		//---------------------------------------------------------------
 		// | Exposure
 		//---------------------------------------------------------------
-		settings.postProcess.toneMapping.exposure = stof(line[1]);
+		settings.renderer.postProcess.toneMapping.exposure = stof(line[1]);
 	}
 	else if (cmd == "HDR")
 	{
@@ -140,7 +136,15 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::R
 		//---------------------------------------------------------------
 		// | Enabled?
 		//---------------------------------------------------------------
-		settings.postProcess.HDREnabled = sBoolTypeReflection.at(GetLowercased(line[1]));
+		settings.renderer.postProcess.HDREnabled = sBoolTypeReflection.at(GetLowercased(line[1]));
+	}
+	else if (cmd == "level")
+	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Enabled?
+		//---------------------------------------------------------------
+		settings.levelToLoad = stoi(line[1]);
 	}
 	else
 	{
@@ -149,10 +153,10 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::R
 	}
 }
 
-SerializedScene SceneParser::ReadScene()
+SerializedScene SceneParser::ReadScene(const std::string& sceneFileName)
 {
 	SerializedScene scene;
-	std::string filePath = std::string(file_root) + std::string(scene_files[0]);
+	std::string filePath = scene_root + sceneFileName;
 	std::ifstream sceneFile(filePath.c_str());
 
 	if (sceneFile.is_open())

@@ -26,7 +26,7 @@
 
 using std::shared_ptr;
 
-// todo: move header to cpp
+// todo: move scene headers to cpp
 // scenes
 #include "../Scenes/RoomScene.h"
 //#include "../Scenes/IBL_Scene.h"
@@ -48,7 +48,7 @@ public:
 
 	ESkyboxPreset GetSceneSkybox() const;
 
-	void Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings, shared_ptr<Camera> pCamera);
+	bool Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings, shared_ptr<Camera> pCamera);
 
 	void Update(float dt);
 	void Render(Renderer* pRenderer, const SceneView& sceneView) const;

@@ -58,17 +58,19 @@ void SceneManager::ReloadLevel()
 	// todo: unload and reload scene, initialize depth pass...
 }
 
-void SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings, shared_ptr<Camera> pCamera)
+bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Renderer& rendererSettings, shared_ptr<Camera> pCamera)
 {
-#if 0
-	m_pPathManager		= pathMan;
-#endif
 	m_sceneCamera = pCamera;
 	m_serializedScenes.push_back(SceneParser::ReadScene());
 	
 	SerializedScene& scene = m_serializedScenes.back();	// non-const because lights are std::move()d for roomscene loading
-	m_roomScene.Load(renderer, scene);
-	m_sceneCamera->ConfigureCamera(scene.cameraSettings, rendererSettings.window);
+	if (scene.loadSuccess == '1')
+	{
+		m_roomScene.Load(renderer, scene);
+		m_sceneCamera->ConfigureCamera(scene.cameraSettings, rendererSettings.window);
+		return true;
+	}
+	return false;
 }
 
 

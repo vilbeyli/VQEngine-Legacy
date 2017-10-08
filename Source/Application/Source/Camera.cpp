@@ -154,6 +154,9 @@ void Camera::Update(float dt)
 	// end debug code 
 	//----------------------------------------------------------------------
 
+#if 1
+	SetProjectionMatrix(m_settings.fovV * DEG2RAD, m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
+#else  // test fov
 	static float gFoVx = 90.0f;
 	static float gFoVy = 45.0f;
 
@@ -167,6 +170,7 @@ void Camera::Update(float dt)
 
 	SetProjectionMatrixHFov(gFoVx * DEG2RAD, 1.0f / m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
 	//SetProjectionMatrix(gFoVy * DEG2RAD, m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
+#endif
 	
 }
 
@@ -263,8 +267,9 @@ void Camera::Move(const float dt)
 	if (m_input->IsKeyDown('S'))		translation += XMVector3TransformCoord(vec3::Back,		MRotation);
 	if (m_input->IsKeyDown('E'))		translation += XMVector3TransformCoord(vec3::Up,		MRotation);
 	if (m_input->IsKeyDown('Q'))		translation += XMVector3TransformCoord(vec3::Down,		MRotation);
-	if (m_input->IsKeyDown(VK_SHIFT))	translation *= 5.0f;
-	
+	if (m_input->IsKeyDown(VK_SHIFT))	translation *= 2.0f;
+	translation *= 4.0f;
+
 	XMVECTOR V = m_velocity;
 	V += (translation * MoveSpeed - V * Drag) * dt;
 	m_velocity = V;

@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define SHADOW_BIAS 0.00000001f
+#define SHADOW_BIAS 0.00001f
 
 
 // STRUCTS

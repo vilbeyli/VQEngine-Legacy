@@ -20,47 +20,6 @@
 #include "Renderer.h"
 #include "RenderPasses.h"
 
-GameObject::GameObject()
-#ifdef ENABLE_PHY_CODE
-	:
-	m_rb(mTransform)
-#endif
-{
-#ifdef ENABLE_PHY_CODE
-	// these should be turned on explicitly
-	m_rb.EnableGravity = false;
-	m_rb.EnablePhysics = false;
-#endif
-}
-
-
-GameObject::~GameObject()
-{}
-
-GameObject::GameObject(const GameObject & obj)
-#ifdef ENABLE_PHY_CODE
-	:
-	m_rb(mTransform)
-#endif
-{
-	mTransform = obj.mTransform;
-	mModel = obj.mModel;
-#ifdef ENABLE_PHY_CODE
-	m_rb = obj.m_rb;
-	m_rb.UpdateVertPositions();
-#endif
-}
-
-GameObject& GameObject::operator=(const GameObject& obj)
-{
-	mTransform = obj.mTransform;
-	mModel = obj.mModel;
-#ifdef ENABLE_PHY_CODE
-	m_rb		= RigidBody(mTransform);
-#endif
-	return *this;
-}
-
 void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const
 {
 	const EShaders shader = static_cast<EShaders>(pRenderer->GetActiveShader());
@@ -103,10 +62,10 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 void GameObject::RenderZ(Renderer * pRenderer) const
 {
 	const XMMATRIX world = mTransform.WorldTransformationMatrix();
-	const bool bIs2DGeometry = false;	// todo: fix self shadowing 2D geometry
-		//m_model.m_mesh == GEOMETRY::TRIANGLE || 
-		//m_model.m_mesh == GEOMETRY::QUAD || 
-		//m_model.m_mesh == GEOMETRY::GRID;
+	const bool bIs2DGeometry = 
+		mModel.mMesh == EGeometry::TRIANGLE || 
+		mModel.mMesh == EGeometry::QUAD || 
+		mModel.mMesh == EGeometry::GRID;
 	const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 
 	pRenderer->SetBufferObj(mModel.mMesh);
@@ -121,6 +80,7 @@ void GameObject::Clear()
 {
 	mTransform = Transform();
 	mModel = Model();
+	mRenderSettings = GameObjectRenderSettings();
 }
 
 

@@ -56,7 +56,7 @@ bool BaseSystem::Init()
 
 	if (!ENGINE->Load())
 	{
-		Log::Error("cannot load engine. Exiting..");
+		Log::Error("Exiting..");
 		return false;
 	}
 

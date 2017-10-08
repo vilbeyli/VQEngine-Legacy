@@ -39,7 +39,7 @@ public:
 
 private:
 	void InitializeLights(SerializedScene& scene);
-	void InitializeObjectArrays();
+	void InitializeObjectArrays(SerializedScene& scene);
 	void UpdateCentralObj(const float dt);
 	void RenderCentralObjects(const SceneView& sceneView, bool sendMaterialData) const;
 // ----------------------------------------------------------------------
@@ -76,17 +76,14 @@ private:
 	} m_room;
 
 	std::vector<GameObject> spheres;
-	std::vector<GameObject> cubes;
+	
+	/// todo: move to ao test scene
+	// std::vector<GameObject> cubes; 
+	//GameObject Plane2;
+	//GameObject obj2;
 
-	GameObject triangle;
-	GameObject quad;
-	GameObject grid;
-	GameObject cylinder;
-	GameObject cube;
-	GameObject sphere;
+	std::vector<GameObject> objects;
 
-	GameObject Plane2;
-	GameObject obj2;
 
 	std::vector<Animation> m_animations;
 };

@@ -28,8 +28,11 @@
 
 
 const char* file_root		= "Data\\";
-const char* scene_file		= "RoomScene.scn";
 const char* settings_file	= "settings.ini";	
+const char* scene_files[] = {
+	"Scenes\\Room.scn",
+	"Scenes\\SSAOTest.scn"
+};
 
 const std::unordered_map<std::string, bool> sBoolTypeReflection
 {
@@ -149,7 +152,7 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::R
 SerializedScene SceneParser::ReadScene()
 {
 	SerializedScene scene;
-	std::string filePath = std::string(file_root) + std::string(scene_file);
+	std::string filePath = std::string(file_root) + std::string(scene_files[0]);
 	std::ifstream sceneFile(filePath.c_str());
 
 	if (sceneFile.is_open())
@@ -163,16 +166,32 @@ SerializedScene SceneParser::ReadScene()
 			std::vector<std::string> command = split(line, ' ', '\t');	// ignore whitespace
 			ParseScene(command, scene);									// process command
 		}
+		scene.loadSuccess = '1';
 	}
 	else
 	{
-		Log::Error( "Parser: Unknown setting command");
+		Log::Error("Cannot open scene file: %s", filePath.c_str());
+		scene.loadSuccess = '0';
 	}
 
 	sceneFile.close();
 	return scene;
 }
 
+
+// Scene File Formatting:
+// ---------------------------------------------------------------------------------------------------------------
+// - all lowercase
+// - '//' starts a comment
+
+// Object initializations
+// ---------------------------------------------------------------------------------------------------------------
+// Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
+// Camera		: near far vfov  pos(3:xyz)  yaw pitch
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
+// BRDF			:
+// Phong		:
+// Object		: transform, brdf/phong, mesh
 void SceneParser::ParseScene(const std::vector<std::string>& command, SerializedScene& scene)
 {
 	// state tracking
@@ -363,8 +382,6 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 	}
 	else if (cmd == "transform")
 	{
-		Log::Info("Todo: transform");
-		return;
 		// #Parameters: 7-9
 		//--------------------------------------------------------------
 		// Position(3), Rotation(3), UniformScale(1)/Scale(3)
@@ -384,9 +401,9 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 		float rotX = stof(command[4]);
 		float rotY = stof(command[5]);
 		float rotZ = stof(command[6]);
-		tf.SetXRotationDeg(rotX);
-		tf.SetYRotationDeg(rotY);
-		tf.SetZRotationDeg(rotZ);
+		tf.RotateAroundGlobalXAxisDegrees(rotX);
+		tf.RotateAroundGlobalYAxisDegrees(rotY);
+		tf.RotateAroundGlobalZAxisDegrees(rotZ);
 
 		float sclX = stof(command[7]);
 		if (command.size() <= 8)

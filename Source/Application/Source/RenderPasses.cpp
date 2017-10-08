@@ -97,7 +97,6 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	pRenderer->BindDepthTarget(_shadowDepthTarget);			// only depth stencil buffer
-	pRenderer->SetRasterizerState(_shadowRenderState);		// shadow render state: cull front faces, fill solid, clip dep
 	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
 	pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
 	pRenderer->SetConstant4x4f("viewProj", shadowLights.front()->GetLightSpaceMatrix());
@@ -150,9 +149,9 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_bloomPass._blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 
 	D3D11_SAMPLER_DESC blurSamplerDesc = {};
-	blurSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	blurSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	blurSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	blurSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	blurSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	blurSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	blurSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	this->_bloomPass._blurSampler = pRenderer->CreateSamplerState(blurSamplerDesc);
 	

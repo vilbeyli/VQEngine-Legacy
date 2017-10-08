@@ -182,9 +182,13 @@ bool Engine::Initialize(HWND hwnd)
 
 bool Engine::Load()
 {
-	bool bLoadSuccess = false;
-	m_sceneManager->Load(m_pRenderer, nullptr, s_rendererSettings, m_pCamera);
-	
+	const bool bLoadSuccess = m_sceneManager->Load(m_pRenderer, nullptr, s_rendererSettings, m_pCamera);
+	if (!bLoadSuccess)
+	{
+		Log::Error("Engine couldn't load scene.");
+		return false;
+	}
+
 	{	// RENDER PASS INITIALIZATION
 		// todo: static game object array in gameobj.h or engine.h
 		m_shadowMapPass.Initialize(m_pRenderer, m_pRenderer->m_device, s_rendererSettings.shadowMap);
@@ -194,16 +198,11 @@ bool Engine::Load()
 		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallR);
 		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.wallF);
 		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.m_room.ceiling);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.quad);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.grid);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.cylinder);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.triangle);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.cube);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.sphere);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.obj2);
-		m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.Plane2);
+		for (GameObject& obj : m_sceneManager->m_roomScene.objects) m_ZPassObjects.push_back(&obj);
 
-		for (GameObject& obj : m_sceneManager->m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
+		//m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.obj2);
+		//m_ZPassObjects.push_back(&m_sceneManager->m_roomScene.Plane2);
+		//for (GameObject& obj : m_sceneManager->m_roomScene.cubes)	m_ZPassObjects.push_back(&obj);
 		for (GameObject& obj : m_sceneManager->m_roomScene.spheres)	m_ZPassObjects.push_back(&obj);
 
 		m_postProcessPass.Initialize(m_pRenderer, s_rendererSettings.postProcess);
@@ -223,11 +222,8 @@ bool Engine::Load()
 		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 		m_normalSampler = m_pRenderer->CreateSamplerState(normalSamplerDesc);
 	}
-
 	m_activeSkybox = m_sceneManager->GetSceneSkybox();
-
-	bLoadSuccess = true;
-	return bLoadSuccess;
+	return true;
 }
 
 void Engine::CalcFrameStats()
@@ -479,6 +475,20 @@ void Engine::Render()
 		const float clearColor[4] = { 0.2f, 0.4f, 0.3f, 1.0f };
 		const float clearDepth = 1.0f;
 
+		// AMBIENT OCCLUSION  PASS
+		if (m_isAmbientOcclusionOn && false)
+		{
+			m_pRenderer->BeginEvent("Z-PrePass");
+			// todo: z-prepass + normals
+			m_pRenderer->EndEvent();
+
+			m_pRenderer->BeginEvent("Ambient Occlusion Pass");
+			//m_SSAOPass.RenderOcclusion(m_pRenderer, texNormal, texPosition, m_sceneView);
+			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
+			m_SSAOPass.GaussianBlurPass(m_pRenderer);
+			m_pRenderer->EndEvent();
+		}
+
 		m_pRenderer->BindRenderTarget(m_postProcessPass._worldRenderTarget);
 		m_pRenderer->BindDepthTarget(0);
 		m_pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_W);
@@ -518,9 +528,13 @@ void Engine::Render()
 		if (m_useDeferredRendering)
 			m_pRenderer->BindDepthTarget(m_worldDepthTarget);
 
+		constexpr bool bSendMaterial = false;
 		m_pRenderer->SetShader(EShaders::TBN);
-		m_sceneManager->m_roomScene.cube.Render(m_pRenderer, m_sceneView, false);
-		m_sceneManager->m_roomScene.sphere.Render(m_pRenderer, m_sceneView, false);
+		for (const GameObject& obj : m_sceneManager->m_roomScene.objects)
+		{
+			if (obj.mRenderSettings.bRenderTBN)
+				obj.Render(m_pRenderer, m_sceneView, bSendMaterial);
+		}
 
 		if (m_useDeferredRendering)
 			m_pRenderer->UnbindDepthTarget();

@@ -24,21 +24,21 @@
 class Renderer;
 struct SceneView;
 
+struct GameObjectRenderSettings
+{
+	bool bRenderTBN = false;
+	bool pRenderDepth = true;
+};
+
 class GameObject
 {
 public:
-	GameObject();
-	~GameObject();
-	GameObject(const GameObject& obj);
-
-	GameObject& operator=(const GameObject& obj);
-
 	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const;
 	void RenderZ(Renderer* pRenderer) const;
-
 	void Clear();
-public:
-	Transform	mTransform;
-	Model		mModel;
+
+	Transform					mTransform;
+	Model						mModel;
+	GameObjectRenderSettings	mRenderSettings;
 };
 

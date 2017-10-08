@@ -47,4 +47,5 @@ struct SerializedScene
 	Settings::Camera		cameraSettings;
 	std::vector<Light>		lights;
 	std::vector<GameObject> objects;
+	char loadSuccess = '0';
 };

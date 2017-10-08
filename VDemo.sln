@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.12
+VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "Source\Application\Application.vcxproj", "{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -64,11 +64,16 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3863EBE7-75B9-4B02-8CCC-44425CE9059A}"
 	ProjectSection(SolutionItems) = preProject
-		Data\RoomScene.scn = Data\RoomScene.scn
 		Data\settings.ini = Data\settings.ini
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Utilities", "Source\Utilities\Utilities.vcxproj", "{19AECA67-F607-4DCC-847B-A6196C924945}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scenes", "Scenes", "{2C145C7D-4AE8-44FD-8933-0649D7918E13}"
+	ProjectSection(SolutionItems) = preProject
+		Data\Scenes\Room.scn = Data\Scenes\Room.scn
+		Data\Scenes\SSAOTest.scn = Data\Scenes\SSAOTest.scn
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

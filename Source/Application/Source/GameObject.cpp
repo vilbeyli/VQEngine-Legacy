@@ -51,14 +51,7 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 		break;
 	case EShaders::NORMAL:
 		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
-		pRenderer->SetConstant1f("isNormalMap", mat->normalMap == -1 ? 0 : 1);
-		if(mat->normalMap != -1) pRenderer->SetTexture("gNormalMap", mat->normalMap);
-		pRenderer->SetConstant4x4f("worldViewProj", wvp);
-		break;
 	case EShaders::UNLIT:
-		pRenderer->SetConstant3f("diffuse", mat->diffuse);
-		pRenderer->SetConstant1f("isDiffuseMap", mat->diffuseMap == -1 ? 0 : 1);
-		if (mat->diffuseMap != -1) pRenderer->SetTexture("gDiffuseMap", mat->diffuseMap);
 	case EShaders::TEXTURE_COORDINATES:
 		pRenderer->SetConstant4x4f("worldViewProj", wvp);
 		break;

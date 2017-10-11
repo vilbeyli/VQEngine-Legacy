@@ -28,14 +28,6 @@
 
 constexpr size_t	RAND_LIGHT_COUNT	= 0;
 
-constexpr size_t	CUBE_ROW_COUNT		= 21;
-constexpr size_t	CUBE_COLUMN_COUNT	= 4;
-constexpr size_t	CUBE_COUNT			= CUBE_ROW_COUNT * CUBE_COLUMN_COUNT;
-constexpr float		CUBE_DISTANCE		= 4.0f * 1.4f;
-
-//constexpr size_t	CUBE_ROW_COUNT		= 20;
-//constexpr size_t	CUBE_ROW_COUNT		= 20;
-
 constexpr float		DISCO_PERIOD		= 0.25f;
 
 enum class WALLS
@@ -223,53 +215,10 @@ void RoomScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 void RoomScene::InitializeObjectArrays(SerializedScene& scene)
 {
 #if 0
-	int i = 3;
-	const float xCoord = 85.0f;
-	const float distToEachOther = -30.0f;
-	grid.mTransform = scene.objects.back().mTransform;
-	--i;
-
-	cube.mTransform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	cube.mTransform.SetUniformScale(5.0f);
-
-	//cubes.front().m_transform.Translate(0, 30, 0);
-	cube.mTransform.SetPosition(0, 65, 0);
-	cube.mTransform.SetXRotationDeg(90);
-	cube.mTransform.RotateAroundGlobalXAxisDegrees(30);
-	cube.mTransform.RotateAroundGlobalYAxisDegrees(30);
 	cube.mModel.mBRDF_Material.normalMap = mpRenderer->CreateTextureFromFile("BumpMapTexturePreview.png");
 	cube.mModel.mBRDF_Material.metalness = 0.6f;
 	cube.mModel.mBRDF_Material.roughness = 0.15f;
-
-	--i;
-
-	cylinder.mTransform.SetPosition(xCoord, 0.0f, distToEachOther * i);
-	cylinder.mTransform.SetUniformScale(7.0f);
-	--i;
-
-
-	sphere.mTransform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	//sphere.m_transform.SetPosition(0, 20.0f, 0);
-	//sphere.m_transform.SetUniformScale(5.0f);
-	--i;
-
-	triangle.mTransform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	triangle.mTransform.SetXRotationDeg(30.0f);
-	triangle.mTransform.RotateAroundGlobalYAxisDegrees(30.0f);
-	triangle.mTransform.SetUniformScale(4.0f);
-	--i;
-
-	quad.mTransform.SetPosition(xCoord, 5.0f, distToEachOther * i);
-	quad.mTransform.SetXRotationDeg(30);
-	quad.mTransform.RotateAroundGlobalYAxisDegrees(30);
-	quad.mTransform.SetUniformScale(4.0f);
-
 	grid.mModel.mMesh = scene.objects.back().mModel.mMesh;
-	cylinder.mModel.mMesh = EGeometry::CYLINDER;
-	triangle.mModel.mMesh = EGeometry::TRIANGLE;
-	    quad.mModel.mMesh = EGeometry::QUAD;
-		cube.mModel.mMesh = EGeometry::CUBE;
-	 sphere.mModel.mMesh = EGeometry::SPHERE;
 
 		grid.mModel.mBRDF_Material.roughness = 0.02f;
 		grid.mModel.mBRDF_Material.metalness = 0.6f;
@@ -281,51 +230,6 @@ void RoomScene::InitializeObjectArrays(SerializedScene& scene)
 	  sphere.mModel.mBRDF_Material.roughness = 0.3f;
 	  sphere.mModel.mBRDF_Material.metalness = 1.0f;
 	  sphere.mModel.SetDiffuseColor(LinearColor(0.04f, 0.04f, 0.04f));
-	  sphere.mTransform.SetUniformScale(2.5f);
-#endif
-#if 0 // todo: move to ssao scene
-	  Plane2.mModel.mMesh = EGeometry::QUAD;
-	  Plane2.mTransform.SetPosition(-300, 0, 0);
-	  Plane2.mTransform.SetUniformScale(100);
-	  Plane2.mTransform.RotateAroundGlobalXAxisDegrees(90);
-
-	  obj2.mModel.mMesh = EGeometry::SPHERE;
-	  obj2.mTransform.SetPosition(-300, 10, 0);
-	  obj2.mTransform.SetUniformScale(10);
-
-	  {	// grid arrangement ( (row * col) cubes that are 'CUBE_DISTANCE' apart from each other )
-		  const std::vector<vec3>   rowRotations = { vec3::Zero, vec3::Up, vec3::Right, vec3::Forward };
-		  static std::vector<float> sCubeDelays = std::vector<float>(CUBE_COUNT, 0.0f);
-		  const std::vector<LinearColor>  colors = { LinearColor::white, LinearColor::red, LinearColor::green, LinearColor::blue, LinearColor::orange, LinearColor::light_gray, LinearColor::cyan };
-
-		  for (int i = 0; i < CUBE_ROW_COUNT; ++i)
-		  {
-			  //Color color = c_colors[i % c_colors.size()];
-			  LinearColor color = vec3(1, 1, 1) * static_cast<float>(i) / (float)(CUBE_ROW_COUNT - 1);
-
-			  for (int j = 0; j < CUBE_COLUMN_COUNT; ++j)
-			  {
-				  GameObject cube;
-
-				  // set transform
-				  float x, y, z;	// position
-				  x = i * CUBE_DISTANCE - CUBE_ROW_COUNT * CUBE_DISTANCE / 2;
-				  y = 5.0f + cubes.size();
-				  z = j * CUBE_DISTANCE - CUBE_COLUMN_COUNT * CUBE_DISTANCE / 2;
-				  cube.mTransform.SetPosition(x, y, z + 350);
-				  cube.mTransform.SetUniformScale(4.0f);
-
-				  // set material
-				  cube.mModel.SetDiffuseColor(color);
-				  cube.mModel.SetNormalMap(mpRenderer->CreateTextureFromFile("simple_normalmap.png"));
-
-				  // set model
-				  cube.mModel.mMesh = EGeometry::CUBE;
-
-				  cubes.push_back(cube);
-			  }
-		  }
-	  }
 #endif
 }
 
@@ -362,18 +266,6 @@ void RoomScene::UpdateCentralObj(const float dt)
 	// assume first object is the cube
 	const float cubeRotSpeed = 100.0f; // degs/s
 	objects.front().mTransform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
-
-	for (int i = 0; i <  CUBE_ROW_COUNT; ++i)
-	{
-		for (int j = 0; j < CUBE_COLUMN_COUNT; ++j)
-		{
-			if (i == 0 && j == 0) continue;
-			//if (j > 4)
-			{	// exclude diagonal
-				//cubes[j* CUBE_ROW_COUNT + i].m_transform.RotateAroundAxisDegrees(vec3::XAxis, dt * cubeRotSpeed);
-			}
-		}
-	}
 
 #ifdef ROTATE_SHADOW_LIGHT
 	mLights[0]._transform.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);

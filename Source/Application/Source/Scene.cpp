@@ -37,8 +37,8 @@ void Scene::Render(const SceneView& sceneView) const
 	const ShaderID selectedShader = ENGINE->GetSelectedShader();
 	const bool bSendMaterialData = (
 		selectedShader == EShaders::FORWARD_PHONG
-		//|| selectedShader == EShaders::UNLIT
-		//|| selectedShader == EShaders::NORMAL
+		|| selectedShader == EShaders::UNLIT
+		|| selectedShader == EShaders::NORMAL
 		|| selectedShader == EShaders::FORWARD_BRDF
 		|| selectedShader == EShaders::DEFERRED_GEOMETRY
 		);

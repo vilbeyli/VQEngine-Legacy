@@ -27,5 +27,7 @@ public:
 
 	SSAOTestScene(SceneManager& sceneMan, std::vector<Light>& lights);
 	~SSAOTestScene() = default;
+
+	std::vector<GameObject> cubes; 
 };
 

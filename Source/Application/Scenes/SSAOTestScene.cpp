@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "SSAOTestScene.h"
-
+#include "Renderer.h"
 
 SSAOTestScene::SSAOTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	:
@@ -33,6 +33,45 @@ void SSAOTestScene::Load(SerializedScene& scene)
 	}
 #endif
 	//m_skybox = ESkyboxPreset::NIGHT_SKY;
+
+	// grid arrangement ( (row * col) cubes that are 'CUBE_DISTANCE' apart from each other )
+	constexpr size_t	CUBE_ROW_COUNT = 4;
+	constexpr size_t	CUBE_COLUMN_COUNT = 3;
+	constexpr size_t	CUBE_COUNT = CUBE_ROW_COUNT * CUBE_COLUMN_COUNT;
+	constexpr float		CUBE_DISTANCE = 4.0f * 2.0f;
+	{	
+		const std::vector<vec3>   rowRotations = { vec3::Zero, vec3::Up, vec3::Right, vec3::Forward };
+		static std::vector<float> sCubeDelays = std::vector<float>(CUBE_COUNT, 0.0f);
+		const std::vector<LinearColor>  colors = { LinearColor::white, LinearColor::red, LinearColor::green, LinearColor::blue, LinearColor::orange, LinearColor::light_gray, LinearColor::cyan };
+
+		for (int i = 0; i < CUBE_ROW_COUNT; ++i)
+		{
+			//Color color = c_colors[i % c_colors.size()];
+			LinearColor color = vec3(1, 1, 1) * static_cast<float>(i) / (float)(CUBE_ROW_COUNT - 1);
+
+			for (int j = 0; j < CUBE_COLUMN_COUNT; ++j)
+			{
+				GameObject cube;
+
+				// set transform
+				float x, y, z;	// position
+				x = i * CUBE_DISTANCE - CUBE_ROW_COUNT * CUBE_DISTANCE / 2;
+				y = 5.0f + cubes.size();
+				z = j * CUBE_DISTANCE - CUBE_COLUMN_COUNT * CUBE_DISTANCE / 2;
+				cube.mTransform.SetPosition(x, y, z);
+				cube.mTransform.SetUniformScale(4.0f);
+
+				// set material
+				cube.mModel.SetDiffuseColor(color);
+				cube.mModel.SetNormalMap(mpRenderer->CreateTextureFromFile("simple_normalmap.png"));
+
+				// set model
+				cube.mModel.mMesh = EGeometry::CUBE;
+
+				cubes.push_back(cube);
+			}
+		}
+	}
 }
 
 void SSAOTestScene::Update(float dt)
@@ -42,7 +81,7 @@ void SSAOTestScene::Update(float dt)
 
 void SSAOTestScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
 {
-
+	for (const auto& obj : cubes) obj.Render(mpRenderer, sceneView, bSendMaterialData);
 }
 
 void SSAOTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const

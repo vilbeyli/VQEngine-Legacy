@@ -79,13 +79,6 @@ private:
 
 	std::vector<GameObject> spheres;
 	std::vector<Animation> m_animations;
-
-
-
-	/// todo: move to ao test scene
-	// std::vector<GameObject> cubes; 
-	//GameObject Plane2;
-	//GameObject obj2;
 };
 
 

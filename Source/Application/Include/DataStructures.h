@@ -49,14 +49,17 @@ struct ShadowCasterData
 	XMMATRIX  lightSpaceMatrix;
 };
 
-
+using LightDataArray = std::array<LightShaderSignature, MAX_POINT_LIGHT_COUNT>;
+using ShadowCasterDataArray = std::array<ShadowCasterData, MAX_SPOT_LIGHT_COUNT>;
 struct SceneLightData
 {
 	size_t pointLightCount;
-	std::array<LightShaderSignature, MAX_POINT_LIGHT_COUNT> pointLights;
+	LightDataArray pointLights;
 
 	size_t spotLightCount;
-	std::array<LightShaderSignature, MAX_SPOT_LIGHT_COUNT>  spotLights;
+	LightDataArray spotLights;
 
-	std::array<ShadowCasterData, MAX_SPOT_LIGHT_COUNT>  shadowCasterData;
+	ShadowCasterDataArray shadowCasterData;
+
+	inline void ResetCounts() { pointLightCount = 0; spotLightCount = 0; /*todo: directional light count*/ }
 };

@@ -27,10 +27,12 @@
 class RoomScene : public Scene
 {
 public:
-	void Load(Renderer* pRenderer, SerializedScene& scene) override;
+	void Load(SerializedScene& scene) override;
 	void Update(float dt) override;
-	void Render(Renderer* pRenderer, const SceneView& sceneView) const override;
-	void GetShadowCasterObjects(std::vector<GameObject*>& casters) override;
+	void Render(const SceneView& sceneView, bool bSendMaterialData) const override;
+
+	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;	// todo: rename this... decide between depth and shadows
+	void GetSceneObjects(std::vector<const GameObject*>&) const override;
 
 	RoomScene(SceneManager& sceneMan, std::vector<Light>& lights);
 	~RoomScene() = default;

@@ -18,54 +18,34 @@
 
 #include "SSAOTestScene.h"
 
-#include "Engine.h"
 
 SSAOTestScene::SSAOTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	:
 	Scene(sceneMan, lights)
 {}
 
-void SSAOTestScene::Load(Renderer* pRenderer, SerializedScene& scene)
+void SSAOTestScene::Load(SerializedScene& scene)
 {
-	mpRenderer = pRenderer;
-	objects = std::move(scene.objects);
+#if 0
 	for (GameObject& obj : objects)
 	{
 		obj.mRenderSettings.bRenderTBN = true;
 	}
-
+#endif
 	//m_skybox = ESkyboxPreset::NIGHT_SKY;
 }
 
 void SSAOTestScene::Update(float dt)
 {
-		
-}
-
-void SSAOTestScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
-{
-	const ShaderID selectedShader = ENGINE->GetSelectedShader();
-	const bool bSendMaterialData = (
-		selectedShader == EShaders::FORWARD_PHONG
-		|| selectedShader == EShaders::UNLIT
-		|| selectedShader == EShaders::NORMAL
-		|| selectedShader == EShaders::FORWARD_BRDF
-		|| selectedShader == EShaders::DEFERRED_GEOMETRY
-		);
 	
-	for (const auto& obj : objects) obj.Render(mpRenderer, sceneView, bSendMaterialData);
-
-	//m_room.Render(mpRenderer, sceneView, bSendMaterialData);
-	//for (const auto& sph : spheres) sph.Render(mpRenderer, sceneView, bSendMaterialData);
 }
 
-void SSAOTestScene::GetShadowCasterObjects(std::vector<GameObject*>& casters)
+void SSAOTestScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
 {
-	//casters.push_back(&m_room.floor);
-	//casters.push_back(&m_room.wallL);
-	//casters.push_back(&m_room.wallR);
-	//casters.push_back(&m_room.wallF);
-	//casters.push_back(&m_room.ceiling);
-	//for (GameObject& obj : objects) casters.push_back(&obj);
-	//for (GameObject& obj : spheres)	casters.push_back(&obj);
+
+}
+
+void SSAOTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
+{
+	
 }

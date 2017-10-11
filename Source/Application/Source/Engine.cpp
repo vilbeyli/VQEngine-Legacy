@@ -193,28 +193,8 @@ bool Engine::Load()
 	{	// RENDER PASS INITIALIZATION
 		mShadowMapPass.Initialize(mpRenderer, mpRenderer->m_device, rendererSettings.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
-
-		// Shadow Pass
-		switch(sEngineSettings.levelToLoad)
-		{
-		case 0:		// Room Scene
-		{
-			mpSceneManager->mRoomScene.GetShadowCasterObjects(mZPassObjects);
-		} break;
-		case 1:		// SSAOTest Scene
-		{
-			//mZPassObjects.push_back(&mSceneManager->mRoomScene.obj2);
-			//mZPassObjects.push_back(&mSceneManager->mRoomScene.Plane2);
-			//for (GameObject& obj : mSceneManager->mRoomScene.cubes)	mZPassObjects.push_back(&obj);
-		} break;
-
-		default:
-			Log::Info("Unknown level = %d", sEngineSettings.levelToLoad);
-			break;
-		}
 		
-
-
+		mpSceneManager->mpActiveScene->GetShadowCasters(mZPassObjects);
 		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
 		mDebugPass.Initialize(mpRenderer);
 		mSSAOPass.Initialize(mpRenderer);
@@ -315,28 +295,27 @@ void Engine::PreRender()
 	mSceneView.projection = proj;
 
 	// gather scene lights
-	size_t spotCount = 0;	size_t lightCount = 0;
+	mSceneLightData.ResetCounts();
+	std::array<size_t*         , Light::ELightType::LIGHT_TYPE_COUNT> lightCounts 
+	{ // can't use size_t& as template instantiation won't allow size_t&*. using size_t* instead.
+		&mSceneLightData.pointLightCount,
+		&mSceneLightData.spotLightCount,
+		&/*TODO: add directional lights*/mSceneLightData.spotLightCount,
+	};
+	std::array<LightDataArray*, Light::ELightType::LIGHT_TYPE_COUNT> lightData
+	{	// can't use LightDataArray& as template instantiation won't allow LightDataArray&*. using LightDataArray* instead.
+		&mSceneLightData.pointLights, 
+		&mSceneLightData.spotLights, 
+		&/*TODO: add directional lights*/mSceneLightData.spotLights, 
+	};
+
 	for (const Light& l : mLights)
 	{
-		switch (l._type)
-		{
-		case Light::ELightType::POINT:
-			mSceneLightData.pointLights[lightCount] = l.ShaderSignature();
-			++lightCount;
-			break;
-		case Light::ELightType::SPOT:
-			mSceneLightData.spotLights[spotCount] = l.ShaderSignature();
-			++spotCount;
-			break;
-		default:
-			OutputDebugString("SceneManager::RenderBuilding(): ERROR: UNKOWN LIGHT TYPE\n");
-			break;
-		}
+		const size_t lightIndex = (*lightCounts[l._type])++;
+		(*lightData[l._type])[lightIndex] = l.ShaderSignature();
 	}
-	mSceneLightData.spotLightCount = spotCount;
-	mSceneLightData.pointLightCount = lightCount;
 
-	if (spotCount > 0)	// temp hack: assume 1 spot light casting shadows
+	if (mSceneLightData.spotLightCount > 0)	// temp hack: assume 1 spot light casting shadows
 	{
 		mSceneLightData.shadowCasterData[0].shadowMap = mShadowMapPass._shadowMap;
 		mSceneLightData.shadowCasterData[0].shadowSampler = mShadowMapPass._shadowSampler;
@@ -517,16 +496,19 @@ void Engine::Render()
 	const bool bIsShaderTBN = true;
 	if (bIsShaderTBN)
 	{
+		constexpr bool bSendMaterial = false;
+		std::vector<const GameObject*> objects;
+		mpSceneManager->mpActiveScene->GetSceneObjects(objects);
+
 		mpRenderer->BeginEvent("Draw TBN Vectors");
 		if (mUseDeferredRendering)
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 
-		constexpr bool bSendMaterial = false;
 		mpRenderer->SetShader(EShaders::TBN);
-		for (const GameObject& obj : mpSceneManager->mRoomScene.objects)
+		for (const GameObject* obj : objects)
 		{
-			if (obj.mRenderSettings.bRenderTBN)
-				obj.Render(mpRenderer, mSceneView, bSendMaterial);
+			if (obj->mRenderSettings.bRenderTBN)
+				obj->Render(mpRenderer, mSceneView, bSendMaterial);
 		}
 
 		if (mUseDeferredRendering)

@@ -31,7 +31,7 @@ struct Light
 {
 	friend class Graphics;
 
-	enum class ELightType
+	enum ELightType : size_t
 	{
 		POINT = 0,
 		SPOT,

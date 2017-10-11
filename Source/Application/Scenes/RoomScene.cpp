@@ -53,10 +53,9 @@ RoomScene::RoomScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	Scene(sceneMan, lights)
 {}
 
-void RoomScene::Load(Renderer* pRenderer, SerializedScene& scene)
+void RoomScene::Load(SerializedScene& scene)
 {
-	mpRenderer = pRenderer;
-	m_room.Initialize(pRenderer);
+	m_room.Initialize(mpRenderer);
 	
 	// lights
 	//---------------------------------------------------------------
@@ -176,7 +175,6 @@ void RoomScene::Load(Renderer* pRenderer, SerializedScene& scene)
 	}
 
 	// objects from scene file
-	objects = std::move(scene.objects);
 	for (GameObject& obj : objects)
 	{
 		//if (obj.mModel.mMesh == EGeometry::SPHERE || obj.mModel.mMesh == EGeometry::CUBE)
@@ -194,35 +192,34 @@ void RoomScene::Update(float dt)
 
 void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj);
 
-void RoomScene::Render(Renderer* pRenderer, const SceneView& sceneView) const
+void RoomScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
 {
-	const ShaderID selectedShader = ENGINE->GetSelectedShader();
-	const bool bSendMaterialData = (
-		   selectedShader == EShaders::FORWARD_PHONG 
-		|| selectedShader == EShaders::UNLIT 
-		|| selectedShader == EShaders::NORMAL
-		|| selectedShader == EShaders::FORWARD_BRDF
-		|| selectedShader == EShaders::DEFERRED_GEOMETRY
-	);
-
 	m_room.Render(mpRenderer, sceneView, bSendMaterialData);
 	for (const auto& sph : spheres) sph.Render(mpRenderer, sceneView, bSendMaterialData);
-	for (const auto& obj : objects) obj.Render(mpRenderer, sceneView, bSendMaterialData);
 }
 
-void RoomScene::GetShadowCasterObjects(std::vector<GameObject*>& casters)
+void RoomScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
 {
+	Scene::GetShadowCasters(casters);
 	casters.push_back(&m_room.floor);
 	casters.push_back(&m_room.wallL);
 	casters.push_back(&m_room.wallR);
 	casters.push_back(&m_room.wallF);
 	casters.push_back(&m_room.ceiling);
-	for (GameObject& obj : objects) casters.push_back(&obj);
-	for (GameObject& obj : spheres)	casters.push_back(&obj);
+	for (const GameObject& obj : spheres)	casters.push_back(&obj);
 }
 
+void RoomScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
+{
+	Scene::GetSceneObjects(objs);
+	objs.push_back(&m_room.floor);
+	objs.push_back(&m_room.wallL);
+	objs.push_back(&m_room.wallR);
+	objs.push_back(&m_room.wallF);
+	objs.push_back(&m_room.ceiling);
+	for (const GameObject& obj : spheres)	objs.push_back(&obj);
+}
 
-	 		  
 void RoomScene::InitializeObjectArrays(SerializedScene& scene)
 {
 #if 0

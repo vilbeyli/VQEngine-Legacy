@@ -58,11 +58,18 @@ private:
 	void HandleInput();
 
 private:
-	shared_ptr<Camera>		mpSceneCamera;
-
-	RoomScene				mRoomScene;	// todo: rethink scene management
-	SSAOTestScene			mSSAOTestScene;
+	shared_ptr<Camera>		mpSceneCamera;	// probably scenes should handle camera themselves
 
 	SerializedScene			mSerializedScene;
 	Scene*					mpActiveScene;
+
+	// current design for adding new scenes is as follows:
+	// - add the .scn scene file to Data/Levels directory
+	// - Create a class for your scene and inherit from Scene base class
+	// - override functions as necessary. 
+	// - edit settings.ini to start with your scene
+	RoomScene				mRoomScene;
+	SSAOTestScene			mSSAOTestScene;
+	
+
 };

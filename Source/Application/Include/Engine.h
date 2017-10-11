@@ -154,7 +154,7 @@ private:
 	DebugPass						mDebugPass;
 	
 
-	std::vector<GameObject*>		mZPassObjects;
+	std::vector<const GameObject*>	mZPassObjects;
 };
 
 #define ENGINE Engine::GetEngine()

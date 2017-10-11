@@ -55,9 +55,9 @@ struct ShadowMapPass
 	);
 	
 	void RenderShadowMaps(
-		Renderer*						pRenderer, 
-		const std::vector<const Light*> shadowLights, 
-		const std::vector<GameObject*> ZPassObjects
+		Renderer*							 pRenderer, 
+		const std::vector<const Light*>		 shadowLights, 
+		const std::vector<const GameObject*> ZPassObjects
 	) const;
 	
 	unsigned				_shadowMapDimension;

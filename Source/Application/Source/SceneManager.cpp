@@ -71,10 +71,11 @@ bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 		mpSceneCamera->ConfigureCamera(mSerializedScene.cameraSettings, settings.renderer.window);
 		switch (settings.levelToLoad)
 		{
-		case 0:	mRoomScene.Load(renderer, mSerializedScene); mpActiveScene = &mRoomScene; break;
-		case 1:	mSSAOTestScene.Load(renderer, mSerializedScene); mpActiveScene = &mSSAOTestScene; break;
+		case 0:	mpActiveScene = &mRoomScene; break;
+		case 1:	mpActiveScene = &mSSAOTestScene; break;
 		default:	break;
 		}
+		mpActiveScene->Load(renderer, mSerializedScene);
 		return true;
 	}
 	return false;
@@ -95,7 +96,7 @@ void SceneManager::Update(float dt)
 
 void SceneManager::Render(Renderer* pRenderer, const SceneView& sceneView) const
 {
-	mpActiveScene->Render(pRenderer, sceneView);
+	mpActiveScene->Render(sceneView);
 }
 
 

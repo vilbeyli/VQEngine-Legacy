@@ -16,6 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 #include "Scene.h"
+#include "Engine.h"
 
 Scene::Scene(SceneManager& sceneManager, std::vector<Light>& lights)
 	:
@@ -23,3 +24,45 @@ Scene::Scene(SceneManager& sceneManager, std::vector<Light>& lights)
 	mLights(lights),
 	mpRenderer(nullptr)	// pRenderer is initialized at Load()
 {}
+
+void Scene::Load(Renderer * pRenderer, SerializedScene & scene)
+{
+	mpRenderer = pRenderer;
+	objects = std::move(scene.objects);
+	Load(scene);
+}
+
+void Scene::Render(const SceneView& sceneView) const
+{
+	const ShaderID selectedShader = ENGINE->GetSelectedShader();
+	const bool bSendMaterialData = (
+		selectedShader == EShaders::FORWARD_PHONG
+		|| selectedShader == EShaders::UNLIT
+		|| selectedShader == EShaders::NORMAL
+		|| selectedShader == EShaders::FORWARD_BRDF
+		|| selectedShader == EShaders::DEFERRED_GEOMETRY
+		);
+
+	for (const auto& obj : objects) obj.Render(mpRenderer, sceneView, bSendMaterialData);
+	Render(sceneView, bSendMaterialData);
+}
+
+void Scene::GetShadowCasters(std::vector<const GameObject*>& casters) const
+{
+	for (const GameObject& obj : objects) 
+		if(obj.mRenderSettings.bRenderDepth)
+			casters.push_back(&obj);
+}
+
+void Scene::GetSceneObjects(std::vector<const GameObject*>& objs) const
+{
+#if 0
+	for (size_t i = 0; i < objects.size(); i++)
+	{
+		objs[i] = &objects[i];
+	}
+#else
+	for (const GameObject& obj : objects)
+		objs.push_back(&obj);
+#endif
+}

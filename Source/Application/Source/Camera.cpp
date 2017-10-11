@@ -54,6 +54,7 @@ void Camera::ConfigureCamera(const Settings::Camera & cameraSettings, const Sett
 	SetProjectionMatrix(VerticalFoV, AspectRatio, NEAR_PLANE, FAR_PLANE);
 
 	SetPosition(cameraSettings.x, cameraSettings.y, cameraSettings.z);
+	m_yaw = m_pitch = 0;
 	Rotate(cameraSettings.yaw, cameraSettings.pitch * DEG2RAD, 1.0f);
 }
 

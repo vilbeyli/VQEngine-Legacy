@@ -227,12 +227,16 @@ bool Engine::HandleInput()
 	if (mpInput->IsKeyTriggered(0x08)) // Key backspace
 		TogglePause();
 
-	if (mpInput->IsKeyTriggered("F1")) mSelectedShader = EShaders::TEXTURE_COORDINATES;
-	if (mpInput->IsKeyTriggered("F2")) mSelectedShader = EShaders::NORMAL;
-	if (mpInput->IsKeyTriggered("F3")) mSelectedShader = EShaders::UNLIT;
-	if (mpInput->IsKeyTriggered("F4")) mSelectedShader = mSelectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
 
-	if (mpInput->IsKeyTriggered("F5")) mpRenderer->sEnableBlend = !mpRenderer->sEnableBlend;
+	if (!mUseDeferredRendering)
+	{
+		if (mpInput->IsKeyTriggered("F1")) mSelectedShader = EShaders::TEXTURE_COORDINATES;
+		if (mpInput->IsKeyTriggered("F2")) mSelectedShader = EShaders::NORMAL;
+		if (mpInput->IsKeyTriggered("F3")) mSelectedShader = EShaders::UNLIT;
+		if (mpInput->IsKeyTriggered("F4")) mSelectedShader = mSelectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
+	}
+
+	//if (mpInput->IsKeyTriggered("F5")) mpRenderer->sEnableBlend = !mpRenderer->sEnableBlend;
 	if (mpInput->IsKeyTriggered("F6")) ToggleLightingModel();
 	if (mpInput->IsKeyTriggered("F7")) mDebugRender = !mDebugRender;
 	if (mpInput->IsKeyTriggered("F8")) ToggleRenderingPath();
@@ -480,11 +484,14 @@ void Engine::Render()
 
 		// LIGHTING
 		mpRenderer->BeginEvent("Lighting Pass");
-		mpRenderer->SetShader(mSelectedShader);	// forward brdf/phong
-		mpRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
-		mpRenderer->SetSamplerState("sNormalSampler", mNormalSampler);
+		mpRenderer->SetShader(mSelectedShader);
+		if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
+		{
+			mpRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+			mpRenderer->SetSamplerState("sNormalSampler", mNormalSampler);
+			SendLightData();
+		}
 
-		SendLightData();
 		mpSceneManager->Render(mpRenderer, mSceneView);
 		mpRenderer->EndEvent();
 

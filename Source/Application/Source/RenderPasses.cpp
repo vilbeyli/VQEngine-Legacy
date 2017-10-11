@@ -238,6 +238,7 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._isEnabled ? _bloomPass._finalRT : _worldRenderTarget);
 	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
 	pRenderer->BeginEvent("Tonemapping");
+	pRenderer->UnbindDepthTarget();
 	pRenderer->SetShader(EShaders::TONEMAPPING);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);

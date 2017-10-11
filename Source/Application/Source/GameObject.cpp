@@ -25,13 +25,16 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 	const EShaders shader = static_cast<EShaders>(pRenderer->GetActiveShader());
 	const XMMATRIX world = mTransform.WorldTransformationMatrix();
 	const XMMATRIX wvp = world * sceneView.viewProj;
+	
+	const Material* mat = [&]() -> const Material*{
+		if (shader == EShaders::FORWARD_BRDF || shader == EShaders::DEFERRED_GEOMETRY)
+			return &mModel.mBRDF_Material;
+		return &mModel.mBlinnPhong_Material;
+	}();
 
 	if (UploadMaterialDataToGPU)
 	{
-		if (shader == EShaders::FORWARD_BRDF || shader == EShaders::DEFERRED_GEOMETRY)
-			mModel.mBRDF_Material.SetMaterialConstants(pRenderer, shader);
-		else
-			mModel.mBlinnPhong_Material.SetMaterialConstants(pRenderer, shader);
+		mat->SetMaterialConstants(pRenderer, shader);
 	}
 
 	switch (shader)
@@ -46,7 +49,20 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 		pRenderer->SetConstant4x4f("normalViewMatrix", mTransform.NormalMatrix(world) * sceneView.view);
 		pRenderer->SetConstant4x4f("worldViewProj", wvp);
 		break;
-	default:
+	case EShaders::NORMAL:
+		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
+		pRenderer->SetConstant1f("isNormalMap", mat->normalMap == -1 ? 0 : 1);
+		if(mat->normalMap != -1) pRenderer->SetTexture("gNormalMap", mat->normalMap);
+		pRenderer->SetConstant4x4f("worldViewProj", wvp);
+		break;
+	case EShaders::UNLIT:
+		pRenderer->SetConstant3f("diffuse", mat->diffuse);
+		pRenderer->SetConstant1f("isDiffuseMap", mat->diffuseMap == -1 ? 0 : 1);
+		if (mat->diffuseMap != -1) pRenderer->SetTexture("gDiffuseMap", mat->diffuseMap);
+	case EShaders::TEXTURE_COORDINATES:
+		pRenderer->SetConstant4x4f("worldViewProj", wvp);
+		break;
+	default:	// lighting shaders
 		pRenderer->SetConstant4x4f("world", world);
 		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 		pRenderer->SetConstant4x4f("worldViewProj", wvp);

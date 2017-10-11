@@ -24,16 +24,10 @@ struct PSIn
 	float2 texCoord : TEXCOORD0;
 };
 
-cbuffer renderConsts
-{
-	float gammaCorrection;
-};
-
 cbuffer perObj
 {
 	float isNormalMap;
 };
-
 
 Texture2D gNormalMap;
 SamplerState samAnisotropic

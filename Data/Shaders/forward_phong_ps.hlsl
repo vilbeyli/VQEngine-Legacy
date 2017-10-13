@@ -108,10 +108,10 @@ float4 PSMain(PSIn In) : SV_TARGET
 	float3 Ia = s.diffuseColor * ambient;	// ambient
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
 	for (int i = 0; i < lightCount; ++i)	// POINT Lights
-		IdIs += Phong(lights[i], s, V, In.worldPos) * Attenuation(lights[i].attenuation, length(lights[i].position - In.worldPos), bUsePhongAttenuation);
+        IdIs += Phong(lights[i], s, V, In.worldPos) * Attenuation(lights[i].attenuation, length(lights[i].position - In.worldPos), bUsePhongAttenuation) * lights[i].brightness * POINTLIGHT_BRIGHTNESS_SCALAR_PHONG;
 
 	for (int j = 0; j < spotCount; ++j)		// SPOT Lights
-		IdIs += Phong(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos) * ShadowTest(In.worldPos, In.lightSpacePos, texShadowMap, sShadowSampler);
+        IdIs += Phong(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos) * ShadowTest(In.worldPos, In.lightSpacePos, texShadowMap, sShadowSampler) * spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
 
 	float3 illumination = Ia + IdIs;
 	

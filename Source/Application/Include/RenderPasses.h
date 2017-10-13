@@ -100,7 +100,7 @@ struct PostProcessPass
 		Renderer*						pRenderer, 
 		const Settings::PostProcess&	postProcessSettings
 	);
-	void Render(Renderer* pRenderer) const;
+	void Render(Renderer* pRenderer, bool bDeferredRendering) const;
 
 	RenderTargetID				_worldRenderTarget;
 	BloomPass					_bloomPass;

@@ -23,7 +23,7 @@
 
 #include "Scene.h"
 
-namespace Settings { struct Renderer; }
+namespace Settings { struct Rendering; }
 
 
 class SceneParser

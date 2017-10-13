@@ -41,7 +41,7 @@ public:
 	void UpdateWindowDimensions(int w, int h);
 
 private:
-	void InitWindow(const Settings::Renderer& rendererSettings);
+	void InitWindow(const Settings::Window& windowSettings);
 	void ShutdownWindows();
 	void InitRawInputDevices();
 

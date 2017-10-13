@@ -61,16 +61,17 @@ namespace Settings
 		bool HDREnabled = false;
 	};
 	
-	struct Renderer{
-		Window		window;
+	struct Rendering{
 		ShadowMap	shadowMap;
 		bool		bUseDeferredRendering;
+		bool		bUseBRDFLighting;	// should use enums when there's more than brdf and blinn-phong lighting
 		bool		bAmbientOcclusion;
 		PostProcess postProcess;
 	};
 
 	struct Engine {
-		Renderer renderer;
+		Window		window;
+		Rendering rendering;
 		int levelToLoad;
 	};
 };

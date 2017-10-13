@@ -115,12 +115,12 @@ void BlinnPhong_Material::SetMaterialConstants(Renderer* pRenderer, EShaders sha
 	switch (shader)
 	{
 	case EShaders::NORMAL:
-		pRenderer->SetConstant1f("isNormalMap", normalMap == -1 ? 0 : 1);
+		pRenderer->SetConstant1f("isNormalMap", normalMap == -1 ? 0.0f : 1.0f);
 		if (normalMap != -1) pRenderer->SetTexture("gNormalMap", normalMap);
 		break;
 	case EShaders::UNLIT:
 		pRenderer->SetConstant3f("diffuse", diffuse);
-		pRenderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0 : 1);
+		pRenderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0.0f : 1.0f);
 		if (diffuseMap != -1) pRenderer->SetTexture("gDiffuseMap", diffuseMap);
 		break;
 	default:

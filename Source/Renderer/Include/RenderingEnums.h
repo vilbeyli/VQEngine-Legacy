@@ -77,7 +77,10 @@ enum EDefaultSamplerState
 
 enum EDefaultDepthStencilState
 {
-	DEPTH_STENCIL_W,
+	DEPTH_STENCIL_WRITE,
+	DEPTH_STENCIL_DISABLED,
+	DEPTH_WRITE,
+	STENCIL_WRITE,
 	// add more as needed
 
 	DEPTH_STENCIL_STATE_COUNT
@@ -145,6 +148,7 @@ enum EShaders
 	SSAO,
 	BILATERAL_BLUR,
 	GAUSSIAN_BLUR_4x4,
+	Z_PREPRASS,
 
 	SHADER_COUNT
 };

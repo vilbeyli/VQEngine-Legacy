@@ -44,6 +44,9 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 		pRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
 		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 		break;
+	case EShaders::Z_PREPRASS:
+		pRenderer->SetConstant4x4f("worldView", world * sceneView.view);
+		break;
 	case EShaders::DEFERRED_GEOMETRY:
 		pRenderer->SetConstant4x4f("worldView", world * sceneView.view);
 		pRenderer->SetConstant4x4f("normalViewMatrix", mTransform.NormalMatrix(world) * sceneView.view);

@@ -91,10 +91,10 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::E
 		//---------------------------------------------------------------
 		// | Window Width	|  Window Height	| Fullscreen?	| VSYNC?
 		//---------------------------------------------------------------
-		settings.renderer.window.width      = stoi(line[1]);
-		settings.renderer.window.height     = stoi(line[2]);
-		settings.renderer.window.fullscreen = stoi(line[3]);
-		settings.renderer.window.vsync      = stoi(line[4]);
+		settings.window.width      = stoi(line[1]);
+		settings.window.height     = stoi(line[2]);
+		settings.window.fullscreen = stoi(line[3]);
+		settings.window.vsync      = stoi(line[4]);
 	}
 	else if (cmd == "bloom")
 	{
@@ -102,9 +102,9 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::E
 		//---------------------------------------------------------------
 		// | Bloom Threshold BRDF | Bloom Threshold PHONG | BlurPassCount
 		//---------------------------------------------------------------
-		settings.renderer.postProcess.bloom.threshold_brdf  = stof(line[1]);
-		settings.renderer.postProcess.bloom.threshold_phong = stof(line[2]);
-		settings.renderer.postProcess.bloom.blurPassCount   = stoi(line[3]);
+		settings.rendering.postProcess.bloom.threshold_brdf  = stof(line[1]);
+		settings.rendering.postProcess.bloom.threshold_phong = stof(line[2]);
+		settings.rendering.postProcess.bloom.blurPassCount   = stoi(line[3]);
 	}
 	else if (cmd == "shadowMap")
 	{
@@ -112,15 +112,24 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::E
 		//---------------------------------------------------------------
 		// | Shadow Map dimension
 		//---------------------------------------------------------------
-		settings.renderer.shadowMap.dimension = stoi(line[1]);
+		settings.rendering.shadowMap.dimension = stoi(line[1]);
+	}
+	else if (cmd == "lightingModel")
+	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | phong/brdf
+		//---------------------------------------------------------------
+		const std::string lightingModel = GetLowercased(line[1]);
+		settings.rendering.bUseBRDFLighting =  lightingModel == "brdf";
 	}
 	else if (cmd == "deferredRendering")
 	{
-		settings.renderer.bUseDeferredRendering = sBoolTypeReflection.at(line[1]);
+		settings.rendering.bUseDeferredRendering = sBoolTypeReflection.at(line[1]);
 	}
 	else if (cmd == "ambientOcclusion")
 	{
-		settings.renderer.bAmbientOcclusion= sBoolTypeReflection.at(line[1]);
+		settings.rendering.bAmbientOcclusion= sBoolTypeReflection.at(line[1]);
 	}
 	else if (cmd == "tonemapping")
 	{
@@ -128,7 +137,7 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::E
 		//---------------------------------------------------------------
 		// | Exposure
 		//---------------------------------------------------------------
-		settings.renderer.postProcess.toneMapping.exposure = stof(line[1]);
+		settings.rendering.postProcess.toneMapping.exposure = stof(line[1]);
 	}
 	else if (cmd == "HDR")
 	{
@@ -136,7 +145,7 @@ void SceneParser::ParseSetting(const std::vector<std::string>& line, Settings::E
 		//---------------------------------------------------------------
 		// | Enabled?
 		//---------------------------------------------------------------
-		settings.renderer.postProcess.HDREnabled = sBoolTypeReflection.at(GetLowercased(line[1]));
+		settings.rendering.postProcess.HDREnabled = sBoolTypeReflection.at(GetLowercased(line[1]));
 	}
 	else if (cmd == "level")
 	{

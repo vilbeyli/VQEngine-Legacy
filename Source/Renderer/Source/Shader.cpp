@@ -125,6 +125,7 @@ void Shader::LoadShaders(Renderer* pRenderer)
 	const std::vector<std::string> BilateralBlurShaders   = { "FullscreenQuad_vs", "BilateralBlur_ps" };	// compute?
 	const std::vector<std::string> GaussianBlur4x4Shaders   = { "FullscreenQuad_vs", "GaussianBlur4x4_ps" };	// compute?
 
+	// todo: limit enumerations? probably better to store just some ids
 	s_shaders[EShaders::FORWARD_PHONG			]	= pRenderer->AddShader("Forward_Phong"			, layout);
 	s_shaders[EShaders::UNLIT					]	= pRenderer->AddShader("UnlitTextureColor"		, layout);
 	s_shaders[EShaders::TEXTURE_COORDINATES		]	= pRenderer->AddShader("TextureCoordinates"		, TextureCoordinates, VS_PS, layout);
@@ -148,8 +149,8 @@ void Shader::LoadShaders(Renderer* pRenderer)
 	s_shaders[EShaders::DEFERRED_BRDF_SPOT		]	= pRenderer->AddShader("Deferred_BRDF_Spot"		, DeferredBRDF_SpotLight	, VS_PS, layout);
 	s_shaders[EShaders::SSAO					]	= pRenderer->AddShader("SSAO"					, AmbientOcclusionShaders	, VS_PS, layout);
 	s_shaders[EShaders::BILATERAL_BLUR			]	= pRenderer->AddShader("BilateralBlur"			, BilateralBlurShaders		, VS_PS, layout);
-	s_shaders[EShaders::GAUSSIAN_BLUR_4x4		]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders	, VS_PS, layout);
-
+	s_shaders[EShaders::GAUSSIAN_BLUR_4x4		]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders, VS_PS, layout);
+	s_shaders[EShaders::Z_PREPRASS				]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders, VS_PS, layout);
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
 

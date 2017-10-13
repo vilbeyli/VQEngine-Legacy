@@ -32,7 +32,7 @@ using std::shared_ptr;
 using std::unique_ptr;
 
 
-namespace Settings { struct Renderer; }
+namespace Settings { struct Rendering; }
 
 class Renderer;
 class Input;
@@ -142,7 +142,7 @@ private:
 
 	ShadowMapPass					mShadowMapPass;
 	
-	bool							mUseDeferredRendering;
+	bool							mbUseDeferredRendering;
 	DeferredRenderingPasses			mDeferredRenderingPasses;
 
 	bool							mbIsAmbientOcclusionOn;

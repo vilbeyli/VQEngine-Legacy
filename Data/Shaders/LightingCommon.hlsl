@@ -18,6 +18,14 @@
 
 #define SHADOW_BIAS 0.0000005f
 
+#if 0	// debug shortcut to cancel spot lights
+#define SPOTLIGHT_BRIGHTNESS_SCALAR 0
+#define SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG 0
+#else
+#define SPOTLIGHT_BRIGHTNESS_SCALAR 0.001f
+#define SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG 0.00028f
+#endif
+#define POINTLIGHT_BRIGHTNESS_SCALAR_PHONG 0.002f
 
 // STRUCTS
 //----------------------------------------------------------

@@ -26,7 +26,7 @@ Camera::Camera()
 	:
 	MoveSpeed(1000.0f),
 	AngularSpeedDeg(20.0f),
-	Drag(15.0f),
+	Drag(9.5f),
 	m_pitch(0.0f),
 	m_yaw(0.0f),
 	m_pos(vec3::ZeroF3),

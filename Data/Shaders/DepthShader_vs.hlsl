@@ -48,6 +48,6 @@ PSIn VSMain(VSIn In)
 	matrix wvp = mul(proj, mul(view, world));
 
 	PSIn Out;
-	Out.position	= mul(wvp  , float4(In.position, 1));
+	Out.position = mul(wvp  , float4(In.position, 1));
 	return Out;
 }

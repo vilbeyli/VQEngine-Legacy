@@ -164,7 +164,6 @@ void OnShaderChange(LPTSTR dir)
 
 const char*			Renderer::s_shaderRoot		= "Data/Shaders/";
 const char*			Renderer::s_textureRoot		= "Data/Textures/";
-Settings::Renderer	Renderer::s_defaultSettings = Settings::Renderer();
 bool				Renderer::sEnableBlend = true;
 
 Renderer::Renderer()
@@ -301,11 +300,11 @@ const Shader* Renderer::GetShader(ShaderID shader_id) const
 }
 
 
-bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
+bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 {
 	// DIRECT3D 11
 	//--------------------------------------------------------------------
-	s_defaultSettings = settings;
+	mWindowSettings = settings;
 	m_Direct3D = new D3DManager();
 	if (!m_Direct3D)
 	{
@@ -314,11 +313,11 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 	}
 
 	bool result = m_Direct3D->Initialize(
-		settings.window.width, 
-		settings.window.height, 
-		settings.window.vsync == 1,
+		settings.width, 
+		settings.height, 
+		settings.vsync == 1,
 		hwnd, 
-		settings.window.fullscreen == 1,
+		settings.fullscreen == 1,
 		DXGI_FORMAT_R16G16B16A16_FLOAT
 		// swapchain should be bgra unorm 32bit
 	);
@@ -362,7 +361,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 			return false;
 		}
 
-		m_textures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - dont add texture to vector
+		m_textures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - don't add texture to vector
 		defaultRT.texture._id = static_cast<int>(m_textures.size() - 1);
 
 		m_renderTargets.push_back(defaultRT);
@@ -377,7 +376,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 		// Set up the description of the depth buffer.
 		const DXGI_FORMAT depthTargetFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
-		m_state._depthBufferTexture = CreateDepthTexture(Renderer::s_defaultSettings.window.width, Renderer::s_defaultSettings.window.height, false);
+		m_state._depthBufferTexture = CreateDepthTexture(settings.width, settings.height, false);
 		Texture& depthTexture = static_cast<Texture>(GetTextureObject(m_state._depthBufferTexture));
 
 		// depth stencil view and shader resource view for the shadow map (^ BindFlags)
@@ -461,8 +460,17 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 
 	// DEFAULT DEPTHSTENCIL SATATES
 	//--------------------------------------------------------------------
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
-	ZeroMemory(&depthStencilDesc, sizeof(depthStencilDesc));
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
+	auto checkFailed = [&](HRESULT hr) 
+	{
+		if (FAILED(result))
+		{
+			Log::Error(CANT_CRERATE_RENDER_STATE, "Default Depth Stencil State");
+			return false;
+		}
+		return true;
+	};
+
 
 	// Set up the description of the stencil state.
 	depthStencilDesc.DepthEnable = true;
@@ -484,16 +492,25 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Renderer& settings)
 	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
 	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
 	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	// Create the depth stencil state.
-	result = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_W]);
-	if (FAILED(result))
-	{
-		Log::Error(CANT_CRERATE_RENDER_STATE, "Default Depth Stencil State");
-		return false;
-	}
-
 	
+	// Create the depth stencil states.
+	HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_WRITE]);
+	if(!checkFailed(hr)) return false;
+
+	depthStencilDesc.DepthEnable = false;
+	depthStencilDesc.StencilEnable = false;
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED]);
+	if (!checkFailed(hr)) return false;
+
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.StencilEnable = false;
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_WRITE]);
+	if (!checkFailed(hr)) return false;
+
+	depthStencilDesc.DepthEnable = false;
+	depthStencilDesc.StencilEnable = true;
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::STENCIL_WRITE]);
+	if (!checkFailed(hr)) return false;
 
 
 	// PRIMITIVES
@@ -1283,8 +1300,8 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 // assumes (0, 0) is Bottom Left corner of the screen.
 void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 {																// warning:
-	const int screenWidth =  s_defaultSettings.window.width;	// 2 copies of renderer settings, one here on in Engine
-	const int screenHeight = s_defaultSettings.window.height;	// dynamic window size change might break things...
+	const int screenWidth =  mWindowSettings.width;	// 2 copies of renderer settings, one here on in Engine
+	const int screenHeight = mWindowSettings.height;	// dynamic window size change might break things...
 	const float& dimx = cmd.dimensionsInPixels.x();
 	const float& dimy = cmd.dimensionsInPixels.y();
 	const float posx = cmd.bottomLeftCornerScreenCoordinates.x() * 2.0f - screenWidth;	// NDC is [-1, 1] ; if (0,0) is given
@@ -1305,9 +1322,12 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 
 void Renderer::Begin(const float clearColor[4], const float depthValue)
 {
-	const RenderTargetID rtv = m_state._boundRenderTargets[0];
-	const DepthTargetID dsv = m_state._boundDepthTarget;	// assumes a single depth target bound
-	if(rtv >= 0) m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearColor);
+	const DepthTargetID dsv = m_state._boundDepthTarget;	
+	for (const auto renderTarget : m_state._boundRenderTargets)
+	{
+		if(renderTarget>=0)
+			m_deviceContext->ClearRenderTargetView(m_renderTargets[renderTarget].pRenderTargetView, clearColor);
+	}
 	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv].pDepthStencilView, D3D11_CLEAR_DEPTH, depthValue, 0);
 }
 

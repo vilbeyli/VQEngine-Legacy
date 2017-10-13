@@ -52,11 +52,12 @@ ESkyboxPreset SceneManager::GetSceneSkybox() const
 void SceneManager::ReloadLevel()
 {
 	// todo: rethink this
-	const SerializedScene&		scene            = mSerializedScene;
-	const Settings::Renderer&	rendererSettings = Engine::ReadSettingsFromFile().renderer;
+	const SerializedScene&		scene			= mSerializedScene;
+	const Settings::Engine      engineSettings	= Engine::ReadSettingsFromFile();
+	
 	Log::Info("Reloading Level...");
 
-	mpSceneCamera->ConfigureCamera(scene.cameraSettings, rendererSettings.window);
+	mpSceneCamera->ConfigureCamera(scene.cameraSettings, engineSettings.window);
 	// only camera reset for now
 	// todo: unload and reload scene, initialize depth pass...
 }
@@ -68,7 +69,7 @@ bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 	mSerializedScene = SceneParser::ReadScene(sceneNames[settings.levelToLoad]);	
 	if (mSerializedScene.loadSuccess == '1')
 	{
-		mpSceneCamera->ConfigureCamera(mSerializedScene.cameraSettings, settings.renderer.window);
+		mpSceneCamera->ConfigureCamera(mSerializedScene.cameraSettings, settings.window);
 		switch (settings.levelToLoad)
 		{
 		case 0:	mpActiveScene = &mRoomScene; break;

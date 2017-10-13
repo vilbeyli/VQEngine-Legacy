@@ -164,7 +164,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 }
 
-void PostProcessPass::Render(Renderer * pRenderer) const
+void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
 {
 	pRenderer->BeginEvent("Post Processing");
 
@@ -176,7 +176,9 @@ void PostProcessPass::Render(Renderer * pRenderer) const
 	if (_bloomPass._isEnabled)
 	{
 		const Settings::PostProcess::Bloom& s = _settings.bloom;
-		const float brightnessThreshold = EShaders::FORWARD_BRDF == pRenderer->GetActiveShader() ? s.threshold_brdf : s.threshold_phong;
+		const ShaderID currentShader = pRenderer->GetActiveShader();
+
+		const float brightnessThreshold = bUseBRDFLighting ? s.threshold_brdf : s.threshold_phong;
 
 		// bright filter
 		pRenderer->BeginEvent("Bloom Bright Filter");

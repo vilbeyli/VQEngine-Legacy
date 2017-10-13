@@ -45,8 +45,8 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
-	const Settings::Renderer& rendererSettings = Engine::ReadSettingsFromFile().renderer;
-	InitWindow(rendererSettings);
+	const Settings::Window& windowSettings = Engine::ReadSettingsFromFile().window;
+	InitWindow(windowSettings);
 
 	if (!ENGINE->Initialize(m_hwnd))
 	{
@@ -96,7 +96,7 @@ void BaseSystem::Exit()
 
 LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
 {
-	const Settings::Renderer& setting = Engine::sEngineSettings.renderer;
+	const Settings::Window& setting = Engine::sEngineSettings.window;
 	switch (umsg)
 	{
 	// application active/inactive
@@ -187,7 +187,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 			long yPosRelative = raw->data.mouse.lLastY;
 			short scroll = raw->data.mouse.usButtonData;
 			ENGINE->mpInput->UpdateMousePos(xPosRelative, yPosRelative, scroll);
-			SetCursorPos(setting.window.width/2, setting.window.height/2);
+			SetCursorPos(setting.width/2, setting.height/2);
 			
 #ifdef LOG
 			char szTempOutput[1024];
@@ -231,7 +231,7 @@ void BaseSystem::UpdateWindowDimensions(int w, int h)
 	m_windowWidth  = w;
 }
 
-void BaseSystem::InitWindow(const Settings::Renderer& rendererSettings)
+void BaseSystem::InitWindow(const Settings::Window& windowSettings)
 {
 	int width, height;
 	int posX, posY;				// window position
@@ -258,7 +258,7 @@ void BaseSystem::InitWindow(const Settings::Renderer& rendererSettings)
 	height	= GetSystemMetrics(SM_CYSCREEN);
 
 	// set screen settings
-	if (rendererSettings.window.fullscreen)
+	if (windowSettings.fullscreen)
 	{
 		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
@@ -273,8 +273,8 @@ void BaseSystem::InitWindow(const Settings::Renderer& rendererSettings)
 	}
 	else
 	{
-		width  = rendererSettings.window.width;
-		height = rendererSettings.window.height;
+		width  = windowSettings.width;
+		height = windowSettings.height;
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
 		posY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
@@ -320,7 +320,7 @@ void BaseSystem::ShutdownWindows()
 {
 	ShowCursor(true);
 
-	if (Engine::sEngineSettings.renderer.window.fullscreen)
+	if (Engine::sEngineSettings.window.fullscreen)
 	{
 		ChangeDisplaySettings(NULL, 0);
 	}

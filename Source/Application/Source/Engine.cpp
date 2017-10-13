@@ -98,7 +98,8 @@ Engine * Engine::GetEngine()
 void Engine::ToggleLightingModel()
 {
 	// enable toggling only on forward rendering for now
-	if (!mUseDeferredRendering)
+#if 1
+	if (!mbUseDeferredRendering)
 	{
 		mSelectedShader = mSelectedShader == EShaders::FORWARD_PHONG ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
 	}
@@ -106,22 +107,25 @@ void Engine::ToggleLightingModel()
 	{
 		Log::Info("Deferred mode only supports BRDF Lighting model...");
 	}
+#else
+	sEngineSettings.rendering.bUseBRDFLighting = !sEngineSettings.rendering.bUseBRDFLighting;
+#endif
 }
 
 void Engine::ToggleRenderingPath()
 {
-	mUseDeferredRendering = !mUseDeferredRendering;
+	mbUseDeferredRendering = !mbUseDeferredRendering;
 
 	// initialize GBuffer if its not initialized, i.e., 
 	// Renderer started in forward mode and we're toggling deferred for the first time
-	if (!mDeferredRenderingPasses._GBuffer.bInitialized && mUseDeferredRendering)
+	if (!mDeferredRenderingPasses._GBuffer.bInitialized && mbUseDeferredRendering)
 	{	
 		mDeferredRenderingPasses.InitializeGBuffer(mpRenderer);
 	}
-	Log::Info("Toggle Rendering Path: %s Rendering enabled", mUseDeferredRendering ? "Deferred" : "Forward");
+	Log::Info("Toggle Rendering Path: %s Rendering enabled", mbUseDeferredRendering ? "Deferred" : "Forward");
 
 	// if we just turned deferred rendering off, clear the gbuffer textures
-	if(!mUseDeferredRendering)
+	if(!mbUseDeferredRendering)
 		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
 }
 
@@ -153,12 +157,13 @@ bool Engine::Initialize(HWND hwnd)
 	//--------------------------------------------------------------
 	const bool bEnableLogging = true;	// todo: read from settings
 	constexpr size_t workerCount = 1;
-	const Settings::Renderer& rendererSettings = sEngineSettings.renderer;
+	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
+	const Settings::Window& windowSettings = sEngineSettings.window;
 
 	Log::Initialize(bEnableLogging);
 	mWorkerPool.Initialize(workerCount);
 	mpInput->Initialize();
-	if (!mpRenderer->Initialize(hwnd, rendererSettings))
+	if (!mpRenderer->Initialize(hwnd, windowSettings))
 	{
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
@@ -168,11 +173,11 @@ bool Engine::Initialize(HWND hwnd)
 	// INITIALIZE RENDERING
 	//--------------------------------------------------------------
 	// render passes
-	mUseDeferredRendering = rendererSettings.bUseDeferredRendering;
+	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
 	mDeferredRenderingPasses.InitializeGBuffer(mpRenderer);
 	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
 	mDebugRender = true;
-	mSelectedShader = mUseDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
+	mSelectedShader = mbUseDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
 	Skybox::InitializePresets(mpRenderer);
@@ -182,7 +187,7 @@ bool Engine::Initialize(HWND hwnd)
 
 bool Engine::Load()
 {
-	const Settings::Renderer& rendererSettings = sEngineSettings.renderer;
+	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 	const bool bLoadSuccess = mpSceneManager->Load(mpRenderer, nullptr, sEngineSettings, m_pCamera);
 	if (!bLoadSuccess)
 	{
@@ -228,7 +233,7 @@ bool Engine::HandleInput()
 		TogglePause();
 
 
-	if (!mUseDeferredRendering)
+	if (!mbUseDeferredRendering)
 	{
 		if (mpInput->IsKeyTriggered("F1")) mSelectedShader = EShaders::TEXTURE_COORDINATES;
 		if (mpInput->IsKeyTriggered("F2")) mSelectedShader = EShaders::NORMAL;
@@ -300,7 +305,7 @@ void Engine::PreRender()
 
 	// gather scene lights
 	mSceneLightData.ResetCounts();
-	std::array<size_t*         , Light::ELightType::LIGHT_TYPE_COUNT> lightCounts 
+	std::array<size_t*        , Light::ELightType::LIGHT_TYPE_COUNT> lightCounts 
 	{ // can't use size_t& as template instantiation won't allow size_t&*. using size_t* instead.
 		&mSceneLightData.pointLightCount,
 		&mSceneLightData.spotLightCount,
@@ -399,7 +404,7 @@ void Engine::Render()
 	mpRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
 	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 
-	if (mUseDeferredRendering)
+	if (mbUseDeferredRendering)
 	{	// DEFERRED
 		const GBuffer& gBuffer = mDeferredRenderingPasses._GBuffer;
 		const TextureID texNormal = mpRenderer->GetRenderTargetTexture(gBuffer._normalRT);
@@ -439,7 +444,7 @@ void Engine::Render()
 		{
 			mpRenderer->SetDepthStencilState(mDeferredRenderingPasses._skyboxStencilState);
 			Skybox::s_Presets[mActiveSkybox].Render(mSceneView.viewProj);
-			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_W);
+			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->UnbindDepthTarget();
 		}
 	}
@@ -450,36 +455,69 @@ void Engine::Render()
 		mSelectedShader = mSelectedShader == EShaders::DEFERRED_GEOMETRY ? EShaders::FORWARD_BRDF : mSelectedShader;
 		const float clearColor[4] = { 0.2f, 0.4f, 0.3f, 1.0f };
 		const float clearDepth = 1.0f;
+		const bool bZPrePass = mbIsAmbientOcclusionOn && false;
 
-		// AMBIENT OCCLUSION  PASS
-		if (mbIsAmbientOcclusionOn && false)
+		// AMBIENT OCCLUSION - Z-PREPASS
+		if (bZPrePass)
 		{
+			const RenderTargetID normals	= mDeferredRenderingPasses._GBuffer._normalRT;
+			const RenderTargetID positions	= mDeferredRenderingPasses._GBuffer._positionRT;
+			const TextureID texNormal		= mpRenderer->GetRenderTargetTexture(normals);
+			const TextureID texPosition		= mpRenderer->GetRenderTargetTexture(positions);
+			
+			const bool bDoClearColor = true;
+			const bool bDoClearDepth = true;
+			const bool bDoClearStencil = false;
+			ClearCommand clearCmd(
+				bDoClearColor, bDoClearDepth, bDoClearStencil,
+				{ 0, 0, 0, 0 }, 1, 0
+			);
+
+
 			mpRenderer->BeginEvent("Z-PrePass");
-			// todo: z-prepass + normals
+			mpRenderer->SetShader(EShaders::Z_PREPRASS);
+			mpRenderer->BindDepthTarget(mWorldDepthTarget);
+			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+			mpRenderer->BindRenderTargets(normals, positions);
+			mpRenderer->Begin(clearCmd);
+			mpSceneManager->Render(mpRenderer, mSceneView);
 			mpRenderer->EndEvent();
 
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
-			//m_SSAOPass.RenderOcclusion(m_pRenderer, texNormal, texPosition, m_sceneView);
+			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+			mpRenderer->UnbindRenderTarget();
+			mpRenderer->Apply();
+			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, texPosition, mSceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
+			mSSAOPass.GaussianBlurPass(mpRenderer);
 			mSSAOPass.GaussianBlurPass(mpRenderer);
 			mpRenderer->EndEvent();
 		}
 
 		mpRenderer->BindRenderTarget(mPostProcessPass._worldRenderTarget);
-		mpRenderer->BindDepthTarget(mWorldDepthTarget);
-		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_W);
-		mpRenderer->Begin(clearColor, clearDepth);
+		if (bZPrePass)
+		{
+			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+		}
+		else
+		{
+			mpRenderer->BindDepthTarget(mWorldDepthTarget);
+			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+			mpRenderer->Begin(clearColor, clearDepth);
+		}
+		
 
 		// SKYBOX
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
+		// Note: this can be done without stencil read/write/masking. set depth test to equals1 
 		if (mActiveSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)	Skybox::s_Presets[mActiveSkybox].Render(mSceneView.viewProj);
 		else
 		{
 			// todo: this might be costly, profile this
 			mpRenderer->SetShader(mSelectedShader);	// set shader so apply won't complain 
-			mpRenderer->Apply();						// apply to bind depth stencil
+			mpRenderer->Apply();					// apply to bind depth stencil
 		}
 
 		// LIGHTING
@@ -508,7 +546,7 @@ void Engine::Render()
 		mpSceneManager->mpActiveScene->GetSceneObjects(objects);
 
 		mpRenderer->BeginEvent("Draw TBN Vectors");
-		if (mUseDeferredRendering)
+		if (mbUseDeferredRendering)
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 
 		mpRenderer->SetShader(EShaders::TBN);
@@ -518,7 +556,7 @@ void Engine::Render()
 				obj->Render(mpRenderer, mSceneView, bSendMaterial);
 		}
 
-		if (mUseDeferredRendering)
+		if (mbUseDeferredRendering)
 			mpRenderer->UnbindDepthTarget();
 
 		mpRenderer->SetShader(mSelectedShader);
@@ -528,16 +566,15 @@ void Engine::Render()
 #if 1
 	// POST PROCESS PASS
 	//------------------------------------------------------------------------
-	mPostProcessPass.Render(mpRenderer);
+	mPostProcessPass.Render(mpRenderer, sEngineSettings.rendering.bUseBRDFLighting);
 
 
 	// DEBUG PASS
 	//------------------------------------------------------------------------
 	if (mDebugRender)
 	{
-		const Settings::Renderer& rendererSettings = sEngineSettings.renderer;
-		const int screenWidth  = rendererSettings.window.width;
-		const int screenHeight = rendererSettings.window.height;
+		const int screenWidth  = sEngineSettings.window.width;
+		const int screenHeight = sEngineSettings.window.height;
 		const float aspectRatio = static_cast<float>(screenWidth) / screenHeight;
 #if 0
 		// TODO: calculate scales and transform each quad into appropriate position in NDC space [0,1]
@@ -563,6 +600,7 @@ void Engine::Render()
 		TextureID tSceneDepth		 = mpRenderer->GetDepthTargetTexture(0);
 		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
 		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
+		tAO = !mbUseDeferredRendering ? mSSAOPass.whiteTexture4x4 : tAO; // forward lighting currently doesn't have ssao. todo: remove this when forward ssao is done
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);

@@ -19,6 +19,7 @@
 
 #include "RenderCommands.h"
 #include "RenderingEnums.h"
+#include "Settings.h"
 #include "Texture.h"
 #include "Shader.h"
 #include "Color.h"
@@ -35,7 +36,6 @@ class BufferObject;
 class Camera;
 class D3DManager;
 
-namespace Settings { struct Renderer; }
 namespace DirectX  { class ScratchImage; }
 
 
@@ -82,19 +82,18 @@ struct PipelineState
 
 class Renderer
 {
-	// two main components have private access to Renderer mainly for the private functions
 	friend class Engine;		
 	friend class SceneManager;
 	friend class Shader;		// shader load/unload
 
 	friend struct SetTextureCommand;
-	friend struct SetSamplerCommand;	// todo: refactor commands - dont use friend for commands
+	friend struct SetSamplerCommand;	// todo: refactor commands - don't use friend for commands
 
 public:
 	// use > tabs w/ 4spaces
 	Renderer();
 	~Renderer();
-	bool					Initialize(HWND hwnd, const Settings::Renderer& settings);
+	bool					Initialize(HWND hwnd, const Settings::Window& settings);
 	void					Exit();
 	inline void				ReloadShaders() { Shader::ReloadShaders(this); }
 
@@ -144,7 +143,7 @@ public:
 												bool					initializeSRV
 							);
 
-	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles
+	TextureID				CreateCubemapTexture(	const std::vector<std::string>& textureFiles
 							);
 	
 	TextureID				CreateDepthTexture( unsigned width, 
@@ -233,7 +232,6 @@ private:
 public:
 	static const char*				s_shaderRoot;
 	static const char*				s_textureRoot;
-	static Settings::Renderer		s_defaultSettings;
 
 	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;
@@ -241,6 +239,8 @@ public:
 
 	static bool						sEnableBlend; //temp
 private:	
+	Settings::Window				mWindowSettings;
+
 	std::vector<BufferObject*>		m_bufferObjects;
 	std::vector<Shader*>			m_shaders;
 	std::vector<Texture>			m_textures;

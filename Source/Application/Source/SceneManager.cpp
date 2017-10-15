@@ -30,7 +30,7 @@
 #include "Light.h"
 
 // todo: remove this dependency
-const char* sceneNames[] = 
+static const char* sceneNames[] = 
 {
 	"Room.scn",
 	"SSAOTest.scn",

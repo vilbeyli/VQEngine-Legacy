@@ -35,3 +35,8 @@ object begin
 mesh sphere
 transform -10 0 -50 0 0 45 5
 object end
+
+object begin
+mesh grid
+transform -30 5 -50 0 0 -45 15
+object end

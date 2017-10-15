@@ -3,7 +3,11 @@
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
 ![](Data/Screenshots/ssao.PNG)
-<center><i>BRDF, HDR, SSAO, Bloom</i></center>
+<center><i>BRDF, HDR, Bloom</i></center>
+
+
+![](Data/Screenshots/SSAOScene.PNG)
+<center><i>SSAO</i></center>
 
 
 ## Prerequisites
@@ -13,8 +17,6 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
    Note: if the linker throws the error `1>LINK : fatal error LNK1158: cannot run 'rc.exe'` do the following:
    - Copy `rc.exe` and `rcdll.dll` 
    from `C:\Program Files (x86)\Windows Kits\10\bin\10.0.15063.0\x64` to `C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin`
-
-Suggested latest Visual Studio.
 
 ## Controls
 
@@ -26,7 +28,7 @@ Suggested latest Visual Studio.
 | **F2** |	Normals Shader (Forward Rendering Only) |
 | **F3** |	Diffuse Color Shader (Forward Rendering Only) |
 | **F4** |	Toggle TBN Shader (Forward Rendering Only) |
-| **F5** |	Empty |
+| **F5** |	Lighting Shader (Forward Rendering Only) |
 | **F6** |	Toggle Phong/BRDF Shaders |
 | **F7** |	Toggle Debug Shader |
 | **F8** |	Toggle Forward/Deferred Rendering |
@@ -59,7 +61,7 @@ See [active Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones
  
  ***In Development***
  
- *v0.2* - Expected: Early October
+ *v0.2* - Expected: Early November
  - BRDF
  - Bloom
  - Cubemap Textures
@@ -69,3 +71,5 @@ See [active Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones
  - SSAO
  - Improved Shadow Maps
  - Anti-Aliasing
+ - Z-PrePass
+ - Scene files

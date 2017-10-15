@@ -69,6 +69,7 @@ private:
 	// - Create a class for your scene and inherit from Scene base class
 	// - override functions as necessary. 
 	// - edit settings.ini to start with your scene
+	// - remember to add scene name in scenemanager.cpp
 	RoomScene				mRoomScene;
 	SSAOTestScene			mSSAOTestScene;
 	IBLTestScene			mIBLTestScene;

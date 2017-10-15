@@ -37,8 +37,7 @@ Engine::Engine()
 	mpRenderer(new Renderer()),
 	mpInput(new Input()),
 	mpTimer(new PerfTimer()),
-	mpSceneManager(new SceneManager(m_pCamera, mLights)),
-	m_pCamera(new Camera()),
+	mpSceneManager(new SceneManager(mLights)),
 	mActiveSkybox(ESkyboxPreset::SKYBOX_PRESET_COUNT),	// default: none
 	mbUsePaniniProjection(false)
 	//,mObjectPool(1024)
@@ -194,7 +193,7 @@ bool Engine::Initialize(HWND hwnd)
 bool Engine::Load()
 {
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
-	const bool bLoadSuccess = mpSceneManager->Load(mpRenderer, nullptr, sEngineSettings, m_pCamera);
+	const bool bLoadSuccess = mpSceneManager->Load(mpRenderer, nullptr, sEngineSettings, mZPassObjects);
 	if (!bLoadSuccess)
 	{
 		Log::Error("Engine couldn't load scene.");
@@ -205,7 +204,6 @@ bool Engine::Load()
 		mShadowMapPass.Initialize(mpRenderer, mpRenderer->m_device, rendererSettings.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
 		
-		mpSceneManager->mpActiveScene->GetShadowCasters(mZPassObjects);
 		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
 		mDebugPass.Initialize(mpRenderer);
 		mSSAOPass.Initialize(mpRenderer);
@@ -251,7 +249,6 @@ bool Engine::HandleInput()
 	if (mpInput->IsKeyTriggered("F9")) mPostProcessPass._bloomPass.ToggleBloomPass();
 	if (mpInput->IsKeyTriggered(";")) ToggleAmbientOcclusion();
 
-	if (mpInput->IsKeyTriggered("R")) mpSceneManager->ReloadLevel();
 	if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
 	//if (m_input->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
 
@@ -282,7 +279,6 @@ bool Engine::UpdateAndRender()
 	{
 		CalcFrameStats();
 
-		m_pCamera->Update(dt);		// maybe in scene?
 		mpSceneManager->Update(dt);
 
 		PreRender();
@@ -297,13 +293,15 @@ bool Engine::UpdateAndRender()
 void Engine::PreRender()
 {
 	// set scene view
-	const XMMATRIX view			= m_pCamera->GetViewMatrix();
-	const XMMATRIX viewInverse	= m_pCamera->GetViewInverseMatrix();
-	const XMMATRIX proj			= m_pCamera->GetProjectionMatrix();
+	const Camera& viewCamera = mpSceneManager->GetMainCamera();
+	const XMMATRIX view			= viewCamera.GetViewMatrix();
+	const XMMATRIX viewInverse	= viewCamera.GetViewInverseMatrix();
+	const XMMATRIX proj			= viewCamera.GetProjectionMatrix();
 	mSceneView.viewProj = view * proj;
 	mSceneView.view = view;
 	mSceneView.viewToWorld = viewInverse;
 	mSceneView.projection = proj;
+	mSceneView.cameraPosition = viewCamera.GetPositionF();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
 
@@ -446,6 +444,7 @@ void Engine::Render()
 		// SKYBOX
 		if (mActiveSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)
 		{
+			// Note: this can be done without stencil read/write/masking. set depth test to equals1 
 			mpRenderer->SetDepthStencilState(mDeferredRenderingPasses._skyboxStencilState);
 			Skybox::s_Presets[mActiveSkybox].Render(mSceneView.viewProj);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
@@ -512,7 +511,6 @@ void Engine::Render()
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
-		// Note: this can be done without stencil read/write/masking. set depth test to equals1 
 		if (mActiveSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)	Skybox::s_Presets[mActiveSkybox].Render(mSceneView.viewProj);
 		else
 		{
@@ -527,7 +525,7 @@ void Engine::Render()
 		if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
 		{
 			mpRenderer->SetTexture("texAmbientOcclusion", tSSAO);
-			mpRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+			mpRenderer->SetConstant3f("cameraPos", mSceneView.cameraPosition);
 			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
 			mpRenderer->SetSamplerState("sNormalSampler", mNormalSampler);
 			SendLightData();

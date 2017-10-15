@@ -23,7 +23,6 @@
 
 //#define LOG
 
-
 const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	// keyboard mapping for windows keycodes. 
 	// #define LOG to see each keycode when you press on output window
@@ -33,6 +32,11 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	m["F5"] = 116;	m["F6"] = 117;	m["F7"] = 118;	m["F8"] = 119;
 	m["F9"] = 120;	m["F10"] = 121;	m["F11"] = 122;	m["F12"] = 123;
 	
+	m["0"] = 48;		m["1"] = 49;	m["2"] = 50;	m["3"] = 51;
+	m["4"] = 52;		m["5"] = 53;	m["6"] = 54;	m["7"] = 55;
+	m["8"] = 56;		m["9"] = 57;
+
+	m["C"] = 67;		m["c"] = 67;
 	m["R"] = 82;		m["r"] = 82;
 
 	m["\\"] = 220;		m[";"] = 186;

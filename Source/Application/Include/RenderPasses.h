@@ -44,6 +44,7 @@ struct SceneView
 	XMMATRIX view;
 	XMMATRIX viewToWorld;
 	XMMATRIX projection;
+	vec3	 cameraPosition;
 	bool	 bIsPBRLightingUsed;
 	bool	 bIsDeferredRendering;
 };

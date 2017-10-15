@@ -44,25 +44,28 @@ class SceneManager
 	friend class SceneParser;
 	friend class Engine;	// temp hack until gameObject array refactoring
 public:
-	SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights);	// lights passed down to RoomScene
+	SceneManager(std::vector<Light>& lights);	// lights passed down to RoomScene
 	~SceneManager() = default;
 
 	ESkyboxPreset GetSceneSkybox() const;
+	const Camera& GetMainCamera() const;
 
-	bool Load(Renderer* renderer, PathManager* pathMan, const Settings::Engine& settings, shared_ptr<Camera> pCamera);
+	bool Load(Renderer* renderer, PathManager* pathMan, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects);
 
 	void Update(float dt);
 	void Render(Renderer* pRenderer, const SceneView& sceneView) const;
 
-	void ReloadLevel();
+	bool LoadScene(Renderer* pRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects);
+	void ReloadScene(Renderer* pRenderer, std::vector<const GameObject*>& ZPassObjects);
+	void ResetMainCamera();
 private:
+	void LoadScene(int level);
 	void HandleInput();
 
 private:
-	shared_ptr<Camera>		mpSceneCamera;	// probably scenes should handle camera themselves
-
 	SerializedScene			mSerializedScene;
 	Scene*					mpActiveScene;
+	int						mCurrentLevel;
 
 	// current design for adding new scenes is as follows:
 	// - add the .scn scene file to Data/Levels directory

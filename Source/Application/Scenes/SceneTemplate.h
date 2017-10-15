@@ -1,3 +1,4 @@
+//	DX11Renderer - VDemo | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -14,35 +15,25 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
-
 #pragma once
-
-#include <vector>
-#include "HandleTypedefs.h"
-
-class Renderer;
-struct Texture;
-namespace DirectX { struct XMMATRIX; }
-
-enum ESkyboxPreset
-{
-	NIGHT_SKY = 0,
-
-	SKYBOX_PRESET_COUNT
-};
-
-class Skybox
+#include "Scene.h"
+class SceneTemplate : public Scene
 {
 public:
-	static std::vector<Skybox> s_Presets;
-	static void InitializePresets(Renderer* pRenderer);
-	
-	void Render(const DirectX::XMMATRIX& viewProj) const;
 
-	Skybox& Initialize(Renderer* renderer, const Texture& cubemapTexture, int shader);
+	void Load(SerializedScene& scene) override;
+	void Unload() override;
+	void Update(float dt) override;
+	void Render(const SceneView& sceneView, bool bSendMaterialData) const override;
+
+	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;	// todo: rename this... decide between depth and shadows
+	void GetSceneObjects(std::vector<const GameObject*>&) const override;
+
+	SceneTemplate(SceneManager& sceneMan, std::vector<Light>& lights);
+	~SceneTemplate() = default;
+
 private:
-	TextureID	skydomeTex;
-	ShaderID	skydomeShader;
-	Renderer*	pRenderer;
+	// custom scene stuff here
+	// std::vector<GameObject> objs; // etc
 };
 

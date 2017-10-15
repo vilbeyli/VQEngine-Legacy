@@ -36,6 +36,15 @@ public:
 	static void ParseSetting(const std::vector<std::string>& line, Settings::Engine& settings);
 
 	static SerializedScene ReadScene(const std::string& sceneFileName);
+
+	// Object initializations
+	// ---------------------------------------------------------------------------------------------------------------
+	// Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
+	// Camera		: near far vfov  pos(3:xyz)  yaw pitch
+	// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
+	// BRDF			:
+	// Phong		:
+	// Object		: transform, brdf/phong, mesh
 	static void ParseScene(const std::vector<std::string>& command, SerializedScene& scene);
 private:
 

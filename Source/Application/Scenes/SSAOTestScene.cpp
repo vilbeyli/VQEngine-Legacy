@@ -32,7 +32,6 @@ void SSAOTestScene::Load(SerializedScene& scene)
 		obj.mRenderSettings.bRenderTBN = true;
 	}
 #endif
-	//m_skybox = ESkyboxPreset::NIGHT_SKY;
 
 	// grid arrangement ( (row * col) cubes that are 'CUBE_DISTANCE' apart from each other )
 	constexpr size_t	CUBE_ROW_COUNT = 4;
@@ -72,6 +71,14 @@ void SSAOTestScene::Load(SerializedScene& scene)
 			}
 		}
 	}
+
+
+	//m_skybox = ESkyboxPreset::NIGHT_SKY;
+}
+
+void SSAOTestScene::Unload()
+{
+	cubes.clear();
 }
 
 void SSAOTestScene::Update(float dt)

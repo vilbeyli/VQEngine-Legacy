@@ -19,7 +19,9 @@
 
 #include "Settings.h"
 #include "Light.h"
+#include "Skybox.h"
 #include "GameObject.h"
+#include "Camera.h"
 
 struct SerializedScene;
 class SceneManager;
@@ -28,6 +30,7 @@ struct SceneView;
 
 // https://en.wikipedia.org/wiki/Template_method_pattern
 // https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
+// https://isocpp.org/wiki/faq/strange-inheritance#two-strategies-for-virtuals
 // template method seems like a good idea here.
 // the idea is that base class takes care of the common tasks among all scenes and calls the 
 // customized functions of the derived classes through pure virtual functions
@@ -41,35 +44,50 @@ public:
 	~Scene() = default;
 
 	// sets mpRenderer and moves objects from serializedScene into objects vector
-	void Load(Renderer* pRenderer, SerializedScene& scene);
-	
+	void LoadScene(Renderer* pRenderer, SerializedScene& scene, const Settings::Window& windowSettings);
+
+	// clears object/light containers and camera settings
+	void UnloadScene();
+
+	// updates selected camera and calls overriden Update from derived scene class
+	void UpdateScene(float dt);
+
 	// calls .Render() on objects and calls derived class RenderSceneSpecific()
 	void Render(const SceneView& sceneView) const;
-
+	
 	// puts objects into provided vector if the RenderSetting.bRenderDepth is true
 	virtual void GetShadowCasters(std::vector<const GameObject*>& casters) const;
 
 	// puts addresses of game objects in provided vector
 	virtual void GetSceneObjects(std::vector<const GameObject*>& objs) const;
 
-	virtual void Update(float dt) = 0;
+	void ResetActiveCamera();
+
+	inline ESkyboxPreset GetSkybox() const			{ return mSkybox; }
+	inline const Camera& GetActiveCamera() const	{ return mCameras[mSelectedCamera]; }
+
 
 protected:	// customization functions for derived classes
 	virtual void Render(const SceneView& sceneView, bool bSendMaterialData) const = 0;
 	virtual void Load(SerializedScene& scene) = 0;
+	virtual void Update(float dt) = 0;
+	virtual void Unload() = 0;
 
 	SceneManager&			mSceneManager;
 	Renderer*				mpRenderer;
-	std::vector<Light>&		mLights;
-	std::vector<GameObject> objects;
 
-	// maybe add a boolean to determine whether derived class will handle objects.Render()
+	ESkyboxPreset			mSkybox;
+	std::vector<Camera>		mCameras;
+	std::vector<Light>&		mLights;
+	std::vector<GameObject> mObjects;
+
+	int mSelectedCamera;
 };
 
 struct SerializedScene
 {
-	Settings::Camera		cameraSettings;
-	std::vector<Light>		lights;
-	std::vector<GameObject> objects;
+	std::vector<Settings::Camera>	cameras;
+	std::vector<Light>				lights;
+	std::vector<GameObject>			objects;
 	char loadSuccess = '0';
 };

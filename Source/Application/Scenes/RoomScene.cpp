@@ -166,13 +166,19 @@ void RoomScene::Load(SerializedScene& scene)
 	}
 
 	// objects from scene file
-	for (GameObject& obj : objects)
+	for (GameObject& obj : mObjects)
 	{
 		//if (obj.mModel.mMesh == EGeometry::SPHERE || obj.mModel.mMesh == EGeometry::CUBE)
 			obj.mRenderSettings.bRenderTBN = true;
 	}
 
-	m_skybox = ESkyboxPreset::NIGHT_SKY;
+	mSkybox = ESkyboxPreset::NIGHT_SKY;
+}
+
+void RoomScene::Unload()
+{
+	spheres.clear();
+	m_animations.clear();
 }
 
 void RoomScene::Update(float dt)
@@ -264,7 +270,7 @@ void RoomScene::UpdateCentralObj(const float dt)
 
 	// assume first object is the cube
 	const float cubeRotSpeed = 100.0f; // degs/s
-	objects.front().mTransform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
+	mObjects.front().mTransform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
 
 #ifdef ROTATE_SHADOW_LIGHT
 	mLights[0]._transform.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);

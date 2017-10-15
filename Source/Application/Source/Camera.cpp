@@ -55,7 +55,7 @@ void Camera::ConfigureCamera(const Settings::Camera & cameraSettings, const Sett
 
 	SetPosition(cameraSettings.x, cameraSettings.y, cameraSettings.z);
 	m_yaw = m_pitch = 0;
-	Rotate(cameraSettings.yaw, cameraSettings.pitch * DEG2RAD, 1.0f);
+	Rotate(cameraSettings.yaw * DEG2RAD, cameraSettings.pitch * DEG2RAD, 1.0f);
 }
 
 
@@ -239,12 +239,19 @@ void Camera::SetPosition(float x, float y, float z)
 
 void Camera::Rotate(float yaw, float pitch, const float dt)
 {
-	const float delta  = AngularSpeedDeg * DEG2RAD * dt;
-	m_yaw	+= yaw   * delta;
-	m_pitch += pitch * delta;
+	m_yaw	+= yaw   * dt;
+	m_pitch += pitch * dt;
 	
 	if (m_pitch > +90.0f * DEG2RAD) m_pitch = +90.0f * DEG2RAD;
 	if (m_pitch < -90.0f * DEG2RAD) m_pitch = -90.0f * DEG2RAD;
+}
+
+void Camera::Reset()
+{
+	const Settings::Camera & cameraSettings = m_settings;
+	SetPosition(cameraSettings.x, cameraSettings.y, cameraSettings.z);
+	m_yaw = m_pitch = 0;
+	Rotate(cameraSettings.yaw * DEG2RAD, cameraSettings.pitch * DEG2RAD, 1.0f);
 }
 
 // internal update functions
@@ -254,7 +261,9 @@ void Camera::Rotate(const float dt)
 	const long* dxdy = m_input->GetDelta();
 	float dy = static_cast<float>(dxdy[1]);
 	float dx = static_cast<float>(dxdy[0]);
-	Rotate(dx, dy, dt);
+
+	const float delta = AngularSpeedDeg * DEG2RAD * dt;
+	Rotate(dx, dy, delta);
 }
 
 void Camera::Move(const float dt)

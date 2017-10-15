@@ -50,10 +50,10 @@ struct ObjectPool
 };
 
 #ifdef _WIN32
-// usage of XMMATRIX in Engine class causes alignment warning: Engine might not 
-// be on 16-byte boundary. To fix this, we declare that we want to align the 
-// Engine class to 16-byte boundary. We also override new/delete functions to
-// allocate and free aligned memory
+// usage of XMMATRIX in Engine class causes alignment warning: 
+// > Engine might not be on 16-byte boundary. 
+// To fix this, we declare that we want to align the Engine class to 16-byte boundary.
+// We also override new/delete functions to allocate and free aligned memory
 #define ALIGNMENT __declspec(align(16))
 #else
 #define ALIGNMENT
@@ -62,9 +62,11 @@ struct ObjectPool
 ALIGNMENT class Engine
 {
 	friend class BaseSystem;
+	friend class SceneManager;	// read/write ZPassObjects
 
 public:
 	static const Settings::Engine& ReadSettingsFromFile();
+	static const Settings::Engine& GetSettings() { return sEngineSettings; }
 	static Engine*			GetEngine();
 	~Engine();
 
@@ -127,7 +129,6 @@ private:
 
 	// scene
 	//--------------------------------------------------------
-	shared_ptr<Camera>				m_pCamera;	// support only 1 main camera for now
 	SceneView						mSceneView;
 	SceneLightData					mSceneLightData;
 	std::vector<Light>				mLights;

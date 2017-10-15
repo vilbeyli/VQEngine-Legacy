@@ -159,6 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Scenes\IBLTestScene.cpp" />
+    <Text Include="Scenes\SceneTemplate.cpp" />
     <ClCompile Include="Source\Scene.cpp" />
     <ClCompile Include="Source\RenderPasses.cpp" />
     <ClCompile Include="Source\Skybox.cpp" />
@@ -189,6 +190,7 @@
     <ClInclude Include="Include\Skybox.h" />
     <ClInclude Include="Include\RenderPasses.h" />
     <ClInclude Include="Include\Scene.h" />
+    <ClInclude Include="Scenes\SceneTemplate.h" />
     <ClInclude Include="Source\Components\Component.h" />
     <ClInclude Include="Source\Components\Transform.h" />
     <ClInclude Include="Include\Engine.h" />

@@ -28,6 +28,7 @@ class RoomScene : public Scene
 {
 public:
 	void Load(SerializedScene& scene) override;
+	void Unload() override;
 	void Update(float dt) override;
 	void Render(const SceneView& sceneView, bool bSendMaterialData) const override;
 
@@ -37,8 +38,6 @@ public:
 	RoomScene(SceneManager& sceneMan, std::vector<Light>& lights);
 	~RoomScene() = default;
 
-	inline ESkyboxPreset GetSkybox() const { return m_skybox; }
-
 private:
 	void InitializeLights(SerializedScene& scene);
 	void InitializeObjectArrays(SerializedScene& scene);
@@ -47,9 +46,7 @@ private:
 // ----------------------------------------------------------------------
 	
 	void ToggleFloorNormalMap();
-
-	ESkyboxPreset		m_skybox;
-
+	
 	struct Room {
 		friend class RoomScene;
 		void Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const;

@@ -15,22 +15,43 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
+
 #include "Scene.h"
 #include "Engine.h"
+#include "Input.h"
 
 Scene::Scene(SceneManager& sceneManager, std::vector<Light>& lights)
 	:
-	mSceneManager(sceneManager),
-	mLights(lights),
-	mpRenderer(nullptr)	// pRenderer is initialized at Load()
+	mSceneManager(sceneManager)
+	, mLights(lights)
+	, mSkybox(ESkyboxPreset::SKYBOX_PRESET_COUNT)
+	, mpRenderer(nullptr)	// pRenderer is initialized at Load()
+	, mSelectedCamera(0)
 {}
 
-void Scene::Load(Renderer * pRenderer, SerializedScene & scene)
+void Scene::LoadScene(Renderer* pRenderer, SerializedScene& scene, const Settings::Window& windowSettings)
 {
 	mpRenderer = pRenderer;
-	objects = std::move(scene.objects);
+	mObjects = std::move(scene.objects);
 	mLights = std::move(scene.lights);
+
+	for (const Settings::Camera& camSetting : scene.cameras)
+	{
+		Camera c;
+		c.ConfigureCamera(camSetting, windowSettings);
+		mCameras.push_back(c);
+	}
+
 	Load(scene);
+}
+
+void Scene::UnloadScene()
+{
+	mCameras.clear();
+	mObjects.clear();
+	mLights.clear();
+	mSkybox = ESkyboxPreset::SKYBOX_PRESET_COUNT;
+	Unload();
 }
 
 void Scene::Render(const SceneView& sceneView) const
@@ -45,13 +66,13 @@ void Scene::Render(const SceneView& sceneView) const
 		|| selectedShader == EShaders::Z_PREPRASS
 		);
 
-	for (const auto& obj : objects) obj.Render(mpRenderer, sceneView, bSendMaterialData);
+	for (const auto& obj : mObjects) obj.Render(mpRenderer, sceneView, bSendMaterialData);
 	Render(sceneView, bSendMaterialData);
 }
 
 void Scene::GetShadowCasters(std::vector<const GameObject*>& casters) const
 {
-	for (const GameObject& obj : objects) 
+	for (const GameObject& obj : mObjects) 
 		if(obj.mRenderSettings.bRenderDepth)
 			casters.push_back(&obj);
 }
@@ -64,7 +85,23 @@ void Scene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 		objs[i] = &objects[i];
 	}
 #else
-	for (const GameObject& obj : objects)
+	for (const GameObject& obj : mObjects)
 		objs.push_back(&obj);
 #endif
+}
+
+void Scene::ResetActiveCamera()
+{
+	mCameras[mSelectedCamera].Reset();
+}
+
+void Scene::UpdateScene(float dt)
+{
+	if (ENGINE->INP()->IsKeyTriggered("C"))
+	{
+		mSelectedCamera = (mSelectedCamera + 1) % mCameras.size();
+	}
+
+	mCameras[mSelectedCamera].Update(dt);
+	Update(dt);
 }

@@ -37,9 +37,8 @@ static const char* sceneNames[] =
 	"IBLTest.scn"
 };
 
-SceneManager::SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights)
+SceneManager::SceneManager(std::vector<Light>& lights)
 	:
-	mpSceneCamera(pCam),
 	mRoomScene(*this, lights),
 	mSSAOTestScene(*this, lights),
 	mIBLTestScene(*this, lights),
@@ -48,56 +47,90 @@ SceneManager::SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights)
 
 ESkyboxPreset SceneManager::GetSceneSkybox() const
 {
-	//return mRoomScene.GetSkybox();
-	return ESkyboxPreset::NIGHT_SKY;
+	return mpActiveScene->GetSkybox();
 }
 
-void SceneManager::ReloadLevel()
+const Camera& SceneManager::GetMainCamera() const
 {
-	// todo: rethink this
-	const SerializedScene&		scene			= mSerializedScene;
-	const Settings::Engine      engineSettings	= Engine::ReadSettingsFromFile();
-	
-	Log::Info("Reloading Level...");
-
-	mpSceneCamera->ConfigureCamera(scene.cameraSettings, engineSettings.window);
-	// only camera reset for now
-	// todo: unload and reload scene, initialize depth pass...
+	return mpActiveScene->GetActiveCamera();
 }
 
-bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Engine& settings, shared_ptr<Camera> pCamera)
+
+void SceneManager::ReloadScene(Renderer* pRenderer, std::vector<const GameObject*>& ZPassObjects)
+{	
+	const auto& settings = Engine::GetSettings();
+	Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
+
+	mpActiveScene->UnloadScene();
+	ZPassObjects.clear();
+
+	LoadScene(pRenderer, settings, ZPassObjects);
+}
+
+void SceneManager::ResetMainCamera()
+{
+	mpActiveScene->ResetActiveCamera();
+}
+
+bool SceneManager::LoadScene(Renderer* pRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects)
+{
+	mSerializedScene = SceneParser::ReadScene(sceneNames[settings.levelToLoad]);
+	if (mSerializedScene.loadSuccess == '0') return false;
+	
+	mCurrentLevel = settings.levelToLoad;
+	switch (settings.levelToLoad)
+	{
+	case 0:	mpActiveScene = &mRoomScene; break;
+	case 1:	mpActiveScene = &mSSAOTestScene; break;
+	case 2:	mpActiveScene = &mIBLTestScene; break;
+	default:	break;
+	}
+	mpActiveScene->LoadScene(pRenderer, mSerializedScene, settings.window);
+	mpActiveScene->GetShadowCasters(zPassObjects);
+	return true;
+}
+
+
+bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects)
 {
 	constexpr size_t numScenes = sizeof(sceneNames) / sizeof(sceneNames[0]);
 	assert(settings.levelToLoad < numScenes);
-
-	mpSceneCamera = pCamera;
-	mSerializedScene = SceneParser::ReadScene(sceneNames[settings.levelToLoad]);
-	if (mSerializedScene.loadSuccess == '1')
-	{
-		mpSceneCamera->ConfigureCamera(mSerializedScene.cameraSettings, settings.window);
-		switch (settings.levelToLoad)
-		{
-		case 0:	mpActiveScene = &mRoomScene; break;
-		case 1:	mpActiveScene = &mSSAOTestScene; break;
-		case 2:	mpActiveScene = &mIBLTestScene; break;
-		default:	break;
-		}
-		mpActiveScene->Load(renderer, mSerializedScene);
-		return true;
-	}
-	return false;
+	bool bLoadSuccess = LoadScene(renderer, settings, zPassObjects);
+	return bLoadSuccess;
 }
 
+void SceneManager::LoadScene(int level)
+{
+	Renderer* mpRenderer = ENGINE->mpRenderer;
+	auto& mZPassObjects = ENGINE->mZPassObjects;
+
+	mpActiveScene->UnloadScene();
+	mZPassObjects.clear();
+	Engine::sEngineSettings.levelToLoad = level;
+	LoadScene(mpRenderer, Engine::sEngineSettings, mZPassObjects);
+}
 
 void SceneManager::HandleInput()
 {
+	const Input* mpInput = ENGINE->INP();
+	Renderer* mpRenderer = ENGINE->mpRenderer;
+	auto& mZPassObjects  = ENGINE->mZPassObjects;
+	
+	if (mpInput->IsKeyTriggered("R"))
+	{
+		if (mpInput->IsKeyDown("Shift")) ReloadScene(mpRenderer, mZPassObjects);
+		else							 ResetMainCamera();
+	}
 
+	if (mpInput->IsKeyTriggered("0"))	LoadScene(0);
+	if (mpInput->IsKeyTriggered("1"))	LoadScene(1);
+	if (mpInput->IsKeyTriggered("2"))	LoadScene(2);
 }
 
 void SceneManager::Update(float dt)
 {
 	HandleInput();
-	mpActiveScene->Update(dt);
+	mpActiveScene->UpdateScene(dt);
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 

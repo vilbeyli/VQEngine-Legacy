@@ -51,6 +51,7 @@ public:
 	void SetPosition(float x, float y, float z);
 	void Rotate(float yaw, float pitch, const float dt);
 
+	void Reset();	// resets camera transform to initial position & orientation
 public:
 	float Drag;				// 15.0f
 	float AngularSpeedDeg;	// 40.0f

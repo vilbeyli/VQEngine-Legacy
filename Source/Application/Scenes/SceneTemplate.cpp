@@ -15,20 +15,47 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
-#pragma once
-#include "Scene.h"
-class SSAOTestScene : public Scene
+
+#include "SceneTemplate.h"
+#include "Engine.h"
+#include "Input.h"
+
+
+SceneTemplate::SceneTemplate(SceneManager& sceneMan, std::vector<Light>& lights)
+	:
+	Scene(sceneMan, lights)
 {
-public:
-	void Load(SerializedScene& scene) override;
-	void Unload() override;
-	void Update(float dt) override;
-	void Render(const SceneView& sceneView, bool bSendMaterialData) const override;
-	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;
+}
 
-	SSAOTestScene(SceneManager& sceneMan, std::vector<Light>& lights);
-	~SSAOTestScene() = default;
+void SceneTemplate::Load(SerializedScene& scene)
+{
 
-	std::vector<GameObject> cubes; 
-};
+}
 
+void SceneTemplate::Unload()
+{
+}
+
+void SceneTemplate::Update(float dt)
+{
+
+}
+
+void SceneTemplate::Render(const SceneView & sceneView, bool bSendMaterialData) const
+{
+
+}
+
+void SceneTemplate::GetShadowCasters(std::vector<const GameObject*>& casters) const
+{
+	Scene::GetShadowCasters(casters);
+
+	// add the objects declared in the header. 
+}
+
+void SceneTemplate::GetSceneObjects(std::vector<const GameObject*>& objs) const
+{
+	Scene::GetSceneObjects(objs);
+
+	// add the objects declared in the header. 
+}

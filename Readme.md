@@ -2,12 +2,14 @@
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
-![](Data/Screenshots/ssao.PNG)
 <center><i>BRDF, HDR, Bloom</i></center>
 
+![](Data/Screenshots/ssao.PNG)
+
+
+<center><i>SSAO</i></center>
 
 ![](Data/Screenshots/SSAOScene.PNG)
-<center><i>SSAO</i></center>
 
 
 ## Prerequisites
@@ -20,10 +22,23 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 ## Controls
 
-| Key | Control |
+| Scene Controls |  |
 | :---: | :--- |
 | **WASD** |	Camera Movement |
 | **numpad::468239** |	Shadow Caster Light Movement |
+| **R** | Reset Camera |
+| **C** | Cycle Through Cameras |
+| **Shift+R** |	Reload Current Scene |
+| **0-9** |	Switch Scenes |
+
+Scenes:
+ - 0 - Room Scene
+ - 1 - SSAO Test Scene
+ - 2 - IBL Test Scene
+
+
+| Engine Controls |  |
+| :---: | :--- |
 | **F1** |	TexCoord Shader (Forward Rendering Only) |
 | **F2** |	Normals Shader (Forward Rendering Only) |
 | **F3** |	Diffuse Color Shader (Forward Rendering Only) |
@@ -35,9 +50,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 | **F9** |	Toggle Bloom |
 | **;** |	Toggle Ambient Occlusion |
 | **Backspace** | Pause App |
-| **R** | Reset Camera |
 | **\\** | Reload Shaders |
-| **'** | Toggle Floor Normal Map |
 | **ESC** |	Exit App |
  
 

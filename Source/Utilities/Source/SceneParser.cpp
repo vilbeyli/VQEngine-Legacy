@@ -230,14 +230,16 @@ void SceneParser::ParseScene(const std::vector<std::string>& command, Serialized
 		//--------------------------------------------------------------
 		// |  Near Plane	| Far Plane	|	Field of View	| Position | Rotation
 		//--------------------------------------------------------------
-		scene.cameraSettings.nearPlane	= stof(command[1]);
-		scene.cameraSettings.farPlane	= stof(command[2]);
-		scene.cameraSettings.fovV		= stof(command[3]);
-		scene.cameraSettings.x          = stof(command[4]);
-		scene.cameraSettings.y          = stof(command[5]);
-		scene.cameraSettings.z          = stof(command[6]);
-		scene.cameraSettings.yaw        = stof(command[7]);
-		scene.cameraSettings.pitch      = stof(command[8]);
+		Settings::Camera camSettings;
+		camSettings.nearPlane	= stof(command[1]);
+		camSettings.farPlane	= stof(command[2]);
+		camSettings.fovV		= stof(command[3]);
+		camSettings.x           = stof(command[4]);
+		camSettings.y           = stof(command[5]);
+		camSettings.z           = stof(command[6]);
+		camSettings.yaw         = stof(command[7]);
+		camSettings.pitch       = stof(command[8]);
+		scene.cameras.push_back(camSettings);
 	}
 	
 	else if (cmd == "light")

@@ -40,7 +40,7 @@ cbuffer SceneConstants
 
 	float lightCount;
 	float spotCount;
-	float2 padding;
+    float2 screenDimensions;
 
 	Light lights[LIGHT_COUNT];
 	Light spots[SPOT_COUNT];
@@ -56,41 +56,20 @@ cbuffer cbSurfaceMaterial
 Texture2D texDiffuseMap;
 Texture2D texNormalMap;
 Texture2D texShadowMap;
+Texture2D texAmbientOcclusion;
 
 SamplerState sShadowSampler;
 SamplerState sNormalSampler;
 
-// returns diffuse and specular light
-float3 Phong(Light light, PHONG_Surface s, float3 V, float3 worldPos)
-{
-	const float3 N = s.N;
-	const float3 L = normalize(light.position - worldPos);
-	const float3 R = normalize(2 * N * dot(N, L) - L);
-	
-
-	float diffuse = max(0.0f, dot(N, L));   // lights
-	float3 Id = light.color * s.diffuseColor  * diffuse;
-
-#ifdef BLINN_PHONG
-	const float3 H = normalize(L + V);
-	float3 Is = light.color * s.specularColor * pow(max(dot(N, H), 0.0f), 4.0f * s.shininess) * diffuse;
-#else
-	float3 Is = light.color * s.specularColor * pow(max(dot(R, V), 0.0f), s.shininess) * diffuse;
-#endif
-	
-	//float3 Is = light.color * pow(max(dot(R, V), 0.0f), 240) ;
-
-	return Id + Is;
-}
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	const bool bUsePhongAttenuation = true;
-
 	// lighting & surface parameters
-	float3 N = normalize(In.normal);
-	float3 T = normalize(In.tangent);
-	float3 V = normalize(cameraPos - In.worldPos);
+	const float3 N = normalize(In.normal);
+	const float3 T = normalize(In.tangent);
+	const float3 V = normalize(cameraPos - In.worldPos);
+    const float2 screenSpaceUV = In.position.xy / screenDimensions;
+
 	const float ambient = 0.005f;
 
 	PHONG_Surface s;
@@ -105,13 +84,27 @@ float4 PSMain(PSIn In) : SV_TARGET
     s.shininess = surfaceMaterial.shininess;
 
 	// illumination
-	float3 Ia = s.diffuseColor * ambient;	// ambient
+    float3 Ia = s.diffuseColor * ambient * texAmbientOcclusion.Sample(sNormalSampler, screenSpaceUV).xxx; // ambient
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
+
 	for (int i = 0; i < lightCount; ++i)	// POINT Lights
-        IdIs += Phong(lights[i], s, V, In.worldPos) * Attenuation(lights[i].attenuation, length(lights[i].position - In.worldPos), bUsePhongAttenuation) * lights[i].brightness * POINTLIGHT_BRIGHTNESS_SCALAR_PHONG;
+    {
+        IdIs += 
+		Phong(lights[i], s, V, In.worldPos) 
+		* AttenuationPhong(lights[i].attenuation, length(lights[i].position - In.worldPos)) 
+		* lights[i].brightness 
+		* POINTLIGHT_BRIGHTNESS_SCALAR_PHONG;
+    }
 
 	for (int j = 0; j < spotCount; ++j)		// SPOT Lights
-        IdIs += Phong(spots[j], s, V, In.worldPos) * Intensity(spots[j], In.worldPos) * ShadowTest(In.worldPos, In.lightSpacePos, texShadowMap, sShadowSampler) * spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
+    {
+        IdIs +=
+		Phong(spots[j], s, V, In.worldPos)
+		* Intensity(spots[j], In.worldPos)
+		* ShadowTest(In.worldPos, In.lightSpacePos, texShadowMap, sShadowSampler)
+		* spots[j].brightness 
+		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
+    }
 
 	float3 illumination = Ia + IdIs;
 	

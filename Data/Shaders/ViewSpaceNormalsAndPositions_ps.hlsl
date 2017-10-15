@@ -33,21 +33,17 @@ struct PSIn
 	float2 uv				: TEXCOORD1;
 };
 
-struct PSOut	// G-BUFFER
+struct PSOut
 {
-	float4 diffuseRoughness  : SV_TARGET0;
-	float4 specularMetalness : SV_TARGET1;
-	float3 normals			 : SV_TARGET2;
-	float3 position			 : SV_TARGET3;
+	float3 normals			 : SV_TARGET0;
+	float3 position			 : SV_TARGET1;
 };
 
 cbuffer cbSurfaceMaterial
 {
-    SurfaceMaterial surfaceMaterial;
-    float BRDFOrPhong;
+    float isNormalMap;
 };
 
-Texture2D texDiffuseMap;
 Texture2D texNormalMap;
 
 SamplerState sNormalSampler;
@@ -63,17 +59,8 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 V = normalize(-P);
 
     BRDF_Surface s;
-	s.N				= (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.uv, N, T) +	(1.0f - surfaceMaterial.isNormalMap) * N;
-	s.diffuseColor	= surfaceMaterial.diffuse *  (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, In.uv).xyz +
-					(1.0f - surfaceMaterial.isDiffuseMap)   * surfaceMaterial.diffuse);
-	s.specularColor = surfaceMaterial.specular;
-    s.roughness = // use s.roughness for either roughness (PBR) or shininess (Phong)
-	surfaceMaterial.roughness * BRDFOrPhong + 
-	surfaceMaterial.shininess * (1.0f - BRDFOrPhong);
-	s.metalness = surfaceMaterial.metalness;
-
-	GBuffer.diffuseRoughness	= float4(s.diffuseColor, s.roughness);
-	GBuffer.specularMetalness	= float4(s.specularColor, s.metalness);
+	s.N				= (isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.uv, N, T) +	(1.0f - isNormalMap) * N;
+	
 	GBuffer.normals				= s.N;
 	GBuffer.position			= P;
 	return GBuffer;

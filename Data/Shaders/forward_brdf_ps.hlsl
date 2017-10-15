@@ -43,7 +43,7 @@ cbuffer SceneVariables
 
 	float  lightCount;
 	float  spotCount;
-	float2 padding;
+	float2 screenDimensions;
 
 	Light lights[LIGHT_COUNT];
 	Light spots[SPOT_COUNT];
@@ -58,19 +58,19 @@ cbuffer cbSurfaceMaterial
 Texture2D texDiffuseMap;
 Texture2D texNormalMap;
 Texture2D texShadowMap;
+Texture2D texAmbientOcclusion;
 
 SamplerState sShadowSampler;
 SamplerState sNormalSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	const bool bUsePhongAttenuation = false; // use brdf attenuation
-	
 	// lighting & surface parameters (World Space)
 	const float3 P = In.worldPos;
 	const float3 N = normalize(In.normal);
 	const float3 T = normalize(In.tangent);
-	const float3 V = normalize(cameraPos - P);
+    const float3 V = normalize(cameraPos - P);
+    const float2 screenSpaceUV = In.position.xy / screenDimensions;
 	const float ambient = 0.01f;
 
 	BRDF_Surface s;
@@ -82,8 +82,8 @@ float4 PSMain(PSIn In) : SV_TARGET
     s.metalness = surfaceMaterial.metalness;
 
 	// illumination
-	const float3 Ia = s.diffuseColor * ambient;	// ambient
-	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
+    const float3 Ia = s.diffuseColor * ambient * texAmbientOcclusion.Sample(sNormalSampler, screenSpaceUV).xxx; // ambient
+	float3 IdIs = float3(0.0f, 0.0f, 0.0f);				// diffuse & specular
 
 	
 	// POINT Lights
@@ -92,7 +92,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	for (int i = 0; i < lightCount; ++i)		
 	{
 		const float3 Wi       = normalize(lights[i].position - P);
-		const float3 radiance = Attenuation(lights[i].attenuation, length(lights[i].position - P), bUsePhongAttenuation) * lights[i].color * lights[i].brightness;
+        const float3 radiance = AttenuationBRDF(lights[i].attenuation, length(lights[i].position - P)) * lights[i].color * lights[i].brightness;
 		IdIs += BRDF(Wi, s, V, P) * radiance;
 	}
 

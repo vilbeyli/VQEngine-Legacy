@@ -40,10 +40,12 @@ struct ID3D11Device;
 struct SceneLightData;
 struct SceneView
 {
-	XMMATRIX			viewProj;
-	XMMATRIX			view;
-	XMMATRIX			viewToWorld;
-	XMMATRIX			projection;
+	XMMATRIX viewProj;
+	XMMATRIX view;
+	XMMATRIX viewToWorld;
+	XMMATRIX projection;
+	bool	 bIsPBRLightingUsed;
+	bool	 bIsDeferredRendering;
 };
 
 struct ShadowMapPass
@@ -127,7 +129,8 @@ struct DeferredRenderingPasses
 		const RenderTargetID target, 
 		const SceneView& sceneView, 
 		const SceneLightData& lights, 
-		const TextureID tSSAO
+		const TextureID tSSAO, 
+		bool bUseBRDFLighting
 	) const;
 
 	GBuffer _GBuffer;

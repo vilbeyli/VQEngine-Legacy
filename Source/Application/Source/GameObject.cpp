@@ -27,14 +27,14 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 	const XMMATRIX wvp = world * sceneView.viewProj;
 	
 	const Material* mat = [&]() -> const Material*{
-		if (shader == EShaders::FORWARD_BRDF || shader == EShaders::DEFERRED_GEOMETRY)
+		if(sceneView.bIsPBRLightingUsed)
 			return &mModel.mBRDF_Material;
 		return &mModel.mBlinnPhong_Material;
 	}();
 
 	if (UploadMaterialDataToGPU)
 	{
-		mat->SetMaterialConstants(pRenderer, shader);
+		mat->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
 	}
 
 	switch (shader)
@@ -45,8 +45,6 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 		break;
 	case EShaders::Z_PREPRASS:
-		pRenderer->SetConstant4x4f("worldView", world * sceneView.view);
-		break;
 	case EShaders::DEFERRED_GEOMETRY:
 		pRenderer->SetConstant4x4f("worldView", world * sceneView.view);
 		pRenderer->SetConstant4x4f("normalViewMatrix", mTransform.NormalMatrix(world) * sceneView.view);

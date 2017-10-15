@@ -81,21 +81,21 @@ struct PHONG_Surface
 
 // FUNCTIONS
 //----------------------------------------------------------
-inline float Attenuation(float2 coeffs, float dist, bool phong)
+inline float AttenuationBRDF(float2 coeffs, float dist)
 {
-	if (phong)
-	{
-		return 1.0f / (
+	// quadratic attenuation (inverse square) is physically more accurate
+	return 1.0f / (dist * dist);
+}
+
+inline float AttenuationPhong(float2 coeffs, float dist)
+{
+    return 1.0f / (
 			1.0f
 			+ coeffs[0] * dist
 			+ coeffs[1] * dist * dist
 			);
-	}
-
-	// quadratic attenuation (inverse square) is physically more accurate
-	// used for BRDF
-	return 1.0f / (dist * dist);
 }
+
 
 // spotlight intensity calculataion
 float Intensity(Light l, float3 worldPos)
@@ -177,4 +177,27 @@ float3 ShadowTestDebug(float3 worldPos, float4 lightSpacePos, float3 illuminatio
 	}
 
 	return noShadows;
+}
+
+// returns diffuse and specular components of phong illumination model
+float3 Phong(Light light, PHONG_Surface s, float3 V, float3 worldPos)
+{
+    const float3 N = s.N;
+    const float3 L = normalize(light.position - worldPos);
+    const float3 R = normalize(2 * N * dot(N, L) - L);
+	
+
+    float diffuse = max(0.0f, dot(N, L)); // lights
+    float3 Id = light.color * s.diffuseColor * diffuse;
+
+#ifdef BLINN_PHONG
+	const float3 H = normalize(L + V);
+	float3 Is = light.color * s.specularColor * pow(max(dot(N, H), 0.0f), 4.0f * s.shininess) * diffuse;
+#else
+    float3 Is = light.color * s.specularColor * pow(max(dot(R, V), 0.0f), s.shininess) * diffuse;
+#endif
+	
+	//float3 Is = light.color * pow(max(dot(R, V), 0.0f), 240) ;
+
+    return Id + Is;
 }

@@ -31,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Data\Shaders\deferred_brdf_vs.hlsl = Data\Shaders\deferred_brdf_vs.hlsl
 		Data\Shaders\deferred_geometry_ps.hlsl = Data\Shaders\deferred_geometry_ps.hlsl
 		Data\Shaders\deferred_geometry_vs.hlsl = Data\Shaders\deferred_geometry_vs.hlsl
+		Data\Shaders\deferred_phong_lighting_ps.hlsl = Data\Shaders\deferred_phong_lighting_ps.hlsl
+		Data\Shaders\deferred_rendering_vs.hlsl = Data\Shaders\deferred_rendering_vs.hlsl
 		Data\Shaders\DepthShader_ps.hlsl = Data\Shaders\DepthShader_ps.hlsl
 		Data\Shaders\DepthShader_vs.hlsl = Data\Shaders\DepthShader_vs.hlsl
 		Data\Shaders\forward_brdf_ps.hlsl = Data\Shaders\forward_brdf_ps.hlsl
@@ -38,6 +40,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Data\Shaders\forward_phong_ps.hlsl = Data\Shaders\forward_phong_ps.hlsl
 		Data\Shaders\Forward_Phong_vs.hlsl = Data\Shaders\Forward_Phong_vs.hlsl
 		Data\Shaders\FullScreenQuad_vs.hlsl = Data\Shaders\FullScreenQuad_vs.hlsl
+		Data\Shaders\GaussianBlur4x4_ps.hlsl = Data\Shaders\GaussianBlur4x4_ps.hlsl
 		Data\Shaders\LightingCommon.hlsl = Data\Shaders\LightingCommon.hlsl
 		Data\Shaders\Line_gs.hlsl = Data\Shaders\Line_gs.hlsl
 		Data\Shaders\Line_ps.hlsl = Data\Shaders\Line_ps.hlsl
@@ -60,6 +63,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Data\Shaders\Tonemapping_vs.hlsl = Data\Shaders\Tonemapping_vs.hlsl
 		Data\Shaders\UnlitTextureColor_ps.hlsl = Data\Shaders\UnlitTextureColor_ps.hlsl
 		Data\Shaders\UnlitTextureColor_vs.hlsl = Data\Shaders\UnlitTextureColor_vs.hlsl
+		Data\Shaders\ViewSpaceNormalsAndPositions_ps.hlsl = Data\Shaders\ViewSpaceNormalsAndPositions_ps.hlsl
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3863EBE7-75B9-4B02-8CCC-44425CE9059A}"

@@ -98,18 +98,10 @@ Engine * Engine::GetEngine()
 void Engine::ToggleLightingModel()
 {
 	// enable toggling only on forward rendering for now
-#if 1
-	if (!mbUseDeferredRendering)
-	{
-		mSelectedShader = mSelectedShader == EShaders::FORWARD_PHONG ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
-	}
-	else
-	{
-		Log::Info("Deferred mode only supports BRDF Lighting model...");
-	}
-#else
-	sEngineSettings.rendering.bUseBRDFLighting = !sEngineSettings.rendering.bUseBRDFLighting;
-#endif
+	const bool isBRDF = sEngineSettings.rendering.bUseBRDFLighting = !sEngineSettings.rendering.bUseBRDFLighting;
+	mSelectedShader = mbUseDeferredRendering 
+		? EShaders::DEFERRED_GEOMETRY 
+		: (isBRDF ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG);
 }
 
 void Engine::ToggleRenderingPath()
@@ -125,8 +117,20 @@ void Engine::ToggleRenderingPath()
 	Log::Info("Toggle Rendering Path: %s Rendering enabled", mbUseDeferredRendering ? "Deferred" : "Forward");
 
 	// if we just turned deferred rendering off, clear the gbuffer textures
-	if(!mbUseDeferredRendering)
+	if (!mbUseDeferredRendering)
+	{
 		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
+		mSelectedShader = sEngineSettings.rendering.bUseBRDFLighting ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
+	}
+}
+
+void Engine::ToggleAmbientOcclusion()
+{
+	mbIsAmbientOcclusionOn = !mbIsAmbientOcclusionOn;
+	if (!mbIsAmbientOcclusionOn)
+	{
+		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
+	}
 }
 
 void Engine::Pause()
@@ -224,21 +228,17 @@ bool Engine::Load()
 
 bool Engine::HandleInput()
 {
-	if (mpInput->IsKeyDown(VK_ESCAPE))
-	{
-		return false;
-	}
-
-	if (mpInput->IsKeyTriggered(0x08)) // Key backspace
-		TogglePause();
-
+	if (mpInput->IsKeyDown("Escape"))			return false;
+	if (mpInput->IsKeyTriggered("Backspace"))	TogglePause();
 
 	if (!mbUseDeferredRendering)
-	{
+	{	// forward only keys
 		if (mpInput->IsKeyTriggered("F1")) mSelectedShader = EShaders::TEXTURE_COORDINATES;
 		if (mpInput->IsKeyTriggered("F2")) mSelectedShader = EShaders::NORMAL;
 		if (mpInput->IsKeyTriggered("F3")) mSelectedShader = EShaders::UNLIT;
 		if (mpInput->IsKeyTriggered("F4")) mSelectedShader = mSelectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
+
+		if (mpInput->IsKeyTriggered("F5")) mSelectedShader = IsLightingModelPBR() ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
 	}
 
 	//if (mpInput->IsKeyTriggered("F5")) mpRenderer->sEnableBlend = !mpRenderer->sEnableBlend;
@@ -247,7 +247,7 @@ bool Engine::HandleInput()
 	if (mpInput->IsKeyTriggered("F8")) ToggleRenderingPath();
 
 	if (mpInput->IsKeyTriggered("F9")) mPostProcessPass._bloomPass.ToggleBloomPass();
-	if (mpInput->IsKeyTriggered(";")) mbIsAmbientOcclusionOn = !mbIsAmbientOcclusionOn;
+	if (mpInput->IsKeyTriggered(";")) ToggleAmbientOcclusion();
 
 	if (mpInput->IsKeyTriggered("R")) mpSceneManager->ReloadLevel();
 	if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
@@ -302,6 +302,8 @@ void Engine::PreRender()
 	mSceneView.view = view;
 	mSceneView.viewToWorld = viewInverse;
 	mSceneView.projection = proj;
+	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
+	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
 
 	// gather scene lights
 	mSceneLightData.ResetCounts();
@@ -394,7 +396,7 @@ void Engine::Render()
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
 	mpRenderer->BeginEvent("Shadow Pass");
-	mpRenderer->UnbindRenderTarget();	// unbind the back render target | every pass has their own render targets
+	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass has their own render targets
 	mShadowMapPass.RenderShadowMaps(mpRenderer, _shadowCasters, mZPassObjects);
 	mpRenderer->EndEvent();
 
@@ -412,6 +414,7 @@ void Engine::Render()
 		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
 		const TextureID texPosition = mpRenderer->GetRenderTargetTexture(gBuffer._positionRT);
 		const TextureID texDepthTexture = mpRenderer->m_state._depthBufferTexture;
+		const TextureID tSSAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 
 		// GEOMETRY - DEPTH PASS
 		mpRenderer->BeginEvent("Geometry Pass");
@@ -430,9 +433,8 @@ void Engine::Render()
 		}
 
 		// DEFERRED LIGHTING PASS
-		const TextureID tSSAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		mpRenderer->BeginEvent("Lighting Pass");
-		mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO);
+		mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
 		mpRenderer->EndEvent();
 
 		// LIGHT SOURCES
@@ -452,10 +454,8 @@ void Engine::Render()
 
 	else
 	{	// FORWARD
-		mSelectedShader = mSelectedShader == EShaders::DEFERRED_GEOMETRY ? EShaders::FORWARD_BRDF : mSelectedShader;
-		const float clearColor[4] = { 0.2f, 0.4f, 0.3f, 1.0f };
-		const float clearDepth = 1.0f;
-		const bool bZPrePass = mbIsAmbientOcclusionOn && false;
+		const bool bZPrePass = mbIsAmbientOcclusionOn;
+		const TextureID tSSAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 
 		// AMBIENT OCCLUSION - Z-PREPASS
 		if (bZPrePass)
@@ -485,27 +485,29 @@ void Engine::Render()
 
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
-			mpRenderer->UnbindRenderTarget();
+			mpRenderer->UnbindRenderTargets();
 			mpRenderer->Apply();
 			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, texPosition, mSceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
 			mSSAOPass.GaussianBlurPass(mpRenderer);
-			mSSAOPass.GaussianBlurPass(mpRenderer);
 			mpRenderer->EndEvent();
 		}
 
+		const bool bDoClearColor = true;
+		const bool bDoClearDepth = !bZPrePass;
+		const bool bDoClearStencil = true;
+		ClearCommand clearCmd(
+			bDoClearColor, bDoClearDepth, bDoClearStencil,
+			{ 0, 0, 0, 0 }, 1, 0
+		);
+
 		mpRenderer->BindRenderTarget(mPostProcessPass._worldRenderTarget);
-		if (bZPrePass)
+		mpRenderer->BindDepthTarget(mWorldDepthTarget);
+		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+		if (!bZPrePass)
 		{
-			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+			mpRenderer->Begin(clearCmd);
 		}
-		else
-		{
-			mpRenderer->BindDepthTarget(mWorldDepthTarget);
-			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
-			mpRenderer->Begin(clearColor, clearDepth);
-		}
-		
 
 		// SKYBOX
 		// if we're not rendering the skybox, call apply() to unbind
@@ -525,7 +527,9 @@ void Engine::Render()
 		mpRenderer->SetShader(mSelectedShader);
 		if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
 		{
+			mpRenderer->SetTexture("texAmbientOcclusion", tSSAO);
 			mpRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
+			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
 			mpRenderer->SetSamplerState("sNormalSampler", mNormalSampler);
 			SendLightData();
 		}
@@ -600,7 +604,6 @@ void Engine::Render()
 		TextureID tSceneDepth		 = mpRenderer->GetDepthTargetTexture(0);
 		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
 		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
-		tAO = !mbUseDeferredRendering ? mSSAOPass.whiteTexture4x4 : tAO; // forward lighting currently doesn't have ssao. todo: remove this when forward ssao is done
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);

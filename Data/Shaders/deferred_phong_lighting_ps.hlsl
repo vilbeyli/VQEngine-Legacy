@@ -19,6 +19,8 @@
 #include "LightingCommon.hlsl"
 #include "BRDF.hlsl"
 
+#define BLINN_PHONG
+
 struct PSIn
 {
 	float4 position		 : SV_POSITION;
@@ -64,55 +66,47 @@ SamplerState sNearestSampler;
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	// lighting & surface parameters (View Space Lighting)
-	const float3 P = texPosition.Sample(sNearestSampler, In.uv);
-	const float3 N = texNormals.Sample(sNearestSampler, In.uv);
-	//const float3 T = normalize(In.tangent);
+	const float3 P = texPosition.Sample(sNearestSampler, In.uv).xyz;
+	const float3 N = texNormals.Sample(sNearestSampler, In.uv).xyz;
 	const float3 V = normalize(- P);
 	
 	const float3 Pw = mul(matViewToWorld, float4(P, 1)).xyz;
+    const float3 Vw = mul(matViewToWorld, float4(V, 0)).xyz;
+    const float3 Nw = mul(matViewToWorld, float4(N, 0)).xyz;
     const float4 lightSpacePos = mul(lightSpaceMat, float4(Pw, 1));
 
 	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
 	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sNearestSampler, In.uv);
 
-    BRDF_Surface s;
-    s.N = N;
+    PHONG_Surface s;
+    s.N = Nw;
 	s.diffuseColor = diffuseRoughness.rgb;
 	s.specularColor = specularMetalness.rgb;
-	s.roughness = diffuseRoughness.a;
-	s.metalness = specularMetalness.a;
+	s.shininess = diffuseRoughness.a;	// shininess is stored in alpha channel
+
+	float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
+
+	for (int i = 0; i < lightCount; ++i)	// POINT Lights
+    {
+        IdIs += 
+		Phong(lights[i], s, Vw, Pw)
+		* AttenuationPhong(lights[i].attenuation, length(lights[i].position - Pw))
+		* lights[i].brightness 
+		* POINTLIGHT_BRIGHTNESS_SCALAR_PHONG;
+    }
 
 #if 1
-	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
-
-	// POINT Lights
-	// brightness default: 300
-	//---------------------------------
-	for (int i = 0; i < lightCount; ++i)		
-	{
-		const float3 Lv       = mul(matView, float4(lights[i].position, 1));
-		const float3 Wi       = normalize(Lv - P);
-		const float3 radiance = 
-			AttenuationBRDF(lights[i].attenuation, length(lights[i].position - Pw))
-			* lights[i].color 
-			* lights[i].brightness;
-		IdIs += BRDF(Wi, s, V, P) * radiance;
-	}
-
-#if 1
-	// SPOT Lights (shadow)
-	//---------------------------------
-	for (int j = 0; j < spotCount; ++j)
-	{
-		const float3 Lv        = mul(matView, float4(spots[j].position, 1));
-		const float3 Wi        = normalize(Lv - P);
-		const float3 radiance  = Intensity(spots[j], Pw) * spots[j].color * spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
-		const float3 shadowing = ShadowTest(Pw, lightSpacePos, texShadowMap, sShadowSampler);
-		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
-	}
+	for (int j = 0; j < spotCount; ++j)		// SPOT Lights
+    {
+        IdIs +=
+		Phong(spots[j], s, Vw, Pw)
+		* Intensity(spots[j], Pw)
+		* ShadowTest(Pw, lightSpacePos, texShadowMap, sShadowSampler)
+		* spots[j].brightness 
+		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
+    }
 #endif
 
 	const float3 illumination = IdIs;
 	return float4(illumination, 1);
-#endif
 }

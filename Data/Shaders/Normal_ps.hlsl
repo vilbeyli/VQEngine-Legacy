@@ -29,7 +29,7 @@ cbuffer perObj
 	float isNormalMap;
 };
 
-Texture2D gNormalMap;
+Texture2D texNormalMap;
 SamplerState samAnisotropic
 {
 	Filter = ANISOTROPIC;
@@ -41,7 +41,7 @@ SamplerState samAnisotropic
 inline float3 UnpackNormals(float2 uv, float3 worldNormal, float3 worldTangent)
 {
 	// uncompressed normal in tangent space
-	float3 normalMapNormal = gNormalMap.Sample(samAnisotropic, uv).xyz;
+	float3 normalMapNormal = texNormalMap.Sample(samAnisotropic, uv).xyz;
 	normalMapNormal = normalize(normalMapNormal * 2.0f - 1.0f);
 	//float Nx = normalMapNormal.
 	//normalMapNormal.y *= -1.0f;

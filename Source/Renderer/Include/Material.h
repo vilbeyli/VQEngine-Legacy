@@ -45,7 +45,8 @@ struct Material
 
 	Material();
 	~Material();
-	virtual void SetMaterialConstants(Renderer* renderer, EShaders shader) const = 0;
+	void SetMaterialConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const;
+	virtual void SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const = 0;
 };
 
 struct BRDF_Material : public Material
@@ -54,7 +55,7 @@ struct BRDF_Material : public Material
 	float		roughness;
 	//--------------------
 	BRDF_Material() : Material(), metalness(0.1f), roughness(0.6f) {}
-	void SetMaterialConstants(Renderer* renderer, EShaders shader) const override;
+	void SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const override;
 };
 
 struct BlinnPhong_Material : public Material
@@ -64,5 +65,5 @@ struct BlinnPhong_Material : public Material
 	static const BlinnPhong_Material jade, ruby, bronze, gold;
 	BlinnPhong_Material(const vec3& diffuse, const vec3& specular, float shininess);
 	BlinnPhong_Material() : Material(), shininess(90) {}
-	void SetMaterialConstants(Renderer* renderer, EShaders shader) const override;
+	void SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const override;
 };

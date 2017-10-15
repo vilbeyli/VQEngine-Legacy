@@ -88,6 +88,8 @@ public:
 	inline ShaderID			GetSelectedShader() const { return mSelectedShader; }
 	void					ToggleLightingModel();	// BRDF / Blinn-Phong
 	void					ToggleRenderingPath();	// Forward / Deferred
+	void					ToggleAmbientOcclusion();
+	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
 	void					Pause();
 	void					Unpause();
 

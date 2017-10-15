@@ -54,8 +54,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float2 uv = In.position.xy / ScreenSize;
 
 	// lighting & surface parameters
-	const float3 P = texPosition.Sample(sNearestSampler, uv);
-	const float3 N = texNormals.Sample(sNearestSampler, uv);
+	const float3 P = texPosition.Sample(sNearestSampler, uv).xyz;
+	const float3 N = texNormals.Sample(sNearestSampler, uv).xyz;
 	const float3 V = normalize(CameraWorldPosition - P);
 	const float3 L = light.position;
 
@@ -70,12 +70,11 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.metalness = specularMetalness.a;
 	
 	// illumination
-	const bool bUsePhongAttenuation = false;
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
 
 	// integrate the lighting equation
 	const float3 Wi = normalize(L - P);
-	const float3 radiance = Attenuation(light.attenuation, length(light.position - P), bUsePhongAttenuation)
+	const float3 radiance = AttenuationPhong(light.attenuation, length(light.position - P))
 		* light.color
 		* light.brightness;
 

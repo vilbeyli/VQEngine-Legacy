@@ -115,15 +115,18 @@ void Shader::LoadShaders(Renderer* pRenderer)
 
 	const std::vector<std::string> TextureCoordinates = { "MVPTransformationWithUVs_vs", "TextureCoordinates_ps" };
 
-	const std::vector<std::string> DeferredBRDF_AmbientLight = { "deferred_brdf_vs", "deferred_brdf_ambient_ps" };
-	const std::vector<std::string> DeferredBRDF_LightingFSQ  = { "deferred_brdf_vs", "deferred_brdf_lighting_ps" };
-	const std::vector<std::string> DeferredBRDF_PointLight   = { "MVPTransformationWithUVs_vs", "deferred_brdf_pointLight_ps" };
+	const std::vector<std::string> DeferredBRDF_AmbientLight	= { "deferred_rendering_vs", "deferred_brdf_ambient_ps" };
+	const std::vector<std::string> DeferredBRDF_LightingFSQ		= { "deferred_rendering_vs", "deferred_brdf_lighting_ps" };
+	const std::vector<std::string> DeferredPhong_LightingFSQ	= { "deferred_rendering_vs", "deferred_phong_lighting_ps" };
+	const std::vector<std::string> DeferredBRDF_PointLight		= { "MVPTransformationWithUVs_vs", "deferred_brdf_pointLight_ps" };
 	// render cone?
-	const std::vector<std::string> DeferredBRDF_SpotLight    = { "MVPTransformationWithUVs_vs", "deferred_brdf_spotLight_ps" }; 
+	const std::vector<std::string> DeferredBRDF_SpotLight		= { "MVPTransformationWithUVs_vs", "deferred_brdf_spotLight_ps" }; 
 
-	const std::vector<std::string> AmbientOcclusionShaders = { "FullscreenQuad_vs", "SSAO_ps" };
-	const std::vector<std::string> BilateralBlurShaders   = { "FullscreenQuad_vs", "BilateralBlur_ps" };	// compute?
-	const std::vector<std::string> GaussianBlur4x4Shaders   = { "FullscreenQuad_vs", "GaussianBlur4x4_ps" };	// compute?
+	const std::vector<std::string> AmbientOcclusionShaders		= { "FullscreenQuad_vs", "SSAO_ps" };
+	const std::vector<std::string> BilateralBlurShaders			= { "FullscreenQuad_vs", "BilateralBlur_ps" };	// compute?
+	const std::vector<std::string> GaussianBlur4x4Shaders		= { "FullscreenQuad_vs", "GaussianBlur4x4_ps" };	// compute?
+
+	const std::vector<std::string> ZPrePassShaders				= { "Deferred_Geometry_vs", "ViewSpaceNormalsAndPositions_ps" };	
 
 	// todo: limit enumerations? probably better to store just some ids
 	s_shaders[EShaders::FORWARD_PHONG			]	= pRenderer->AddShader("Forward_Phong"			, layout);
@@ -145,12 +148,13 @@ void Shader::LoadShaders(Renderer* pRenderer)
 	s_shaders[EShaders::DEFERRED_GEOMETRY		]	= pRenderer->AddShader("Deferred_Geometry"		, layout);
 	s_shaders[EShaders::DEFERRED_BRDF_AMBIENT	]	= pRenderer->AddShader("Deferred_BRDF_Ambient"	, DeferredBRDF_AmbientLight	, VS_PS, layout);
 	s_shaders[EShaders::DEFERRED_BRDF_LIGHTING	]	= pRenderer->AddShader("Deferred_BRDF_Lighting" , DeferredBRDF_LightingFSQ	, VS_PS, layout);
+	s_shaders[EShaders::DEFERRED_PHONG_LIGHTING	]	= pRenderer->AddShader("Deferred_Phong_Lighting", DeferredPhong_LightingFSQ	, VS_PS, layout);
 	s_shaders[EShaders::DEFERRED_BRDF_POINT		]	= pRenderer->AddShader("Deferred_BRDF_Point"	, DeferredBRDF_PointLight	, VS_PS, layout);
 	s_shaders[EShaders::DEFERRED_BRDF_SPOT		]	= pRenderer->AddShader("Deferred_BRDF_Spot"		, DeferredBRDF_SpotLight	, VS_PS, layout);
 	s_shaders[EShaders::SSAO					]	= pRenderer->AddShader("SSAO"					, AmbientOcclusionShaders	, VS_PS, layout);
 	s_shaders[EShaders::BILATERAL_BLUR			]	= pRenderer->AddShader("BilateralBlur"			, BilateralBlurShaders		, VS_PS, layout);
-	s_shaders[EShaders::GAUSSIAN_BLUR_4x4		]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders, VS_PS, layout);
-	s_shaders[EShaders::Z_PREPRASS				]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders, VS_PS, layout);
+	s_shaders[EShaders::GAUSSIAN_BLUR_4x4		]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders	, VS_PS, layout);
+	s_shaders[EShaders::Z_PREPRASS				]	= pRenderer->AddShader("ZPrePass"				, ZPrePassShaders			, VS_PS, layout);
 	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
 }
 

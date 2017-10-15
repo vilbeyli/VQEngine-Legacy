@@ -204,7 +204,7 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
 			const int texWidth = pRenderer->GetTextureObject(pingPong)._width;
 			const int texHeight = pRenderer->GetTextureObject(pingPong)._height;
 
-			pRenderer->UnbindRenderTarget();
+			pRenderer->UnbindRenderTargets();
 			pRenderer->Apply();
 			pRenderer->BindRenderTarget(_bloomPass._blurPingPong[isHorizontal]);
 			pRenderer->SetConstant1i("isHorizontal", 1 - isHorizontal);
@@ -381,7 +381,13 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	pRenderer->Apply();
 }
 
-void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const RenderTargetID target, const SceneView& sceneView, const SceneLightData& lights, const TextureID tSSAO) const
+void DeferredRenderingPasses::RenderLightingPass(
+	Renderer* pRenderer, 
+	const RenderTargetID target, 
+	const SceneView& sceneView, 
+	const SceneLightData& lights, 
+	const TextureID tSSAO, 
+	bool bUseBRDFLighting) const
 {
 	const bool bDoClearColor = true;
 	const bool bDoClearDepth = false;
@@ -398,6 +404,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer._diffuseRoughnessRT);
 	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer._specularMetallicRT);
 	const TextureID texPosition = pRenderer->GetRenderTargetTexture(_GBuffer._positionRT);
+	const ShaderID lightingShader = bUseBRDFLighting ? EShaders::DEFERRED_BRDF_LIGHTING : EShaders::DEFERRED_PHONG_LIGHTING;
 
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
@@ -473,7 +480,7 @@ void DeferredRenderingPasses::RenderLightingPass(Renderer* pRenderer, const Rend
 #endif
 
 #else
-	pRenderer->SetShader(EShaders::DEFERRED_BRDF_LIGHTING);
+	pRenderer->SetShader(lightingShader);
 	ENGINE->SendLightData();
 
 	pRenderer->SetConstant4x4f("matView", sceneView.view);
@@ -635,7 +642,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 
 void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer)
 {
-	pRenderer->UnbindRenderTarget();
+	pRenderer->UnbindRenderTargets();
 	return;
 	pRenderer->BeginEvent("Blur Pass");
 	pRenderer->SetShader(EShaders::BILATERAL_BLUR);

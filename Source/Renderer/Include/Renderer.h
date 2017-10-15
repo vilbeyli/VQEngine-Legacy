@@ -197,7 +197,7 @@ public:
 	void					BindRenderTarget(RenderTargetID rtvID);
 	void					BindDepthTarget(DepthTargetID dsvID);
 
-	void					UnbindRenderTarget();
+	void					UnbindRenderTargets();
 	void					UnbindDepthTarget();
 
 	void					SetConstant4x4f(const char* cName, const XMMATRIX& matrix);

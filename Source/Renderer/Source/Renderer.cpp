@@ -512,6 +512,11 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::STENCIL_WRITE]);
 	if (!checkFailed(hr)) return false;
 
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	depthStencilDesc.StencilEnable = true;
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_TEST_ONLY]);
+	if (!checkFailed(hr)) return false;
 
 	// PRIMITIVES
 	//--------------------------------------------------------------------
@@ -1264,7 +1269,7 @@ void Renderer::BindDepthTarget(DepthTargetID dsvID)
 	m_state._boundDepthTarget = dsvID;
 }
 
-void Renderer::UnbindRenderTarget()
+void Renderer::UnbindRenderTargets()
 {
 	m_state._boundRenderTargets = { -1, -1, -1, -1, -1, -1 };
 }

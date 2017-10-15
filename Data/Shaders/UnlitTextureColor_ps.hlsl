@@ -28,7 +28,7 @@ cbuffer perObject
     float isDiffuseMap;
 };
 
-Texture2D gDiffuseMap;
+Texture2D texDiffuseMap;
 SamplerState samAnisotropic
 {
     Filter = ANISOTROPIC;
@@ -40,7 +40,7 @@ SamplerState samAnisotropic
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	float2 uv = In.texCoord;
-    float4 outColor = isDiffuseMap          * gDiffuseMap.Sample(samAnisotropic, uv) * float4(diffuse, 1) 
+    float4 outColor = isDiffuseMap          * texDiffuseMap.Sample(samAnisotropic, uv) * float4(diffuse, 1) 
                     + (1.0f - isDiffuseMap) * float4(diffuse,1);
 	return outColor;
 }

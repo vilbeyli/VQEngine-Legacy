@@ -41,6 +41,7 @@ void Scene::Render(const SceneView& sceneView) const
 		|| selectedShader == EShaders::NORMAL
 		|| selectedShader == EShaders::FORWARD_BRDF
 		|| selectedShader == EShaders::DEFERRED_GEOMETRY
+		|| selectedShader == EShaders::Z_PREPRASS
 		);
 
 	for (const auto& obj : objects) obj.Render(mpRenderer, sceneView, bSendMaterialData);

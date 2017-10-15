@@ -77,6 +77,7 @@ Material::Material()
 
 Material::~Material() {}
 
+
 struct SurfaceMaterial
 {
 	vec3  diffuse;
@@ -91,38 +92,74 @@ struct SurfaceMaterial
 	float shininess;
 };
 
-void BRDF_Material::SetMaterialConstants(Renderer* renderer, EShaders shader) const
-{
-	SurfaceMaterial mat{
-		diffuse.Value(),
-		alpha,
-
-		specular,
-		roughness,
-
-		diffuseMap == -1 ? 0.0f : 1.0f,
-		normalMap == -1 ? 0.0f : 1.0f,
-		metalness,
-		0.0f
-	};
-	renderer->SetConstantStruct("surfaceMaterial", &mat);
-	if (diffuseMap >= 0) renderer->SetTexture("texDiffuseMap", diffuseMap);
-	if (normalMap >= 0) renderer->SetTexture("texNormalMap", normalMap);
-}
-
-void BlinnPhong_Material::SetMaterialConstants(Renderer* pRenderer, EShaders shader) const
+void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool bIsDeferredRendering) const
 {
 	switch (shader)
 	{
 	case EShaders::NORMAL:
-		pRenderer->SetConstant1f("isNormalMap", normalMap == -1 ? 0.0f : 1.0f);
-		if (normalMap != -1) pRenderer->SetTexture("gNormalMap", normalMap);
+	case EShaders::Z_PREPRASS:
+		renderer->SetConstant1f("isNormalMap", normalMap == -1 ? 0.0f : 1.0f);
+		if (normalMap != -1) renderer->SetTexture("texNormalMap", normalMap);
 		break;
 	case EShaders::UNLIT:
-		pRenderer->SetConstant3f("diffuse", diffuse);
-		pRenderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0.0f : 1.0f);
-		if (diffuseMap != -1) pRenderer->SetTexture("gDiffuseMap", diffuseMap);
+		renderer->SetConstant3f("diffuse", diffuse);
+		renderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0.0f : 1.0f);
+		if (diffuseMap != -1) renderer->SetTexture("texDiffuseMap", diffuseMap);
 		break;
+	default:
+		if (diffuseMap >= 0) renderer->SetTexture("texDiffuseMap", diffuseMap);
+		if (normalMap >= 0) renderer->SetTexture("texNormalMap", normalMap);
+		break;
+	}
+
+	SetMaterialSpecificConstants(renderer, shader, bIsDeferredRendering);
+}
+
+void BRDF_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const
+{
+	switch (shader)
+	{
+	case EShaders::NORMAL:
+	case EShaders::Z_PREPRASS:
+	case EShaders::UNLIT:
+		break;
+	default:
+		SurfaceMaterial mat{
+			diffuse.Value(),
+			alpha,
+
+			specular,
+			roughness,
+
+			diffuseMap == -1 ? 0.0f : 1.0f,
+			normalMap == -1 ? 0.0f : 1.0f,
+			metalness,
+			0.0f
+		};
+		renderer->SetConstantStruct("surfaceMaterial", &mat);
+
+		if (bIsDeferredRendering)
+		{
+			renderer->SetConstant1f("BRDFOrPhong", 1.0f);
+		}
+		else
+		{
+
+		}
+
+		break;
+	}
+}
+
+void BlinnPhong_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const
+{
+	switch (shader)
+	{
+	case EShaders::NORMAL:
+	case EShaders::Z_PREPRASS:
+	case EShaders::UNLIT:
+		break;
+
 	default:
 		SurfaceMaterial mat{
 			diffuse.Value(),
@@ -136,9 +173,15 @@ void BlinnPhong_Material::SetMaterialConstants(Renderer* pRenderer, EShaders sha
 			0.0f,	// brdf metalness
 			shininess
 		};
-		pRenderer->SetConstantStruct("surfaceMaterial", &mat);
-		if (diffuseMap >= 0) pRenderer->SetTexture("texDiffuseMap", diffuseMap);
-		if (normalMap >= 0) pRenderer->SetTexture("texNormalMap", normalMap);
+		renderer->SetConstantStruct("surfaceMaterial", &mat);
+		if (bIsDeferredRendering)
+		{
+			renderer->SetConstant1f("BRDFOrPhong", 0.0f);
+		}
+		else
+		{
+
+		}
 		break;
 	}
 }

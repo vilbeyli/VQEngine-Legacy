@@ -51,7 +51,6 @@ void RoomScene::Load(SerializedScene& scene)
 	
 	// lights
 	//---------------------------------------------------------------
-	mLights = std::move(scene.lights);
 	mLights[1]._color = vec3(mLights[1]._color) * 3.0f;// * 0;
 	mLights[2]._color = vec3(mLights[2]._color) * 2.0f;// * 0;
 	mLights[3]._color = vec3(mLights[3]._color) * 1.5f;// * 0;

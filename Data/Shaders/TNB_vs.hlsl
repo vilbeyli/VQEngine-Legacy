@@ -43,23 +43,9 @@ GSIn VSMain(VSIn In)
 	const float3 B = normalize(cross(In.normal, In.tangent));
 
 	GSIn Out;
-#if 1
 	Out.T	 = normalize(mul(normalMatrix, In.tangent));
 	Out.N	 = normalize(mul(normalMatrix, In.normal));
 	Out.B	 = normalize(mul(normalMatrix, B));
-#else
-	// study relationship between inverse-transpose vs float3x3
-	float3x3 rotMatrix =
-	{
-		world._11_12_13,
-		world._21_22_23,
-		world._31_32_33
-	};
-
-	Out.T	 = normalize(mul(rotMatrix, In.tangent));
-	Out.N	 = normalize(mul(rotMatrix, In.normal));
-	Out.B	 = normalize(mul(rotMatrix, B));
-#endif
 	Out.WorldPosition = mul(world, float4(In.position, 1)).xyz;
 	return Out;
 }

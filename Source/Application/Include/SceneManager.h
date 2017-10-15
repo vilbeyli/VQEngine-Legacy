@@ -30,6 +30,7 @@ using std::shared_ptr;
 // scenes
 #include "../Scenes/RoomScene.h"
 #include "../Scenes/SSAOTestScene.h"
+#include "../Scenes/IBLTestScene.h"
 
 class Camera;
 class PathManager;
@@ -70,6 +71,6 @@ private:
 	// - edit settings.ini to start with your scene
 	RoomScene				mRoomScene;
 	SSAOTestScene			mSSAOTestScene;
-	
+	IBLTestScene			mIBLTestScene;
 
 };

@@ -158,6 +158,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Scenes\IBLTestScene.cpp" />
     <ClCompile Include="Source\Scene.cpp" />
     <ClCompile Include="Source\RenderPasses.cpp" />
     <ClCompile Include="Source\Skybox.cpp" />
@@ -175,6 +176,7 @@
     <ClCompile Include="Scenes\SSAOTestScene.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Scenes\IBLTestScene.h" />
     <ClInclude Include="Include\Animation.h" />
     <ClInclude Include="Include\DataStructures.h" />
     <ClInclude Include="Include\HandleTypedefs.h" />

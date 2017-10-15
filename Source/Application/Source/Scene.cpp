@@ -29,6 +29,7 @@ void Scene::Load(Renderer * pRenderer, SerializedScene & scene)
 {
 	mpRenderer = pRenderer;
 	objects = std::move(scene.objects);
+	mLights = std::move(scene.lights);
 	Load(scene);
 }
 

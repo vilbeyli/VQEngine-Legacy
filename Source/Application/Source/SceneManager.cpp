@@ -29,10 +29,12 @@
 #include "Camera.h"
 #include "Light.h"
 
+// todo: remove this dependency
 const char* sceneNames[] = 
 {
 	"Room.scn",
-	"SSAOTest.scn"
+	"SSAOTest.scn",
+	"IBLTest.scn"
 };
 
 SceneManager::SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights)
@@ -40,6 +42,7 @@ SceneManager::SceneManager(shared_ptr<Camera> pCam, std::vector<Light>& lights)
 	mpSceneCamera(pCam),
 	mRoomScene(*this, lights),
 	mSSAOTestScene(*this, lights),
+	mIBLTestScene(*this, lights),
 	mpActiveScene(nullptr)
 {}
 
@@ -64,9 +67,11 @@ void SceneManager::ReloadLevel()
 
 bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings::Engine& settings, shared_ptr<Camera> pCamera)
 {
-	mpSceneCamera = pCamera;
+	constexpr size_t numScenes = sizeof(sceneNames) / sizeof(sceneNames[0]);
+	assert(settings.levelToLoad < numScenes);
 
-	mSerializedScene = SceneParser::ReadScene(sceneNames[settings.levelToLoad]);	
+	mpSceneCamera = pCamera;
+	mSerializedScene = SceneParser::ReadScene(sceneNames[settings.levelToLoad]);
 	if (mSerializedScene.loadSuccess == '1')
 	{
 		mpSceneCamera->ConfigureCamera(mSerializedScene.cameraSettings, settings.window);
@@ -74,6 +79,7 @@ bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 		{
 		case 0:	mpActiveScene = &mRoomScene; break;
 		case 1:	mpActiveScene = &mSSAOTestScene; break;
+		case 2:	mpActiveScene = &mIBLTestScene; break;
 		default:	break;
 		}
 		mpActiveScene->Load(renderer, mSerializedScene);

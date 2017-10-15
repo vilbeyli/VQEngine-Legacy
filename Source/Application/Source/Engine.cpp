@@ -102,6 +102,7 @@ void Engine::ToggleLightingModel()
 	mSelectedShader = mbUseDeferredRendering 
 		? EShaders::DEFERRED_GEOMETRY 
 		: (isBRDF ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG);
+	Log::Info("Toggle Lighting Model: %s Ligting", isBRDF ? "PBR - BRDF" : "Blinn-Phong");
 }
 
 void Engine::ToggleRenderingPath()
@@ -131,6 +132,7 @@ void Engine::ToggleAmbientOcclusion()
 	{
 		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
 	}
+	Log::Info("Toggle Ambient Occlusion: %s", mbIsAmbientOcclusionOn ? "On" : "Off");
 }
 
 void Engine::Pause()
@@ -504,10 +506,7 @@ void Engine::Render()
 		mpRenderer->BindRenderTarget(mPostProcessPass._worldRenderTarget);
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
-		if (!bZPrePass)
-		{
-			mpRenderer->Begin(clearCmd);
-		}
+		mpRenderer->Begin(clearCmd);
 
 		// SKYBOX
 		// if we're not rendering the skybox, call apply() to unbind
@@ -615,7 +614,6 @@ void Engine::Render()
 				{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
-				//{ vec2(1600, 900),	vec2(0,0),			tAO					, false},
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
 				c[i].bottomLeftCornerScreenCoordinates.x() = c[i-1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;

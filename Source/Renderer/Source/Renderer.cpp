@@ -34,6 +34,9 @@
 #include "DirectXTex.h"
 #include "D3DManager.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb/stb_image.h"
+
 #include <mutex>
 #include <cassert>
 
@@ -41,7 +44,7 @@
 //=======================================================================================================================================================
 std::vector<std::string> GetShaderPaths(const std::string& shaderFileName)
 {	// try to open each file
-	const std::string path = Renderer::s_shaderRoot + shaderFileName;
+	const std::string path = Renderer::sShaderRoot + shaderFileName;
 	const std::string paths[] = {
 		path + "_vs.hlsl",
 		path + "_gs.hlsl",
@@ -162,8 +165,9 @@ void OnShaderChange(LPTSTR dir)
 //=======================================================================================================================================================
 
 
-const char*			Renderer::s_shaderRoot		= "Data/Shaders/";
-const char*			Renderer::s_textureRoot		= "Data/Textures/";
+const char*			Renderer::sShaderRoot		= "Data/Shaders/";
+const char*			Renderer::sTextureRoot		= "Data/Textures/";
+const char*			Renderer::sHDRTextureRoot	= "Data/Textures/EnvironmentMaps/";
 bool				Renderer::sEnableBlend = true;
 
 Renderer::Renderer()
@@ -586,7 +590,7 @@ ShaderID Renderer::AddShader(
 	std::vector<std::string> paths;
 	for (const auto& shaderFileName : shaderFileNames)
 	{
-		paths.push_back(std::string(s_shaderRoot + shaderFileName + ".hlsl"));
+		paths.push_back(std::string(sShaderRoot + shaderFileName + ".hlsl"));
 	}
 
 	Shader* shader = new Shader(shaderName);
@@ -621,9 +625,9 @@ RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERa
 }
 
 // example params: "bricks_d.png", "Data/Textures/"
-TextureID Renderer::CreateTextureFromFile(const std::string& shdFileName, const std::string& fileRoot /*= s_textureRoot*/)
+TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&shdFileName](auto& tex) { return tex._name == shdFileName; });
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
 	if (found != m_textures.end())
 	{
 		return (*found)._id;
@@ -635,8 +639,8 @@ TextureID Renderer::CreateTextureFromFile(const std::string& shdFileName, const 
 	}
 	Texture& tex = m_textures.back();
 
-	tex._name = shdFileName;
-	std::string path = fileRoot + shdFileName;
+	tex._name = texFileName;
+	std::string path = fileRoot + texFileName;
 	std::wstring wpath(path.begin(), path.end());
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
@@ -672,16 +676,15 @@ TextureID Renderer::CreateTextureFromFile(const std::string& shdFileName, const 
 
 }
 
-TextureID Renderer::CreateTexture2D(int width, int height, void* data /* = nullptr */)
+TextureID Renderer::CreateTexture2D(int width, int height, EImageFormat format, const std::string&	texFileName, void* data /* = nullptr */)
 {
-	const DXGI_FORMAT format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-
 	Texture tex;
 	tex._width = width;
 	tex._height = height;
+	tex._name = texFileName;
 	
 	D3D11_TEXTURE2D_DESC desc = {};
-	desc.Format = format;
+	desc.Format = (DXGI_FORMAT)format;
 	desc.Height = height;
 	desc.Width = width;
 	desc.ArraySize = 1;
@@ -700,7 +703,7 @@ TextureID Renderer::CreateTexture2D(int width, int height, void* data /* = nullp
 	m_device->CreateTexture2D(&desc, &dataDesc, &tex._tex2D);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = format;
+	srvDesc.Format = (DXGI_FORMAT)format;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MipLevels = 1;
 
@@ -720,6 +723,36 @@ TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc, bool ini
 	return m_textures.back()._id;
 }
 
+TextureID Renderer::CreateHDRTexture(const std::string & texFileName, const std::string & fileRoot)
+{
+	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
+	if (found != m_textures.end())
+	{
+		return (*found)._id;
+	}
+
+	std::string path = fileRoot + texFileName;
+	
+	int width = 0;
+	int height = 0;
+	int numComponents = 0;
+	float* data = stbi_loadf(path.c_str(), &width, &height, &numComponents, 4);
+
+	if (!data)
+	{
+		Log::Error("Cannot load HDR Texture: %s", path.c_str());
+		return -1;
+	}
+
+	TextureID newTex = CreateTexture2D(width, height, EImageFormat::RGBA32F, texFileName, data);
+	if (newTex == -1)
+	{
+		Log::Error("Cannot create HDR Texture from data: %s", path.c_str());
+	}
+	stbi_image_free(data);
+	return newTex;
+}
+
 TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& textureFileNames)
 {
 	constexpr size_t FACE_COUNT = 6;
@@ -729,7 +762,7 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	std::array<DirectX::ScratchImage, FACE_COUNT> faceImages;
 	for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < FACE_COUNT; cubeMapFaceIndex++)
 	{
-		const std::string path = s_textureRoot + textureFileNames[cubeMapFaceIndex];
+		const std::string path = sTextureRoot + textureFileNames[cubeMapFaceIndex];
 		const std::wstring wpath(path.begin(), path.end());
 
 		DirectX::ScratchImage* img = &faceImages[cubeMapFaceIndex];

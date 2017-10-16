@@ -130,17 +130,23 @@ public:
 							);
 
 	//						example params:			"bricks_d.png", "Data/Textures/"
-	TextureID				CreateTextureFromFile(	const std::string&	shdFileName, 
-													const std::string&	fileRoot = s_textureRoot
+	TextureID				CreateTextureFromFile(	const std::string&	texFileName, 
+													const std::string&	fileRoot = sTextureRoot
 							);
 
 	TextureID				CreateTexture2D(	int widht, 
 												int height,
+												EImageFormat format,
+												const std::string&	texFileName = "",
 												void* data = nullptr
 							);
 
 	TextureID				CreateTexture2D(	D3D11_TEXTURE2D_DESC&	textureDesc, 
 												bool					initializeSRV
+							);
+
+	TextureID				CreateHDRTexture(	const std::string&	texFileName,
+												const std::string&	fileRoot = sHDRTextureRoot
 							);
 
 	TextureID				CreateCubemapTexture(	const std::vector<std::string>& textureFiles
@@ -230,8 +236,9 @@ private:
 	void					SetConstant(const char* cName, const void* data);
 //==================================================================================================================================================
 public:
-	static const char*				s_shaderRoot;
-	static const char*				s_textureRoot;
+	static const char*				sShaderRoot;
+	static const char*				sTextureRoot;
+	static const char*				sHDRTextureRoot;
 
 	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;

@@ -1,0 +1,47 @@
+[Header]
+ICOfile = "Mans_Outside_Thumb.jpg"
+PREVIEWfile = "Mans_Outside_8k_preview.jpg"
+Name = "Walk Of Fame"
+Author = "Blochi"
+Location = "Hollywood"
+Comment = "in front of the Mans Chinese, first rays of sunlight, very bright"
+GEOlat = 34.10174409112319
+GEOlong = -118.34098219871521
+Link = "http://www.hdrlabs.com/sibl/archive.html"
+Date = "2007:03:12"
+Time = "06:50:00"
+Height = 1.5
+North = 0.5
+
+[Background]
+; heavily tonemapped, could be darker
+BGfile = "Mans_Outside_8k_TMap.jpg"
+BGmap = 1
+BGu = 0.000000
+BGv = 0.000000
+BGheight = 4000
+
+[Enviroment]
+EVfile = "Mans_Outside_Env.hdr"
+EVmap = 1
+EVu = 0.000000
+EVv = 0.000000
+EVheight = 180
+EVmulti = 2.000000
+EVgamma = 2.000000
+
+[Reflection]
+REFfile = "Mans_Outside_2k.hdr"
+REFmap = 1
+REFu = 0.000000
+REFv = 0.000000
+REFheight = 1024
+REFmulti = 2.000000
+REFgamma = 2.000000
+
+[Sun]
+SUNcolor = 255,186,106
+SUNmulti = 1.8
+SUNu = 0.770000
+SUNv = 0.448000
+

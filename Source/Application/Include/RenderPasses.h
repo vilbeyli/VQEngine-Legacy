@@ -90,11 +90,16 @@ struct BloomPass
 	RenderTargetID					_finalRT;
 	std::array<RenderTargetID, 2>	_blurPingPong;
 	bool							_isEnabled;
+	ShaderID						_blurShader;
+	ShaderID						_bilateralBlurShader;
+	ShaderID						_bloomFilterShader;
+	ShaderID						_bloomCombineShader;
 };
 
 struct TonemappingCombinePass
 {
-	RenderTargetID						_finalRenderTarget;
+	RenderTargetID	_finalRenderTarget;
+	ShaderID		_toneMappingShader;
 };
 
 struct PostProcessPass
@@ -122,6 +127,7 @@ struct GBuffer
 
 struct DeferredRenderingPasses
 {
+	void Initialize(Renderer* pRenderer);
 	void InitializeGBuffer(Renderer* pRenderer);
 	void ClearGBuffer(Renderer* pRenderer);
 	void SetGeometryRenderingStates(Renderer* pRenderer) const;
@@ -137,6 +143,14 @@ struct DeferredRenderingPasses
 	GBuffer _GBuffer;
 	DepthStencilStateID _geometryStencilState;
 	DepthStencilStateID _skyboxStencilState;
+	ShaderID			_geometryShader;
+	ShaderID			_ambientShader;
+	ShaderID			_phongLightingShader;
+	ShaderID			_BRDFLightingShader;
+
+	// todo
+	ShaderID			_spotLightShader;
+	ShaderID			_pointLightShader;
 };
 
 struct DebugPass
@@ -161,6 +175,9 @@ struct AmbientOcclusionPass
 	SamplerID			noiseSampler;
 	RenderTargetID		occlusionRenderTarget;
 	RenderTargetID		blurRenderTarget;
+	ShaderID			SSAOShader;
+	ShaderID			bilateralBlurShader;
+	ShaderID			blurShader;
 
 	float radius;
 	float intensity;

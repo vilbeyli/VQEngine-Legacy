@@ -33,5 +33,7 @@ public:
 
 private:
 	std::vector<GameObject> spheres;
+
+	GameObject testQuad;
 };
 

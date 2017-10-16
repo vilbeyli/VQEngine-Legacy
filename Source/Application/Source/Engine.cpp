@@ -99,7 +99,7 @@ void Engine::ToggleLightingModel()
 	// enable toggling only on forward rendering for now
 	const bool isBRDF = sEngineSettings.rendering.bUseBRDFLighting = !sEngineSettings.rendering.bUseBRDFLighting;
 	mSelectedShader = mbUseDeferredRendering 
-		? EShaders::DEFERRED_GEOMETRY 
+		? mDeferredRenderingPasses._geometryShader
 		: (isBRDF ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG);
 	Log::Info("Toggle Lighting Model: %s Ligting", isBRDF ? "PBR - BRDF" : "Blinn-Phong");
 }
@@ -179,10 +179,9 @@ bool Engine::Initialize(HWND hwnd)
 	//--------------------------------------------------------------
 	// render passes
 	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
-	mDeferredRenderingPasses.InitializeGBuffer(mpRenderer);
 	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
 	mDebugRender = true;
-	mSelectedShader = mbUseDeferredRendering ? EShaders::DEFERRED_GEOMETRY : EShaders::FORWARD_BRDF;
+	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
 	Skybox::InitializePresets(mpRenderer);
@@ -204,6 +203,7 @@ bool Engine::Load()
 		mShadowMapPass.Initialize(mpRenderer, mpRenderer->m_device, rendererSettings.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
 		
+		mDeferredRenderingPasses.Initialize(mpRenderer);
 		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
 		mDebugPass.Initialize(mpRenderer);
 		mSSAOPass.Initialize(mpRenderer);
@@ -236,7 +236,7 @@ bool Engine::HandleInput()
 		if (mpInput->IsKeyTriggered("F1")) mSelectedShader = EShaders::TEXTURE_COORDINATES;
 		if (mpInput->IsKeyTriggered("F2")) mSelectedShader = EShaders::NORMAL;
 		if (mpInput->IsKeyTriggered("F3")) mSelectedShader = EShaders::UNLIT;
-		if (mpInput->IsKeyTriggered("F4")) mSelectedShader = mSelectedShader == EShaders::TBN ? EShaders::FORWARD_BRDF : EShaders::TBN;
+		if (mpInput->IsKeyTriggered("F4")) mSelectedShader = mSelectedShader == EShaders::TBN ? (sEngineSettings.rendering.bUseBRDFLighting ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG) : EShaders::TBN;
 
 		if (mpInput->IsKeyTriggered("F5")) mSelectedShader = IsLightingModelPBR() ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
 	}
@@ -331,6 +331,15 @@ void Engine::PreRender()
 		mSceneLightData.shadowCasterData[0].shadowMap = mShadowMapPass._shadowMap;
 		mSceneLightData.shadowCasterData[0].shadowSampler = mShadowMapPass._shadowSampler;
 		mSceneLightData.shadowCasterData[0].lightSpaceMatrix = mLights[0].GetLightSpaceMatrix();
+	}
+
+	mTBNDrawObjects.clear();
+	std::vector<const GameObject*> objects;
+	mpSceneManager->mpActiveScene->GetSceneObjects(objects);
+	for (const GameObject* obj : objects)
+	{
+		if (obj->mRenderSettings.bRenderTBN)
+			mTBNDrawObjects.push_back(obj);
 	}
 }
 
@@ -539,23 +548,20 @@ void Engine::Render()
 
 	// Tangent-Bitangent-Normal drawing
 	//------------------------------------------------------------------------
-	const bool bIsShaderTBN = true;
+	const bool bIsShaderTBN = !mTBNDrawObjects.empty();
 	if (bIsShaderTBN)
 	{
 		constexpr bool bSendMaterial = false;
-		std::vector<const GameObject*> objects;
-		mpSceneManager->mpActiveScene->GetSceneObjects(objects);
 
 		mpRenderer->BeginEvent("Draw TBN Vectors");
 		if (mbUseDeferredRendering)
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 
 		mpRenderer->SetShader(EShaders::TBN);
-		for (const GameObject* obj : objects)
-		{
-			if (obj->mRenderSettings.bRenderTBN)
-				obj->Render(mpRenderer, mSceneView, bSendMaterial);
-		}
+
+		for (const GameObject* obj : mTBNDrawObjects)
+			obj->Render(mpRenderer, mSceneView, bSendMaterial);
+		
 
 		if (mbUseDeferredRendering)
 			mpRenderer->UnbindDepthTarget();

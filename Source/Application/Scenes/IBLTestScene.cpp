@@ -20,6 +20,7 @@
 #include "Engine.h"
 #include "Input.h"
 
+#include "Renderer.h"
 
 IBLTestScene::IBLTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	:
@@ -89,6 +90,16 @@ void IBLTestScene::Load(SerializedScene& scene)
 	//	l._spotAngle = 50;
 	//	mLights.push_back(l);
 	//}
+
+	const std::string sIBLDirectory = Renderer::sHDRTextureRoot + std::string("sIBL/");
+
+	TextureID hdrTex = mpRenderer->CreateHDRTexture("Milkyway/Milkyway_small.hdr", sIBLDirectory);
+	testQuad.mModel.SetDiffuseMap(hdrTex);
+
+	const float scl = 40;
+	testQuad.mTransform.SetPosition(0, 40, 120);
+	testQuad.mTransform.SetScale(scl * 1.77f, scl, 1);
+	testQuad.mModel.mMesh = EGeometry::QUAD;
 }
 
 void IBLTestScene::Unload()
@@ -116,6 +127,7 @@ void IBLTestScene::Update(float dt)
 void IBLTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) const
 {
 	for (const auto& sph : spheres) sph.Render(mpRenderer, sceneView, bSendMaterialData);
+	testQuad.Render(mpRenderer, sceneView, bSendMaterialData);
 }
 
 void IBLTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
@@ -128,4 +140,5 @@ void IBLTestScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 {
 	Scene::GetSceneObjects(objs);
 	for (const GameObject& obj : spheres)	objs.push_back(&obj);
+	objs.push_back(&testQuad);
 }

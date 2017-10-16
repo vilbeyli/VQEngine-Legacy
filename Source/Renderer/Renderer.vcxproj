@@ -69,20 +69,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(ProjectDir)Include;$(IncludePath);$(ProjectDir)..\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(SolutionDir)Source\Utilities\Include</IncludePath>
+    <IncludePath>$(ProjectDir)Include;$(IncludePath);$(ProjectDir)..\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(SolutionDir)Source\Utilities\Include;$(ProjectDir)..\3rdParty</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(VC_SourcePath);$(ProjectDir)Source\</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(ProjectDir)Include;$(IncludePath);$(ProjectDir)..\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(SolutionDir)Source\Utilities\Include</IncludePath>
+    <IncludePath>$(ProjectDir)Include;$(IncludePath);$(ProjectDir)..\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(SolutionDir)Source\Utilities\Include;$(ProjectDir)..\3rdParty</IncludePath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(VC_SourcePath);$(ProjectDir)Source\</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)Include;$(SolutionDir)Source\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(SolutionDir)Source\Utilities\Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)Include;$(SolutionDir)Source\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(SolutionDir)Source\Utilities\Include;$(ProjectDir)..\3rdParty;$(IncludePath)</IncludePath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(VC_SourcePath);</SourcePath>
@@ -90,7 +90,7 @@
     <EnableExperimentalCppCoreCheck>false</EnableExperimentalCppCoreCheck>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(ProjectDir)Include;$(SolutionDir)Source\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(SolutionDir)Source\Utilities\Include;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir)Include;$(SolutionDir)Source\Application\Include;$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex;$(SolutionDir)Source\Utilities\Include;$(ProjectDir)..\3rdParty;$(IncludePath)</IncludePath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(VC_SourcePath);</SourcePath>

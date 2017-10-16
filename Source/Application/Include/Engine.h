@@ -158,6 +158,7 @@ private:
 	
 
 	std::vector<const GameObject*>	mZPassObjects;
+	std::vector<const GameObject*>	mTBNDrawObjects;
 };
 
 #define ENGINE Engine::GetEngine()

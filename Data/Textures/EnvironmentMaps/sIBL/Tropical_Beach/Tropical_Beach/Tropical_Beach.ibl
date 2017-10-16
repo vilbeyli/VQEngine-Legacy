@@ -1,0 +1,46 @@
+[Header]
+ICOfile = "Tropical_Beach_thumb.jpg"
+Name = "Tropical Beach"
+Author = "Blochi"
+Location = "Barbados"
+Comment = "High noon at Bottom Bay, the most beautiful hidden beach in Barbados"
+GEOlat = 13.1360692977777770
+GEOlong = -59.4246902466666640
+Link = "www.hdrlabs.com/sibl/archive.html"
+Date = "2011:03:01"
+Time = "12:30:00"
+Height = 1.600000
+
+[Background]
+; boosted colors to look nicer
+BGfile = "Tropical_Beach_8k.jpg"
+BGmap = 1
+BGu = 0.000000
+BGv = 0.000000
+BGheight = 4096
+
+[Enviroment]
+EVfile = "Tropical_Beach_Env.hdr"
+EVmap = 1
+EVu = 0.000000
+EVv = 0.000000
+EVheight = 180
+EVmulti = 1.000000
+EVgamma = 2.000000
+
+[Reflection]
+REFfile = "Tropical_Beach_3k.hdr"
+REFmap = 1
+REFu = 0.000000
+REFv = 0.000000
+REFheight = 1800
+REFmulti = 1.000000
+REFgamma = 2.000000
+
+[Light1]
+LIGHTname = "Sun"
+LIGHTcolor = 255,252,245
+LIGHTmulti = 1.200000
+LIGHTu = 0.788000
+LIGHTv = 0.144000
+

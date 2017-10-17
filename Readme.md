@@ -4,7 +4,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 <center><i>BRDF, HDR, Bloom</i></center>
 
-![](Data/Screenshots/ssao.PNG)
+![](Data/Screenshots/hdr_brdf_bloom.PNG)
 
 
 <center><i>SSAO</i></center>

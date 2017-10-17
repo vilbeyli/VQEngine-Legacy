@@ -169,7 +169,7 @@ void RoomScene::Load(SerializedScene& scene)
 	for (GameObject& obj : mObjects)
 	{
 		//if (obj.mModel.mMesh == EGeometry::SPHERE || obj.mModel.mMesh == EGeometry::CUBE)
-			obj.mRenderSettings.bRenderTBN = true;
+		;// obj.mRenderSettings.bRenderTBN = true;
 	}
 
 	mSkybox = ESkyboxPreset::NIGHT_SKY;

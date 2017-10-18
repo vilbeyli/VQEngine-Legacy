@@ -116,6 +116,8 @@ void Shader::LoadShaders(Renderer* pRenderer)
 
 	const std::vector<std::string> ZPrePassShaders				= { "Deferred_Geometry_vs", "ViewSpaceNormalsAndPositions_ps" };	
 
+	const std::vector<std::string> EQSkybox = {"Skybox_vs", "SkyboxEquirectangular_ps"};
+
 	// todo: limit enumerations? probably better to store just some ids
 	s_shaders[EShaders::FORWARD_PHONG			]	= pRenderer->AddShader("Forward_Phong"			, layout);
 	s_shaders[EShaders::UNLIT					]	= pRenderer->AddShader("UnlitTextureColor"		, layout);
@@ -127,6 +129,7 @@ void Shader::LoadShaders(Renderer* pRenderer)
 	s_shaders[EShaders::TBN						]	= pRenderer->AddShader("TNB"					, layout);
 	s_shaders[EShaders::DEBUG					]	= pRenderer->AddShader("Debug"					, layout);
 	s_shaders[EShaders::SKYBOX					]	= pRenderer->AddShader("Skybox"					, layout);
+	s_shaders[EShaders::SKYBOX_EQUIRECTANGULAR	]	= pRenderer->AddShader("SkyboxEquirectangular"	, EQSkybox, VS_PS, layout);
 	s_shaders[EShaders::FORWARD_BRDF			]	= pRenderer->AddShader("Forward_BRDF"			, layout);
 	s_shaders[EShaders::SHADOWMAP_DEPTH			]	= pRenderer->AddShader("DepthShader"			, layout);
 	s_shaders[EShaders::BILATERAL_BLUR			]	= pRenderer->AddShader("BilateralBlur"			, BilateralBlurShaders		, VS_PS, layout);

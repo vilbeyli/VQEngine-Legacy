@@ -129,7 +129,9 @@ enum EGeometry
 	MESH_TYPE_COUNT
 };
 
-enum EShaders : unsigned	// builtin shaders
+// https://learnopengl.com/#!PBR/IBL/Diffuse-irradiance
+// todo: add convolution shaders (compute)
+enum EShaders : unsigned	// built-in shaders
 {	
 	FORWARD_PHONG = 0,
 	UNLIT,
@@ -141,6 +143,7 @@ enum EShaders : unsigned	// builtin shaders
 	TBN,
 	DEBUG,
 	SKYBOX,
+	SKYBOX_EQUIRECTANGULAR,
 	FORWARD_BRDF,
 	SHADOWMAP_DEPTH,
 	BILATERAL_BLUR,

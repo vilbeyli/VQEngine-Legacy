@@ -221,7 +221,6 @@ bool Engine::Load()
 		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 		mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
 	}
-	mActiveSkybox = mpSceneManager->GetSceneSkybox();
 	return true;
 }
 
@@ -341,6 +340,8 @@ void Engine::PreRender()
 		if (obj->mRenderSettings.bRenderTBN)
 			mTBNDrawObjects.push_back(obj);
 	}
+
+	mActiveSkybox = mpSceneManager->GetSceneSkybox();
 }
 
 void Engine::RenderLights() const

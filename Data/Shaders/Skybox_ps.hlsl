@@ -23,17 +23,10 @@ struct PSIn
 	float3 LPos : POSITION;
 };
 
-TextureCube gSkybox;
-
-SamplerState samTriLinearSam
-{
-	Filter = MIN_MAG_MIP_LINEAR;
-	AddressU = Wrap;
-	AddressV = Wrap;
-};
-
+Texture2D texSkybox;
+SamplerState samWrap;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	return gSkybox.Sample(samTriLinearSam, In.LPos);
+    return texSkybox.Sample(samWrap, In.LPos);
 }

@@ -35,7 +35,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 		constexpr size_t gridDimension[2] = { 4, 4 };
 		constexpr size_t numSph = gridDimension[0] * gridDimension[1];
 
-		const vec3 origin = vec3::Zero;
+		const vec3 origin = vec3(0, 1, -20);
 
 		for (size_t i = 0; i < numSph; i++)
 		{
@@ -46,13 +46,21 @@ void IBLTestScene::Load(SerializedScene& scene)
 			const float rowStep = static_cast<float>(row) / ((numSph - 1) / gridDimension[0]);
 			const float colStep = static_cast<float>(col) / ((numSph - 1) / gridDimension[1]);
 
+#if 0
 			// offset to center the grid
 			const float offsetDim[2] = {
 				-static_cast<float>(gridDimension[0]) * r / 2 + r / 2.0f,
 				-static_cast<float>(gridDimension[1]) * r / 2 + r / 2.0f
 			};
 			const vec3 offset = vec3(col * r, 1.0f, row * r) + vec3(offsetDim[0], 0.0f, offsetDim[1]);
+#else
+			const float R = 65.0f;
+			const float archAngle = DEG2RAD * 150.0f;	// how much arch will cover
+			const float archOffset = DEG2RAD * 15.0f;	// rotate arch by degrees
 
+			const float phi = sphereStep * archAngle + archOffset;
+			const vec3 offset = R * vec3(cosf(phi), 0, sinf(phi));
+#endif
 			const vec3 pos = origin + offset;
 
 			GameObject sph;
@@ -61,11 +69,11 @@ void IBLTestScene::Load(SerializedScene& scene)
 			sph.mModel.mMesh = EGeometry::SPHERE;
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
-			// col(-x->+x) -> metalness [0.0f, 1.0f]
+			// metalness [0.0f, 1.0f]
 			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::white)));
 			mat0.metalness = 0;
 
-			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
+			// roughness [roughnessLowClamp, 1.0f]
 			const float roughnessLowClamp = 0.12f;
 			mat0.roughness = sphereStep < roughnessLowClamp ? roughnessLowClamp : sphereStep;
 
@@ -77,7 +85,6 @@ void IBLTestScene::Load(SerializedScene& scene)
 			spheres.push_back(sph);
 		}
 	}
-
 	//{	// spot/directional light
 	//	Light l;
 	//	l._type = Light::SPOT;
@@ -93,13 +100,18 @@ void IBLTestScene::Load(SerializedScene& scene)
 
 	const std::string sIBLDirectory = Renderer::sHDRTextureRoot + std::string("sIBL/");
 
-	TextureID hdrTex = mpRenderer->CreateHDRTexture("Milkyway/Milkyway_small.hdr", sIBLDirectory);
-	testQuad.mModel.SetDiffuseMap(hdrTex);
+	const TextureID hdrTex = mpRenderer->CreateHDRTexture("Milkyway/Milkyway_small.hdr", sIBLDirectory);
+	const TextureID skydomeTex = mpRenderer->CreateTextureFromFile("Milkyway/Milkyway_BG.jpg", sIBLDirectory);
+	
+	const auto tex = skydomeTex;
+	testQuad.mModel.SetDiffuseMap(tex);
 
 	const float scl = 40;
 	testQuad.mTransform.SetPosition(0, 40, 120);
-	testQuad.mTransform.SetScale(scl * 1.77f, scl, 1);
+	testQuad.mTransform.SetScale(scl * 1.77f, scl, 1);	// 16:9
 	testQuad.mModel.mMesh = EGeometry::QUAD;
+
+	mSkybox = ESkyboxPreset::MILKYWAY;
 }
 
 void IBLTestScene::Unload()
@@ -121,7 +133,11 @@ void IBLTestScene::Update(float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad2")) tr += vec3::Back;
 	if (ENGINE->INP()->IsKeyDown("Numpad9")) tr += vec3::Up;
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
-	mLights[0]._transform.Translate(dt * tr * moveSpeed);
+	if(!mLights.empty()) mLights[0]._transform.Translate(dt * tr * moveSpeed);
+
+	if (ENGINE->INP()->IsKeyTriggered("PageUp"))   mSkybox = static_cast<ESkyboxPreset>((mSkybox + 1) % ((unsigned)ESkyboxPreset::SKYBOX_PRESET_COUNT));
+	if (ENGINE->INP()->IsKeyTriggered("PageDown")) mSkybox = static_cast<ESkyboxPreset>(mSkybox == ESkyboxPreset::CUBEMAP_SKYBOX_COUNT ? (ESkyboxPreset::SKYBOX_PRESET_COUNT - 1) : (mSkybox - 1));
+	mSkybox = static_cast<ESkyboxPreset>(mSkybox == 0 ? ESkyboxPreset::CUBEMAP_SKYBOX_COUNT : mSkybox); // if wrapped to 0 from upper limit, skip cubemap skyboxes
 }
 
 void IBLTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) const

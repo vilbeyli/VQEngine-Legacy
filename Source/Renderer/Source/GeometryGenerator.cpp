@@ -409,7 +409,7 @@ BufferObject* GeometryGenerator::Cube()
 	return bufferObj;
 }
 
-// TODO: figure out TBN vectors
+
 BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceCount)
 {
 	// CYLINDER BODY
@@ -418,7 +418,7 @@ BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsign
 	// the bottom and moving up.
 	std::vector<Vertex> Vertices;
 	float dPhi = XM_PI / (ringCount - 1);
-	for (float phi = -XM_PIDIV2; phi <= XM_PIDIV2 + 0.001f; phi += dPhi)
+	for (float phi = -XM_PIDIV2; phi <= XM_PIDIV2 + 0.00001f; phi += dPhi)
 	{
 		float y = radius * sinf(phi);	// horizontal slice center height
 		float r = radius * cosf(phi);	// horizontal slice radius
@@ -435,6 +435,7 @@ BufferObject* GeometryGenerator::Sphere(float radius, unsigned ringCount, unsign
 			{
 				float u = (float)j / sliceCount;
 				float v = (y + radius) / (2 * radius);
+				//fmod(2 * v, 1.0f);
 				vertex.texCoords = XMFLOAT2(u, v);
 			}
 			// Cylinder can be parameterized as follows, where we

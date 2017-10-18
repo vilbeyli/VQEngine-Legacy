@@ -24,9 +24,19 @@ class Renderer;
 struct Texture;
 namespace DirectX { struct XMMATRIX; }
 
-enum ESkyboxPreset
+enum ESkyboxPreset : unsigned
 {
+	// Cubemaps
 	NIGHT_SKY = 0,
+
+	CUBEMAP_SKYBOX_COUNT,	// keep record of numCubemapSkyboxes
+
+	// Equirectangular
+	MILKYWAY = CUBEMAP_SKYBOX_COUNT,
+	BARCELONA,
+	TROPICAL_BEACH,
+	TROPICAL_RUINS,
+	WALK_OF_FAME,
 
 	SKYBOX_PRESET_COUNT
 };
@@ -39,9 +49,10 @@ public:
 	
 	void Render(const DirectX::XMMATRIX& viewProj) const;
 
-	Skybox& Initialize(Renderer* renderer, const Texture& cubemapTexture, int shader);
+	Skybox& Initialize(Renderer* renderer, TextureID cubemapTexture, int shader, bool bEquirectangular);
 private:
 	TextureID	skydomeTex;
+	bool		bEquirectangular;
 	ShaderID	skydomeShader;
 	Renderer*	pRenderer;
 };

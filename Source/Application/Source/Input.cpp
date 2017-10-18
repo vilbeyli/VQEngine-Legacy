@@ -45,6 +45,7 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	m["Enter"] = 13;	m["enter"] = 13;
 	m["Backspace"] = 8; m["backspace"] = 8;
 	m["Escape"] = 0x1B; m["escape"] = 0x1B;
+	m["PageUp"] = 33;	m["PageDown"] = 34;
 
 	m["Numpad7"] = 103; m["Numpad8"] = 104; m["Numpad9"] = 105;
 	m["Numpad4"] = 100; m["Numpad5"] = 101; m["Numpad6"] = 102;

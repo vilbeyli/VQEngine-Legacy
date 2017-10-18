@@ -51,6 +51,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Data\Shaders\Panini.hlsl = Data\Shaders\Panini.hlsl
 		Data\Shaders\Skybox_ps.hlsl = Data\Shaders\Skybox_ps.hlsl
 		Data\Shaders\Skybox_vs.hlsl = Data\Shaders\Skybox_vs.hlsl
+		Data\Shaders\SkyboxEquirectangular_ps.hlsl = Data\Shaders\SkyboxEquirectangular_ps.hlsl
 		Data\Shaders\SSAO_ps.hlsl = Data\Shaders\SSAO_ps.hlsl
 		Data\Shaders\Tangent_ps.hlsl = Data\Shaders\Tangent_ps.hlsl
 		Data\Shaders\Tangent_vs.hlsl = Data\Shaders\Tangent_vs.hlsl

@@ -15,19 +15,19 @@
 
 // Scene
 // ---------------------------------------------------------------------------------------------------------------
-camera 0.1 3000 60   0 30 -100  0 25 
+camera 0.1 4000 60   0 30 -100  0 25 
 
 // todo: directional light
 // Light: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
-light       s         white      	true       3000         70	     40   120    -120	   140  0  	0	 
+//light       s         white      	true       3000         70	     40   120    -120	   140  0  	0	 
 
 // objects
 // =======
 
-object begin
-mesh quad
-transform 0 -10 0 90 0 0 100
-object end
+//object begin
+//mesh quad
+//transform 0 -10 0 90 0 0 100
+//object end
 
 
 object begin

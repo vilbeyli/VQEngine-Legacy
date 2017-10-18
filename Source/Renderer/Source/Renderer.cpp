@@ -178,7 +178,8 @@ Renderer::Renderer()
 	m_bufferObjects     (std::vector<BufferObject*>     (EGeometry::MESH_TYPE_COUNT)      ),
 	m_rasterizerStates  (std::vector<RasterizerState*>  ((int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
 	m_depthStencilStates(std::vector<DepthStencilState*>(EDefaultDepthStencilState::DEPTH_STENCIL_STATE_COUNT)),
-	m_blendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT))
+	m_blendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT)),
+	m_samplers			(std::vector<Sampler>(EDefaultSamplerState::DEFAULT_SAMPLER_COUNT))
 	//,	m_ShaderHotswapPollWatcher("ShaderHotswapWatcher")
 {
 	for (int i=0; i<(int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT; ++i)
@@ -461,6 +462,22 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	m_Direct3D->ReportLiveObjects("Init Default BlendStates ");
 
 
+	// DEFAULT SAMPLER STATES
+	//--------------------------------------------------------------------
+	{
+		D3D11_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+		m_device->CreateSamplerState(&samplerDesc, &(m_samplers[EDefaultSamplerState::POINT_SAMPLER]._samplerState));
+
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+		m_device->CreateSamplerState(&samplerDesc, &(m_samplers[EDefaultSamplerState::WRAP_SAMPLER]._samplerState));
+	}
 
 	// DEFAULT DEPTHSTENCIL SATATES
 	//--------------------------------------------------------------------

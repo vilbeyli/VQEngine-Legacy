@@ -17,17 +17,17 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "SceneManager.h"	
-#include "SceneParser.h"
 #include "Engine.h"			
 #include "Input.h"
-#include "utils.h"
 #include "BaseSystem.h"	// only for renderer settings... maybe store in renderer?
-#include "Log.h"
-
-
-#include "Renderer.h"
 #include "Camera.h"
-#include "Light.h"
+
+#include "Utilities/CustomParser.h"
+#include "Utilities/utils.h"
+#include "Utilities/Log.h"
+
+#include "Renderer/Renderer.h"
+#include "Renderer/Light.h"
 
 // todo: remove this dependency
 static const char* sceneNames[] = 
@@ -74,7 +74,7 @@ void SceneManager::ResetMainCamera()
 
 bool SceneManager::LoadScene(Renderer* pRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects)
 {
-	mSerializedScene = SceneParser::ReadScene(sceneNames[settings.levelToLoad]);
+	mSerializedScene = Parser::ReadScene(sceneNames[settings.levelToLoad]);
 	if (mSerializedScene.loadSuccess == '0') return false;
 	
 	mCurrentLevel = settings.levelToLoad;

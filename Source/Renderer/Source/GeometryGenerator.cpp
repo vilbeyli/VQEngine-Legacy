@@ -19,7 +19,7 @@
 #include "GeometryGenerator.h"
 #include "BufferObject.h"
 
-#include "Log.h"
+#include "Utilities/Log.h"
 
 #include <vector>
 

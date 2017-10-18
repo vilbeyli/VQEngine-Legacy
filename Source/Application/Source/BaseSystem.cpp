@@ -19,8 +19,8 @@
 #include "BaseSystem.h"
 #include "Engine.h"
 #include "Input.h"
-#include "SceneParser.h"
-#include "Log.h"
+#include "Utilities/CustomParser.h"
+#include "Utilities/Log.h"
 
 #include <strsafe.h>
 #include <vector>

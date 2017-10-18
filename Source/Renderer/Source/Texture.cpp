@@ -18,7 +18,7 @@
 
 #include "Texture.h"
 #include "Renderer.h"
-#include "Log.h"
+#include "Utilities/Log.h"
 
 #include <d3d11.h>
 

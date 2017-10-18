@@ -20,8 +20,6 @@
 #include "Input.h"
 #include "Engine.h"
 
-#include "utils.h"
-
 Camera::Camera()
 	:
 	MoveSpeed(1000.0f),

@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\Scene.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\RenderPasses.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\Skybox.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\SceneManager.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\GameObject.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\Camera.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\Components\Component.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\Components\Transform.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\Engine.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\Input.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\Main.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\BaseSystem.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Application\Source\WorkerPool.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(SolutionDir)Source\Application\Animation.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\DataStructures.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\HandleTypedefs.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\SceneManager.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\GameObject.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\BaseSystem.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\Camera.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\Settings.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\Skybox.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\RenderPasses.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\Scene.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\Engine.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\Input.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\resource.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\SystemDefs.h" />
+    <ClInclude Include="$(SolutionDir)Source\Application\WorkerPool.h" />
+    <ClInclude Include="..\Source\Application\Components\Component.h" />
+    <ClInclude Include="..\Source\Application\Components\Transform.h" />
+  </ItemGroup>
+</Project>

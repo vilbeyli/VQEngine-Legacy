@@ -18,8 +18,8 @@
 
 #include "Shader.h"
 #include "Renderer.h"
-#include "Log.h"
-#include "utils.h"
+#include "Utilities/Log.h"
+#include "Utilities/utils.h"
 
 #include <fstream>
 #include <sstream>

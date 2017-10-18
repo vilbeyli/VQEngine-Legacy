@@ -19,23 +19,22 @@
 #define LOG_SEARCH 0
 
 #include "Renderer.h"
-#include "Settings.h"
 #include "Mesh.h"
-
 #include "GeometryGenerator.h"
 #include "D3DManager.h"
 #include "BufferObject.h"
 #include "Shader.h"
 #include "Light.h"
 
-#include "SystemDefs.h"
-#include "utils.h"
-#include "Camera.h"
-#include "DirectXTex.h"
-#include "D3DManager.h"
+#include "Application/Settings.h"
+#include "Application/SystemDefs.h"
+#include "Application/Camera.h"
+
+#include "Utilities/utils.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb/stb_image.h"
+#include "3rdParty/stb/stb_image.h"
+#include "3rdParty/DirectXTex/DirectXTex/DirectXTex.h"
 
 #include <mutex>
 #include <cassert>
@@ -165,7 +164,7 @@ void OnShaderChange(LPTSTR dir)
 //=======================================================================================================================================================
 
 
-const char*			Renderer::sShaderRoot		= "Data/Shaders/";
+const char*			Renderer::sShaderRoot		= "Source/Shaders/";
 const char*			Renderer::sTextureRoot		= "Data/Textures/";
 const char*			Renderer::sHDRTextureRoot	= "Data/Textures/EnvironmentMaps/";
 bool				Renderer::sEnableBlend = true;

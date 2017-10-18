@@ -17,9 +17,9 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Light.h"
-#include "GameObject.h"
+#include "Application/GameObject.h"
 
-#include "Log.h"
+#include "Utilities/Log.h"
 
 #include <iostream>
 #include <unordered_map>

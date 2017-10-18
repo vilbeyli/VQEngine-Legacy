@@ -21,11 +21,11 @@
 #include "Engine.h"
 #include "GameObject.h"
 
-#include "Renderer.h"
+#include "Renderer/Renderer.h"
 #include "Camera.h"
-#include "D3DManager.h"
+#include "Renderer/D3DManager.h"
 
-#include "Log.h"
+#include "Utilities/Log.h"
 
 #include <array>
 

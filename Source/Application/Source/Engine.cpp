@@ -17,15 +17,15 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Engine.h"
-#include "Log.h"
 #include "Input.h"
-#include "PerfTimer.h"
-#include "SceneParser.h"
+#include "Utilities/Log.h"
+#include "Utilities/PerfTimer.h"
+#include "Utilities/CustomParser.h"
 #include "SceneManager.h"
 #include "WorkerPool.h"
 #include "Settings.h"
 
-#include "Renderer.h"
+#include "Renderer/Renderer.h"
 #include "Camera.h"
 
 #include <sstream>
@@ -146,7 +146,7 @@ void Engine::Unpause()
 
 const Settings::Engine& Engine::ReadSettingsFromFile()
 {
-	sEngineSettings = SceneParser::ReadSettings("settings.ini");
+	sEngineSettings = Parser::ReadSettings("EngineSettings.ini");
 	return sEngineSettings;
 }
 

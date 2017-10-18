@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "GameObject.h"
-#include "Renderer.h"
+#include "Renderer/Renderer.h"
 #include "RenderPasses.h"
 
 void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const

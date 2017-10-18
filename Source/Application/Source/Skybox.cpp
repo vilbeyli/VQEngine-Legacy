@@ -16,7 +16,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Skybox.h"
-#include "Renderer.h"
+#include "Renderer/Renderer.h"
 
 // preset file paths (todo: read from file)
 using FilePaths = std::vector<std::string>;
@@ -108,7 +108,7 @@ void Skybox::Render(const XMMATRIX& viewProj) const
 	pRenderer->SetShader(skydomeShader);
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);
 	pRenderer->SetTexture("texSkybox", skydomeTex);
-	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);	// uses default sampler state | todo: enum samplers
+	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
 	pRenderer->SetBufferObj(EGeometry::CUBE);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();

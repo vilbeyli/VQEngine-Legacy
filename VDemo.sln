@@ -3,83 +3,79 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "Source\Application\Application.vcxproj", "{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "SolutionFiles\Application.vcxproj", "{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00} = {EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Renderer", "Source\Renderer\Renderer.vcxproj", "{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Renderer", "SolutionFiles\Renderer.vcxproj", "{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571DA824-A6F1-4944-8C39-85DC665C8A81}"
 	ProjectSection(SolutionItems) = preProject
-		Data\Shaders\BilateralBlur_ps.hlsl = Data\Shaders\BilateralBlur_ps.hlsl
-		Data\Shaders\Binormal_ps.hlsl = Data\Shaders\Binormal_ps.hlsl
-		Data\Shaders\Binormal_vs.hlsl = Data\Shaders\Binormal_vs.hlsl
-		Data\Shaders\Bloom_ps.hlsl = Data\Shaders\Bloom_ps.hlsl
-		Data\Shaders\Bloom_vs.hlsl = Data\Shaders\Bloom_vs.hlsl
-		Data\Shaders\BloomCombine_ps.hlsl = Data\Shaders\BloomCombine_ps.hlsl
-		Data\Shaders\BloomCombine_vs.hlsl = Data\Shaders\BloomCombine_vs.hlsl
-		Data\Shaders\Blur_ps.hlsl = Data\Shaders\Blur_ps.hlsl
-		Data\Shaders\Blur_vs.hlsl = Data\Shaders\Blur_vs.hlsl
-		Data\Shaders\BRDF.hlsl = Data\Shaders\BRDF.hlsl
-		Data\Shaders\Debug_ps.hlsl = Data\Shaders\Debug_ps.hlsl
-		Data\Shaders\Debug_vs.hlsl = Data\Shaders\Debug_vs.hlsl
-		Data\Shaders\deferred_brdf_ambient_ps.hlsl = Data\Shaders\deferred_brdf_ambient_ps.hlsl
-		Data\Shaders\deferred_brdf_lighting_ps.hlsl = Data\Shaders\deferred_brdf_lighting_ps.hlsl
-		Data\Shaders\deferred_brdf_pointLight_ps.hlsl = Data\Shaders\deferred_brdf_pointLight_ps.hlsl
-		Data\Shaders\deferred_brdf_spotLight_ps.hlsl = Data\Shaders\deferred_brdf_spotLight_ps.hlsl
-		Data\Shaders\deferred_brdf_vs.hlsl = Data\Shaders\deferred_brdf_vs.hlsl
-		Data\Shaders\deferred_geometry_ps.hlsl = Data\Shaders\deferred_geometry_ps.hlsl
-		Data\Shaders\deferred_geometry_vs.hlsl = Data\Shaders\deferred_geometry_vs.hlsl
-		Data\Shaders\deferred_phong_lighting_ps.hlsl = Data\Shaders\deferred_phong_lighting_ps.hlsl
-		Data\Shaders\deferred_rendering_vs.hlsl = Data\Shaders\deferred_rendering_vs.hlsl
-		Data\Shaders\DepthShader_ps.hlsl = Data\Shaders\DepthShader_ps.hlsl
-		Data\Shaders\DepthShader_vs.hlsl = Data\Shaders\DepthShader_vs.hlsl
-		Data\Shaders\forward_brdf_ps.hlsl = Data\Shaders\forward_brdf_ps.hlsl
-		Data\Shaders\forward_brdf_vs.hlsl = Data\Shaders\forward_brdf_vs.hlsl
-		Data\Shaders\forward_phong_ps.hlsl = Data\Shaders\forward_phong_ps.hlsl
-		Data\Shaders\Forward_Phong_vs.hlsl = Data\Shaders\Forward_Phong_vs.hlsl
-		Data\Shaders\FullScreenQuad_vs.hlsl = Data\Shaders\FullScreenQuad_vs.hlsl
-		Data\Shaders\GaussianBlur4x4_ps.hlsl = Data\Shaders\GaussianBlur4x4_ps.hlsl
-		Data\Shaders\LightingCommon.hlsl = Data\Shaders\LightingCommon.hlsl
-		Data\Shaders\Line_gs.hlsl = Data\Shaders\Line_gs.hlsl
-		Data\Shaders\Line_ps.hlsl = Data\Shaders\Line_ps.hlsl
-		Data\Shaders\Line_vs.hlsl = Data\Shaders\Line_vs.hlsl
-		Data\Shaders\MVPTransformationWithUVs_vs.hlsl = Data\Shaders\MVPTransformationWithUVs_vs.hlsl
-		Data\Shaders\Normal_ps.hlsl = Data\Shaders\Normal_ps.hlsl
-		Data\Shaders\Normal_vs.hlsl = Data\Shaders\Normal_vs.hlsl
-		Data\Shaders\Panini.hlsl = Data\Shaders\Panini.hlsl
-		Data\Shaders\Skybox_ps.hlsl = Data\Shaders\Skybox_ps.hlsl
-		Data\Shaders\Skybox_vs.hlsl = Data\Shaders\Skybox_vs.hlsl
-		Data\Shaders\SkyboxEquirectangular_ps.hlsl = Data\Shaders\SkyboxEquirectangular_ps.hlsl
-		Data\Shaders\SSAO_ps.hlsl = Data\Shaders\SSAO_ps.hlsl
-		Data\Shaders\Tangent_ps.hlsl = Data\Shaders\Tangent_ps.hlsl
-		Data\Shaders\Tangent_vs.hlsl = Data\Shaders\Tangent_vs.hlsl
-		Data\Shaders\TextureCoord_ps.hlsl = Data\Shaders\TextureCoord_ps.hlsl
-		Data\Shaders\TextureCoordinates_ps.hlsl = Data\Shaders\TextureCoordinates_ps.hlsl
-		Data\Shaders\TNB_gs.hlsl = Data\Shaders\TNB_gs.hlsl
-		Data\Shaders\TNB_ps.hlsl = Data\Shaders\TNB_ps.hlsl
-		Data\Shaders\TNB_vs.hlsl = Data\Shaders\TNB_vs.hlsl
-		Data\Shaders\Tonemapping_ps.hlsl = Data\Shaders\Tonemapping_ps.hlsl
-		Data\Shaders\Tonemapping_vs.hlsl = Data\Shaders\Tonemapping_vs.hlsl
-		Data\Shaders\UnlitTextureColor_ps.hlsl = Data\Shaders\UnlitTextureColor_ps.hlsl
-		Data\Shaders\UnlitTextureColor_vs.hlsl = Data\Shaders\UnlitTextureColor_vs.hlsl
-		Data\Shaders\ViewSpaceNormalsAndPositions_ps.hlsl = Data\Shaders\ViewSpaceNormalsAndPositions_ps.hlsl
+		Source\Shaders\BilateralBlur_ps.hlsl = Source\Shaders\BilateralBlur_ps.hlsl
+		Source\Shaders\Binormal_ps.hlsl = Source\Shaders\Binormal_ps.hlsl
+		Source\Shaders\Binormal_vs.hlsl = Source\Shaders\Binormal_vs.hlsl
+		Source\Shaders\Bloom_ps.hlsl = Source\Shaders\Bloom_ps.hlsl
+		Source\Shaders\BloomCombine_ps.hlsl = Source\Shaders\BloomCombine_ps.hlsl
+		Source\Shaders\Blur_ps.hlsl = Source\Shaders\Blur_ps.hlsl
+		Source\Shaders\BRDF.hlsl = Source\Shaders\BRDF.hlsl
+		Source\Shaders\Debug_ps.hlsl = Source\Shaders\Debug_ps.hlsl
+		Source\Shaders\Debug_vs.hlsl = Source\Shaders\Debug_vs.hlsl
+		Source\Shaders\deferred_brdf_ambient_ps.hlsl = Source\Shaders\deferred_brdf_ambient_ps.hlsl
+		Source\Shaders\deferred_brdf_lighting_ps.hlsl = Source\Shaders\deferred_brdf_lighting_ps.hlsl
+		Source\Shaders\deferred_brdf_pointLight_ps.hlsl = Source\Shaders\deferred_brdf_pointLight_ps.hlsl
+		Source\Shaders\deferred_brdf_spotLight_ps.hlsl = Source\Shaders\deferred_brdf_spotLight_ps.hlsl
+		Source\Shaders\deferred_geometry_ps.hlsl = Source\Shaders\deferred_geometry_ps.hlsl
+		Source\Shaders\deferred_geometry_vs.hlsl = Source\Shaders\deferred_geometry_vs.hlsl
+		Source\Shaders\deferred_phong_lighting_ps.hlsl = Source\Shaders\deferred_phong_lighting_ps.hlsl
+		Source\Shaders\deferred_rendering_vs.hlsl = Source\Shaders\deferred_rendering_vs.hlsl
+		Source\Shaders\DepthShader_ps.hlsl = Source\Shaders\DepthShader_ps.hlsl
+		Source\Shaders\DepthShader_vs.hlsl = Source\Shaders\DepthShader_vs.hlsl
+		Source\Shaders\forward_brdf_ps.hlsl = Source\Shaders\forward_brdf_ps.hlsl
+		Source\Shaders\forward_brdf_vs.hlsl = Source\Shaders\forward_brdf_vs.hlsl
+		Source\Shaders\forward_phong_ps.hlsl = Source\Shaders\forward_phong_ps.hlsl
+		Source\Shaders\Forward_Phong_vs.hlsl = Source\Shaders\Forward_Phong_vs.hlsl
+		Source\Shaders\FullScreenQuad_vs.hlsl = Source\Shaders\FullScreenQuad_vs.hlsl
+		Source\Shaders\GaussianBlur4x4_ps.hlsl = Source\Shaders\GaussianBlur4x4_ps.hlsl
+		Source\Shaders\LightingCommon.hlsl = Source\Shaders\LightingCommon.hlsl
+		Source\Shaders\Line_gs.hlsl = Source\Shaders\Line_gs.hlsl
+		Source\Shaders\Line_ps.hlsl = Source\Shaders\Line_ps.hlsl
+		Source\Shaders\Line_vs.hlsl = Source\Shaders\Line_vs.hlsl
+		Source\Shaders\MVPTransformationWithUVs_vs.hlsl = Source\Shaders\MVPTransformationWithUVs_vs.hlsl
+		Source\Shaders\Normal_ps.hlsl = Source\Shaders\Normal_ps.hlsl
+		Source\Shaders\Normal_vs.hlsl = Source\Shaders\Normal_vs.hlsl
+		Source\Shaders\Panini.hlsl = Source\Shaders\Panini.hlsl
+		Source\Shaders\Skybox_ps.hlsl = Source\Shaders\Skybox_ps.hlsl
+		Source\Shaders\Skybox_vs.hlsl = Source\Shaders\Skybox_vs.hlsl
+		Source\Shaders\SkyboxEquirectangular_ps.hlsl = Source\Shaders\SkyboxEquirectangular_ps.hlsl
+		Source\Shaders\SSAO_ps.hlsl = Source\Shaders\SSAO_ps.hlsl
+		Source\Shaders\Tangent_ps.hlsl = Source\Shaders\Tangent_ps.hlsl
+		Source\Shaders\Tangent_vs.hlsl = Source\Shaders\Tangent_vs.hlsl
+		Source\Shaders\TextureCoordinates_ps.hlsl = Source\Shaders\TextureCoordinates_ps.hlsl
+		Source\Shaders\TNB_gs.hlsl = Source\Shaders\TNB_gs.hlsl
+		Source\Shaders\TNB_ps.hlsl = Source\Shaders\TNB_ps.hlsl
+		Source\Shaders\TNB_vs.hlsl = Source\Shaders\TNB_vs.hlsl
+		Source\Shaders\Tonemapping_ps.hlsl = Source\Shaders\Tonemapping_ps.hlsl
+		Source\Shaders\UnlitTextureColor_ps.hlsl = Source\Shaders\UnlitTextureColor_ps.hlsl
+		Source\Shaders\UnlitTextureColor_vs.hlsl = Source\Shaders\UnlitTextureColor_vs.hlsl
+		Source\Shaders\ViewSpaceNormalsAndPositions_ps.hlsl = Source\Shaders\ViewSpaceNormalsAndPositions_ps.hlsl
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3863EBE7-75B9-4B02-8CCC-44425CE9059A}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Settings", "Settings", "{3863EBE7-75B9-4B02-8CCC-44425CE9059A}"
 	ProjectSection(SolutionItems) = preProject
-		Data\settings.ini = Data\settings.ini
+		Data\EngineSettings.ini = Data\EngineSettings.ini
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Utilities", "Source\Utilities\Utilities.vcxproj", "{19AECA67-F607-4DCC-847B-A6196C924945}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Utilities", "SolutionFiles\Utilities.vcxproj", "{19AECA67-F607-4DCC-847B-A6196C924945}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scenes", "Scenes", "{2C145C7D-4AE8-44FD-8933-0649D7918E13}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SceneFiles", "SceneFiles", "{2C145C7D-4AE8-44FD-8933-0649D7918E13}"
 	ProjectSection(SolutionItems) = preProject
 		Data\Scenes\IBLTest.scn = Data\Scenes\IBLTest.scn
 		Data\Scenes\Room.scn = Data\Scenes\Room.scn
 		Data\Scenes\SSAOTest.scn = Data\Scenes\SSAOTest.scn
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Scenes", "SolutionFiles\Scenes.vcxproj", "{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -127,6 +123,18 @@ Global
 		{19AECA67-F607-4DCC-847B-A6196C924945}.Release|x64.Build.0 = Release|x64
 		{19AECA67-F607-4DCC-847B-A6196C924945}.Release|x86.ActiveCfg = Release|Win32
 		{19AECA67-F607-4DCC-847B-A6196C924945}.Release|x86.Build.0 = Release|Win32
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Debug|x64.ActiveCfg = Debug|x64
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Debug|x64.Build.0 = Debug|x64
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Debug|x86.ActiveCfg = Debug|Win32
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Debug|x86.Build.0 = Debug|Win32
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Profile|x64.ActiveCfg = Release|x64
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Profile|x64.Build.0 = Release|x64
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Profile|x86.ActiveCfg = Release|Win32
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Profile|x86.Build.0 = Release|Win32
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Release|x64.ActiveCfg = Release|x64
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Release|x64.Build.0 = Release|x64
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Release|x86.ActiveCfg = Release|Win32
+		{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

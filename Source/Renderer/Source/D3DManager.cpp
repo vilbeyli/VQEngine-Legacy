@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "D3DManager.h"
-#include "Log.h"
+#include "Utilities/Log.h"
 
 #include <string>
 

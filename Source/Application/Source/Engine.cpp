@@ -303,6 +303,7 @@ void Engine::PreRender()
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
+	mSceneView.sceneAmbientOcclusionFactor = mpSceneManager->mpActiveScene->GetAOFactor();
 
 	// gather scene lights
 	mSceneLightData.ResetCounts();

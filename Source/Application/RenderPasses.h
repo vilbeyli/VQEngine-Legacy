@@ -46,6 +46,7 @@ struct SceneView
 	vec3	 cameraPosition;
 	bool	 bIsPBRLightingUsed;
 	bool	 bIsDeferredRendering;
+	float	 sceneAmbientOcclusionFactor;
 };
 
 struct ShadowMapPass

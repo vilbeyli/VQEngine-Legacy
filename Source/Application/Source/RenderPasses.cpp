@@ -461,10 +461,9 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
-	const float ambient = 0.01f;
 	pRenderer->BeginEvent("Ambient Pass");
 	pRenderer->SetShader(_ambientShader);
-	pRenderer->SetConstant1f("ambientFactor", ambient);
+	pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
 	pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
 	pRenderer->SetBufferObj(EGeometry::QUAD);

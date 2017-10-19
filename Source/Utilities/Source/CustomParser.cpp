@@ -432,6 +432,10 @@ void Parser::ParseScene(const std::vector<std::string>& command, SerializedScene
 			tf.SetScale(sclX, sclY, sclZ);
 		}
 	}
+	else if (cmd == "ao")
+	{
+		scene.aoFactor = stof(command[1]);
+	}
 	else
 	{
 		Log::Error("Parser: Unknown command \"%s\"", cmd);

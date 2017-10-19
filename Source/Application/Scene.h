@@ -65,7 +65,7 @@ public:
 
 	inline ESkyboxPreset GetSkybox() const			{ return mSkybox; }
 	inline const Camera& GetActiveCamera() const	{ return mCameras[mSelectedCamera]; }
-
+	inline float GetAOFactor() const { return mAmbientOcclusionFactor; }
 
 protected:	// customization functions for derived classes
 	virtual void Render(const SceneView& sceneView, bool bSendMaterialData) const = 0;
@@ -82,6 +82,8 @@ protected:	// customization functions for derived classes
 	std::vector<GameObject> mObjects;
 
 	int mSelectedCamera;
+
+	float mAmbientOcclusionFactor;
 };
 
 struct SerializedScene
@@ -89,5 +91,6 @@ struct SerializedScene
 	std::vector<Settings::Camera>	cameras;
 	std::vector<Light>				lights;
 	std::vector<GameObject>			objects;
+	float aoFactor;
 	char loadSuccess = '0';
 };

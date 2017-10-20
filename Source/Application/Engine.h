@@ -144,17 +144,15 @@ private:
 	SamplerID						mNormalSampler;
 
 	ShadowMapPass					mShadowMapPass;
-	
-	bool							mbUseDeferredRendering;
 	DeferredRenderingPasses			mDeferredRenderingPasses;
-
-	bool							mbIsAmbientOcclusionOn;
+	EnvironmentMapLightingPass		mEnvironmentMapLighting;
 	AmbientOcclusionPass			mSSAOPass;
-
 	PostProcessPass					mPostProcessPass;
-	
-	bool							mDebugRender;
 	DebugPass						mDebugPass;
+
+	bool							mbUseDeferredRendering;	// todo read from sceneview
+	bool							mbIsAmbientOcclusionOn;	// todo read from sceneview
+	bool							mDebugRender;			// todo read from sceneview
 	
 
 	std::vector<const GameObject*>	mZPassObjects;

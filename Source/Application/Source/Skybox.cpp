@@ -68,46 +68,69 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 
 	{	// MILKYWAY 
 		Skybox skybox;
-		TextureID skydomeTex = pRenderer->CreateTextureFromFile("Milkyway/Milkyway_BG.jpg", sIBLDirectory);
-		s_Presets[ESkyboxPreset::MILKYWAY] = skybox.Initialize(pRenderer, skydomeTex, shader, bEquirectangular);
+		EnvironmentMap env
+		{
+			pRenderer->CreateTextureFromFile("Milkyway/Milkyway_BG.jpg", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Milkyway/Milkyway_Light.hdr", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Milkyway/Milkyway_small.hdr", sIBLDirectory)
+		};
+		s_Presets[ESkyboxPreset::MILKYWAY] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
 
 	{	// BARCELONA ROOFTOP 
 		Skybox skybox;
-		TextureID skydomeTex = pRenderer->CreateTextureFromFile("Barcelona_Rooftops/Barce_Rooftop_C_8k.jpg", sIBLDirectory);
-		s_Presets[ESkyboxPreset::BARCELONA] = skybox.Initialize(pRenderer, skydomeTex, shader, bEquirectangular);
+		EnvironmentMap env
+		{
+			pRenderer->CreateTextureFromFile("Barcelona_Rooftops/Barce_Rooftop_C_8k.jpg", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Barcelona_Rooftops/Barce_Rooftop_C_Env.hdr", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Barcelona_Rooftops/Barce_Rooftop_C_3k.hdr", sIBLDirectory)
+		};
+		TextureID skydomeTex = pRenderer->CreateTextureFromFile("", sIBLDirectory);
+		s_Presets[ESkyboxPreset::BARCELONA] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
 
 	{	// TROPICAL BEACH
 		Skybox skybox;
-		TextureID skydomeTex = pRenderer->CreateTextureFromFile("Tropical_Beach/Tropical_Beach_8k.jpg", sIBLDirectory);
-		s_Presets[ESkyboxPreset::TROPICAL_BEACH] = skybox.Initialize(pRenderer, skydomeTex, shader, bEquirectangular);
+		EnvironmentMap env
+		{
+			pRenderer->CreateTextureFromFile("Tropical_Beach/Tropical_Beach_8k.jpg", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Tropical_Beach/Tropical_Beach_Env.hdr", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Tropical_Beach/Tropical_Beach_3k.hdr", sIBLDirectory)
+		};
+		s_Presets[ESkyboxPreset::TROPICAL_BEACH] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
 
 	{	// TROPICAL RUINS
 		Skybox skybox;
-		TextureID skydomeTex = pRenderer->CreateTextureFromFile("Tropical_Ruins/TropicalRuins_8k.jpg", sIBLDirectory);
-		s_Presets[ESkyboxPreset::TROPICAL_RUINS] = skybox.Initialize(pRenderer, skydomeTex, shader, bEquirectangular);
+		EnvironmentMap env
+		{
+			pRenderer->CreateTextureFromFile("Tropical_Ruins/TropicalRuins_8k.jpg", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Tropical_Ruins/TropicalRuins_Env.hdr", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Tropical_Ruins/TropicalRuins_3k.hdr", sIBLDirectory)
+		};
+		s_Presets[ESkyboxPreset::TROPICAL_RUINS] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
 
 	{	// WALK OF FAME
 		Skybox skybox;
-		TextureID skydomeTex = pRenderer->CreateTextureFromFile("Walk_Of_Fame/Mans_Outside_8k_TMap.jpg", sIBLDirectory);
-		s_Presets[ESkyboxPreset::WALK_OF_FAME] = skybox.Initialize(pRenderer, skydomeTex, shader, bEquirectangular);
+		EnvironmentMap env
+		{
+			pRenderer->CreateTextureFromFile("Walk_Of_Fame/Mans_Outside_8k_TMap.jpg", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Walk_Of_Fame/Mans_Outside_Env.hdr", sIBLDirectory),
+			pRenderer->CreateHDRTexture("Walk_Of_Fame/Mans_Outside_2k.hdr", sIBLDirectory)
+		};
+		s_Presets[ESkyboxPreset::WALK_OF_FAME] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
-
 	// ...
 }
 
 void Skybox::Render(const XMMATRIX& viewProj) const
 {
-	assert(pRenderer);	// assert we initialized the skybox object
-	const XMMATRIX wvp = viewProj;
-
+	const XMMATRIX& wvp = viewProj;
 	pRenderer->BeginEvent("Skybox Pass");
 	pRenderer->SetShader(skydomeShader);
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);
-	pRenderer->SetTexture("texSkybox", skydomeTex);
+	pRenderer->SetTexture("texSkybox", environmentMap.skydomeTex);
 	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
 	pRenderer->SetBufferObj(EGeometry::CUBE);
 	pRenderer->Apply();
@@ -116,14 +139,18 @@ void Skybox::Render(const XMMATRIX& viewProj) const
 }
 
 
-Skybox& Skybox::Initialize(Renderer* renderer, TextureID cubemapTexture, int shader, bool bEquirectangular)
+Skybox& Skybox::Initialize(Renderer* renderer, const EnvironmentMap& environmentMap, int shader, bool bEquirectangular)
 {
-	pRenderer = renderer;
-	skydomeTex = cubemapTexture;
-	skydomeShader = shader;
-	bEquirectangular = bEquirectangular;
-
-
-
+	this->pRenderer = renderer;
+	this->environmentMap = environmentMap;
+	this->skydomeShader = shader;
+	this->bEquirectangular = bEquirectangular;
 	return *this;
+}
+
+Skybox & Skybox::Initialize(Renderer * renderer, const TextureID skydomeTexture, int shader, bool bEquirectangular)
+{
+	EnvironmentMap e;
+	e.skydomeTex = skydomeTexture;
+	return Initialize(renderer, e, shader, bEquirectangular);
 }

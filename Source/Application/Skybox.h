@@ -41,6 +41,13 @@ enum ESkyboxPreset : unsigned
 	SKYBOX_PRESET_COUNT
 };
 
+struct EnvironmentMap
+{
+	TextureID skydomeTex	= -1;
+	TextureID irradianceMap	= -1;
+	TextureID specularMap	= -1;
+};
+
 class Skybox
 {
 public:
@@ -49,11 +56,13 @@ public:
 	
 	void Render(const DirectX::XMMATRIX& viewProj) const;
 
-	Skybox& Initialize(Renderer* renderer, TextureID cubemapTexture, int shader, bool bEquirectangular);
+	Skybox& Initialize(Renderer* renderer, const EnvironmentMap& environmentMap, int shader, bool bEquirectangular);
+	Skybox& Initialize(Renderer* renderer, const TextureID skydomeTexture, int shader, bool bEquirectangular);
+	inline const EnvironmentMap& GetEnvironmentMap() const { return environmentMap; }
 private:
-	TextureID	skydomeTex;
-	bool		bEquirectangular;
-	ShaderID	skydomeShader;
-	Renderer*	pRenderer;
+	bool			bEquirectangular;
+	ShaderID		skydomeShader;
+	Renderer*		pRenderer;
+	EnvironmentMap	environmentMap;
 };
 

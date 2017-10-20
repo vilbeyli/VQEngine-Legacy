@@ -103,7 +103,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 	const TextureID hdrTex = mpRenderer->CreateHDRTexture("Milkyway/Milkyway_small.hdr", sIBLDirectory);
 	const TextureID skydomeTex = mpRenderer->CreateTextureFromFile("Milkyway/Milkyway_BG.jpg", sIBLDirectory);
 	
-	const auto tex = skydomeTex;
+	const auto tex = hdrTex;
 	testQuad.mModel.SetDiffuseMap(tex);
 
 	const float scl = 40;

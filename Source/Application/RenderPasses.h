@@ -16,9 +16,12 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+// #TODO: baseclass pass / better naming
+
 #pragma once
 
 #include "Settings.h"
+#include "Skybox.h"
 
 #include "Renderer/RenderingEnums.h"
 
@@ -39,14 +42,16 @@ struct ID3D11Device;
 struct SceneLightData;
 struct SceneView
 {
-	XMMATRIX viewProj;
-	XMMATRIX view;
-	XMMATRIX viewToWorld;
-	XMMATRIX projection;
-	vec3	 cameraPosition;
-	bool	 bIsPBRLightingUsed;
-	bool	 bIsDeferredRendering;
-	float	 sceneAmbientOcclusionFactor;
+	XMMATRIX		viewProj;
+	XMMATRIX		view;
+	XMMATRIX		viewToWorld;
+	XMMATRIX		projection;
+	vec3			cameraPosition;
+	bool			bIsPBRLightingUsed;
+	bool			bIsDeferredRendering;
+	bool			bIsIBLEnabled;
+	float			sceneAmbientOcclusionFactor;
+	EnvironmentMap	environmentMap;
 };
 
 struct ShadowMapPass
@@ -181,4 +186,10 @@ struct AmbientOcclusionPass
 
 	float radius;
 	float intensity;
+};
+
+struct EnvironmentMapLightingPass
+{
+	TextureID irradianceMap;
+	TextureID specularMap;
 };

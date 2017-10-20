@@ -32,7 +32,7 @@ struct PSIn
 #define LIGHT_COUNT 20  // don't forget to update CPU define too (SceneManager.cpp)
 #define SPOT_COUNT 10   // ^
 
-cbuffer SceneVariables
+cbuffer SceneVariables	// frame constants
 {
 	matrix lightSpaceMat; // [arr?]
 	//float  pad0;

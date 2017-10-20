@@ -1,4 +1,3 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -292,10 +291,12 @@ bool Engine::UpdateAndRender()
 void Engine::PreRender()
 {
 	// set scene view
-	const Camera& viewCamera = mpSceneManager->GetMainCamera();
+	const Camera& viewCamera	= mpSceneManager->GetMainCamera();
 	const XMMATRIX view			= viewCamera.GetViewMatrix();
 	const XMMATRIX viewInverse	= viewCamera.GetViewInverseMatrix();
 	const XMMATRIX proj			= viewCamera.GetProjectionMatrix();
+	const Scene* scene			= mpSceneManager->mpActiveScene;
+
 	mSceneView.viewProj = view * proj;
 	mSceneView.view = view;
 	mSceneView.viewToWorld = viewInverse;
@@ -303,7 +304,8 @@ void Engine::PreRender()
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
-	mSceneView.sceneAmbientOcclusionFactor = mpSceneManager->mpActiveScene->GetAOFactor();
+	mSceneView.sceneAmbientOcclusionFactor = scene->GetAOFactor();
+	mSceneView.environmentMap = scene->GetEnvironmentMap();
 
 	// gather scene lights
 	mSceneLightData.ResetCounts();

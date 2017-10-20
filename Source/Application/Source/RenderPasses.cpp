@@ -453,6 +453,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer._specularMetallicRT);
 	const TextureID texPosition = pRenderer->GetRenderTargetTexture(_GBuffer._positionRT);
 	const ShaderID lightingShader = bUseBRDFLighting ? _BRDFLightingShader : _phongLightingShader;
+	const TextureID texIrradianceMap = sceneView.environmentMap.irradianceMap;
 
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
@@ -463,9 +464,14 @@ void DeferredRenderingPasses::RenderLightingPass(
 	// AMBIENT LIGHTING
 	pRenderer->BeginEvent("Ambient Pass");
 	pRenderer->SetShader(_ambientShader);
-	pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
+	pRenderer->SetTexture("tPosition", texPosition);
 	pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
+	pRenderer->SetTexture("tNormalMap", texNormal);
 	pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
+	pRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
+	pRenderer->SetSamplerState("sNearestSampler", 0);	// todo: nearest sampler
+	pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
+	pRenderer->SetConstant4x4f("viewToWorld", sceneView.viewToWorld);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();

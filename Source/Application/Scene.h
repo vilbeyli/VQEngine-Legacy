@@ -63,7 +63,8 @@ public:
 
 	void ResetActiveCamera();
 
-	inline ESkyboxPreset GetSkybox() const			{ return mSkybox; }
+	inline ESkyboxPreset GetSkybox() const { return mSkybox; }
+	inline const EnvironmentMap& GetEnvironmentMap() const { return Skybox::s_Presets[mSkybox].GetEnvironmentMap(); }
 	inline const Camera& GetActiveCamera() const	{ return mCameras[mSelectedCamera]; }
 	inline float GetAOFactor() const { return mAmbientOcclusionFactor; }
 

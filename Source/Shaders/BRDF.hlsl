@@ -109,6 +109,14 @@ inline float3 Fresnel(float3 N, float3 V, float3 F0)
 	return F0 + (float3(1,1,1) - F0) * pow(1.0f - max(0.0f, dot(N, V)), 5.0f);
 }
 
+// Fresnel-Schlight with roughness factored in used in image-based lighting 
+// for factoring in irradiance coming from environment map
+// src: https://seblagarde.wordpress.com/2011/08/17/hello-world/ 
+float3 FresnelWithRoughness(float cosTheta, float3 F0, float roughness)
+{
+    return F0 + (max((1.0f - roughness).xxx, F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
 inline float3 F_LambertDiffuse(float3 kd)
 {
 	return kd / PI;
@@ -142,4 +150,20 @@ float3 BRDF(float3 Wi, BRDF_Surface s, float3 V, float3 worldPos)
 	const float3 Id = F_LambertDiffuse(kD);
 	
 	return (Id + Is) * NL;
+}
+
+float3 EnvironmentBRDF(BRDF_Surface s, float3 V, float ao, float3 irradience)
+{
+	// surface
+	const float3 albedo = s.diffuseColor;
+	const float  roughness = s.roughness;
+	const float  metalness = s.metalness;
+
+    const float3 F0 = lerp(0.04f.xxx, albedo, metalness);
+	
+	const float3 Ks = FresnelWithRoughness( max(dot(s.N, V), 0.0), F0, roughness );
+    const float Kd = 1.0f - Ks;
+	
+
+    return (Kd * albedo * irradience) * ao;
 }

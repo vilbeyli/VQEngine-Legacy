@@ -132,7 +132,6 @@ private:
 	SceneView						mSceneView;
 	SceneLightData					mSceneLightData;
 	std::vector<Light>				mLights;
-	EnvironmentMap					mEnvironmentMap;
 
 	bool							mbUsePaniniProjection;
 

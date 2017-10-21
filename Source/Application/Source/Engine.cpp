@@ -343,8 +343,6 @@ void Engine::PreRender()
 		if (obj->mRenderSettings.bRenderTBN)
 			mTBNDrawObjects.push_back(obj);
 	}
-
-	mEnvironmentMap = mpSceneManager->GetSceneEnvironmentMap();
 }
 
 void Engine::RenderLights() const
@@ -455,7 +453,7 @@ void Engine::Render()
 		RenderLights();
 
 		// SKYBOX
-		if (mEnvironmentMap.skydomeTex != -1)
+		if (mSceneView.environmentMap.skydomeTex != -1)
 		{
 			// Note: this can be done without stencil read/write/masking. set depth test to equals1 
 			mpRenderer->SetDepthStencilState(mDeferredRenderingPasses._skyboxStencilState);

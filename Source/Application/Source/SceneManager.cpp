@@ -45,11 +45,6 @@ SceneManager::SceneManager(std::vector<Light>& lights)
 	mpActiveScene(nullptr)
 {}
 
-ESkyboxPreset SceneManager::GetSceneSkybox() const
-{
-	return mpActiveScene->GetSkybox();
-}
-
 const Camera& SceneManager::GetMainCamera() const
 {
 	return mpActiveScene->GetActiveCamera();

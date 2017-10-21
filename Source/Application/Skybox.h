@@ -24,25 +24,27 @@ class Renderer;
 struct Texture;
 namespace DirectX { struct XMMATRIX; }
 
-enum ESkyboxPreset : unsigned
+enum ECubeMapPresets : unsigned
 {
-	// Cubemaps
-	NIGHT_SKY = 0,
+	NIGHT_SKY,
 
-	CUBEMAP_SKYBOX_COUNT,	// keep record of numCubemapSkyboxes
+	CUBEMAP_PRESET_COUNT
+};
 
-	// Equirectangular
-	MILKYWAY = CUBEMAP_SKYBOX_COUNT,
+enum EEnvironmentMapPresets : unsigned
+{
+	MILKYWAY = ECubeMapPresets::CUBEMAP_PRESET_COUNT,
 	BARCELONA,
 	TROPICAL_BEACH,
 	TROPICAL_RUINS,
 	WALK_OF_FAME,
 
-	SKYBOX_PRESET_COUNT
+	ENVIRONMENT_MAP_PRESET_COUNT = (WALK_OF_FAME - MILKYWAY + 1)
 };
 
 struct EnvironmentMap
 {
+	inline void Clear() { skydomeTex = irradianceMap = specularMap = -1; }
 	TextureID skydomeTex	= -1;
 	TextureID irradianceMap	= -1;
 	TextureID specularMap	= -1;

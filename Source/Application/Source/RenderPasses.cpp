@@ -287,6 +287,7 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
 
 	const std::vector<std::string> Deferred_AmbientLight		= { "deferred_rendering_vs", "deferred_brdf_ambient_ps" };
+	const std::vector<std::string> Deferred_AmbientIBL			= { "deferred_rendering_vs", "deferred_brdf_ambientIBL_ps" };
 	const std::vector<std::string> DeferredBRDF_LightingFSQ		= { "deferred_rendering_vs", "deferred_brdf_lighting_ps" };
 	const std::vector<std::string> DeferredPhong_LightingFSQ	= { "deferred_rendering_vs", "deferred_phong_lighting_ps" };
 
@@ -296,6 +297,7 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 	InitializeGBuffer(pRenderer);
 	_geometryShader		 = pRenderer->AddShader("Deferred_Geometry", layout);
 	_ambientShader		 = pRenderer->AddShader("Deferred_Ambient", Deferred_AmbientLight, VS_PS, layout);
+	_ambientIBLShader	 = pRenderer->AddShader("Deferred_AmbientIBL", Deferred_AmbientIBL, VS_PS, layout);
 	_BRDFLightingShader  = pRenderer->AddShader("Deferred_BRDF_Lighting", DeferredBRDF_LightingFSQ, VS_PS, layout);
 	_phongLightingShader = pRenderer->AddShader("Deferred_Phong_Lighting", DeferredPhong_LightingFSQ, VS_PS, layout);
 	_spotLightShader	 = pRenderer->AddShader("Deferred_BRDF_Point", DeferredBRDF_PointLight, VS_PS, layout);
@@ -462,16 +464,28 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
-	pRenderer->BeginEvent("Ambient Pass");
-	pRenderer->SetShader(_ambientShader);
-	pRenderer->SetTexture("tPosition", texPosition);
-	pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
-	pRenderer->SetTexture("tNormalMap", texNormal);
-	pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
-	pRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
-	pRenderer->SetSamplerState("sNearestSampler", 0);	// todo: nearest sampler
-	pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
-	pRenderer->SetConstant4x4f("viewToWorld", sceneView.viewToWorld);
+	if(sceneView.bIsIBLEnabled)
+	{
+		pRenderer->BeginEvent("Environment Map Lighting Pass");
+		pRenderer->SetShader(_ambientIBLShader);
+		pRenderer->SetTexture("tPosition", texPosition);
+		pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
+		pRenderer->SetTexture("tNormalMap", texNormal);
+		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
+		pRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
+		pRenderer->SetSamplerState("sNearestSampler", 0);	// todo: nearest sampler
+		pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
+		pRenderer->SetConstant4x4f("viewToWorld", sceneView.viewToWorld);
+	}
+	else
+	{
+		pRenderer->BeginEvent("Ambient Pass");
+		pRenderer->SetShader(_ambientShader);
+		pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
+		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
+		pRenderer->SetSamplerState("sNearestSampler", 0);	// todo: nearest sampler
+		pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
+	}
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();

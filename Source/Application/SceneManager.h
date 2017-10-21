@@ -47,7 +47,7 @@ public:
 	SceneManager(std::vector<Light>& lights);	// lights passed down to RoomScene
 	~SceneManager() = default;
 
-	ESkyboxPreset GetSceneSkybox() const;
+	inline const EnvironmentMap& GetSceneEnvironmentMap() const { return mpActiveScene->GetEnvironmentMap(); };
 	const Camera& GetMainCamera() const;
 
 	bool Load(Renderer* renderer, PathManager* pathMan, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects);

@@ -24,7 +24,6 @@ Scene::Scene(SceneManager& sceneManager, std::vector<Light>& lights)
 	:
 	mSceneManager(sceneManager)
 	, mLights(lights)
-	, mSkybox(ESkyboxPreset::SKYBOX_PRESET_COUNT)
 	, mpRenderer(nullptr)	// pRenderer is initialized at Load()
 	, mSelectedCamera(0)
 	, mAmbientOcclusionFactor(1.0f)
@@ -52,7 +51,6 @@ void Scene::UnloadScene()
 	mCameras.clear();
 	mObjects.clear();
 	mLights.clear();
-	mSkybox = ESkyboxPreset::SKYBOX_PRESET_COUNT;
 	Unload();
 }
 

@@ -72,8 +72,6 @@ void SSAOTestScene::Load(SerializedScene& scene)
 		}
 	}
 
-
-	//m_skybox = ESkyboxPreset::NIGHT_SKY;
 }
 
 void SSAOTestScene::Unload()

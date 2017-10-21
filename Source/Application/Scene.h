@@ -55,16 +55,17 @@ public:
 	// calls .Render() on objects and calls derived class RenderSceneSpecific()
 	void Render(const SceneView& sceneView) const;
 	
+	void ResetActiveCamera();
+	inline void RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
+
 	// puts objects into provided vector if the RenderSetting.bRenderDepth is true
 	virtual void GetShadowCasters(std::vector<const GameObject*>& casters) const;
 
 	// puts addresses of game objects in provided vector
 	virtual void GetSceneObjects(std::vector<const GameObject*>& objs) const;
 
-	void ResetActiveCamera();
 
-	inline ESkyboxPreset GetSkybox() const { return mSkybox; }
-	inline const EnvironmentMap& GetEnvironmentMap() const { return Skybox::s_Presets[mSkybox].GetEnvironmentMap(); }
+	inline const EnvironmentMap& GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }
 	inline const Camera& GetActiveCamera() const	{ return mCameras[mSelectedCamera]; }
 	inline float GetAOFactor() const { return mAmbientOcclusionFactor; }
 
@@ -77,7 +78,7 @@ protected:	// customization functions for derived classes
 	SceneManager&			mSceneManager;
 	Renderer*				mpRenderer;
 
-	ESkyboxPreset			mSkybox;
+	Skybox					mSkybox;
 	std::vector<Camera>		mCameras;
 	std::vector<Light>&		mLights;
 	std::vector<GameObject> mObjects;

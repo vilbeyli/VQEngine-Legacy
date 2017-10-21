@@ -28,22 +28,23 @@ const  FilePaths s_filePaths = []{
 	// 4: FRONT		5: BACK
 	//------------------------------------------------------------------------------------------------------
 
-	FilePaths paths(ESkyboxPreset::SKYBOX_PRESET_COUNT * 6);	// use as an array to access using enum
+	FilePaths paths(ECubeMapPresets::CUBEMAP_PRESET_COUNT * 6);	// use as an array to access using enum
 	
 	// night sky by: Hazel Whorley
-	paths[ESkyboxPreset::NIGHT_SKY + 0] = "night_sky/nightsky_rt.png";
-	paths[ESkyboxPreset::NIGHT_SKY + 1] = "night_sky/nightsky_lf.png";
-	paths[ESkyboxPreset::NIGHT_SKY + 2] = "night_sky/nightsky_up.png";
-	paths[ESkyboxPreset::NIGHT_SKY + 3] = "night_sky/nightsky_dn.png";
-	paths[ESkyboxPreset::NIGHT_SKY + 4] = "night_sky/nightsky_ft.png";
-	paths[ESkyboxPreset::NIGHT_SKY + 5] = "night_sky/nightsky_bk.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 0] = "night_sky/nightsky_rt.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 1] = "night_sky/nightsky_lf.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 2] = "night_sky/nightsky_up.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 3] = "night_sky/nightsky_dn.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 4] = "night_sky/nightsky_ft.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 5] = "night_sky/nightsky_bk.png";
 
 	// other cubemap presets
 	// ...
 	return paths;
 }();
 
-std::vector<Skybox> Skybox::s_Presets(ESkyboxPreset::SKYBOX_PRESET_COUNT);
+std::vector<Skybox> Skybox::s_Presets(ECubeMapPresets::CUBEMAP_PRESET_COUNT + EEnvironmentMapPresets::ENVIRONMENT_MAP_PRESET_COUNT);
+
 
 void Skybox::InitializePresets(Renderer* pRenderer)
 {
@@ -53,11 +54,11 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 		Skybox skybox;
 		
 		const bool bEquirectangular = false;
-		const auto offsetIter = s_filePaths.begin() + ESkyboxPreset::NIGHT_SKY;
+		const auto offsetIter = s_filePaths.begin() + ECubeMapPresets::NIGHT_SKY;
 		const FilePaths filePaths = FilePaths(offsetIter, offsetIter + 6);
 		
 		TextureID skydomeTex = pRenderer->CreateCubemapTexture(filePaths);
-		s_Presets[ESkyboxPreset::NIGHT_SKY] = skybox.Initialize(pRenderer, skydomeTex, EShaders::SKYBOX, bEquirectangular);
+		s_Presets[ECubeMapPresets::NIGHT_SKY] = skybox.Initialize(pRenderer, skydomeTex, EShaders::SKYBOX, bEquirectangular);
 	}
 
 	// HDR / IBL - Equirectangular Skyboxes
@@ -74,7 +75,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 			pRenderer->CreateHDRTexture("Milkyway/Milkyway_Light.hdr", sIBLDirectory),
 			pRenderer->CreateHDRTexture("Milkyway/Milkyway_small.hdr", sIBLDirectory)
 		};
-		s_Presets[ESkyboxPreset::MILKYWAY] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
+		s_Presets[EEnvironmentMapPresets::MILKYWAY] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
 
 	{	// BARCELONA ROOFTOP 
@@ -86,7 +87,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 			pRenderer->CreateHDRTexture("Barcelona_Rooftops/Barce_Rooftop_C_3k.hdr", sIBLDirectory)
 		};
 		TextureID skydomeTex = pRenderer->CreateTextureFromFile("", sIBLDirectory);
-		s_Presets[ESkyboxPreset::BARCELONA] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
+		s_Presets[EEnvironmentMapPresets::BARCELONA] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
 
 	{	// TROPICAL BEACH
@@ -97,7 +98,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 			pRenderer->CreateHDRTexture("Tropical_Beach/Tropical_Beach_Env.hdr", sIBLDirectory),
 			pRenderer->CreateHDRTexture("Tropical_Beach/Tropical_Beach_3k.hdr", sIBLDirectory)
 		};
-		s_Presets[ESkyboxPreset::TROPICAL_BEACH] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
+		s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
 
 	{	// TROPICAL RUINS
@@ -108,7 +109,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 			pRenderer->CreateHDRTexture("Tropical_Ruins/TropicalRuins_Env.hdr", sIBLDirectory),
 			pRenderer->CreateHDRTexture("Tropical_Ruins/TropicalRuins_3k.hdr", sIBLDirectory)
 		};
-		s_Presets[ESkyboxPreset::TROPICAL_RUINS] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
+		s_Presets[EEnvironmentMapPresets::TROPICAL_RUINS] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
 
 	{	// WALK OF FAME
@@ -119,7 +120,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 			pRenderer->CreateHDRTexture("Walk_Of_Fame/Mans_Outside_Env.hdr", sIBLDirectory),
 			pRenderer->CreateHDRTexture("Walk_Of_Fame/Mans_Outside_2k.hdr", sIBLDirectory)
 		};
-		s_Presets[ESkyboxPreset::WALK_OF_FAME] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
+		s_Presets[EEnvironmentMapPresets::WALK_OF_FAME] = skybox.Initialize(pRenderer, env, shader, bEquirectangular);
 	}
 	// ...
 }

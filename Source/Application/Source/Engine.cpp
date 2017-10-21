@@ -37,7 +37,6 @@ Engine::Engine()
 	mpInput(new Input()),
 	mpTimer(new PerfTimer()),
 	mpSceneManager(new SceneManager(mLights)),
-	mActiveSkybox(ESkyboxPreset::SKYBOX_PRESET_COUNT),	// default: none
 	mbUsePaniniProjection(false)
 	//,mObjectPool(1024)
 {}
@@ -291,11 +290,11 @@ bool Engine::UpdateAndRender()
 void Engine::PreRender()
 {
 	// set scene view
-	const Camera& viewCamera	= mpSceneManager->GetMainCamera();
-	const XMMATRIX view			= viewCamera.GetViewMatrix();
-	const XMMATRIX viewInverse	= viewCamera.GetViewInverseMatrix();
-	const XMMATRIX proj			= viewCamera.GetProjectionMatrix();
-	const Scene* scene			= mpSceneManager->mpActiveScene;
+	const Camera& viewCamera = mpSceneManager->GetMainCamera();
+	const XMMATRIX view = viewCamera.GetViewMatrix();
+	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
+	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
+	const Scene* scene = mpSceneManager->mpActiveScene;
 
 	mSceneView.viewProj = view * proj;
 	mSceneView.view = view;
@@ -306,10 +305,11 @@ void Engine::PreRender()
 	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
 	mSceneView.sceneAmbientOcclusionFactor = scene->GetAOFactor();
 	mSceneView.environmentMap = scene->GetEnvironmentMap();
+	mSceneView.bIsIBLEnabled = mSceneView.environmentMap.irradianceMap != -1;
 
 	// gather scene lights
 	mSceneLightData.ResetCounts();
-	std::array<size_t*        , Light::ELightType::LIGHT_TYPE_COUNT> lightCounts 
+	std::array<size_t*, Light::ELightType::LIGHT_TYPE_COUNT> lightCounts
 	{ // can't use size_t& as template instantiation won't allow size_t&*. using size_t* instead.
 		&mSceneLightData.pointLightCount,
 		&mSceneLightData.spotLightCount,
@@ -317,9 +317,9 @@ void Engine::PreRender()
 	};
 	std::array<LightDataArray*, Light::ELightType::LIGHT_TYPE_COUNT> lightData
 	{	// can't use LightDataArray& as template instantiation won't allow LightDataArray&*. using LightDataArray* instead.
-		&mSceneLightData.pointLights, 
-		&mSceneLightData.spotLights, 
-		&/*TODO: add directional lights*/mSceneLightData.spotLights, 
+		&mSceneLightData.pointLights,
+		&mSceneLightData.spotLights,
+		&/*TODO: add directional lights*/mSceneLightData.spotLights,
 	};
 
 	for (const Light& l : mLights)
@@ -344,7 +344,7 @@ void Engine::PreRender()
 			mTBNDrawObjects.push_back(obj);
 	}
 
-	mActiveSkybox = mpSceneManager->GetSceneSkybox();
+	mEnvironmentMap = mpSceneManager->GetSceneEnvironmentMap();
 }
 
 void Engine::RenderLights() const
@@ -455,11 +455,11 @@ void Engine::Render()
 		RenderLights();
 
 		// SKYBOX
-		if (mActiveSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)
+		if (mEnvironmentMap.skydomeTex != -1)
 		{
 			// Note: this can be done without stencil read/write/masking. set depth test to equals1 
 			mpRenderer->SetDepthStencilState(mDeferredRenderingPasses._skyboxStencilState);
-			Skybox::s_Presets[mActiveSkybox].Render(mSceneView.viewProj);
+			mpSceneManager->mpActiveScene->RenderSkybox(mSceneView.viewProj);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->UnbindDepthTarget();
 		}
@@ -524,7 +524,7 @@ void Engine::Render()
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
-		if (mActiveSkybox != ESkyboxPreset::SKYBOX_PRESET_COUNT)	Skybox::s_Presets[mActiveSkybox].Render(mSceneView.viewProj);
+		if (mSceneView.environmentMap.skydomeTex != -1)	mpSceneManager->mpActiveScene->RenderSkybox(mSceneView.viewProj);
 		else
 		{
 			// todo: this might be costly, profile this

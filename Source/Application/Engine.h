@@ -132,7 +132,7 @@ private:
 	SceneView						mSceneView;
 	SceneLightData					mSceneLightData;
 	std::vector<Light>				mLights;
-	ESkyboxPreset					mActiveSkybox;
+	EnvironmentMap					mEnvironmentMap;
 
 	bool							mbUsePaniniProjection;
 

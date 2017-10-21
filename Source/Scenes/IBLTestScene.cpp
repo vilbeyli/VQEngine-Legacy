@@ -28,6 +28,12 @@ IBLTestScene::IBLTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
 {
 }
 
+void IBLTestScene::SetEnvironmentMap(EEnvironmentMapPresets preset)
+{
+	activeIBLSkybox = preset;
+	mSkybox = Skybox::s_Presets[activeIBLSkybox];
+}
+
 void IBLTestScene::Load(SerializedScene& scene)
 {
 	{	// sphere grid
@@ -111,7 +117,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 	testQuad.mTransform.SetScale(scl * 1.77f, scl, 1);	// 16:9
 	testQuad.mModel.mMesh = EGeometry::QUAD;
 
-	mSkybox = ESkyboxPreset::MILKYWAY;
+	SetEnvironmentMap(EEnvironmentMapPresets::MILKYWAY);
 }
 
 void IBLTestScene::Unload()
@@ -135,9 +141,16 @@ void IBLTestScene::Update(float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
 	if(!mLights.empty()) mLights[0]._transform.Translate(dt * tr * moveSpeed);
 
-	if (ENGINE->INP()->IsKeyTriggered("PageUp"))   mSkybox = static_cast<ESkyboxPreset>((mSkybox + 1) % ((unsigned)ESkyboxPreset::SKYBOX_PRESET_COUNT));
-	if (ENGINE->INP()->IsKeyTriggered("PageDown")) mSkybox = static_cast<ESkyboxPreset>(mSkybox == ESkyboxPreset::CUBEMAP_SKYBOX_COUNT ? (ESkyboxPreset::SKYBOX_PRESET_COUNT - 1) : (mSkybox - 1));
-	mSkybox = static_cast<ESkyboxPreset>(mSkybox == 0 ? ESkyboxPreset::CUBEMAP_SKYBOX_COUNT : mSkybox); // if wrapped to 0 from upper limit, skip cubemap skyboxes
+	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
+	const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
+	const EEnvironmentMapPresets lastPreset  = static_cast<EEnvironmentMapPresets>(
+		static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
+		);
+
+	EEnvironmentMapPresets selectedEnvironmentMap = activeIBLSkybox;
+	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = activeIBLSkybox == lastPreset  ? firstPreset : static_cast<EEnvironmentMapPresets>(activeIBLSkybox + 1);
+	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = activeIBLSkybox == firstPreset ? lastPreset  : static_cast<EEnvironmentMapPresets>(activeIBLSkybox - 1);
+	SetEnvironmentMap(selectedEnvironmentMap);
 }
 
 void IBLTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) const

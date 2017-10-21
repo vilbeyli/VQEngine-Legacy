@@ -27,55 +27,20 @@ struct PSIn
 
 cbuffer SceneVariables
 {
-    matrix viewToWorld;
 	float ambientFactor;
 };
 
-Texture2D tPosition;	//todo remove
+
 Texture2D tDiffuseRoughnessMap;
-Texture2D tSpecularMetalnessMap;
-Texture2D tNormalMap;
 Texture2D tAmbientOcclusion;
-Texture2D tIrradianceMap;
 
 SamplerState sNearestSampler;
 
-// todo: header for general stuff like this
-float2 SphericalSample(float3 v)
-{
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509575(v=vs.85).aspx
-	// The signs of the x and y parameters are used to determine the quadrant of the return values 
-	// within the range of -PI to PI. The atan2 HLSL intrinsic function is well-defined for every point 
-	// other than the origin, even if y equals 0 and x does not equal 0.
-    float2 uv = float2(atan2(v.z, v.x), asin(-v.y));
-    uv /= float2(2 * PI, PI);
-    uv += float2(0.5, 0.5);
-    return uv;
-}
-
 float4 PSMain(PSIn In) : SV_TARGET
 {
-    const float4 kD_roughness = tDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
-    const float4 kS_metalness = tSpecularMetalnessMap.Sample(sNearestSampler, In.uv);
-    const float3 Pv = tPosition.Sample(sNearestSampler, In.uv).rgb;
-    const float3 Nv = tNormalMap.Sample(sNearestSampler, In.uv).rgb;
-    
-	const float3 Vw = normalize(-mul(viewToWorld, float4(Pv, 1.0f)).xyz);
-    const float3 Nw = mul(viewToWorld, float4(Nv, 0.0f)).xyz;
-
-	const float  ambientOcclusion = tAmbientOcclusion.Sample(sNearestSampler, In.uv).r;	
-
-    const float2 equirectangularUV = SphericalSample(normalize(Nw));
-    const float3 environmentIrradience = tIrradianceMap.Sample(sNearestSampler, equirectangularUV).rgb;
-    
-	BRDF_Surface s;
-    s.N = Nw;
-    s.diffuseColor = kD_roughness.rgb;
-    s.specularColor = kS_metalness.rgb;
-    s.roughness = kD_roughness.a;
-    s.metalness = kS_metalness.a;
-
-    float3 Ia = EnvironmentBRDF(s, Vw, ambientOcclusion * ambientFactor, environmentIrradience);
-
-    return float4(Ia, 1.0f);
+	const float3 diffuseColor     = tDiffuseRoughnessMap.Sample(sNearestSampler, In.uv).rgb;
+	const float  ambientOcclusion = tAmbientOcclusion.Sample(sNearestSampler, In.uv).r;
+	
+	const float3 Ia = diffuseColor * ambientOcclusion * ambientFactor;
+	return float4(Ia, 1.0f);
 }

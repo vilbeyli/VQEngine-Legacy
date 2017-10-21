@@ -150,6 +150,8 @@ struct DeferredRenderingPasses
 	DepthStencilStateID _skyboxStencilState;
 	ShaderID			_geometryShader;
 	ShaderID			_ambientShader;
+	ShaderID			_ambientIBLShader;
+	//ShaderID			_environmentMapSpecularShader;
 	ShaderID			_phongLightingShader;
 	ShaderID			_BRDFLightingShader;
 

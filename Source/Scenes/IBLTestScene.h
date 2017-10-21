@@ -32,8 +32,12 @@ public:
 	~IBLTestScene() = default;
 
 private:
+	void SetEnvironmentMap(EEnvironmentMapPresets preset);
+
+private:
 	std::vector<GameObject> spheres;
 
 	GameObject testQuad;
+	EEnvironmentMapPresets activeIBLSkybox;
 };
 

@@ -172,7 +172,7 @@ void RoomScene::Load(SerializedScene& scene)
 		;// obj.mRenderSettings.bRenderTBN = true;
 	}
 
-	mSkybox = ESkyboxPreset::NIGHT_SKY;
+	mSkybox = Skybox::s_Presets[ECubeMapPresets::NIGHT_SKY];
 }
 
 void RoomScene::Unload()

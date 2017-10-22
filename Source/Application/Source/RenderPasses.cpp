@@ -688,9 +688,10 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	size_t idx = 0;
 	for (const vec3& v : sampleKernel)
 	{
-		samples[idx++] = v.x();
-		samples[idx++] = v.y();
-		samples[idx++] = v.z();
+		samples[idx + 0] = v.x();
+		samples[idx + 1] = v.y();
+		samples[idx + 2] = v.z();
+		idx += 3;
 	}
 
 	SSAOConstants ssaoConsts = {
@@ -707,6 +708,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->BindRenderTarget(this->occlusionRenderTarget);
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
+	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
 	pRenderer->SetTexture("texViewPositions", texPositions);
 	pRenderer->SetTexture("texNoise", this->noiseTexture);
@@ -745,6 +747,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	pRenderer->SetShader(EShaders::GAUSSIAN_BLUR_4x4);
 	pRenderer->BindRenderTarget(this->blurRenderTarget);
 	pRenderer->SetTexture("tOcclusion", texOcclusion);
+	pRenderer->SetSamplerState("BlurSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetConstant2f("inputTextureDimensions", texDimensions);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();

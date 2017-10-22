@@ -21,11 +21,10 @@
 
 #define ENABLE_RANGE_CHECK
 
-
 struct PSIn
 {
 	float4 position		 : SV_POSITION;
-    noperspective float2 uv : TEXCOORD0;
+	float2 uv : TEXCOORD0;
 };
 
 
@@ -51,13 +50,14 @@ Texture2D texDepth;
 SamplerState sNoiseSampler;
 SamplerState sPointSampler;
 
+
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	const float2 uv = In.uv;
-	const float3 N = texViewSpaceNormals.Sample(sNoiseSampler, uv).xyz;
+    const float3 N = texViewSpaceNormals.Sample(sPointSampler, uv).xyz;
 	if(dot(N, N) < 0.001) return 0.0f.xxxx;
 
-	const float3 P = texViewPositions.Sample(sNoiseSampler, uv).xyz;
+    const float3 P = texViewPositions.Sample(sPointSampler, uv).xyz;
 
 	// tile noise texture (4x4) over whole screen by scaling UV coords (textures wrap)
     const float2 noiseScale = SSAO_constants.screenSize / 4.0f;
@@ -69,24 +69,24 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3x3 TBN = float3x3(T, B, N);
 
 	float occlusion = 0.0;
-	for (int i = 0; i < KERNEL_SIZE; ++i)
+
+	[loop]	// when unrolled, VGPR usage skyrockets and reduces #waves in flight
+    for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
-		float3 kernelSample = mul(SSAO_constants.samples[i], TBN); // From tangent to view-space
-		kernelSample = P + kernelSample * SSAO_constants.radius;
+		float3 kernelSample = P + mul(SSAO_constants.samples[i], TBN); // From tangent to view-space
 
 		// get the screenspace position of the sample
-		float4 offset = float4(kernelSample, 1.0f);
+        float4 offset = float4(kernelSample, 1.0f);
 		offset = mul(SSAO_constants.matProjection, offset);
 		offset.xyz /= offset.w;
-		offset.xy  = offset.xy * 0.5f + 0.5f;	// [0, 1]
-		offset.xy *= float2(1.0f, -1.0f);
+        offset.xy = (offset.xy * float2(1.0f, -1.0f)) * 0.5f + 0.5f; // [0, 1]
 		
 #if 0
 		// reconstruct viewspace depth from depth-buffer
 		const float  D = texDepth.Sample(sNoiseSampler, uv + offset.xy).r;
 #else
 		// read view space depth 
-		const float  D = texViewPositions.Sample(sNoiseSampler, offset.xy).z;
+		const float  D = texViewPositions.Sample(sPointSampler, offset.xy).z;
 #endif
 
 
@@ -100,5 +100,5 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 	occlusion = 1.0 - (occlusion / KERNEL_SIZE);
 
-    return pow(occlusion, SSAO_constants.intensity).xxxx;
+	return pow(occlusion, SSAO_constants.intensity).xxxx;
 }

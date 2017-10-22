@@ -134,13 +134,15 @@
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Scenes\IBLTestScene.h" />
     <ClInclude Include="$(SolutionDir)Source\Scenes\RoomScene.h" />
-    <ClInclude Include="$(SolutionDir)Source\Scenes\SceneTemplate.h" />
+    <None Include="..\Source\Scenes\SceneTemplate.h.txt">
+      <FileType>CppHeader</FileType>
+    </None>
     <ClInclude Include="$(SolutionDir)Source\Scenes\SSAOTestScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Scenes\IBLTestScene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Scenes\RoomScene.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Scenes\SceneTemplate.cpp" />
+    <None Include="..\Source\Scenes\SceneTemplate.cpp.txt" />
     <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

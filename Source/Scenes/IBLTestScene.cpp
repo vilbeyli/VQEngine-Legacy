@@ -22,6 +22,8 @@
 
 #include "Renderer/Renderer.h"
 
+static const vec3 sSphereCenter = vec3(0, 1, -20);
+
 IBLTestScene::IBLTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	:
 	Scene(sceneMan, lights)
@@ -38,10 +40,10 @@ void IBLTestScene::Load(SerializedScene& scene)
 {
 	{	// sphere grid
 		constexpr float r = 11.0f;
-		constexpr size_t gridDimension[2] = { 4, 4 };
-		constexpr size_t numSph = gridDimension[0] * gridDimension[1];
+		constexpr size_t gridDimension[2] = { 7, 7 };
+		constexpr size_t numSph = gridDimension[0] * gridDimension[1] - 4;
 
-		const vec3 origin = vec3(0, 1, -20);
+		const vec3& origin = sSphereCenter;
 
 		for (size_t i = 0; i < numSph; i++)
 		{
@@ -61,11 +63,11 @@ void IBLTestScene::Load(SerializedScene& scene)
 			const vec3 offset = vec3(col * r, 1.0f, row * r) + vec3(offsetDim[0], 0.0f, offsetDim[1]);
 #else
 			const float R = 85.0f;
-			const float archAngle = DEG2RAD * 150.0f;	// how much arch will cover
+			const float archAngle = DEG2RAD * 359.9f;	// how much arch will cover
 			const float archOffset = DEG2RAD * 15.0f;	// rotate arch by degrees
 
 			const float phi = sphereStep * archAngle + archOffset;
-			const vec3 offset = R * vec3(cosf(phi), 0, sinf(phi));
+			const vec3 offset = R * vec3(cosf(phi), 0.15f * cosf( (phi - archOffset) * 0.25f ), sinf(phi));
 #endif
 			const vec3 pos = origin + offset;
 
@@ -129,7 +131,7 @@ void IBLTestScene::Update(float dt)
 {
 	float t = ENGINE->GetTotalTime();
 	const float moveSpeed = 45.0f;
-	const float rotSpeed = XM_PI;
+	const float rotSpeed = XM_PI * sinf(t* 0.5f) * sinf((t+0.15f)* 0.5f) * dt * 0.01f;
 
 	XMVECTOR rot = XMVectorZero();
 	XMVECTOR tr = XMVectorZero();
@@ -151,6 +153,14 @@ void IBLTestScene::Update(float dt)
 	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = activeIBLSkybox == lastPreset  ? firstPreset : static_cast<EEnvironmentMapPresets>(activeIBLSkybox + 1);
 	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = activeIBLSkybox == firstPreset ? lastPreset  : static_cast<EEnvironmentMapPresets>(activeIBLSkybox - 1);
 	SetEnvironmentMap(selectedEnvironmentMap);
+
+
+	for (GameObject& sphere : spheres)
+	{
+		const vec3& point = sSphereCenter;
+		const float angle = rotSpeed;
+		sphere.mTransform.RotateAroundPointAndAxis(vec3::YAxis, angle, point);
+	}
 }
 
 void IBLTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) const

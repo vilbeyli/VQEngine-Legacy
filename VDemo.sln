@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.26730.16
+VisualStudioVersion = 15.0.27004.2002
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "SolutionFiles\Application.vcxproj", "{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -22,6 +22,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Source\Shaders\Debug_ps.hlsl = Source\Shaders\Debug_ps.hlsl
 		Source\Shaders\Debug_vs.hlsl = Source\Shaders\Debug_vs.hlsl
 		Source\Shaders\deferred_brdf_ambient_ps.hlsl = Source\Shaders\deferred_brdf_ambient_ps.hlsl
+		Source\Shaders\deferred_brdf_ambientIBL_ps.hlsl = Source\Shaders\deferred_brdf_ambientIBL_ps.hlsl
 		Source\Shaders\deferred_brdf_lighting_ps.hlsl = Source\Shaders\deferred_brdf_lighting_ps.hlsl
 		Source\Shaders\deferred_brdf_pointLight_ps.hlsl = Source\Shaders\deferred_brdf_pointLight_ps.hlsl
 		Source\Shaders\deferred_brdf_spotLight_ps.hlsl = Source\Shaders\deferred_brdf_spotLight_ps.hlsl

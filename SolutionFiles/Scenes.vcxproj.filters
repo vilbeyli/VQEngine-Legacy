@@ -15,30 +15,30 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Scenes\IBLTestScene.h">
+    <ClInclude Include="$(SolutionDir)Source\Scenes\IBLTestScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Scenes\RoomScene.h">
+    <ClInclude Include="$(SolutionDir)Source\Scenes\RoomScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Scenes\SceneTemplate.h">
+    <ClInclude Include="$(SolutionDir)Source\Scenes\SSAOTestScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Scenes\SSAOTestScene.h">
+    <ClInclude Include="..\Source\Scenes\SceneTemplate.h.txt">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Scenes\IBLTestScene.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Scenes\IBLTestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scenes\RoomScene.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Scenes\RoomScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scenes\SceneTemplate.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Scenes\SSAOTestScene.cpp">
+    <ClCompile Include="..\Source\Scenes\SceneTemplate.cpp.txt">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

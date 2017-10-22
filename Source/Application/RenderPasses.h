@@ -155,6 +155,12 @@ struct DeferredRenderingPasses
 	ShaderID			_phongLightingShader;
 	ShaderID			_BRDFLightingShader;
 
+	// learnopengl:		https://learnopengl.com/#!PBR/IBL/Specular-IBL
+	RenderTargetID		_BRDFIntegrationLUT;	//  BRDF's response given an input roughness and an input angle (N dot w_i)
+	TextureID			_irradianceMap;
+	TextureID			_specularMap;
+
+
 	// todo
 	ShaderID			_spotLightShader;
 	ShaderID			_pointLightShader;
@@ -188,10 +194,4 @@ struct AmbientOcclusionPass
 
 	float radius;
 	float intensity;
-};
-
-struct EnvironmentMapLightingPass
-{
-	TextureID irradianceMap;
-	TextureID specularMap;
 };

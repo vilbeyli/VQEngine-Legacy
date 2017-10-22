@@ -40,7 +40,7 @@ Texture2D tIrradianceMap;
 
 SamplerState sNearestSampler;
 
-// todo: header for general stuff like this
+// todo: header for general stuff like this sampling
 float2 SphericalSample(float3 v)
 {
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509575(v=vs.85).aspx
@@ -57,17 +57,24 @@ float4 PSMain(PSIn In) : SV_TARGET
 {
     const float4 kD_roughness = tDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
     const float4 kS_metalness = tSpecularMetalnessMap.Sample(sNearestSampler, In.uv);
+
+	// view-space vectors
     const float3 Pv = tPosition.Sample(sNearestSampler, In.uv).rgb;
     const float3 Nv = tNormalMap.Sample(sNearestSampler, In.uv).rgb;
+    const float3 Vv = normalize(-Pv);
     
-	const float3 Vw = normalize(-mul(viewToWorld, float4(Pv, 1.0f)).xyz);
+	// world-space vectors
+	const float3 Vw = normalize(mul(viewToWorld, float4(Vv, 0.0f)).xyz);
     const float3 Nw = mul(viewToWorld, float4(Nv, 0.0f)).xyz;
 
-	const float  ambientOcclusion = tAmbientOcclusion.Sample(sNearestSampler, In.uv).r;	
-
+	// environment map
     const float2 equirectangularUV = SphericalSample(normalize(Nw));
     const float3 environmentIrradience = tIrradianceMap.Sample(sNearestSampler, equirectangularUV).rgb;
     
+	// ambient occl
+	const float  ambientOcclusion = tAmbientOcclusion.Sample(sNearestSampler, In.uv).r;	
+
+	// surface
 	BRDF_Surface s;
     s.N = Nw;
     s.diffuseColor = kD_roughness.rgb;

@@ -144,7 +144,6 @@ private:
 
 	ShadowMapPass					mShadowMapPass;
 	DeferredRenderingPasses			mDeferredRenderingPasses;
-	EnvironmentMapLightingPass		mEnvironmentMapLighting;
 	AmbientOcclusionPass			mSSAOPass;
 	PostProcessPass					mPostProcessPass;
 	DebugPass						mDebugPass;

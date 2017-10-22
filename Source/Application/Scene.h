@@ -68,6 +68,7 @@ public:
 	inline const EnvironmentMap& GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }
 	inline const Camera& GetActiveCamera() const	{ return mCameras[mSelectedCamera]; }
 	inline float GetAOFactor() const { return mAmbientOcclusionFactor; }
+	inline bool  HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
 
 protected:	// customization functions for derived classes
 	virtual void Render(const SceneView& sceneView, bool bSendMaterialData) const = 0;

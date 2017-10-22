@@ -42,29 +42,56 @@ enum EEnvironmentMapPresets : unsigned
 	ENVIRONMENT_MAP_PRESET_COUNT = (WALK_OF_FAME - MILKYWAY + 1)
 };
 
-struct EnvironmentMap
+struct EnvironmentMapFileNames
 {
-	inline void Clear() { skydomeTex = irradianceMap = specularMap = -1; }
-	TextureID skydomeTex	= -1;
-	TextureID irradianceMap	= -1;
-	TextureID specularMap	= -1;
+	std::string skyboxFileName;
+	std::string irradianceMapFileName;
+	std::string specularMapFileName;
+};
+
+class EnvironmentMap
+{
+public:
+	// learnopengl:	https://learnopengl.com/#!PBR/IBL/Specular-IBL
+	// stores the lookup table for BRDF's response given an input 
+	// roughness and an input angle between normal and view (N dot V)
+	static RenderTargetID		BRDFIntegrationLUTRT;
+	static ShaderID				BRDFIntegrationLUTShader;
+	static void Initialize(Renderer* pRenderer);	// renders BRDFIntegrationLUT
+
+	EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory);
+	EnvironmentMap();
+	inline void Clear() { irradianceMap = specularMap = -1; }
+
+	TextureID irradianceMap;
+	TextureID specularMap; 
 };
 
 class Skybox
 {
 public:
-	static std::vector<Skybox> s_Presets;
 	static void InitializePresets(Renderer* pRenderer);
+
+	static std::vector<Skybox> s_Presets;
 	
+public:
+	inline const EnvironmentMap& GetEnvironmentMap() const { return environmentMap; }
+	inline const TextureID GetSkyboxTexture() const{ return skyboxTexture; }
+
 	void Render(const DirectX::XMMATRIX& viewProj) const;
 
-	Skybox& Initialize(Renderer* renderer, const EnvironmentMap& environmentMap, int shader, bool bEquirectangular);
-	Skybox& Initialize(Renderer* renderer, const TextureID skydomeTexture, int shader, bool bEquirectangular);
-	inline const EnvironmentMap& GetEnvironmentMap() const { return environmentMap; }
+	// initializes a skybox with environment map data (used in image-based lighting)
+	Skybox(Renderer* renderer, const EnvironmentMapFileNames& environmentMapFiles, const std::string& rootDirectory, bool bEquirectangular);
+	
+	// initializes a skybox with no environment map (no image-based lighting)
+	Skybox(Renderer* renderer, const TextureID skydomeTexture, bool bEquirectangular);
+
+	Skybox();
+
 private:
-	bool			bEquirectangular;
-	ShaderID		skydomeShader;
 	Renderer*		pRenderer;
+	TextureID		skyboxTexture;
+	ShaderID		skyboxShader;
 	EnvironmentMap	environmentMap;
 };
 

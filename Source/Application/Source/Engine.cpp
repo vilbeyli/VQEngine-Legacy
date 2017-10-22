@@ -394,7 +394,8 @@ void Engine::SendLightData() const
 void Engine::Render()
 {	
 	const XMMATRIX& viewProj = mSceneView.viewProj;
-	
+	const Scene* pScene = mpSceneManager->mpActiveScene;
+
 	// get shadow casters (todo: static/dynamic lights)
 	std::vector<const Light*> _shadowCasters;
 	for (const Light& light : mpSceneManager->mRoomScene.mLights)
@@ -453,11 +454,11 @@ void Engine::Render()
 		RenderLights();
 
 		// SKYBOX
-		if (mSceneView.environmentMap.skydomeTex != -1)
+		if (pScene->HasSkybox())
 		{
 			// Note: this can be done without stencil read/write/masking. set depth test to equals1 
 			mpRenderer->SetDepthStencilState(mDeferredRenderingPasses._skyboxStencilState);
-			mpSceneManager->mpActiveScene->RenderSkybox(mSceneView.viewProj);
+			pScene->RenderSkybox(mSceneView.viewProj);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->UnbindDepthTarget();
 		}
@@ -522,7 +523,7 @@ void Engine::Render()
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
-		if (mSceneView.environmentMap.skydomeTex != -1)	mpSceneManager->mpActiveScene->RenderSkybox(mSceneView.viewProj);
+		if (pScene->HasSkybox())	pScene->RenderSkybox(mSceneView.viewProj);
 		else
 		{
 			// todo: this might be costly, profile this

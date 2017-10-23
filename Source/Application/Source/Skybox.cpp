@@ -18,7 +18,8 @@
 #include "Skybox.h"
 #include "Renderer/Renderer.h"
 
-// preset file paths (todo: read from file)
+// SKYBOX PRESETS W/ CUBEMAP / ENVIRONMENT MAP
+//==========================================================================================================
 using FilePaths = std::vector<std::string>;
 const  FilePaths s_filePaths = []{
 	// cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
@@ -44,8 +45,6 @@ const  FilePaths s_filePaths = []{
 }();
 
 std::vector<Skybox> Skybox::s_Presets(ECubeMapPresets::CUBEMAP_PRESET_COUNT + EEnvironmentMapPresets::ENVIRONMENT_MAP_PRESET_COUNT);
-
-
 void Skybox::InitializePresets(Renderer* pRenderer)
 {
 	// Cubemap Skyboxes
@@ -119,14 +118,70 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 	// ...
 }
 
+
+
+// ENVIRONMENT MAP
+//==========================================================================================================
+
+
 EnvironmentMap::EnvironmentMap() : irradianceMap(-1), specularMap(-1) {}
+
+RenderTargetID EnvironmentMap::sBRDFIntegrationLUTRT = -1;
+ShaderID EnvironmentMap::sBRDFIntegrationLUTShader   = -1;
+
+void EnvironmentMap::CalculateBRDFIntegralLUT(Renderer * pRenderer)
+{
+	// todo: layouts from reflection?
+	const std::vector<InputLayout> layout = {
+		{ "POSITION",	FLOAT32_3 },
+		{ "NORMAL",		FLOAT32_3 },
+		{ "TANGENT",	FLOAT32_3 },
+		{ "TEXCOORD",	FLOAT32_2 },
+	};
+	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
+	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };	// compute?
+	sBRDFIntegrationLUTShader = pRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
+
+	DXGI_FORMAT format = false ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT;
+
+	D3D11_TEXTURE2D_DESC rtDesc = {};
+	rtDesc.Width = 2048;
+	rtDesc.Height = 2048;
+	rtDesc.MipLevels = 1;
+	rtDesc.ArraySize = 1;
+	rtDesc.Format = format;
+	rtDesc.Usage = D3D11_USAGE_DEFAULT;
+	rtDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	rtDesc.CPUAccessFlags = 0;
+	rtDesc.SampleDesc = { 1, 0 };
+	rtDesc.MiscFlags = 0;
+
+	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+	RTVDesc.Format = format;
+	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	RTVDesc.Texture2D.MipSlice = 0;
+	sBRDFIntegrationLUTRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+
+	pRenderer->BindRenderTarget(sBRDFIntegrationLUTRT);
+	pRenderer->UnbindDepthTarget();
+	pRenderer->SetShader(sBRDFIntegrationLUTShader);
+	pRenderer->SetViewport(2048, 2048);
+	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+}
 
 EnvironmentMap::EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory)
 {
 	irradianceMap = pRenderer->CreateHDRTexture(files.irradianceMapFileName, rootDirectory);
 	specularMap = pRenderer->CreateHDRTexture(files.specularMapFileName, rootDirectory);
+
+	// todo: use mip levels to store pre-filtered specular map based on roughness value intervals
 }
 
+
+// SKYBOX
+//==========================================================================================================
 Skybox::Skybox(Renderer* renderer, const EnvironmentMapFileNames& environmentMapFiles, const std::string& rootDirectory, bool bEquirectangular)
 	:
 	pRenderer(renderer),

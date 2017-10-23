@@ -40,8 +40,8 @@ void IBLTestScene::Load(SerializedScene& scene)
 {
 	{	// sphere grid
 		constexpr float r = 11.0f;
-		constexpr size_t gridDimension[2] = { 7, 7 };
-		constexpr size_t numSph = gridDimension[0] * gridDimension[1] - 4;
+		constexpr size_t gridDimension[2] = { 3, 3 };
+		constexpr size_t numSph = gridDimension[0] * gridDimension[1];
 
 		const vec3& origin = sSphereCenter;
 
@@ -62,8 +62,8 @@ void IBLTestScene::Load(SerializedScene& scene)
 			};
 			const vec3 offset = vec3(col * r, 1.0f, row * r) + vec3(offsetDim[0], 0.0f, offsetDim[1]);
 #else
-			const float R = 85.0f;
-			const float archAngle = DEG2RAD * 359.9f;	// how much arch will cover
+			const float R = 25.0f;
+			const float archAngle = DEG2RAD * 160.9f;	// how much arch will cover
 			const float archOffset = DEG2RAD * 15.0f;	// rotate arch by degrees
 
 			const float phi = sphereStep * archAngle + archOffset;
@@ -73,13 +73,13 @@ void IBLTestScene::Load(SerializedScene& scene)
 
 			GameObject sph;
 			sph.mTransform.SetPosition(pos);
-			sph.mTransform.SetUniformScale(2.0f + sinf(sphereStep * PI));
+			sph.mTransform.SetUniformScale(2.0f + 0*sinf(sphereStep * PI));
 			sph.mModel.mMesh = EGeometry::SPHERE;
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			// metalness [0.0f, 1.0f]
 			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::white)));
-			mat0.metalness = 0;
+			mat0.metalness = sphereStep;
 
 			// roughness [roughnessLowClamp, 1.0f]
 			const float roughnessLowClamp = 0.12f;

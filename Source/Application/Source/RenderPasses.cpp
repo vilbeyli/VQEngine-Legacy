@@ -456,6 +456,9 @@ void DeferredRenderingPasses::RenderLightingPass(
 	const TextureID texPosition = pRenderer->GetRenderTargetTexture(_GBuffer._positionRT);
 	const ShaderID lightingShader = bUseBRDFLighting ? _BRDFLightingShader : _phongLightingShader;
 	const TextureID texIrradianceMap = sceneView.environmentMap.irradianceMap;
+	const TextureID texSpecularMap = sceneView.environmentMap.specularMap;
+	const TextureID tBRDFLUT = pRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
+
 
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
@@ -473,6 +476,8 @@ void DeferredRenderingPasses::RenderLightingPass(
 		pRenderer->SetTexture("tNormalMap", texNormal);
 		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
 		pRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
+		pRenderer->SetTexture("tSpecularMap", texSpecularMap);
+		pRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
 		pRenderer->SetSamplerState("sNearestSampler", 0);	// todo: nearest sampler
 		pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
 		pRenderer->SetConstant4x4f("viewToWorld", sceneView.viewToWorld);

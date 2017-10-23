@@ -55,9 +55,9 @@ public:
 	// learnopengl:	https://learnopengl.com/#!PBR/IBL/Specular-IBL
 	// stores the lookup table for BRDF's response given an input 
 	// roughness and an input angle between normal and view (N dot V)
-	static RenderTargetID		BRDFIntegrationLUTRT;
-	static ShaderID				BRDFIntegrationLUTShader;
-	static void Initialize(Renderer* pRenderer);	// renders BRDFIntegrationLUT
+	static RenderTargetID		sBRDFIntegrationLUTRT;
+	static ShaderID				sBRDFIntegrationLUTShader;
+	static void CalculateBRDFIntegralLUT(Renderer* pRenderer);	// renders BRDFIntegrationLUT
 
 	EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory);
 	EnvironmentMap();

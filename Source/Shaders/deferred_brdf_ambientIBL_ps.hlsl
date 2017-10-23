@@ -38,6 +38,9 @@ Texture2D tNormalMap;
 Texture2D tAmbientOcclusion;
 Texture2D tIrradianceMap;
 
+Texture2D tSpecularMap;
+Texture2D tBRDFIntegrationLUT;
+
 SamplerState sNearestSampler;
 
 // todo: header for general stuff like this sampling
@@ -70,6 +73,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	// environment map
     const float2 equirectangularUV = SphericalSample(normalize(Nw));
     const float3 environmentIrradience = tIrradianceMap.Sample(sNearestSampler, equirectangularUV).rgb;
+    const float3 environmentSpecular = tSpecularMap.Sample(sNearestSampler, equirectangularUV).rgb;
     
 	// ambient occl
 	const float  ambientOcclusion = tAmbientOcclusion.Sample(sNearestSampler, In.uv).r;	
@@ -82,7 +86,17 @@ float4 PSMain(PSIn In) : SV_TARGET
     s.roughness = kD_roughness.a;
     s.metalness = kS_metalness.a;
 
+	// ambient irradiance
     float3 Ia = EnvironmentBRDF(s, Vw, ambientOcclusion * ambientFactor, environmentIrradience);
 
-    return float4(Ia, 1.0f);
+	// specular lighting
+    const float NdotV = max(dot(Nw, Vw), 0);
+
+    const float3 F0 = 0.04f.xxx;
+    const float3 F = FresnelWithRoughness(NdotV, F0, s.roughness);
+    const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, s.roughness)).rg;
+    float3 Is = environmentSpecular * (F * F0ScaleBias.x + F0ScaleBias.y);
+
+    float3 I = (Ia + Is) * 1;
+    return float4(I, 1.0f);
 }

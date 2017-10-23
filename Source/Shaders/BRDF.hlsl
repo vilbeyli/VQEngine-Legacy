@@ -31,7 +31,7 @@
 // Rendering Equation
 // ------------------
 //
-// L_o(p, w_o) = L_e(p) + Integral_Omega()[f_r(p, w_i, w_o) * L_i(p, w_i) * dot(N, w_i)]dw_i
+//		L_o(p, w_o) = L_e(p) + Integral_Omega()[f_r(p, w_i, w_o) * L_i(p, w_i) * dot(N, w_i)]dw_i
 //
 // L_o		: Radiance leaving surface point P along the direction w_o (V=eye)
 // L_e		: Emissive Radiance leaving surface point p | we're not gonna use emissive materials for now 
@@ -67,7 +67,7 @@ inline float NormalDistribution(float3 N, float3 H, float roughness)
 #endif
 }
 
-// Smith's Schlick-GGX
+// Smith's Schlick-GGX for Direct Lighting (non-IBL)
 inline float Geometry_Smiths_SchlickGGX(float3 N, float3 V, float roughness)
 {	// describes self shadowing of geometry
 	//
@@ -78,15 +78,29 @@ inline float Geometry_Smiths_SchlickGGX(float3 N, float3 V, float roughness)
 	// k_direct	 = (roughness + 1)^2 / 8
 	// k_IBL	 = roughness^2 / 2
 	//
-#ifdef DIRECT_LIGHTING
 	const float k = pow((roughness + 1.0f), 2) / 8.0f;
-#else	// IBL
-	const float k = pow(roughness, 2) / 2.0f;
-#endif
 	const float NV = max(0.0f, dot(N, V));
 	const float denom = (NV * (1.0f - k) + k) + 0.0001f;
 	//if (denom < EPSILON) return 1.0f;
 	return NV / denom;
+}
+
+// Smith's Schlick-GGX for Environment Maps
+inline float Geometry_Smiths_SchlickGGX_EnvironmentMap(float3 N, float3 V, float roughness)
+{ // describes self shadowing of geometry
+	//
+	// G_ShclickGGX(N, V, k) = ( dot(N,V) ) / ( dot(N,V)*(1-k) + k )
+	//
+	// k		 :	remapping of roughness based on wheter we're using geometry function 
+	//				for direct lighting or IBL
+	// k_direct	 = (roughness + 1)^2 / 8
+	// k_IBL	 = roughness^2 / 2
+	//
+	const float k = pow(roughness, 2) / 2.0f;
+    const float NV = max(0.0f, dot(N, V));
+    const float denom = (NV * (1.0f - k) + k) + 0.0001f;
+	if (denom < EPSILON) return 1.0f;
+    return NV / denom;
 }
 
 #ifdef _DEBUG
@@ -103,7 +117,14 @@ inline float Geometry(float3 N, float3 V, float3 L, float k)
 }
 #endif
 
-// Fresnel-Schlick approximation descrribes reflection
+float GeometryEnvironmentMap(float3 N, float3 V, float3 L, float k)
+{ // essentially a multiplier [0, 1] measuring microfacet shadowing
+    float geomNV = Geometry_Smiths_SchlickGGX_EnvironmentMap(N, V, k);
+    float geomNL = Geometry_Smiths_SchlickGGX_EnvironmentMap(N, L, k);
+    return geomNV * geomNL;
+}
+
+// Fresnel-Schlick approximation describes reflection
 inline float3 Fresnel(float3 N, float3 V, float3 F0)
 {	// F_Schlick(N, V, F0) = F0 - (1-F0)*(1 - dot(N,V))^5
 	return F0 + (float3(1,1,1) - F0) * pow(1.0f - max(0.0f, dot(N, V)), 5.0f);
@@ -162,8 +183,7 @@ float3 EnvironmentBRDF(BRDF_Surface s, float3 V, float ao, float3 irradience)
     const float3 F0 = lerp(0.04f.xxx, albedo, metalness);
 	
 	const float3 Ks = FresnelWithRoughness( max(dot(s.N, V), 0.0), F0, roughness );
-    const float Kd = 1.0f - Ks;
+    const float Kd = (1.0f - Ks) * (1.0f - metalness);
 	
-
     return (Kd * albedo * irradience) * ao;
 }

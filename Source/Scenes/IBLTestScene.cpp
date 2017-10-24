@@ -40,7 +40,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 {
 	{	// sphere grid
 		constexpr float r = 11.0f;
-		constexpr size_t gridDimension[2] = { 3, 3 };
+		constexpr size_t gridDimension[2] = { 3, 4 };
 		constexpr size_t numSph = gridDimension[0] * gridDimension[1];
 
 		const vec3& origin = sSphereCenter;
@@ -62,7 +62,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			};
 			const vec3 offset = vec3(col * r, 1.0f, row * r) + vec3(offsetDim[0], 0.0f, offsetDim[1]);
 #else
-			const float R = 25.0f;
+			const float R = 55.0f;
 			const float archAngle = DEG2RAD * 160.9f;	// how much arch will cover
 			const float archOffset = DEG2RAD * 15.0f;	// rotate arch by degrees
 
@@ -73,7 +73,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 
 			GameObject sph;
 			sph.mTransform.SetPosition(pos);
-			sph.mTransform.SetUniformScale(2.0f + 0*sinf(sphereStep * PI));
+			sph.mTransform.SetUniformScale(3.0f + 0*sinf(sphereStep * PI));
 			sph.mModel.mMesh = EGeometry::SPHERE;
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
@@ -82,8 +82,9 @@ void IBLTestScene::Load(SerializedScene& scene)
 			mat0.metalness = sphereStep;
 
 			// roughness [roughnessLowClamp, 1.0f]
-			const float roughnessLowClamp = 0.12f;
+			const float roughnessLowClamp = 0.4f;
 			mat0.roughness = sphereStep < roughnessLowClamp ? roughnessLowClamp : sphereStep;
+			//mat0.roughness = 0.05f * 3;
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;
@@ -159,14 +160,14 @@ void IBLTestScene::Update(float dt)
 	{
 		const vec3& point = sSphereCenter;
 		const float angle = rotSpeed;
-		sphere.mTransform.RotateAroundPointAndAxis(vec3::YAxis, angle, point);
+		//sphere.mTransform.RotateAroundPointAndAxis(vec3::YAxis, angle, point);
 	}
 }
 
 void IBLTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) const
 {
 	for (const auto& sph : spheres) sph.Render(mpRenderer, sceneView, bSendMaterialData);
-	testQuad.Render(mpRenderer, sceneView, bSendMaterialData);
+	//testQuad.Render(mpRenderer, sceneView, bSendMaterialData);
 }
 
 void IBLTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const

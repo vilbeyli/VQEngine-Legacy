@@ -115,6 +115,27 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 	SetMaterialSpecificConstants(renderer, shader, bIsDeferredRendering);
 }
 
+void BRDF_Material::Clear() 
+{
+	diffuse = vec3::Zero;
+	metalness = 0.0f;
+	specular = vec3::Zero;
+	roughness = 0.0f;
+	diffuseMap = -1;
+	normalMap = -1;
+	alpha = 1.0f;
+}
+
+void BlinnPhong_Material::Clear()
+{
+	diffuse = vec3::Zero;
+	shininess = 0.0f;
+	specular = vec3::Zero;
+	diffuseMap = -1;
+	normalMap = -1;
+	alpha = 1.0f;
+}
+
 void BRDF_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const
 {
 	switch (shader)
@@ -150,6 +171,8 @@ void BRDF_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders sh
 		break;
 	}
 }
+
+
 
 void BlinnPhong_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const
 {

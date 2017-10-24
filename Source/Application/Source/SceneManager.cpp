@@ -69,7 +69,7 @@ void SceneManager::ResetMainCamera()
 
 bool SceneManager::LoadScene(Renderer* pRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects)
 {
-	mSerializedScene = Parser::ReadScene(sceneNames[settings.levelToLoad]);
+	mSerializedScene = Parser::ReadScene(pRenderer,sceneNames[settings.levelToLoad]);
 	if (mSerializedScene.loadSuccess == '0') return false;
 	
 	mCurrentLevel = settings.levelToLoad;

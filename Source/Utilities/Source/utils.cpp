@@ -117,6 +117,21 @@ std::string GetFileNameFromPath(const std::string& path)
 	return name;
 }
 
+bool IsImageName(const std::string & str)
+{
+	std::vector<std::string> FileNameAndExtension = split(str, '.');
+	if (FileNameAndExtension.size() < 2)
+		return false;
+
+	const std::string& extension = FileNameAndExtension[1];
+
+	bool bIsImageFile = false;
+	bIsImageFile = bIsImageFile || extension == "png";
+	bIsImageFile = bIsImageFile || extension == "jpg";
+	bIsImageFile = bIsImageFile || extension == "hdr";
+	return bIsImageFile;
+}
+
 //---------------------------------------------------------------------------------
 
 

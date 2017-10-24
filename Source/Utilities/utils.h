@@ -189,6 +189,7 @@ template<class... Args> std::vector<std::string> split(const std::string& s, Arg
 }
 
 std::string	GetFileNameFromPath(const std::string&);
+bool IsImageName(const std::string&);
 
 struct UnicodeString
 {

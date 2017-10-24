@@ -94,7 +94,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 
     const float3 F0 = 0.04f.xxx;
     const float3 F = FresnelWithRoughness(NdotV, F0, s.roughness);
-    const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, s.roughness)).rg;
+    const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, 1.0f - s.roughness)).rg;
     float3 Is = environmentSpecular * (F * F0ScaleBias.x + F0ScaleBias.y);
 
     float3 I = (Ia + Is) * 1;

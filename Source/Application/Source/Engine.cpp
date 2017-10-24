@@ -517,7 +517,7 @@ void Engine::Render()
 
 		mpRenderer->BindRenderTarget(mPostProcessPass._worldRenderTarget);
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
-		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 		mpRenderer->Begin(clearCmd);
 
 		// SKYBOX
@@ -612,6 +612,7 @@ void Engine::Render()
 		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
 		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		TextureID tBRDF				 = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
+		const TextureID tLUTRef		 = mpRenderer->CreateTextureFromFile("DebugTextures/ibl_brdf_lut_reference.png");
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);
@@ -623,7 +624,8 @@ void Engine::Render()
 				{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
-				{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false},
+				{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
+				{ squareTextureScaledDownSize,		screenPosition,			tLUTRef				, false},
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
 				c[i].bottomLeftCornerScreenCoordinates.x() = c[i-1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;

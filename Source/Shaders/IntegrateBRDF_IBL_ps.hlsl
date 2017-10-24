@@ -31,6 +31,8 @@ struct PSIn
 // src: 
 //	https://learnopengl.com/#!PBR/IBL/Specular-IBL
 //	http://blog.selfshadow.com/publications/s2013-shading-course/karis/s2013_pbs_epic_notes_v2.pdf
+//	https://chetanjags.wordpress.com/2015/08/26/image-based-lighting/
+//	http://www.trentreed.net/blog/physically-based-shading-and-image-based-lighting/
 // ---------------------------------------------------------------------------------------------------------
 // The focus is on the specular part of the lighting equation
 //
@@ -69,7 +71,7 @@ struct PSIn
 //
 
 #define SAMPLE_COUNT 1024
-#define USE_BIT_MANIPULATION
+#define xUSE_BIT_MANIPULATION
 
 // the Hammersley Sequence,a random low-discrepancy sequence based on the Quasi-Monte Carlo method as carefully described by Holger Dammertz. 
 // It is based on the Van Der Corpus sequence which mirrors a decimal binary representation around its decimal point.
@@ -127,7 +129,7 @@ float3 ImportanceSampleGGX(float2 Xi, float3 N, float roughness)
     const float a = roughness * roughness;
 
     const float phi = 2.0f * PI * Xi.x;
-    const float cosTheta = sqrt((1.0f - Xi.y) / (1.0f + (a*a - 1.0f)) * Xi.y);
+    const float cosTheta = sqrt((1.0f - Xi.y) / (1.0f + (a * a - 1.0f) * Xi.y));
     const float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
 
 	// from sphreical coords to cartesian coords
@@ -147,8 +149,6 @@ float3 ImportanceSampleGGX(float2 Xi, float3 N, float roughness)
 
 float2 IntegrateBRDF(float NdotV, float roughness)
 {
-    //return float2(NdotV, roughness);
-
     float3 V;
     V.x = sqrt(1.0f - NdotV * NdotV);
     V.y = 0;
@@ -183,6 +183,6 @@ float2 IntegrateBRDF(float NdotV, float roughness)
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
-	float2 integratedBRDF = IntegrateBRDF(In.uv.x, In.uv.y);
+	float2 integratedBRDF = IntegrateBRDF(In.uv.x, 1.0f - In.uv.y);
 	return float4(integratedBRDF, 0, 1);
 }

@@ -35,7 +35,7 @@ public:
 	static Settings::Engine ReadSettings(const std::string& settingsFileName);
 	static void ParseSetting(const std::vector<std::string>& line, Settings::Engine& settings);
 
-	static SerializedScene ReadScene(const std::string& sceneFileName);
+	static SerializedScene ReadScene(Renderer* pRenderer, const std::string& sceneFileName);
 
 	// Object initializations
 	// ---------------------------------------------------------------------------------------------------------------
@@ -45,7 +45,7 @@ public:
 	// BRDF			:
 	// Phong		:
 	// Object		: transform, brdf/phong, mesh
-	static void ParseScene(const std::vector<std::string>& command, SerializedScene& scene);
+	static void ParseScene(Renderer* pRenderer, const std::vector<std::string>& command, SerializedScene& scene);
 private:
 
 };

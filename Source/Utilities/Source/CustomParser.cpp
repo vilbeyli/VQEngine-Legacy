@@ -19,8 +19,9 @@
 #include "CustomParser.h"
 #include "utils.h"
 #include "Log.h"
-
 #include "Color.h"
+
+#include "Renderer/Renderer.h"
 
 #include <fstream>
 #include <unordered_map>
@@ -162,7 +163,7 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 	}
 }
 
-SerializedScene Parser::ReadScene(const std::string& sceneFileName)
+SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneFileName)
 {
 	SerializedScene scene;
 	std::string filePath = scene_root + sceneFileName;
@@ -177,7 +178,7 @@ SerializedScene Parser::ReadScene(const std::string& sceneFileName)
 				continue;
 
 			std::vector<std::string> command = split(line, ' ', '\t');	// ignore whitespace
-			ParseScene(command, scene);									// process command
+			ParseScene(pRenderer, command, scene);									// process command
 		}
 		scene.loadSuccess = '1';
 	}
@@ -205,12 +206,62 @@ SerializedScene Parser::ReadScene(const std::string& sceneFileName)
 // BRDF			:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
-void Parser::ParseScene(const std::vector<std::string>& command, SerializedScene& scene)
-{
-	// state tracking
-	static bool bIsReadingGameObject = false;	
-	static GameObject obj;
+// ---------------------------------------------------------------------------------------------------------------
 
+// state tracking
+static bool bIsReadingGameObject = false;
+static bool bIsReadingMaterial = false;
+static GameObject obj;
+
+enum MaterialType { UNKNOWN, BRDF, PHONG };
+static MaterialType materialType = MaterialType::UNKNOWN;
+static BRDF_Material brdf;
+static BlinnPhong_Material phong;
+
+using ParseFunctionType = void(__cdecl *)(const std::vector<std::string>&);
+using ParseFunctionLookup = std::unordered_map<std::string, ParseFunctionType>;
+
+static const std::unordered_map<std::string, Light::ELightType>	sLightTypeLookup
+{ 
+	{"s", Light::ELightType::SPOT },
+	{"p", Light::ELightType::POINT},
+	{"d", Light::ELightType::DIRECTIONAL}
+};
+
+static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
+{
+	{"orange"    , LinearColor::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
+	{"black"     , LinearColor::s_palette[ static_cast<int>(EColorValue::BLACK      )]},
+	{"white"     , LinearColor::s_palette[ static_cast<int>(EColorValue::WHITE      )]},
+	{"red"       , LinearColor::s_palette[ static_cast<int>(EColorValue::RED        )]},
+	{"green"     , LinearColor::s_palette[ static_cast<int>(EColorValue::GREEN      )]},
+	{"blue"      , LinearColor::s_palette[ static_cast<int>(EColorValue::BLUE       )]},
+	{"yellow"    , LinearColor::s_palette[ static_cast<int>(EColorValue::YELLOW     )]},
+	{"magenta"   , LinearColor::s_palette[ static_cast<int>(EColorValue::MAGENTA    )]},
+	{"cyan"      , LinearColor::s_palette[ static_cast<int>(EColorValue::CYAN       )]},
+	{"gray"      , LinearColor::s_palette[ static_cast<int>(EColorValue::GRAY       )]},
+	{"light_gray", LinearColor::s_palette[ static_cast<int>(EColorValue::LIGHT_GRAY )]},
+	{"orange"    , LinearColor::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
+	{"purple"    , LinearColor::s_palette[ static_cast<int>(EColorValue::PURPLE     )]}
+};
+
+// todo: get rid of else ifs for cmd == "" comparison... 
+// perhaps use a function lookup?
+// or define static functions in corresponding objects?
+// might as well use some preprocessor magic... 
+
+//static const ParseFunctionLookup sParseCommandFn =
+//{	
+//	{"camera", [](const std::vector<std::string>& cmds) -> void 
+//	{
+//		const auto& cmd = cmds[0];
+//		
+//	}
+//	}
+//};
+
+void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& command, SerializedScene& scene)
+{
 	if (command.empty())
 	{
 		Log::Error("Empty Command.");
@@ -248,29 +299,7 @@ void Parser::ParseScene(const std::vector<std::string>& command, SerializedScene
 		//--------------------------------------------------------------
 		// | Light Type	| Color	| Shadowing? |  Brightness | Spot.Angle OR Point.Range | Position3 | Rotation3
 		//--------------------------------------------------------------
-		static const std::unordered_map<std::string, Light::ELightType>	sLightTypeLookup
-		{ 
-			{"s", Light::ELightType::SPOT },
-			{"p", Light::ELightType::POINT},
-			{"d", Light::ELightType::DIRECTIONAL}
-		};
 
-		static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
-		{
-			{"orange"    , LinearColor::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
-			{"black"     , LinearColor::s_palette[ static_cast<int>(EColorValue::BLACK      )]},
-			{"white"     , LinearColor::s_palette[ static_cast<int>(EColorValue::WHITE      )]},
-			{"red"       , LinearColor::s_palette[ static_cast<int>(EColorValue::RED        )]},
-			{"green"     , LinearColor::s_palette[ static_cast<int>(EColorValue::GREEN      )]},
-			{"blue"      , LinearColor::s_palette[ static_cast<int>(EColorValue::BLUE       )]},
-			{"yellow"    , LinearColor::s_palette[ static_cast<int>(EColorValue::YELLOW     )]},
-			{"magenta"   , LinearColor::s_palette[ static_cast<int>(EColorValue::MAGENTA    )]},
-			{"cyan"      , LinearColor::s_palette[ static_cast<int>(EColorValue::CYAN       )]},
-			{"gray"      , LinearColor::s_palette[ static_cast<int>(EColorValue::GRAY       )]},
-			{"light_gray", LinearColor::s_palette[ static_cast<int>(EColorValue::LIGHT_GRAY )]},
-			{"orange"    , LinearColor::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
-			{"purple"    , LinearColor::s_palette[ static_cast<int>(EColorValue::PURPLE     )]}
-		};
 
 		const bool bCommandHasRotationEntry = command.size() > 9;
 
@@ -359,8 +388,8 @@ void Parser::ParseScene(const std::vector<std::string>& command, SerializedScene
 	}
 	else if (cmd == "brdf")
 	{
-		Log::Info("Todo: brdf mat");
-		return;
+		//Log::Info("Todo: brdf mat");
+		//return;
 		// #Parameters: todo
 		//--------------------------------------------------------------
 		// todo
@@ -370,12 +399,15 @@ void Parser::ParseScene(const std::vector<std::string>& command, SerializedScene
 			Log::Error(" Creating BRDF Material without defining a game object (missing cmd: \"%s\"", "object begin");
 			return;
 		}
+		if (bIsReadingMaterial)
+		{
+			Log::Error(" Syntax Error: Already defining a brdf or phong material!");
+			return;
+		}
 
-		BRDF_Material& mat = obj.mModel.mBRDF_Material;
-		//const std::string mesh = GetLowercased(command[1]);
-
-
-		
+		bIsReadingMaterial = true;
+		materialType = BRDF;
+		obj.mModel.mBRDF_Material.Clear();
 	}
 	else if (cmd == "blinnphong")
 	{
@@ -390,10 +422,52 @@ void Parser::ParseScene(const std::vector<std::string>& command, SerializedScene
 			Log::Error(" Creating BlinnPhong Material without defining a game object (missing cmd: \"%s\"", "object begin");
 			return;
 		}
+		if (bIsReadingMaterial)
+		{
+			Log::Error(" Syntax Error: Already defining a brdf or phong material!");
+			return;
+		}
 
-		BlinnPhong_Material& mat = obj.mModel.mBlinnPhong_Material;
-		//const std::string mesh = GetLowercased(command[1]);
+		bIsReadingMaterial = true;
+		materialType = PHONG;
+		obj.mModel.mBlinnPhong_Material.Clear();
+	}
 
+	// todo: read textures all at once..
+	else if (cmd == "diffuse" || cmd == "albedo")
+	{
+		if (!bIsReadingMaterial)
+		{
+			Log::Error(" Cannot define Material Property ");
+			return;
+		}
+
+		// #Parameters
+		//--------------------------------------------------------------
+		// diffuseTexturePath 
+		// OR
+		// vec3 diffuse, diffuseTexturePath
+		//--------------------------------------------------------------
+		const std::string firstParam = GetLowercased(command[1]);
+		if (IsImageName(firstParam))
+		{
+			const TextureID texDiffuse = pRenderer->CreateTextureFromFile(firstParam);
+			obj.mModel.SetDiffuseMap(texDiffuse);
+		}
+		else
+		{
+			const float r = stof(command[1]);
+			const float g = stof(command[2]);
+			const float b = stof(command[3]);
+			//	const float a = stof(command[4]); // ?
+			obj.mModel.SetDiffuseColor(LinearColor(r, g, b));
+
+			if (command.size() == 5)
+			{
+				const TextureID texDiffuse = pRenderer->CreateTextureFromFile(command[5]);
+				obj.mModel.SetDiffuseMap(texDiffuse);
+			}
+		}
 	}
 	else if (cmd == "transform")
 	{

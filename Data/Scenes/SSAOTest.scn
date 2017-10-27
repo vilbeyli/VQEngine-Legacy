@@ -30,14 +30,23 @@ object end
 object begin
 mesh cube
 transform 10 0 -50 45 0 45 5
+brdf
+diffuse 0.9 0.9 0.9
+textures openart/186.jpg openart/186_norm.jpg
+brdf
 object end
 
 object begin
 mesh sphere
+diffuse 0.8 0.8 0.8
 transform -10 0 -50 0 0 45 5
 object end
 
 object begin
 mesh grid
 transform -30 5 -50 0 0 -45 15
+brdf
+diffuse 0.7 0.8 0.7
+textures openart/186.jpg openart/186_norm.jpg
+brdf
 object end

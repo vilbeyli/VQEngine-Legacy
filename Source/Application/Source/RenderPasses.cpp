@@ -426,7 +426,7 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT, _GBuffer._positionRT);
 	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
 	pRenderer->SetDepthStencilState(_geometryStencilState); 
-	pRenderer->SetSamplerState("sNormalSampler", 0);
+	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
 	pRenderer->Begin(clearCmd);
 	pRenderer->Apply();
 }
@@ -714,7 +714,8 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->BindRenderTarget(this->occlusionRenderTarget);
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
-	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
+	//pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
 	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
 	pRenderer->SetTexture("texViewPositions", texPositions);
 	pRenderer->SetTexture("texNoise", this->noiseTexture);

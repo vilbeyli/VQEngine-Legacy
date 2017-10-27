@@ -26,8 +26,9 @@ struct VSIn
 
 struct PSIn 
 {
-	float4 position	 : SV_POSITION;
-    float2 uv		 : TEXCOORD0;
+    centroid float4 position : SV_POSITION;
+    centroid noperspective
+    float2 uv : TEXCOORD0;
 };
 
 PSIn VSMain(VSIn In)

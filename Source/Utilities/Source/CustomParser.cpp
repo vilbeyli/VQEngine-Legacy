@@ -348,6 +348,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 				return;
 			}
 			bIsReadingGameObject = true;
+			obj.Clear();
 		}
 
 		if (objCmd == "end")
@@ -359,7 +360,6 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			}
 			bIsReadingGameObject = false;
 			scene.objects.push_back(obj);
-			obj.Clear();
 		}
 	}
 	else if (cmd == "mesh")
@@ -388,11 +388,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	}
 	else if (cmd == "brdf")
 	{
-		//Log::Info("Todo: brdf mat");
-		//return;
-		// #Parameters: todo
-		//--------------------------------------------------------------
-		// todo
+		// #Parameters: 0
 		//--------------------------------------------------------------
 		if (!bIsReadingGameObject)
 		{
@@ -401,7 +397,14 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		}
 		if (bIsReadingMaterial)
 		{
-			Log::Error(" Syntax Error: Already defining a brdf or phong material!");
+			if (materialType != BRDF)
+			{
+				Log::Error(" Syntax Error: Already defining a phong material!");
+				return;
+			}
+
+			materialType = UNKNOWN;
+			bIsReadingMaterial = false;
 			return;
 		}
 
@@ -413,9 +416,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	{
 		Log::Info("Todo: blinnphong mat");
 		return;
-		// #Parameters: todo
-		//--------------------------------------------------------------
-		// todo
+		// #Parameters: 0
 		//--------------------------------------------------------------
 		if (!bIsReadingGameObject)
 		{
@@ -424,7 +425,14 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		}
 		if (bIsReadingMaterial)
 		{
-			Log::Error(" Syntax Error: Already defining a brdf or phong material!");
+			if (materialType != PHONG)
+			{
+				Log::Error(" Syntax Error: Already defining a brdf material!");
+				return;
+			}
+
+			materialType = UNKNOWN;
+			bIsReadingMaterial = false;
 			return;
 		}
 
@@ -433,20 +441,17 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		obj.mModel.mBlinnPhong_Material.Clear();
 	}
 
-	// todo: read textures all at once..
 	else if (cmd == "diffuse" || cmd == "albedo")
 	{
 		if (!bIsReadingMaterial)
 		{
-			Log::Error(" Cannot define Material Property ");
+			Log::Error(" Cannot define Material Property: %s", cmd.c_str());
 			return;
 		}
 
-		// #Parameters
+		// #Parameters: 4 (1 optional)
 		//--------------------------------------------------------------
-		// diffuseTexturePath 
-		// OR
-		// vec3 diffuse, diffuseTexturePath
+		// r g b a
 		//--------------------------------------------------------------
 		const std::string firstParam = GetLowercased(command[1]);
 		if (IsImageName(firstParam))
@@ -456,19 +461,88 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		}
 		else
 		{
+			assert(command.size() >= 4); // albedo r g b a(optional)
 			const float r = stof(command[1]);
 			const float g = stof(command[2]);
 			const float b = stof(command[3]);
-			//	const float a = stof(command[4]); // ?
-			obj.mModel.SetDiffuseColor(LinearColor(r, g, b));
-
+			
 			if (command.size() == 5)
 			{
-				const TextureID texDiffuse = pRenderer->CreateTextureFromFile(command[5]);
-				obj.mModel.SetDiffuseMap(texDiffuse);
+				const float a = stof(command[4]);
+				obj.mModel.SetDiffuseAlpha(LinearColor(r, g, b), a);
+			}
+			else
+			{
+				obj.mModel.SetDiffuseColor(LinearColor(r, g, b));
 			}
 		}
 	}
+	else if (cmd == "roughness")
+	{
+		if (!bIsReadingMaterial || materialType != BRDF)
+		{
+			Log::Error(" Cannot define Material Property: roughness ");
+			return;
+		}
+		// #Parameters: 1
+		//--------------------------------------------------------------
+		// roughness [0.0f, 1.0f]
+		//--------------------------------------------------------------
+		obj.mModel.mBRDF_Material.roughness = stof(command[1]);
+	}
+	else if (cmd == "metalness")
+	{
+		if (!bIsReadingMaterial || materialType != BRDF)
+		{
+			Log::Error(" Cannot define Material Property: metalness ");
+			return;
+		}
+		// #Parameters: 1
+		//--------------------------------------------------------------
+		// metalness [0.0f, 1.0f]
+		//--------------------------------------------------------------
+		obj.mModel.mBRDF_Material.metalness = stof(command[1]);
+	}
+	else if (cmd == "shininess")
+	{
+		if (!bIsReadingMaterial || materialType != PHONG)
+		{
+			Log::Error(" Cannot define Material Property: shininess ");
+			return;
+		}
+		// #Parameters: 1
+		//--------------------------------------------------------------
+		// shininess [0.04 - inf]
+		//--------------------------------------------------------------
+		obj.mModel.mBlinnPhong_Material.shininess = stof(command[1]);
+	}
+	else if (cmd == "textures")
+	{
+		if (!bIsReadingMaterial)
+		{
+			Log::Error(" Cannot define Material Property: textures ");
+			return;
+		}
+
+		// #Parameters: 2 (1 optional)
+		//--------------------------------------------------------------
+		// albedoMap normalMap
+		//--------------------------------------------------------------
+		const TextureID texDiffuse = pRenderer->CreateTextureFromFile(command[1]);
+		obj.mModel.SetDiffuseMap(texDiffuse);
+
+		if (command.size() > 2)
+		{
+			const TextureID texNormal = pRenderer->CreateTextureFromFile(command[2]);
+			obj.mModel.SetNormalMap(texNormal);
+		}
+
+		if (command.size() > 3)
+		{
+			// add various maps (specular etc)
+		}
+	}
+
 	else if (cmd == "transform")
 	{
 		// #Parameters: 7-9
@@ -512,6 +586,6 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	}
 	else
 	{
-		Log::Error("Parser: Unknown command \"%s\"", cmd);
+		Log::Error("Parser: Unknown command \"%s\"", cmd.c_str());
 	}
 }

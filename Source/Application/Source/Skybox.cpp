@@ -18,6 +18,8 @@
 #include "Skybox.h"
 #include "Renderer/Renderer.h"
 
+#define LOAD_ALL_ENVIRONMENT_MAPS 0
+
 // SKYBOX PRESETS W/ CUBEMAP / ENVIRONMENT MAP
 //==========================================================================================================
 using FilePaths = std::vector<std::string>;
@@ -65,15 +67,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 	const bool bEquirectangular = true;
 
 	EnvironmentMapFileNames files;
-	{	// MILKYWAY 
-		const std::string root = sIBLDirectory + "Milkyway/";
-		files = {
-			"Milkyway_BG.jpg",
-			"Milkyway_Light.hdr",
-			"Milkyway_small.hdr",
-		};
-		s_Presets[EEnvironmentMapPresets::MILKYWAY] = Skybox(pRenderer, files, root, bEquirectangular);
-	}
+
 
 	{	// BARCELONA ROOFTOP  
 		const std::string root = sIBLDirectory + "Barcelona_Rooftops/";
@@ -93,6 +87,17 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 			"Tropical_Beach_3k.hdr",
 		};
 		s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = Skybox(pRenderer, files, root, bEquirectangular);
+	}
+
+#if LOAD_ALL_ENVIRONMENT_MAPS
+	{	// MILKYWAY 
+		const std::string root = sIBLDirectory + "Milkyway/";
+		files = {
+			"Milkyway_BG.jpg",
+			"Milkyway_Light.hdr",
+			"Milkyway_small.hdr",
+		};
+		s_Presets[EEnvironmentMapPresets::MILKYWAY] = Skybox(pRenderer, files, root, bEquirectangular);
 	}
 
 	{	// TROPICAL RUINS
@@ -116,6 +121,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 	}
 
 	// ...
+#endif
 }
 
 
@@ -123,11 +129,15 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 // ENVIRONMENT MAP
 //==========================================================================================================
 
+// Static Variables - BRDF LUT & Pre-filtered Environment Map
+//---------------------------------------------------------------
+RenderTargetID EnvironmentMap::sBRDFIntegrationLUTRT = -1;
+ShaderID EnvironmentMap::sBRDFIntegrationLUTShader   = -1;
+ShaderID EnvironmentMap::sPrefilterShader = -1;
+//---------------------------------------------------------------
 
 EnvironmentMap::EnvironmentMap() : irradianceMap(-1), specularMap(-1) {}
 
-RenderTargetID EnvironmentMap::sBRDFIntegrationLUTRT = -1;
-ShaderID EnvironmentMap::sBRDFIntegrationLUTShader   = -1;
 
 void EnvironmentMap::CalculateBRDFIntegralLUT(Renderer * pRenderer)
 {
@@ -169,6 +179,20 @@ void EnvironmentMap::CalculateBRDFIntegralLUT(Renderer * pRenderer)
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
+}
+
+
+TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & specularMap)
+{
+	const TextureID envMap = specularMap._id;
+
+	// mip0 is already the specular map itself
+	unsigned textureSize[2] = { specularMap._width >> 1, specularMap._height >> 1 };
+	for (int i = 0; i < PREFILTER_MIP_LEVEL_COUNT; ++i)
+	{
+
+	}
+	return -1;
 }
 
 EnvironmentMap::EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory)

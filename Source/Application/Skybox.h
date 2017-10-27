@@ -17,8 +17,10 @@
 
 #pragma once
 
-#include <vector>
 #include "HandleTypedefs.h"
+
+#include <vector>
+#include <array>
 
 class Renderer;
 struct Texture;
@@ -47,6 +49,17 @@ struct EnvironmentMapFileNames
 	std::string skyboxFileName;
 	std::string irradianceMapFileName;
 	std::string specularMapFileName;
+	std::string settingsFileName;
+};
+
+constexpr size_t PREFILTER_MIP_LEVEL_COUNT = 5;
+using MipRenderTargets = std::array<RenderTargetID, PREFILTER_MIP_LEVEL_COUNT>;
+
+struct sIBLSettings
+{
+	float gamma;
+	float exposure;
+	size_t environmentMapSize;
 };
 
 class EnvironmentMap
@@ -57,14 +70,23 @@ public:
 	// roughness and an input angle between normal and view (N dot V)
 	static RenderTargetID		sBRDFIntegrationLUTRT;
 	static ShaderID				sBRDFIntegrationLUTShader;
-	static void CalculateBRDFIntegralLUT(Renderer* pRenderer);	// renders BRDFIntegrationLUT
+	static void CalculateBRDFIntegralLUT(Renderer* pRenderer);
+
+	// renders pre-filtered environment map texture into mip levels 
+	// with the convolution being based on the roughness
+	static ShaderID				sPrefilterShader;
+	static TextureID InitializePrefilteredEnvironmentMap(const Texture& specularMap);
 
 	EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory);
 	EnvironmentMap();
-	inline void Clear() { irradianceMap = specularMap = -1; }
+	inline void Clear() { irradianceMap = specularMap = -1; }	// ???
 
 	TextureID irradianceMap;
 	TextureID specularMap; 
+	TextureID prefilteredEnvironmentMap;
+	MipRenderTargets prefilterMipRenderTargets;
+
+	sIBLSettings settings;
 };
 
 class Skybox

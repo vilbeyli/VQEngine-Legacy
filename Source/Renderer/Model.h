@@ -26,7 +26,8 @@ public:
 	Model() : mMesh(-1) {}
 	~Model() {}
 
-	void SetDiffuseColor(const LinearColor& diffuseColor);
+	void SetDiffuseAlpha(const LinearColor & diffuseColor, float alpha);
+	void SetDiffuseColor(const LinearColor & diffuseColor);
 	void SetNormalMap(const TextureID normalMap);
 	void SetDiffuseMap(const TextureID diffuseMap);
 

@@ -120,7 +120,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 	testQuad.mTransform.SetScale(scl * 1.77f, scl, 1);	// 16:9
 	testQuad.mModel.mMesh = EGeometry::QUAD;
 
-	SetEnvironmentMap(EEnvironmentMapPresets::MILKYWAY);
+	SetEnvironmentMap(EEnvironmentMapPresets::BARCELONA);
 }
 
 void IBLTestScene::Unload()

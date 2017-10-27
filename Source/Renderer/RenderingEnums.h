@@ -69,6 +69,7 @@ enum EDefaultBlendState
 enum EDefaultSamplerState
 {
 	POINT_SAMPLER,
+	LINEAR_FILTER_SAMPLER,
 	WRAP_SAMPLER,
 
 	DEFAULT_SAMPLER_COUNT

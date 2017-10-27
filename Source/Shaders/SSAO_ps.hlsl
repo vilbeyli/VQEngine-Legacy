@@ -49,22 +49,26 @@ Texture2D texDepth;
 
 SamplerState sNoiseSampler;
 SamplerState sPointSampler;
+SamplerState sLinearSampler;
 
 
-float4 PSMain(PSIn In) : SV_TARGET
+float PSMain(PSIn In) : SV_TARGET
 {
 	const float2 uv = In.uv;
-    const float3 N = texViewSpaceNormals.Sample(sPointSampler, uv).xyz;
+    const float3 N = normalize(texViewSpaceNormals.Sample(sLinearSampler, uv).xyz);
 	if(dot(N, N) < 0.001) return 0.0f.xxxx;
 
-    const float3 P = texViewPositions.Sample(sPointSampler, uv).xyz;
+    const float3 P = texViewPositions.Sample(sLinearSampler, uv).xyz;
 
 	// tile noise texture (4x4) over whole screen by scaling UV coords (textures wrap)
     const float2 noiseScale = SSAO_constants.screenSize / 4.0f;
 	const float3 noise = texNoise.Sample(sNoiseSampler, uv * noiseScale).xyz;
 
 	// Gramm-Schmidt process for orthogonal basis creation: https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
+	// in short: project noise on N vector, and subtract that projection from the noise vector
+	//			 this would give us a vector perpendicular to N. see gif in link 
 	const float3 T = normalize(noise - N * dot(noise, N));
+
 	const float3 B = cross(N, T);
 	const float3x3 TBN = float3x3(T, B, N);
 
@@ -86,7 +90,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float  D = texDepth.Sample(sNoiseSampler, uv + offset.xy).r;
 #else
 		// read view space depth 
-		const float  D = texViewPositions.Sample(sPointSampler, offset.xy).z;
+		const float  D = texViewPositions.Sample(sLinearSampler, offset.xy).z;
 #endif
 
 
@@ -100,5 +104,5 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 	occlusion = 1.0 - (occlusion / KERNEL_SIZE);
 
-	return pow(occlusion, SSAO_constants.intensity).xxxx;
+	return pow(occlusion, SSAO_constants.intensity);
 }

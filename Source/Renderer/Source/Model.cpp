@@ -22,6 +22,11 @@ void Model::SetDiffuseColor(const LinearColor & diffuseColor)
 {
 	mBlinnPhong_Material.diffuse = mBRDF_Material.diffuse = diffuseColor;
 }
+void Model::SetDiffuseAlpha(const LinearColor & diffuseColor, float alpha)
+{
+	mBlinnPhong_Material.diffuse = mBRDF_Material.diffuse = diffuseColor;
+	mBlinnPhong_Material.alpha = mBRDF_Material.alpha = alpha;
+}
 
 void Model::SetNormalMap(const TextureID normalMap)
 {

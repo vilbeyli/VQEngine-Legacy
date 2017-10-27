@@ -34,6 +34,21 @@ ao 0.02
 object begin
 mesh cube
 transform 10 0 -50 45 0 45 5
+brdf
+textures openart/185.jpg openart/185_norm.jpg
+roughness 0.9
+metalness 0
+brdf
+object end
+
+object begin
+mesh cube
+transform 25 0 -50 45 0 45 5
+brdf
+textures openart/186.jpg openart/186_norm.jpg
+roughness 0.1
+metalness 1
+brdf
 object end
 
 object begin

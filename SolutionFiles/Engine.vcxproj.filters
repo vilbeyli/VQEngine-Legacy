@@ -15,48 +15,54 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(SolutionDir)Source\Utilities\Color.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\Animation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Utilities\Log.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\Transform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Utilities\PerfTimer.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\Engine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Utilities\Quaternion.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\GameObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Utilities\CustomParser.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\RenderPasses.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Utilities\utils.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Utilities\Camera.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\SceneManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)Source\Engine\Skybox.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)Source\Engine\Settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Color.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Transform.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Log.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Engine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\PerfTimer.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\GameObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Quaternion.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\RenderPasses.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\CustomParser.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\utils.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\SceneManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Camera.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Skybox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

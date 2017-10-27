@@ -16,12 +16,13 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "SceneManager.h"	
-#include "Engine.h"			
-#include "Input.h"
-#include "BaseSystem.h"	// only for renderer settings... maybe store in renderer?
-#include "Camera.h"
+#include "SceneManager.h"
+#include "Engine.h"
 
+#include "Application/Input.h"
+#include "Application/BaseSystem.h"	// only for renderer settings... maybe store in renderer?
+
+#include "Utilities/Camera.h"
 #include "Utilities/CustomParser.h"
 #include "Utilities/utils.h"
 #include "Utilities/Log.h"

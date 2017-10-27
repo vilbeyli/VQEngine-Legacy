@@ -17,11 +17,11 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "RoomScene.h"
-#include "Application/SceneManager.h"
 
-#include "Renderer/Renderer.h"
-#include "Application/Engine.h"
 #include "Application/Input.h"
+#include "Renderer/Renderer.h"
+#include "Engine/SceneManager.h"
+#include "Engine/Engine.h"
 
 #define ENABLE_POINT_LIGHTS
 #define xROTATE_SHADOW_LIGHT	// todo: fix frustum for shadow
@@ -217,27 +217,6 @@ void RoomScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 	for (const GameObject& obj : spheres)	objs.push_back(&obj);
 }
 
-void RoomScene::InitializeObjectArrays(SerializedScene& scene)
-{
-#if 0
-	cube.mModel.mBRDF_Material.normalMap = mpRenderer->CreateTextureFromFile("BumpMapTexturePreview.png");
-	cube.mModel.mBRDF_Material.metalness = 0.6f;
-	cube.mModel.mBRDF_Material.roughness = 0.15f;
-	grid.mModel.mMesh = scene.objects.back().mModel.mMesh;
-
-		grid.mModel.mBRDF_Material.roughness = 0.02f;
-		grid.mModel.mBRDF_Material.metalness = 0.6f;
-		grid.mModel.mBlinnPhong_Material.shininess = 40.f;
-	cylinder.mModel.mBRDF_Material.roughness = 0.3f;
-	cylinder.mModel.mBRDF_Material.metalness = 0.3f;
-		cube.mModel.mBRDF_Material.roughness = 0.6f;
-		cube.mModel.mBRDF_Material.metalness = 0.6f;
-	  sphere.mModel.mBRDF_Material.roughness = 0.3f;
-	  sphere.mModel.mBRDF_Material.metalness = 1.0f;
-	  sphere.mModel.SetDiffuseColor(LinearColor(0.04f, 0.04f, 0.04f));
-#endif
-}
-
 void RoomScene::UpdateCentralObj(const float dt)
 {
 	float t = ENGINE->GetTotalTime();
@@ -281,7 +260,7 @@ void RoomScene::ToggleFloorNormalMap()
 {
 	TextureID nMap = m_room.floor.mModel.mBRDF_Material.normalMap;
 
-	nMap = nMap == mpRenderer->GetTexture("185_norm.JPG") ? -1 : mpRenderer->CreateTextureFromFile("185_norm.JPG");
+	nMap = nMap == mpRenderer->GetTexture("openart/185_norm.JPG") ? -1 : mpRenderer->CreateTextureFromFile("openart/185_norm.JPG");
 	m_room.floor.mModel.mBRDF_Material.normalMap = nMap;
 }
 
@@ -358,8 +337,8 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		tf.RotateAroundGlobalYAxisDegrees(-90);
 		//tf.RotateAroundGlobalXAxisDegrees(-180.0f);
 
-		wallR.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("190.JPG"));
-		wallR.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("190_norm.JPG"));
+		wallR.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
+		wallR.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
 	}
 
 	// LEFT WALL
@@ -372,8 +351,8 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		//tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
 
 		wallL.mModel.mBlinnPhong_Material.shininess = 60.0f;
-		wallL.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("190.JPG"));
-		wallL.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("190_norm.JPG"));
+		wallL.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
+		wallL.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
 	}
 	// WALL
 	{
@@ -383,8 +362,8 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		tf.SetXRotationDeg(-90.0f);
 
 		wallF.mModel.mBlinnPhong_Material.shininess = 90.0f;
-		wallF.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("190.JPG"));
-		wallF.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("190_norm.JPG"));
+		wallF.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
+		wallF.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
 	}
 
 	wallL.mModel.mMesh = EGeometry::CUBE;

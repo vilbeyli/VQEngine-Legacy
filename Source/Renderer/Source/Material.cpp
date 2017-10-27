@@ -117,10 +117,10 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 
 void BRDF_Material::Clear() 
 {
-	diffuse = vec3::Zero;
+	diffuse = vec3(1,1,1);
 	metalness = 0.0f;
-	specular = vec3::Zero;
-	roughness = 0.0f;
+	specular = vec3(1,1,1);
+	roughness = 0.04f;
 	diffuseMap = -1;
 	normalMap = -1;
 	alpha = 1.0f;
@@ -128,9 +128,9 @@ void BRDF_Material::Clear()
 
 void BlinnPhong_Material::Clear()
 {
-	diffuse = vec3::Zero;
+	diffuse = vec3(1,1,1);
 	shininess = 0.0f;
-	specular = vec3::Zero;
+	specular = vec3(1,1,1);
 	diffuseMap = -1;
 	normalMap = -1;
 	alpha = 1.0f;

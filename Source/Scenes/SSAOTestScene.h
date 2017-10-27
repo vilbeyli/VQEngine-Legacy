@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
-#include "Application/Scene.h"
+#include "Engine/Scene.h"
 class SSAOTestScene : public Scene
 {
 public:

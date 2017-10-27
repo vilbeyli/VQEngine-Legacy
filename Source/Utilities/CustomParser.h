@@ -21,7 +21,7 @@
 #include <vector>
 #include <string>
 
-#include "Application/Scene.h"
+#include "Engine/Scene.h"
 
 namespace Settings { struct Rendering; }
 

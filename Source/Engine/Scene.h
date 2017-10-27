@@ -17,11 +17,11 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
-#include "Settings.h"
+#include "Engine/Settings.h"
 #include "Renderer/Light.h"
 #include "Skybox.h"
 #include "GameObject.h"
-#include "Camera.h"
+#include "Utilities/Camera.h"
 
 struct SerializedScene;
 class SceneManager;

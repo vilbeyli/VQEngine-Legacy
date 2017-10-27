@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -19,33 +19,33 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}</ProjectGuid>
+    <ProjectGuid>{9780D393-8EF6-43C8-B821-6B6A6661831C}</ProjectGuid>
     <RootNamespace>DX11Renderer</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
-    <ProjectName>Application</ProjectName>
+    <ProjectName>Engine</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -70,25 +70,25 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Application;$(SolutionDir)Source\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Engine;$(SolutionDir)Source\</IncludePath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(SolutionDir)Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)</LibraryPath>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Application;$(SolutionDir)Source\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Engine;$(SolutionDir)Source\</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);$(NETFXKitsDir)Lib\um\x86;$(SolutionDir)Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)</LibraryPath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Application;$(SolutionDir)Source\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Engine;$(SolutionDir)Source\</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)</LibraryPath>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Application;$(SolutionDir)Source\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Engine;$(SolutionDir)Source\</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)</LibraryPath>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
@@ -158,33 +158,24 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="$(SolutionDir)Source\Application\Source\Input.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Application\Source\Main.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Application\Source\BaseSystem.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Application\Source\WorkerPool.cpp" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Animation.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Transform.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Engine.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\GameObject.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\RenderPasses.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Scene.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\SceneManager.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Settings.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Skybox.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(SolutionDir)Source\Application\DataStructures.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\BaseSystem.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\Input.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\resource.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\SystemDefs.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\WorkerPool.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\HandleTypedefs.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="Engine.vcxproj">
-      <Project>{9780d393-8ef6-43c8-b821-6b6a6661831c}</Project>
-    </ProjectReference>
-    <ProjectReference Include="Renderer.vcxproj">
-      <Project>{eaf3c9db-a325-40fc-bdb4-7ee2e0756b00}</Project>
-    </ProjectReference>
-    <ProjectReference Include="Scenes.vcxproj">
-      <Project>{ba3ede91-c0be-4b6b-a6cb-95a1c06c43c9}</Project>
-    </ProjectReference>
-    <ProjectReference Include="Utilities.vcxproj">
-      <Project>{19aeca67-f607-4dcc-847b-a6196c924945}</Project>
-    </ProjectReference>
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Transform.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Engine.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\GameObject.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\RenderPasses.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Scene.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\SceneManager.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Skybox.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -29,14 +29,21 @@ light       p         red        	false      1000         60	    -140   100   14
 
 object begin
 mesh cube
-//BRDF
+brdf begin
+roughness 0.6
+metalness 1.0
+textures "" BumpMapTexturePreview.png
+brdf end
 //Phong
 transform 0 65 0 30 30 0 5
 object end
 
 object begin
 mesh grid
-//BRDF
+brdf begin
+roughness 0.9
+metalness 0.1
+brdf end
 //Phong
 transform 85 5 -90 0 0 45 30
 object end
@@ -44,14 +51,21 @@ object end
 
 object begin
 mesh cylinder
-//BRDF
+brdf begin
+roughness 0.3
+metalness 0.3 
+brdf end
 //Phong
 transform 85 5 -60 0 0 0 7
 object end
 
 object begin
 mesh sphere
-//BRDF
+brdf begin
+diffuse 0.04 0.04 0.04
+roughness 0.3
+metalness 1.0
+brdf end
 //Phong
 transform 85 5 -30 0 0 0 2.5
 object end

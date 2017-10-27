@@ -18,7 +18,7 @@
 
 #include "Scene.h"
 #include "Engine.h"
-#include "Input.h"
+#include "Application/Input.h"
 
 Scene::Scene(SceneManager& sceneManager, std::vector<Light>& lights)
 	:

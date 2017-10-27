@@ -20,9 +20,10 @@
 
 #include <windows.h>
 #include "Utilities/PerfTimer.h"
-#include "WorkerPool.h"
-#include "DataStructures.h"
+#include "Application/WorkerPool.h"
+#include "Application/DataStructures.h"
 
+#include "Settings.h"
 #include "RenderPasses.h"
 #include "Renderer/Light.h"
 #include "Skybox.h"
@@ -30,9 +31,6 @@
 #include <memory>
 using std::shared_ptr;
 using std::unique_ptr;
-
-
-namespace Settings { struct Rendering; }
 
 class Renderer;
 class Input;

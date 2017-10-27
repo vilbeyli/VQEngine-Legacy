@@ -19,7 +19,7 @@
 
 #include "RenderCommands.h"
 #include "RenderingEnums.h"
-#include "Application/Settings.h"
+#include "Engine/Settings.h"
 #include "Texture.h"
 #include "Shader.h"
 #include "Utilities/Color.h"

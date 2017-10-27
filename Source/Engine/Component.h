@@ -1,11 +1,4 @@
-// ---------------------------------------------------------------------------
-// Author			:	Volkan Ilbeyli
-// Creation Date	:	2015/10/27
-// Purpose			:	Base class for components to be used in game objects
-// ---------------------------------------------------------------------------
-
-#ifndef COMPONENT_H
-#define COMPONENT_H
+#pragma once
 
 #include <string>
 #include <algorithm>
@@ -71,4 +64,3 @@ ComponentName* Component::CopyComponent(ComponentName* c)
 {
 	return new ComponentName(c);
 }
-#endif

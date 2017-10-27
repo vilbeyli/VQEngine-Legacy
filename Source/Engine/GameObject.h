@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "Components/Transform.h"
+#include "Engine/Transform.h"
 #include "Renderer/Model.h"	// todo: engine? model's kinda component...
 
 class Renderer;

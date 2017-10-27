@@ -16,9 +16,9 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "Camera.h"
-#include "Input.h"
-#include "Engine.h"
+#include "Utilities/Camera.h"
+#include "Application/Input.h"
+#include "Engine/Engine.h"
 
 Camera::Camera()
 	:

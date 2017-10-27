@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "Settings.h"
+#include "Engine/Settings.h"
 #include "Skybox.h"
 
 #include "Renderer/RenderingEnums.h"

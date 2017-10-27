@@ -24,7 +24,8 @@
 #define WIN32_LEAN_AND_MEAN		// speeds up build process
 
 #include <windows.h>
-#include "Settings.h"
+
+namespace Settings { struct Window; }
 
 class BaseSystem
 {

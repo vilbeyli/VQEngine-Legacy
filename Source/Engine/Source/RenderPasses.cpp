@@ -22,7 +22,7 @@
 #include "GameObject.h"
 
 #include "Renderer/Renderer.h"
-#include "Camera.h"
+#include "Utilities/Camera.h"
 #include "Renderer/D3DManager.h"
 
 #include "Utilities/Log.h"

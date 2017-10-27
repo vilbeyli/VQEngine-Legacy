@@ -20,7 +20,7 @@
 #define _CAMERA_H
 
 #include "Utilities/utils.h"
-#include "Settings.h"
+#include "Engine/Settings.h"
 
 using namespace DirectX;
 

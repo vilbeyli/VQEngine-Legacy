@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Light.h"
-#include "Application/GameObject.h"
+#include "Engine/GameObject.h"
 
 #include "Utilities/Log.h"
 

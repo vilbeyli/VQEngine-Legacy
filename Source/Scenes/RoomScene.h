@@ -18,10 +18,10 @@
 
 #pragma once
 
-#include "Application/Scene.h"
-#include "Application/Animation.h"
-#include "Application/GameObject.h"
-#include "Application/Skybox.h"
+#include "Engine/Scene.h"
+#include "Engine/Animation.h"
+#include "Engine/GameObject.h"
+#include "Engine/Skybox.h"
 
 
 class RoomScene : public Scene
@@ -40,7 +40,6 @@ public:
 
 private:
 	void InitializeLights(SerializedScene& scene);
-	void InitializeObjectArrays(SerializedScene& scene);
 	void UpdateCentralObj(const float dt);
 	void RenderCentralObjects(const SceneView& sceneView, bool sendMaterialData) const;
 // ----------------------------------------------------------------------

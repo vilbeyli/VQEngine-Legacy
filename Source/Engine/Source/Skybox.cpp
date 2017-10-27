@@ -34,12 +34,12 @@ const  FilePaths s_filePaths = []{
 	FilePaths paths(ECubeMapPresets::CUBEMAP_PRESET_COUNT * 6);	// use as an array to access using enum
 	
 	// night sky by: Hazel Whorley
-	paths[ECubeMapPresets::NIGHT_SKY + 0] = "night_sky/nightsky_rt.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 1] = "night_sky/nightsky_lf.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 2] = "night_sky/nightsky_up.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 3] = "night_sky/nightsky_dn.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 4] = "night_sky/nightsky_ft.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 5] = "night_sky/nightsky_bk.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 0] = "EnvironmentMaps/night_sky/nightsky_rt.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 1] = "EnvironmentMaps/night_sky/nightsky_lf.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 2] = "EnvironmentMaps/night_sky/nightsky_up.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 3] = "EnvironmentMaps/night_sky/nightsky_dn.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 4] = "EnvironmentMaps/night_sky/nightsky_ft.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 5] = "EnvironmentMaps/night_sky/nightsky_bk.png";
 
 	// other cubemap presets
 	// ...

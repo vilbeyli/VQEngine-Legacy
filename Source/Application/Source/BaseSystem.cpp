@@ -17,8 +17,11 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "BaseSystem.h"
-#include "Engine.h"
 #include "Input.h"
+
+#include "Engine/Engine.h"
+#include "Engine/Settings.h"
+
 #include "Utilities/CustomParser.h"
 #include "Utilities/Log.h"
 
@@ -29,8 +32,6 @@
 #ifdef _DEBUG
 #include <cassert>
 #endif
-
-Settings::Engine Engine::sEngineSettings;
 
 BaseSystem::BaseSystem()
 {

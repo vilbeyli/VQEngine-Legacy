@@ -26,9 +26,8 @@
 #include "Shader.h"
 #include "Light.h"
 
-#include "Application/Settings.h"
+#include "Engine/Settings.h"
 #include "Application/SystemDefs.h"
-#include "Application/Camera.h"
 
 #include "Utilities/utils.h"
 
@@ -646,15 +645,15 @@ RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERa
 	return static_cast<RasterizerStateID>(m_rasterizerStates.size() - 1);
 }
 
-// example params: "bricks_d.png", "Data/Textures/"
+// example params: "openart/185.png", "Data/Textures/"
 TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
+	if (texFileName.empty() || texFileName == "\"\"") return -1;
 	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
 	if (found != m_textures.end())
 	{
 		return (*found)._id;
 	}
-
 	{	// push texture right away and hold a reference
 		Texture tex;
 		m_textures.push_back(tex);
@@ -692,7 +691,7 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 	}
 	else
 	{
-		Log::Error("Cannot load texture file\n");
+		Log::Error("Cannot load texture file: %s\n", texFileName.c_str());
 		return m_textures[0]._id;
 	}
 

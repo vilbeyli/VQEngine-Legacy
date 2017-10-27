@@ -18,7 +18,7 @@
 
 // Component header files
 //#include "PhysicsComponent.h"
-#include "Components/Transform.h"
+#include "Transform.h"
 
 Transform::Transform(const vec3& position, const Quaternion& rotation, const vec3& scale)
 	:

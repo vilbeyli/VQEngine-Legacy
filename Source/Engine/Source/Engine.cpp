@@ -16,19 +16,20 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Engine.h"
-#include "Input.h"
+#include "Application/Input.h"
 #include "Utilities/Log.h"
 #include "Utilities/PerfTimer.h"
 #include "Utilities/CustomParser.h"
 #include "SceneManager.h"
-#include "WorkerPool.h"
-#include "Settings.h"
+#include "Application/WorkerPool.h"
+#include "Engine/Settings.h"
 
 #include "Renderer/Renderer.h"
-#include "Camera.h"
+#include "Utilities/Camera.h"
 
 #include <sstream>
 
+Settings::Engine Engine::sEngineSettings;
 Engine* Engine::sInstance = nullptr;
 
 Engine::Engine()

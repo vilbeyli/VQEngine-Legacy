@@ -136,6 +136,7 @@
     <ClInclude Include="$(SolutionDir)Source\Utilities\Quaternion.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\CustomParser.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\utils.h" />
+    <ClInclude Include="$(SolutionDir)Source\Utilities\Camera.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Color.cpp" />
@@ -144,6 +145,7 @@
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Quaternion.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\CustomParser.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\utils.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Camera.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

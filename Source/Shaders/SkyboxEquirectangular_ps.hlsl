@@ -46,6 +46,7 @@ float2 SphericalSample(float3 v)
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
+	//return float4(In.LPos, 1);
 	const float2 uv = SphericalSample(normalize(In.LPos));
 	return float4(texSkybox.Sample(samWrap, uv).xyz, 1);
 	//return float4(uv, 0, 1);	// test

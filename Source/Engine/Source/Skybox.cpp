@@ -178,21 +178,21 @@ void EnvironmentMap::CalculateBRDFIntegralLUT()
 
 TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & specularMap)
 {
-	// todo: create prefiltered env map texture mipped
-	//		 create mipped render target
-	//		 render directly into mips.
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/ff476517(v=vs.85).aspx
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/ff476244(v=vs.85).aspx
-
 	Renderer*& pRenderer = spRenderer;
 	const TextureID envMap = specularMap._id;
 	//return -1;
+	const float screenAspect = 19.0f / 6.0f;
+	const float screenNear = 0.01f;
+	const float screenFar = 1000.0f;
+	const float fovy = 90.0f * DEG2RAD;
+	XMMATRIX viewProj = XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar);
 
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 	pRenderer->SetShader(sPrefilterShader);
-	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->SetBufferObj(EGeometry::CUBE);
 	pRenderer->SetTexture("tEnvironmentMap", envMap);
+	pRenderer->SetConstant4x4f("worldViewProj", viewProj);
 	pRenderer->SetSamplerState("sLinear", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
 
 	// set pre-filtered environment map texture with mips
@@ -255,7 +255,7 @@ void EnvironmentMap::LoadShaders()
 	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
 
 	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };	// compute?
-	const std::vector<std::string> IBLConvolution = { "FullscreenQuad_vs", "PreFilterConvolution_ps" };		// compute?
+	const std::vector<std::string> IBLConvolution = { "Skybox_vs", "PreFilterConvolution_ps" };		// compute?
 
 	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
 	sPrefilterShader = spRenderer->AddShader("PreFilterConvolution", IBLConvolution, VS_PS, layout);

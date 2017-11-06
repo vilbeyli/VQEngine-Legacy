@@ -21,8 +21,8 @@
 
 struct PSIn
 {
-	float4 position		 : SV_POSITION;
-	float2 uv : TEXCOORD0;
+	float4 HPos : SV_POSITION;
+	float3 LPos : POSITION;
 };
 
 Texture2D tEnvironmentMap;
@@ -33,10 +33,22 @@ cbuffer cb
 	float roughness;
 };
 
+float2 SphericalSample(float3 v)
+{
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509575(v=vs.85).aspx
+	// The signs of the x and y parameters are used to determine the quadrant of the return values 
+	// within the range of -PI to PI. The atan2 HLSL intrinsic function is well-defined for every point 
+	// other than the origin, even if y equals 0 and x does not equal 0.
+	float2 uv = float2(atan2(v.z, v.x), asin(-v.y));
+	uv /= float2(2*PI, PI);
+	uv += float2(0.5, 0.5);
+	return uv;
+}
+
 // source: https://learnopengl.com/#!PBR/IBL/Specular-IBL
 float4 PSMain(PSIn In) : SV_TARGET
 {
-    float3 N = float3(0, 0, 1);
+    float3 N = normalize(In.LPos);
 	float3 R = N;
 	float3 V = R;
 
@@ -47,20 +59,21 @@ float4 PSMain(PSIn In) : SV_TARGET
 	for(int i = 0; i < PREFILTER_SAMPLE_COUNT; ++i)
 	{
 		float2 Xi = Hammersley(i, PREFILTER_SAMPLE_COUNT);
-		float3 H = ImportanceSampleGGX(Xi, N, roughness);
+		float3 H = ImportanceSampleGGX(Xi, N, 0.15);
         float3 L = normalize(2.0f * dot(V, H) * H - V);
 
 		float NdotL = max(dot(N,L), 0.0f);
 		if(NdotL > 0.0f)
         {
-			//const float2 uv = SphericalSample(normalize(In.LPos));
-			preFilteredColor += tEnvironmentMap.Sample(sLinear, In.uv).xyz;
+			const float2 uv = SphericalSample(L);
+			preFilteredColor += tEnvironmentMap.Sample(sLinear, uv).xyz;
 			totalWeight += NdotL;
+            //preFilteredColor = float3(1,1,0);
         }
     }
 
 	preFilteredColor /= totalWeight;
 	return float4(preFilteredColor, 1.0f);
-	//return tEnvironmentMap.Sample(sLinear, In.uv);
+    //return tEnvironmentMap.Sample(sLinear, SphericalSample(N));
 	//return float4(1,0,0.5,1);
 }

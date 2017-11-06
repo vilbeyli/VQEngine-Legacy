@@ -182,9 +182,7 @@ bool Engine::Initialize(HWND hwnd)
 	mDebugRender = true;
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
-
 	Skybox::InitializePresets(mpRenderer);
-	EnvironmentMap::CalculateBRDFIntegralLUT(mpRenderer);
 
 	return true;
 }
@@ -257,13 +255,13 @@ bool Engine::HandleInput()
 		{
 			const float step = 0.1f;
 			if (mpInput->IsScrollUp()) { mSSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
-			if (mpInput->IsScrollDown()) { mSSAOPass.intensity -= step; if (mSSAOPass.intensity < 1.001) mSSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
+			if (mpInput->IsScrollDown()) { mSSAOPass.intensity -= step; if (mSSAOPass.intensity < 0.301) mSSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
 		}
 		else
 		{
 			const float step = 0.5f;
 			if (mpInput->IsScrollUp()) { mSSAOPass.radius += step; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
-			if (mpInput->IsScrollDown()) { mSSAOPass.radius -= step; if (mSSAOPass.radius < 1.001) mSSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
+			if (mpInput->IsScrollDown()) { mSSAOPass.radius -= step; if (mSSAOPass.radius < 0.301) mSSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
 		}
 	}
 
@@ -605,6 +603,7 @@ void Engine::Render()
 		const vec2 squareTextureScaledDownSize    ((float)heightPx              , (float)heightPx);
 
 		// Textures to draw
+		const TextureID white4x4	 = mSSAOPass.whiteTexture4x4;
 		TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._shadowDepthTarget);
 		TextureID tBlurredBloom		 = mpRenderer->GetRenderTargetTexture(mPostProcessPass._bloomPass._blurPingPong[0]);
 		TextureID tDiffuseRoughness  = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
@@ -613,8 +612,9 @@ void Engine::Render()
 		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
 		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		TextureID tBRDF				 = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
-		const TextureID tLUTRef		 = mpRenderer->CreateTextureFromFile("DebugTextures/ibl_brdf_lut_reference.png");
-
+		TextureID tLUTRef			 = mpRenderer->CreateTextureFromFile("DebugTextures/ibl_brdf_lut_reference.png");
+		TextureID preFilteredEnvMap = pScene->GetEnvironmentMap().prefilteredEnvironmentMap;
+		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap; 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);
 			std::vector<DrawQuadOnScreenCommand> c
@@ -625,7 +625,8 @@ void Engine::Render()
 				{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
-				{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
+				{ fullscreenTextureScaledDownSize,	screenPosition,			preFilteredEnvMap	, false },
+				//{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 				{ squareTextureScaledDownSize,		screenPosition,			tLUTRef				, false},
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
@@ -641,6 +642,12 @@ void Engine::Render()
 		}
 		mpRenderer->EndEvent();
 	}
+
+	// temp hack to initialize prefilter every map for debugging
+	//Scene* ncpScene = const_cast<Scene*>(pScene);
+	//const_cast<EnvironmentMap*>(&ncpScene->GetEnvironmentMap())->InitializePrefilteredEnvironmentMap(mpRenderer->GetTextureObject(ncpScene->GetEnvironmentMap().specularMap));
+
+
 #endif
 	mpRenderer->End();
 }

@@ -70,16 +70,20 @@ public:
 	// roughness and an input angle between normal and view (N dot V)
 	static RenderTargetID		sBRDFIntegrationLUTRT;
 	static ShaderID				sBRDFIntegrationLUTShader;
-	static void CalculateBRDFIntegralLUT(Renderer* pRenderer);
+	static void CalculateBRDFIntegralLUT();
 
 	// renders pre-filtered environment map texture into mip levels 
 	// with the convolution being based on the roughness
 	static ShaderID				sPrefilterShader;
-	static TextureID InitializePrefilteredEnvironmentMap(const Texture& specularMap);
+	
+	static Renderer* spRenderer;
+	static void Initialize(Renderer* pRenderer);
+	static void LoadShaders();
 
 	EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory);
 	EnvironmentMap();
 	inline void Clear() { irradianceMap = specularMap = -1; }	// ???
+	TextureID InitializePrefilteredEnvironmentMap(const Texture& specularMap);
 
 	TextureID irradianceMap;
 	TextureID specularMap; 

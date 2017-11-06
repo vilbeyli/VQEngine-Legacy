@@ -80,6 +80,30 @@ struct PipelineState
 	TextureID			_depthBufferTexture;	// ^
 };
 
+enum ETextureUsage 
+{
+	GPU_READ = D3D11_BIND_SHADER_RESOURCE,
+	GPU_WRITE = D3D11_BIND_RENDER_TARGET,
+	GPU_RW = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
+	
+	TEXTURE_USAGE_COUNT
+};
+
+struct TextureDesc
+{
+	int width;
+	int height;
+	EImageFormat format;
+	ETextureUsage usage;
+	std::string	 texFileName;
+	void* data;
+	int mipCount;
+
+	TextureDesc() : width(1), height(1), format(RGBA32F), usage(GPU_READ), texFileName(""), data(nullptr), mipCount(1) {}
+
+	D3D11_TEXTURE2D_DESC dxDesc;
+};
+
 class Renderer
 {
 	friend class Engine;		
@@ -134,16 +158,11 @@ public:
 													const std::string&	fileRoot = sTextureRoot
 							);
 
-	TextureID				CreateTexture2D(	int widht, 
-												int height,
-												EImageFormat format,
-												const std::string&	texFileName = "",
-												void* data = nullptr
-							);
+	TextureID				CreateTexture2D(const TextureDesc& texDesc);
 
 	TextureID				CreateTexture2D(	D3D11_TEXTURE2D_DESC&	textureDesc, 
 												bool					initializeSRV
-							);
+							);	// used by AddRenderTarget()
 
 	TextureID				CreateHDRTexture(	const std::string&	texFileName,
 												const std::string&	fileRoot = sHDRTextureRoot
@@ -177,7 +196,13 @@ public:
 	BlendStateID			AddBlendState( // todo params
 							);
 
+	// initializes the texture data with the given desc
 	RenderTargetID			AddRenderTarget(	D3D11_TEXTURE2D_DESC&			RTTextureDesc, 
+												D3D11_RENDER_TARGET_VIEW_DESC&	RTVDesc
+							);
+
+	// uses the given texture object, doesn't create a new texture for the render target
+	RenderTargetID			AddRenderTarget(	const Texture& textureObj, 
 												D3D11_RENDER_TARGET_VIEW_DESC&	RTVDesc
 							);
 
@@ -192,7 +217,7 @@ public:
 	void					SetShader(ShaderID);
 	void					SetBufferObj(int BufferID);
 	void					SetTexture(const char* texName, TextureID tex);
-	void					SetSamplerState(const char* texName, SamplerID sampler);
+	void					SetSamplerState(const char* samplerName, SamplerID sampler);
 	void					SetRasterizerState(RasterizerStateID rsStateID);
 	void					SetBlendState(BlendStateID blendStateID);
 	void					SetDepthStencilState(DepthStencilStateID depthStencilStateID);

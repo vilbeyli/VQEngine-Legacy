@@ -697,36 +697,42 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 
 }
 
-TextureID Renderer::CreateTexture2D(int width, int height, EImageFormat format, const std::string&	texFileName, void* data /* = nullptr */)
+TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 {
 	Texture tex;
-	tex._width = width;
-	tex._height = height;
-	tex._name = texFileName;
+	tex._width  = texDesc.width;
+	tex._height = texDesc.height;
+	tex._name   = texDesc.texFileName;
 	
 	D3D11_TEXTURE2D_DESC desc = {};
-	desc.Format = (DXGI_FORMAT)format;
-	desc.Height = height;
-	desc.Width = width;
+	desc.Format = (DXGI_FORMAT)texDesc.format;
+	desc.Height = texDesc.height;
+	desc.Width = texDesc.width;
 	desc.ArraySize = 1;
-	desc.MipLevels = 1;
+	desc.MipLevels = texDesc.mipCount;
 	desc.SampleDesc = { 1, 0 };
-	desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	desc.BindFlags = texDesc.usage;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = 0;
 
+	D3D11_SUBRESOURCE_DATA* pDataDesc = nullptr;
 	D3D11_SUBRESOURCE_DATA dataDesc = {};
-	dataDesc.pSysMem = data;
-	dataDesc.SysMemPitch = sizeof(vec4) * width;
+	dataDesc.pSysMem = texDesc.data;
+	dataDesc.SysMemPitch = sizeof(vec4) * texDesc.width;	// assumes RGBA32F
 	dataDesc.SysMemSlicePitch = 0;
+	if (texDesc.data)
+	{
+		pDataDesc = &dataDesc;
+	}
 
-	m_device->CreateTexture2D(&desc, &dataDesc, &tex._tex2D);
+	m_device->CreateTexture2D(&desc, pDataDesc, &tex._tex2D);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = (DXGI_FORMAT)format;
+	srvDesc.Format = (DXGI_FORMAT)texDesc.format;
 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MipLevels = -1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
 
 	m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
 
@@ -765,7 +771,15 @@ TextureID Renderer::CreateHDRTexture(const std::string & texFileName, const std:
 		return -1;
 	}
 
-	TextureID newTex = CreateTexture2D(width, height, EImageFormat::RGBA32F, texFileName, data);
+	TextureDesc texDesc = {};
+	texDesc.width = width;
+	texDesc.height = height;
+	texDesc.format = EImageFormat::RGBA32F;
+	texDesc.texFileName = texFileName;
+	texDesc.data = data;
+	texDesc.mipCount = 1;
+
+	TextureID newTex = CreateTexture2D(texDesc);
 	if (newTex == -1)
 	{
 		Log::Error("Cannot create HDR Texture from data: %s", path.c_str());
@@ -955,6 +969,21 @@ RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D
 {
 	RenderTarget newRenderTarget;
 	newRenderTarget.texture = GetTextureObject(CreateTexture2D(RTTextureDesc, true));
+	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget.texture._tex2D, &RTVDesc, &newRenderTarget.pRenderTargetView);
+	if (!SUCCEEDED(hr))
+	{
+		Log::Error(CANT_CREATE_RESOURCE, "Render Target View");
+		return -1;
+	}
+
+	m_renderTargets.push_back(newRenderTarget);
+	return static_cast<int>(m_renderTargets.size() - 1);
+}
+
+RenderTargetID Renderer::AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
+{
+	RenderTarget newRenderTarget;
+	newRenderTarget.texture = textureObj;
 	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget.texture._tex2D, &RTVDesc, &newRenderTarget.pRenderTargetView);
 	if (!SUCCEEDED(hr))
 	{
@@ -1248,7 +1277,7 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 #ifdef _DEBUG
 	if (!found)
 	{
-		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"\n", texName, m_state._activeShader, shader->Name().c_str());
+		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, m_state._activeShader, shader->Name().c_str());
 	}
 #endif
 }

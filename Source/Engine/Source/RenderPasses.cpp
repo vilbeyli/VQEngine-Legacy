@@ -121,8 +121,8 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	smpDesc.Count = 1;
 	smpDesc.Quality = 0;
 
-	constexpr const DXGI_FORMAT HDR_Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-	constexpr const DXGI_FORMAT LDR_Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	constexpr const EImageFormat HDR_Format = RGBA16F;
+	constexpr const EImageFormat LDR_Format = RGBA8UN;
 
 	const std::vector<InputLayout> layout = {
 		{ "POSITION",	FLOAT32_3 },
@@ -138,14 +138,14 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	const std::vector<std::string> TonemapShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
 
 
-	DXGI_FORMAT format = _settings.HDREnabled ? HDR_Format : LDR_Format;
+	EImageFormat format = _settings.HDREnabled ? HDR_Format : LDR_Format;
 
 	D3D11_TEXTURE2D_DESC rtDesc = {};
 	rtDesc.Width = pRenderer->WindowWidth();
 	rtDesc.Height = pRenderer->WindowHeight();
 	rtDesc.MipLevels = 1;
 	rtDesc.ArraySize = 1;
-	rtDesc.Format = format;
+	rtDesc.Format = (DXGI_FORMAT)format;
 	rtDesc.Usage = D3D11_USAGE_DEFAULT;
 	rtDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	rtDesc.CPUAccessFlags = 0;
@@ -153,7 +153,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	rtDesc.MiscFlags = 0;
 
 	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
-	RTVDesc.Format = format;
+	RTVDesc.Format = (DXGI_FORMAT)format;
 	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	RTVDesc.Texture2D.MipSlice = 0;
 
@@ -316,7 +316,7 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	smpDesc.Quality = 0;
 
 	D3D11_TEXTURE2D_DESC RTDescriptor[2] = { {}, {} };
-	constexpr const DXGI_FORMAT Format[2] = { /*DXGI_FORMAT_R11G11B10_FLOAT*/ DXGI_FORMAT_R16G16B16A16_FLOAT , DXGI_FORMAT_R16G16B16A16_FLOAT };
+	constexpr const DXGI_FORMAT Format[2] = { /*DXGI_FORMAT_R11G11B10_FLOAT*/ DXGI_FORMAT_R32G32B32A32_FLOAT , DXGI_FORMAT_R16G16B16A16_FLOAT };
 
 	for (int i = 0; i < 2; ++i)
 	{
@@ -629,11 +629,20 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 		);
 		this->noiseKernel.push_back(vec4(noise.normalized()));
 	}
-	this->noiseTexture = pRenderer->CreateTexture2D(NOISE_KERNEL_SIZE, NOISE_KERNEL_SIZE, EImageFormat::RGBA32F, "noiseKernel", this->noiseKernel.data());
+	TextureDesc texDesc = {};
+	texDesc.width = NOISE_KERNEL_SIZE;
+	texDesc.height = NOISE_KERNEL_SIZE;
+	texDesc.format = EImageFormat::RGBA32F;
+	texDesc.texFileName = "noiseKernel";
+	texDesc.data = this->noiseKernel.data();
+	this->noiseTexture = pRenderer->CreateTexture2D(texDesc);
 
 	const float whiteValue = 1.0f;
-	std::vector<vec4> white4x4 = std::vector<vec4>(16, vec4(whiteValue, 0, 0, 1));
-	this->whiteTexture4x4 = pRenderer->CreateTexture2D(4, 4, EImageFormat::RGBA32F, "white4x4", white4x4.data());
+	std::vector<vec4> white4x4 = std::vector<vec4>(16, vec4(whiteValue, whiteValue, whiteValue, 1));
+	texDesc.width = texDesc.height = 4;
+	texDesc.texFileName = "white4x4";
+	texDesc.data = white4x4.data();
+	this->whiteTexture4x4 = pRenderer->CreateTexture2D(texDesc);
 
 	// The tiling of the texture causes the orientation of the kernel to be repeated and 
 	// introduces regularity into the result. By keeping the texture size small we can make 

@@ -49,6 +49,10 @@ const  FilePaths s_filePaths = []{
 std::vector<Skybox> Skybox::s_Presets(ECubeMapPresets::CUBEMAP_PRESET_COUNT + EEnvironmentMapPresets::ENVIRONMENT_MAP_PRESET_COUNT);
 void Skybox::InitializePresets(Renderer* pRenderer)
 {
+	EnvironmentMap::Initialize(pRenderer);
+	EnvironmentMap::LoadShaders();
+	EnvironmentMap::CalculateBRDFIntegralLUT();
+
 	// Cubemap Skyboxes
 	//------------------------------------------------------------------------------------------------------------------------------------
 	{	// NIGHTSKY		
@@ -134,24 +138,14 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 RenderTargetID EnvironmentMap::sBRDFIntegrationLUTRT = -1;
 ShaderID EnvironmentMap::sBRDFIntegrationLUTShader   = -1;
 ShaderID EnvironmentMap::sPrefilterShader = -1;
+Renderer* EnvironmentMap::spRenderer = nullptr;
 //---------------------------------------------------------------
 
 EnvironmentMap::EnvironmentMap() : irradianceMap(-1), specularMap(-1) {}
 
 
-void EnvironmentMap::CalculateBRDFIntegralLUT(Renderer * pRenderer)
+void EnvironmentMap::CalculateBRDFIntegralLUT()
 {
-	// todo: layouts from reflection?
-	const std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 },
-	};
-	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
-	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };	// compute?
-	sBRDFIntegrationLUTShader = pRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
-
 	DXGI_FORMAT format = false ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT;
 
 	D3D11_TEXTURE2D_DESC rtDesc = {};
@@ -170,37 +164,116 @@ void EnvironmentMap::CalculateBRDFIntegralLUT(Renderer * pRenderer)
 	RTVDesc.Format = format;
 	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	RTVDesc.Texture2D.MipSlice = 0;
-	sBRDFIntegrationLUTRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	sBRDFIntegrationLUTRT = spRenderer->AddRenderTarget(rtDesc, RTVDesc);
 
-	pRenderer->BindRenderTarget(sBRDFIntegrationLUTRT);
-	pRenderer->UnbindDepthTarget();
-	pRenderer->SetShader(sBRDFIntegrationLUTShader);
-	pRenderer->SetViewport(2048, 2048);
-	pRenderer->SetBufferObj(EGeometry::QUAD);
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
+	spRenderer->BindRenderTarget(sBRDFIntegrationLUTRT);
+	spRenderer->UnbindDepthTarget();
+	spRenderer->SetShader(sBRDFIntegrationLUTShader);
+	spRenderer->SetViewport(2048, 2048);
+	spRenderer->SetBufferObj(EGeometry::QUAD);
+	spRenderer->Apply();
+	spRenderer->DrawIndexed();
 }
 
 
 TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & specularMap)
 {
+	// todo: create prefiltered env map texture mipped
+	//		 create mipped render target
+	//		 render directly into mips.
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/ff476517(v=vs.85).aspx
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/ff476244(v=vs.85).aspx
+
+	Renderer*& pRenderer = spRenderer;
 	const TextureID envMap = specularMap._id;
+	//return -1;
 
-	// mip0 is already the specular map itself
-	unsigned textureSize[2] = { specularMap._width >> 1, specularMap._height >> 1 };
-	for (int i = 0; i < PREFILTER_MIP_LEVEL_COUNT; ++i)
+	pRenderer->UnbindDepthTarget();
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+	pRenderer->SetShader(sPrefilterShader);
+	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->SetTexture("tEnvironmentMap", envMap);
+	pRenderer->SetSamplerState("sLinear", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+
+	// set pre-filtered environment map texture with mips
+	TextureDesc texDesc = {};
+	texDesc.width = specularMap._width;
+	texDesc.height = specularMap._height;
+	texDesc.format = EImageFormat::RGBA32F;
+	texDesc.texFileName = specularMap._name + "_preFiltered";
+	texDesc.data = nullptr; // no CPU data
+	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
+	texDesc.usage = GPU_RW;
+	
+	prefilteredEnvironmentMap = pRenderer->CreateTexture2D(texDesc);
+	const Texture& prefilteredEnvMapTex = pRenderer->GetTextureObject(prefilteredEnvironmentMap);
+
+	D3D11_TEXTURE2D_DESC desc = {};
+	prefilteredEnvMapTex._tex2D->GetDesc(&desc);
+	//desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+
+	Viewport viewPort = {};
+	viewPort.TopLeftX = viewPort.TopLeftY = 0;
+	viewPort.MaxDepth = 1.0f;
+	viewPort.MinDepth = 0.0f;
+
+	unsigned textureSize[2] = { specularMap._width, specularMap._height};
+	for (unsigned mipLevel = 0; mipLevel < PREFILTER_MIP_LEVEL_COUNT; ++mipLevel)
 	{
+		D3D11_RENDER_TARGET_VIEW_DESC rtDesc = {};
+		rtDesc.Format = desc.Format;
+		rtDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+		rtDesc.Texture2D.MipSlice = mipLevel;
 
+		prefilterMipRenderTargets[mipLevel] = pRenderer->AddRenderTarget(prefilteredEnvMapTex, rtDesc);
+		viewPort.Width  = static_cast<float>(textureSize[0] >> mipLevel);
+		viewPort.Height = static_cast<float>(textureSize[1] >> mipLevel);
+
+		const RenderTargetID mipTarget = prefilterMipRenderTargets[mipLevel];
+
+
+		pRenderer->BindRenderTarget(mipTarget);
+		pRenderer->SetViewport(viewPort);
+		pRenderer->SetConstant1f("roughness", static_cast<float>(mipLevel) / (PREFILTER_MIP_LEVEL_COUNT-1));
+		pRenderer->Apply();
+		pRenderer->DrawIndexed();
 	}
-	return -1;
+
+	return prefilteredEnvironmentMap;
 }
 
-EnvironmentMap::EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory)
+void EnvironmentMap::LoadShaders()
+{
+	// todo: layouts from reflection?
+	const std::vector<InputLayout> layout = {
+		{ "POSITION",	FLOAT32_3 },
+		{ "NORMAL",		FLOAT32_3 },
+		{ "TANGENT",	FLOAT32_3 },
+		{ "TEXCOORD",	FLOAT32_2 },
+	};
+
+	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
+
+	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };	// compute?
+	const std::vector<std::string> IBLConvolution = { "FullscreenQuad_vs", "PreFilterConvolution_ps" };		// compute?
+
+	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
+	sPrefilterShader = spRenderer->AddShader("PreFilterConvolution", IBLConvolution, VS_PS, layout);
+}
+
+void EnvironmentMap::Initialize(Renderer * pRenderer)
+{
+	spRenderer = pRenderer;
+}
+
+EnvironmentMap::EnvironmentMap(
+	Renderer* pRenderer, 
+	const EnvironmentMapFileNames& files,
+	const std::string& rootDirectory)
 {
 	irradianceMap = pRenderer->CreateHDRTexture(files.irradianceMapFileName, rootDirectory);
 	specularMap = pRenderer->CreateHDRTexture(files.specularMapFileName, rootDirectory);
-
-	// todo: use mip levels to store pre-filtered specular map based on roughness value intervals
+	InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(specularMap));
 }
 
 

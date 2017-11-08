@@ -98,8 +98,8 @@ struct TextureDesc
 	std::string	 texFileName;
 	void* data;
 	int mipCount;
-
-	TextureDesc() : width(1), height(1), format(RGBA32F), usage(GPU_READ), texFileName(""), data(nullptr), mipCount(1) {}
+	bool bIsCubeMap;
+	TextureDesc() : width(1), height(1), format(RGBA32F), usage(GPU_READ), texFileName(""), data(nullptr), mipCount(1), bIsCubeMap(false){}
 
 	D3D11_TEXTURE2D_DESC dxDesc;
 };

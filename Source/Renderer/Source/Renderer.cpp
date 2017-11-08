@@ -704,35 +704,49 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	tex._height = texDesc.height;
 	tex._name   = texDesc.texFileName;
 	
+	UINT miscFlags = 0;
+	miscFlags |= texDesc.bIsCubeMap ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;
+
+	UINT arrSize = 1;	// currently there's no texture array support
+	arrSize = texDesc.bIsCubeMap ? 6 : arrSize;
+
 	D3D11_TEXTURE2D_DESC desc = {};
 	desc.Format = (DXGI_FORMAT)texDesc.format;
 	desc.Height = texDesc.height;
 	desc.Width = texDesc.width;
-	desc.ArraySize = 1;
+	desc.ArraySize = arrSize;
 	desc.MipLevels = texDesc.mipCount;
 	desc.SampleDesc = { 1, 0 };
 	desc.BindFlags = texDesc.usage;
 	desc.Usage = D3D11_USAGE_DEFAULT;
 	desc.CPUAccessFlags = 0;
-	desc.MiscFlags = 0;
+	desc.MiscFlags = miscFlags;
 
+	D3D11_SUBRESOURCE_DATA dataDesc = {};	
 	D3D11_SUBRESOURCE_DATA* pDataDesc = nullptr;
-	D3D11_SUBRESOURCE_DATA dataDesc = {};
-	dataDesc.pSysMem = texDesc.data;
-	dataDesc.SysMemPitch = sizeof(vec4) * texDesc.width;	// assumes RGBA32F
-	dataDesc.SysMemSlicePitch = 0;
 	if (texDesc.data)
 	{
+		dataDesc.pSysMem = texDesc.data;
+		dataDesc.SysMemPitch = sizeof(vec4) * texDesc.width;	// assumes RGBA32F
+		dataDesc.SysMemSlicePitch = 0;
 		pDataDesc = &dataDesc;
 	}
-
 	m_device->CreateTexture2D(&desc, pDataDesc, &tex._tex2D);
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = (DXGI_FORMAT)texDesc.format;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-	srvDesc.Texture2D.MipLevels = -1;
-	srvDesc.Texture2D.MostDetailedMip = 0;
+	if (texDesc.bIsCubeMap)
+	{
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+		srvDesc.TextureCube.MipLevels = texDesc.mipCount;
+		srvDesc.TextureCube.MostDetailedMip = 0;
+	}
+	else
+	{
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = -1;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+	}
 
 	m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
 
@@ -752,6 +766,7 @@ TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc, bool ini
 
 TextureID Renderer::CreateHDRTexture(const std::string & texFileName, const std::string & fileRoot)
 {
+	// cache lookup, return early if the texture already exists
 	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
 	if (found != m_textures.end())
 	{

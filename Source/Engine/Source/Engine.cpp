@@ -625,8 +625,8 @@ void Engine::Render()
 				{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
-				{ fullscreenTextureScaledDownSize,	screenPosition,			preFilteredEnvMap	, false },
-				//{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
+				//{ fullscreenTextureScaledDownSize,	screenPosition,			preFilteredEnvMap	, false },
+				{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 				{ squareTextureScaledDownSize,		screenPosition,			tLUTRef				, false},
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)

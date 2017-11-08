@@ -25,6 +25,11 @@ struct PSIn
 	float3 LPos : POSITION;
 };
 
+struct PSOut
+{
+	float4 cubeMapFace : SV_TARGET0;
+};
+
 Texture2D tEnvironmentMap;
 SamplerState sLinear;
 
@@ -45,35 +50,43 @@ float2 SphericalSample(float3 v)
 	return uv;
 }
 
-// source: https://learnopengl.com/#!PBR/IBL/Specular-IBL
-float4 PSMain(PSIn In) : SV_TARGET
+float4 Convolve(float3 N, float3 V, float3 R)
 {
-    float3 N = normalize(In.LPos);
-	float3 R = N;
-	float3 V = R;
-
 	const int PREFILTER_SAMPLE_COUNT = 1024;
+
 	float totalWeight = 0.0f;
 	float3 preFilteredColor = 0.0f.xxx;
-
 	for(int i = 0; i < PREFILTER_SAMPLE_COUNT; ++i)
 	{
 		float2 Xi = Hammersley(i, PREFILTER_SAMPLE_COUNT);
-		float3 H = ImportanceSampleGGX(Xi, N, 0.15);
-        float3 L = normalize(2.0f * dot(V, H) * H - V);
+		float3 H = ImportanceSampleGGX(Xi, N, 0);
+	    float3 L = normalize(2.0f * dot(V, H) * H - V);
 
 		float NdotL = max(dot(N,L), 0.0f);
 		if(NdotL > 0.0f)
-        {
-			const float2 uv = SphericalSample(L);
+	    {
+			const float2 uv = SphericalSample(N);
 			preFilteredColor += tEnvironmentMap.Sample(sLinear, uv).xyz;
 			totalWeight += NdotL;
-            //preFilteredColor = float3(1,1,0);
-        }
-    }
+	        //preFilteredColor = float3(1,1,0);
+	    }
+	}
 
 	preFilteredColor /= totalWeight;
-	return float4(preFilteredColor, 1.0f);
-    //return tEnvironmentMap.Sample(sLinear, SphericalSample(N));
-	//return float4(1,0,0.5,1);
+    return float4(preFilteredColor, 1);
+}
+
+// source: https://learnopengl.com/#!PBR/IBL/Specular-IBL
+PSOut PSMain(PSIn In)
+{
+	PSOut cubeMap;
+	
+    float3 N = normalize(In.LPos);
+	
+    const float3 R = N;
+    const float3 V = R;
+	
+	//const float4 prefilteredColor = Convolve(N, V, R);
+    cubeMap.cubeMapFace = Convolve(N, V, R);
+	return cubeMap;
 }

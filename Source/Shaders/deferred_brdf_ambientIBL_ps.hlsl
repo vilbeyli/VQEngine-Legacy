@@ -40,6 +40,7 @@ Texture2D tIrradianceMap;
 TextureCube tPreFilteredEnvironmentMap;
 Texture2D tBRDFIntegrationLUT;
 
+SamplerState sWrapSampler;
 SamplerState sNearestSampler;
 
 // todo: header for general stuff like this sampling
@@ -68,12 +69,12 @@ float4 PSMain(PSIn In) : SV_TARGET
 	// world-space vectors
 	const float3 Vw = normalize(mul(viewToWorld, float4(Vv, 0.0f)).xyz);
     const float3 Nw = mul(viewToWorld, float4(Nv, 0.0f)).xyz;
-    const float3 Rw = reflect(-Vw, Nw);	// this breaks AMD
+    const float3 Rw = reflect(-Vw, Nw);
 
 	// environment map
     const float2 equirectangularUV = SphericalSample(normalize(Nw));
     const float3 environmentIrradience = tIrradianceMap.Sample(sNearestSampler, equirectangularUV).rgb;
-    const float3 environmentSpecular = tPreFilteredEnvironmentMap.Sample(sNearestSampler, Rw).rgb;
+    const float3 environmentSpecular = tPreFilteredEnvironmentMap.SampleLevel(sNearestSampler, Rw, 4).rgb;
     
 	// ambient occl
 	const float  ambientOcclusion = tAmbientOcclusion.Sample(sNearestSampler, In.uv).r;	

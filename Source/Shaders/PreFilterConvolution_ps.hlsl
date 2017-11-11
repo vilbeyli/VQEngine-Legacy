@@ -59,7 +59,7 @@ float4 Convolve(float3 N, float3 V, float3 R)
 	for(int i = 0; i < PREFILTER_SAMPLE_COUNT; ++i)
 	{
 		float2 Xi = Hammersley(i, PREFILTER_SAMPLE_COUNT);
-		float3 H = ImportanceSampleGGX(Xi, N, roughness);
+        float3 H = ImportanceSampleGGX(Xi, N, max(0.04, roughness));
 	    float3 L = normalize(2.0f * dot(V, H) * H - V);
 
 		float NdotL = max(dot(N,L), 0.0f);
@@ -71,7 +71,7 @@ float4 Convolve(float3 N, float3 V, float3 R)
 	    }
 	}
 	
-	preFilteredColor /= totalWeight;
+    preFilteredColor /= max(totalWeight, 0.0001f);
     return float4(preFilteredColor, 1);
 }
 

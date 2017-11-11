@@ -83,6 +83,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 		s_Presets[EEnvironmentMapPresets::BARCELONA] = Skybox(pRenderer, files, root, bEquirectangular);
 	}
 
+#if LOAD_ALL_ENVIRONMENT_MAPS
 	{	// TROPICAL BEACH
 		const std::string root = sIBLDirectory + "Tropical_Beach/";
 		files = {
@@ -93,7 +94,6 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 		s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = Skybox(pRenderer, files, root, bEquirectangular);
 	}
 
-#if LOAD_ALL_ENVIRONMENT_MAPS
 	{	// MILKYWAY 
 		const std::string root = sIBLDirectory + "Milkyway/";
 		files = {
@@ -317,8 +317,8 @@ Skybox::Skybox(Renderer* renderer, const EnvironmentMapFileNames& environmentMap
 	skyboxShader(bEquirectangular ? EShaders::SKYBOX_EQUIRECTANGULAR : EShaders::SKYBOX)
 {
 	// debug
-	skyboxShader = EShaders::SKYBOX;
-	skyboxTexture = environmentMap.prefilteredEnvironmentMap;
+	//skyboxShader = EShaders::SKYBOX;
+	//skyboxTexture = environmentMap.prefilteredEnvironmentMap;
 }
 
 Skybox::Skybox(Renderer * renderer, const TextureID skydomeTexture, bool bEquirectangular)

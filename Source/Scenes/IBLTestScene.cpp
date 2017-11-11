@@ -82,7 +82,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			mat0.metalness = sphereStep;
 
 			// roughness [roughnessLowClamp, 1.0f]
-			const float roughnessLowClamp = 0.4f;
+			const float roughnessLowClamp = 0.1f;
 			mat0.roughness = sphereStep < roughnessLowClamp ? roughnessLowClamp : sphereStep;
 			//mat0.roughness = 0.05f * 3;
 

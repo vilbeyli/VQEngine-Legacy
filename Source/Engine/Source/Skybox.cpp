@@ -181,9 +181,9 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	Renderer*& pRenderer = spRenderer;
 	const TextureID envMap = specularMap._id;
 
-	const float screenAspect = 19.0f / 6.0f;
+	const float screenAspect = 1;
 	const float screenNear = 0.01f;
-	const float screenFar = 1000.0f;
+	const float screenFar = 10.0f;
 	const float fovy = 90.0f * DEG2RAD;
 	const XMMATRIX proj = XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar);
 
@@ -232,7 +232,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 
 		const XMVECTOR upDirs[6] = {
 			vec3::Up, vec3::Up,
-			vec3::Forward, vec3::Back,
+			vec3::Back, vec3::Forward,
 			vec3::Up, vec3::Up
 		};
 

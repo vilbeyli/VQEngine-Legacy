@@ -59,19 +59,18 @@ float4 Convolve(float3 N, float3 V, float3 R)
 	for(int i = 0; i < PREFILTER_SAMPLE_COUNT; ++i)
 	{
 		float2 Xi = Hammersley(i, PREFILTER_SAMPLE_COUNT);
-		float3 H = ImportanceSampleGGX(Xi, N, 0);
+		float3 H = ImportanceSampleGGX(Xi, N, roughness);
 	    float3 L = normalize(2.0f * dot(V, H) * H - V);
 
 		float NdotL = max(dot(N,L), 0.0f);
 		if(NdotL > 0.0f)
 	    {
-			const float2 uv = SphericalSample(N);
+			const float2 uv = SphericalSample(L);
 			preFilteredColor += tEnvironmentMap.Sample(sLinear, uv).xyz;
 			totalWeight += NdotL;
-	        //preFilteredColor = float3(1,1,0);
 	    }
 	}
-
+	
 	preFilteredColor /= totalWeight;
     return float4(preFilteredColor, 1);
 }

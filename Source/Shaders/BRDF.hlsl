@@ -173,19 +173,21 @@ float3 BRDF(float3 Wi, BRDF_Surface s, float3 V, float3 worldPos)
 	return (Id + Is) * NL;
 }
 
-float3 EnvironmentBRDF(BRDF_Surface s, float3 V, float ao, float3 irradience)
+float3 EnvironmentBRDF(BRDF_Surface s, float3 V, float ao, float3 irradience, float3 envSpecular, float2 F0ScaleBias)
 {
-	// surface
-	const float3 albedo = s.diffuseColor;
-	const float  roughness = s.roughness;
-	const float  metalness = s.metalness;
+    const float3 F0 = lerp(0.04f.xxx, s.diffuseColor, s.metalness);
+	
+	const float3 Ks = FresnelWithRoughness( max(dot(s.N, V), 0.0), F0, s.roughness );
+    const float Kd = (1.0f - Ks) * (1.0f - s.metalness);
+	
+	const float3 diffuse = irradience * s.diffuseColor;
+	const float3 specular = envSpecular * (Ks * F0ScaleBias.x + F0ScaleBias.y);
 
-    const float3 F0 = lerp(0.04f.xxx, albedo, metalness);
-	
-	const float3 Ks = FresnelWithRoughness( max(dot(s.N, V), 0.0), F0, roughness );
-    const float Kd = (1.0f - Ks) * (1.0f - metalness);
-	
-    return (Kd * albedo * irradience) * ao;
+    //return (Kd * diffuse + specular) * ao;
+    //return (Kd * diffuse + specular);
+    //return (Kd * diffuse);
+    //return (specular);
+    return (Kd * diffuse) * 0.08 + specular;
 }
 
 #define SAMPLE_COUNT 1024

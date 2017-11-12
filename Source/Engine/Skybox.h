@@ -88,6 +88,7 @@ public:
 	TextureID irradianceMap;
 	TextureID specularMap; 
 	TextureID prefilteredEnvironmentMap;
+	SamplerID envMapSampler;
 	MipRenderTargets prefilterMipRenderTargets;
 
 	sIBLSettings settings;

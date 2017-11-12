@@ -15,12 +15,12 @@
 
 // Scene
 // ---------------------------------------------------------------------------------------------------------------
-camera 0.1 4000 60   0 30 -100  0 25 
-ao 0.02
+camera 0.1 1000 70   0 30 100  180 25 
+ao 0.06
 
 // todo: directional light
 // Light: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
-//light       s         white      	true       3000         70	     40   120    -120	   140  0  	0	 
+light       s         white      	true       800         70	     0   120    120	   140  180  	0	 
 
 // objects
 // =======
@@ -31,32 +31,32 @@ ao 0.02
 //object end
 
 
-object begin
-mesh cube
-transform 10 0 -50 45 0 45 5
-brdf
-textures openart/185.jpg openart/185_norm.jpg
-roughness 0.9
-metalness 0
-brdf
-object end
-
-object begin
-mesh cube
-transform 25 0 -50 45 0 45 5
-brdf
-textures openart/186.jpg openart/186_norm.jpg
-roughness 0.1
-metalness 1
-brdf
-object end
-
-object begin
-mesh sphere
-transform -10 0 -50 0 0 45 5
-object end
-
-object begin
-mesh grid
-transform -40 0 -50 0 0 -45 15
-object end
+//object begin
+//mesh cube
+//transform 10 0 50 45 0 45 5
+//brdf
+//textures openart/185.jpg openart/185_norm.jpg
+//roughness 0.9
+//metalness 0
+//brdf
+//object end
+//
+//object begin
+//mesh cube
+//transform 25 0 50 45 0 45 5
+//brdf
+//textures openart/186.jpg openart/186_norm.jpg
+//roughness 0.1
+//metalness 1
+//brdf
+//object end
+//
+//object begin
+//mesh sphere
+//transform -10 0 50 0 0 45 5
+//object end
+//
+//object begin
+//mesh grid
+//transform -40 0 50 0 0 -45 15
+//object end

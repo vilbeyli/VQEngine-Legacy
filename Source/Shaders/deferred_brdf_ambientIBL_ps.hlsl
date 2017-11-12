@@ -41,6 +41,7 @@ TextureCube tPreFilteredEnvironmentMap;
 Texture2D tBRDFIntegrationLUT;
 
 SamplerState sWrapSampler;
+SamplerState sEnvMapSampler;
 SamplerState sNearestSampler;
 
 // todo: header for general stuff like this sampling
@@ -56,6 +57,8 @@ float2 SphericalSample(float3 v)
     return uv;
 }
 
+#define MAX_REFLECTION_LOD 4	// 5 mip levels -> [0, 4]
+
 float4 PSMain(PSIn In) : SV_TARGET
 {
     const float4 kD_roughness = tDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
@@ -70,11 +73,12 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 Vw = normalize(mul(viewToWorld, float4(Vv, 0.0f)).xyz);
     const float3 Nw = mul(viewToWorld, float4(Nv, 0.0f)).xyz;
     const float3 Rw = reflect(-Vw, Nw);
+    const float NdotV = max(dot(Nw, Vw), 0);
 
 	// environment map
     const float2 equirectangularUV = SphericalSample(normalize(Nw));
     const float3 environmentIrradience = tIrradianceMap.Sample(sNearestSampler, equirectangularUV).rgb;
-    const float3 environmentSpecular = tPreFilteredEnvironmentMap.SampleLevel(sNearestSampler, Rw, 4).rgb;
+    const float3 environmentSpecular = tPreFilteredEnvironmentMap.SampleLevel(sEnvMapSampler, Rw, kD_roughness.a * MAX_REFLECTION_LOD).rgb;
     
 	// ambient occl
 	const float  ambientOcclusion = tAmbientOcclusion.Sample(sNearestSampler, In.uv).r;	
@@ -86,18 +90,10 @@ float4 PSMain(PSIn In) : SV_TARGET
     s.specularColor = kS_metalness.rgb;
     s.roughness = kD_roughness.a;
     s.metalness = kS_metalness.a;
+    
+	const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, 1.0f - s.roughness)).rg;
 
-	// ambient irradiance
-    float3 Ia = EnvironmentBRDF(s, Vw, ambientOcclusion * ambientFactor, environmentIrradience);
-
-	// specular lighting
-    const float NdotV = max(dot(Nw, Vw), 0);
-
-    const float3 F0 = 0.04f.xxx;
-    const float3 F = FresnelWithRoughness(NdotV, F0, s.roughness);
-    const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, 1.0f - s.roughness)).rg;
-    float3 Is = environmentSpecular * (F * F0ScaleBias.x + F0ScaleBias.y);
-
-    float3 I = (Ia + Is) * 1;
-    return float4(I, 1.0f);
+	const float ao = ambientOcclusion * ambientFactor;
+    float3 IEnv = EnvironmentBRDF(s, Vw, ao, environmentIrradience, environmentSpecular, F0ScaleBias);
+    return float4(IEnv, 1.0f);
 }

@@ -269,6 +269,17 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 		}
 	}
 
+	D3D11_SAMPLER_DESC envMapSamplerDesc = {};
+	envMapSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	envMapSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	envMapSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	envMapSamplerDesc.MipLODBias = 0;
+	envMapSamplerDesc.MinLOD = 0;
+	envMapSamplerDesc.MaxLOD = PREFILTER_MIP_LEVEL_COUNT;
+	envMapSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	envMapSamplerDesc.MaxAnisotropy = 1;
+	this->envMapSampler = spRenderer->CreateSamplerState(envMapSamplerDesc);
+
 	return prefilteredEnvironmentMap;
 }
 

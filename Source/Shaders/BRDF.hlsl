@@ -183,11 +183,7 @@ float3 EnvironmentBRDF(BRDF_Surface s, float3 V, float ao, float3 irradience, fl
 	const float3 diffuse = irradience * s.diffuseColor;
 	const float3 specular = envSpecular * (Ks * F0ScaleBias.x + F0ScaleBias.y);
 
-    //return (Kd * diffuse + specular) * ao;
-    //return (Kd * diffuse + specular);
-    //return (Kd * diffuse);
-    //return (specular);
-    return (Kd * diffuse) * 0.08 + specular;
+    return (Kd * diffuse + specular) * ao;
 }
 
 #define SAMPLE_COUNT 1024

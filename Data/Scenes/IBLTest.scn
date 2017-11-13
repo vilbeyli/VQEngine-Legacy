@@ -16,7 +16,8 @@
 // Scene
 // ---------------------------------------------------------------------------------------------------------------
 camera 0.1 1000 70   0 30 100  180 25 
-ao 0.06
+//ao 0.06
+ao 1
 
 // todo: directional light
 // Light: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)

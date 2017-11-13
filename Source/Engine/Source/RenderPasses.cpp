@@ -474,6 +474,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 		pRenderer->SetShader(_ambientIBLShader);
 		pRenderer->SetTexture("tPosition", texPosition);
 		pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
+		pRenderer->SetTexture("tSpecularMetalnessMap", texSpecularMetallic);
 		pRenderer->SetTexture("tNormalMap", texNormal);
 		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
 		pRenderer->SetTexture("tIrradianceMap", texIrradianceMap);

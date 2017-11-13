@@ -77,7 +77,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	// environment map
     const float2 equirectangularUV = SphericalSample(normalize(Nw));
-    const float3 environmentIrradience = tIrradianceMap.Sample(sNearestSampler, equirectangularUV).rgb;
+    const float3 environmentIrradience = tIrradianceMap.Sample(sWrapSampler, equirectangularUV).rgb;
     const float3 environmentSpecular = tPreFilteredEnvironmentMap.SampleLevel(sEnvMapSampler, Rw, kD_roughness.a * MAX_REFLECTION_LOD).rgb;
     
 	// ambient occl

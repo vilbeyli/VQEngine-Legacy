@@ -40,7 +40,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 {
 	{	// sphere grid
 		constexpr float r = 11.0f;
-		constexpr size_t gridDimension[2] = { 3, 3 };
+		constexpr size_t gridDimension[2] = { 3, 2 };
 		constexpr size_t numSph = gridDimension[0] * gridDimension[1];
 
 		const vec3& origin = sSphereCenter;
@@ -62,9 +62,9 @@ void IBLTestScene::Load(SerializedScene& scene)
 			};
 			const vec3 offset = vec3(col * r, 1.0f, row * r) + vec3(offsetDim[0], 0.0f, offsetDim[1]);
 #else
-			const float R = 55.0f;
-			const float archAngle = DEG2RAD * 160.9f;	// how much arch will cover
-			const float archOffset = DEG2RAD * 15.0f;	// rotate arch by degrees
+			const float R = 85.0f;
+			const float archAngle = DEG2RAD * 61.9f;	// how much arch will cover
+			const float archOffset = DEG2RAD * -15.0f;	// rotate arch by degrees
 
 			const float phi = -sphereStep * archAngle + archOffset;
 			const vec3 offset = R * vec3(cosf(phi), 0.15f * cosf((phi - archOffset) * 0.25f), sinf(phi));
@@ -81,7 +81,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 				BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 				// metalness [0.0f, 1.0f]
 				sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::white)));
-				mat0.metalness = 0;
+				mat0.metalness = (1.0f - sphereStep) * 0.2f;
 
 				// roughness [roughnessLowClamp, 1.0f]
 				const float roughnessLowClamp = 0.03f;
@@ -109,7 +109,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 
 				// roughness [roughnessLowClamp, 1.0f]
 				const float roughnessLowClamp = 0.1f;
-				mat0.roughness = 0.1f;
+				mat0.roughness = 0.02f;
 				//mat0.roughness = 0.05f * 3;
 
 				BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
@@ -134,19 +134,9 @@ void IBLTestScene::Load(SerializedScene& scene)
 	//	mLights.push_back(l);
 	//}
 
-	const std::string sIBLDirectory = Renderer::sHDRTextureRoot + std::string("sIBL/");
-
-	const TextureID hdrTex = mpRenderer->CreateHDRTexture("Milkyway/Milkyway_small.hdr", sIBLDirectory);
-	const TextureID skydomeTex = mpRenderer->CreateTextureFromFile("Milkyway/Milkyway_BG.jpg", sIBLDirectory);
+	if(!mLights.empty())
+		mLights.back()._color = vec3(255, 244, 221) / 255.0f;
 	
-	const auto tex = hdrTex;
-	testQuad.mModel.SetDiffuseMap(tex);
-
-	const float scl = 40;
-	testQuad.mTransform.SetPosition(0, 40, 120);
-	testQuad.mTransform.SetScale(scl * 1.77f, scl, 1);	// 16:9
-	testQuad.mModel.mMesh = EGeometry::QUAD;
-
 	SetEnvironmentMap(EEnvironmentMapPresets::BARCELONA);
 }
 

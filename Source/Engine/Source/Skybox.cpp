@@ -217,7 +217,6 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	viewPort.MaxDepth = 1.0f;
 	viewPort.MinDepth = 0.0f;
 
-	//unsigned textureSize[2] = { specularMap._width, specularMap._height };
 	unsigned textureSize[2] = { cubemapDimension, cubemapDimension };
 	for (unsigned mipLevel = 0; mipLevel < PREFILTER_MIP_LEVEL_COUNT; ++mipLevel)
 	{
@@ -326,11 +325,7 @@ Skybox::Skybox(Renderer* renderer, const EnvironmentMapFileNames& environmentMap
 	environmentMap(EnvironmentMap(renderer, environmentMapFiles, rootDirectory)),
 	skyboxTexture(pRenderer->CreateTextureFromFile(environmentMapFiles.skyboxFileName, rootDirectory)),
 	skyboxShader(bEquirectangular ? EShaders::SKYBOX_EQUIRECTANGULAR : EShaders::SKYBOX)
-{
-	// debug
-	//skyboxShader = EShaders::SKYBOX;
-	//skyboxTexture = environmentMap.prefilteredEnvironmentMap;
-}
+{}
 
 Skybox::Skybox(Renderer * renderer, const TextureID skydomeTexture, bool bEquirectangular)
 	:

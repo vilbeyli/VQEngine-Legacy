@@ -612,7 +612,6 @@ void Engine::Render()
 		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
 		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		TextureID tBRDF				 = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
-		TextureID tLUTRef			 = mpRenderer->CreateTextureFromFile("DebugTextures/ibl_brdf_lut_reference.png");
 		TextureID preFilteredEnvMap = pScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap; 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
@@ -627,7 +626,6 @@ void Engine::Render()
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
 				//{ fullscreenTextureScaledDownSize,	screenPosition,			preFilteredEnvMap	, false },
 				{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
-				{ squareTextureScaledDownSize,		screenPosition,			tLUTRef				, false},
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
 				c[i].bottomLeftCornerScreenCoordinates.x() = c[i-1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;

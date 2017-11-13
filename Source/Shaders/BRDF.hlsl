@@ -99,7 +99,7 @@ inline float Geometry_Smiths_SchlickGGX_EnvironmentMap(float3 N, float3 V, float
 	const float k = pow(roughness, 2) / 2.0f;
     const float NV = max(0.0f, dot(N, V));
     const float denom = (NV * (1.0f - k) + k) + 0.0001f;
-	if (denom < EPSILON) return 1.0f;
+	//if (denom < EPSILON) return 1.0f;
     return NV / denom;
 }
 
@@ -279,7 +279,7 @@ float2 IntegrateBRDF(float NdotV, float roughness)
     {
         const float2 Xi = Hammersley(i, SAMPLE_COUNT);
         const float3 H = ImportanceSampleGGX(Xi, N, roughness);
-        const float3 L = normalize(reflect(V, H));
+        const float3 L = normalize(reflect(-V, H));
 
         const float NdotL = max(L.z, 0);
         const float NdotH = max(H.z, 0);

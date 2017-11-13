@@ -459,7 +459,6 @@ void DeferredRenderingPasses::RenderLightingPass(
 	const SamplerID smpEnvMap = sceneView.environmentMap.envMapSampler;
 	const TextureID texSpecularMap = sceneView.environmentMap.prefilteredEnvironmentMap;
 	const TextureID tBRDFLUT = pRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
-	const TextureID tLUTRef = pRenderer->CreateTextureFromFile("DebugTextures/ibl_brdf_lut_reference.png");
 
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
@@ -479,7 +478,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
 		pRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
 		pRenderer->SetTexture("tPreFilteredEnvironmentMap", texSpecularMap);
-		pRenderer->SetTexture("tBRDFIntegrationLUT", tLUTRef);
+		pRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
 		pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 		pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 		//pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);

@@ -60,8 +60,17 @@ Texture2D texNormalMap;
 Texture2D texShadowMap;
 Texture2D texAmbientOcclusion;
 
+Texture2D tIrradianceMap;
+TextureCube tPreFilteredEnvironmentMap;
+Texture2D tBRDFIntegrationLUT;
+
 SamplerState sShadowSampler;
 SamplerState sNormalSampler;
+SamplerState sEnvMapSampler;
+SamplerState sNearestSampler;
+SamplerState sWrapSampler;
+
+#define MAX_REFLECTION_LOD 4
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
@@ -70,6 +79,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 N = normalize(In.normal);
 	const float3 T = normalize(In.tangent);
     const float3 V = normalize(cameraPos - P);
+    const float3 R = reflect(-V, N);
     const float2 screenSpaceUV = In.position.xy / screenDimensions;
 	const float ambient = 0.01f;
 
@@ -81,8 +91,10 @@ float4 PSMain(PSIn In) : SV_TARGET
     s.roughness = surfaceMaterial.roughness;
     s.metalness = surfaceMaterial.metalness;
 
+	const float tAO = texAmbientOcclusion.Sample(sNormalSampler, screenSpaceUV).x;
+
 	// illumination
-    const float3 Ia = s.diffuseColor * ambient * texAmbientOcclusion.Sample(sNormalSampler, screenSpaceUV).xxx; // ambient
+    const float3 Ia = s.diffuseColor * ambient * tAO; // ambient
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);				// diffuse & specular
 
 	
@@ -106,6 +118,16 @@ float4 PSMain(PSIn In) : SV_TARGET
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
 	}
 	
-	const float3 illumination = Ia + IdIs;
+	// ENVIRONMENT Map
+	//---------------------------------
+    const float NdotV = max(0.0f, dot(N, V));
+
+    const float2 equirectangularUV = SphericalSample(N);
+    const float3 environmentIrradience = tIrradianceMap.Sample(sWrapSampler, equirectangularUV).rgb;
+    const float3 environmentSpecular = tPreFilteredEnvironmentMap.SampleLevel(sEnvMapSampler, R, s.roughness * MAX_REFLECTION_LOD).rgb;
+	const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, 1.0f - s.roughness)).rg;
+	float3 IEnv = EnvironmentBRDF(s, V, tAO, environmentIrradience, environmentSpecular, F0ScaleBias);
+
+	const float3 illumination = Ia + IdIs + IEnv;
 	return float4(illumination, 1);
 }

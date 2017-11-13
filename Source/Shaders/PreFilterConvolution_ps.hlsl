@@ -38,18 +38,6 @@ cbuffer cb
 	float roughness;
 };
 
-float2 SphericalSample(float3 v)
-{
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509575(v=vs.85).aspx
-	// The signs of the x and y parameters are used to determine the quadrant of the return values 
-	// within the range of -PI to PI. The atan2 HLSL intrinsic function is well-defined for every point 
-	// other than the origin, even if y equals 0 and x does not equal 0.
-	float2 uv = float2(atan2(v.z, v.x), asin(-v.y));
-	uv /= float2(2*PI, PI);
-	uv += float2(0.5, 0.5);
-	return uv;
-}
-
 float4 Convolve(float3 N, float3 V, float3 R)
 {
 	const int PREFILTER_SAMPLE_COUNT = 1024;

@@ -469,6 +469,10 @@ void Engine::Render()
 	{	// FORWARD
 		const bool bZPrePass = mbIsAmbientOcclusionOn;
 		const TextureID tSSAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
+		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
+		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler;
+		const TextureID texSpecularMap = mSceneView.environmentMap.prefilteredEnvironmentMap;
+		const TextureID tBRDFLUT = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
 
 		// AMBIENT OCCLUSION - Z-PREPASS
 		if (bZPrePass)
@@ -537,6 +541,16 @@ void Engine::Render()
 		if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
 		{
 			mpRenderer->SetTexture("texAmbientOcclusion", tSSAO);
+			if (mSceneView.bIsIBLEnabled && mSelectedShader == EShaders::FORWARD_BRDF)
+			{
+				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
+				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", texSpecularMap);
+				mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
+				mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
+				mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
+				mpRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
+			}
+
 			mpRenderer->SetConstant3f("cameraPos", mSceneView.cameraPosition);
 			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
 			mpRenderer->SetSamplerState("sNormalSampler", mNormalSampler);

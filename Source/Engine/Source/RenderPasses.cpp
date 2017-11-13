@@ -481,7 +481,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 		pRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
 		pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 		pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
-		//pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
+		pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
 		pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
 		pRenderer->SetConstant4x4f("viewToWorld", sceneView.viewToWorld);
 	}

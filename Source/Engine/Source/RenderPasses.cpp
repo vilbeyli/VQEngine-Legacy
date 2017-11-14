@@ -724,6 +724,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->SetShader(SSAOShader);
 	pRenderer->BindRenderTarget(this->occlusionRenderTarget);
 	pRenderer->UnbindDepthTarget();
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
 	//pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);

@@ -18,7 +18,7 @@
 #include "Skybox.h"
 #include "Renderer/Renderer.h"
 
-#define LOAD_ALL_ENVIRONMENT_MAPS 0
+#define LOAD_ALL_ENVIRONMENT_MAPS 1
 
 // SKYBOX PRESETS W/ CUBEMAP / ENVIRONMENT MAP
 //==========================================================================================================
@@ -83,7 +83,6 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 		s_Presets[EEnvironmentMapPresets::BARCELONA] = Skybox(pRenderer, files, root, bEquirectangular);
 	}
 
-#if LOAD_ALL_ENVIRONMENT_MAPS
 	{	// TROPICAL BEACH
 		const std::string root = sIBLDirectory + "Tropical_Beach/";
 		files = {
@@ -93,6 +92,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 		};
 		s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = Skybox(pRenderer, files, root, bEquirectangular);
 	}
+#if LOAD_ALL_ENVIRONMENT_MAPS
 
 	{	// MILKYWAY 
 		const std::string root = sIBLDirectory + "Milkyway/";
@@ -274,11 +274,12 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	envMapSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	envMapSamplerDesc.MipLODBias = 0;
 	envMapSamplerDesc.MinLOD = 0;
-	envMapSamplerDesc.MaxLOD = PREFILTER_MIP_LEVEL_COUNT;
+	envMapSamplerDesc.MaxLOD = PREFILTER_MIP_LEVEL_COUNT - 1;
 	envMapSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	envMapSamplerDesc.MaxAnisotropy = 1;
 	this->envMapSampler = spRenderer->CreateSamplerState(envMapSamplerDesc);
 
+	pRenderer->End();	// present frame or device removed...
 	return prefilteredEnvironmentMap;
 }
 

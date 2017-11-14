@@ -182,7 +182,12 @@ bool Engine::Initialize(HWND hwnd)
 	mDebugRender = true;
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
+
+	Log::Info("Loading Environment Maps... ");
+	float duration = mpTimer->TotalTime();
 	Skybox::InitializePresets(mpRenderer);
+	duration = mpTimer->TotalTime() - duration;
+	Log::Info("Environment Maps loaded in %.2fs.", duration);
 
 	return true;
 }

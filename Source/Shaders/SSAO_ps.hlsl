@@ -55,8 +55,9 @@ SamplerState sLinearSampler;
 float PSMain(PSIn In) : SV_TARGET
 {
 	const float2 uv = In.uv;
-    const float3 N = normalize(texViewSpaceNormals.Sample(sLinearSampler, uv).xyz);
-	if(dot(N, N) < 0.001) return 0.0f.xxxx;
+    float3 N = texViewSpaceNormals.Sample(sLinearSampler, uv).xyz;
+	if(dot(N, N) < 0.00001) return 0.0f.xxxx;
+    N = normalize(N);
 
     const float3 P = texViewPositions.Sample(sLinearSampler, uv).xyz;
 

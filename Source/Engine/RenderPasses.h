@@ -170,6 +170,8 @@ struct DebugPass
 // Blizzard Dev Paper:	http://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf
 struct AmbientOcclusionPass
 {
+	static TextureID whiteTexture4x4;
+	
 	void Initialize(Renderer* pRenderer);
 	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const TextureID texPositions, const SceneView& sceneView);
 	void BilateralBlurPass(Renderer* pRenderer);
@@ -178,7 +180,6 @@ struct AmbientOcclusionPass
 	std::vector<vec3>	sampleKernel;
 	std::vector<vec4>	noiseKernel;
 	TextureID			noiseTexture;
-	TextureID			whiteTexture4x4;
 	SamplerID			noiseSampler;
 	RenderTargetID		occlusionRenderTarget;
 	RenderTargetID		blurRenderTarget;

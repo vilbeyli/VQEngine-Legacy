@@ -70,6 +70,7 @@ public:
 
 public:
 	static const LinearColor black, white, red, green, blue, magenta, yellow, cyan, gray, light_gray, orange, purple, gold;
+	static const LinearColor bp_gold, bp_ruby, bp_jade, bp_bronze;
 	static const ColorPalette s_palette;
 private:
 	vec3 value;

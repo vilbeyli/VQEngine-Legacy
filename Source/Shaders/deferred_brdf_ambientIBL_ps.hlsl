@@ -44,7 +44,7 @@ SamplerState sWrapSampler;
 SamplerState sEnvMapSampler;
 SamplerState sNearestSampler;
 
-#define MAX_REFLECTION_LOD 4	// 5 mip levels -> [0, 4]
+#define MAX_REFLECTION_LOD 7	// 6 mip levels -> [0, 7]
 
 float4 PSMain(PSIn In) : SV_TARGET
 {

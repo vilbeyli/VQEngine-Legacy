@@ -309,8 +309,6 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 
 void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 {
-	Log::Info("Initializing GBuffer...");
-
 	DXGI_SAMPLE_DESC smpDesc;
 	smpDesc.Count = 1;
 	smpDesc.Quality = 0;
@@ -350,7 +348,6 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	// Option: trade storage for computation
 	//  - Store pos.z     and compute xy from z + window.xy
 	//	- Store normal.xy and compute z = sqrt(1 - x^2 - y^2)
-	Log::Info("Done.");
 
 	{	// Geometry depth stencil state descriptor
 		D3D11_DEPTH_STENCILOP_DESC dsOpDesc = {};
@@ -560,7 +557,8 @@ void DeferredRenderingPasses::RenderLightingPass(
 
 	pRenderer->SetConstant4x4f("matView", sceneView.view);
 	pRenderer->SetConstant4x4f("matViewToWorld", sceneView.viewToWorld);
-	pRenderer->SetSamplerState("sNearestSampler", 0);	// todo: nearest sampler
+	//pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);
@@ -579,6 +577,7 @@ void DebugPass::Initialize(Renderer * pRenderer)
 }
 
 constexpr size_t SSAO_SAMPLE_KERNEL_SIZE = 64;
+TextureID AmbientOcclusionPass::whiteTexture4x4 = -1;
 void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 {
 	const std::vector<InputLayout> layout = {
@@ -683,7 +682,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->blurRenderTarget		= pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->radius = 6.5f;
-	this->intensity = 5.0f;
+	this->intensity = 1.0f;
 }
 
 struct SSAOConstants
@@ -726,7 +725,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
-	//pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
 	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
 	pRenderer->SetTexture("texViewPositions", texPositions);

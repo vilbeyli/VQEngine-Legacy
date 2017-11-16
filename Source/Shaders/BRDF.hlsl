@@ -25,9 +25,9 @@
 #define DIRECT_LIGHTING
 
 // ================================== BRDF NOTES =========================================
-//
 //	src: https://learnopengl.com/#!PBR/Theory
 //	ref: http://blog.selfshadow.com/publications/s2012-shading-course/hoffman/s2012_pbs_physics_math_notes.pdf
+//
 // Rendering Equation
 // ------------------
 //

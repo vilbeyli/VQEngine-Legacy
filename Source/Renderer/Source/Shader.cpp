@@ -229,8 +229,8 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 {
 	HRESULT result;
 
-	std::string info("\tCompiling  \""); info += m_name; info += "\"...\t";
-	Log::Info(info);
+	std::string info("----- INFO: \tCompiling "); info += m_name; info += "...";
+	Log::String(info);
 	
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
@@ -266,10 +266,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 	//---------------------------------------------------------------------------
 	//create vertex shader buffer
 	// TODO: specify which shaders to compile. some might not need pixel shader
-	result = device->CreateVertexShader(blobs.vs->GetBufferPointer(), 
-										blobs.vs->GetBufferSize(), 
-										NULL, 
-										&m_vertexShader);
+	result = device->CreateVertexShader(blobs.vs->GetBufferPointer(), blobs.vs->GetBufferSize(), NULL, &m_vertexShader);
 	if (FAILED(result))
 	{
 		OutputDebugString("Error creating vertex shader program");
@@ -277,10 +274,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 	}
 
 	//create pixel shader buffer
-	result = device->CreatePixelShader( blobs.ps->GetBufferPointer(), 
-										blobs.ps->GetBufferSize(), 
-										NULL, 
-										&m_pixelShader);
+	result = device->CreatePixelShader( blobs.ps->GetBufferPointer(), blobs.ps->GetBufferSize(), NULL, &m_pixelShader);
 	if (FAILED(result))
 	{
 		OutputDebugString("Error creating pixel shader program");
@@ -290,10 +284,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 	// create geo shader buffer
 	if (blobs.gs)
 	{
-		result = device->CreateGeometryShader(  blobs.gs->GetBufferPointer(),
-												blobs.gs->GetBufferSize(),
-												NULL,
-												&m_geometryShader);
+		result = device->CreateGeometryShader(  blobs.gs->GetBufferPointer(), blobs.gs->GetBufferSize(), NULL, &m_geometryShader);
 		if (FAILED(result))
 		{
 			OutputDebugString("Error creating geometry shader program");
@@ -385,7 +376,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 		blobs.cs->Release();
 	if(blobs.ps)
 		blobs.ps->Release();
-	Log::String(" - Done.\n");
+	Log::String(" Done.\n");
 }
 
 void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob)
@@ -555,13 +546,13 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 
 ID3D10Blob* Shader::Compile(const std::string & filePath, const EShaderType & type)
 {
-	// ---- statics veriables?
+	// ---- static veriables?
 	ID3DInclude* const	includeHandler = D3D_COMPILE_STANDARD_FILE_INCLUDE;		// use default include handler for using #include in shader files
 	
 	// compiler versions indexed by enum EShaderType;
 	const char*			shaderCompilerVersions[] = { "vs_5_0", "gs_5_0", "", "", "", "ps_5_0" };
 	const char*			shaderEntryPointNames[]  = { "VSMain", "GSMain", "DSMain", "HSMain", "CSMain", "PSMain" };
-	// ---- statics veriables?
+	// ---- static veriables?
 
 #if defined( _DEBUG ) || defined ( FORCE_DEBUG )
 	UINT flags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
@@ -588,7 +579,6 @@ ID3D10Blob* Shader::Compile(const std::string & filePath, const EShaderType & ty
 		HandleCompileError(errorMessage, filePath);
 		return nullptr;
 	}
-	Log::String(filePath + "\n");
 	return blob;
 }
 

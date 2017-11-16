@@ -99,7 +99,8 @@ struct TextureDesc
 	void* data;
 	int mipCount;
 	bool bIsCubeMap;
-	TextureDesc() : width(1), height(1), format(RGBA32F), usage(GPU_READ), texFileName(""), data(nullptr), mipCount(1), bIsCubeMap(false){}
+	bool bGenerateMips;
+	TextureDesc() : width(1), height(1), format(RGBA32F), usage(GPU_READ), texFileName(""), data(nullptr), mipCount(1), bIsCubeMap(false), bGenerateMips(false){}
 
 	D3D11_TEXTURE2D_DESC dxDesc;
 };
@@ -164,8 +165,9 @@ public:
 												bool					initializeSRV
 							);	// used by AddRenderTarget()
 
-	TextureID				CreateHDRTexture(	const std::string&	texFileName,
-												const std::string&	fileRoot = sHDRTextureRoot
+	TextureID CreateHDRTexture(	const std::string& texFileName,
+												const std::string& fileRoot = sHDRTextureRoot,
+												bool bGenerateMips = false
 							);
 
 	TextureID				CreateCubemapTexture(	const std::vector<std::string>& textureFiles

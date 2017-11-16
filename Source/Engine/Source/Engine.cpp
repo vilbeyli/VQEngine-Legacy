@@ -183,11 +183,12 @@ bool Engine::Initialize(HWND hwnd)
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
-	Log::Info("Loading Environment Maps... ");
-	float duration = mpTimer->TotalTime();
+	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
+	mpTimer->Start();
+	mpTimer->Tick();
 	Skybox::InitializePresets(mpRenderer);
-	duration = mpTimer->TotalTime() - duration;
-	Log::Info("Environment Maps loaded in %.2fs.", duration);
+	const float duration = mpTimer->Tick();
+	Log::Info("--------------------- ENVIRONMENT MAPS LOADED IN %.2fs.", duration);
 
 	return true;
 }
@@ -203,6 +204,7 @@ bool Engine::Load()
 	}
 
 	{	// RENDER PASS INITIALIZATION
+		Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
 		mShadowMapPass.Initialize(mpRenderer, mpRenderer->m_device, rendererSettings.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
 		
@@ -224,6 +226,7 @@ bool Engine::Load()
 		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 		mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
 	}
+	Log::Info("---------------- INITIALIZING RENDER PASSES DONE ---------------- ");
 	return true;
 }
 
@@ -352,6 +355,7 @@ void Engine::PreRender()
 
 void Engine::RenderLights() const
 {
+	return;
 	mpRenderer->BeginEvent("Render Lights Pass");
 	mpRenderer->Reset();	// is reset necessary?
 	mpRenderer->SetShader(EShaders::UNLIT);
@@ -643,7 +647,7 @@ void Engine::Render()
 				{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
-				//{ fullscreenTextureScaledDownSize,	screenPosition,			preFilteredEnvMap	, false },
+				//{ fullscreenTextureScaledDownSize,	screenPosition,			pScene->GetEnvironmentMap().environmentMap	, false },
 				{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)

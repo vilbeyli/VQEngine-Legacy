@@ -18,6 +18,7 @@
 
 #include "SSAOTestScene.h"
 #include "Renderer/Renderer.h"
+#include "Engine/RenderPasses.h"
 
 SSAOTestScene::SSAOTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	:
@@ -56,7 +57,7 @@ void SSAOTestScene::Load(SerializedScene& scene)
 				float x, y, z;	// position
 				x = i * CUBE_DISTANCE - CUBE_ROW_COUNT * CUBE_DISTANCE / 2;
 				y = 5.0f + cubes.size();
-				z = j * CUBE_DISTANCE - CUBE_COLUMN_COUNT * CUBE_DISTANCE / 2;
+				z = j * CUBE_DISTANCE - CUBE_COLUMN_COUNT * CUBE_DISTANCE / 2 + 50;
 				cube.mTransform.SetPosition(x, y, z);
 				cube.mTransform.SetUniformScale(4.0f);
 
@@ -70,6 +71,11 @@ void SSAOTestScene::Load(SerializedScene& scene)
 				cubes.push_back(cube);
 			}
 		}
+	}
+
+	for (auto& obj : mObjects)
+	{
+		obj.mModel.SetDiffuseMap(AmbientOcclusionPass::whiteTexture4x4);
 	}
 
 }

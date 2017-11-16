@@ -34,7 +34,13 @@ const LinearColor LinearColor::gray			= vec3(0.2f, 0.2f, 0.2f);
 const LinearColor LinearColor::light_gray	= vec3(0.45f, 0.45f, 0.45f);
 const LinearColor LinearColor::orange		= vec3(1.0f, 0.5f, 0.0f);
 const LinearColor LinearColor::purple		= vec3(0.31f, 0.149f, 0.513f);
-const LinearColor LinearColor::gold			= vec3(1.000f, 0.76f, 0.336f);
+const LinearColor LinearColor::gold			= vec3(1.000f, 0.76f, 0.336f);	// pbr?
+
+// blinn phong values
+const LinearColor LinearColor::bp_gold   = vec3(0.75164f, 0.60648f, 0.22648f);
+const LinearColor LinearColor::bp_ruby   = vec3(0.61424f, 0.04136f, 0.04136f);
+const LinearColor LinearColor::bp_jade   = vec3(0.54f, 0.89f, 0.63f);
+const LinearColor LinearColor::bp_bronze = vec3(0.714f, 0.4284f, 0.18144f);
 
 const LinearColor::ColorPalette LinearColor::s_palette = {
 	LinearColor::black,		LinearColor::white,

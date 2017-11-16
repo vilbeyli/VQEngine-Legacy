@@ -59,21 +59,21 @@ Texture2D texPosition;
 Texture2D texShadowMap;
 
 SamplerState sShadowSampler;
-SamplerState sNearestSampler;
+SamplerState sLinearSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	// lighting & surface parameters (View Space Lighting)
-	const float3 P = texPosition.Sample(sNearestSampler, In.uv);
-	const float3 N = texNormals.Sample(sNearestSampler, In.uv);
+	const float3 P = texPosition.Sample(sLinearSampler, In.uv);
+	const float3 N = texNormals.Sample(sLinearSampler, In.uv);
 	//const float3 T = normalize(In.tangent);
 	const float3 V = normalize(- P);
 	
 	const float3 Pw = mul(matViewToWorld, float4(P, 1)).xyz;
     const float4 lightSpacePos = mul(lightSpaceMat, float4(Pw, 1));
 
-	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
-	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sNearestSampler, In.uv);
+	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sLinearSampler, In.uv);
+	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sLinearSampler, In.uv);
 
     BRDF_Surface s;
     s.N = N;

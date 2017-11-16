@@ -46,7 +46,7 @@ vector<string> split(const char* s, char c)
 		const char* begin = s;
 
 		// skip delimiter character
-		if (*begin == c) continue;
+		if (*begin == c || *begin == '\0') continue;
 		
 		// iterate until delimiter is found
 		while (*s != c && *s) s++;

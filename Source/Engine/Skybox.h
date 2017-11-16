@@ -48,11 +48,11 @@ struct EnvironmentMapFileNames
 {
 	std::string skyboxFileName;
 	std::string irradianceMapFileName;
-	std::string specularMapFileName;
+	std::string environmentMapFileName;
 	std::string settingsFileName;
 };
 
-constexpr size_t PREFILTER_MIP_LEVEL_COUNT = 5;
+constexpr size_t PREFILTER_MIP_LEVEL_COUNT = 8;
 using MipRenderTargets = std::array<RenderTargetID, PREFILTER_MIP_LEVEL_COUNT>;
 
 struct sIBLSettings
@@ -65,6 +65,7 @@ struct sIBLSettings
 class EnvironmentMap
 {
 public:
+	static Renderer* spRenderer;
 	// learnopengl:	https://learnopengl.com/#!PBR/IBL/Specular-IBL
 	// stores the lookup table for BRDF's response given an input 
 	// roughness and an input angle between normal and view (N dot V)
@@ -76,20 +77,18 @@ public:
 	// with the convolution being based on the roughness
 	static ShaderID				sPrefilterShader;
 	
-	static Renderer* spRenderer;
 	static void Initialize(Renderer* pRenderer);
 	static void LoadShaders();
 
 	EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory);
 	EnvironmentMap();
-	inline void Clear() { irradianceMap = specularMap = -1; }	// ???
 	TextureID InitializePrefilteredEnvironmentMap(const Texture& specularMap);
 
 	TextureID irradianceMap;
-	TextureID specularMap; 
+	TextureID environmentMap; 
 	TextureID prefilteredEnvironmentMap;
 	SamplerID envMapSampler;
-	MipRenderTargets prefilterMipRenderTargets;
+	MipRenderTargets prefilterMipRenderTargets;	// todo: remove this
 
 	sIBLSettings settings;
 };

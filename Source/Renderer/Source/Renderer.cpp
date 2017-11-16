@@ -467,7 +467,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		m_device->CreateSamplerState(&samplerDesc, &(m_samplers[EDefaultSamplerState::WRAP_SAMPLER]._samplerState));
 
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -479,6 +479,12 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		m_device->CreateSamplerState(&samplerDesc, &(m_samplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW]._samplerState));
+
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		m_device->CreateSamplerState(&samplerDesc, &(m_samplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER]._samplerState));
 	}
@@ -706,6 +712,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	
 	UINT miscFlags = 0;
 	miscFlags |= texDesc.bIsCubeMap ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;
+	miscFlags |= texDesc.bGenerateMips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
 
 	UINT arrSize = 1;	// currently there's no texture array support
 	arrSize = texDesc.bIsCubeMap ? 6 : arrSize;
@@ -749,6 +756,10 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	}
 
 	m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+	if (texDesc.bGenerateMips)
+	{
+		m_deviceContext->GenerateMips(tex._srv);
+	}
 
 	tex._id = static_cast<int>(m_textures.size());
 	m_textures.push_back(tex);
@@ -764,7 +775,7 @@ TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc, bool ini
 	return m_textures.back()._id;
 }
 
-TextureID Renderer::CreateHDRTexture(const std::string & texFileName, const std::string & fileRoot)
+TextureID Renderer::CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot /*= sHDRTextureRoot*/, bool bGenerateMips /*= false */)
 {
 	// cache lookup, return early if the texture already exists
 	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
@@ -793,6 +804,7 @@ TextureID Renderer::CreateHDRTexture(const std::string & texFileName, const std:
 	texDesc.texFileName = texFileName;
 	texDesc.data = data;
 	texDesc.mipCount = 1;
+	texDesc.bGenerateMips = false;
 
 	TextureID newTex = CreateTexture2D(texDesc);
 	if (newTex == -1)

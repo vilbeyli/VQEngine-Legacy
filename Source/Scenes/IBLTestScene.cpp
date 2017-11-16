@@ -22,6 +22,8 @@
 
 #include "Renderer/Renderer.h"
 
+#undef max
+
 static const vec3 sSphereCenter = vec3(0, 1, 20);
 
 IBLTestScene::IBLTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
@@ -38,89 +40,137 @@ void IBLTestScene::SetEnvironmentMap(EEnvironmentMapPresets preset)
 
 void IBLTestScene::Load(SerializedScene& scene)
 {
-	{	// sphere grid
-		constexpr float r = 11.0f;
-		constexpr size_t gridDimension[2] = { 3, 2 };
-		constexpr size_t numSph = gridDimension[0] * gridDimension[1];
+	// sphere grid
+	constexpr float r = 14.0f;
+	constexpr size_t gridDimension[2] = { 6, 4 };
+	constexpr size_t numSph = gridDimension[0] * gridDimension[1];
+	TextureID cubeNormalMap = mpRenderer->CreateTextureFromFile("openart/185_norm.jpg");
 
-		const vec3& origin = sSphereCenter;
+	const vec3& origin = sSphereCenter;
 
-		for (size_t i = 0; i < numSph; i++)
-		{
-			const size_t row = i / gridDimension[0];
-			const size_t col = i % gridDimension[1];
+	for (size_t i = 0; i < numSph; i++)
+	{
+		const size_t row = i / gridDimension[1];
+		const size_t col = i % gridDimension[1];
 
-			const float sphereStep = static_cast<float>(i) / (numSph-1);
-			const float rowStep = static_cast<float>(row) / ((numSph - 1) / gridDimension[0]);
-			const float colStep = static_cast<float>(col) / ((numSph - 1) / gridDimension[1]);
+		const float sphereStep = static_cast<float>(i) / (numSph - 1);
+		const float rowStep = static_cast<float>(row) / ((numSph - 1) / gridDimension[0]);
+		const float colStep = static_cast<float>(col) / ((numSph - 1) / gridDimension[1]);
 
-#if 0
-			// offset to center the grid
-			const float offsetDim[2] = {
-				-static_cast<float>(gridDimension[0]) * r / 2 + r / 2.0f,
-				-static_cast<float>(gridDimension[1]) * r / 2 + r / 2.0f
-			};
-			const vec3 offset = vec3(col * r, 1.0f, row * r) + vec3(offsetDim[0], 0.0f, offsetDim[1]);
+#if 1
+		// offset to center the grid
+		const float offsetDim[2] = {
+			-static_cast<float>(gridDimension[0]) * r / 2 + r / 2.0f,
+			-static_cast<float>(gridDimension[1]) * r / 2 + r / 2.0f
+		};
+		vec3 offset = vec3(row * r, col * r, 1.0f) + vec3(offsetDim[0], offsetDim[1], 0);
 #else
-			const float R = 85.0f;
-			const float archAngle = DEG2RAD * 61.9f;	// how much arch will cover
-			const float archOffset = DEG2RAD * -15.0f;	// rotate arch by degrees
+		const float R = 85.0f;
+		const float archAngle = DEG2RAD * 61.9f;	// how much arch will cover
+		const float archOffset = DEG2RAD * -15.0f;	// rotate arch by degrees
 
-			const float phi = -sphereStep * archAngle + archOffset;
-			const vec3 offset = R * vec3(cosf(phi), 0.15f * cosf((phi - archOffset) * 0.25f), sinf(phi));
-			//const vec3 offset = vec3(2.1f * r * sphereStep - 1.1f * i * r, 0, 0);
+		const float phi = -sphereStep * archAngle + archOffset;
+		const vec3 offset = R * vec3(cosf(phi), 0.15f * cosf((phi - archOffset) * 0.25f), sinf(phi));
+		//const vec3 offset = vec3(2.1f * r * sphereStep - 1.1f * i * r, 0, 0);
 #endif
-			const vec3 pos = origin + offset;
+		vec3 pos = origin + offset;
+		const float sphereGroupOffset = gridDimension[0] * r / 2;
 
-			{
-				GameObject sph;
-				sph.mTransform.SetPosition(pos);
-				sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
-				sph.mModel.mMesh = EGeometry::SPHERE;
+		// GOLD / SILVER PAIR
+		{
+			GameObject sph;
+			pos.x() += sphereGroupOffset;
+			sph.mTransform.SetPosition(pos);
+			sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
+			sph.mModel.mMesh = EGeometry::SPHERE;
 
-				BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
-				// metalness [0.0f, 1.0f]
-				sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::white)));
-				mat0.metalness = (1.0f - sphereStep) * 0.2f;
+			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
+			sph.mModel.SetDiffuseColor(LinearColor(vec3(1.0f)));
+			mat0.metalness = 1.0f-colStep;	// metalness [0.0f, 1.0f]
 
-				// roughness [roughnessLowClamp, 1.0f]
-				const float roughnessLowClamp = 0.03f;
-				mat0.roughness = sphereStep < roughnessLowClamp ? roughnessLowClamp : sphereStep;
-				//mat0.roughness = 0.05f * 3;
+			const float roughnessLowClamp = 0.03f;
+			mat0.roughness = powf(std::max(rowStep, 0.04f), 2.01f);	// roughness [roughnessLowClamp, 1.0f]
 
-				BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
-				const float shininessMax = 150.f;
-				const float shininessBase = shininessMax + 7.0f;
-				mat1.shininess = shininessBase - rowStep * shininessMax;
+			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
+			const float shininessMax = 150.f;
+			const float shininessBase = shininessMax + 7.0f;
+			mat1.shininess = shininessBase - rowStep * shininessMax;
 
-				spheres.push_back(sph);
-			}
-			
-			{
-				GameObject sph;
-				sph.mTransform.SetPosition(vec3(pos.x(), pos.y() + 15, pos.z()));
-				sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
-				sph.mModel.mMesh = EGeometry::SPHERE;
+			spheres.push_back(sph);
+		}
 
-				BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
-				// metalness [0.0f, 1.0f]
-				sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::gold)));
-				mat0.metalness = 1.0f - sphereStep;
+		{
+			pos.x() -= 2 * sphereGroupOffset;
+			GameObject sph;
+			sph.mTransform.SetPosition(pos);
+			sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
+			sph.mModel.mMesh = EGeometry::SPHERE;
 
-				// roughness [roughnessLowClamp, 1.0f]
-				const float roughnessLowClamp = 0.1f;
-				mat0.roughness = 0.02f;
-				//mat0.roughness = 0.05f * 3;
+			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
+			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::gold)));
+			mat0.metalness = 1.0f - colStep;	// metalness [0.0f, 1.0f]
 
-				BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
-				const float shininessMax = 150.f;
-				const float shininessBase = shininessMax + 7.0f;
-				mat1.shininess = shininessBase - rowStep * shininessMax;
+			const float roughnessLowClamp = 0.1f;
+			mat0.roughness = 1.0f - rowStep;// powf(std::max(rowStep, 0.04f), 2.01f);	// roughness [roughnessLowClamp, 1.0f];
 
-				spheres.push_back(sph);
-			}
+			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
+			const float shininessMax = 150.f;
+			const float shininessBase = shininessMax + 7.0f;
+			mat1.shininess = shininessBase - rowStep * shininessMax;
+
+			spheres.push_back(sph);
+		}
+
+
+		// RUBY / EMERALD PAIR
+		offset = vec3(row * r, col * r, 1.0f) + vec3(offsetDim[0], offsetDim[1], 0);
+		pos = origin + offset;
+		pos.y() += offsetDim[1] * r / 5;
+		{
+			GameObject sph;
+			pos.x() += sphereGroupOffset;
+			sph.mTransform.SetPosition(pos);
+			sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
+			sph.mModel.mMesh = EGeometry::SPHERE;
+
+			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
+			sph.mModel.SetDiffuseColor(LinearColor::bp_ruby);
+			mat0.metalness = colStep;	// metalness [0.0f, 1.0f]
+
+			const float roughnessLowClamp = 0.03f;
+			mat0.roughness = powf(std::max(rowStep, 0.04f), 2.55f);	// roughness [roughnessLowClamp, 1.0f]
+
+			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
+			const float shininessMax = 150.f;
+			const float shininessBase = shininessMax + 7.0f;
+			mat1.shininess = shininessBase - rowStep * shininessMax;
+
+			spheres.push_back(sph);
+		}
+
+		{
+			pos.x() -= 2 * sphereGroupOffset;
+			GameObject sph;
+			sph.mTransform.SetPosition(pos);
+			sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
+			sph.mModel.mMesh = EGeometry::SPHERE;
+
+			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
+			sph.mModel.SetDiffuseColor(vec3(0.04f));
+			mat0.metalness = colStep;	// metalness [0.0f, 1.0f]
+
+			const float roughnessLowClamp = 0.1f;
+			mat0.roughness = 1.0f - powf(std::max(rowStep, 0.04f), 0.75f);	// roughness [roughnessLowClamp, 1.0f]
+
+			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
+			const float shininessMax = 150.f;
+			const float shininessBase = shininessMax + 7.0f;
+			mat1.shininess = shininessBase - rowStep * shininessMax;
+
+			spheres.push_back(sph);
 		}
 	}
+	
 	//{	// spot/directional light
 	//	Light l;
 	//	l._type = Light::SPOT;
@@ -134,6 +184,14 @@ void IBLTestScene::Load(SerializedScene& scene)
 	//	mLights.push_back(l);
 	//}
 
+
+	//for (int gridX = 0; gridX < gridDimension[0]; ++gridX)
+	//{
+	//	for (int gridY = 0; gridY < gridDimension[1]; ++gridY)
+	//	{
+	//
+	//	}
+	//}
 	if(!mLights.empty())
 		mLights.back()._color = vec3(255, 244, 221) / 255.0f;
 	

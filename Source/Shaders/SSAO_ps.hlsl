@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #define KERNEL_SIZE 64
-#define DEPTH_BIAS 0.025
+#define DEPTH_BIAS -0.025
 
 #define ENABLE_RANGE_CHECK
 
@@ -55,22 +55,22 @@ SamplerState sLinearSampler;
 float PSMain(PSIn In) : SV_TARGET
 {
 	const float2 uv = In.uv;
-    float3 N = texViewSpaceNormals.Sample(sLinearSampler, uv).xyz;
-	if(dot(N, N) < 0.00001) return 0.0f.xxxx;
+    float3 N = texViewSpaceNormals.Sample(sPointSampler, uv).xyz;
+	if(dot(N, N) < 0.00001) return 1.0f.xxxx;
     N = normalize(N);
 
     const float3 P = texViewPositions.Sample(sLinearSampler, uv).xyz;
 
 	// tile noise texture (4x4) over whole screen by scaling UV coords (textures wrap)
     const float2 noiseScale = SSAO_constants.screenSize / 4.0f;
-	const float3 noise = texNoise.Sample(sNoiseSampler, uv * noiseScale).xyz;
+    const float3 noise = float3(texNoise.Sample(sNoiseSampler, uv * noiseScale).xy, 0.0f);
 
 	// Gramm-Schmidt process for orthogonal basis creation: https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
 	// in short: project noise on N vector, and subtract that projection from the noise vector
 	//			 this would give us a vector perpendicular to N. see gif in link 
 	const float3 T = normalize(noise - N * dot(noise, N));
 
-	const float3 B = cross(N, T);
+	const float3 B = cross(T, N);
 	const float3x3 TBN = float3x3(T, B, N);
 
 	float occlusion = 0.0;
@@ -78,7 +78,7 @@ float PSMain(PSIn In) : SV_TARGET
 	[loop]	// when unrolled, VGPR usage skyrockets and reduces #waves in flight
     for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
-		float3 kernelSample = P + mul(SSAO_constants.samples[i], TBN); // From tangent to view-space
+		float3 kernelSample = P + mul(SSAO_constants.samples[i], TBN) * SSAO_constants.radius; // From tangent to view-space
 
 		// get the screenspace position of the sample
         float4 offset = float4(kernelSample, 1.0f);
@@ -95,7 +95,7 @@ float PSMain(PSIn In) : SV_TARGET
 #endif
 
 
-#ifdef ENABLE_RANGE_CHECK
+#ifdef xENABLE_RANGE_CHECK
 		const float rangeCheck = smoothstep(0.01f, 1.0f, SSAO_constants.radius / abs(P.z - D));
 #else
 		const float rangeCheck = 1.0f;

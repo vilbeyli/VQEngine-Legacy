@@ -17,8 +17,9 @@
 
 #include "Skybox.h"
 #include "Renderer/Renderer.h"
+#include "Utilities/Log.h"
 
-#define LOAD_ALL_ENVIRONMENT_MAPS 1
+#define LOAD_ALL_ENVIRONMENT_MAPS 0
 
 // SKYBOX PRESETS W/ CUBEMAP / ENVIRONMENT MAP
 //==========================================================================================================
@@ -83,6 +84,7 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 		s_Presets[EEnvironmentMapPresets::BARCELONA] = Skybox(pRenderer, files, root, bEquirectangular);
 	}
 
+#if LOAD_ALL_ENVIRONMENT_MAPS
 	{	// TROPICAL BEACH
 		const std::string root = sIBLDirectory + "Tropical_Beach/";
 		files = {
@@ -92,7 +94,6 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 		};
 		s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = Skybox(pRenderer, files, root, bEquirectangular);
 	}
-#if LOAD_ALL_ENVIRONMENT_MAPS
 
 	{	// MILKYWAY 
 		const std::string root = sIBLDirectory + "Milkyway/";
@@ -128,6 +129,46 @@ void Skybox::InitializePresets(Renderer* pRenderer)
 #endif
 }
 
+// SKYBOX
+//==========================================================================================================
+Skybox::Skybox(Renderer* renderer, const EnvironmentMapFileNames& environmentMapFiles, const std::string& rootDirectory, bool bEquirectangular)
+	:
+	pRenderer(renderer),
+	environmentMap(EnvironmentMap(renderer, environmentMapFiles, rootDirectory)),
+	skyboxTexture(pRenderer->CreateTextureFromFile(environmentMapFiles.skyboxFileName, rootDirectory)),
+	skyboxShader(bEquirectangular ? EShaders::SKYBOX_EQUIRECTANGULAR : EShaders::SKYBOX)
+{}
+
+Skybox::Skybox(Renderer * renderer, const TextureID skydomeTexture, bool bEquirectangular)
+	:
+	pRenderer(renderer),
+	environmentMap(EnvironmentMap()),
+	skyboxTexture(skydomeTexture),
+	skyboxShader(bEquirectangular ? EShaders::SKYBOX_EQUIRECTANGULAR : EShaders::SKYBOX)
+{}
+
+Skybox::Skybox()
+	:
+	pRenderer(nullptr),
+	environmentMap(EnvironmentMap()),
+	skyboxTexture(-1),
+	skyboxShader(EShaders::SHADER_COUNT)
+{}
+
+
+void Skybox::Render(const XMMATRIX& viewProj) const
+{
+	const XMMATRIX& wvp = viewProj;
+	pRenderer->BeginEvent("Skybox Pass");
+	pRenderer->SetShader(skyboxShader);
+	pRenderer->SetConstant4x4f("worldViewProj", wvp);
+	pRenderer->SetTexture("texSkybox", skyboxTexture);
+	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
+	pRenderer->SetBufferObj(EGeometry::CUBE);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+	pRenderer->EndEvent();
+}
 
 
 // ENVIRONMENT MAP
@@ -141,8 +182,31 @@ ShaderID EnvironmentMap::sPrefilterShader = -1;
 Renderer* EnvironmentMap::spRenderer = nullptr;
 //---------------------------------------------------------------
 
-EnvironmentMap::EnvironmentMap() : irradianceMap(-1), specularMap(-1) {}
+EnvironmentMap::EnvironmentMap() : irradianceMap(-1), environmentMap(-1) {}
 
+void EnvironmentMap::Initialize(Renderer * pRenderer)
+{
+	spRenderer = pRenderer;
+}
+
+void EnvironmentMap::LoadShaders()
+{
+	// todo: layouts from reflection?
+	const std::vector<InputLayout> layout = {
+		{ "POSITION",	FLOAT32_3 },
+		{ "NORMAL",		FLOAT32_3 },
+		{ "TANGENT",	FLOAT32_3 },
+		{ "TEXCOORD",	FLOAT32_2 },
+	};
+
+	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
+
+	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };	// compute?
+	const std::vector<std::string> IBLConvolution = { "Skybox_vs", "PreFilterConvolution_ps" };		// compute?
+
+	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
+	sPrefilterShader = spRenderer->AddShader("PreFilterConvolution", IBLConvolution, VS_PS, layout);
+}
 
 void EnvironmentMap::CalculateBRDFIntegralLUT()
 {
@@ -175,7 +239,6 @@ void EnvironmentMap::CalculateBRDFIntegralLUT()
 	spRenderer->DrawIndexed();
 }
 
-
 TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & specularMap)
 {
 	Renderer*& pRenderer = spRenderer;
@@ -192,7 +255,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	pRenderer->SetShader(sPrefilterShader);
 	pRenderer->SetBufferObj(EGeometry::CUBE);
 	pRenderer->SetTexture("tEnvironmentMap", envMap);
-	pRenderer->SetSamplerState("sLinear", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+	pRenderer->SetSamplerState("sLinear", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 
 	// set pre-filtered environment map texture with mips
 	const unsigned cubemapDimension = specularMap._height / 2;
@@ -205,7 +268,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
 	texDesc.usage = GPU_RW;
 	texDesc.bIsCubeMap = true;
-	
+
 	prefilteredEnvironmentMap = pRenderer->CreateTexture2D(texDesc);
 	const Texture& prefilteredEnvMapTex = pRenderer->GetTextureObject(prefilteredEnvironmentMap);
 
@@ -222,7 +285,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	{
 		viewPort.Width = static_cast<float>(textureSize[0] >> mipLevel);
 		viewPort.Height = static_cast<float>(textureSize[1] >> mipLevel);
-	
+
 		const XMVECTOR lookDirs[6] = {
 			vec3::Right, vec3::Left,
 			vec3::Up, vec3::Down,
@@ -283,78 +346,10 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	return prefilteredEnvironmentMap;
 }
 
-void EnvironmentMap::LoadShaders()
+EnvironmentMap::EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory)
 {
-	// todo: layouts from reflection?
-	const std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 },
-	};
-
-	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
-
-	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };	// compute?
-	const std::vector<std::string> IBLConvolution = { "Skybox_vs", "PreFilterConvolution_ps" };		// compute?
-
-	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
-	sPrefilterShader = spRenderer->AddShader("PreFilterConvolution", IBLConvolution, VS_PS, layout);
-}
-
-void EnvironmentMap::Initialize(Renderer * pRenderer)
-{
-	spRenderer = pRenderer;
-}
-
-EnvironmentMap::EnvironmentMap(
-	Renderer* pRenderer, 
-	const EnvironmentMapFileNames& files,
-	const std::string& rootDirectory)
-{
+	Log::Info("Loading Environment Map: %s", split(rootDirectory, '/').back().c_str());
 	irradianceMap = pRenderer->CreateHDRTexture(files.irradianceMapFileName, rootDirectory);
-	specularMap = pRenderer->CreateHDRTexture(files.specularMapFileName, rootDirectory);
-	InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(specularMap));
-}
-
-
-// SKYBOX
-//==========================================================================================================
-Skybox::Skybox(Renderer* renderer, const EnvironmentMapFileNames& environmentMapFiles, const std::string& rootDirectory, bool bEquirectangular)
-	:
-	pRenderer(renderer),
-	environmentMap(EnvironmentMap(renderer, environmentMapFiles, rootDirectory)),
-	skyboxTexture(pRenderer->CreateTextureFromFile(environmentMapFiles.skyboxFileName, rootDirectory)),
-	skyboxShader(bEquirectangular ? EShaders::SKYBOX_EQUIRECTANGULAR : EShaders::SKYBOX)
-{}
-
-Skybox::Skybox(Renderer * renderer, const TextureID skydomeTexture, bool bEquirectangular)
-	:
-	pRenderer(renderer),
-	environmentMap(EnvironmentMap()),
-	skyboxTexture(skydomeTexture),
-	skyboxShader(bEquirectangular ? EShaders::SKYBOX_EQUIRECTANGULAR : EShaders::SKYBOX)
-{}
-
-Skybox::Skybox()
-	:
-	pRenderer(nullptr),
-	environmentMap(EnvironmentMap()),
-	skyboxTexture(-1),
-	skyboxShader(EShaders::SHADER_COUNT)
-{}
-
-
-void Skybox::Render(const XMMATRIX& viewProj) const
-{
-	const XMMATRIX& wvp = viewProj;
-	pRenderer->BeginEvent("Skybox Pass");
-	pRenderer->SetShader(skyboxShader);
-	pRenderer->SetConstant4x4f("worldViewProj", wvp);
-	pRenderer->SetTexture("texSkybox", skyboxTexture);
-	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
-	pRenderer->SetBufferObj(EGeometry::CUBE);
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
-	pRenderer->EndEvent();
+	environmentMap = pRenderer->CreateHDRTexture(files.environmentMapFileName, rootDirectory, true);
+	InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(environmentMap));
 }

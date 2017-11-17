@@ -756,10 +756,6 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	}
 
 	m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
-	if (texDesc.bGenerateMips)
-	{
-		m_deviceContext->GenerateMips(tex._srv);
-	}
 
 	tex._id = static_cast<int>(m_textures.size());
 	m_textures.push_back(tex);
@@ -775,7 +771,7 @@ TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc, bool ini
 	return m_textures.back()._id;
 }
 
-TextureID Renderer::CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot /*= sHDRTextureRoot*/, bool bGenerateMips /*= false */)
+TextureID Renderer::CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot /*= sHDRTextureRoot*/)
 {
 	// cache lookup, return early if the texture already exists
 	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });

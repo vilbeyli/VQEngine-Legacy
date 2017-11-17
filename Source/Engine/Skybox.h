@@ -76,20 +76,22 @@ public:
 	// renders pre-filtered environment map texture into mip levels 
 	// with the convolution being based on the roughness
 	static ShaderID				sPrefilterShader;
+	static ShaderID				sRenderIntoCubemapShader;
 	
 	static void Initialize(Renderer* pRenderer);
 	static void LoadShaders();
 
 	EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory);
 	EnvironmentMap();
-	TextureID InitializePrefilteredEnvironmentMap(const Texture& specularMap);
+	TextureID InitializePrefilteredEnvironmentMap(const Texture& specularMap, const Texture& irradienceMap);
 
 	TextureID irradianceMap;
 	TextureID environmentMap; 
-	TextureID prefilteredEnvironmentMap;
-	SamplerID envMapSampler;
-	MipRenderTargets prefilterMipRenderTargets;	// todo: remove this
 
+	TextureID mippedEnvironmentCubemap;
+	TextureID prefilteredEnvironmentMap;
+
+	SamplerID envMapSampler;
 	sIBLSettings settings;
 };
 

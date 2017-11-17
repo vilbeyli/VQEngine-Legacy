@@ -30,7 +30,7 @@ struct PSOut
 	float4 cubeMapFace : SV_TARGET0;
 };
 
-Texture2D tEnvironmentMap;
+TextureCube tEnvironmentMap;
 SamplerState sLinear;
 
 cbuffer cb
@@ -53,8 +53,7 @@ float4 Convolve(float3 N, float3 V, float3 R)
 		float NdotL = max(dot(N,L), 0.0f);
 		if(NdotL > 0.0f)
 	    {
-			const float2 uv = SphericalSample(L);
-			preFilteredColor += tEnvironmentMap.Sample(sLinear, uv).xyz;
+			preFilteredColor += tEnvironmentMap.Sample(sLinear, L).xyz;
 			totalWeight += NdotL;
 	    }
 	}

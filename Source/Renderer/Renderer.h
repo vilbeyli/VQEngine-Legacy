@@ -166,8 +166,7 @@ public:
 							);	// used by AddRenderTarget()
 
 	TextureID CreateHDRTexture(	const std::string& texFileName,
-												const std::string& fileRoot = sHDRTextureRoot,
-												bool bGenerateMips = false
+												const std::string& fileRoot = sHDRTextureRoot
 							);
 
 	TextureID				CreateCubemapTexture(	const std::vector<std::string>& textureFiles

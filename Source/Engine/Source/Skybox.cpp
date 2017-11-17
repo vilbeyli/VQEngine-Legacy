@@ -163,7 +163,8 @@ void Skybox::Render(const XMMATRIX& viewProj) const
 	pRenderer->SetShader(skyboxShader);
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);
 	pRenderer->SetTexture("texSkybox", skyboxTexture);
-	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
+	//pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
+	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 	pRenderer->SetBufferObj(EGeometry::CUBE);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
@@ -179,6 +180,7 @@ void Skybox::Render(const XMMATRIX& viewProj) const
 RenderTargetID EnvironmentMap::sBRDFIntegrationLUTRT = -1;
 ShaderID EnvironmentMap::sBRDFIntegrationLUTShader   = -1;
 ShaderID EnvironmentMap::sPrefilterShader = -1;
+ShaderID EnvironmentMap::sRenderIntoCubemapShader = -1;
 Renderer* EnvironmentMap::spRenderer = nullptr;
 //---------------------------------------------------------------
 
@@ -201,11 +203,13 @@ void EnvironmentMap::LoadShaders()
 
 	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
 
-	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };	// compute?
+	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };// compute?
 	const std::vector<std::string> IBLConvolution = { "Skybox_vs", "PreFilterConvolution_ps" };		// compute?
+	const std::vector<std::string> RenderIntoCubemap = { "Skybox_vs", "RenderIntoCubemap_ps" };
 
 	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
 	sPrefilterShader = spRenderer->AddShader("PreFilterConvolution", IBLConvolution, VS_PS, layout);
+	sRenderIntoCubemapShader = spRenderer->AddShader("RenderIntoCubemap", RenderIntoCubemap, VS_PS, layout);
 }
 
 void EnvironmentMap::CalculateBRDFIntegralLUT()
@@ -239,10 +243,10 @@ void EnvironmentMap::CalculateBRDFIntegralLUT()
 	spRenderer->DrawIndexed();
 }
 
-TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & specularMap)
+TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& environmentMap, const Texture& irradienceMap)
 {
 	Renderer*& pRenderer = spRenderer;
-	const TextureID envMap = specularMap._id;
+	const TextureID envMap = environmentMap._id;
 
 	const float screenAspect = 1;
 	const float screenNear = 0.01f;
@@ -250,20 +254,27 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	const float fovy = 90.0f * DEG2RAD;
 	const XMMATRIX proj = XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar);
 
-	pRenderer->UnbindDepthTarget();
-	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
-	pRenderer->SetShader(sPrefilterShader);
-	pRenderer->SetBufferObj(EGeometry::CUBE);
-	pRenderer->SetTexture("tEnvironmentMap", envMap);
-	pRenderer->SetSamplerState("sLinear", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+	// cubemap look dirs
+	const XMVECTOR lookDirs[6] = {
+		vec3::Right, vec3::Left,
+		vec3::Up, vec3::Down,
+		vec3::Forward, vec3::Back
+	};
 
-	// set pre-filtered environment map texture with mips
-	const unsigned cubemapDimension = specularMap._height / 2;
+	const XMVECTOR upDirs[6] = {
+		vec3::Up, vec3::Up,
+		vec3::Back, vec3::Forward,
+		vec3::Up, vec3::Up
+	};
+
+	// create environment map cubemap texture
+	const unsigned cubemapDimension = environmentMap._height / 2;
+	const unsigned textureSize[2] = { cubemapDimension, cubemapDimension };
 	TextureDesc texDesc = {};
 	texDesc.width = cubemapDimension;
 	texDesc.height = cubemapDimension;
 	texDesc.format = EImageFormat::RGBA32F;
-	texDesc.texFileName = specularMap._name + "_preFiltered";
+	texDesc.texFileName = environmentMap._name + "_preFiltered";
 	texDesc.data = nullptr; // no CPU data
 	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
 	texDesc.usage = GPU_RW;
@@ -271,6 +282,11 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 
 	prefilteredEnvironmentMap = pRenderer->CreateTexture2D(texDesc);
 	const Texture& prefilteredEnvMapTex = pRenderer->GetTextureObject(prefilteredEnvironmentMap);
+
+	texDesc.bGenerateMips = true;
+	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
+	mippedEnvironmentCubemap = pRenderer->CreateTexture2D(texDesc);
+	const Texture& mippedEnvironmentCubemapTex = pRenderer->GetTextureObject(mippedEnvironmentCubemap);
 
 	D3D11_TEXTURE2D_DESC desc = {};
 	prefilteredEnvMapTex._tex2D->GetDesc(&desc);
@@ -280,23 +296,55 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	viewPort.MaxDepth = 1.0f;
 	viewPort.MinDepth = 0.0f;
 
-	unsigned textureSize[2] = { cubemapDimension, cubemapDimension };
+	pRenderer->UnbindDepthTarget();
+	pRenderer->SetShader(sRenderIntoCubemapShader);
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+	pRenderer->SetBufferObj(EGeometry::CUBE);
+	pRenderer->SetTexture("tEnvironmentMap", envMap);
+	pRenderer->SetSamplerState("sLinear", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+
+	viewPort.Width = static_cast<float>(textureSize[0]);
+	viewPort.Height = static_cast<float>(textureSize[1]);
+	pRenderer->SetViewport(viewPort);
+	
+	// RENDER INTO CUBEMAP PASS
+	// render cubemap version of the environment map, generate mips, and then bind to pre-filter stage 
+	// cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
+	//------------------------------------------------------------------------------------------------------
+	// 0: RIGHT		1: LEFT
+	// 2: UP		3: DOWN
+	// 4: FRONT		5: BACK
+	//------------------------------------------------------------------------------------------------------
+	for (unsigned cubeFace = 0; cubeFace < 6; ++cubeFace)
+	{
+		D3D11_RENDER_TARGET_VIEW_DESC rtDesc = {};
+		rtDesc.Format = desc.Format;
+		rtDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2DARRAY;
+		rtDesc.Texture2DArray.MipSlice = 0;
+		rtDesc.Texture2DArray.ArraySize = 6 - cubeFace;
+		rtDesc.Texture2DArray.FirstArraySlice = cubeFace;
+
+		const RenderTargetID mipTarget = pRenderer->AddRenderTarget(mippedEnvironmentCubemapTex, rtDesc);	// todo: pool RTs.
+
+		const XMMATRIX view = XMMatrixLookAtLH(vec3::Zero, lookDirs[cubeFace], upDirs[cubeFace]);
+		const XMMATRIX viewProj = view * proj;
+
+		pRenderer->BindRenderTarget(mipTarget);
+		pRenderer->SetConstant4x4f("worldViewProj", viewProj);
+		pRenderer->Apply();
+		pRenderer->DrawIndexed();
+	}
+	pRenderer->m_deviceContext->GenerateMips(mippedEnvironmentCubemapTex._srv);
+	pRenderer->End();	// present frame or device removed...
+
+	// PREFILTER PASS
+	// pre-filter environment map into each cube face and mip level (~ roughness)
+	pRenderer->SetShader(sPrefilterShader);
+	pRenderer->SetTexture("tEnvironmentMap", mippedEnvironmentCubemap);
 	for (unsigned mipLevel = 0; mipLevel < PREFILTER_MIP_LEVEL_COUNT; ++mipLevel)
 	{
 		viewPort.Width = static_cast<float>(textureSize[0] >> mipLevel);
 		viewPort.Height = static_cast<float>(textureSize[1] >> mipLevel);
-
-		const XMVECTOR lookDirs[6] = {
-			vec3::Right, vec3::Left,
-			vec3::Up, vec3::Down,
-			vec3::Forward, vec3::Back
-		};
-
-		const XMVECTOR upDirs[6] = {
-			vec3::Up, vec3::Up,
-			vec3::Back, vec3::Forward,
-			vec3::Up, vec3::Up
-		};
 
 		pRenderer->SetConstant1f("roughness", static_cast<float>(mipLevel) / (PREFILTER_MIP_LEVEL_COUNT - 1));
 
@@ -315,10 +363,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 			rtDesc.Texture2DArray.ArraySize = 6 - cubeFace;
 			rtDesc.Texture2DArray.FirstArraySlice = cubeFace;
 
-			// this is currently redundant. probably need to make use of some render target pool for this. ignore this for now
-			//prefilterMipRenderTargets[mipLevel] = pRenderer->AddRenderTarget(prefilteredEnvMapTex, rtDesc);
-			//const RenderTargetID mipTarget = prefilterMipRenderTargets[mipLevel];
-			const RenderTargetID mipTarget = pRenderer->AddRenderTarget(prefilteredEnvMapTex, rtDesc);
+			const RenderTargetID mipTarget = pRenderer->AddRenderTarget(prefilteredEnvMapTex, rtDesc);	// todo: pool RTs.
 
 			const XMMATRIX view = XMMatrixLookAtLH(vec3::Zero, lookDirs[cubeFace], upDirs[cubeFace]);
 			const XMMATRIX viewProj = view * proj;
@@ -341,8 +386,14 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture & sp
 	envMapSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	envMapSamplerDesc.MaxAnisotropy = 1;
 	this->envMapSampler = spRenderer->CreateSamplerState(envMapSamplerDesc);
-
 	pRenderer->End();	// present frame or device removed...
+
+	// RENDER IRRADIANCE CUBEMAP PASS
+	// TODO: irradiance cubemap
+	//pRenderer->End();	// present frame or device removed...
+
+	ID3D11ShaderResourceView* pNull[6] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
+	pRenderer->m_deviceContext->PSSetShaderResources(0, 6, &pNull[0]);
 	return prefilteredEnvironmentMap;
 }
 
@@ -350,6 +401,6 @@ EnvironmentMap::EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileName
 {
 	Log::Info("Loading Environment Map: %s", split(rootDirectory, '/').back().c_str());
 	irradianceMap = pRenderer->CreateHDRTexture(files.irradianceMapFileName, rootDirectory);
-	environmentMap = pRenderer->CreateHDRTexture(files.environmentMapFileName, rootDirectory, true);
-	InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(environmentMap));
+	environmentMap = pRenderer->CreateHDRTexture(files.environmentMapFileName, rootDirectory);
+	InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(environmentMap), pRenderer->GetTextureObject(irradianceMap));
 }

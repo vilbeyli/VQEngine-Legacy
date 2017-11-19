@@ -4,14 +4,12 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 
 
-<center><i>Environment Mapping - Image-based Lighting</i></center>
+<center><i>BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting</i></center>
 
 ![](Data/Screenshots/IBL_la.PNG)
 
 
-<center><i>BRDF, HDR, Tonemapping, Bloom</i></center>
-
-![](Data/Screenshots/hdr_brdf_bloom.PNG)
+![](Data/Screenshots/ibl_ruins2.PNG)
 
 
 <center><i>SSAO w/ Gaussian Blur</i></center>

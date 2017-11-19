@@ -47,7 +47,7 @@
 //							f_lambert = albedo / PI;
 
 // Trowbridge-Reitz GGX Distribution
-inline float NormalDistribution(float3 N, float3 H, float roughness)
+inline float NormalDistributionGGX(float3 N, float3 H, float roughness)
 {	// approximates microfacets :	approximates the amount the surface's microfacets are
 	//								aligned to the halfway vector influenced by the roughness
 	//								of the surface
@@ -160,7 +160,7 @@ float3 BRDF(float3 Wi, BRDF_Surface s, float3 V, float3 worldPos)
 	// Fresnel_Cook-Torrence BRDF
 	const float3 F   = Fresnel(H, V, F0);
 	const float  G   = Geometry(N, Wo, Wi, roughness);
-	const float  NDF = NormalDistribution(N, H, roughness);
+	const float  NDF = NormalDistributionGGX(N, H, roughness);
 	const float  denom = (4.0f * max(0.0f, dot(Wo, N)) * max(0.0f, dot(Wi, N))) + 0.0001f;
 	const float3 specular = NDF * F * G / denom;
 	const float3 Is = specular * s.specularColor;
@@ -188,10 +188,12 @@ float3 EnvironmentBRDF(BRDF_Surface s, float3 V, float ao, float3 irradience, fl
 
 #define SAMPLE_COUNT 1024
 #define USE_BIT_MANIPULATION
+#define MAX_REFLECTION_LOD 7
 
 // the Hammersley Sequence,a random low-discrepancy sequence based on the Quasi-Monte Carlo method as carefully described by Holger Dammertz. 
 // It is based on the Van Der Corpus sequence which mirrors a decimal binary representation around its decimal point.
-// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
+// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html 
+// https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/monte-carlo-methods-in-practice/introduction-quasi-monte-carlo
 #ifdef USE_BIT_MANIPULATION
 float RadicalInverse_VdC(uint bits) //  Van Der Corpus
 {

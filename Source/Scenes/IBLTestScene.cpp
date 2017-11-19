@@ -42,7 +42,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 {
 	// sphere grid
 	constexpr float r = 14.0f;
-	constexpr size_t gridDimension[2] = { 6, 4 };
+	constexpr size_t gridDimension[2] = { 8, 4 };
 	constexpr size_t numSph = gridDimension[0] * gridDimension[1];
 	TextureID cubeNormalMap = mpRenderer->CreateTextureFromFile("openart/185_norm.jpg");
 
@@ -54,8 +54,8 @@ void IBLTestScene::Load(SerializedScene& scene)
 		const size_t col = i % gridDimension[1];
 
 		const float sphereStep = static_cast<float>(i) / (numSph - 1);
-		const float rowStep = static_cast<float>(row) / ((numSph - 1) / gridDimension[0]);
-		const float colStep = static_cast<float>(col) / ((numSph - 1) / gridDimension[1]);
+		const float rowStep = static_cast<float>(row) / (gridDimension[0]-1);
+		const float colStep = static_cast<float>(col) / (gridDimension[1]-1);
 
 #if 1
 		// offset to center the grid
@@ -89,7 +89,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			mat0.metalness = 1.0f-colStep;	// metalness [0.0f, 1.0f]
 
 			const float roughnessLowClamp = 0.03f;
-			mat0.roughness = powf(std::max(rowStep, 0.04f), 2.01f);	// roughness [roughnessLowClamp, 1.0f]
+			mat0.roughness = rowStep;// powf(std::max(rowStep, 0.04f), 2.01f);	// roughness [roughnessLowClamp, 1.0f]
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;
@@ -138,7 +138,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			mat0.metalness = colStep;	// metalness [0.0f, 1.0f]
 
 			const float roughnessLowClamp = 0.03f;
-			mat0.roughness = powf(std::max(rowStep, 0.04f), 2.55f);	// roughness [roughnessLowClamp, 1.0f]
+			mat0.roughness = rowStep; // powf(std::max(rowStep, 0.04f), 2.55f);	// roughness [roughnessLowClamp, 1.0f]
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;
@@ -160,7 +160,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			mat0.metalness = colStep;	// metalness [0.0f, 1.0f]
 
 			const float roughnessLowClamp = 0.1f;
-			mat0.roughness = 1.0f - powf(std::max(rowStep, 0.04f), 0.75f);	// roughness [roughnessLowClamp, 1.0f]
+			mat0.roughness = 1.0f - rowStep;// powf(std::max(rowStep, 0.04f), 0.75f);	// roughness [roughnessLowClamp, 1.0f]
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;

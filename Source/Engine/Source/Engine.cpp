@@ -480,7 +480,7 @@ void Engine::Render()
 		const TextureID tSSAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
 		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler;
-		const TextureID texSpecularMap = mSceneView.environmentMap.prefilteredEnvironmentMap;
+		const TextureID prefilteredEnvMap = mSceneView.environmentMap.prefilteredEnvironmentMap;
 		const TextureID tBRDFLUT = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
 
 		// AMBIENT OCCLUSION - Z-PREPASS
@@ -553,7 +553,7 @@ void Engine::Render()
 			if (mSceneView.bIsIBLEnabled && mSelectedShader == EShaders::FORWARD_BRDF)
 			{
 				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
-				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", texSpecularMap);
+				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", prefilteredEnvMap);
 				mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
 				mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 				mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);

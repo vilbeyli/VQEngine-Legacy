@@ -19,7 +19,7 @@
 #include "Renderer/Renderer.h"
 #include "Utilities/Log.h"
 
-#define LOAD_ALL_ENVIRONMENT_MAPS 0
+#define LOAD_ALL_ENVIRONMENT_MAPS 1
 
 // SKYBOX PRESETS W/ CUBEMAP / ENVIRONMENT MAP
 //==========================================================================================================
@@ -279,13 +279,13 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
 	texDesc.usage = GPU_RW;
 	texDesc.bIsCubeMap = true;
-
 	prefilteredEnvironmentMap = pRenderer->CreateTexture2D(texDesc);
-	const Texture& prefilteredEnvMapTex = pRenderer->GetTextureObject(prefilteredEnvironmentMap);
 
 	texDesc.bGenerateMips = true;
 	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
 	mippedEnvironmentCubemap = pRenderer->CreateTexture2D(texDesc);
+
+	const Texture& prefilteredEnvMapTex = pRenderer->GetTextureObject(prefilteredEnvironmentMap);
 	const Texture& mippedEnvironmentCubemapTex = pRenderer->GetTextureObject(mippedEnvironmentCubemap);
 
 	D3D11_TEXTURE2D_DESC desc = {};
@@ -315,6 +315,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	// 2: UP		3: DOWN
 	// 4: FRONT		5: BACK
 	//------------------------------------------------------------------------------------------------------
+	// TODO: Compute shader in single pass.
 	for (unsigned cubeFace = 0; cubeFace < 6; ++cubeFace)
 	{
 		D3D11_RENDER_TARGET_VIEW_DESC rtDesc = {};
@@ -339,6 +340,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 
 	// PREFILTER PASS
 	// pre-filter environment map into each cube face and mip level (~ roughness)
+	// TODO: Compute shader in single pass.
 	pRenderer->SetShader(sPrefilterShader);
 	pRenderer->SetTexture("tEnvironmentMap", mippedEnvironmentCubemap);
 	for (unsigned mipLevel = 0; mipLevel < PREFILTER_MIP_LEVEL_COUNT; ++mipLevel)
@@ -347,6 +349,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 		viewPort.Height = static_cast<float>(textureSize[1] >> mipLevel);
 
 		pRenderer->SetConstant1f("roughness", static_cast<float>(mipLevel) / (PREFILTER_MIP_LEVEL_COUNT - 1));
+		pRenderer->SetConstant1f("resolution", viewPort.Width);
 
 		// cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
 		//------------------------------------------------------------------------------------------------------
@@ -390,6 +393,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 
 	// RENDER IRRADIANCE CUBEMAP PASS
 	// TODO: irradiance cubemap
+	// TODO: Compute shader in single pass.
 	//pRenderer->End();	// present frame or device removed...
 
 	ID3D11ShaderResourceView* pNull[6] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};

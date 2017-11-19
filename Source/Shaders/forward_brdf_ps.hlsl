@@ -70,8 +70,6 @@ SamplerState sEnvMapSampler;
 SamplerState sNearestSampler;
 SamplerState sWrapSampler;
 
-#define MAX_REFLECTION_LOD 4
-
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	// lighting & surface parameters (World Space)

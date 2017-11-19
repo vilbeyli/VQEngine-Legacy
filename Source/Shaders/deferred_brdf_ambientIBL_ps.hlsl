@@ -44,8 +44,6 @@ SamplerState sWrapSampler;
 SamplerState sEnvMapSampler;
 SamplerState sNearestSampler;
 
-#define MAX_REFLECTION_LOD 7	// 6 mip levels -> [0, 7]
-
 float4 PSMain(PSIn In) : SV_TARGET
 {
     const float4 kD_roughness = tDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);

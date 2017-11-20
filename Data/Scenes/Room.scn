@@ -17,12 +17,14 @@
 // ---------------------------------------------------------------------------------------------------------------
 camera 0.1 1500 75   0 50 -190  0 15 
 camera 0.1 1500 75   0 50 120  180 0 
-ao 0.01
+ao true 0.04
+environmentLights false
 
-light       s         white      	true       5000         70	     -70    35     0	   180  0  	65	 
-light       p         orange       	false      6000         60	      0     30     0  	   
-light       p         cyan      	false      1200          84	      60    25    -2 	   
-light       p         red        	false      1000         60	    -140   100   140       
+light       s         white      	true       5000         70	     -70    35     0	   180  0  	65  0.8	 
+light       s         orange      	false       5000         70	     0    100     0	   0  0  	0	    0.7
+//light       p         orange       	false      18000         60	      0     30     0  	   0.3
+//light       p         cyan      	false      2400          84	      60    25    -2 	   0.4
+//light       p         red        	false      1500         60	    -140   100   140        0.5
 
 // objects
 // =======
@@ -59,29 +61,38 @@ brdf end
 transform 85 5 -60 0 0 0 7
 object end
 
-object begin
-mesh sphere
-brdf begin
-diffuse 0.04 0.04 0.04
-roughness 0.3
-metalness 1.0
-brdf end
-//Phong
-transform 85 5 -30 0 0 0 2.5
-object end
+
 
 
 object begin
 mesh triangle
-//BRDF
+brdf begin
+diffuse 0.74 0.04 0.04
+roughness 0.1
+metalness 0.9
+brdf end
 //Phong
-transform 85 5 0 30 30 0 4
+transform 85 5 -30 30 120 0 4
 object end
 
+object begin
+mesh sphere
+brdf begin
+diffuse 0.04 0.64 0.04
+roughness 0.1
+metalness 0.9
+brdf end
+//Phong
+transform 85 5 0 0 0 0 2.5
+object end
 
 object begin
 mesh quad
-//BRDF
+brdf begin
+diffuse 0.04 0.24 0.74
+roughness 0.1
+metalness 0.9
+brdf end
 //Phong
 transform 85 5 30 30 30 0 4
 object end

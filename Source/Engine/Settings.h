@@ -20,9 +20,6 @@
 
 namespace Settings
 {
-	//Settings() { memset(this, 0, sizeof(*this)); }
-
-	//int read_err;
 	struct Window {
 		int		width;
 		int		height;
@@ -67,12 +64,17 @@ namespace Settings
 		bool		bUseDeferredRendering;
 		bool		bUseBRDFLighting;	// should use enums when there's more than brdf and blinn-phong lighting
 		bool		bAmbientOcclusion;
-		bool		bEnableSkylight;
+		bool		bEnableEnvironmentLighting;
 	};
 
 	struct Engine {
 		Window		window;
 		Rendering rendering;
 		int levelToLoad;
+	};
+
+	struct SceneRender {
+		bool bAmbientOcclusionEnabled;	// screenspace ambient occlusion
+		float ambientFactor;			// ambient lighting scalar
 	};
 };

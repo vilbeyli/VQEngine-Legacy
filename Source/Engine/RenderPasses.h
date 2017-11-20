@@ -50,7 +50,7 @@ struct SceneView
 	bool			bIsPBRLightingUsed;
 	bool			bIsDeferredRendering;
 	bool			bIsIBLEnabled;
-	float			sceneAmbientOcclusionFactor;
+	Settings::SceneRender sceneRenderSettings;
 	EnvironmentMap	environmentMap;
 };
 

@@ -140,6 +140,14 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		//---------------------------------------------------------------
 		settings.rendering.postProcess.toneMapping.exposure = stof(line[1]);
 	}
+	else if (cmd == "environmentMapping")
+	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Environment Mapping enabled?
+		//---------------------------------------------------------------
+		settings.rendering.bEnableEnvironmentLighting = sBoolTypeReflection.at(GetLowercased(line[1]));
+	}
 	else if (cmd == "HDR")
 	{
 		// Parameters
@@ -178,7 +186,7 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 				continue;
 
 			std::vector<std::string> command = split(line, ' ', '\t');	// ignore whitespace
-			ParseScene(pRenderer, command, scene);									// process command
+			ParseScene(pRenderer, command, scene);						// process command
 		}
 		scene.loadSuccess = '1';
 	}
@@ -302,6 +310,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 
 
 		const bool bCommandHasRotationEntry = command.size() > 9;
+		const bool bCommandHasScaleEntry = command.size() > 12;
 
 		const std::string lightType	 = GetLowercased(command[1]);	// lookups have lowercase keys
 		const std::string colorValue = GetLowercased(command[2]);
@@ -309,6 +318,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const float rotX = bCommandHasRotationEntry ? stof(command[9])  : 0.0f;
 		const float rotY = bCommandHasRotationEntry ? stof(command[10]) : 0.0f;
 		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
+		const float scl  = bCommandHasScaleEntry ? stof(command[12]) : 1.0f;
 		const float range      = stof(command[5]);
 		const float brightness = stof(command[4]);
 		const bool  bCastsShadows = sBoolTypeReflection.at(shadowing);
@@ -331,6 +341,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		l._transform.RotateAroundGlobalXAxisDegrees(rotX);
 		l._transform.RotateAroundGlobalYAxisDegrees(rotY);
 		l._transform.RotateAroundGlobalZAxisDegrees(rotZ);
+		l._transform.SetUniformScale(scl);
 		scene.lights.push_back(l);
 	}
 	else if (cmd == "object")
@@ -582,7 +593,8 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	}
 	else if (cmd == "ao")
 	{
-		scene.aoFactor = stof(command[1]);
+		scene.settings.bAmbientOcclusionEnabled = sBoolTypeReflection.at(command[1]); 
+		scene.settings.ambientFactor = stof(command[2]);
 	}
 	else
 	{

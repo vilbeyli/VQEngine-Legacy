@@ -479,7 +479,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 		pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 		pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 		pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
-		pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
+		pRenderer->SetConstant1f("ambientFactor", sceneView.sceneRenderSettings.ambientFactor);
 		pRenderer->SetConstant4x4f("viewToWorld", sceneView.viewToWorld);
 	}
 	else
@@ -489,7 +489,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 		pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
 		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
 		pRenderer->SetSamplerState("sNearestSampler", 0);	// todo: nearest sampler
-		pRenderer->SetConstant1f("ambientFactor", sceneView.sceneAmbientOcclusionFactor);
+		pRenderer->SetConstant1f("ambientFactor", sceneView.sceneRenderSettings.ambientFactor);
 	}
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();

@@ -26,7 +26,6 @@ Scene::Scene(SceneManager& sceneManager, std::vector<Light>& lights)
 	, mLights(lights)
 	, mpRenderer(nullptr)	// pRenderer is initialized at Load()
 	, mSelectedCamera(0)
-	, mAmbientOcclusionFactor(1.0f)
 {}
 
 void Scene::LoadScene(Renderer* pRenderer, SerializedScene& scene, const Settings::Window& windowSettings)
@@ -34,7 +33,7 @@ void Scene::LoadScene(Renderer* pRenderer, SerializedScene& scene, const Setting
 	mpRenderer = pRenderer;
 	mObjects = std::move(scene.objects);
 	mLights = std::move(scene.lights);
-	mAmbientOcclusionFactor = scene.aoFactor;
+	mSceneRenderSettings = scene.settings;
 
 	for (const Settings::Camera& camSetting : scene.cameras)
 	{

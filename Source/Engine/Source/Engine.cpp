@@ -186,7 +186,7 @@ bool Engine::Initialize(HWND hwnd)
 	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
 	mpTimer->Start();
 	mpTimer->Tick();
-	Skybox::InitializePresets(mpRenderer);
+	Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting);
 	const float duration = mpTimer->Tick();
 	Log::Info("--------------------- ENVIRONMENT MAPS LOADED IN %.2fs.", duration);
 
@@ -311,7 +311,7 @@ void Engine::PreRender()
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
-	mSceneView.sceneAmbientOcclusionFactor = scene->GetAOFactor();
+	mSceneView.sceneRenderSettings = scene->GetSceneRenderSettings();
 	mSceneView.environmentMap = scene->GetEnvironmentMap();
 	mSceneView.bIsIBLEnabled = mSceneView.environmentMap.irradianceMap != -1;
 
@@ -336,6 +336,7 @@ void Engine::PreRender()
 		(*lightData[l._type])[lightIndex] = l.ShaderSignature();
 	}
 
+	//for (int i = 0; i < mSceneLightData.spotLightCount; ++i)
 	if (mSceneLightData.spotLightCount > 0)	// temp hack: assume 1 spot light casting shadows
 	{
 		mSceneLightData.shadowCasterData[0].shadowMap = mShadowMapPass._shadowMap;
@@ -355,7 +356,6 @@ void Engine::PreRender()
 
 void Engine::RenderLights() const
 {
-	return;
 	mpRenderer->BeginEvent("Render Lights Pass");
 	mpRenderer->Reset();	// is reset necessary?
 	mpRenderer->SetShader(EShaders::UNLIT);
@@ -435,7 +435,9 @@ void Engine::Render()
 		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
 		const TextureID texPosition = mpRenderer->GetRenderTargetTexture(gBuffer._positionRT);
 		const TextureID texDepthTexture = mpRenderer->m_state._depthBufferTexture;
-		const TextureID tSSAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
+		const TextureID tSSAO = mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled
+			? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget)
+			: mSSAOPass.whiteTexture4x4;
 
 		// GEOMETRY - DEPTH PASS
 		mpRenderer->BeginEvent("Geometry Pass");
@@ -444,7 +446,7 @@ void Engine::Render()
 		mpRenderer->EndEvent();
 
 		// AMBIENT OCCLUSION  PASS
-		if (mbIsAmbientOcclusionOn)
+		if (mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled)
 		{
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, texPosition, mSceneView);
@@ -476,8 +478,8 @@ void Engine::Render()
 
 	else
 	{	// FORWARD
-		const bool bZPrePass = mbIsAmbientOcclusionOn;
-		const TextureID tSSAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
+		const bool bZPrePass = mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled;
+		const TextureID tSSAO = bZPrePass ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
 		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler;
 		const TextureID prefilteredEnvMap = mSceneView.environmentMap.prefilteredEnvironmentMap;

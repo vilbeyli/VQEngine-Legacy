@@ -48,18 +48,6 @@ RoomScene::RoomScene(SceneManager& sceneMan, std::vector<Light>& lights)
 void RoomScene::Load(SerializedScene& scene)
 {
 	m_room.Initialize(mpRenderer);
-	
-	// lights
-	//---------------------------------------------------------------
-	mLights[1]._color = vec3(mLights[1]._color) * 3.0f;// * 0;
-	mLights[2]._color = vec3(mLights[2]._color) * 2.0f;// * 0;
-	mLights[3]._color = vec3(mLights[3]._color) * 1.5f;// * 0;
-
-	// hard-coded scales for now
-	mLights[0]._transform.SetUniformScale(0.8f);
-	mLights[1]._transform.SetUniformScale(0.3f);
-	mLights[2]._transform.SetUniformScale(0.4f);
-	mLights[3]._transform.SetUniformScale(0.5f);
 
 	for (size_t i = 0; i < RAND_LIGHT_COUNT; i++)
 	{
@@ -312,6 +300,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		floor.mModel.mBlinnPhong_Material.shininess = 20.0f;
 		floor.mModel.mBRDF_Material.roughness = 0.8f;
 		floor.mModel.mBRDF_Material.metalness = 0.0f;
+		floor.mModel.SetDiffuseAlpha(LinearColor::gray, 1.0f);
 
 		//mat = Material::bronze;
 		//floor.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("185.JPG"));

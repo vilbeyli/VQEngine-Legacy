@@ -56,6 +56,7 @@ public:
 	void Render(const SceneView& sceneView) const;
 	
 	void ResetActiveCamera();
+
 	inline void RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
 
 	// puts objects into provided vector if the RenderSetting.bRenderDepth is true
@@ -67,7 +68,7 @@ public:
 
 	inline const EnvironmentMap& GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }
 	inline const Camera& GetActiveCamera() const	{ return mCameras[mSelectedCamera]; }
-	inline float GetAOFactor() const { return mAmbientOcclusionFactor; }
+	inline const Settings::SceneRender& GetSceneRenderSettings() const { return mSceneRenderSettings; }
 	inline bool  HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
 
 protected:	// customization functions for derived classes
@@ -86,7 +87,7 @@ protected:	// customization functions for derived classes
 
 	int mSelectedCamera;
 
-	float mAmbientOcclusionFactor;
+	Settings::SceneRender	mSceneRenderSettings;
 };
 
 struct SerializedScene
@@ -94,6 +95,6 @@ struct SerializedScene
 	std::vector<Settings::Camera>	cameras;
 	std::vector<Light>				lights;
 	std::vector<GameObject>			objects;
-	float aoFactor;
+	Settings::SceneRender			settings;
 	char loadSuccess = '0';
 };

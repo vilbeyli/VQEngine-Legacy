@@ -23,7 +23,7 @@
 #include <array>
 
 constexpr int MAX_POINT_LIGHT_COUNT = 20;
-constexpr int MAX_SPOT_LIGHT_COUNT = 10;
+constexpr int MAX_SPOT_LIGHT_COUNT = 20;
 
 
 
@@ -42,7 +42,7 @@ struct LightShaderSignature
 	float pad3;
 };
 
-struct ShadowCasterData
+struct ShadowView
 {
 	TextureID shadowMap = -1;
 	SamplerID shadowSampler = -1;
@@ -50,16 +50,33 @@ struct ShadowCasterData
 };
 
 using LightDataArray = std::array<LightShaderSignature, MAX_POINT_LIGHT_COUNT>;
-using ShadowCasterDataArray = std::array<ShadowCasterData, MAX_SPOT_LIGHT_COUNT>;
+using ShadowViewArray = std::array<ShadowView, MAX_SPOT_LIGHT_COUNT>;
+
 struct SceneLightData
 {
-	size_t pointLightCount;
+	struct cb{
+	int       pointLightCount;
+	int        spotLightCount;
+	int directionalLightCount;
+
+	int       pointLightCount_shadow;
+	int        spotLightCount_shadow;
+	int directionalLightCount_shadow;
+	int _pad0, _pad1;
+
 	LightDataArray pointLights;
+	LightDataArray pointLightsShadowing;
+	// todo directional
 
-	size_t spotLightCount;
 	LightDataArray spotLights;
+	LightDataArray spotLightsShadowing;
+	// todo directional
+	} _cb;
 
-	ShadowCasterDataArray shadowCasterData;
+	ShadowViewArray shadowView;
 
-	inline void ResetCounts() { pointLightCount = 0; spotLightCount = 0; /*todo: directional light count*/ }
+	inline void ResetCounts() {
+		_cb.pointLightCount = _cb.spotLightCount = _cb.directionalLightCount =
+		_cb.pointLightCount_shadow = _cb.spotLightCount_shadow = _cb.directionalLightCount_shadow = 0;
+	}
 };

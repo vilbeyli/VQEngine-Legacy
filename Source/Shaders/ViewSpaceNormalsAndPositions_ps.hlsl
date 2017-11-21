@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "LightingCommon.hlsl"
+#include "BRDF.hlsl"
 
 #define PI		3.14159265359f
 #define EPSILON 0.000000000001f

@@ -22,6 +22,7 @@
 #define SPOT_COUNT 10   // ^
 
 #include "LightingCommon.hlsl"
+#include "ShadingMath.hlsl"
 
 struct PSIn
 {

@@ -294,6 +294,10 @@ bool Engine::UpdateAndRender()
 	return bExitApp;
 }
 
+// can't use std::array<T&, size_t>, hence std::array<T*, size_t> 
+using pLightDataArray = std::array<LightDataArray*, Light::ELightType::LIGHT_TYPE_COUNT-1>;
+using pNumArray = std::array<int*, Light::ELightType::LIGHT_TYPE_COUNT>;
+
 // prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 void Engine::PreRender()
 {
@@ -317,32 +321,50 @@ void Engine::PreRender()
 
 	// gather scene lights
 	mSceneLightData.ResetCounts();
-	std::array<size_t*, Light::ELightType::LIGHT_TYPE_COUNT> lightCounts
-	{ // can't use size_t& as template instantiation won't allow size_t&*. using size_t* instead.
-		&mSceneLightData.pointLightCount,
-		&mSceneLightData.spotLightCount,
-		&/*TODO: add directional lights*/mSceneLightData.spotLightCount,
+	pNumArray lightCounts
+	{ 
+		&mSceneLightData._cb.pointLightCount,
+		&mSceneLightData._cb.spotLightCount,
+		&mSceneLightData._cb.directionalLightCount
 	};
-	std::array<LightDataArray*, Light::ELightType::LIGHT_TYPE_COUNT> lightData
-	{	// can't use LightDataArray& as template instantiation won't allow LightDataArray&*. using LightDataArray* instead.
-		&mSceneLightData.pointLights,
-		&mSceneLightData.spotLights,
-		&/*TODO: add directional lights*/mSceneLightData.spotLights,
+	pNumArray casterCounts
+	{ 
+		&mSceneLightData._cb.pointLightCount_shadow,
+		&mSceneLightData._cb.spotLightCount_shadow,
+		&mSceneLightData._cb.directionalLightCount_shadow
+	};
+	pLightDataArray lightData
+	{	
+		&mSceneLightData._cb.pointLights,
+		&mSceneLightData._cb.spotLights,
+		//&mSceneLightData._cb.directionalLights, //todo
+	};
+	pLightDataArray casterData
+	{	
+		&mSceneLightData._cb.pointLightsShadowing,
+		&mSceneLightData._cb.pointLightsShadowing,
+		//&mSceneLightData._cb.directionalLightsShadowing, //todo
 	};
 
+	// set constant buffer data
 	for (const Light& l : mLights)
 	{
-		const size_t lightIndex = (*lightCounts[l._type])++;
-		(*lightData[l._type])[lightIndex] = l.ShaderSignature();
+		// select the numCounts array and light data array based on whether the light casts shadow or not
+		pLightDataArray& refLightData = l._castsShadow ? casterData : lightData;
+		pNumArray& refLightCounts = l._castsShadow ? casterCounts : lightCounts;
+
+		// set the caster data and count
+		const size_t lightIndex = (*refLightCounts[l._type])++;
+		(*refLightData[l._type])[lightIndex] = l.ShaderSignature();
 	}
 
-	//for (int i = 0; i < mSceneLightData.spotLightCount; ++i)
-	if (mSceneLightData.spotLightCount > 0)	// temp hack: assume 1 spot light casting shadows
-	{
-		mSceneLightData.shadowCasterData[0].shadowMap = mShadowMapPass._shadowMap;
-		mSceneLightData.shadowCasterData[0].shadowSampler = mShadowMapPass._shadowSampler;
-		mSceneLightData.shadowCasterData[0].lightSpaceMatrix = mLights[0].GetLightSpaceMatrix();
-	}
+
+	//if (mSceneLightData._cb.spotLightCount_shadow > 0)	// temp hack: assume 1 spot light casting shadows
+	//{
+	//	mSceneLightData.shadowCasterData[0].shadowMap = mShadowMapPass._shadowMap;
+	//	mSceneLightData.shadowCasterData[0].shadowSampler = mShadowMapPass._shadowSampler;
+	//	mSceneLightData.shadowCasterData[0].lightSpaceMatrix = mLights[0].GetLightSpaceMatrix();
+	//}
 
 	mTBNDrawObjects.clear();
 	std::vector<const GameObject*> objects;
@@ -378,25 +400,24 @@ void Engine::SendLightData() const
 {
 	// SPOT & POINT LIGHTS
 	//--------------------------------------------------------------
-	mpRenderer->SetConstant1f("lightCount", static_cast<float>(mSceneLightData.pointLightCount));
-	mpRenderer->SetConstant1f("spotCount", static_cast<float>(mSceneLightData.spotLightCount));
-	mpRenderer->SetConstantStruct("lights", static_cast<const void*>(mSceneLightData.pointLights.data()));
-	mpRenderer->SetConstantStruct("spots", static_cast<const void*>(mSceneLightData.spotLights.data()));
+	mpRenderer->SetConstantStruct("sceneLightData", &mSceneLightData._cb);
+	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 
 	// SHADOW MAPS
 	//--------------------------------------------------------------
 	// first light is spot: single shadow map support for now
-	if (mSceneLightData.spotLightCount > 0)
-	{
-		const ShadowCasterData& caster = mSceneLightData.shadowCasterData[0];
-		mpRenderer->SetConstant4x4f("lightSpaceMat", caster.lightSpaceMatrix);
-		mpRenderer->SetTexture("texShadowMap", caster.shadowMap);
-		mpRenderer->SetSamplerState("sShadowSampler", caster.shadowSampler);
-	}
+	//if (mSceneLightData.spotLightsShadowing > 0)
+	//{
+	//	const ShadowView& caster = mSceneLightData.shadowView[0];
+	//	mpRenderer->SetConstant4x4f("lightSpaceMat", caster.lightSpaceMatrix);
+	//	mpRenderer->SetTexture("texShadowMap", caster.shadowMap);
+	//	mpRenderer->SetSamplerState("sShadowSampler", caster.shadowSampler);
+	//}
 
 #ifdef _DEBUG
-	if (mSceneLightData.pointLightCount > mSceneLightData.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
-	if (mSceneLightData.spotLightCount > mSceneLightData.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
+	const SceneLightData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
+	if (cb.pointLightCount > cb.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
+	if (cb.spotLightCount  > cb.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif
 }
 

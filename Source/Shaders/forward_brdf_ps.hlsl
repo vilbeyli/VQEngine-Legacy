@@ -19,11 +19,6 @@
 #define _DEBUG
 #define DIRECT_LIGHTING
 
-// defines maximum number of dynamic lights
-#define LIGHT_COUNT 20  // don't forget to update CPU define too (SceneManager.cpp)
-#define SPOT_COUNT 10   // ^
-
-#include "LightingCommon.hlsl"
 #include "BRDF.hlsl"
 
 struct PSIn
@@ -45,8 +40,8 @@ cbuffer SceneVariables
 	float  spotCount;
 	float2 screenDimensions;
 
-	Light lights[LIGHT_COUNT];
-	Light spots[SPOT_COUNT];
+	Light lights[20];
+	Light spots[10];
 	//	float ambient;
 };
 

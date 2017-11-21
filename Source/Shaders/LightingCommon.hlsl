@@ -47,6 +47,40 @@ struct Light
 	float  pad3;
 };
 
+//struct SpotLight
+//
+//struct PointLight
+//{
+//	float3 position;
+//	float 
+//};
+
+// defines maximum number of dynamic lights  todo: shader defines
+#define NUM_POINT_LIGHT 20			// don't forget to update CPU define too (SceneManager.cpp)
+#define NUM_POINT_LIGHT_SHADOW 20   // ^
+#define NUM_SPOT_LIGHT 20			// ^
+#define NUM_SPOT_LIGHT_SHADOW 20	// ^
+
+struct SceneLighting	//  5152 bytes
+{
+	int numPointLights;		// non-shadow caster count
+	int numSpots;
+	int numDirectionals;
+	int numPointCasters;		// shadow caster count
+	int numSpotCasters;
+	int numDirectionalCasters;
+	int pad0, pad1;	// 32 bytes
+
+	// todo: break up light into point and spot. add directional as well.
+	Light point_lights[NUM_POINT_LIGHT];
+	Light point_casters[NUM_POINT_LIGHT_SHADOW];
+	// dir
+
+	Light spots[NUM_SPOT_LIGHT];
+	Light spot_casters[NUM_SPOT_LIGHT_SHADOW];
+	// dir
+};
+
 // CPU - GPU struct for both lighting models
 struct SurfaceMaterial
 {
@@ -106,19 +140,6 @@ float Intensity(Light l, float3 worldPos)
 	const float softAngle  = l.halfAngle * 1.25f;
 	const float softRegion = softAngle - l.halfAngle;
 	return clamp((theta - softAngle) / softRegion, 0.0f, 1.0f);
-}
-
-inline float3 UnpackNormals(Texture2D normalMap, SamplerState normalSampler, float2 uv, float3 worldNormal, float3 worldTangent)
-{
-	// uncompressed normal in tangent space
-	float3 SampledNormal = normalMap.Sample(normalSampler, uv).xyz;
-	SampledNormal = normalize(SampledNormal * 2.0f - 1.0f);
-
-	const float3 T = normalize(worldTangent - dot(worldNormal, worldTangent) * worldNormal);
-	const float3 N = normalize(worldNormal);
-	const float3 B = normalize(cross(T, N));
-	const float3x3 TBN = float3x3(T, B, N);
-	return mul(SampledNormal, TBN);
 }
 
 float ShadowTest(float3 worldPos, float4 lightSpacePos, Texture2D shadowMap, SamplerState shadowSampler)

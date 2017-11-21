@@ -16,7 +16,6 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "LightingCommon.hlsl"
 #include "BRDF.hlsl"
 
 struct PSIn
@@ -34,20 +33,13 @@ struct PSIn
 
 cbuffer SceneVariables	// frame constants
 {
-	matrix lightSpaceMat; // [arr?]
-	//float  pad0;
-	//float3 CameraWorldPosition;
 	matrix matView;
 	matrix matViewToWorld;
-
-	float  lightCount;
-	float  spotCount;
-	float2 padding;
-
-	Light lights[LIGHT_COUNT];
-	Light spots[SPOT_COUNT];
 	
+	matrix lightSpaceMat; // todo [arr]
+	SceneLighting sceneLightData;
 };
+Texture2D texShadowMap;// todo array
 
 
 // TEXTURES & SAMPLERS
@@ -56,7 +48,6 @@ Texture2D texDiffuseRoughnessMap;
 Texture2D texSpecularMetalnessMap;
 Texture2D texNormals;
 Texture2D texPosition;
-Texture2D texShadowMap;
 
 SamplerState sShadowSampler;
 SamplerState sLinearSampler;
@@ -70,7 +61,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 V = normalize(- P);
 	
 	const float3 Pw = mul(matViewToWorld, float4(P, 1)).xyz;
-    const float4 lightSpacePos = mul(lightSpaceMat, float4(Pw, 1));
+    const float4 lightSpacePos = mul(lightSpaceMat[0], float4(Pw, 1));
 
 	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sLinearSampler, In.uv);
 	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sLinearSampler, In.uv);
@@ -88,29 +79,50 @@ float4 PSMain(PSIn In) : SV_TARGET
 	// POINT Lights
 	// brightness default: 300
 	//---------------------------------
-	for (int i = 0; i < lightCount; ++i)		
+	for (int i = 0; i < sceneLightData.numPointLights; ++i)		
 	{
-		const float3 Lv       = mul(matView, float4(lights[i].position, 1));
+		const float3 Lv       = mul(matView, float4(sceneLightData.point_lights[i].position, 1));
 		const float3 Wi       = normalize(Lv - P);
+		const float D = length(sceneLightData.point_lights[i].position - Pw);
 		const float3 radiance = 
-			AttenuationBRDF(lights[i].attenuation, length(lights[i].position - Pw))
-			* lights[i].color 
-			* lights[i].brightness;
+			AttenuationBRDF(sceneLightData.point_lights[i].attenuation, D)
+			* sceneLightData.point_lights[i].color 
+			* sceneLightData.point_lights[i].brightness;
 		IdIs += BRDF(Wi, s, V, P) * radiance;
 	}
 
-#if 1
-	// SPOT Lights (shadow)
+	// todo shadow caster points
+	//for (int i = 0; i < sceneLightData.numPointLights; ++i)		
+	//{
+	//	const float3 Lv       = mul(matView, float4(sceneLightData.point_lights[i].position, 1));
+	//	const float3 Wi       = normalize(Lv - P);
+	//	const float3 radiance = 
+	//		AttenuationBRDF(sceneLightData.point_lights[i].attenuation, length(sceneLightData.point_lights[i].position - Pw))
+	//		* sceneLightData.point_lights[i].color 
+	//		* sceneLightData.point_lights[i].brightness;
+	//	IdIs += BRDF(Wi, s, V, P) * radiance;
+	//}
+
+	
+	// SPOT Lights
 	//---------------------------------
-	for (int j = 0; j < spotCount; ++j)
+	for (int j = 0; j < sceneLightData.numSpots; ++j)
 	{
-		const float3 Lv        = mul(matView, float4(spots[j].position, 1));
+		const float3 Lv        = mul(matView, float4(sceneLightData.spots[j].position, 1));
 		const float3 Wi        = normalize(Lv - P);
-		const float3 radiance  = Intensity(spots[j], Pw) * spots[j].color * spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float3 radiance  = Intensity(sceneLightData.spots[j], Pw) * sceneLightData.spots[j].color * sceneLightData.spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		IdIs += BRDF(Wi, s, V, P) * radiance;
+	}
+
+	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)
+	{
+		const float3 Lv        = mul(matView, float4(sceneLightData.spot_casters[k].position, 1));
+		const float3 Wi        = normalize(Lv - P);
+		const float3 radiance  = Intensity(sceneLightData.spot_casters[k], Pw) * sceneLightData.spot_casters[k].color * sceneLightData.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		const float3 shadowing = ShadowTest(Pw, lightSpacePos, texShadowMap, sShadowSampler);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
 	}
-#endif
+
 
 	const float3 illumination = IdIs;
 	return float4(illumination, 1);

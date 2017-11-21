@@ -65,49 +65,14 @@ void RoomScene::Load(SerializedScene& scene)
 		mLights.push_back(l);
 	}
 
-	Animation anim;
-	anim._fTracks.push_back(Track<float>(&mLights[1]._brightness, 40.0f, 800.0f, 3.0f));
-	m_animations.push_back(anim);
+	//Animation anim;
+	//anim._fTracks.push_back(Track<float>(&mLights[1]._brightness, 40.0f, 800.0f, 3.0f));
+	//m_animations.push_back(anim);
 
 
 	// objects
 	//---------------------------------------------------------------
 	const float sphHeight[2] = { 10.0f, 19.0f };
-	{	// rotating spheres
-		const float r = 30.0f;
-		const size_t numSph = 15;
-
-		const vec3 radius(r, sphHeight[0], 0.0f);
-		const float rot = 2.0f * XM_PI / (numSph == 0 ? 1.0f : numSph);
-		const vec3 axis = vec3::Up;
-		for (size_t i = 0; i < numSph; i++)
-		{
-			// calc position
-			Quaternion rotQ = Quaternion::FromAxisAngle(axis, rot * i);
-			vec3 pos = rotQ.TransformVector(radius);
-
-			GameObject sph;
-			sph.mTransform = pos;
-			sph.mTransform.Translate(vec3::Up * (sphHeight[1] * ((float)i / (float)numSph) + sphHeight[1]));
-			sph.mModel.mMesh = EGeometry::SPHERE;
-
-			// set materials blinn-phong
-			sph.mModel.mBlinnPhong_Material = BlinnPhong_Material::gold;
-
-			// set materials brdf
-			const float baseSpecular = 5.0f;
-			const float step = 15.0f;
-			sph.mModel.mBRDF_Material.diffuse = LinearColor::gray;
-			sph.mModel.mBRDF_Material.specular = vec3(baseSpecular + (static_cast<float>(i) / numSph) * step)._v;
-			//sph.m_model.m_material.specular = i % 2 == 0 ? vec3((static_cast<float>(i) / numSph) * baseSpecular)._v : vec3((static_cast<float>(numSph - i) / numSph) * baseSpecular)._v;
-			//sph.m_model.m_material.specular = i < numSph / 2 ? vec3(0.0f).v : vec3(90.0f).v;
-
-			sph.mModel.mBRDF_Material.roughness = 0.2f;
-			sph.mModel.mBRDF_Material.metalness = 1.0f - static_cast<float>(i) / static_cast<float>(numSph);
-
-			spheres.push_back(sph);
-		}
-	}
 	{	// sphere grid
 		constexpr float r = 11.0f;
 		constexpr size_t gridDimension = 7;
@@ -221,7 +186,7 @@ void RoomScene::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
 	mLights[0]._transform.Translate(dt * tr * moveSpeed);
 
-
+#if 0
 	float angle = (dt * XM_PI * 0.08f) + (sinf(t) * sinf(dt * XM_PI * 0.03f));
 	size_t sphIndx = 0;
 	for (auto& sph : spheres)
@@ -234,6 +199,7 @@ void RoomScene::UpdateCentralObj(const float dt)
 		}
 		++sphIndx;
 	}
+#endif
 
 	// assume first object is the cube
 	const float cubeRotSpeed = 100.0f; // degs/s
@@ -301,6 +267,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		floor.mModel.mBRDF_Material.roughness = 0.8f;
 		floor.mModel.mBRDF_Material.metalness = 0.0f;
 		floor.mModel.SetDiffuseAlpha(LinearColor::gray, 1.0f);
+		floor.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/161_norm.JPG"));
 
 		//mat = Material::bronze;
 		//floor.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("185.JPG"));

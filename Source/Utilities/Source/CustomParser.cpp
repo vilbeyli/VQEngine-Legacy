@@ -309,7 +309,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		//--------------------------------------------------------------
 
 
-		const bool bCommandHasRotationEntry = command.size() > 9;
+		const bool bCommandHasRotationEntry = command.size() > 10;
 		const bool bCommandHasScaleEntry = command.size() > 12;
 
 		const std::string lightType	 = GetLowercased(command[1]);	// lookups have lowercase keys

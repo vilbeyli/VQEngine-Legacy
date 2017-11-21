@@ -17,7 +17,6 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "LightingCommon.hlsl"
-#include "BRDF.hlsl"
 
 #define BLINN_PHONG
 
@@ -30,26 +29,17 @@ struct PSIn
 
 // CBUFFERS
 //---------------------------------------------------------
-// defines maximum number of dynamic lights
-#define LIGHT_COUNT 20  // don't forget to update CPU define too (SceneManager.cpp)
-#define SPOT_COUNT 10   // ^
-
 cbuffer SceneVariables
 {
-	matrix lightSpaceMat; // [arr?]
-	//float  pad0;
-	//float3 CameraWorldPosition;
 	matrix matView;
 	matrix matViewToWorld;
 
-	float  lightCount;
-	float  spotCount;
-	float2 padding;
-
-	Light lights[LIGHT_COUNT];
-	Light spots[SPOT_COUNT];
-	
+	matrix lightSpaceMat; // todo [arr]
+	SceneLighting sceneLightData;
 };
+
+
+Texture2D texSpotShadowMap;	// todo array
 
 
 // TEXTURES & SAMPLERS
@@ -57,8 +47,8 @@ cbuffer SceneVariables
 Texture2D texDiffuseRoughnessMap;
 Texture2D texSpecularMetalnessMap;
 Texture2D texNormals;
-Texture2D texPosition;
-Texture2D texShadowMap;
+Texture2D texPosition;	// to be removed
+//Texture2DArray texPointShadowMaps;
 
 SamplerState sShadowSampler;
 SamplerState sNearestSampler;
@@ -71,9 +61,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 V = normalize(- P);
 	
 	const float3 Pw = mul(matViewToWorld, float4(P, 1)).xyz;
+    const float4 Pl = mul(lightSpaceMat, float4(Pw, 1));
     const float3 Vw = mul(matViewToWorld, float4(V, 0)).xyz;
     const float3 Nw = mul(matViewToWorld, float4(N, 0)).xyz;
-    const float4 lightSpacePos = mul(lightSpaceMat, float4(Pw, 1));
 
 	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
 	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sNearestSampler, In.uv);
@@ -86,26 +76,34 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
 
-	for (int i = 0; i < lightCount; ++i)	// POINT Lights
+	for (int i = 0; i < sceneLightData.numPointLights; ++i)	// POINT Lights w/o shadows
     {
         IdIs += 
-		Phong(lights[i], s, Vw, Pw)
-		* AttenuationPhong(lights[i].attenuation, length(lights[i].position - Pw))
-		* lights[i].brightness 
+		Phong(sceneLightData.point_lights[i], s, Vw, Pw)
+		* AttenuationPhong(sceneLightData.point_lights[i].attenuation, length(sceneLightData.point_lights[i].position - Pw))
+		* sceneLightData.point_lights[i].brightness 
 		* POINTLIGHT_BRIGHTNESS_SCALAR_PHONG;
     }
-
-#if 1
-	for (int j = 0; j < spotCount; ++j)		// SPOT Lights
+	
+	for (int j = 0; j < sceneLightData.numSpots; ++j)		// SPOT Lights w/o shadows
     {
         IdIs +=
-		Phong(spots[j], s, Vw, Pw)
-		* Intensity(spots[j], Pw)
-		* ShadowTest(Pw, lightSpacePos, texShadowMap, sShadowSampler)
-		* spots[j].brightness 
+		Phong(sceneLightData.spots[j], s, Vw, Pw)
+		* Intensity(sceneLightData.spots[j], Pw)
+		* sceneLightData.spots[j].brightness 
 		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
     }
-#endif
+
+	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)	// SPOT Lights
+    {
+        IdIs +=
+		Phong(sceneLightData.spot_casters[k], s, Vw, Pw)
+		* Intensity(sceneLightData.spot_casters[k], Pw)
+		* ShadowTest(Pw, Pl, texSpotShadowMap, sShadowSampler)
+		* sceneLightData.spot_casters[k].brightness 
+		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
+    }
+
 
 	const float3 illumination = IdIs;
 	return float4(illumination, 1);

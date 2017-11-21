@@ -16,8 +16,10 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "ShadingMath.hlsl"
+#include "LightingCommon.hlsl"
+
 // constants
-#define PI 3.14159265359f
 #define EPSILON 0.000000000001f
 
 // defines
@@ -187,56 +189,8 @@ float3 EnvironmentBRDF(BRDF_Surface s, float3 V, float ao, float3 irradience, fl
 }
 
 #define SAMPLE_COUNT 1024
-#define USE_BIT_MANIPULATION
 #define MAX_REFLECTION_LOD 7
 
-// the Hammersley Sequence,a random low-discrepancy sequence based on the Quasi-Monte Carlo method as carefully described by Holger Dammertz. 
-// It is based on the Van Der Corpus sequence which mirrors a decimal binary representation around its decimal point.
-// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html 
-// https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/monte-carlo-methods-in-practice/introduction-quasi-monte-carlo
-#ifdef USE_BIT_MANIPULATION
-float RadicalInverse_VdC(uint bits) //  Van Der Corpus
-{
-    bits = (bits << 16u) | (bits >> 16u);
-    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
-    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
-    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
-    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
-    return float(bits) * 2.3283064365386963e-10; // / 0x100000000
-}
-
-#else
-// the non-bit-manipulation version of the above function
-float VanDerCorpus(uint n, uint base)
-{
-    float invBase = 1.0 / float(base);
-    float denom = 1.0;
-    float result = 0.0;
-
-    for (uint i = 0u; i < 32u; ++i)
-    {
-        if (n > 0u)
-        {
-            denom = n % 2.0f;
-            result += denom * invBase;
-            invBase = invBase / 2.0;
-            n = uint(float(n) / 2.0);
-        }
-    }
-
-    return result;
-}
-#endif
-
-float2 Hammersley(int i, int count)
-{
-#ifdef USE_BIT_MANIPULATION
-    return float2(float(i) / float(count), RadicalInverse_VdC(uint(i)));
-#else
-	// note: this crashes for some reason. todo: figure out why...
-    return float2(float(i) / float(count), VanDerCorpus(uint(i), 2u));
-#endif
-}
 
 // Instead of uniformly or randomly (Monte Carlo) generating sample vectors over the integral's hemisphere, we'll generate 
 // sample vectors biased towards the general reflection orientation of the microsurface halfway vector based on the surface's roughness. 
@@ -298,16 +252,4 @@ float2 IntegrateBRDF(float NdotV, float roughness)
         }
     }
     return float2(F0Scale, F0Bias) / SAMPLE_COUNT;
-}
-
-float2 SphericalSample(float3 v)
-{
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509575(v=vs.85).aspx
-	// The signs of the x and y parameters are used to determine the quadrant of the return values 
-	// within the range of -PI to PI. The atan2 HLSL intrinsic function is well-defined for every point 
-	// other than the origin, even if y equals 0 and x does not equal 0.
-    float2 uv = float2(atan2(v.z, v.x), asin(-v.y));
-    uv /= float2(2 * PI, PI);
-    uv += float2(0.5, 0.5);
-    return uv;
 }

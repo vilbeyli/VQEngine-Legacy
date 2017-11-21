@@ -16,7 +16,6 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "LightingCommon.hlsl"
 #include "BRDF.hlsl"
 
 struct PSIn

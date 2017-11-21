@@ -16,9 +16,6 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "LightingCommon.hlsl"
-#include "BRDF.hlsl"
-
 struct PSIn
 {
 	float4 position		 : SV_POSITION;

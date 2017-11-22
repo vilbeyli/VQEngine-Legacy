@@ -25,55 +25,69 @@
 constexpr int MAX_POINT_LIGHT_COUNT = 20;
 constexpr int MAX_SPOT_LIGHT_COUNT = 20;
 
-
-
-struct LightShaderSignature
+struct PointLightGPU
 {
 	vec3 position;
-	float pad1;
+	float  range;
 	vec3 color;
-	float brightness;
-
-	vec3 spotDir;
-	float halfAngle;
-
+	float  brightness;
 	vec2 attenuation;
-	float range;
-	float pad3;
+	vec2 padding;
 };
 
-struct ShadowView
+struct SpotLightGPU
 {
-	TextureID shadowMap = -1;
-	SamplerID shadowSampler = -1;
-	XMMATRIX  lightSpaceMatrix;
+	vec3 position;
+	float  halfAngle;
+	vec3 color;
+	float  brightness;
+	vec3 spotDir;
+	float padding;
 };
 
-using LightDataArray = std::array<LightShaderSignature, MAX_POINT_LIGHT_COUNT>;
-using ShadowViewArray = std::array<ShadowView, MAX_SPOT_LIGHT_COUNT>;
-
-struct SceneLightData
+struct DirectionalLightGPU
 {
-	struct cb{
-	int       pointLightCount;
-	int        spotLightCount;
-	int directionalLightCount;
+	vec3 lightDirection;
+	float  brightness;
+	vec3 color;
+};
 
-	int       pointLightCount_shadow;
-	int        spotLightCount_shadow;
-	int directionalLightCount_shadow;
-	int _pad0, _pad1;
+//struct ShadowView
+//{
+//	TextureID shadowMap = -1;
+//	SamplerID shadowSampler = -1;
+//	XMMATRIX  lightSpaceMatrix;
+//};
 
-	LightDataArray pointLights;
-	LightDataArray pointLightsShadowing;
-	// todo directional
+using PointLightDataArray		= std::array<PointLightGPU, MAX_POINT_LIGHT_COUNT>;
+using SpotLightDataArray		= std::array<SpotLightGPU, MAX_POINT_LIGHT_COUNT>;
+using DirectionalLightDataArray = std::array<DirectionalLightGPU, MAX_POINT_LIGHT_COUNT>;
+using ShadowViewArray = std::array<XMMATRIX, MAX_SPOT_LIGHT_COUNT /*+dir*/>;
 
-	LightDataArray spotLights;
-	LightDataArray spotLightsShadowing;
-	// todo directional
+struct SceneLightingData
+{
+	struct cb{	// shader constant buffer
+		int       pointLightCount;
+		int        spotLightCount;
+		int directionalLightCount;
+
+		int       pointLightCount_shadow;
+		int        spotLightCount_shadow;
+		int directionalLightCount_shadow;
+		int _pad0, _pad1;
+
+		PointLightDataArray pointLights;
+		PointLightDataArray pointLightsShadowing;
+
+		SpotLightDataArray spotLights;
+		SpotLightDataArray spotLightsShadowing;
+
+		// todo directional
+		// todo directional shadowing
+
+		ShadowViewArray shadowViews;
 	} _cb;
 
-	ShadowViewArray shadowView;
 
 	inline void ResetCounts() {
 		_cb.pointLightCount = _cb.spotLightCount = _cb.directionalLightCount =

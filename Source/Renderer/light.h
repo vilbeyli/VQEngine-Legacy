@@ -27,6 +27,8 @@
 
 using InputBufferID = int; // warning: duplicate definition
 
+
+// todo: break up light into its own structs and remove 3 functions for gpu data
 struct Light
 {
 	friend class Graphics;
@@ -54,12 +56,14 @@ struct Light
 	XMMATRIX GetLightSpaceMatrix() const;
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
-	LightShaderSignature ShaderSignature() const;
+	PointLightGPU		GetPointLightData() const;
+	SpotLightGPU		GetSpotLightData() const;
+	DirectionalLightGPU GetDirectionalLightData() const;
 
 	//---------------------------------------------------------------------------------
 	
 	ELightType		_type;
-	LinearColor			_color;
+	LinearColor		_color;
 	float			_range;
 	float			_brightness;	// 300.0f is a good default value
 	bool			_castsShadow;

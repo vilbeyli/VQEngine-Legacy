@@ -33,7 +33,7 @@ cbuffer SceneVariables
 
 cbuffer PerLightData
 {
-	Light light;
+	PointLight light;
 };
 
 // GBuffer

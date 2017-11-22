@@ -128,7 +128,7 @@ private:
 	// scene
 	//--------------------------------------------------------
 	SceneView						mSceneView;
-	SceneLightData					mSceneLightData;
+	SceneLightingData					mSceneLightData;
 	std::vector<Light>				mLights;
 
 	bool							mbUsePaniniProjection;

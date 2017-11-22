@@ -40,8 +40,8 @@ cbuffer SceneVariables
 	float  spotCount;
 	float2 padding;
 
-	Light lights[LIGHT_COUNT];
-	Light spots[SPOT_COUNT];
+	PointLight lights[LIGHT_COUNT];
+	SpotLight spots[SPOT_COUNT];
 	//	float ambient;
 };
 

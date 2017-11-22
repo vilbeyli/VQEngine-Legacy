@@ -432,7 +432,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	Renderer* pRenderer, 
 	const RenderTargetID target, 
 	const SceneView& sceneView, 
-	const SceneLightData& lights, 
+	const SceneLightingData& lights, 
 	const TextureID tSSAO, 
 	bool bUseBRDFLighting) const
 {

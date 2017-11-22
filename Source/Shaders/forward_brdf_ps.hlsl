@@ -40,8 +40,9 @@ cbuffer SceneVariables
 	float  spotCount;
 	float2 screenDimensions;
 
-	Light lights[20];
-	Light spots[10];
+	// todo
+	PointLight lights[20];
+	SpotLight spots[10];
 	//	float ambient;
 };
 

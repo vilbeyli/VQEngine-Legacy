@@ -78,8 +78,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	for (int i = 0; i < sceneLightData.numPointLights; ++i)	// POINT Lights w/o shadows
     {
+		float3 Lw = normalize(sceneLightData.point_lights[i].position - Pw);
         IdIs += 
-		Phong(sceneLightData.point_lights[i], s, Vw, Pw)
+		Phong(s, Lw, Vw, sceneLightData.point_lights[i].color)
 		* AttenuationPhong(sceneLightData.point_lights[i].attenuation, length(sceneLightData.point_lights[i].position - Pw))
 		* sceneLightData.point_lights[i].brightness 
 		* POINTLIGHT_BRIGHTNESS_SCALAR_PHONG;
@@ -87,8 +88,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	
 	for (int j = 0; j < sceneLightData.numSpots; ++j)		// SPOT Lights w/o shadows
     {
+		float3 Lw = normalize(sceneLightData.spots[i].position - Pw);
         IdIs +=
-		Phong(sceneLightData.spots[j], s, Vw, Pw)
+		Phong(s, Lw, Vw, sceneLightData.spots[j].color)
 		* Intensity(sceneLightData.spots[j], Pw)
 		* sceneLightData.spots[j].brightness 
 		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
@@ -96,8 +98,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)	// SPOT Lights
     {
+		float3 Lw = normalize(sceneLightData.spot_casters[i].position - Pw);
         IdIs +=
-		Phong(sceneLightData.spot_casters[k], s, Vw, Pw)
+		Phong(s, Lw, Vw, sceneLightData.spot_casters[k].color)
 		* Intensity(sceneLightData.spot_casters[k], Pw)
 		* ShadowTest(Pw, Pl, texSpotShadowMap, sShadowSampler)
 		* sceneLightData.spot_casters[k].brightness 

@@ -36,10 +36,13 @@ cbuffer SceneVariables	// frame constants
 	matrix matView;
 	matrix matViewToWorld;
 	
-	matrix lightSpaceMat; // todo [arr]
 	SceneLighting sceneLightData;
 };
-Texture2D texShadowMap;// todo array
+
+TextureCubeArray texPointShadowMaps;
+Texture2DArray   texSpotShadowMaps;
+Texture2DArray   texDirectionalShadowMaps;
+
 
 
 // TEXTURES & SAMPLERS
@@ -61,10 +64,15 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 V = normalize(- P);
 	
 	const float3 Pw = mul(matViewToWorld, float4(P, 1)).xyz;
-    const float4 lightSpacePos = mul(lightSpaceMat[0], float4(Pw, 1));
 
 	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sLinearSampler, In.uv);
 	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sLinearSampler, In.uv);
+
+	
+	// base indices for indexing shadow views
+	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
+	const int spotShadowsBaseIndex = 0;		
+	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
 
     BRDF_Surface s;
     s.N = N;
@@ -72,6 +80,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.specularColor = specularMetalness.rgb;
 	s.roughness = diffuseRoughness.a;
 	s.metalness = specularMetalness.a;
+	
 
 #if 1
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
@@ -116,10 +125,12 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)
 	{
+		const matrix matShadowView = sceneLightData.shadowViews[spotShadowsBaseIndex + k];
+		const float4 Pl		   = mul(matShadowView, float4(Pw, 1));
 		const float3 Lv        = mul(matView, float4(sceneLightData.spot_casters[k].position, 1));
 		const float3 Wi        = normalize(Lv - P);
 		const float3 radiance  = Intensity(sceneLightData.spot_casters[k], Pw) * sceneLightData.spot_casters[k].color * sceneLightData.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
-		const float3 shadowing = ShadowTest(Pw, lightSpacePos, texShadowMap, sShadowSampler);
+		const float3 shadowing = 1.0f;//ShadowTest(Pw, Pl, texShadowMap, sShadowSampler);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
 	}
 

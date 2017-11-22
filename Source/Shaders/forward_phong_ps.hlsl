@@ -43,8 +43,9 @@ cbuffer SceneConstants
 	float spotCount;
     float2 screenDimensions;
 
-	Light lights[LIGHT_COUNT];
-	Light spots[SPOT_COUNT];
+	// todo
+	PointLight lights[LIGHT_COUNT];
+	SpotLight spots[SPOT_COUNT];
 	//	float ambient;
 };
 
@@ -70,6 +71,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 T = normalize(In.tangent);
 	const float3 V = normalize(cameraPos - In.worldPos);
     const float2 screenSpaceUV = In.position.xy / screenDimensions;
+	const float3 Pw = In.worldPos;
 
 	const float ambient = 0.005f;
 
@@ -90,18 +92,20 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	for (int i = 0; i < lightCount; ++i)	// POINT Lights
     {
+        float3 L = normalize(lights[i].position - Pw);
         IdIs += 
-		Phong(lights[i], s, V, In.worldPos) 
-		* AttenuationPhong(lights[i].attenuation, length(lights[i].position - In.worldPos)) 
+		Phong(s, L, V, lights[i].color) 
+		* AttenuationPhong(lights[i].attenuation, length(lights[i].position - Pw)) 
 		* lights[i].brightness 
 		* POINTLIGHT_BRIGHTNESS_SCALAR_PHONG;
     }
 
 	for (int j = 0; j < spotCount; ++j)		// SPOT Lights
     {
+		float3 L = normalize(spots[j].position - Pw);
         IdIs +=
-		Phong(spots[j], s, V, In.worldPos)
-		* Intensity(spots[j], In.worldPos)
+		Phong(s, L, V, spots[j].color)
+		* Intensity(spots[j], Pw)
 		* ShadowTest(In.worldPos, In.lightSpacePos, texShadowMap, sShadowSampler)
 		* spots[j].brightness 
 		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;

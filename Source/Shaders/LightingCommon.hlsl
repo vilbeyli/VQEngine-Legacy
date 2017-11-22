@@ -29,31 +29,30 @@
 
 // STRUCTS
 //----------------------------------------------------------
-struct Light
+struct PointLight
 {
-	// COMMON
 	float3 position;
-	float  pad1;
+	float  range;
 	float3 color;
 	float  brightness;
-
-	// SPOTLIGHT
-	float3 spotDir;
-	float  halfAngle;
-
-	// POINT LIGHT
 	float2 attenuation;
-	float  range;
-	float  pad3;
 };
 
-//struct SpotLight
-//
-//struct PointLight
-//{
-//	float3 position;
-//	float 
-//};
+struct SpotLight
+{
+	float3 position;
+	float  halfAngle;
+	float3 color;
+	float  brightness;
+	float3 spotDir;
+};
+
+struct DirectionalLight
+{	// work in progress
+	float3 lightDirection;
+	float  brightness;
+	float3 color;
+};
 
 // defines maximum number of dynamic lights  todo: shader defines
 #define NUM_POINT_LIGHT 20			// don't forget to update CPU define too (SceneManager.cpp)
@@ -72,13 +71,16 @@ struct SceneLighting	//  5152 bytes
 	int pad0, pad1;	// 32 bytes
 
 	// todo: break up light into point and spot. add directional as well.
-	Light point_lights[NUM_POINT_LIGHT];
-	Light point_casters[NUM_POINT_LIGHT_SHADOW];
+	PointLight point_lights[NUM_POINT_LIGHT];
+	PointLight point_casters[NUM_POINT_LIGHT_SHADOW];
 	// dir
 
-	Light spots[NUM_SPOT_LIGHT];
-	Light spot_casters[NUM_SPOT_LIGHT_SHADOW];
+	SpotLight spots[NUM_SPOT_LIGHT];
+	SpotLight spot_casters[NUM_SPOT_LIGHT_SHADOW];
 	// dir
+
+	
+	matrix shadowViews[NUM_SPOT_LIGHT_SHADOW /*+ directionalLightViews*/];
 };
 
 // CPU - GPU struct for both lighting models
@@ -132,7 +134,7 @@ inline float AttenuationPhong(float2 coeffs, float dist)
 
 
 // spotlight intensity calculataion
-float Intensity(Light l, float3 worldPos)
+float Intensity(SpotLight l, float3 worldPos)
 {   
 	const float3 L         = normalize(l.position - worldPos);
 	const float3 spotDir   = normalize(-l.spotDir);
@@ -201,24 +203,21 @@ float3 ShadowTestDebug(float3 worldPos, float4 lightSpacePos, float3 illuminatio
 }
 
 // returns diffuse and specular components of phong illumination model
-float3 Phong(Light light, PHONG_Surface s, float3 V, float3 worldPos)
+float3 Phong(PHONG_Surface s, float3 L, float3 V, float3 lightColor)
 {
     const float3 N = s.N;
-    const float3 L = normalize(light.position - worldPos);
     const float3 R = normalize(2 * N * dot(N, L) - L);
-	
+    float diffuse = max(0.0f, dot(N, L)); 
 
-    float diffuse = max(0.0f, dot(N, L)); // lights
-    float3 Id = light.color * s.diffuseColor * diffuse;
+    float3 Id = lightColor * s.diffuseColor * diffuse;
 
 #ifdef BLINN_PHONG
 	const float3 H = normalize(L + V);
-	float3 Is = light.color * s.specularColor * pow(max(dot(N, H), 0.0f), 4.0f * s.shininess) * diffuse;
+	float3 Is = lightColor * s.specularColor * pow(max(dot(N, H), 0.0f), 4.0f * s.shininess) * diffuse;
 #else
-    float3 Is = light.color * s.specularColor * pow(max(dot(R, V), 0.0f), s.shininess) * diffuse;
+    float3 Is = lightColor * s.specularColor * pow(max(dot(R, V), 0.0f), s.shininess) * diffuse;
 #endif
 	
 	//float3 Is = light.color * pow(max(dot(R, V), 0.0f), 240) ;
-
     return Id + Is;
 }

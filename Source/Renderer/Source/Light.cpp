@@ -209,9 +209,21 @@ XMMATRIX Light::GetProjectionMatrix() const
 	return proj;
 }
 
-LightShaderSignature Light::ShaderSignature() const
+
+PointLightGPU Light::GetPointLightData() const
 {
-	const vec3 spotDirection = [&]() -> const vec3 {
+	PointLightGPU l;
+	l.position = _transform._position;
+	l.color = _color.Value();
+	l.brightness = _brightness;
+	l.attenuation = _attenuation;
+	l.range = _range;
+	return l;
+}
+
+SpotLightGPU Light::GetSpotLightData() const
+{
+	const vec3 spotDirection = [&]() -> const vec3{
 		if (_type == ELightType::SPOT)
 		{
 			return XMVector3TransformCoord(vec3::Up, _transform.RotationMatrix());
@@ -219,13 +231,25 @@ LightShaderSignature Light::ShaderSignature() const
 		return vec3();
 	}();
 
-	LightShaderSignature sl;
-	sl.position    = _transform._position;
-	sl.color       = _color.Value();
-	sl.brightness  = _brightness;
-	sl.halfAngle   = _spotAngle.x() * DEG2RAD / 2;
-	sl.spotDir     = spotDirection;
-	sl.attenuation = _attenuation;
-	sl.range       = _range;
-	return sl;
+	SpotLightGPU l;
+	l.position = _transform._position;
+	l.color = _color.Value();
+	l.brightness = _brightness;
+	l.halfAngle = _spotAngle.x() * DEG2RAD / 2;
+	l.spotDir = spotDirection;
+	return l;
+}
+
+DirectionalLightGPU Light::GetDirectionalLightData() const
+{
+	DirectionalLightGPU l;
+	// todo
+	//l.position = _transform._position;
+	//l.color = _color.Value();
+	//l.brightness = _brightness;
+	//l.halfAngle = _spotAngle.x() * DEG2RAD / 2;
+	//l.spotDir = spotDirection;
+	//l.attenuation = _attenuation;
+	//l.range = _range;
+	return l;
 }

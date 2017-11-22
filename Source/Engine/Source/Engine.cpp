@@ -294,8 +294,11 @@ bool Engine::UpdateAndRender()
 	return bExitApp;
 }
 
-// can't use std::array<T&, size_t>, hence std::array<T*, size_t> 
-using pLightDataArray = std::array<LightDataArray*, Light::ELightType::LIGHT_TYPE_COUNT-1>;
+// can't use std::array<T&, 2>, hence std::array<T*, 2> 
+// array of 2: light data for non-shadowing and shadowing lights
+using pPointLightDataArray		 = std::array<PointLightDataArray*, 2>;
+using pSpotLightDataArray		 = std::array<SpotLightDataArray*, 2>;
+using pDirectionalLightDataArray = std::array<DirectionalLightDataArray*, 2>;
 using pNumArray = std::array<int*, Light::ELightType::LIGHT_TYPE_COUNT>;
 
 // prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
@@ -313,11 +316,13 @@ void Engine::PreRender()
 	mSceneView.viewToWorld = viewInverse;
 	mSceneView.projection = proj;
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
+
+	mSceneView.sceneRenderSettings = scene->GetSceneRenderSettings();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
-	mSceneView.sceneRenderSettings = scene->GetSceneRenderSettings();
-	mSceneView.environmentMap = scene->GetEnvironmentMap();
 	mSceneView.bIsIBLEnabled = mSceneView.environmentMap.irradianceMap != -1;
+
+	mSceneView.environmentMap = scene->GetEnvironmentMap();
 
 	// gather scene lights
 	mSceneLightData.ResetCounts();
@@ -333,38 +338,51 @@ void Engine::PreRender()
 		&mSceneLightData._cb.spotLightCount_shadow,
 		&mSceneLightData._cb.directionalLightCount_shadow
 	};
-	pLightDataArray lightData
-	{	
+
+	constexpr size_t NON_SHADOWING_LIGHT_INDEX = 0;
+	constexpr size_t SHADOWING_LIGHT_INDEX = 1;
+	pPointLightDataArray pointLights
+	{
 		&mSceneLightData._cb.pointLights,
+		&mSceneLightData._cb.pointLightsShadowing
+	};
+	pSpotLightDataArray spotLights
+	{
 		&mSceneLightData._cb.spotLights,
-		//&mSceneLightData._cb.directionalLights, //todo
+		&mSceneLightData._cb.spotLightsShadowing
 	};
-	pLightDataArray casterData
-	{	
-		&mSceneLightData._cb.pointLightsShadowing,
-		&mSceneLightData._cb.pointLightsShadowing,
-		//&mSceneLightData._cb.directionalLightsShadowing, //todo
+	pDirectionalLightDataArray directionalLights
+	{	// work in progress
+		nullptr, nullptr
 	};
+	
 
 	// set constant buffer data
 	for (const Light& l : mLights)
 	{
-		// select the numCounts array and light data array based on whether the light casts shadow or not
-		pLightDataArray& refLightData = l._castsShadow ? casterData : lightData;
+		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
+		const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
+
+		// add to the count of the current light type & whether its shadow casting or not
 		pNumArray& refLightCounts = l._castsShadow ? casterCounts : lightCounts;
-
-		// set the caster data and count
 		const size_t lightIndex = (*refLightCounts[l._type])++;
-		(*refLightData[l._type])[lightIndex] = l.ShaderSignature();
+
+		switch (l._type)
+		{
+		case Light::ELightType::POINT:
+			(*pointLights[shadowIndex])[lightIndex] = l.GetPointLightData();
+			break;
+		case Light::ELightType::SPOT:
+			(*spotLights[shadowIndex])[lightIndex] = l.GetSpotLightData();
+			break;
+		case Light::ELightType::DIRECTIONAL:
+			(*directionalLights[shadowIndex])[lightIndex] = l.GetDirectionalLightData();
+			break;
+		default:
+			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
+			continue;
+		}
 	}
-
-
-	//if (mSceneLightData._cb.spotLightCount_shadow > 0)	// temp hack: assume 1 spot light casting shadows
-	//{
-	//	mSceneLightData.shadowCasterData[0].shadowMap = mShadowMapPass._shadowMap;
-	//	mSceneLightData.shadowCasterData[0].shadowSampler = mShadowMapPass._shadowSampler;
-	//	mSceneLightData.shadowCasterData[0].lightSpaceMatrix = mLights[0].GetLightSpaceMatrix();
-	//}
 
 	mTBNDrawObjects.clear();
 	std::vector<const GameObject*> objects;
@@ -415,7 +433,7 @@ void Engine::SendLightData() const
 	//}
 
 #ifdef _DEBUG
-	const SceneLightData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
+	const SceneLightingData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
 	if (cb.pointLightCount > cb.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
 	if (cb.spotLightCount  > cb.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif

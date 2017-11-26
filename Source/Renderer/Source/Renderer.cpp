@@ -377,14 +377,20 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	//--------------------------------------------------------------------
 	{
 		// Set up the description of the depth buffer.
-		const DXGI_FORMAT depthTargetFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		TextureDesc depthTexDesc;
+		depthTexDesc.width = settings.width;
+		depthTexDesc.height = settings.height;
+		depthTexDesc.arraySize = 1;
+		depthTexDesc.mipCount = 1;
+		depthTexDesc.format = R24G8;
+		depthTexDesc.usage = ETextureUsage(DEPTH_TARGET | RESOURCE);
 
-		m_state._depthBufferTexture = CreateDepthTexture(settings.width, settings.height, false);
+		m_state._depthBufferTexture = CreateTexture2D(depthTexDesc);
 		Texture& depthTexture = static_cast<Texture>(GetTextureObject(m_state._depthBufferTexture));
 
 		// depth stencil view and shader resource view for the shadow map (^ BindFlags)
 		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-		dsvDesc.Format = depthTargetFormat;
+		dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		dsvDesc.Texture2D.MipSlice = 0;
 		AddDepthTarget(dsvDesc, depthTexture);	// assumes index 0
@@ -787,6 +793,17 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 			srvDesc.Texture2D.MipLevels = -1;
 			srvDesc.Texture2D.MostDetailedMip = 0;
+
+			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
+			switch (texDesc.format)
+			{
+				// caution: if initializing for depth texture, and the depth texture
+				//			has stencil defined (d24s8), we have to check for 
+				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+			case EImageFormat::R24G8:
+				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R24_UNORM_X8_TYPELESS;
+				break;
+			}
 			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
 		}
 	}
@@ -919,33 +936,6 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	m_textures.push_back(cubemapOut);
 
 	return cubemapOut._id;
-}
-
-TextureID Renderer::CreateDepthTexture(unsigned width, unsigned height, bool bDepthOnly)
-{
-	D3D11_TEXTURE2D_DESC depthTextureDescriptor = {};
-	depthTextureDescriptor.Format = bDepthOnly ? DXGI_FORMAT_R32_TYPELESS : DXGI_FORMAT_R24G8_TYPELESS;
-	depthTextureDescriptor.MipLevels = 1;
-	depthTextureDescriptor.ArraySize = 1;
-	depthTextureDescriptor.SampleDesc.Count = 1;
-	depthTextureDescriptor.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_DEPTH_STENCIL;
-	depthTextureDescriptor.Height = height;
-	depthTextureDescriptor.Width  = width;
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.Format = bDepthOnly ? DXGI_FORMAT_R32_FLOAT : DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;	// array maybe? check descriptor.
-	srvDesc.Texture2D.MipLevels = 1;
-
-	Texture tex;	
-	tex._width  = width;
-	tex._height = height;
-	m_device->CreateTexture2D(&depthTextureDescriptor, nullptr, &tex._tex2D);;
-	m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
-
-	m_textures.push_back(tex);
-	m_textures.back()._id = static_cast<int>(m_textures.size() - 1);
-	return m_textures.back()._id;
 }
 
 SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)

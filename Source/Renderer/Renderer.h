@@ -171,10 +171,6 @@ public:
 	TextureID				CreateTexture2D(D3D11_TEXTURE2D_DESC&	textureDesc, bool initializeSRV);	// used by AddRenderTarget() | todo: remove this?
 	TextureID				CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot = sHDRTextureRoot);
 	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles);
-	
-	// DEPRECATED
-	TextureID				CreateDepthTexture(unsigned width, unsigned height, bool bDepthOnly);
-	// DEPRECATED
 
 	SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc );	// TODO: samplerDesc
 

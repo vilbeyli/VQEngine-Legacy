@@ -61,10 +61,24 @@ bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Render
 
 void Texture::Release()
 {
-	if (_srv)
+	if (_srvArray.size() > 0)
 	{
-		_srv->Release();
-		_srv = nullptr;
+		for (int i = 0; i < _srvArray.size(); ++i)
+		{
+			if(_srvArray[i])
+			{
+				_srvArray[i]->Release();
+				_srvArray[i] = nullptr;
+			}
+		}
+	}
+	else
+	{
+		if (_srv)
+		{
+			_srv->Release();
+			_srv = nullptr;
+		}
 	}
 
 	if (_tex2D)
@@ -72,4 +86,5 @@ void Texture::Release()
 		_tex2D->Release();
 		_tex2D = nullptr;
 	}
+
 }

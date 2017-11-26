@@ -34,6 +34,15 @@ struct SetTextureCommand
 	ShaderTexture	shaderTexture;
 };
 
+struct SetTextureArrayCommand
+{
+	SetTextureArrayCommand(const std::vector<TextureID>& textureArray) : textureIDs(textureArray) {}
+	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
+
+	const std::vector<TextureID> textureIDs;
+	ShaderTexture	shaderTexture;
+};
+
 struct SetSamplerCommand
 {
 	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
@@ -44,6 +53,10 @@ struct SetSamplerCommand
 
 struct ClearCommand
 {
+	static ClearCommand Depth(float depthClearValue);
+	static ClearCommand Color(const std::array<float, 4>& clearColorValues);
+	static ClearCommand Color(float r, float g, float b, float a);
+	
 	ClearCommand(bool doClearColor                          , bool doClearDepth    , bool doClearStencil, 
 				const std::array<float, 4>& clearColorValues, float clearDepthValue, unsigned char clearStencilValue) :
 		bDoClearColor(doClearColor),
@@ -53,6 +66,7 @@ struct ClearCommand
 		clearDepth(clearDepthValue),
 		clearStencil(clearStencilValue)
 	{}
+
 
 	bool					bDoClearColor;
 	bool					bDoClearDepth;

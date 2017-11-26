@@ -41,17 +41,32 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
 
 	// create shadow map texture for the pixel shader stage
-	const bool bDepthOnly = true;	// do we need stencil in depth map?
-	TextureID shadowMapID = pRenderer->CreateDepthTexture(static_cast<unsigned>(_shadowMapDimension), static_cast<unsigned>(_shadowMapDimension), bDepthOnly);
-	_shadowMap = shadowMapID;
-	Texture& shadowMap = const_cast<Texture&>(pRenderer->GetTextureObject(_shadowMap));
+	const unsigned dimension = static_cast<unsigned>(_shadowMapDimension);
+	const bool bDepthOnly = true;
+	const EImageFormat format = bDepthOnly ? R32 : R24G8;
 
-	// depth stencil view
+	TextureDesc texDesc;
+	texDesc.height = texDesc.width = dimension;
+	texDesc.format = format;
+	texDesc.arraySize = NUM_SPOT_LIGHT_SHADOW;
+	texDesc.usage = static_cast<ETextureUsage>(DEPTH_TARGET | RESOURCE);
+
+	this->_spotShadowMaps = pRenderer->CreateTexture2D(texDesc);
+	Texture& spotShadowMaps = const_cast<Texture&>(pRenderer->GetTextureObject(_spotShadowMaps));
+
+	// depth targets
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-	dsvDesc.Format = bDepthOnly ? DXGI_FORMAT_D32_FLOAT : DXGI_FORMAT_D24_UNORM_S8_UINT;
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Texture2D.MipSlice = 0;
-	this->_shadowDepthTarget = pRenderer->AddDepthTarget(dsvDesc, shadowMap);
+	dsvDesc.Format = static_cast<DXGI_FORMAT>(bDepthOnly ? D32F : D24UNORM_S8U);
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	dsvDesc.Texture2DArray.MipSlice = 0;
+
+	this->_spotShadowDepthTargets.resize(NUM_SPOT_LIGHT_SHADOW);
+	for (int i = 0; i < NUM_SPOT_LIGHT_SHADOW; i++)
+	{
+		dsvDesc.Texture2DArray.ArraySize = NUM_SPOT_LIGHT_SHADOW - i;
+		dsvDesc.Texture2DArray.FirstArraySlice = i;
+		this->_spotShadowDepthTargets[i] = pRenderer->AddDepthTarget(dsvDesc, spotShadowMaps);
+	}
 
 	// comparison sampler
 	D3D11_SAMPLER_DESC comparisonSamplerDesc;
@@ -92,23 +107,28 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	_shadowViewport.MaxDepth = 1.f;
 }
 
-void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<const Light*> shadowLights, const std::vector<const GameObject*> ZPassObjects) const
+void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<const GameObject*> ZPassObjects, const ShadowView& shadowView) const
 {
-	if (shadowLights.empty()) return;
+	const bool bNoShadowingLights = shadowView.spots.empty() && shadowView.points.empty() && shadowView.directionals.empty();
+	if (bNoShadowingLights) return;
 
-	const float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-
-	pRenderer->BindDepthTarget(_shadowDepthTarget);			// only depth stencil buffer
-	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
-	pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
-	pRenderer->SetConstant4x4f("viewProj", shadowLights.front()->GetLightSpaceMatrix());
-	pRenderer->SetConstant4x4f("view", shadowLights.front()->GetViewMatrix());
-	pRenderer->SetConstant4x4f("proj", shadowLights.front()->GetProjectionMatrix());
-	pRenderer->Apply();
-	pRenderer->Begin(clearColor, 1.0f);
-	for (const GameObject* obj : ZPassObjects)
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
+	for (int i = 0; i < shadowView.spots.size(); i++)
 	{
-		obj->RenderZ(pRenderer);
+		pRenderer->BindDepthTarget(_spotShadowDepthTargets[i]);	// only depth stencil buffer
+		pRenderer->Apply();
+		pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
+		pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
+		pRenderer->Begin(ClearCommand::Depth(1.0f));
+		pRenderer->SetConstant4x4f("viewProj", shadowView.spots[i]->GetLightSpaceMatrix());
+		pRenderer->SetConstant4x4f("view"    , shadowView.spots[i]->GetViewMatrix());
+		pRenderer->SetConstant4x4f("proj"    , shadowView.spots[i]->GetProjectionMatrix());
+		pRenderer->Apply();
+
+		pRenderer->BeginEvent("DrawScene");
+		for (const GameObject* obj : ZPassObjects)
+			obj->RenderZ(pRenderer);
+		pRenderer->EndEvent();
 	}
 }
 
@@ -436,13 +456,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	const TextureID tSSAO, 
 	bool bUseBRDFLighting) const
 {
-	const bool bDoClearColor = true;
-	const bool bDoClearDepth = false;
-	const bool bDoClearStencil = false;
-	ClearCommand clearCmd(
-		bDoClearColor, bDoClearDepth, bDoClearStencil,
-		{ 0, 0, 0, 0 }, 1, 0
-	);
+	ClearCommand cmd = ClearCommand::Color({ 0, 0, 0, 0 });
 
 	const bool bAmbientOcclusionOn = tSSAO == -1;
 
@@ -460,7 +474,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
 	pRenderer->BindRenderTarget(target);
-	pRenderer->Begin(clearCmd);
+	pRenderer->Begin(cmd);
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
@@ -597,15 +611,15 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	// src: https://john-chapman-graphics.blogspot.nl/2013/01/ssao-tutorial.html
 	for (size_t i = 0; i < SSAO_SAMPLE_KERNEL_SIZE; i++)
 	{
-		// get a random direction in tangent space - z-up.
+		// get a random direction in tangent space, Z-up.
 		// As the sample kernel will be oriented along the surface normal, 
 		// the resulting sample vectors will all end up in the hemisphere.
 		vec3 sample(
 			RandF(-1, 1),
 			RandF(-1, 1),
-			RandF(0, 1)	// hemisphere
+			RandF(0, 1)	// hemisphere normal direction (up)
 		);
-		sample.normalize();
+		sample.normalize();				// bring the sample to the hemisphere surface
 		sample = sample * RandF(0, 1);	// scale to distribute samples within the hemisphere
 
 		// scale vectors with a power curve based on i to make samples close to center of the

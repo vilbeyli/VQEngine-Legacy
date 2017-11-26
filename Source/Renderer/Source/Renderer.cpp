@@ -710,11 +710,13 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	tex._height = texDesc.height;
 	tex._name   = texDesc.texFileName;
 	
+	// Texture2D Resource
 	UINT miscFlags = 0;
 	miscFlags |= texDesc.bIsCubeMap ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;
 	miscFlags |= texDesc.bGenerateMips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
 
-	UINT arrSize = 1;	// currently there's no texture array support
+	UINT arrSize = texDesc.arraySize;
+	const bool bIsTextureArray = texDesc.arraySize > 1;
 	arrSize = texDesc.bIsCubeMap ? 6 : arrSize;
 
 	D3D11_TEXTURE2D_DESC desc = {};
@@ -740,6 +742,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	}
 	m_device->CreateTexture2D(&desc, pDataDesc, &tex._tex2D);
 
+	// Shader Resource View
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = (DXGI_FORMAT)texDesc.format;
 	if (texDesc.bIsCubeMap)
@@ -747,15 +750,46 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
 		srvDesc.TextureCube.MipLevels = texDesc.mipCount;
 		srvDesc.TextureCube.MostDetailedMip = 0;
+		m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
 	}
 	else
 	{
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = -1;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-	}
+		if (bIsTextureArray)
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+			srvDesc.Texture2DArray.MipLevels = 1;
+			srvDesc.Texture2DArray.MostDetailedMip = 0;
+			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
 
-	m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+			switch (texDesc.format)
+			{
+				// caution: if initializing for depth texture, and the depth texture
+				//			has stencil defined (d24s8), we have to check for 
+				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+			case EImageFormat::R32:
+				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R32F;
+				break;
+			}
+
+			tex._srvArray.resize(desc.ArraySize, nullptr);
+			tex._depth = desc.ArraySize;
+			for (unsigned i = 0; i < desc.ArraySize; ++i) 
+			{
+				srvDesc.Texture2DArray.FirstArraySlice = i;
+				srvDesc.Texture2DArray.ArraySize = desc.ArraySize - i;
+				m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srvArray[i]);
+				if (i == 0)
+					tex._srv = tex._srvArray[i];
+			}
+		}
+		else
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MipLevels = -1;
+			srvDesc.Texture2D.MostDetailedMip = 0;
+			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+		}
+	}
 
 	tex._id = static_cast<int>(m_textures.size());
 	m_textures.push_back(tex);
@@ -1065,7 +1099,7 @@ void Renderer::SetShader(ShaderID id)
 			// nullify texture units 
 			for (ShaderTexture& tex : shader->m_textures)
 			{
-				constexpr UINT NumNullSRV = 6;
+				constexpr UINT NumNullSRV = 12;
 				ID3D11ShaderResourceView* nullSRV[NumNullSRV ] = { nullptr };
 				//(m_deviceContext->*SetShaderResources[tex.shdType])(tex.bufferSlot, 1, nullSRV);
 				switch (tex.shdType)
@@ -1305,6 +1339,59 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 #endif
 }
 
+void Renderer::SetTextureArray(const char * texName, const std::vector<TextureID>& textureArray)
+{
+	Shader* shader = m_shaders[m_state._activeShader];
+	bool found = false;
+
+	// linear name lookup
+	for (size_t i = 0; i < shader->m_textures.size(); ++i)
+	{
+		if (strcmp(texName, shader->m_textures[i].name.c_str()) == 0)
+		{
+			found = true;
+			for (TextureID tex : textureArray) 
+			{
+				SetTextureArrayCommand cmd(textureArray);
+				m_setTextureArrayCmds.push(cmd);
+			}
+		}
+	}
+
+#ifdef _DEBUG
+	if (!found)
+	{
+		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, m_state._activeShader, shader->Name().c_str());
+	}
+#endif
+}
+
+void Renderer::SetTextureArray(const char * texName, TextureID texArray)
+{
+	Shader* shader = m_shaders[m_state._activeShader];
+	bool found = false;
+
+	// linear name lookup
+	for (size_t i = 0; i < shader->m_textures.size(); ++i)
+	{
+		if (strcmp(texName, shader->m_textures[i].name.c_str()) == 0)
+		{
+			found = true;
+			SetTextureCommand cmd;
+			cmd.textureID = texArray;
+			cmd.shaderTexture = shader->m_textures[i];
+			m_setTextureCmds.push(cmd);
+		}
+	}
+
+#ifdef _DEBUG
+	if (!found)
+	{
+		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, m_state._activeShader, shader->Name().c_str());
+	}
+#endif
+}
+
 void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 {
 	Shader* shader = m_shaders[m_state._activeShader];
@@ -1431,16 +1518,6 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 	DrawIndexed();
 }
 
-void Renderer::Begin(const float clearColor[4], const float depthValue)
-{
-	const DepthTargetID dsv = m_state._boundDepthTarget;	
-	for (const auto renderTarget : m_state._boundRenderTargets)
-	{
-		if(renderTarget>=0)
-			m_deviceContext->ClearRenderTargetView(m_renderTargets[renderTarget].pRenderTargetView, clearColor);
-	}
-	if(dsv >= 0) m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv].pDepthStencilView, D3D11_CLEAR_DEPTH, depthValue, 0);
-}
 
 void Renderer::Begin(const ClearCommand & clearCmd)
 {

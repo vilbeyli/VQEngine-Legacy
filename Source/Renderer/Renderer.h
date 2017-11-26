@@ -80,12 +80,13 @@ struct PipelineState
 	TextureID			_depthBufferTexture;	// ^
 };
 
-enum ETextureUsage 
+enum ETextureUsage : unsigned
 {
-	GPU_READ = D3D11_BIND_SHADER_RESOURCE,
-	GPU_WRITE = D3D11_BIND_RENDER_TARGET,
-	GPU_RW = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
-	
+	RESOURCE			= D3D11_BIND_SHADER_RESOURCE,
+	RENDER_TARGET		= D3D11_BIND_RENDER_TARGET,
+	RENDER_TARGET_RW	= D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
+	DEPTH_TARGET		= D3D11_BIND_DEPTH_STENCIL,
+
 	TEXTURE_USAGE_COUNT
 };
 
@@ -98,9 +99,22 @@ struct TextureDesc
 	std::string	 texFileName;
 	void* data;
 	int mipCount;
+	int arraySize;
 	bool bIsCubeMap;
 	bool bGenerateMips;
-	TextureDesc() : width(1), height(1), format(RGBA32F), usage(GPU_READ), texFileName(""), data(nullptr), mipCount(1), bIsCubeMap(false), bGenerateMips(false){}
+	
+	TextureDesc() : 
+		width(1), 
+		height(1), 
+		format(RGBA32F), 
+		usage(RESOURCE),
+		texFileName(""), 
+		data(nullptr), 
+		mipCount(1), 
+		arraySize(1), 
+		bIsCubeMap(false), 
+		bGenerateMips(false)
+	{}
 
 	D3D11_TEXTURE2D_DESC dxDesc;
 };
@@ -142,12 +156,9 @@ public:
 	inline const ShaderID	GetActiveShader() const { return m_state._activeShader; }
 
 
-	// RESOURCE INITIALIZATION (testing readability of function definitions)
+	// RESOURCE INITIALIZATION
 	//----------------------------------------------------------------------------------
-	ShaderID				AddShader(	const std::string&				shaderFileName, 
-										const std::vector<InputLayout>& layouts			
-							);
-
+	ShaderID				AddShader(const std::string& shaderFileName, const std::vector<InputLayout>& layouts);
 	ShaderID				AddShader(	const std::string&				shaderName, 
 										const std::vector<std::string>&	shaderFileNames, 
 										const std::vector<EShaderType>&	shaderTypes, 
@@ -155,61 +166,32 @@ public:
 							);
 
 	//						example params:			"bricks_d.png", "Data/Textures/"
-	TextureID				CreateTextureFromFile(	const std::string&	texFileName, 
-													const std::string&	fileRoot = sTextureRoot
-							);
-
+	TextureID				CreateTextureFromFile(	const std::string&	texFileName, const std::string&	fileRoot = sTextureRoot);
 	TextureID				CreateTexture2D(const TextureDesc& texDesc);
-
-	TextureID				CreateTexture2D(	D3D11_TEXTURE2D_DESC&	textureDesc, 
-												bool					initializeSRV
-							);	// used by AddRenderTarget()
-
-	TextureID CreateHDRTexture(	const std::string& texFileName,
-												const std::string& fileRoot = sHDRTextureRoot
-							);
-
-	TextureID				CreateCubemapTexture(	const std::vector<std::string>& textureFiles
-							);
+	TextureID				CreateTexture2D(D3D11_TEXTURE2D_DESC&	textureDesc, bool initializeSRV);	// used by AddRenderTarget() | todo: remove this?
+	TextureID				CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot = sHDRTextureRoot);
+	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles);
 	
-	TextureID				CreateDepthTexture( unsigned width, 
-												unsigned height, 
-												bool bDepthOnly
-							);
+	// DEPRECATED
+	TextureID				CreateDepthTexture(unsigned width, unsigned height, bool bDepthOnly);
+	// DEPRECATED
 
-	SamplerID				CreateSamplerState(	D3D11_SAMPLER_DESC&	samplerDesc
-							);
+	SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc );	// TODO: samplerDesc
 
+	RasterizerStateID		AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors);
 
-	RasterizerStateID		AddRasterizerState(	ERasterizerCullMode cullMode, 
-												ERasterizerFillMode fillMode, 
-												bool bEnableDepthClip, 
-												bool bEnableScissors
-							);
+	DepthStencilStateID		AddDepthStencilState(	bool bEnableDepth, bool bEnableStencil);	// todo params
+	DepthStencilStateID		AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
 
-	DepthStencilStateID		AddDepthStencilState(	bool bEnableDepth, 
-													bool bEnableStencil
-							);	// todo params
-
-	DepthStencilStateID		AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC&	dsDesc
-							);
-
-	BlendStateID			AddBlendState( // todo params
-							);
+	BlendStateID			AddBlendState( /*todo params*/);
 
 	// initializes the texture data with the given desc
-	RenderTargetID			AddRenderTarget(	D3D11_TEXTURE2D_DESC&			RTTextureDesc, 
-												D3D11_RENDER_TARGET_VIEW_DESC&	RTVDesc
-							);
+	RenderTargetID			AddRenderTarget(D3D11_TEXTURE2D_DESC& RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC&	RTVDesc);
 
 	// uses the given texture object, doesn't create a new texture for the render target
-	RenderTargetID			AddRenderTarget(	const Texture& textureObj, 
-												D3D11_RENDER_TARGET_VIEW_DESC&	RTVDesc
-							);
+	RenderTargetID			AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
 
-	DepthTargetID AddDepthTarget(	const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, 
-											Texture& surface
-											);
+	DepthTargetID			AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, Texture& surface);
 
 	// PIPELINE STATE MANAGEMENT
 	//----------------------------------------------------------------------------------
@@ -218,6 +200,8 @@ public:
 	void					SetShader(ShaderID);
 	void					SetBufferObj(int BufferID);
 	void					SetTexture(const char* texName, TextureID tex);
+	void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex);
+	void					SetTextureArray(const char* texName, TextureID texArray);
 	void					SetSamplerState(const char* samplerName, SamplerID sampler);
 	void					SetRasterizerState(RasterizerStateID rsStateID);
 	void					SetBlendState(BlendStateID blendStateID);
@@ -239,7 +223,6 @@ public:
 	inline void				SetConstant1i(const char* cName, const int& data)		{ SetConstant(cName, static_cast<const void*>(&data)); }
 	inline void				SetConstantStruct(const char * cName, const void* data) { SetConstant(cName, data); }
 
-	void					Begin(const float clearColor[4], const float depthValue);
 	void					Begin(const ClearCommand& clearCmd);
 	void					End();
 	void					Reset();
@@ -280,6 +263,7 @@ private:
 	std::vector<Sampler>			m_samplers;
 
 	std::queue<SetTextureCommand>	m_setTextureCmds;
+	std::queue<SetTextureArrayCommand>	m_setTextureArrayCmds;
 	std::queue<SetSamplerCommand>	m_setSamplerCmds;
 
 	std::vector<RasterizerState*>	m_rasterizerStates;

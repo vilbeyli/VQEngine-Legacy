@@ -280,7 +280,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	texDesc.texFileName = environmentMap._name + "_preFiltered";
 	texDesc.data = nullptr; // no CPU data
 	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
-	texDesc.usage = GPU_RW;
+	texDesc.usage = RENDER_TARGET_RW;
 	texDesc.bIsCubeMap = true;
 	prefilteredEnvironmentMap = pRenderer->CreateTexture2D(texDesc);
 

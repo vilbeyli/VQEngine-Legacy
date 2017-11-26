@@ -18,12 +18,9 @@
 #pragma once
 
 #include "Utilities/utils.h"
-#include "HandleTypedefs.h"
+//#include "HandleTypedefs.h"
 
 #include <array>
-
-constexpr int MAX_POINT_LIGHT_COUNT = 20;
-constexpr int MAX_SPOT_LIGHT_COUNT = 20;
 
 struct PointLightGPU
 {
@@ -59,10 +56,21 @@ struct DirectionalLightGPU
 //	XMMATRIX  lightSpaceMatrix;
 //};
 
-using PointLightDataArray		= std::array<PointLightGPU, MAX_POINT_LIGHT_COUNT>;
-using SpotLightDataArray		= std::array<SpotLightGPU, MAX_POINT_LIGHT_COUNT>;
-using DirectionalLightDataArray = std::array<DirectionalLightGPU, MAX_POINT_LIGHT_COUNT>;
-using ShadowViewArray = std::array<XMMATRIX, MAX_SPOT_LIGHT_COUNT /*+dir*/>;
+#define NUM_POINT_LIGHT 20
+#define NUM_SPOT_LIGHT 20
+#define NUM_DIRECTIONAL_LIGHT 4
+using PointLightDataArray		= std::array<PointLightGPU, NUM_POINT_LIGHT>;
+using SpotLightDataArray		= std::array<SpotLightGPU, NUM_SPOT_LIGHT>;
+using DirectionalLightDataArray = std::array<DirectionalLightGPU, NUM_DIRECTIONAL_LIGHT>;
+
+#define NUM_POINT_LIGHT_SHADOW 5
+#define NUM_SPOT_LIGHT_SHADOW 5
+#define NUM_DIRECTIONAL_LIGHT_SHADOW 4
+using ShadowingPointLightDataArray			= std::array<PointLightGPU, NUM_POINT_LIGHT_SHADOW>;
+using ShadowingSpotLightDataArray			= std::array<SpotLightGPU, NUM_SPOT_LIGHT_SHADOW>;
+using ShadowingDirectionalLightDataArray	= std::array<DirectionalLightGPU, NUM_DIRECTIONAL_LIGHT_SHADOW>;
+
+using SpotShadowViewArray = std::array<XMMATRIX, NUM_SPOT_LIGHT_SHADOW>;
 
 struct SceneLightingData
 {
@@ -77,15 +85,15 @@ struct SceneLightingData
 		int _pad0, _pad1;
 
 		PointLightDataArray pointLights;
-		PointLightDataArray pointLightsShadowing;
+		ShadowingPointLightDataArray pointLightsShadowing;
 
 		SpotLightDataArray spotLights;
-		SpotLightDataArray spotLightsShadowing;
+		ShadowingSpotLightDataArray spotLightsShadowing;
 
 		// todo directional
 		// todo directional shadowing
 
-		ShadowViewArray shadowViews;
+		SpotShadowViewArray shadowViews;
 	} _cb;
 
 

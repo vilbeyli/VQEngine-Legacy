@@ -130,7 +130,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 Lv        = mul(matView, float4(sceneLightData.spot_casters[k].position, 1));
 		const float3 Wi        = normalize(Lv - P);
 		const float3 radiance  = Intensity(sceneLightData.spot_casters[k], Pw) * sceneLightData.spot_casters[k].color * sceneLightData.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
-		const float3 shadowing = 1.0f;//ShadowTest(Pw, Pl, texShadowMap, sShadowSampler);
+		const float3 shadowing = ShadowTest(Pw, Pl, texSpotShadowMaps, k, sShadowSampler);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
 	}
 

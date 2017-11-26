@@ -296,12 +296,15 @@ bool Engine::UpdateAndRender()
 
 // can't use std::array<T&, 2>, hence std::array<T*, 2> 
 // array of 2: light data for non-shadowing and shadowing lights
+constexpr size_t NON_SHADOWING_LIGHT_INDEX	= 0;
+constexpr size_t SHADOWING_LIGHT_INDEX		= 1;
 using pPointLightDataArray		 = std::array<PointLightDataArray*, 2>;
 using pSpotLightDataArray		 = std::array<SpotLightDataArray*, 2>;
 using pDirectionalLightDataArray = std::array<DirectionalLightDataArray*, 2>;
+
+// stores the number of lights per light type
 using pNumArray = std::array<int*, Light::ELightType::LIGHT_TYPE_COUNT>;
 
-// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 void Engine::PreRender()
 {
 	// set scene view
@@ -326,6 +329,9 @@ void Engine::PreRender()
 
 	// gather scene lights
 	mSceneLightData.ResetCounts();
+	mShadowView.spots.clear();
+	mShadowView.directionals.clear();
+	mShadowView.points.clear();
 	pNumArray lightCounts
 	{ 
 		&mSceneLightData._cb.pointLightCount,
@@ -339,25 +345,6 @@ void Engine::PreRender()
 		&mSceneLightData._cb.directionalLightCount_shadow
 	};
 
-	constexpr size_t NON_SHADOWING_LIGHT_INDEX = 0;
-	constexpr size_t SHADOWING_LIGHT_INDEX = 1;
-	pPointLightDataArray pointLights
-	{
-		&mSceneLightData._cb.pointLights,
-		&mSceneLightData._cb.pointLightsShadowing
-	};
-	pSpotLightDataArray spotLights
-	{
-		&mSceneLightData._cb.spotLights,
-		&mSceneLightData._cb.spotLightsShadowing
-	};
-	pDirectionalLightDataArray directionalLights
-	{	// work in progress
-		nullptr, nullptr
-	};
-	
-
-	// set constant buffer data
 	for (const Light& l : mLights)
 	{
 		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
@@ -370,18 +357,44 @@ void Engine::PreRender()
 		switch (l._type)
 		{
 		case Light::ELightType::POINT:
-			(*pointLights[shadowIndex])[lightIndex] = l.GetPointLightData();
+			mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();
+			mSceneLightData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
 			break;
 		case Light::ELightType::SPOT:
-			(*spotLights[shadowIndex])[lightIndex] = l.GetSpotLightData();
+			mSceneLightData._cb.spotLights[lightIndex] = l.GetSpotLightData();
+			mSceneLightData._cb.spotLightsShadowing[lightIndex] = l.GetSpotLightData();
 			break;
 		case Light::ELightType::DIRECTIONAL:
-			(*directionalLights[shadowIndex])[lightIndex] = l.GetDirectionalLightData();
+			//mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();
+			//mSceneLightData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
 			break;
 		default:
 			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
 			continue;
 		}
+	}
+
+	unsigned numShd = 0;	// only for spot lights for now
+	for (const Light& l : mLights)
+	{
+		// shadowing lights
+		if (l._castsShadow)
+		{
+			switch (l._type)
+			{
+			case Light::ELightType::SPOT:
+				mShadowView.spots.push_back(&l);
+				mSceneLightData._cb.shadowViews[numShd++] = l.GetLightSpaceMatrix();
+				break;
+			case Light::ELightType::POINT:
+				mShadowView.points.push_back(&l);
+				break;
+			case Light::ELightType::DIRECTIONAL:
+				mShadowView.directionals.push_back(&l);
+				break;
+			}
+		}
+
 	}
 
 	mTBNDrawObjects.clear();
@@ -397,7 +410,6 @@ void Engine::PreRender()
 void Engine::RenderLights() const
 {
 	mpRenderer->BeginEvent("Render Lights Pass");
-	mpRenderer->Reset();	// is reset necessary?
 	mpRenderer->SetShader(EShaders::UNLIT);
 	for (const Light& light : mLights)
 	{
@@ -423,14 +435,7 @@ void Engine::SendLightData() const
 
 	// SHADOW MAPS
 	//--------------------------------------------------------------
-	// first light is spot: single shadow map support for now
-	//if (mSceneLightData.spotLightsShadowing > 0)
-	//{
-	//	const ShadowView& caster = mSceneLightData.shadowView[0];
-	//	mpRenderer->SetConstant4x4f("lightSpaceMat", caster.lightSpaceMatrix);
-	//	mpRenderer->SetTexture("texShadowMap", caster.shadowMap);
-	//	mpRenderer->SetSamplerState("sShadowSampler", caster.shadowSampler);
-	//}
+	mpRenderer->SetTextureArray("texSpotShadowMaps", mShadowMapPass._spotShadowMaps);
 
 #ifdef _DEBUG
 	const SceneLightingData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
@@ -444,20 +449,11 @@ void Engine::Render()
 	const XMMATRIX& viewProj = mSceneView.viewProj;
 	const Scene* pScene = mpSceneManager->mpActiveScene;
 
-	// get shadow casters (todo: static/dynamic lights)
-	std::vector<const Light*> _shadowCasters;
-	for (const Light& light : mpSceneManager->mRoomScene.mLights)
-	{
-		if (light._castsShadow)
-			_shadowCasters.push_back(&light);
-	}
-
-
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
 	mpRenderer->BeginEvent("Shadow Pass");
 	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass has their own render targets
-	mShadowMapPass.RenderShadowMaps(mpRenderer, _shadowCasters, mZPassObjects);
+	mShadowMapPass.RenderShadowMaps(mpRenderer, mZPassObjects, mShadowView);
 	mpRenderer->EndEvent();
 
 	// LIGHTING PASS
@@ -668,7 +664,7 @@ void Engine::Render()
 
 		// Textures to draw
 		const TextureID white4x4	 = mSSAOPass.whiteTexture4x4;
-		TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._shadowDepthTarget);
+		//TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._spotShadowDepthTargets);
 		TextureID tBlurredBloom		 = mpRenderer->GetRenderTargetTexture(mPostProcessPass._bloomPass._blurPingPong[0]);
 		TextureID tDiffuseRoughness  = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
 		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
@@ -685,7 +681,7 @@ void Engine::Render()
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tSceneDepth			, true},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tDiffuseRoughness	, false},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tNormals			, false},
-				{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
+				//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
 				//{ fullscreenTextureScaledDownSize,	screenPosition,			pScene->GetEnvironmentMap().environmentMap	, false },

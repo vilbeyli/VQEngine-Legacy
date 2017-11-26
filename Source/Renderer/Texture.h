@@ -19,6 +19,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 using TextureID = int;
 using SamplerID = int;
@@ -45,7 +46,7 @@ public:
 	//   the type right before binding by reinterpret casting.
 	// note: typed resources are optimized for access. use typeless if you really need. (src?)
 	ID3D11ShaderResourceView*	_srv;
-
+	std::vector<ID3D11ShaderResourceView*> _srvArray;
 	union
 	{
 		ID3D11Texture3D*		_tex3D;

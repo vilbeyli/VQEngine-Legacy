@@ -55,6 +55,18 @@ void SetTextureCommand::SetResource(Renderer * pRenderer)
 	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, 1, &pRenderer->m_textures[textureID]._srv);
 }
 
+
+void SetTextureArrayCommand::SetResource(Renderer * pRenderer)
+{
+#ifdef _DEBUG
+	for(auto textureID : textureIDs)
+		assert(textureID >= 0);
+#endif
+	const unsigned textureCount = static_cast<unsigned>(textureIDs.size());
+	;// (pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, textureCount, &pRenderer->m_textures[textureID]._srv);
+}
+
+
 static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[6])
 (UINT StartSlot, UINT NumViews, ID3D11SamplerState* const *ppShaderResourceViews) =
 {
@@ -71,3 +83,31 @@ void SetSamplerCommand::SetResource(Renderer * pRenderer)
 	assert(samplerID >= 0);
 	(pRenderer->m_deviceContext->*SetSampler[shaderSampler.shdType])(shaderSampler.bufferSlot, 1, &pRenderer->m_samplers[samplerID]._samplerState);
 }
+
+ClearCommand ClearCommand::Depth(float depthClearValue)
+{
+	const bool bDoClearColor = false;
+	const bool bDoClearDepth = true;
+	const bool bDoClearStencil = false;
+	return ClearCommand (
+		bDoClearColor, bDoClearDepth, bDoClearStencil,
+		{ 0, 0, 0, 0 }, depthClearValue, 0
+	);
+}
+
+ClearCommand ClearCommand::Color(const std::array<float, 4>& clearColorValues)
+{
+	const bool bDoClearColor = true;
+	const bool bDoClearDepth = false;
+	const bool bDoClearStencil = false;
+	return ClearCommand(
+		bDoClearColor, bDoClearDepth, bDoClearStencil,
+		clearColorValues, 0, 0
+	);
+}
+
+ClearCommand ClearCommand::Color(float r, float g, float b, float a)
+{
+	return ClearCommand::Color({ r,g,b,a });
+}
+

@@ -55,10 +55,13 @@ struct DirectionalLight
 };
 
 // defines maximum number of dynamic lights  todo: shader defines
-#define NUM_POINT_LIGHT 20			// don't forget to update CPU define too (SceneManager.cpp)
-#define NUM_POINT_LIGHT_SHADOW 20   // ^
-#define NUM_SPOT_LIGHT 20			// ^
-#define NUM_SPOT_LIGHT_SHADOW 20	// ^
+// don't forget to update CPU define too (RenderPasses.h)
+#define NUM_POINT_LIGHT 20
+#define NUM_POINT_LIGHT_SHADOW 5
+#define NUM_SPOT_LIGHT 20
+#define NUM_SPOT_LIGHT_SHADOW 5
+#define NUM_DIRECTIONAL_LIGHT 4
+#define NUM_DIRECTIONAL_LIGHT_SHADOW 4
 
 struct SceneLighting	//  5152 bytes
 {
@@ -143,6 +146,34 @@ float Intensity(SpotLight l, float3 worldPos)
 	const float softRegion = softAngle - l.halfAngle;
 	return clamp((theta - softAngle) / softRegion, 0.0f, 1.0f);
 }
+float ShadowTest(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler)
+{
+	// homogeneous position after interpolation
+	float3 projLSpaceCoords = lightSpacePos.xyz / lightSpacePos.w;
+
+	// clip space [-1, 1] --> texture space [0, 1]
+	float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
+
+	float pxDepthInLSpace = projLSpaceCoords.z;
+    float closestDepthInLSpace = shadowMapArr.Sample(shadowSampler, float3(shadowTexCoords, shadowMapIndex)).x;
+
+	// frustum check
+	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
+		projLSpaceCoords.y < -1.0f || projLSpaceCoords.y > 1.0f ||
+		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
+		)
+	{
+		return 0.0f;
+	}
+
+	// depth check
+	if (pxDepthInLSpace - SHADOW_BIAS > closestDepthInLSpace)
+	{
+		return 0.0f;
+	}
+
+	return 1.0f;
+}
 
 float ShadowTest(float3 worldPos, float4 lightSpacePos, Texture2D shadowMap, SamplerState shadowSampler)
 {
@@ -153,7 +184,7 @@ float ShadowTest(float3 worldPos, float4 lightSpacePos, Texture2D shadowMap, Sam
 	float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
 
 	float pxDepthInLSpace = projLSpaceCoords.z;
-	float closestDepthInLSpace = shadowMap.Sample(shadowSampler, shadowTexCoords).x;
+    float closestDepthInLSpace = shadowMap.Sample(shadowSampler, shadowTexCoords).x;
 
 	// frustum check
 	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||

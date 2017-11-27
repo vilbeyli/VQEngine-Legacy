@@ -28,7 +28,6 @@ struct PSIn
 {
 	float4 position		 : SV_POSITION;
 	float3 worldPos		 : POSITION;
-	float4 lightSpacePos : POSITION1;	// array?
 	float3 normal		 : NORMAL;
 	float3 tangent		 : TANGENT;
 	float2 texCoord		 : TEXCOORD4;
@@ -38,16 +37,19 @@ cbuffer SceneConstants
 {
 	float padding0;
 	float3 cameraPos;
+	
+	float2 screenDimensions;
+	float2 spotShadowMapDimensions;
 
-	float lightCount;
-	float spotCount;
-    float2 screenDimensions;
-
-	// todo
-	PointLight lights[LIGHT_COUNT];
-	SpotLight spots[SPOT_COUNT];
-	//	float ambient;
+	//float2 pointShadowMapDimensions;
+	//float2 pad;
+	
+	SceneLighting sceneLightData;
+	float ambientFactor;
 };
+TextureCubeArray texPointShadowMaps;
+Texture2DArray   texSpotShadowMaps;
+Texture2DArray   texDirectionalShadowMaps;
 
 cbuffer cbSurfaceMaterial
 {
@@ -57,57 +59,81 @@ cbuffer cbSurfaceMaterial
 
 Texture2D texDiffuseMap;
 Texture2D texNormalMap;
-Texture2D texShadowMap;
 Texture2D texAmbientOcclusion;
 
 SamplerState sShadowSampler;
+SamplerState sLinearSampler;
 SamplerState sNormalSampler;
 
 
 float4 PSMain(PSIn In) : SV_TARGET
-{
+{	// base indices for indexing shadow views
+	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
+	const int spotShadowsBaseIndex = 0;		
+	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
+
 	// lighting & surface parameters
-	const float3 N = normalize(In.normal);
+	const float3 Nw = normalize(In.normal);
 	const float3 T = normalize(In.tangent);
-	const float3 V = normalize(cameraPos - In.worldPos);
+	const float3 Vw = normalize(cameraPos - In.worldPos);
     const float2 screenSpaceUV = In.position.xy / screenDimensions;
 	const float3 Pw = In.worldPos;
 
-	const float ambient = 0.005f;
-
 	PHONG_Surface s;
-    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.texCoord, N, T) +
-		  (1.0f - surfaceMaterial.isNormalMap) * N;
+    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, In.texCoord, Nw, T) +
+		  (1.0f - surfaceMaterial.isNormalMap) * Nw;
     
-	s.diffuseColor = (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sShadowSampler, In.texCoord).xyz +
-		             (1.0f - surfaceMaterial.isDiffuseMap) * float3(1, 1, 1)
-	) * surfaceMaterial.diffuse;
+	// diffuse * diffuse here??
+	s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, In.texCoord).xyz +
+					(1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
 
 	s.specularColor = surfaceMaterial.specular;
     s.shininess = surfaceMaterial.shininess;
 
 	// illumination
-    float3 Ia = s.diffuseColor * ambient * texAmbientOcclusion.Sample(sNormalSampler, screenSpaceUV).xxx; // ambient
+    float3 Ia = s.diffuseColor * ambientFactor * texAmbientOcclusion.Sample(sNormalSampler, screenSpaceUV).xxx; // ambient
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
+    s.N = normalize(s.N);
 
-	for (int i = 0; i < lightCount; ++i)	// POINT Lights
+	// POINT Lights w/o shadows
+	for (int i = 0; i < sceneLightData.numPointLights; ++i)	
     {
-        float3 L = normalize(lights[i].position - Pw);
+		float3 Lw = normalize(sceneLightData.point_lights[i].position - Pw);
+        float NdotL = saturate(dot(s.N, Lw));
         IdIs += 
-		Phong(s, L, V, lights[i].color) 
-		* AttenuationPhong(lights[i].attenuation, length(lights[i].position - Pw)) 
-		* lights[i].brightness 
+		Phong(s, Lw, Vw, sceneLightData.point_lights[i].color)
+		* AttenuationPhong(sceneLightData.point_lights[i].attenuation, length(sceneLightData.point_lights[i].position - Pw))
+		* sceneLightData.point_lights[i].brightness 
+		* NdotL
 		* POINTLIGHT_BRIGHTNESS_SCALAR_PHONG;
     }
-
-	for (int j = 0; j < spotCount; ++j)		// SPOT Lights
+	
+	// SPOT Lights w/o shadows
+	for (int j = 0; j < sceneLightData.numSpots; ++j)		
     {
-		float3 L = normalize(spots[j].position - Pw);
+		float3 Lw = normalize(sceneLightData.spots[j].position - Pw);
+        float NdotL = saturate(dot(s.N, Lw));
         IdIs +=
-		Phong(s, L, V, spots[j].color)
-		* Intensity(spots[j], Pw)
-		* ShadowTest(In.worldPos, In.lightSpacePos, texShadowMap, sShadowSampler)
-		* spots[j].brightness 
+		Phong(s, Lw, Vw, sceneLightData.spots[j].color)
+		* Intensity(sceneLightData.spots[j], Pw)
+		* sceneLightData.spots[j].brightness 
+		* NdotL
+		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
+    }
+
+	// SPOT Lights w/ shadows
+	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)	
+    {
+		const matrix matShadowView = sceneLightData.shadowViews[spotShadowsBaseIndex + k];
+		const float4 Pl = mul(matShadowView, float4(Pw, 1));
+		float3 Lw = normalize(sceneLightData.spot_casters[k].position - Pw);
+        float NdotL = saturate(dot(s.N, Lw));
+        IdIs +=
+		Phong(s, Lw, Vw, sceneLightData.spot_casters[k].color)
+		* Intensity(sceneLightData.spot_casters[k], Pw)
+		* ShadowTestPCF(Pw, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions)
+		* sceneLightData.spot_casters[k].brightness 
+		* NdotL
 		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
     }
 

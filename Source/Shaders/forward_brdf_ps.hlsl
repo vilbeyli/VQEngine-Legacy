@@ -33,18 +33,22 @@ struct PSIn
 
 cbuffer SceneVariables
 {
-	float  pad0;
+	float  isEnvironmentLightingOn;
 	float3 cameraPos;
-
-	float  lightCount;
-	float  spotCount;
+	
 	float2 screenDimensions;
+	float2 spotShadowMapDimensions;
 
-	// todo
-	PointLight lights[20];
-	SpotLight spots[10];
-	//	float ambient;
+	//float2 pointShadowMapDimensions;
+	//float2 pad;
+	
+	SceneLighting sceneLightData;
+
+	float ambientFactor;
 };
+TextureCubeArray texPointShadowMaps;
+Texture2DArray   texSpotShadowMaps;
+Texture2DArray   texDirectionalShadowMaps;
 
 cbuffer cbSurfaceMaterial
 {
@@ -53,7 +57,7 @@ cbuffer cbSurfaceMaterial
 
 Texture2D texDiffuseMap;
 Texture2D texNormalMap;
-Texture2D texShadowMap;
+
 Texture2D texAmbientOcclusion;
 
 Texture2D tIrradianceMap;
@@ -61,13 +65,18 @@ TextureCube tPreFilteredEnvironmentMap;
 Texture2D tBRDFIntegrationLUT;
 
 SamplerState sShadowSampler;
-SamplerState sNormalSampler;
+SamplerState sLinearSampler;
 SamplerState sEnvMapSampler;
 SamplerState sNearestSampler;
 SamplerState sWrapSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
+	// base indices for indexing shadow views
+	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
+	const int spotShadowsBaseIndex = 0;		
+	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
+
 	// lighting & surface parameters (World Space)
 	const float3 P = In.worldPos;
 	const float3 N = normalize(In.normal);
@@ -75,53 +84,78 @@ float4 PSMain(PSIn In) : SV_TARGET
     const float3 V = normalize(cameraPos - P);
     const float3 R = reflect(-V, N);
     const float2 screenSpaceUV = In.position.xy / screenDimensions;
-	const float ambient = 0.01f;
 
 	BRDF_Surface s;
-    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.texCoord, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
-    s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, In.texCoord).xyz +
+    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, In.texCoord, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
+	
+	// diffuse * diffuse here??
+    s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, In.texCoord).xyz +
 					(1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
+
     s.specularColor = surfaceMaterial.specular;
     s.roughness = surfaceMaterial.roughness;
     s.metalness = surfaceMaterial.metalness;
 
-	const float tAO = texAmbientOcclusion.Sample(sNormalSampler, screenSpaceUV).x;
+	const float tAO = texAmbientOcclusion.Sample(sNearestSampler, screenSpaceUV).x;
 
 	// illumination
-    const float3 Ia = s.diffuseColor * ambient * tAO; // ambient
-	float3 IdIs = float3(0.0f, 0.0f, 0.0f);				// diffuse & specular
-
+    const float3 Ia = s.diffuseColor * ambientFactor * tAO; // ambient
+	float3 IdIs = float3(0.0f, 0.0f, 0.0f);					// diffuse & specular
 	
 	// POINT Lights
 	// brightness default: 300
 	//---------------------------------
-	for (int i = 0; i < lightCount; ++i)		
+	for (int i = 0; i < sceneLightData.numPointLights; ++i)		
 	{
-		const float3 Wi       = normalize(lights[i].position - P);
-        const float3 radiance = AttenuationBRDF(lights[i].attenuation, length(lights[i].position - P)) * lights[i].color * lights[i].brightness;
-		IdIs += BRDF(Wi, s, V, P) * radiance;
+		const float3 Lw       = sceneLightData.point_lights[i].position;
+		const float3 Wi       = normalize(Lw - P);
+		const float D		  = length(Lw - P);
+		const float NdotL	  = saturate(dot(s.N, Wi));
+		const float3 radiance = 
+			AttenuationBRDF(sceneLightData.point_lights[i].attenuation, D)
+			* sceneLightData.point_lights[i].color 
+			* sceneLightData.point_lights[i].brightness;
+		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
 
-	// SPOT Lights (shadow)
+	// SPOT Lights - Shadowing
 	//---------------------------------
-	for (int j = 0; j < spotCount; ++j)	
+	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)
 	{
-		const float3 Wi       = normalize(spots[j].position - P);
-        const float3 radiance = Intensity(spots[j], P) * spots[j].color * spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
-		const float shadowing = ShadowTest(P, In.lightSpacePos, texShadowMap, sShadowSampler);
-		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
+		const matrix matShadowView = sceneLightData.shadowViews[spotShadowsBaseIndex + k];
+		const float4 Pl		   = mul(matShadowView, float4(P, 1));
+		const float3 Lw        = sceneLightData.spot_casters[k].position;
+		const float3 Wi        = normalize(Lw - P);
+		const float3 radiance  = Intensity(sceneLightData.spot_casters[k], P) * sceneLightData.spot_casters[k].color * sceneLightData.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float  NdotL	   = saturate(dot(s.N, Wi));
+		const float3 shadowing = ShadowTestPCF(P, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
 	}
 	
+	// SPOT Lights - Non-shadowing
+	//---------------------------------
+	for (int j = 0; j < sceneLightData.numSpots; ++j)
+	{
+		const float3 Lw        = sceneLightData.spots[j].position;
+		const float3 Wi        = normalize(Lw - P);
+		const float3 radiance  = Intensity(sceneLightData.spots[j], P) * sceneLightData.spots[j].color * sceneLightData.spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float NdotL	   = saturate(dot(s.N, Wi));
+		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
+	}
+
 	// ENVIRONMENT Map
 	//---------------------------------
-    const float NdotV = max(0.0f, dot(N, V));
+	float3 IEnv = 0.0f.xxx;
+	if(isEnvironmentLightingOn > 0.001f)
+    {
+        const float NdotV = max(0.0f, dot(N, V));
 
-    const float2 equirectangularUV = SphericalSample(N);
-    const float3 environmentIrradience = tIrradianceMap.Sample(sWrapSampler, equirectangularUV).rgb;
-    const float3 environmentSpecular = tPreFilteredEnvironmentMap.SampleLevel(sEnvMapSampler, R, s.roughness * MAX_REFLECTION_LOD).rgb;
-	const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, 1.0f - s.roughness)).rg;
-	float3 IEnv = EnvironmentBRDF(s, V, tAO, environmentIrradience, environmentSpecular, F0ScaleBias);
-
+        const float2 equirectangularUV = SphericalSample(N);
+        const float3 environmentIrradience = tIrradianceMap.Sample(sWrapSampler, equirectangularUV).rgb;
+        const float3 environmentSpecular = tPreFilteredEnvironmentMap.SampleLevel(sEnvMapSampler, R, s.roughness * MAX_REFLECTION_LOD).rgb;
+        const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, 1.0f - s.roughness)).rg;
+        IEnv = EnvironmentBRDF(s, V, tAO, environmentIrradience, environmentSpecular, F0ScaleBias);
+    }
 	const float3 illumination = Ia + IdIs + IEnv;
 	return float4(illumination, 1);
 }

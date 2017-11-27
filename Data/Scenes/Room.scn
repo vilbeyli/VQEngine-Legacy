@@ -17,13 +17,13 @@
 // ---------------------------------------------------------------------------------------------------------------
 camera 0.1 1500 75   0 50 -190  0 15 
 camera 0.1 1500 75   0 50 120  180 0 
-ao true 0.04
+ao false 0.04
 environmentLights false
 
 light       s         white      	true       2000         70	     -90    65     0	   180  0  	65  0.8	 
 light       s         white      	true       7000         70	     0    75     40	   190  0 	0  0.8	 
-//light       p         orange       	false      18000         60	      0     30     0  	   0.3
-//light       p         cyan      	false      2400          84	      60    25    -2 	   0.4
+//light       p         orange       	false      1800         60	      0     30     0  	   0.3
+light       p         cyan      	false      2400          84	      60    25    -2 	   0.4
 //light       p         red        	false      1500         60	    -140   100   140       0.5
 
 // objects

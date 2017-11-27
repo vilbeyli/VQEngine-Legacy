@@ -428,10 +428,11 @@ void Engine::RenderLights() const
 
 void Engine::SendLightData() const
 {
+	const float shadowDimension = static_cast<float>(mShadowMapPass._shadowMapDimension);
 	// SPOT & POINT LIGHTS
 	//--------------------------------------------------------------
 	mpRenderer->SetConstantStruct("sceneLightData", &mSceneLightData._cb);
-	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+	mpRenderer->SetConstant2f("spotShadowMapDimensions", vec2(shadowDimension, shadowDimension));
 
 	// SHADOW MAPS
 	//--------------------------------------------------------------
@@ -587,19 +588,33 @@ void Engine::Render()
 		if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
 		{
 			mpRenderer->SetTexture("texAmbientOcclusion", tSSAO);
+
+			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
+			if(mSelectedShader == EShaders::FORWARD_BRDF) mpRenderer->SetConstant1f("isEnvironmentLightingOn", mSceneView.bIsIBLEnabled ? 1.0f : 0.0f);
 			if (mSceneView.bIsIBLEnabled && mSelectedShader == EShaders::FORWARD_BRDF)
 			{
 				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
 				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", prefilteredEnvMap);
 				mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
 				mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
-				mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
-				mpRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
 			}
+			else
+			{
+				if (mSelectedShader == EShaders::FORWARD_BRDF)	mpRenderer->SetSamplerState("sEnvMapSampler", EDefaultSamplerState::POINT_SAMPLER);
+			}
+			
+			if (mSelectedShader == EShaders::FORWARD_BRDF)
+			{
+				mpRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
+				mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
+			}
+			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
 
+			mpRenderer->SetConstant1f("ambientFactor", mSceneView.sceneRenderSettings.ambientFactor);
 			mpRenderer->SetConstant3f("cameraPos", mSceneView.cameraPosition);
 			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
-			mpRenderer->SetSamplerState("sNormalSampler", mNormalSampler);
+			mpRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+			//mpRenderer->SetSamplerState("sNormalSampler", mNormalSampler);
 			SendLightData();
 		}
 

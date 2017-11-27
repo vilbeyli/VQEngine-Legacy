@@ -33,13 +33,15 @@ cbuffer SceneVariables
 {
 	matrix matView;
 	matrix matViewToWorld;
-
-	matrix lightSpaceMat; // todo [arr]
+	
+	float2 spotShadowMapDimensions;
+	float2 pad;
+	
 	SceneLighting sceneLightData;
 };
-
-
-Texture2D texSpotShadowMap;	// todo array
+TextureCubeArray texPointShadowMaps;
+Texture2DArray   texSpotShadowMaps;
+Texture2DArray   texDirectionalShadowMaps;
 
 
 // TEXTURES & SAMPLERS
@@ -48,25 +50,28 @@ Texture2D texDiffuseRoughnessMap;
 Texture2D texSpecularMetalnessMap;
 Texture2D texNormals;
 Texture2D texPosition;	// to be removed
-//Texture2DArray texPointShadowMaps;
 
 SamplerState sShadowSampler;
-SamplerState sNearestSampler;
+SamplerState sLinearSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
-{
+{	
+	// base indices for indexing shadow views
+	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
+	const int spotShadowsBaseIndex = 0;		
+	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
+
 	// lighting & surface parameters (View Space Lighting)
-	const float3 P = texPosition.Sample(sNearestSampler, In.uv).xyz;
-	const float3 N = texNormals.Sample(sNearestSampler, In.uv).xyz;
+	const float3 P = texPosition.Sample(sLinearSampler, In.uv).xyz;
+    const float3 N = normalize(texNormals.Sample(sLinearSampler, In.uv).xyz);
 	const float3 V = normalize(- P);
 	
 	const float3 Pw = mul(matViewToWorld, float4(P, 1)).xyz;
-    const float4 Pl = mul(lightSpaceMat, float4(Pw, 1));
     const float3 Vw = mul(matViewToWorld, float4(V, 0)).xyz;
     const float3 Nw = mul(matViewToWorld, float4(N, 0)).xyz;
 
-	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sNearestSampler, In.uv);
-	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sNearestSampler, In.uv);
+	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sLinearSampler, In.uv);
+	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sLinearSampler, In.uv);
 
     PHONG_Surface s;
     s.N = Nw;
@@ -75,35 +80,46 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.shininess = diffuseRoughness.a;	// shininess is stored in alpha channel
 
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
-
-	for (int i = 0; i < sceneLightData.numPointLights; ++i)	// POINT Lights w/o shadows
+	
+	// POINT Lights w/o shadows
+	for (int i = 0; i < sceneLightData.numPointLights; ++i)	
     {
 		float3 Lw = normalize(sceneLightData.point_lights[i].position - Pw);
+        float NdotL = saturate(dot(Nw, Lw));
         IdIs += 
 		Phong(s, Lw, Vw, sceneLightData.point_lights[i].color)
 		* AttenuationPhong(sceneLightData.point_lights[i].attenuation, length(sceneLightData.point_lights[i].position - Pw))
 		* sceneLightData.point_lights[i].brightness 
+		* NdotL
 		* POINTLIGHT_BRIGHTNESS_SCALAR_PHONG;
     }
 	
-	for (int j = 0; j < sceneLightData.numSpots; ++j)		// SPOT Lights w/o shadows
+	// SPOT Lights w/o shadows
+	for (int j = 0; j < sceneLightData.numSpots; ++j)		
     {
-		float3 Lw = normalize(sceneLightData.spots[i].position - Pw);
+		float3 Lw = normalize(sceneLightData.spots[j].position - Pw);
+        float NdotL = saturate(dot(Nw, Lw));
         IdIs +=
 		Phong(s, Lw, Vw, sceneLightData.spots[j].color)
 		* Intensity(sceneLightData.spots[j], Pw)
 		* sceneLightData.spots[j].brightness 
+		* NdotL
 		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
     }
 
-	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)	// SPOT Lights
+	// SPOT Lights w/ shadows
+	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)	
     {
-		float3 Lw = normalize(sceneLightData.spot_casters[i].position - Pw);
+		const matrix matShadowView = sceneLightData.shadowViews[spotShadowsBaseIndex + k];
+		const float4 Pl = mul(matShadowView, float4(Pw, 1));
+		float3 Lw = normalize(sceneLightData.spot_casters[k].position - Pw);
+        float NdotL = saturate(dot(Nw, Lw));
         IdIs +=
 		Phong(s, Lw, Vw, sceneLightData.spot_casters[k].color)
 		* Intensity(sceneLightData.spot_casters[k], Pw)
-		* ShadowTest(Pw, Pl, texSpotShadowMap, sShadowSampler)
+		* ShadowTestPCF(Pw, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions)
 		* sceneLightData.spot_casters[k].brightness 
+		* NdotL
 		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
     }
 

@@ -151,7 +151,6 @@ float3 BRDF(float3 Wi, BRDF_Surface s, float3 V, float3 worldPos)
 	const float3 Wo = V;
 	const float3 N  = s.N;
 	const float3 H = normalize(Wo + Wi);
-	const float  NL = max(0.0f, dot(N, Wi));
 
 	// surface
 	const float3 albedo = s.diffuseColor;
@@ -172,7 +171,7 @@ float3 BRDF(float3 Wi, BRDF_Surface s, float3 V, float3 worldPos)
 	const float3 kD = (float3(1, 1, 1) - kS) * (1.0f - metalness) * albedo;
 	const float3 Id = F_LambertDiffuse(kD);
 	
-	return (Id + Is) * NL;
+	return (Id + Is);
 }
 
 float3 EnvironmentBRDF(BRDF_Surface s, float3 V, float ao, float3 irradience, float3 envSpecular, float2 F0ScaleBias)

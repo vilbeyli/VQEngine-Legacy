@@ -1117,6 +1117,38 @@ void Renderer::SetShader(ShaderID id)
 				}
 			}
 
+#if 0
+			const size_t numSamplers = shader->m_samplers.size();
+			std::vector<ID3D11SamplerState*> nullSSvec(numSamplers, nullptr);
+			ID3D11SamplerState** nullSS = nullSSvec.data();
+			for(ShaderSampler& smp : shader->m_samplers)
+			{
+				switch (smp.shdType)
+				{
+				case EShaderType::VS:
+					m_deviceContext->VSSetSamplers(smp.bufferSlot, numSamplers, nullSS);
+					break;
+				case EShaderType::GS:
+					m_deviceContext->GSSetSamplers(smp.bufferSlot, numSamplers, nullSS);
+					break;
+				case EShaderType::HS:
+					m_deviceContext->HSSetSamplers(smp.bufferSlot, numSamplers, nullSS);
+					break;
+				case EShaderType::DS:
+					m_deviceContext->DSSetSamplers(smp.bufferSlot, numSamplers, nullSS);
+					break;
+				case EShaderType::PS:
+					m_deviceContext->PSSetSamplers(smp.bufferSlot, numSamplers, nullSS);
+					break;
+				case EShaderType::CS:
+					m_deviceContext->CSSetSamplers(smp.bufferSlot, numSamplers, nullSS);
+					break;
+				default:
+					break;
+				}
+			}
+#endif
+
 			ID3D11RenderTargetView* nullRTV[6] = { nullptr };
 			ID3D11DepthStencilView* nullDSV = { nullptr };
 			m_deviceContext->OMSetRenderTargets(6, nullRTV, nullDSV);

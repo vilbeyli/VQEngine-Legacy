@@ -146,16 +146,12 @@ float Intensity(SpotLight l, float3 worldPos)
 	const float softRegion = softAngle - l.halfAngle;
 	return clamp((theta - softAngle) / softRegion, 0.0f, 1.0f);
 }
-float ShadowTest(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler)
+
+// todo: ESM - http://www.cad.zju.edu.cn/home/jqfeng/papers/Exponential%20Soft%20Shadow%20Mapping.pdf
+float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
 {
 	// homogeneous position after interpolation
-	float3 projLSpaceCoords = lightSpacePos.xyz / lightSpacePos.w;
-
-	// clip space [-1, 1] --> texture space [0, 1]
-	float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
-
-	float pxDepthInLSpace = projLSpaceCoords.z;
-    float closestDepthInLSpace = shadowMapArr.Sample(shadowSampler, float3(shadowTexCoords, shadowMapIndex)).x;
+	const float3 projLSpaceCoords = lightSpacePos.xyz / lightSpacePos.w;
 
 	// frustum check
 	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
@@ -166,13 +162,32 @@ float ShadowTest(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMap
 		return 0.0f;
 	}
 
-	// depth check
-	if (pxDepthInLSpace - SHADOW_BIAS > closestDepthInLSpace)
-	{
-		return 0.0f;
-	}
+    const float2 texelSize = 1.0f / (shadowMapDimensions);
+	
+	// clip space [-1, 1] --> texture space [0, 1]
+	const float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
+	
+    const float BIAS = SHADOW_BIAS * tan(acos(NdotL));
+	const float pxDepthInLSpace = projLSpaceCoords.z;
 
-	return 1.0f;
+	float shadow = 0.0f;
+	const int rowHalfSize = 2;
+
+	// PCF
+    for (int x = -rowHalfSize; x <= rowHalfSize; ++x)
+    {
+		for (int y = -rowHalfSize; y <= rowHalfSize; ++y)
+        {
+			float2 texelOffset = float2(x,y) * texelSize;
+			float closestDepthInLSpace = shadowMapArr.Sample(shadowSampler, float3(shadowTexCoords + texelOffset, shadowMapIndex)).x;
+
+			// depth check
+			shadow += (pxDepthInLSpace - BIAS> closestDepthInLSpace) ? 1.0f : 0.0f;
+        }
+    }
+
+    shadow /= (rowHalfSize * 2 + 1) * (rowHalfSize * 2 + 1);
+	return 1.0 - shadow;
 }
 
 float ShadowTest(float3 worldPos, float4 lightSpacePos, Texture2D shadowMap, SamplerState shadowSampler)

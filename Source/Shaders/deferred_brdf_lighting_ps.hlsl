@@ -36,6 +36,10 @@ cbuffer SceneVariables	// frame constants
 	matrix matView;
 	matrix matViewToWorld;
 	
+	//float2 pointShadowMapDimensions;
+	float2 spotShadowMapDimensions;
+	float2 pad;
+	
 	SceneLighting sceneLightData;
 };
 
@@ -56,7 +60,12 @@ SamplerState sShadowSampler;
 SamplerState sLinearSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
-{
+{	
+	// base indices for indexing shadow views
+	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
+	const int spotShadowsBaseIndex = 0;		
+	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
+
 	// lighting & surface parameters (View Space Lighting)
 	const float3 P = texPosition.Sample(sLinearSampler, In.uv);
 	const float3 N = texNormals.Sample(sLinearSampler, In.uv);
@@ -67,12 +76,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sLinearSampler, In.uv);
 	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sLinearSampler, In.uv);
-
-	
-	// base indices for indexing shadow views
-	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
-	const int spotShadowsBaseIndex = 0;		
-	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
 
     BRDF_Surface s;
     s.N = N;
@@ -93,11 +96,12 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 Lv       = mul(matView, float4(sceneLightData.point_lights[i].position, 1));
 		const float3 Wi       = normalize(Lv - P);
 		const float D = length(sceneLightData.point_lights[i].position - Pw);
+		const float NdotL	  = saturate(dot(s.N, Wi));
 		const float3 radiance = 
 			AttenuationBRDF(sceneLightData.point_lights[i].attenuation, D)
 			* sceneLightData.point_lights[i].color 
 			* sceneLightData.point_lights[i].brightness;
-		IdIs += BRDF(Wi, s, V, P) * radiance;
+		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
 
 	// todo shadow caster points
@@ -120,7 +124,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 Lv        = mul(matView, float4(sceneLightData.spots[j].position, 1));
 		const float3 Wi        = normalize(Lv - P);
 		const float3 radiance  = Intensity(sceneLightData.spots[j], Pw) * sceneLightData.spots[j].color * sceneLightData.spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
-		IdIs += BRDF(Wi, s, V, P) * radiance;
+		const float NdotL	   = saturate(dot(s.N, Wi));
+		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
 
 	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)
@@ -130,8 +135,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 Lv        = mul(matView, float4(sceneLightData.spot_casters[k].position, 1));
 		const float3 Wi        = normalize(Lv - P);
 		const float3 radiance  = Intensity(sceneLightData.spot_casters[k], Pw) * sceneLightData.spot_casters[k].color * sceneLightData.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
-		const float3 shadowing = ShadowTest(Pw, Pl, texSpotShadowMaps, k, sShadowSampler);
-		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing;
+		const float  NdotL	   = saturate(dot(s.N, Wi));
+		const float3 shadowing = ShadowTestPCF(Pw, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
 	}
 
 

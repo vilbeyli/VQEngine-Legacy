@@ -91,7 +91,7 @@ void RoomScene::Load(SerializedScene& scene)
 
 			// offset to center the grid
 			const float offsetDim = -static_cast<float>(gridDimension) * r / 2 + r / 2.0f;
-			const vec3 offset = vec3(col * r, -1.0f, row * r) + vec3(offsetDim, 0.0f, offsetDim);
+			const vec3 offset = vec3(col * r, -1.0f, row * r) + vec3(offsetDim, 0.2f, offsetDim);
 
 			const vec3 pos = origin + offset;
 
@@ -103,6 +103,7 @@ void RoomScene::Load(SerializedScene& scene)
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			// col(-x->+x) -> metalness [0.0f, 1.0f]
 			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::red) / 1.5f));
+			//sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::white) * rowStep));
 			mat0.metalness = colStep;
 
 			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
@@ -263,7 +264,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		tf.SetScale(floorWidth, thickness, floorDepth);
 		tf.SetPosition(0, -wallHieght + YOffset, 0);
 
-		floor.mModel.mBlinnPhong_Material.shininess = 20.0f;
+		floor.mModel.mBlinnPhong_Material.shininess = 40.0f;
 		floor.mModel.mBRDF_Material.roughness = 0.8f;
 		floor.mModel.mBRDF_Material.metalness = 0.0f;
 		floor.mModel.SetDiffuseAlpha(LinearColor::gray, 1.0f);
@@ -280,6 +281,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		Transform& tf = ceiling.mTransform;
 		tf.SetScale(floorWidth, thickness, floorDepth);
 		tf.SetPosition(0, wallHieght + YOffset, 0);
+		//ceiling.mModel.SetDiffuseAlpha(LinearColor::bp_bronze, 1.0f);
 
 		ceiling.mModel.mBlinnPhong_Material.shininess = 20.0f;
 	}

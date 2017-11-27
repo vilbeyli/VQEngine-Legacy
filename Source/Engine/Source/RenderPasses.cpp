@@ -478,7 +478,9 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
-	if(sceneView.bIsIBLEnabled)
+	const bool bSkylight = texIrradianceMap != -1;
+	//assert(bSkylight == sceneView.bIsIBLEnabled);	// this fails from ibl->ssao test scene
+	if(bSkylight)
 	{
 		pRenderer->BeginEvent("Environment Map Lighting Pass");
 		pRenderer->SetShader(_ambientIBLShader);

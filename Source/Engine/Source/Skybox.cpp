@@ -48,6 +48,55 @@ const  FilePaths s_filePaths = []{
 }();
 
 std::vector<Skybox> Skybox::s_Presets(ECubeMapPresets::CUBEMAP_PRESET_COUNT + EEnvironmentMapPresets::ENVIRONMENT_MAP_PRESET_COUNT);
+
+void InitializePreset_sIBL(Renderer* pRenderer, EEnvironmentMapPresets preset)
+{
+	const std::string sIBLDirectory = Renderer::sHDRTextureRoot + std::string("sIBL/");
+	const bool bEquirectangular = true;
+
+	auto initBarca = [&]()
+	{	// BARCELONA ROOFTOP  
+		EnvironmentMapFileNames files;
+		const std::string root = sIBLDirectory + "Barcelona_Rooftops/";
+		files = {
+			"Barce_Rooftop_C_8k.jpg",
+			"Barce_Rooftop_C_Env.hdr",
+			"Barce_Rooftop_C_3k.hdr",
+		};
+		Skybox::s_Presets[EEnvironmentMapPresets::BARCELONA] = Skybox(pRenderer, files, root, bEquirectangular);
+	};
+
+	auto initTropical = [&]()
+	{	// TROPICAL BEACH
+		EnvironmentMapFileNames files;
+		const std::string root = sIBLDirectory + "Tropical_Beach/";
+		files = {
+			"Tropical_Beach_8k.jpg",
+			"Tropical_Beach_Env.hdr",
+			"Tropical_Beach_3k.hdr",
+		};
+		Skybox::s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = Skybox(pRenderer, files, root, bEquirectangular);
+	};
+
+
+	switch (preset)
+	{
+	case BARCELONA:
+		initBarca();
+		break;
+	case TROPICAL_BEACH:
+		break;
+	case TROPICAL_RUINS:
+		break;
+	case WALK_OF_FAME:
+		break;
+	default:
+		Log::Error("Preset %d is not an sIBL preset.", preset);
+		break;
+	}
+
+}
+
 void Skybox::InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps)
 {
 	EnvironmentMap::Initialize(pRenderer);
@@ -75,7 +124,7 @@ void Skybox::InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps)
 
 		EnvironmentMapFileNames files;
 
-
+		//InitializePreset_sIBL(pRenderer, EEnvironmentMapPresets::BARCELONA);
 		{	// BARCELONA ROOFTOP  
 			const std::string root = sIBLDirectory + "Barcelona_Rooftops/";
 			files = {

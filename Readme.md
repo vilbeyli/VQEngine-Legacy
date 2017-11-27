@@ -8,8 +8,9 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 ![](Data/Screenshots/IBL_la.PNG)
 
+<center><i>BRDF, HDR, Tonemapping, Bloom, PCF Shadows</i></center>
 
-![](Data/Screenshots/ibl_ruins2.PNG)
+![](Data/Screenshots/brdf.PNG)
 
 
 <center><i>SSAO w/ Gaussian Blur</i></center>
@@ -55,7 +56,6 @@ Scenes:
 | **F9** |	Toggle Bloom |
 | **;** |	Toggle Ambient Occlusion |
 | **Backspace** | Pause App |
-| **\\** | Reload Shaders |
 | **ESC** |	Exit App |
  
 
@@ -79,15 +79,20 @@ See [active Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones
  
  ***In Development***
  
- *v0.2* - Expected: Early November
- - BRDF
+ *v0.2* - Expected: Early December
+ - PBR: GGX-Smith BRDF
  - Bloom
  - Cubemap Textures
  - Skybox
- - Image-Based Lighting
+ - Environment Mapping (Image-Based Lighting)
  - Deferred Rendering
- - SSAO
- - Improved Shadow Maps
+ - SSAO w/ Gaussian Blur
+ - PCF Shadow Maps & Multiple dynamic spot-light
  - Anti-Aliasing
  - Z-PrePass
- - Scene files
+ - Scene files / Switchable scenes
+ 
+ *v0.3 - Debug Features* - Expected: TBA
+  - Debug drawing: Mesh, Bounding box, TBN vectors, etc.
+  - Text drawing
+  - ... TBA  

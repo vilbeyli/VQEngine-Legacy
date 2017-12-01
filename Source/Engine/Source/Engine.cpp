@@ -323,7 +323,7 @@ void Engine::PreRender()
 	mSceneView.sceneRenderSettings = scene->GetSceneRenderSettings();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
-	mSceneView.bIsIBLEnabled = mSceneView.environmentMap.irradianceMap != -1;
+	mSceneView.bIsIBLEnabled = scene->mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
 
 	mSceneView.environmentMap = scene->GetEnvironmentMap();
 
@@ -498,8 +498,6 @@ void Engine::Render()
 
 		// LIGHT SOURCES
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
-		RenderLights();
-
 		// SKYBOX
 		if (pScene->HasSkybox())
 		{
@@ -509,6 +507,9 @@ void Engine::Render()
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->UnbindDepthTarget();
 		}
+
+		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+		RenderLights();
 	}
 
 
@@ -540,6 +541,7 @@ void Engine::Render()
 
 			mpRenderer->BeginEvent("Z-PrePass");
 			mpRenderer->SetShader(EShaders::Z_PREPRASS);
+			mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->BindRenderTargets(normals, positions);
@@ -590,31 +592,29 @@ void Engine::Render()
 			mpRenderer->SetTexture("texAmbientOcclusion", tSSAO);
 
 			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
-			if(mSelectedShader == EShaders::FORWARD_BRDF) mpRenderer->SetConstant1f("isEnvironmentLightingOn", mSceneView.bIsIBLEnabled ? 1.0f : 0.0f);
-			if (mSceneView.bIsIBLEnabled && mSelectedShader == EShaders::FORWARD_BRDF)
+			if (mSceneView.bIsIBLEnabled)
 			{
 				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
 				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", prefilteredEnvMap);
 				mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
 				mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 			}
-			else
-			{
-				if (mSelectedShader == EShaders::FORWARD_BRDF)	mpRenderer->SetSamplerState("sEnvMapSampler", EDefaultSamplerState::POINT_SAMPLER);
-			}
 			
 			if (mSelectedShader == EShaders::FORWARD_BRDF)
 			{
+				mpRenderer->SetConstant1f("isEnvironmentLightingOn", mSceneView.bIsIBLEnabled ? 1.0f : 0.0f);
 				mpRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
 				mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 			}
+			else
+				mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
 
 			mpRenderer->SetConstant1f("ambientFactor", mSceneView.sceneRenderSettings.ambientFactor);
 			mpRenderer->SetConstant3f("cameraPos", mSceneView.cameraPosition);
 			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
-			mpRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
-			//mpRenderer->SetSamplerState("sNormalSampler", mNormalSampler);
+			mpRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+
 			SendLightData();
 		}
 

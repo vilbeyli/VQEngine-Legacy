@@ -78,13 +78,14 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 Vw = normalize(cameraPos - In.worldPos);
     const float2 screenSpaceUV = In.position.xy / screenDimensions;
 	const float3 Pw = In.worldPos;
+	const float2 uv = In.texCoord * surfaceMaterial.uvScale;
 
 	PHONG_Surface s;
-    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, In.texCoord, Nw, T) +
+    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, uv, Nw, T) +
 		  (1.0f - surfaceMaterial.isNormalMap) * Nw;
     
 	// diffuse * diffuse here??
-	s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, In.texCoord).xyz +
+	s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, uv).xyz +
 					(1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
 
 	s.specularColor = surfaceMaterial.specular;

@@ -443,7 +443,7 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT, _GBuffer._positionRT);
 	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
 	pRenderer->SetDepthStencilState(_geometryStencilState); 
-	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 	pRenderer->Begin(clearCmd);
 	pRenderer->Apply();
 }
@@ -478,8 +478,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
-	const bool bSkylight = texIrradianceMap != -1;
-	//assert(bSkylight == sceneView.bIsIBLEnabled);	// this fails from ibl->ssao test scene
+	const bool bSkylight = sceneView.bIsIBLEnabled;
 	if(bSkylight)
 	{
 		pRenderer->BeginEvent("Environment Map Lighting Pass");

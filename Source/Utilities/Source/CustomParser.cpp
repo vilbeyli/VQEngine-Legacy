@@ -596,6 +596,10 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		scene.settings.bAmbientOcclusionEnabled = sBoolTypeReflection.at(command[1]); 
 		scene.settings.ambientFactor = stof(command[2]);
 	}
+	else if (cmd == "skylight")
+	{
+		scene.settings.bSkylightEnabled= sBoolTypeReflection.at(command[1]);
+	}
 	else
 	{
 		Log::Error("Parser: Unknown command \"%s\"", cmd.c_str());

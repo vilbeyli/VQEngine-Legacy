@@ -78,6 +78,8 @@ void SSAOTestScene::Load(SerializedScene& scene)
 		obj.mModel.SetDiffuseMap(AmbientOcclusionPass::whiteTexture4x4);
 	}
 
+	mSkybox = Skybox::s_Presets[MILKYWAY];
+
 }
 
 void SSAOTestScene::Unload()

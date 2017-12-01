@@ -71,6 +71,7 @@ Material::Material()
 	diffuse(LinearColor::white),
 	alpha(1.0f),
 	specular(LinearColor::white.Value()),
+	tiling(1, 1),
 	diffuseMap(-1),
 	normalMap(-1)
 {}
@@ -86,10 +87,13 @@ struct SurfaceMaterial
 	vec3  specular;
 	float roughness;
 
+	// todo: remove is*Map after shader permutation is implemented
 	float isDiffuseMap;
 	float isNormalMap;
+
 	float metalness;
 	float shininess;
+	vec2 tiling;
 };
 
 void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool bIsDeferredRendering) const
@@ -98,6 +102,7 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 	{
 	case EShaders::NORMAL:
 	case EShaders::Z_PREPRASS:
+		renderer->SetConstant2f("uvScale", tiling);
 		renderer->SetConstant1f("isNormalMap", normalMap == -1 ? 0.0f : 1.0f);
 		if (normalMap != -1) renderer->SetTexture("texNormalMap", normalMap);
 		break;
@@ -142,6 +147,8 @@ void BRDF_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders sh
 	{
 	case EShaders::NORMAL:
 	case EShaders::Z_PREPRASS:
+		renderer->SetConstant2f("uvScale", tiling);
+		break;
 	case EShaders::UNLIT:
 		break;
 	default:
@@ -155,7 +162,8 @@ void BRDF_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders sh
 			diffuseMap == -1 ? 0.0f : 1.0f,
 			normalMap == -1 ? 0.0f : 1.0f,
 			metalness,
-			0.0f
+			0.0f,
+			tiling
 		};
 		renderer->SetConstantStruct("surfaceMaterial", &mat);
 
@@ -194,7 +202,8 @@ void BlinnPhong_Material::SetMaterialSpecificConstants(Renderer* renderer, EShad
 			diffuseMap == -1 ? 0.0f : 1.0f,
 			normalMap == -1 ? 0.0f : 1.0f,
 			0.0f,	// brdf metalness
-			shininess
+			shininess,
+			tiling
 		};
 		renderer->SetConstantStruct("surfaceMaterial", &mat);
 		if (bIsDeferredRendering)

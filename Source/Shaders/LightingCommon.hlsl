@@ -95,10 +95,13 @@ struct SurfaceMaterial
     float3 specular;
     float roughness;
 
+	// todo: remove is*Map after shader permutation is implemented
     float isDiffuseMap;
     float isNormalMap;
+
     float metalness;
     float shininess;
+	float2 uvScale;
 };
 
 struct BRDF_Surface
@@ -159,7 +162,7 @@ float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadow
 		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
 		)
 	{
-		return 0.0f;
+		return 1.0f;
 	}
 
     const float2 texelSize = 1.0f / (shadowMapDimensions);

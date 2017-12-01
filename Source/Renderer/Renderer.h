@@ -80,45 +80,6 @@ struct PipelineState
 	TextureID			_depthBufferTexture;	// ^
 };
 
-enum ETextureUsage : unsigned
-{
-	RESOURCE			= D3D11_BIND_SHADER_RESOURCE,
-	RENDER_TARGET		= D3D11_BIND_RENDER_TARGET,
-	RENDER_TARGET_RW	= D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET,
-	DEPTH_TARGET		= D3D11_BIND_DEPTH_STENCIL,
-
-	TEXTURE_USAGE_COUNT
-};
-
-struct TextureDesc
-{
-	int width;
-	int height;
-	EImageFormat format;
-	ETextureUsage usage;
-	std::string	 texFileName;
-	void* data;
-	int mipCount;
-	int arraySize;
-	bool bIsCubeMap;
-	bool bGenerateMips;
-	
-	TextureDesc() : 
-		width(1), 
-		height(1), 
-		format(RGBA32F), 
-		usage(RESOURCE),
-		texFileName(""), 
-		data(nullptr), 
-		mipCount(1), 
-		arraySize(1), 
-		bIsCubeMap(false), 
-		bGenerateMips(false)
-	{}
-
-	D3D11_TEXTURE2D_DESC dxDesc;
-};
-
 class Renderer
 {
 	friend class Engine;		

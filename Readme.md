@@ -1,4 +1,4 @@
-# DX11Renderer - VDemo | DirectX11 & C++11 Real-Time Renderer
+# VDemo | DirectX11 & C++11 Real-Time Renderer
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
@@ -10,8 +10,9 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 <center><i>BRDF, HDR, Tonemapping, Bloom, PCF Shadows</i></center>
 
-![](Data/Screenshots/brdf.PNG)
+![](Data/Screenshots/space_gold.PNG)
 
+![](Data/Screenshots/room_skylight.PNG)
 
 <center><i>SSAO w/ Gaussian Blur</i></center>
 
@@ -24,7 +25,30 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
   
    Note: if the linker throws the error `1>LINK : fatal error LNK1158: cannot run 'rc.exe'` do the following:
    - Copy `rc.exe` and `rcdll.dll` 
-   from `C:\Program Files (x86)\Windows Kits\10\bin\10.0.15063.0\x64` to `C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin`
+   from `C:\Program Files (x86)\Windows Kits\10\bin\10.0.15063.0\x64` to `C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin` (or wherever you store Visual Studio)
+ 
+
+ ## Feature List / Version History
+
+ *v0.2.0 - Rendering Techniques & Multiple Scenes - November28-2017*
+ - Forward/Deferred Rendering
+ - PBR: GGX-Smith BRDF
+ - Environment Mapping (Image-Based Lighting)
+ - PCF Shadows
+ - Bloom
+ - SSAO w/ Gaussian Blur
+ - Scene files, Switchable/Reloadable scenes
+ - Improved build times
+
+*v0.1.0 - Simple Lighting, Texturing and Shader Reflection: July15-2017*
+ - Vertex-Geometry-Pixel Shader Pipeline
+ - Shader Reflection
+ - Phong Lighting
+ - Simple Shadow Maping Algorithm
+ - Normal Maps
+ - Diffuse Textures
+ - Procedural Geometry: Cube, Sphere, Cylinder, Grid
+  
 
 ## Controls
 
@@ -40,7 +64,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 Scenes:
  - 0 - Room Scene
  - 1 - SSAO Test Scene
- - 2 - IBL Test Scene
+ - 2 - IBL Test Scene (PageUp/Down to change EnvironmentMap)
 
 
 | Engine Controls |  |
@@ -57,42 +81,3 @@ Scenes:
 | **;** |	Toggle Ambient Occlusion |
 | **Backspace** | Pause App |
 | **ESC** |	Exit App |
- 
-
-
-## Milestones & Future
-
-Future Plans / In-Development: https://github.com/vilbeyli/DX11Renderer/issues
-
-See [active Milestones here](https://github.com/vilbeyli/DX11Renderer/milestones).
- 
- ***Completed***
-
-*v0.1 : July15-2017*
- - Vertex-Geometry-Pixel Shader Pipeline
- - Shader Reflection
- - Phong Lighting
- - Simple Shadow Maps
- - Normal Maps
- - Diffuse Textures
- - Procedural Geometry: Cube, Sphere, Cylinder, Grid
- 
- ***In Development***
- 
- *v0.2* - Expected: Early December
- - PBR: GGX-Smith BRDF
- - Bloom
- - Cubemap Textures
- - Skybox
- - Environment Mapping (Image-Based Lighting)
- - Deferred Rendering
- - SSAO w/ Gaussian Blur
- - PCF Shadow Maps & Multiple dynamic spot-light
- - Anti-Aliasing
- - Z-PrePass
- - Scene files / Switchable scenes
- 
- *v0.3 - Debug Features* - Expected: TBA
-  - Debug drawing: Mesh, Bounding box, TBN vectors, etc.
-  - Text drawing
-  - ... TBA  

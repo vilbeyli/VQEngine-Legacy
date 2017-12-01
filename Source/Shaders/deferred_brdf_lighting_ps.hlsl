@@ -87,7 +87,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 #if 1
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
-
+	
 	// POINT Lights
 	// brightness default: 300
 	//---------------------------------
@@ -139,7 +139,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 shadowing = ShadowTestPCF(Pw, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
 	}
-
 
 	const float3 illumination = IdIs;
 	return float4(illumination, 1);

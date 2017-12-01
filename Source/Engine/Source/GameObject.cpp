@@ -37,6 +37,7 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 		mat->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
 	}
 
+	// SET MATRICES
 	switch (shader)
 	{
 	case EShaders::TBN:

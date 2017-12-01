@@ -716,6 +716,14 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	tex._height = texDesc.height;
 	tex._name   = texDesc.texFileName;
 	
+
+	// check multi sampling quality level
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb173072(v=vs.85).aspx
+	//UINT maxMultiSamplingQualityLevel = 0;
+	//m_device->CheckMultisampleQualityLevels(, , &maxMultiSamplingQualityLevel);
+	//---
+
+
 	// Texture2D Resource
 	UINT miscFlags = 0;
 	miscFlags |= texDesc.bIsCubeMap ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;

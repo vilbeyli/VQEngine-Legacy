@@ -37,6 +37,7 @@ struct Material
 	float		alpha;
 	vec3		specular;
 
+	vec2		tiling;	// default=(1,1)
 	TextureID	diffuseMap;
 	TextureID	normalMap;
 

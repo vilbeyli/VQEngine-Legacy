@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "BRDF.hlsl"
+#include "ShadingMath.hlsl"
 
 #define PI		3.14159265359f
 #define EPSILON 0.000000000001f
@@ -42,6 +42,7 @@ struct PSOut
 cbuffer cbSurfaceMaterial
 {
     float isNormalMap;
+	float2 uvScale;
 };
 
 Texture2D texNormalMap;
@@ -57,11 +58,12 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 N = normalize(In.viewNormal);
 	const float3 T = normalize(In.viewTangent);
 	const float3 V = normalize(-P);
+	const float2 uv = In.uv * uvScale;
 
-    BRDF_Surface s;
-	s.N				= (isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.uv, N, T) +	(1.0f - isNormalMap) * N;
+    
+	float3 surfaceN				= (isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) +	(1.0f - isNormalMap) * N;
 	
-	GBuffer.normals				= s.N;
+	GBuffer.normals				= surfaceN;
 	GBuffer.position			= P;
 	return GBuffer;
 }

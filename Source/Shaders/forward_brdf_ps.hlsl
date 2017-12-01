@@ -76,6 +76,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
 	const int spotShadowsBaseIndex = 0;		
 	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
+	const float2 uv = In.texCoord * surfaceMaterial.uvScale;
 
 	// lighting & surface parameters (World Space)
 	const float3 P = In.worldPos;
@@ -86,21 +87,23 @@ float4 PSMain(PSIn In) : SV_TARGET
     const float2 screenSpaceUV = In.position.xy / screenDimensions;
 
 	BRDF_Surface s;
-    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, In.texCoord, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
+    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
 	
 	// diffuse * diffuse here??
-    s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, In.texCoord).xyz +
+    s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, uv).xyz +
 					(1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
 
     s.specularColor = surfaceMaterial.specular;
     s.roughness = surfaceMaterial.roughness;
     s.metalness = surfaceMaterial.metalness;
 
-	const float tAO = texAmbientOcclusion.Sample(sNearestSampler, screenSpaceUV).x;
+	const float texAO = texAmbientOcclusion.Sample(sNearestSampler, screenSpaceUV).x;
+	const float ao = texAO * ambientFactor;
 
 	// illumination
-    const float3 Ia = s.diffuseColor * ambientFactor * tAO; // ambient
-	float3 IdIs = float3(0.0f, 0.0f, 0.0f);					// diffuse & specular
+    const float3 Ia = s.diffuseColor * ao;	// ambient
+	float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
+	float3 IEnv = 0.0f.xxx;					// environment lighting
 	
 	// POINT Lights
 	// brightness default: 300
@@ -145,7 +148,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	// ENVIRONMENT Map
 	//---------------------------------
-	float3 IEnv = 0.0f.xxx;
 	if(isEnvironmentLightingOn > 0.001f)
     {
         const float NdotV = max(0.0f, dot(N, V));
@@ -154,7 +156,8 @@ float4 PSMain(PSIn In) : SV_TARGET
         const float3 environmentIrradience = tIrradianceMap.Sample(sWrapSampler, equirectangularUV).rgb;
         const float3 environmentSpecular = tPreFilteredEnvironmentMap.SampleLevel(sEnvMapSampler, R, s.roughness * MAX_REFLECTION_LOD).rgb;
         const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, 1.0f - s.roughness)).rg;
-        IEnv = EnvironmentBRDF(s, V, tAO, environmentIrradience, environmentSpecular, F0ScaleBias);
+        IEnv = EnvironmentBRDF(s, V, ao, environmentIrradience, environmentSpecular, F0ScaleBias);
+		IEnv -= Ia; // cancel ambient lighting
     }
 	const float3 illumination = Ia + IdIs + IEnv;
 	return float4(illumination, 1);

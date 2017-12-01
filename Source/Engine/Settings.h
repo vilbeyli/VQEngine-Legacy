@@ -20,14 +20,16 @@
 
 namespace Settings
 {
-	struct Window {
+	struct Window
+	{
 		int		width;
 		int		height;
 		int		fullscreen;
 		int		vsync;
 	};
 
-	struct Camera {
+	struct Camera 
+	{
 		union
 		{
 			float		fovH;
@@ -40,25 +42,30 @@ namespace Settings
 		float		yaw, pitch;
 	};
 
-	struct ShadowMap {
+	struct ShadowMap 
+	{
 		size_t	dimension;
 	};
 
-	struct PostProcess {
-		struct Bloom {
+	struct PostProcess 
+	{
+		struct Bloom 
+		{
 			float	threshold_brdf;
 			float	threshold_phong;
 			int     blurPassCount;
 		} bloom;
 
-		struct Tonemapping {
+		struct Tonemapping 
+		{
 			float	exposure;
 		} toneMapping;
 
 		bool HDREnabled = false;
 	};
 	
-	struct Rendering{
+	struct Rendering
+	{
 		ShadowMap	shadowMap;
 		PostProcess postProcess;
 		bool		bUseDeferredRendering;
@@ -67,14 +74,17 @@ namespace Settings
 		bool		bEnableEnvironmentLighting;
 	};
 
-	struct Engine {
+	struct Engine 
+	{
 		Window		window;
 		Rendering rendering;
 		int levelToLoad;
 	};
 
-	struct SceneRender {
-		bool bAmbientOcclusionEnabled;	// screenspace ambient occlusion
+	struct SceneRender
+	{
+		bool bAmbientOcclusionEnabled;	// screen-space ambient occlusion
 		float ambientFactor;			// ambient lighting scalar
+		bool bSkylightEnabled;			// ambient environment map lighting
 	};
 };

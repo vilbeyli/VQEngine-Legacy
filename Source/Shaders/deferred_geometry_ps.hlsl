@@ -62,10 +62,11 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 N = normalize(In.viewNormal);
 	const float3 T = normalize(In.viewTangent);
 	const float3 V = normalize(-P);
+	float2 uv = In.uv * surfaceMaterial.uvScale;
 
     BRDF_Surface s;
-	s.N				= (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, In.uv, N, T) +	(1.0f - surfaceMaterial.isNormalMap) * N;
-	s.diffuseColor	= surfaceMaterial.diffuse *  (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, In.uv).xyz +
+	s.N				= (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) +	(1.0f - surfaceMaterial.isNormalMap) * N;
+	s.diffuseColor	= surfaceMaterial.diffuse *  (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, uv).xyz +
 					(1.0f - surfaceMaterial.isDiffuseMap)   * surfaceMaterial.diffuse);
 	s.specularColor = surfaceMaterial.specular;
     s.roughness = // use s.roughness for either roughness (PBR) or shininess (Phong)

@@ -20,6 +20,7 @@
 
 #include <string>
 #include <vector>
+#include "RenderingEnums.h"
 
 using TextureID = int;
 using SamplerID = int;
@@ -30,6 +31,36 @@ struct ID3D11SamplerState;
 struct D3D11_TEXTURE2D_DESC;
 struct ID3D11Texture3D;
 struct ID3D11Texture2D;
+
+struct TextureDesc
+{
+	int width;
+	int height;
+	EImageFormat format;
+	ETextureUsage usage;
+	std::string	 texFileName;
+	void* data;
+	int mipCount;
+	int arraySize;
+	bool bIsCubeMap;
+	bool bGenerateMips;
+
+	TextureDesc() :
+		width(1),
+		height(1),
+		format(RGBA32F),
+		usage(RESOURCE),
+		texFileName(""),
+		data(nullptr),
+		mipCount(1),
+		arraySize(1),
+		bIsCubeMap(false),
+		bGenerateMips(false)
+	{}
+
+	D3D11_TEXTURE2D_DESC dxDesc;
+};
+
 
 struct Texture
 {

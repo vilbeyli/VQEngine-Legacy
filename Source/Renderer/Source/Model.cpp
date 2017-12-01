@@ -37,3 +37,8 @@ void Model::SetDiffuseMap(const TextureID diffuseMap)
 {
 	mBlinnPhong_Material.diffuseMap = mBRDF_Material.diffuseMap = diffuseMap;
 }
+
+void Model::SetTextureTiling(const vec2 & tiling)
+{
+	mBlinnPhong_Material.tiling = mBRDF_Material.tiling = tiling;
+}

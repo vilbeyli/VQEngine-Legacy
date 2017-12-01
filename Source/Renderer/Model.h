@@ -30,6 +30,7 @@ public:
 	void SetDiffuseColor(const LinearColor & diffuseColor);
 	void SetNormalMap(const TextureID normalMap);
 	void SetDiffuseMap(const TextureID diffuseMap);
+	void SetTextureTiling(const vec2& tiling);
 
 public:
 	InputBufferID		mMesh;

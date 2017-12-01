@@ -91,7 +91,7 @@ void RoomScene::Load(SerializedScene& scene)
 
 			// offset to center the grid
 			const float offsetDim = -static_cast<float>(gridDimension) * r / 2 + r / 2.0f;
-			const vec3 offset = vec3(col * r, -1.0f, row * r) + vec3(offsetDim, 0.2f, offsetDim);
+			const vec3 offset = vec3(col * r, -1.0f, row * r) + vec3(offsetDim, 0.75f, offsetDim);
 
 			const vec3 pos = origin + offset;
 
@@ -102,13 +102,14 @@ void RoomScene::Load(SerializedScene& scene)
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			// col(-x->+x) -> metalness [0.0f, 1.0f]
-			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::red) / 1.5f));
+			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::gold)));
 			//sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::white) * rowStep));
-			mat0.metalness = colStep;
+			mat0.metalness = 1.0;
 
 			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
-			const float roughnessLowClamp = 0.065f;
+			const float roughnessLowClamp = 0.07f;
 			mat0.roughness = rowStep < roughnessLowClamp ? roughnessLowClamp : rowStep;
+			mat0.roughness = (1.0f + roughnessLowClamp) - mat0.roughness;
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;
@@ -126,7 +127,7 @@ void RoomScene::Load(SerializedScene& scene)
 		;// obj.mRenderSettings.bRenderTBN = true;
 	}
 
-	mSkybox = Skybox::s_Presets[ECubeMapPresets::NIGHT_SKY];
+	mSkybox = Skybox::s_Presets[EEnvironmentMapPresets::MILKYWAY];
 }
 
 void RoomScene::Unload()
@@ -222,10 +223,10 @@ void RoomScene::ToggleFloorNormalMap()
 void RoomScene::Room::Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const
 {
 	floor.Render(pRenderer, sceneView, sendMaterialData);
-	wallL.Render(pRenderer, sceneView, sendMaterialData);
+	//wallL.Render(pRenderer, sceneView, sendMaterialData);
 	wallR.Render(pRenderer, sceneView, sendMaterialData);
-	wallF.Render(pRenderer, sceneView, sendMaterialData);
-	ceiling.Render(pRenderer, sceneView, sendMaterialData);
+	//wallF.Render(pRenderer, sceneView, sendMaterialData);
+	//ceiling.Render(pRenderer, sceneView, sendMaterialData);
 }
 
 void RoomScene::Room::Initialize(Renderer* pRenderer)
@@ -269,7 +270,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		floor.mModel.mBRDF_Material.metalness = 0.0f;
 		floor.mModel.SetDiffuseAlpha(LinearColor::gray, 1.0f);
 		floor.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/161_norm.JPG"));
-
+		floor.mModel.SetTextureTiling(vec2(10, 10));
 		//mat = Material::bronze;
 		//floor.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("185.JPG"));
 		//floor.m_model.SetNormalMap(pRenderer->CreateTextureFromFile("185_norm.JPG"));
@@ -286,6 +287,9 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		ceiling.mModel.mBlinnPhong_Material.shininess = 20.0f;
 	}
 
+	const float ratio = floorWidth / wallHieght;
+	const vec2 wallTiling    = vec2(ratio, 1.3f) * 1.7f;
+	const vec2 wallTilingInv = vec2(1.3f, ratio) * 1.7f;
 	// RIGHT WALL
 	{
 		Transform& tf = wallR.mTransform;
@@ -297,6 +301,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 
 		wallR.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
 		wallR.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
+		wallR.mModel.SetTextureTiling(wallTiling);
 	}
 
 	// LEFT WALL
@@ -311,6 +316,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		wallL.mModel.mBlinnPhong_Material.shininess = 60.0f;
 		wallL.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
 		wallL.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
+		wallL.mModel.SetTextureTiling(wallTilingInv);
 	}
 	// WALL
 	{
@@ -322,6 +328,7 @@ void RoomScene::Room::Initialize(Renderer* pRenderer)
 		wallF.mModel.mBlinnPhong_Material.shininess = 90.0f;
 		wallF.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
 		wallF.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
+		wallL.mModel.SetTextureTiling(vec2(1, 3));
 	}
 
 	wallL.mModel.mMesh = EGeometry::CUBE;

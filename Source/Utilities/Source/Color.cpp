@@ -34,7 +34,11 @@ const LinearColor LinearColor::gray			= vec3(0.2f, 0.2f, 0.2f);
 const LinearColor LinearColor::light_gray	= vec3(0.45f, 0.45f, 0.45f);
 const LinearColor LinearColor::orange		= vec3(1.0f, 0.5f, 0.0f);
 const LinearColor LinearColor::purple		= vec3(0.31f, 0.149f, 0.513f);
-const LinearColor LinearColor::gold			= vec3(1.000f, 0.76f, 0.336f);	// pbr?
+
+// PBR Metals
+const LinearColor LinearColor::gold = vec3(1.000f, 0.76f, 0.336f);
+const LinearColor LinearColor::aluminum = vec3(0.913f, 0.921f, 0.925f);
+//const LinearColor LinearColor::aluminum = vec3(0.263f, 0.421f, 0.925f);
 
 // blinn phong values
 const LinearColor LinearColor::bp_gold   = vec3(0.75164f, 0.60648f, 0.22648f);

@@ -359,14 +359,13 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	}
 	
 	constexpr size_t Float3TypeIndex = 0;		constexpr size_t Float4TypeIndex = 1;
-	this->_GBuffer._positionRT		   = pRenderer->AddRenderTarget(RTDescriptor[Float3TypeIndex], RTVDescriptor[Float3TypeIndex]);
 	this->_GBuffer._normalRT		   = pRenderer->AddRenderTarget(RTDescriptor[Float3TypeIndex], RTVDescriptor[Float3TypeIndex]);
 	this->_GBuffer._diffuseRoughnessRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
 	this->_GBuffer._specularMetallicRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
 	this->_GBuffer.bInitialized = true;
 	// http://download.nvidia.com/developer/presentations/2004/6800_Leagues/6800_Leagues_Deferred_Shading.pdf
 	// Option: trade storage for computation
-	//  - Store pos.z     and compute xy from z + window.xy
+	//  - Store pos.z     and compute xy from z + window.xy		(implemented)
 	//	- Store normal.xy and compute z = sqrt(1 - x^2 - y^2)
 
 	{	// Geometry depth stencil state descriptor
@@ -393,27 +392,6 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 		_geometryStencilState = pRenderer->AddDepthStencilState(desc);
 	}
 
-	{	// Skybox depth stencil state descriptor
-		D3D11_DEPTH_STENCILOP_DESC dsOpDesc = {};
-		dsOpDesc.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-		dsOpDesc.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-		dsOpDesc.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-		dsOpDesc.StencilFunc = D3D11_COMPARISON_EQUAL;
-
-		D3D11_DEPTH_STENCIL_DESC desc = {};
-		desc.FrontFace = dsOpDesc;
-
-		dsOpDesc.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-		desc.BackFace = dsOpDesc;
-
-		desc.DepthEnable = false;
-
-		desc.StencilEnable = true;
-		desc.StencilReadMask = 0xFF;
-		desc.StencilWriteMask = 0x00;
-
-		_skyboxStencilState = pRenderer->AddDepthStencilState(desc);
-	}
 }
 
 void DeferredRenderingPasses::ClearGBuffer(Renderer* pRenderer)
@@ -425,7 +403,7 @@ void DeferredRenderingPasses::ClearGBuffer(Renderer* pRenderer)
 		bDoClearColor, bDoClearDepth, bDoClearStencil,
 		{ 0, 0, 0, 0 }, 0, 0
 	);
-	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT, _GBuffer._positionRT);
+	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT);
 	pRenderer->Begin(clearCmd);
 }
 
@@ -440,7 +418,7 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	);
 
 	pRenderer->SetShader(_geometryShader);
-	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT, _GBuffer._positionRT);
+	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT);
 	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
 	pRenderer->SetDepthStencilState(_geometryStencilState); 
 	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
@@ -464,12 +442,12 @@ void DeferredRenderingPasses::RenderLightingPass(
 	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
 	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer._diffuseRoughnessRT);
 	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer._specularMetallicRT);
-	const TextureID texPosition = pRenderer->GetRenderTargetTexture(_GBuffer._positionRT);
 	const ShaderID lightingShader = bUseBRDFLighting ? _BRDFLightingShader : _phongLightingShader;
 	const TextureID texIrradianceMap = sceneView.environmentMap.irradianceMap;
 	const SamplerID smpEnvMap = sceneView.environmentMap.envMapSampler;
 	const TextureID texSpecularMap = sceneView.environmentMap.prefilteredEnvironmentMap;
 	const TextureID tBRDFLUT = pRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
+	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
@@ -478,22 +456,24 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
-	const bool bSkylight = sceneView.bIsIBLEnabled;
+	//-----------------------------------------------------------------------------------------
+	const bool bSkylight = sceneView.bIsIBLEnabled && texIrradianceMap != -1;
 	if(bSkylight)
 	{
 		pRenderer->BeginEvent("Environment Map Lighting Pass");
 		pRenderer->SetShader(_ambientIBLShader);
-		pRenderer->SetTexture("tPosition", texPosition);
 		pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
 		pRenderer->SetTexture("tSpecularMetalnessMap", texSpecularMetallic);
 		pRenderer->SetTexture("tNormalMap", texNormal);
+		pRenderer->SetTexture("tDepthMap", depthTexture);
 		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
 		pRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
 		pRenderer->SetTexture("tPreFilteredEnvironmentMap", texSpecularMap);
 		pRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
 		pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 		pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
-		pRenderer->SetConstant4x4f("viewToWorld", sceneView.viewToWorld);
+		pRenderer->SetConstant4x4f("matViewInverse", sceneView.viewInverse);
+		pRenderer->SetConstant4x4f("matProjInverse", sceneView.projectionInverse);
 	}
 	else
 	{
@@ -509,7 +489,9 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->DrawIndexed();
 	pRenderer->EndEvent();
 
+
 	// DIFFUSE & SPECULAR LIGHTING
+	//-----------------------------------------------------------------------------------------
 	pRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
 
 	// draw fullscreen quad for lighting for now. Will add light volumes
@@ -522,7 +504,6 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);
-	pRenderer->SetTexture("texPosition", texPosition);
 
 	// POINT LIGHTS
 	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_POINT);
@@ -569,13 +550,14 @@ void DeferredRenderingPasses::RenderLightingPass(
 	ENGINE->SendLightData();
 
 	pRenderer->SetConstant4x4f("matView", sceneView.view);
-	pRenderer->SetConstant4x4f("matViewToWorld", sceneView.viewToWorld);
+	pRenderer->SetConstant4x4f("matViewToWorld", sceneView.viewInverse);
+	pRenderer->SetConstant4x4f("matPorjInverse", sceneView.projectionInverse);
 	//pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);
-	pRenderer->SetTexture("texPosition", texPosition);
+	pRenderer->SetTexture("texDepth", depthTexture);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
@@ -701,19 +683,23 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 struct SSAOConstants
 {
 	XMFLOAT4X4 matProjection;
+	XMFLOAT4X4 matProjectionInverse;
 	vec2 screenSize;
 	float radius;
 	float intensity;
 	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * 3> samples;
 };
-void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const TextureID texPositions, const SceneView& sceneView)
+void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView)
 {
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 	
 	XMFLOAT4X4 proj = {};
 	XMStoreFloat4x4(&proj, sceneView.projection);
-	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * 3> samples;
 
+	XMFLOAT4X4 projInv = {};
+	XMStoreFloat4x4(&projInv, sceneView.projectionInverse);
+
+	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * 3> samples;
 	size_t idx = 0;
 	for (const vec3& v : sampleKernel)
 	{
@@ -725,6 +711,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 
 	SSAOConstants ssaoConsts = {
 		proj,
+		projInv,
 		pRenderer->GetWindowDimensionsAsFloat2(),
 		this->radius,
 		this->intensity,
@@ -739,11 +726,10 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
 	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
-	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+	//pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
 	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
-	pRenderer->SetTexture("texViewPositions", texPositions);
 	pRenderer->SetTexture("texNoise", this->noiseTexture);
-	//pRenderer->SetTexture("texDepth", depthTexture);
+	pRenderer->SetTexture("texDepth", depthTexture);
 	pRenderer->SetConstantStruct("SSAO_constants", &ssaoConsts);
 	pRenderer->SetBufferObj(EGeometry::QUAD);
 	pRenderer->Apply();

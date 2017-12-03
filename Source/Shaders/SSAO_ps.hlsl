@@ -16,10 +16,11 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define KERNEL_SIZE 64
-#define DEPTH_BIAS -0.025
 
-#define ENABLE_RANGE_CHECK
+// http://developer.amd.com/wordpress/media/2013/05/GCNPerformanceTweets.pdf
+
+#include "ShadingMath.hlsl"
+#define KERNEL_SIZE 64
 
 struct PSIn
 {
@@ -31,6 +32,7 @@ struct PSIn
 struct SceneVariables
 {
 	matrix matProjection;
+	matrix matProjectionInv;
 	float2 screenSize;
 	float  radius;
 	float  intensity;
@@ -43,7 +45,6 @@ cbuffer cSceneVariables
 };
 
 Texture2D texViewSpaceNormals;
-Texture2D texViewPositions;
 Texture2D<float4> texNoise;
 Texture2D texDepth;
 
@@ -51,19 +52,20 @@ SamplerState sNoiseSampler;
 SamplerState sPointSampler;
 SamplerState sLinearSampler;
 
-
 float PSMain(PSIn In) : SV_TARGET
 {
 	const float2 uv = In.uv;
+
     float3 N = texViewSpaceNormals.Sample(sPointSampler, uv).xyz;
 	if(dot(N, N) < 0.00001) return 1.0f.xxxx;
     N = normalize(N);
 
-    const float3 P = texViewPositions.Sample(sLinearSampler, uv).xyz;
+    const float zBufferSample = texDepth.Sample(sPointSampler, uv).x;	// non-linear depth
+    const float3 P = ViewSpacePosition(zBufferSample, uv, SSAO_constants.matProjectionInv);
 
 	// tile noise texture (4x4) over whole screen by scaling UV coords (textures wrap)
     const float2 noiseScale = SSAO_constants.screenSize / 4.0f;
-    const float3 noise = float3(texNoise.Sample(sNoiseSampler, uv * noiseScale).xy, 0.0f);
+    const float3 noise = texNoise.Sample(sNoiseSampler, uv * noiseScale).xyz;
 
 	// Gramm-Schmidt process for orthogonal basis creation: https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
 	// in short: project noise on N vector, and subtract that projection from the noise vector
@@ -78,30 +80,21 @@ float PSMain(PSIn In) : SV_TARGET
 	[loop]	// when unrolled, VGPR usage skyrockets and reduces #waves in flight
     for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
-		float3 kernelSample = P + mul(SSAO_constants.samples[i], TBN) * SSAO_constants.radius; // From tangent to view-space
+		const float3 kernelSample = P + mul(SSAO_constants.samples[i], TBN) * SSAO_constants.radius; // From tangent to view-space
 
 		// get the screenspace position of the sample
         float4 offset = float4(kernelSample, 1.0f);
 		offset = mul(SSAO_constants.matProjection, offset);
-		offset.xyz /= offset.w;
-        offset.xy = (offset.xy * float2(1.0f, -1.0f)) * 0.5f + 0.5f; // [0, 1]
+        offset.xy = ((offset.xy / offset.w) * float2(1.0f, -1.0f)) * 0.5f + 0.5f; // [0, 1]
 		
-#if 0
-		// reconstruct viewspace depth from depth-buffer
-		const float  D = texDepth.Sample(sNoiseSampler, uv + offset.xy).r;
-#else
-		// read view space depth 
-		const float  D = texViewPositions.Sample(sLinearSampler, offset.xy).z;
-#endif
+		// sample depth
+        const float sampleDepth = LinearDepth(texDepth.Sample(sPointSampler, offset.xy).r, SSAO_constants.matProjection[2][3], SSAO_constants.matProjection[2][2]);
 
-
-#ifdef xENABLE_RANGE_CHECK
-		const float rangeCheck = smoothstep(0.01f, 1.0f, SSAO_constants.radius / abs(P.z - D));
-#else
-		const float rangeCheck = 1.0f;
-#endif
-
-		occlusion += (D < kernelSample.z - DEPTH_BIAS ? 1.0f : 0.0f) * rangeCheck;
+		// range check & accumulate
+		const float rangeCheck = smoothstep(0.0f, 1.0f, SSAO_constants.radius / abs(P.z - sampleDepth));
+        //const float rangeCheck = abs(P.z - sampleDepth) < SSAO_constants.radius ? 1.0f : 0.0f;
+		
+		occlusion += (sampleDepth < kernelSample.z ? 1.0f : 0.0f) * rangeCheck;
 	}
 	occlusion = 1.0 - (occlusion / KERNEL_SIZE);
 

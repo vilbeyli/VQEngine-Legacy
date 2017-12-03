@@ -162,7 +162,8 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		//---------------------------------------------------------------
 		// | Enabled?
 		//---------------------------------------------------------------
-		settings.levelToLoad = stoi(line[1]);
+		settings.levelToLoad = stoi(line[1]) - 1;	// input file assumes 1 as first index
+		if (settings.levelToLoad == -1) settings.levelToLoad = 0;
 	}
 	else
 	{

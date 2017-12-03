@@ -309,15 +309,19 @@ void Engine::PreRender()
 {
 	// set scene view
 	const Camera& viewCamera = mpSceneManager->GetMainCamera();
+	const Scene* scene = mpSceneManager->mpActiveScene;
 	const XMMATRIX view = viewCamera.GetViewMatrix();
 	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
 	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
-	const Scene* scene = mpSceneManager->mpActiveScene;
+	XMVECTOR det = XMMatrixDeterminant(proj);
+	const XMMATRIX projInv = XMMatrixInverse(&det, proj);
 
 	mSceneView.viewProj = view * proj;
 	mSceneView.view = view;
-	mSceneView.viewToWorld = viewInverse;
+	mSceneView.viewInverse = viewInverse;
 	mSceneView.projection = proj;
+	mSceneView.projectionInverse = projInv;
+
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
 
 	mSceneView.sceneRenderSettings = scene->GetSceneRenderSettings();
@@ -469,7 +473,6 @@ void Engine::Render()
 		const TextureID texNormal = mpRenderer->GetRenderTargetTexture(gBuffer._normalRT);
 		const TextureID texDiffuseRoughness = mpRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
 		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
-		const TextureID texPosition = mpRenderer->GetRenderTargetTexture(gBuffer._positionRT);
 		const TextureID texDepthTexture = mpRenderer->m_state._depthBufferTexture;
 		const TextureID tSSAO = mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled
 			? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget)
@@ -485,7 +488,7 @@ void Engine::Render()
 		if (mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled)
 		{
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
-			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, texPosition, mSceneView);
+			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mSceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
 			mSSAOPass.GaussianBlurPass(mpRenderer);
 			mpRenderer->EndEvent();
@@ -498,17 +501,15 @@ void Engine::Render()
 
 		// LIGHT SOURCES
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
+		
 		// SKYBOX
 		if (pScene->HasSkybox())
 		{
-			// Note: this can be done without stencil read/write/masking. set depth test to equals1 
-			mpRenderer->SetDepthStencilState(mDeferredRenderingPasses._skyboxStencilState);
+			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 			pScene->RenderSkybox(mSceneView.viewProj);
-			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->UnbindDepthTarget();
 		}
 
-		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 		RenderLights();
 	}
 
@@ -526,9 +527,7 @@ void Engine::Render()
 		if (bZPrePass)
 		{
 			const RenderTargetID normals	= mDeferredRenderingPasses._GBuffer._normalRT;
-			const RenderTargetID positions	= mDeferredRenderingPasses._GBuffer._positionRT;
 			const TextureID texNormal		= mpRenderer->GetRenderTargetTexture(normals);
-			const TextureID texPosition		= mpRenderer->GetRenderTargetTexture(positions);
 			
 			const bool bDoClearColor = true;
 			const bool bDoClearDepth = true;
@@ -542,9 +541,9 @@ void Engine::Render()
 			mpRenderer->BeginEvent("Z-PrePass");
 			mpRenderer->SetShader(EShaders::Z_PREPRASS);
 			mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+			mpRenderer->BindRenderTarget(normals);
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
-			mpRenderer->BindRenderTargets(normals, positions);
 			mpRenderer->Begin(clearCmd);
 			mpSceneManager->Render(mpRenderer, mSceneView);
 			mpRenderer->EndEvent();
@@ -553,7 +552,7 @@ void Engine::Render()
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 			mpRenderer->UnbindRenderTargets();
 			mpRenderer->Apply();
-			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, texPosition, mSceneView);
+			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mSceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
 			mSSAOPass.GaussianBlurPass(mpRenderer);
 			mpRenderer->EndEvent();
@@ -569,7 +568,7 @@ void Engine::Render()
 
 		mpRenderer->BindRenderTarget(mPostProcessPass._worldRenderTarget);
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
-		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
 		mpRenderer->Begin(clearCmd);
 
 		// SKYBOX

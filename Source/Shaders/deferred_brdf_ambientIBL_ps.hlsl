@@ -26,14 +26,15 @@ struct PSIn
 
 cbuffer SceneVariables
 {
-    matrix viewToWorld;
+    matrix matViewInverse;
+	matrix matProjInverse;
 	float ambientFactor;
 };
 
-Texture2D tPosition;	//todo remove
 Texture2D tDiffuseRoughnessMap;
 Texture2D tSpecularMetalnessMap;
 Texture2D tNormalMap;
+Texture2D tDepthMap;
 Texture2D tAmbientOcclusion;
 Texture2D tIrradianceMap;
 TextureCube tPreFilteredEnvironmentMap;
@@ -49,13 +50,13 @@ float4 PSMain(PSIn In) : SV_TARGET
     const float4 kS_metalness = tSpecularMetalnessMap.Sample(sNearestSampler, In.uv);
 
 	// view-space vectors
-    const float3 Pv = tPosition.Sample(sNearestSampler, In.uv).rgb;
+    const float3 Pv = ViewSpacePosition(tDepthMap.Sample(sNearestSampler, In.uv).r, In.uv, matProjInverse);
     const float3 Nv = tNormalMap.Sample(sNearestSampler, In.uv).rgb;
     const float3 Vv = normalize(-Pv);
     
 	// world-space vectors
-	const float3 Vw = normalize(mul(viewToWorld, float4(Vv, 0.0f)).xyz);
-    const float3 Nw = mul(viewToWorld, float4(Nv, 0.0f)).xyz;
+	const float3 Vw = normalize(mul(matViewInverse, float4(Vv, 0.0f)).xyz);
+    const float3 Nw = mul(matViewInverse, float4(Nv, 0.0f)).xyz;
     const float3 Rw = reflect(-Vw, Nw);
     const float NdotV = max(dot(Nw, Vw), 0);
 

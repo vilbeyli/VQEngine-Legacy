@@ -42,10 +42,11 @@ struct ID3D11Device;
 struct SceneLightingData;
 struct SceneView
 {
-	XMMATRIX		viewProj;
 	XMMATRIX		view;
-	XMMATRIX		viewToWorld;
+	XMMATRIX		viewProj;
+	XMMATRIX		viewInverse;
 	XMMATRIX		projection;
+	XMMATRIX		projectionInverse;
 	vec3			cameraPosition;
 	bool			bIsPBRLightingUsed;
 	bool			bIsDeferredRendering;
@@ -134,7 +135,6 @@ struct GBuffer
 	RenderTargetID	_diffuseRoughnessRT;
 	RenderTargetID	_specularMetallicRT;
 	RenderTargetID	_normalRT;
-	RenderTargetID	_positionRT;	// todo: construct position from viewProj^-1 
 };
 
 struct DeferredRenderingPasses
@@ -154,7 +154,6 @@ struct DeferredRenderingPasses
 
 	GBuffer _GBuffer;
 	DepthStencilStateID _geometryStencilState;
-	DepthStencilStateID _skyboxStencilState;
 	ShaderID			_geometryShader;
 	ShaderID			_ambientShader;
 	ShaderID			_ambientIBLShader;
@@ -180,7 +179,7 @@ struct AmbientOcclusionPass
 	static TextureID whiteTexture4x4;
 	
 	void Initialize(Renderer* pRenderer);
-	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const TextureID texPositions, const SceneView& sceneView);
+	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
 	void BilateralBlurPass(Renderer* pRenderer);
 	void GaussianBlurPass(Renderer* pRenderer);	// Gaussian 4x4 kernel
 

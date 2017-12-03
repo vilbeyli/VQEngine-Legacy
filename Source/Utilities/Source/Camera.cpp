@@ -25,20 +25,20 @@ Camera::Camera()
 	MoveSpeed(1000.0f),
 	AngularSpeedDeg(20.0f),
 	Drag(9.5f),
-	m_pitch(0.0f),
-	m_yaw(0.0f),
-	m_pos(vec3::ZeroF3),
-	m_velocity(vec3::ZeroF3)
+	mPitch(0.0f),
+	mYaw(0.0f),
+	mPosition(vec3::ZeroF3),
+	mVelocity(vec3::ZeroF3),
+	mRT_LinearDepthLUT(-1)
 {
-	XMStoreFloat4x4(&m_projectionMatrix, XMMatrixIdentity());
-	XMStoreFloat4x4(&m_orthoMatrix, XMMatrixIdentity());
-	XMStoreFloat4x4(&m_viewMatrix, XMMatrixIdentity());
+	XMStoreFloat4x4(&mMatProj, XMMatrixIdentity());
+	XMStoreFloat4x4(&mMatView, XMMatrixIdentity());
 }
 
 Camera::~Camera(void)
 {}
 
-void Camera::ConfigureCamera(const Settings::Camera & cameraSettings, const Settings::Window& windowSettings)
+void Camera::ConfigureCamera(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings, Renderer* pRenderer)
 {
 	const auto& NEAR_PLANE = cameraSettings.nearPlane;
 	const auto& FAR_PLANE = cameraSettings.farPlane;
@@ -52,19 +52,25 @@ void Camera::ConfigureCamera(const Settings::Camera & cameraSettings, const Sett
 	SetProjectionMatrix(VerticalFoV, AspectRatio, NEAR_PLANE, FAR_PLANE);
 
 	SetPosition(cameraSettings.x, cameraSettings.y, cameraSettings.z);
-	m_yaw = m_pitch = 0;
+	mYaw = mPitch = 0;
 	Rotate(cameraSettings.yaw * DEG2RAD, cameraSettings.pitch * DEG2RAD, 1.0f);
+
+	// if we haven't initialized the LUT render target
+	//if (mRT_LinearDepthLUT == -1)
+	//{
+	//	mRT_LinearDepthLUT = pRenderer->AddRenderTarget();
+	//}
 }
 
 
 void Camera::SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, float screenFar)
 {
-	XMStoreFloat4x4(&m_orthoMatrix, XMMatrixOrthographicLH((float)screenWidth, (float)screenHeight, screenNear, screenFar));
+	XMStoreFloat4x4(&mMatProj, XMMatrixOrthographicLH((float)screenWidth, (float)screenHeight, screenNear, screenFar));
 }
 
 void Camera::SetProjectionMatrix(float fovy, float screenAspect, float screenNear, float screenFar)
 {
-	XMStoreFloat4x4(&m_projectionMatrix, XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar));
+	XMStoreFloat4x4(&mMatProj, XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar));
 }
 
 void Camera::SetProjectionMatrixHFov(float fovx, float screenAspectInverse, float screenNear, float screenFar)
@@ -96,7 +102,7 @@ void Camera::SetProjectionMatrixHFov(float fovx, float screenAspectInverse, floa
 	M.r[3].m128_f32[1] = 0.0f;
 	M.r[3].m128_f32[2] = -fRange * NearZ;
 	M.r[3].m128_f32[3] = 0.0f;
-	XMStoreFloat4x4(&m_projectionMatrix, M);
+	XMStoreFloat4x4(&mMatProj, M);
 }
 
 // updates View Matrix
@@ -107,7 +113,7 @@ void Camera::Update(float dt)
 
 	XMVECTOR up		= XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-	XMVECTOR pos	= m_pos;	
+	XMVECTOR pos	= mPosition;	
 	XMMATRIX MRot	= RotMatrix();
 
 	//transform the lookat and up vector by rotation matrix
@@ -118,13 +124,13 @@ void Camera::Update(float dt)
 	lookAt = pos + lookAt;
 
 	//create view matrix
-	XMStoreFloat4x4(&m_viewMatrix, XMMatrixLookAtLH(pos, lookAt, up));
+	XMStoreFloat4x4(&mMatView, XMMatrixLookAtLH(pos, lookAt, up));
 
 	// move based on velocity
-	XMVECTOR P = m_pos;
-	XMVECTOR V = m_velocity;
+	XMVECTOR P = mPosition;
+	XMVECTOR V = mVelocity;
 	P += V * dt;
-	m_pos = P;
+	mPosition = P;
 
 	//----------------------------------------------------------------------
 	// debug code 
@@ -176,19 +182,19 @@ void Camera::Update(float dt)
 
 vec3 Camera::GetPositionF() const
 {
-	return m_pos;
+	return mPosition;
 }
 
 XMMATRIX Camera::GetViewMatrix() const
 {
-	return XMLoadFloat4x4(&m_viewMatrix);
+	return XMLoadFloat4x4(&mMatView);
 }
 
 XMMATRIX Camera::GetViewInverseMatrix() const
 {
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 	XMVECTOR lookAt = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-	XMVECTOR pos = m_pos;
+	XMVECTOR pos = mPosition;
 	XMMATRIX MRot = RotMatrix();
 
 	XMVECTOR dir	= XMVector3Normalize(lookAt - pos);
@@ -208,7 +214,7 @@ XMMATRIX Camera::GetViewInverseMatrix() const
 	//	orienting our model using this, we want the inverse of viewmat
 	// XMMATRIX rotMatrix = XMMatrixTranspose(R) * T.inverse();
 
-	XMMATRIX view = XMLoadFloat4x4(&m_viewMatrix);
+	XMMATRIX view = XMLoadFloat4x4(&mMatView);
 	XMVECTOR det = XMMatrixDeterminant(view);
 	XMMATRIX test = XMMatrixInverse(&det, view);
 
@@ -217,38 +223,34 @@ XMMATRIX Camera::GetViewInverseMatrix() const
 
 XMMATRIX Camera::GetProjectionMatrix() const
 {
-	return  XMLoadFloat4x4(&m_projectionMatrix);
+	return  XMLoadFloat4x4(&mMatProj);
 }
 
-XMMATRIX Camera::GetOrthoMatrix() const
-{
-	return  XMLoadFloat4x4(&m_orthoMatrix);
-}
 
 XMMATRIX Camera::RotMatrix() const
 {
-	return XMMatrixRotationRollPitchYaw(m_pitch, m_yaw, 0.0f);
+	return XMMatrixRotationRollPitchYaw(mPitch, mYaw, 0.0f);
 }
 
 void Camera::SetPosition(float x, float y, float z)
 {
-	m_pos = vec3(x, y, z);
+	mPosition = vec3(x, y, z);
 }
 
 void Camera::Rotate(float yaw, float pitch, const float dt)
 {
-	m_yaw	+= yaw   * dt;
-	m_pitch += pitch * dt;
+	mYaw	+= yaw   * dt;
+	mPitch += pitch * dt;
 	
-	if (m_pitch > +90.0f * DEG2RAD) m_pitch = +90.0f * DEG2RAD;
-	if (m_pitch < -90.0f * DEG2RAD) m_pitch = -90.0f * DEG2RAD;
+	if (mPitch > +90.0f * DEG2RAD) mPitch = +90.0f * DEG2RAD;
+	if (mPitch < -90.0f * DEG2RAD) mPitch = -90.0f * DEG2RAD;
 }
 
 void Camera::Reset()
 {
 	const Settings::Camera & cameraSettings = m_settings;
 	SetPosition(cameraSettings.x, cameraSettings.y, cameraSettings.z);
-	m_yaw = m_pitch = 0;
+	mYaw = mPitch = 0;
 	Rotate(cameraSettings.yaw * DEG2RAD, cameraSettings.pitch * DEG2RAD, 1.0f);
 }
 
@@ -278,7 +280,7 @@ void Camera::Move(const float dt)
 	if (m_input->IsKeyDown(VK_SHIFT))	translation *= 2.0f;
 	translation *= 4.0f;
 
-	XMVECTOR V = m_velocity;
+	XMVECTOR V = mVelocity;
 	V += (translation * MoveSpeed - V * Drag) * dt;
-	m_velocity = V;
+	mVelocity = V;
 }

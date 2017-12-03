@@ -21,19 +21,21 @@
 
 #include "Utilities/utils.h"
 #include "Engine/Settings.h"
+#include "Renderer/RenderingEnums.h"
 
 using namespace DirectX;
 
 namespace Settings { struct Camera; struct Window; }
 
 class Input;
+class Renderer;
 class Camera
 {
 public:
 	Camera();
 	~Camera(void);
 
-	void ConfigureCamera(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings);
+	void ConfigureCamera(const Settings::Camera& cameraSettings, const Settings::Window& windowSettings, Renderer* pRenderer);
 
 	void SetOthoMatrix(int screenWidth, int screenHeight, float screenNear, float screenFar);
 	void SetProjectionMatrix(float fovy, float screenAspect, float screenNear, float screenFar);
@@ -45,8 +47,6 @@ public:
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetViewInverseMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
-	XMMATRIX GetOrthoMatrix() const;
-	XMMATRIX RotMatrix() const;
 
 	void SetPosition(float x, float y, float z);
 	void Rotate(float yaw, float pitch, const float dt);
@@ -62,15 +62,17 @@ public:
 private:
 	void Move(const float dt);
 	void Rotate(const float dt);
+	XMMATRIX RotMatrix() const;
 
 private:
-	vec3		m_pos;
-	vec3		m_velocity;
+	vec3		mPosition;
+	vec3		mVelocity;
 	friend class SceneManager;
-	float		m_yaw, m_pitch;
-	XMFLOAT4X4	m_viewMatrix;
-	XMFLOAT4X4	m_projectionMatrix;
-	XMFLOAT4X4	m_orthoMatrix;
+	float		mYaw, mPitch;
+	XMFLOAT4X4	mMatView;
+	XMFLOAT4X4	mMatProj;
+
+	RenderTargetID mRT_LinearDepthLUT;
 };
 
 #endif

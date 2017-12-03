@@ -150,9 +150,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	//---------------------------------
 	if(isEnvironmentLightingOn > 0.001f)
     {
-        const float NdotV = max(0.0f, dot(N, V));
+        const float NdotV = max(0.0f, dot(s.N, V));
 
-        const float2 equirectangularUV = SphericalSample(N);
+        const float2 equirectangularUV = SphericalSample(s.N);
         const float3 environmentIrradience = tIrradianceMap.Sample(sWrapSampler, equirectangularUV).rgb;
         const float3 environmentSpecular = tPreFilteredEnvironmentMap.SampleLevel(sEnvMapSampler, R, s.roughness * MAX_REFLECTION_LOD).rgb;
         const float2 F0ScaleBias = tBRDFIntegrationLUT.Sample(sNearestSampler, float2(NdotV, 1.0f - s.roughness)).rg;

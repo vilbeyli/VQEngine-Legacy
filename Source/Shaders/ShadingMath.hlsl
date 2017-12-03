@@ -91,3 +91,30 @@ float2 Hammersley(int i, int count)
     return float2(float(i) / float(count), VanDerCorpus(uint(i), 2u));
 #endif
 }
+
+
+float LinearDepth(in float zBufferSample, in float A, in float B)
+{
+	// src:
+	// https://developer.nvidia.com/content/depth-precision-visualized
+	// http://dev.theomader.com/linear-depth/
+	// https://www.mvps.org/directx/articles/linear_z/linearz.htm
+	// http://www.humus.name/index.php?ID=255
+
+    return A / (zBufferSample - B);
+}
+
+float3 ViewSpacePosition(in const float nonLinearDepth, const in float2 uv, const in matrix invProjection)
+{
+	// src: 
+	// https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/
+	// http://www.derschmale.com/2014/01/26/reconstructing-positions-from-the-depth-buffer/
+
+	const float x = uv.x * 2 - 1;			// [-1, 1]
+    const float y = (1.0f - uv.y) * 2 - 1;	// [-1, 1]
+	const float z = nonLinearDepth;			// [ 0, 1]
+
+	float4 projectedPosition = float4(x, y, z, 1);
+	float4 viewSpacePosition = mul(invProjection, projectedPosition);
+	return viewSpacePosition.xyz / viewSpacePosition.w;
+}

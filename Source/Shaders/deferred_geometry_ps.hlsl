@@ -39,7 +39,6 @@ struct PSOut	// G-BUFFER
 	float4 diffuseRoughness  : SV_TARGET0;
 	float4 specularMetalness : SV_TARGET1;
 	float3 normals			 : SV_TARGET2;
-	float3 position			 : SV_TARGET3;
 };
 
 cbuffer cbSurfaceMaterial
@@ -77,6 +76,5 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	GBuffer.diffuseRoughness	= float4(s.diffuseColor, s.roughness);
 	GBuffer.specularMetalness	= float4(s.specularColor, s.metalness);
 	GBuffer.normals				= s.N;
-	GBuffer.position			= P;
 	return GBuffer;
 }

@@ -382,7 +382,8 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		depthTexDesc.height = settings.height;
 		depthTexDesc.arraySize = 1;
 		depthTexDesc.mipCount = 1;
-		depthTexDesc.format = R24G8;
+		//depthTexDesc.format = R24G8;
+		depthTexDesc.format = R32;
 		depthTexDesc.usage = ETextureUsage(DEPTH_TARGET | RESOURCE);
 
 		m_state._depthBufferTexture = CreateTexture2D(depthTexDesc);
@@ -390,7 +391,8 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 
 		// depth stencil view and shader resource view for the shadow map (^ BindFlags)
 		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-		dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		//dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
 		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 		dsvDesc.Texture2D.MipSlice = 0;
 		AddDepthTarget(dsvDesc, depthTexture);	// assumes index 0
@@ -810,6 +812,9 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
 			case EImageFormat::R24G8:
 				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R24_UNORM_X8_TYPELESS;
+				break;
+			case EImageFormat::R32:
+				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R32F;
 				break;
 			}
 			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);

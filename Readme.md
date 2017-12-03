@@ -62,9 +62,9 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 | **0-9** |	Switch Scenes |
 
 Scenes:
- - 0 - Room Scene
- - 1 - SSAO Test Scene
- - 2 - IBL Test Scene (PageUp/Down to change EnvironmentMap)
+ - 1 - Room Scene
+ - 2 - SSAO Test Scene
+ - 3 - IBL Test Scene (PageUp/Down to change EnvironmentMap)
 
 
 | Engine Controls |  |

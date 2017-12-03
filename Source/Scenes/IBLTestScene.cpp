@@ -89,7 +89,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			mat0.metalness = 1.0f-colStep;	// metalness [0.0f, 1.0f]
 
 			const float roughnessLowClamp = 0.03f;
-			mat0.roughness = rowStep;// powf(std::max(rowStep, 0.04f), 2.01f);	// roughness [roughnessLowClamp, 1.0f]
+			mat0.roughness = std::max(0.04f, rowStep);// powf(std::max(rowStep, 0.04f), 2.01f);	// roughness [roughnessLowClamp, 1.0f]
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;
@@ -111,7 +111,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			mat0.metalness = 1.0f - colStep;	// metalness [0.0f, 1.0f]
 
 			const float roughnessLowClamp = 0.1f;
-			mat0.roughness = 1.0f - rowStep;// powf(std::max(rowStep, 0.04f), 2.01f);	// roughness [roughnessLowClamp, 1.0f];
+			mat0.roughness = std::max(0.04f, 1.0f - rowStep);// powf(std::max(rowStep, 0.04f), 2.01f);	// roughness [roughnessLowClamp, 1.0f];
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;
@@ -138,7 +138,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			mat0.metalness = colStep;	// metalness [0.0f, 1.0f]
 
 			const float roughnessLowClamp = 0.03f;
-			mat0.roughness = rowStep; // powf(std::max(rowStep, 0.04f), 2.55f);	// roughness [roughnessLowClamp, 1.0f]
+			mat0.roughness = std::max(0.04f, rowStep); // powf(std::max(rowStep, 0.04f), 2.55f);	// roughness [roughnessLowClamp, 1.0f]
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;
@@ -161,6 +161,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 
 			const float roughnessLowClamp = 0.1f;
 			mat0.roughness = 1.0f - rowStep;// powf(std::max(rowStep, 0.04f), 0.75f);	// roughness [roughnessLowClamp, 1.0f]
+			mat0.roughness = mat0.roughness == 0.0f ? 0.04f : mat0.roughness;
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
 			const float shininessMax = 150.f;

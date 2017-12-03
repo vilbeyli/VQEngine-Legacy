@@ -35,6 +35,7 @@ cbuffer SceneVariables	// frame constants
 {
 	matrix matView;
 	matrix matViewToWorld;
+	matrix matPorjInverse;
 	
 	//float2 pointShadowMapDimensions;
 	float2 spotShadowMapDimensions;
@@ -54,7 +55,7 @@ Texture2DArray   texDirectionalShadowMaps;
 Texture2D texDiffuseRoughnessMap;
 Texture2D texSpecularMetalnessMap;
 Texture2D texNormals;
-Texture2D texPosition;
+Texture2D texDepth;
 
 SamplerState sShadowSampler;
 SamplerState sLinearSampler;
@@ -67,7 +68,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
 
 	// lighting & surface parameters (View Space Lighting)
-	const float3 P = texPosition.Sample(sLinearSampler, In.uv);
+    const float nonLinearDepth = texDepth.Sample(sLinearSampler, In.uv).r;
+	const float3 P = ViewSpacePosition(nonLinearDepth, In.uv, matPorjInverse);
 	const float3 N = texNormals.Sample(sLinearSampler, In.uv);
 	//const float3 T = normalize(In.tangent);
 	const float3 V = normalize(- P);

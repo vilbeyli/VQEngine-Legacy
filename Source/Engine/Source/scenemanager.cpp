@@ -118,9 +118,9 @@ void SceneManager::HandleInput()
 		else							 ResetMainCamera();
 	}
 
-	if (mpInput->IsKeyTriggered("0"))	LoadScene(0);
-	if (mpInput->IsKeyTriggered("1"))	LoadScene(1);
-	if (mpInput->IsKeyTriggered("2"))	LoadScene(2);
+	if (mpInput->IsKeyTriggered("1"))	LoadScene(0);
+	if (mpInput->IsKeyTriggered("2"))	LoadScene(1);
+	if (mpInput->IsKeyTriggered("3"))	LoadScene(2);
 }
 
 void SceneManager::Update(float dt)

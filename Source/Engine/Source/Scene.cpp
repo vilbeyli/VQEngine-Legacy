@@ -38,7 +38,7 @@ void Scene::LoadScene(Renderer* pRenderer, SerializedScene& scene, const Setting
 	for (const Settings::Camera& camSetting : scene.cameras)
 	{
 		Camera c;
-		c.ConfigureCamera(camSetting, windowSettings);
+		c.ConfigureCamera(camSetting, windowSettings, pRenderer);
 		mCameras.push_back(c);
 	}
 

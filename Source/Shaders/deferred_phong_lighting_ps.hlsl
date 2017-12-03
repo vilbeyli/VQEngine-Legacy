@@ -17,6 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "LightingCommon.hlsl"
+#include "ShadingMath.hlsl"
 
 #define BLINN_PHONG
 
@@ -33,6 +34,7 @@ cbuffer SceneVariables
 {
 	matrix matView;
 	matrix matViewToWorld;
+	matrix matPorjInverse;
 	
 	float2 spotShadowMapDimensions;
 	float2 pad;
@@ -49,7 +51,7 @@ Texture2DArray   texDirectionalShadowMaps;
 Texture2D texDiffuseRoughnessMap;
 Texture2D texSpecularMetalnessMap;
 Texture2D texNormals;
-Texture2D texPosition;	// to be removed
+Texture2D texDepth;
 
 SamplerState sShadowSampler;
 SamplerState sLinearSampler;
@@ -62,7 +64,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
 
 	// lighting & surface parameters (View Space Lighting)
-	const float3 P = texPosition.Sample(sLinearSampler, In.uv).xyz;
+    const float3 P = ViewSpacePosition(texDepth.Sample(sLinearSampler, In.uv).r, In.uv, matPorjInverse);
     const float3 N = normalize(texNormals.Sample(sLinearSampler, In.uv).xyz);
 	const float3 V = normalize(- P);
 	

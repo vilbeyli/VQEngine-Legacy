@@ -18,12 +18,6 @@
 
 #include "ShadingMath.hlsl"
 
-#define PI		3.14159265359f
-#define EPSILON 0.000000000001f
-
-#define _DEBUG
-
-
 struct PSIn
 {
 	float4 position			: SV_POSITION;
@@ -36,7 +30,6 @@ struct PSIn
 struct PSOut
 {
 	float3 normals			 : SV_TARGET0;
-	float3 position			 : SV_TARGET1;
 };
 
 cbuffer cbSurfaceMaterial
@@ -59,11 +52,8 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 T = normalize(In.viewTangent);
 	const float3 V = normalize(-P);
 	const float2 uv = In.uv * uvScale;
-
-    
-	float3 surfaceN				= (isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) +	(1.0f - isNormalMap) * N;
 	
+	float3 surfaceN				= (isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) +	(1.0f - isNormalMap) * N;
 	GBuffer.normals				= surfaceN;
-	GBuffer.position			= P;
 	return GBuffer;
 }

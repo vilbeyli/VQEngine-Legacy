@@ -49,7 +49,7 @@ void Engine::CalcFrameStats()
 {
 	static long  frameCount = 0;
 	static float timeElaped = -0.9f;
-	constexpr float UpdateInterval = 0.5f;
+	constexpr float UpdateInterval = 0.1f;
 
 	++frameCount;
 	if (mpTimer->TotalTime() - timeElaped >= UpdateInterval)
@@ -58,7 +58,7 @@ void Engine::CalcFrameStats()
 		float frameTime = 1000.0f / fps;			// milliseconds
 
 		std::ostringstream stats;
-		stats.precision(2);
+		stats.precision(4);
 		stats << "VDemo | "
 			<< "dt: " << frameTime << "ms ";
 		stats.precision(4);
@@ -177,7 +177,7 @@ bool Engine::Initialize(HWND hwnd)
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
 	}
-	if (!mpTextRenderer->Initialize())
+	if (!mpTextRenderer->Initialize(mpRenderer))
 	{
 		Log::Error("Cannot initialize Text Renderer.\n");
 		return false;

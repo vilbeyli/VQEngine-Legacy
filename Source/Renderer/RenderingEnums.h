@@ -117,6 +117,7 @@ enum EImageFormat
 
 	// R
 	R32F = DXGI_FORMAT_R32_FLOAT,
+	R32U = DXGI_FORMAT_R32_UINT,
 
 	// Typeless
 	R32		= DXGI_FORMAT_R32_TYPELESS,

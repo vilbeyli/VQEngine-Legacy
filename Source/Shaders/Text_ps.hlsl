@@ -15,29 +15,24 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
-#pragma once
 
-#include <string>
-#include <Utilities/Color.h>
-
-class Renderer;
-
-struct TextDrawDescription
+struct PSIn
 {
-	std::string text;
-	LinearColor color;
-	vec2 screenPosition;	// top-left (0,0) - bottom-right(1,1)
-	float scale;
+	float4 position : SV_POSITION;
+	float2 texCoord : TEXCOORD0;
 };
 
-class TextRenderer
+cbuffer perObject
 {
-public:
-	bool Initialize(Renderer* pRenderer);
-
-	void RenderText(const TextDrawDescription& drawDesc);
-
-private:
-	static Renderer* pRenderer;
-	static int shaderText;
+	float3 color;
 };
+
+Texture2D textMap;
+SamplerState samText;
+
+
+float4 PSMain(PSIn In) : SV_TARGET
+{
+	const float2 uv = In.texCoord;
+    return float4(color, textMap.Sample(samText, uv).r);
+}

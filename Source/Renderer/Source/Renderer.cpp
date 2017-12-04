@@ -747,12 +747,27 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = miscFlags;
 
+	int perPixel = 0;
+	switch (texDesc.format)
+	{
+	case RGBA32F:
+
+	case R32F:
+		perPixel = sizeof(float);
+		break;
+	case R32U:
+		perPixel = sizeof(unsigned);
+		break;
+	default:
+		perPixel = sizeof(vec4);
+	}
+
 	D3D11_SUBRESOURCE_DATA dataDesc = {};	
 	D3D11_SUBRESOURCE_DATA* pDataDesc = nullptr;
 	if (texDesc.data)
 	{
 		dataDesc.pSysMem = texDesc.data;
-		dataDesc.SysMemPitch = sizeof(vec4) * texDesc.width;	// assumes RGBA32F
+		dataDesc.SysMemPitch = perPixel * (texDesc.width + 15) / 16;
 		dataDesc.SysMemSlicePitch = 0;
 		pDataDesc = &dataDesc;
 	}

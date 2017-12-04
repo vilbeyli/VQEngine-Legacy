@@ -113,7 +113,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 	if (bNoShadowingLights) return;
 
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
-	for (int i = 0; i < shadowView.spots.size(); i++)
+	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
 		pRenderer->BindDepthTarget(_spotShadowDepthTargets[i]);	// only depth stencil buffer
 		pRenderer->Apply();

@@ -19,8 +19,6 @@
 #include "Renderer/Renderer.h"
 #include "Utilities/Log.h"
 
-#define LOAD_ALL_ENVIRONMENT_MAPS 1
-
 // SKYBOX PRESETS W/ CUBEMAP / ENVIRONMENT MAP
 //==========================================================================================================
 using FilePaths = std::vector<std::string>;
@@ -97,7 +95,7 @@ void InitializePreset_sIBL(Renderer* pRenderer, EEnvironmentMapPresets preset)
 
 }
 
-void Skybox::InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps)
+void Skybox::InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps, bool bLoadAllMaps)
 {
 	EnvironmentMap::Initialize(pRenderer);
 	EnvironmentMap::LoadShaders();
@@ -135,49 +133,50 @@ void Skybox::InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps)
 			s_Presets[EEnvironmentMapPresets::BARCELONA] = Skybox(pRenderer, files, root, bEquirectangular);
 		}
 
-#if LOAD_ALL_ENVIRONMENT_MAPS
-		{	// TROPICAL BEACH
-			const std::string root = sIBLDirectory + "Tropical_Beach/";
-			files = {
-				"Tropical_Beach_8k.jpg",
-				"Tropical_Beach_Env.hdr",
-				"Tropical_Beach_3k.hdr",
-			};
-			s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = Skybox(pRenderer, files, root, bEquirectangular);
-		}
+		if (bLoadAllMaps)
+		{
+			{	// TROPICAL BEACH
+				const std::string root = sIBLDirectory + "Tropical_Beach/";
+				files = {
+					"Tropical_Beach_8k.jpg",
+					"Tropical_Beach_Env.hdr",
+					"Tropical_Beach_3k.hdr",
+				};
+				s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = Skybox(pRenderer, files, root, bEquirectangular);
+			}
 
-		{	// MILKYWAY 
-			const std::string root = sIBLDirectory + "Milkyway/";
-			files = {
-				"Milkyway_BG.jpg",
-				"Milkyway_Light.hdr",
-				"Milkyway_small.hdr",
-			};
-			s_Presets[EEnvironmentMapPresets::MILKYWAY] = Skybox(pRenderer, files, root, bEquirectangular);
-		}
+			{	// MILKYWAY 
+				const std::string root = sIBLDirectory + "Milkyway/";
+				files = {
+					"Milkyway_BG.jpg",
+					"Milkyway_Light.hdr",
+					"Milkyway_small.hdr",
+				};
+				s_Presets[EEnvironmentMapPresets::MILKYWAY] = Skybox(pRenderer, files, root, bEquirectangular);
+			}
 
-		{	// TROPICAL RUINS
-			const std::string root = sIBLDirectory + "Tropical_Ruins/";
-			files = {
-				"TropicalRuins_8k.jpg",
-				"TropicalRuins_Env.hdr",
-				"TropicalRuins_3k.hdr",
-			};
-			s_Presets[EEnvironmentMapPresets::TROPICAL_RUINS] = Skybox(pRenderer, files, root, bEquirectangular);
-		}
+			{	// TROPICAL RUINS
+				const std::string root = sIBLDirectory + "Tropical_Ruins/";
+				files = {
+					"TropicalRuins_8k.jpg",
+					"TropicalRuins_Env.hdr",
+					"TropicalRuins_3k.hdr",
+				};
+				s_Presets[EEnvironmentMapPresets::TROPICAL_RUINS] = Skybox(pRenderer, files, root, bEquirectangular);
+			}
 
-		{	// WALK OF FAME
-			const std::string root = sIBLDirectory + "Walk_Of_Fame/";
-			files = {
-				"Mans_Outside_8k_TMap.jpg",
-				"Mans_Outside_Env.hdr",
-				"Mans_Outside_2k.hdr",
-			};
-			s_Presets[EEnvironmentMapPresets::WALK_OF_FAME] = Skybox(pRenderer, files, root, bEquirectangular);
-		}
+			{	// WALK OF FAME
+				const std::string root = sIBLDirectory + "Walk_Of_Fame/";
+				files = {
+					"Mans_Outside_8k_TMap.jpg",
+					"Mans_Outside_Env.hdr",
+					"Mans_Outside_2k.hdr",
+				};
+				s_Presets[EEnvironmentMapPresets::WALK_OF_FAME] = Skybox(pRenderer, files, root, bEquirectangular);
+			}
 
-		// ...
-#endif
+			// ...
+		}
 	}
 }
 

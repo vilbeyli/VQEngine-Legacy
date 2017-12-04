@@ -25,6 +25,7 @@
 #include "Engine/Settings.h"
 
 #include "Renderer/Renderer.h"
+#include "Renderer/TextRenderer.h"
 #include "Utilities/Camera.h"
 
 #include <sstream>
@@ -149,6 +150,10 @@ const Settings::Engine& Engine::ReadSettingsFromFile()
 	return sEngineSettings;
 }
 
+
+
+
+
 bool Engine::Initialize(HWND hwnd)
 {
 	if (!mpRenderer || !mpInput || !mpSceneManager || !mpTimer)
@@ -172,6 +177,11 @@ bool Engine::Initialize(HWND hwnd)
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
 	}
+	if (!mpTextRenderer->Initialize())
+	{
+		Log::Error("Cannot initialize Text Renderer.\n");
+		return false;
+	}
 
 
 	// INITIALIZE RENDERING
@@ -186,7 +196,7 @@ bool Engine::Initialize(HWND hwnd)
 	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
 	mpTimer->Start();
 	mpTimer->Tick();
-	Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting);
+	Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
 	const float duration = mpTimer->Tick();
 	Log::Info("--------------------- ENVIRONMENT MAPS LOADED IN %.2fs.", duration);
 
@@ -698,7 +708,6 @@ void Engine::Render()
 				//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
-				//{ fullscreenTextureScaledDownSize,	screenPosition,			pScene->GetEnvironmentMap().environmentMap	, false },
 				{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
@@ -715,10 +724,16 @@ void Engine::Render()
 		mpRenderer->EndEvent();
 	}
 
-	// temp hack to initialize prefilter every map for debugging
-	//Scene* ncpScene = const_cast<Scene*>(pScene);
-	//const_cast<EnvironmentMap*>(&ncpScene->GetEnvironmentMap())->InitializePrefilteredEnvironmentMap(mpRenderer->GetTextureObject(ncpScene->GetEnvironmentMap().specularMap));
-
+	// UI / Text
+	if(true)	// mRenderGUI ?
+	{
+		TextDrawDescription drawDesc;
+		drawDesc.text = "Test 123. HI!";
+		drawDesc.color = LinearColor::green;
+		drawDesc.scale = 1.0f;
+		drawDesc.screenPosition = {0.5f, 0.5f};
+		mpTextRenderer->RenderText(drawDesc);
+	}
 
 #endif
 	mpRenderer->End();

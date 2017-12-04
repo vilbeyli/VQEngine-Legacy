@@ -105,6 +105,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>DirectXTex.lib;dxguid.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)Source\3rdParty\freetype-windows-binaries\win32\freetype271.dll $(TargetDir) /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -121,6 +124,9 @@
       <Command>
       </Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\freetype271.dll $(TargetDir) /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -139,6 +145,9 @@
       <AdditionalDependencies>DirectXTex.lib;dxguid.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)Source\3rdParty\freetype-windows-binaries\win32\freetype271.dll $(TargetDir) /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -156,6 +165,9 @@
       <AdditionalDependencies>DirectXTex.lib;dxguid.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
+    <PostBuildEvent>
+      <Command>xcopy $(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\freetype271.dll $(TargetDir) /Y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Application\Source\Input.cpp" />

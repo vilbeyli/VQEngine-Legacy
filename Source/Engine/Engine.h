@@ -33,6 +33,7 @@ using std::shared_ptr;
 using std::unique_ptr;
 
 class Renderer;
+class TextRenderer;
 class Input;
 class Parser;
 class SceneManager;
@@ -121,6 +122,7 @@ private:
 	//--------------------------------------------------------
 	Input*							mpInput;
 	Renderer*						mpRenderer;
+	TextRenderer*					mpTextRenderer;
 	SceneManager*					mpSceneManager;
 	PerfTimer*						mpTimer;
 	WorkerPool						mWorkerPool;

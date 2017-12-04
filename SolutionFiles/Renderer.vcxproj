@@ -69,20 +69,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\;$(SolutionDir)Source\Renderer\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\;$(SolutionDir)Source\Renderer\;$(SolutionDir)Source\3rdParty\freetype-windows-binaries\include\</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(VC_SourcePath);$(ProjectDir)Source\</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath);$(SolutionDir)Source\;$(SolutionDir)Source\Renderer\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(IncludePath);$(SolutionDir)Source\;$(SolutionDir)Source\Renderer\;$(SolutionDir)Source\3rdParty\freetype-windows-binaries\include\</IncludePath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(VC_SourcePath);$(ProjectDir)Source\</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\;$(SolutionDir)Source\Renderer\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\;$(SolutionDir)Source\Renderer\;$(SolutionDir)Source\3rdParty\freetype-windows-binaries\include\;$(SolutionDir)Source\3rdParty\freetype-windows-binaries\include\</IncludePath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(VC_SourcePath);</SourcePath>
@@ -90,7 +90,7 @@
     <EnableExperimentalCppCoreCheck>false</EnableExperimentalCppCoreCheck>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\;$(SolutionDir)Source\Renderer\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\;$(SolutionDir)Source\Renderer\;$(SolutionDir)Source\3rdParty\freetype-windows-binaries\include\;$(SolutionDir)Source\3rdParty\freetype-windows-binaries\include\</IncludePath>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <SourcePath>$(VC_SourcePath);</SourcePath>
@@ -111,6 +111,10 @@ echo DirectXTex.lib already built. ) ELSE (
 echo Building dependency library: DirectXTex... 
 devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>
     </PreBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win32\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freetype271.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -128,6 +132,10 @@ echo DirectXTex.lib already built. ) ELSE (
 echo Building dependency library: DirectXTex... 
 devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>
     </PreBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freetype271.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -149,6 +157,10 @@ echo DirectXTex.lib already built. ) ELSE (
 echo Building dependency library: DirectXTex... 
 devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>
     </PreBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win32\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freetype271.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -170,6 +182,10 @@ echo DirectXTex.lib already built. ) ELSE (
 echo Building dependency library: DirectXTex... 
 devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>
     </PreBuildEvent>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freetype271.lib</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Material.cpp" />
@@ -183,6 +199,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Renderer.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Shader.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Texture.cpp" />
+    <ClCompile Include="..\Source\Renderer\Source\TextRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Renderer\Light.h" />
@@ -197,6 +214,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderCommands.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\Material.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingEnums.h" />
+    <ClInclude Include="..\Source\Renderer\TextRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

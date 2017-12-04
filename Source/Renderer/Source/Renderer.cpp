@@ -1218,8 +1218,8 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 
 void Renderer::SetConstant(const char * cName, const void * data)
 {
-	// Here, we write to the CPU version of the constant buffer -- if the contents are updated 
-	// ofc, otherwise we don't write -- and set the dirty flag of the GPU CBuffer counterpart.
+	// Here, we write to the CPU version of the constant buffer -- if the contents are updated.
+	// otherwise we don't write -- and set the dirty flag of the GPU CBuffer counterpart.
 	// When all the constants are set on the CPU side, right before the draw call,
 	// we will use a mapped resource as a block of memory, transfer our CPU
 	// version of constants to there, and then send it to GPU CBuffers at one call as a block memory.

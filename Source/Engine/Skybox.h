@@ -98,7 +98,7 @@ public:
 class Skybox
 {
 public:
-	static void InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps);
+	static void InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps, bool bLoadAllMaps);
 
 	static std::vector<Skybox> s_Presets;
 	

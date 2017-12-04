@@ -72,6 +72,7 @@ namespace Settings
 		bool		bUseBRDFLighting;	// should use enums when there's more than brdf and blinn-phong lighting
 		bool		bAmbientOcclusion;
 		bool		bEnableEnvironmentLighting;
+		bool		bPreLoadEnvironmentMaps;
 	};
 
 	struct Engine 

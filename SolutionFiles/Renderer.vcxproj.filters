@@ -11,75 +11,81 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\Renderer\Source\Material.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Material.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\RenderCommands.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\RenderCommands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\Light.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Light.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\Model.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\BufferObject.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\BufferObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\D3DManager.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\D3DManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\GeometryGenerator.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\GeometryGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\Mesh.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\Renderer.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\Shader.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Renderer\Source\Texture.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Source\Renderer\Source\TextRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\Renderer\Light.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Model.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\BufferObject.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\BufferObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\D3DManager.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\D3DManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\GeometryGenerator.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\GeometryGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Mesh.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\Mesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Renderer.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\Renderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Shader.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Texture.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\RenderCommands.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\RenderCommands.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\Material.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\Material.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Renderer\RenderingEnums.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingEnums.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Source\Renderer\TextRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

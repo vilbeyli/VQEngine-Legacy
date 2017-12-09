@@ -181,7 +181,7 @@ enum EShaders : unsigned	// built-in shaders
 	BILATERAL_BLUR,
 	GAUSSIAN_BLUR_4x4,
 	Z_PREPRASS,
-	DEFERRED_GEOMETRY = Z_PREPRASS +4,	// zzz... this NEEDS to change. TODO URGENT.
+	DEFERRED_GEOMETRY = Z_PREPRASS +5,	// zzz... this NEEDS to change. TODO URGENT.
 
 	SHADER_COUNT
 };

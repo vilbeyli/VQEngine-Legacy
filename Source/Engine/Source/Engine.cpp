@@ -45,28 +45,33 @@ Engine::Engine()
 
 Engine::~Engine(){}
 
-void Engine::CalcFrameStats()
+void Engine::CalcFrameStats(float dt)
 {
-	static long  frameCount = 0;
-	static float timeElaped = -0.9f;
-	constexpr float UpdateInterval = 0.1f;
+	static unsigned long long frameCount = 0;
+	constexpr size_t RefreshRate = 5;	// refresh every 5 frames
+	constexpr size_t SampleCount = 50;	// over 50 dt samples
+	
+	static std::vector<float> dtSamples(SampleCount, 0.0f);
+
+	dtSamples[frameCount % SampleCount] = dt;
+
+	float dtSampleSum = 0.0f;
+	std::for_each(dtSamples.begin(), dtSamples.end(), [&dtSampleSum](float dt) { dtSampleSum += dt; });
+	const float frameTime = dtSampleSum / SampleCount;
+	const int fps = static_cast<int>(1.0f / frameTime);
+
+	if (frameCount % RefreshRate == 0)
+	{
+		std::ostringstream stats;
+		stats.precision(2);
+		stats << std::fixed;
+		stats << "VQEngine Demo | " << "CPU Frame: " << frameTime * 1000.0f << " ms  FPS: ";
+		stats.precision(4);
+		stats << fps;
+		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
+	}
 
 	++frameCount;
-	if (mpTimer->TotalTime() - timeElaped >= UpdateInterval)
-	{
-		float fps = static_cast<float>(frameCount);	// #frames / 1.0f
-		float frameTime = 1000.0f / fps;			// milliseconds
-
-		std::ostringstream stats;
-		stats.precision(4);
-		stats << "VDemo | "
-			<< "dt: " << frameTime << "ms ";
-		stats.precision(4);
-		stats << "FPS: " << fps;
-		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
-		frameCount = 0;
-		timeElaped += UpdateInterval;
-	}
 }
 
 
@@ -292,7 +297,7 @@ bool Engine::UpdateAndRender()
 	const bool bExitApp = !HandleInput();
 	if (!mbIsPaused)
 	{
-		CalcFrameStats();
+		CalcFrameStats(dt);
 
 		mpSceneManager->Update(dt);
 

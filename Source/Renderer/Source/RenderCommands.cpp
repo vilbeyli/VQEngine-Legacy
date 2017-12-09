@@ -55,18 +55,6 @@ void SetTextureCommand::SetResource(Renderer * pRenderer)
 	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, 1, &pRenderer->m_textures[textureID]._srv);
 }
 
-
-void SetTextureArrayCommand::SetResource(Renderer * pRenderer)
-{
-#ifdef _DEBUG
-	for(auto textureID : textureIDs)
-		assert(textureID >= 0);
-#endif
-	const unsigned textureCount = static_cast<unsigned>(textureIDs.size());
-	;// (pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, textureCount, &pRenderer->m_textures[textureID]._srv);
-}
-
-
 static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[6])
 (UINT StartSlot, UINT NumViews, ID3D11SamplerState* const *ppShaderResourceViews) =
 {

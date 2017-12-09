@@ -392,13 +392,13 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	// PREFILTER PASS
 	// pre-filter environment map into each cube face and mip level (~ roughness)
 	// TODO: Compute shader in single pass.
-	pRenderer->SetShader(sPrefilterShader);
-	pRenderer->SetTexture("tEnvironmentMap", mippedEnvironmentCubemap);
 	for (unsigned mipLevel = 0; mipLevel < PREFILTER_MIP_LEVEL_COUNT; ++mipLevel)
 	{
 		viewPort.Width = static_cast<float>(textureSize[0] >> mipLevel);
 		viewPort.Height = static_cast<float>(textureSize[1] >> mipLevel);
 
+		pRenderer->SetShader(sPrefilterShader);
+		pRenderer->SetTexture("tEnvironmentMap", mippedEnvironmentCubemap);
 		pRenderer->SetConstant1f("roughness", static_cast<float>(mipLevel) / (PREFILTER_MIP_LEVEL_COUNT - 1));
 		pRenderer->SetConstant1f("resolution", viewPort.Width);
 
@@ -428,6 +428,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 			pRenderer->Apply();
 			pRenderer->DrawIndexed();
 		}
+		pRenderer->End();	// present frame or device removed...
 	}
 
 	D3D11_SAMPLER_DESC envMapSamplerDesc = {};
@@ -440,7 +441,6 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	envMapSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	envMapSamplerDesc.MaxAnisotropy = 1;
 	this->envMapSampler = spRenderer->CreateSamplerState(envMapSamplerDesc);
-	pRenderer->End();	// present frame or device removed...
 
 	// RENDER IRRADIANCE CUBEMAP PASS
 	// TODO: irradiance cubemap

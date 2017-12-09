@@ -19,7 +19,6 @@
 #include "LightingCommon.hlsl"
 #include "ShadingMath.hlsl"
 
-#define PI		3.14159265359f
 #define EPSILON 0.000000000001f
 
 #define _DEBUG

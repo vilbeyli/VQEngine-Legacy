@@ -36,7 +36,7 @@
 BaseSystem::BaseSystem()
 {
 	m_hInstance		= GetModuleHandle(NULL);	// instance of this application
-	m_appName		= "DX11 Renderer";
+	m_appName		= "VQEngine Demo";
 }
 
 

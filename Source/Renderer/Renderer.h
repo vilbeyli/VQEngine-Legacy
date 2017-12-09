@@ -220,7 +220,6 @@ private:
 	std::vector<Sampler>			m_samplers;
 
 	std::queue<SetTextureCommand>	m_setTextureCmds;
-	std::queue<SetTextureArrayCommand>	m_setTextureArrayCmds;
 	std::queue<SetSamplerCommand>	m_setSamplerCmds;
 
 	std::vector<RasterizerState*>	m_rasterizerStates;

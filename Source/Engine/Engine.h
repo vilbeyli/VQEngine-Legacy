@@ -102,7 +102,7 @@ private:
 	Engine();
 
 	inline void TogglePause() { mbIsPaused = !mbIsPaused; }
-	void CalcFrameStats();
+	void CalcFrameStats(float dt);
 	bool HandleInput();
 
 	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU

@@ -34,15 +34,6 @@ struct SetTextureCommand
 	ShaderTexture	shaderTexture;
 };
 
-struct SetTextureArrayCommand
-{
-	SetTextureArrayCommand(const std::vector<TextureID>& textureArray) : textureIDs(textureArray) {}
-	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
-
-	const std::vector<TextureID> textureIDs;
-	ShaderTexture	shaderTexture;
-};
-
 struct SetSamplerCommand
 {
 	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer

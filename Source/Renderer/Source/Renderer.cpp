@@ -751,15 +751,15 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	switch (texDesc.format)
 	{
 	case RGBA32F:
-
+		perPixel = sizeof(vec4);
+		break;
+	case R32:
 	case R32F:
+	case R32U:
 		perPixel = sizeof(float);
 		break;
-	case R32U:
-		perPixel = sizeof(unsigned);
-		break;
 	default:
-		perPixel = sizeof(vec4);
+		perPixel = sizeof(vec4); // 0?
 	}
 
 	D3D11_SUBRESOURCE_DATA dataDesc = {};	
@@ -767,7 +767,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	if (texDesc.data)
 	{
 		dataDesc.pSysMem = texDesc.data;
-		dataDesc.SysMemPitch = perPixel * (texDesc.width + 15) / 16;
+		dataDesc.SysMemPitch = perPixel * (texDesc.width);
 		dataDesc.SysMemSlicePitch = 0;
 		pDataDesc = &dataDesc;
 	}
@@ -1389,33 +1389,6 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 #endif
 }
 
-void Renderer::SetTextureArray(const char * texName, const std::vector<TextureID>& textureArray)
-{
-	Shader* shader = m_shaders[m_state._activeShader];
-	bool found = false;
-
-	// linear name lookup
-	for (size_t i = 0; i < shader->m_textures.size(); ++i)
-	{
-		if (strcmp(texName, shader->m_textures[i].name.c_str()) == 0)
-		{
-			found = true;
-			for (TextureID tex : textureArray) 
-			{
-				SetTextureArrayCommand cmd(textureArray);
-				m_setTextureArrayCmds.push(cmd);
-			}
-		}
-	}
-
-#ifdef _DEBUG
-	if (!found)
-	{
-		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, m_state._activeShader, shader->Name().c_str());
-	}
-#endif
-}
-
 void Renderer::SetTextureArray(const char * texName, TextureID texArray)
 {
 	Shader* shader = m_shaders[m_state._activeShader];
@@ -1634,7 +1607,6 @@ void Renderer::Apply()
 
 		// SHADER RESOURCES
 		// ----------------------------------------
-
 		while (m_setSamplerCmds.size() > 0)
 		{
 			SetSamplerCommand& cmd = m_setSamplerCmds.front();
@@ -1642,7 +1614,6 @@ void Renderer::Apply()
 			m_setSamplerCmds.pop();
 		}
 
-		// todo: set texture array?
 		while (m_setTextureCmds.size() > 0)
 		{
 			SetTextureCommand& cmd = m_setTextureCmds.front();

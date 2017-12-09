@@ -19,6 +19,9 @@
 // Method for Hammersley Sequence creation
 #define USE_BIT_MANIPULATION	
 #define PI 3.14159265359f
+#define TWO_PI 6.28318530718f
+#define PI_OVER_TWO 1.5707963268f
+#define PI_SQUARED 9.86960440109f
 
 inline float3 UnpackNormals(Texture2D normalMap, SamplerState normalSampler, float2 uv, float3 worldNormal, float3 worldTangent)
 {
@@ -33,6 +36,11 @@ inline float3 UnpackNormals(Texture2D normalMap, SamplerState normalSampler, flo
 	return mul(SampledNormal, TBN);
 }
 
+
+// additional sources: 
+// - Converting to/from cubemaps: http://paulbourke.net/miscellaneous/cubemaps/
+// - Convolution: https://learnopengl.com/#!PBR/IBL/Diffuse-irradiance
+// - Projections: https://gamedev.stackexchange.com/questions/114412/how-to-get-uv-coordinates-for-sphere-cylindrical-projection
 float2 SphericalSample(float3 v)
 {
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509575(v=vs.85).aspx
@@ -40,7 +48,7 @@ float2 SphericalSample(float3 v)
 	// within the range of -PI to PI. The atan2 HLSL intrinsic function is well-defined for every point 
 	// other than the origin, even if y equals 0 and x does not equal 0.
     float2 uv = float2(atan2(v.z, v.x), asin(-v.y));
-    uv /= float2(2 * PI, PI);
+    uv /= float2(TWO_PI, PI);
     uv += float2(0.5, 0.5);
     return uv;
 }

@@ -23,6 +23,7 @@
 #include "Utilities/utils.h"
 
 #include <map>
+#include <sstream>
 
 #include "ft2build.h"
 #include FT_FREETYPE_H
@@ -32,16 +33,20 @@ ShaderID TextRenderer::shaderText = -1;
 
 struct Character
 {
-	TextureID tex;
-	vec2 size;
-	vec2 bearing;
-	int advance;
+	TextureID tex;	// ID handle of the glyph texture
+	vec2 size;		// Size of glyph
+	vec2 bearing;	// Offset from baseline to left/top of glyph
+	int advance;	// Offset to advance to next glyph
 };
 
 static std::map<char, Character> sCharacters;
 
 bool TextRenderer::Initialize(Renderer* pRenderer)
 {
+	const std::vector<InputLayout> layouts = { { "POSITION",	FLOAT32_3 } };
+	TextRenderer::shaderText = pRenderer->AddShader("Text", layouts);
+	return true;
+
 	// https://learnopengl.com/#!In-Practice/Text-Rendering
 	TextRenderer::pRenderer = pRenderer;
 
@@ -108,18 +113,29 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 	// cleanup
 	FT_Done_Face(face);
 	FT_Done_FreeType(ft);
-
-	const std::vector<InputLayout> layouts = { { "POSITION",	FLOAT32_3 }	};
-	TextRenderer::shaderText = pRenderer->AddShader("Text", layouts);
 	return true;
 }
 
 void TextRenderer::RenderText(const TextDrawDescription& drawDesc)
 {
-	//const XMFLOAT4X4 proj;
-	//	
-	//pRenderer->SetShader(shaderText);
-	//pRenderer->SetConstant4x4f("projection");
-	//pRenderer->Apply();
-	//pRenderer->Draw();
+	return;
+	assert(pRenderer);
+	const vec2 windowSizeXY = pRenderer->GetWindowDimensionsAsFloat2();
+	const XMMATRIX proj = XMMatrixOrthographicLH(windowSizeXY.x(), windowSizeXY.y(), 0.1f, 1000.0f);
+	
+	
+	std::stringstream ss;
+	ss << "RenderText: " << drawDesc.text;
+
+	pRenderer->BeginEvent(ss.str());
+	pRenderer->SetShader(shaderText);
+	pRenderer->SetConstant4x4f("projection", proj);
+	pRenderer->SetConstant3f("color", drawDesc.color);
+	pRenderer->SetTexture("textMap", 0);
+	pRenderer->SetSamplerState("samText", 0);
+	pRenderer->SetBlendState(0);
+	pRenderer->SetBufferObj(0); // todo dynamic vertex
+	pRenderer->Apply();
+	pRenderer->Draw();
+	pRenderer->EndEvent();
 }

@@ -104,3 +104,9 @@ void Scene::UpdateScene(float dt)
 	mCameras[mSelectedCamera].Update(dt);
 	Update(dt);
 }
+
+void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
+{
+	mActiveSkyboxPreset = preset;
+	mSkybox = Skybox::s_Presets[mActiveSkyboxPreset];
+}

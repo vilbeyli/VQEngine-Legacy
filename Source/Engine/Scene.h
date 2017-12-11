@@ -71,16 +71,22 @@ public:
 	inline const Settings::SceneRender& GetSceneRenderSettings() const { return mSceneRenderSettings; }
 	inline bool  HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
 
+	EEnvironmentMapPresets GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
+	void SetEnvironmentMap(EEnvironmentMapPresets preset);
+
 protected:	// customization functions for derived classes
 	virtual void Render(const SceneView& sceneView, bool bSendMaterialData) const = 0;
 	virtual void Load(SerializedScene& scene) = 0;
 	virtual void Update(float dt) = 0;
 	virtual void Unload() = 0;
-
+	
+protected:
 	SceneManager&			mSceneManager;
 	Renderer*				mpRenderer;
 
 	Skybox					mSkybox;
+	EEnvironmentMapPresets	mActiveSkyboxPreset;	// dynamic skybox changing
+
 	std::vector<Camera>		mCameras;
 	std::vector<Light>&		mLights;
 	std::vector<GameObject> mObjects;

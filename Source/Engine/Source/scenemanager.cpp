@@ -121,6 +121,18 @@ void SceneManager::HandleInput()
 	if (mpInput->IsKeyTriggered("1"))	LoadScene(0);
 	if (mpInput->IsKeyTriggered("2"))	LoadScene(1);
 	if (mpInput->IsKeyTriggered("3"))	LoadScene(2);
+
+
+	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
+	const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
+	const EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
+		static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
+		);
+	
+	EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
+	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
+	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
+	mpActiveScene->SetEnvironmentMap(selectedEnvironmentMap);
 }
 
 void SceneManager::Update(float dt)

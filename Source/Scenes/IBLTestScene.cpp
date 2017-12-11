@@ -32,12 +32,6 @@ IBLTestScene::IBLTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
 {
 }
 
-void IBLTestScene::SetEnvironmentMap(EEnvironmentMapPresets preset)
-{
-	activeIBLSkybox = preset;
-	mSkybox = Skybox::s_Presets[activeIBLSkybox];
-}
-
 void IBLTestScene::Load(SerializedScene& scene)
 {
 	// sphere grid
@@ -220,18 +214,6 @@ void IBLTestScene::Update(float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
 	if(!mLights.empty()) mLights[0]._transform.Translate(dt * tr * moveSpeed);
 
-	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
-	const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
-	const EEnvironmentMapPresets lastPreset  = static_cast<EEnvironmentMapPresets>(
-		static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
-		);
-
-	EEnvironmentMapPresets selectedEnvironmentMap = activeIBLSkybox;
-	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = activeIBLSkybox == lastPreset  ? firstPreset : static_cast<EEnvironmentMapPresets>(activeIBLSkybox + 1);
-	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = activeIBLSkybox == firstPreset ? lastPreset  : static_cast<EEnvironmentMapPresets>(activeIBLSkybox - 1);
-	SetEnvironmentMap(selectedEnvironmentMap);
-
-
 	for (GameObject& sphere : spheres)
 	{
 		const vec3& point = sSphereCenter;
@@ -256,5 +238,5 @@ void IBLTestScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 {
 	Scene::GetSceneObjects(objs);
 	for (const GameObject& obj : spheres)	objs.push_back(&obj);
-	objs.push_back(&testQuad);
+	//objs.push_back(&testQuad);
 }

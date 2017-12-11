@@ -305,7 +305,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	const float fovy = 90.0f * DEG2RAD;
 	const XMMATRIX proj = XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar);
 
-	// cubemap look dirs
+	// cubemap look and up directions for left-handed view
 	const XMVECTOR lookDirs[6] = {
 		vec3::Right, vec3::Left,
 		vec3::Up, vec3::Down,

@@ -1218,13 +1218,12 @@ void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 
 void Renderer::SetConstant(const char * cName, const void * data)
 {
-	// Here, we write to the CPU version of the constant buffer -- if the contents are updated.
-	// otherwise we don't write -- and set the dirty flag of the GPU CBuffer counterpart.
+	// Here, we write to the CPU address of the constant buffer if the contents are updated.
+	// otherwise we don't write and flag the buffer that contains the GPU address dirty.
 	// When all the constants are set on the CPU side, right before the draw call,
 	// we will use a mapped resource as a block of memory, transfer our CPU
 	// version of constants to there, and then send it to GPU CBuffers at one call as a block memory.
-	// Otherwise, we would have to make an API call each time we set the constants, which
-	// would be slower.
+	// Otherwise, we would have to make an API call each time we set the constants, which would be slower.
 	// Read more here: https://developer.nvidia.com/sites/default/files/akamai/gamedev/files/gdc12/Efficient_Buffer_Management_McDonald.pdf
 	//      and  here: https://developer.nvidia.com/content/constant-buffers-without-constant-pain-0
 
@@ -1505,8 +1504,8 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 
 // assumes (0, 0) is Bottom Left corner of the screen.
 void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
-{																// warning:
-	const int screenWidth =  mWindowSettings.width;	// 2 copies of renderer settings, one here on in Engine
+{														// warning:
+	const int screenWidth = mWindowSettings.width;		// 2 copies of renderer settings, one here on in Engine
 	const int screenHeight = mWindowSettings.height;	// dynamic window size change might break things...
 	const float& dimx = cmd.dimensionsInPixels.x();
 	const float& dimy = cmd.dimensionsInPixels.y();

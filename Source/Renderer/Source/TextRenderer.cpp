@@ -41,13 +41,13 @@ struct Character
 
 static std::map<char, Character> sCharacters;
 
+// https://learnopengl.com/#!In-Practice/Text-Rendering
 bool TextRenderer::Initialize(Renderer* pRenderer)
 {
+	TextRenderer::pRenderer = pRenderer;	// set static pRenderer
+
 	const std::vector<InputLayout> layouts = { { "POSITION",	FLOAT32_3 } };
 	TextRenderer::shaderText = pRenderer->AddShader("Text", layouts);
-
-	// https://learnopengl.com/#!In-Practice/Text-Rendering
-	TextRenderer::pRenderer = pRenderer;
 
 	FT_Error err; 
 
@@ -81,7 +81,7 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 		err = FT_Load_Char(face, c, FT_LOAD_RENDER);
 		if (err != 0)
 		{
-			Log::Error("Couldn't load character glpyh (%d): %c", c, c);
+			Log::Error("Couldn't load character glyph (%d): %c", c, c);
 		}
 
 		const int w = face->glyph->bitmap.width;

@@ -60,12 +60,12 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 Scenes:
  - 1 - Room Scene
  - 2 - SSAO Test Scene
- - 3 - IBL Test Scene (PageUp/Down to change EnvironmentMap)
+ - 3 - IBL Test Scene
 
 
 | Engine Controls |  |
 | :---: | :--- |
-| **PageUp / PageDown** | Change Environment Map / Skybox
+| **PageUp / PageDown** | Change Environment Map / Skybox |
 | **F1** |	TexCoord Shader (Forward Rendering Only) |
 | **F2** |	Normals Shader (Forward Rendering Only) |
 | **F3** |	Diffuse Color Shader (Forward Rendering Only) |

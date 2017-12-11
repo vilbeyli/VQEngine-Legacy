@@ -19,7 +19,7 @@
 #pragma once
 
 using ShaderID = int;
-using InputBufferID = int;
+using BufferID = int;
 using TextureID = int;
 using SamplerID = int;
 using RasterizerStateID = int;

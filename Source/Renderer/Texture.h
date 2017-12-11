@@ -39,7 +39,9 @@ struct TextureDesc
 	EImageFormat format;
 	ETextureUsage usage;
 	std::string	 texFileName;
-	void* data;
+	void* pData;
+	int dataPitch;		// used for 2D/3D Textures - how many bytes per row of pixels
+	int dataSlicePitch;	// used for 3D Textures
 	int mipCount;
 	int arraySize;
 	bool bIsCubeMap;
@@ -51,7 +53,8 @@ struct TextureDesc
 		format(RGBA32F),
 		usage(RESOURCE),
 		texFileName(""),
-		data(nullptr),
+		pData(nullptr),
+		dataSlicePitch(0),
 		mipCount(1),
 		arraySize(1),
 		bIsCubeMap(false),

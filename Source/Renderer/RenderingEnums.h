@@ -186,4 +186,27 @@ enum EShaders : unsigned	// built-in shaders
 	SHADER_COUNT
 };
 
+
+enum EBufferUsage
+{
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/ff476259(v=vs.85).aspx
+	STATIC_R = D3D11_USAGE_IMMUTABLE,
+	STATIC_RW = D3D11_USAGE_DEFAULT,
+	DYNAMIC = D3D11_USAGE_DYNAMIC,
+	STAGING = D3D11_USAGE_STAGING,
+
+	BUFFER_USAGE_COUNT
+};
+
+enum EBufferType
+{
+	VERTEX_BUFER = D3D11_BIND_VERTEX_BUFFER,
+	INDEX_BUFFER = D3D11_BIND_INDEX_BUFFER,
+	// CONSTANT_BUFFER, // this can fit here
+
+	BUFFER_TYPE_UNKNOWN,
+	BUFFER_TYPE_COUNT
+};
+
+
 #include "Application/HandleTypedefs.h"

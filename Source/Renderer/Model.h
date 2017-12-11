@@ -24,7 +24,8 @@ class Model
 {
 public:
 	Model() : mMesh(-1) {}
-	~Model() {}
+	//Model()  = default;
+	~Model() = default;
 
 	void SetDiffuseAlpha(const LinearColor & diffuseColor, float alpha);
 	void SetDiffuseColor(const LinearColor & diffuseColor);
@@ -33,7 +34,7 @@ public:
 	void SetTextureTiling(const vec2& tiling);
 
 public:
-	InputBufferID		mMesh;
+	int				mMesh;
 	BRDF_Material		mBRDF_Material;
 	BlinnPhong_Material mBlinnPhong_Material;
 };

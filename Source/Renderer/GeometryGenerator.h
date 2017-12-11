@@ -18,25 +18,15 @@
 
 #pragma once
 
-class BufferObject;
-struct ID3D11Device;
+#include "Mesh.h"
 
-class GeometryGenerator
+namespace GeometryGenerator
 {
-public:
-	GeometryGenerator() = delete;
-	~GeometryGenerator() = delete;
-
-	static void SetDevice(ID3D11Device* dev) { m_device = dev; }
-
-	static BufferObject* Triangle();
-	static BufferObject* Quad();
-	static BufferObject* Cube();
-	static BufferObject* Sphere(float radius, unsigned ringCount, unsigned sliceCount);
-	static BufferObject* Grid(float width, float depth, unsigned m, unsigned n);
-	static BufferObject* Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount);
-
-private:
-	static ID3D11Device* m_device;
+	Mesh Triangle(float scale);
+	Mesh Quad(float scale);
+	Mesh Cube();
+	Mesh Sphere(float radius, unsigned ringCount, unsigned sliceCount);
+	Mesh Grid(float width, float depth, unsigned m, unsigned n);
+	Mesh Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount);
 };
 

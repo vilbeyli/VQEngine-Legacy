@@ -15,20 +15,75 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
-
 #pragma once
 
-// this will be populated in milestone3
+#include "RenderingEnums.h"
+#include "BufferObject.h"
 
-struct Vertex;
+#include "Utilities/utils.h"
 
-// refactor mesh
+#include <vector>
+
 class Mesh
 {
-	//Mesh() : vertices(NULL), numVertices(0), indices(NULL), numIndices(0) {}
-	//~Mesh() { if (vertices) delete[] vertices; if (indices) delete[] indices; }
-	//Vertex* vertices;
-	//unsigned numVertices;
-	//unsigned* indices;
-	//unsigned numIndices;
+	friend class Renderer;
+	static ID3D11Device* spDevice;	// initialized by Renderer
+public:
+	template<class VertexBufferType> Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices);
+	//	template<class VertexBufferType> Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices, const std::vector<std::string> textureFileNames);	// TODO
+
+	void Draw() const;
+
+	void CleanUp();	// ctor initializes d3d buffer, should be cleaned up;
+private:
+	TextureID textures;
+	Buffer	mVertexBuffer;
+	Buffer	mIndexBuffer;
 };
+
+// template definitions
+// --------------------------------------------------------------------------------------------------------------------------
+static const BufferDesc sDefaultBufferDesc = {EBufferType::BUFFER_TYPE_UNKNOWN, EBufferUsage::STATIC_RW, 0, 0};
+
+template<class VertexBufferType> 
+Mesh::Mesh(
+	const std::vector<VertexBufferType>& vertices, 
+	const std::vector<unsigned>& indices
+)	:
+	textures(-1),
+	mVertexBuffer(sDefaultBufferDesc),
+	mIndexBuffer(sDefaultBufferDesc)
+{
+	BufferDesc bufferDesc = {};
+
+	mVertexBuffer.test = 1;
+	bufferDesc.mType = VERTEX_BUFER;
+	bufferDesc.mUsage = STATIC_RW;
+	bufferDesc.mElementCount = static_cast<unsigned>(vertices.size());
+	bufferDesc.mStride = sizeof(vertices[0]);
+	mVertexBuffer = Buffer(bufferDesc); 
+	mVertexBuffer.Initialize(spDevice, static_cast<const void*>(vertices.data()));
+	
+	bufferDesc.mType = INDEX_BUFFER;
+	bufferDesc.mUsage = STATIC_RW;
+	bufferDesc.mElementCount = static_cast<unsigned>(indices.size());
+	bufferDesc.mStride = sizeof(unsigned);
+	mIndexBuffer = Buffer(bufferDesc);
+	mIndexBuffer.Initialize(spDevice, static_cast<const void*>(indices.data()));
+}
+
+#if 0	// TODO
+template<class VertexBufferType> 
+Mesh::Mesh(
+	const std::vector<VertexBufferType>& vertices, 
+	const std::vector<unsigned>& indices, 
+	const std::vector<std::string> textureFileNames
+)	:
+	textures(-1)
+	mVertexBuffer(sDefaultBufferDesc),
+	mIndexBuffer(sDefaultBufferDesc)
+{
+
+	// todo: set texture array
+}
+#endif

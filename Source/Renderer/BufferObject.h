@@ -18,37 +18,82 @@
 
 #pragma once
 
+#include "RenderingEnums.h"
 #include "Utilities/utils.h"
 
-struct ID3D11Buffer;
-struct ID3D11Device;
-
-struct Vertex
-{	//44 Bytes in total
-	vec3 position;		//12
-	vec3 normal;		//12 
-	vec3 tangent;		//12
-	vec2 texCoords;		// 8
-};
-
-class BufferObject	// todo: rename to PrimitiveAssembly?
+struct BufferDesc
 {
-public:
-	BufferObject() = default;
-	~BufferObject();
-
-	bool FillGPUBuffers(ID3D11Device* device, bool writable);
-
-public:
-	// gpu data
-	ID3D11Buffer*	m_vertexBuffer;
-	ID3D11Buffer*	m_indexBuffer;
-
-	// cpu data
-	Vertex*			m_vertices;
-	unsigned*		m_indices;
-
-	unsigned		m_vertexCount;
-	unsigned		m_indexCount;
+	EBufferType		mType;
+	EBufferUsage	mUsage;
+	unsigned		mElementCount;
+	unsigned		mStride;
 };
 
+struct Buffer
+{
+	BufferDesc		mDesc;
+	ID3D11Buffer*	mData;
+	bool			mDirty;
+	void*			mCPUData;
+
+	int test = 0;
+
+	bool bInitialized;
+	void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
+	void CleanUp();
+
+	void Update();
+
+	Buffer(const BufferDesc& desc);
+};
+
+struct DefaultVertexBufferData
+{
+	vec3 position;
+	vec3 normal;
+	vec3 tangent;
+	vec2 uv;
+};
+
+
+#if 0
+// exploring some ideas here
+//
+// warning for the feint-hearted: variadic template fun follows.
+// https://eli.thegreenplace.net/2014/variadic-templates-in-c/
+//
+// The idea is simple: flexible vertex buffer struct with struct definitions handled by the compiler.
+// Example: VertexBuffer<vec3, vec2> for a vertex buffer for positions(vec3) and UVs(vec2).
+
+// base case
+template <class ...Attributes>
+struct VertexBuffer {};
+
+// argument peeling
+template <class Attribute, class... Attributes> 
+struct VertexBuffer<Attribute, Attributes...> : VertexBuffer<Attributes...> 
+{
+	VertexBuffer(Attribute inAttribute, Attributes... inRestOfTheAttributes) : VertexBuffer<Attributes...>(inRestOfTheAttributes), mAttribute(inAttribute) {}
+	Attribute mAttribute;	// tail
+};
+
+// variadic example usage: 
+//	VertexBuffer<vec3, vec2, vec4> vb(vec3(0,0,0), vec2(1,1), vec4(0,0,1,0));
+// 
+// argument peeling:
+//  -	struct VertexBuffer<vec3, vec2, vec4> : VertexBuffer<vec2, vec4> {
+//			vec3 attribute; //position
+//		}
+//	
+//	-	VertexBuffer<vec2, vec4> : VertexBuffer<vec4>{
+//			vec2 attribute; // uv
+//		}
+//
+//	-	VertexBuffer<vec2> : VertexBuffer<>{
+//			vec4 attribute; // some other packed data
+//		}
+//
+//	-	VertexBuffer<> : VertexBuffer{}	
+//							// base case
+//
+#endif

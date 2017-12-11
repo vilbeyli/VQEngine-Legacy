@@ -36,6 +36,7 @@ Engine* Engine::sInstance = nullptr;
 Engine::Engine()
 	:
 	mpRenderer(new Renderer()),
+	mpTextRenderer(new TextRenderer()),
 	mpInput(new Input()),
 	mpTimer(new PerfTimer()),
 	mpSceneManager(new SceneManager(mLights)),

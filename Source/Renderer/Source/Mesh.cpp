@@ -16,3 +16,17 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "Mesh.h"
+#include "Utilities/Log.h"
+
+ID3D11Device* Mesh::spDevice = nullptr;
+
+void Mesh::Draw() const
+{
+}
+
+void Mesh::CleanUp()
+{
+	mVertexBuffer.CleanUp();
+	mIndexBuffer.CleanUp();
+}

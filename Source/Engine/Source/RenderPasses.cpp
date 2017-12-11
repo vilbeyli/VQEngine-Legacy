@@ -630,14 +630,15 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	texDesc.height = NOISE_KERNEL_SIZE;
 	texDesc.format = EImageFormat::RGBA32F;
 	texDesc.texFileName = "noiseKernel";
-	texDesc.data = this->noiseKernel.data();
+	texDesc.pData = this->noiseKernel.data();
+	texDesc.dataPitch = sizeof(vec4) * NOISE_KERNEL_SIZE;
 	this->noiseTexture = pRenderer->CreateTexture2D(texDesc);
 
 	const float whiteValue = 1.0f;
 	std::vector<vec4> white4x4 = std::vector<vec4>(16, vec4(whiteValue, whiteValue, whiteValue, 1));
 	texDesc.width = texDesc.height = 4;
 	texDesc.texFileName = "white4x4";
-	texDesc.data = white4x4.data();
+	texDesc.pData = white4x4.data();
 	this->whiteTexture4x4 = pRenderer->CreateTexture2D(texDesc);
 
 	// The tiling of the texture causes the orientation of the kernel to be repeated and 

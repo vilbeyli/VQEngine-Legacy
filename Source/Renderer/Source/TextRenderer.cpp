@@ -45,7 +45,6 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 {
 	const std::vector<InputLayout> layouts = { { "POSITION",	FLOAT32_3 } };
 	TextRenderer::shaderText = pRenderer->AddShader("Text", layouts);
-	return true;
 
 	// https://learnopengl.com/#!In-Practice/Text-Rendering
 	TextRenderer::pRenderer = pRenderer;
@@ -97,7 +96,9 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 		texDesc.format = EImageFormat::R32U;
 		texDesc.width = w;
 		texDesc.height = h;
-		texDesc.data = face->glyph->bitmap.buffer;
+		texDesc.pData = face->glyph->bitmap.buffer;
+		texDesc.dataPitch = face->glyph->bitmap.pitch;
+		texDesc.dataSlicePitch = 0;
 
 		TextureID charTexture = pRenderer->CreateTexture2D(texDesc);
 		Character character = 

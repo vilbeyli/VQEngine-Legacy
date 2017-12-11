@@ -19,11 +19,13 @@
 
 #include "RenderCommands.h"
 #include "RenderingEnums.h"
-#include "Engine/Settings.h"
 #include "Texture.h"
 #include "Shader.h"
-#include "Utilities/Color.h"
+#include "Mesh.h"
 
+#include "Engine/Settings.h"
+
+#include "Utilities/Color.h"
 #include "Utilities/utils.h"
 //#include "WorkerPool.h"
 
@@ -70,7 +72,7 @@ struct DepthTarget
 struct PipelineState
 {
 	ShaderID			_activeShader;
-	InputBufferID		_activeInputBuffer;
+	int _activeInputBuffer; // todo, remove this
 	RasterizerStateID	_activeRSState;
 	DepthStencilStateID	_activeDepthStencilState;
 	RenderTargetIDs		_boundRenderTargets;
@@ -214,7 +216,7 @@ public:
 private:	
 	Settings::Window				mWindowSettings;
 
-	std::vector<BufferObject*>		m_bufferObjects;
+	std::vector<Mesh>				mBuiltinMeshes;
 	std::vector<Shader*>			m_shaders;
 	std::vector<Texture>			m_textures;
 	std::vector<Sampler>			m_samplers;

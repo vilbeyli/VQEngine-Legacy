@@ -27,6 +27,7 @@
 #include "Light.h"
 
 #include "Engine/Settings.h"
+
 #include "Application/SystemDefs.h"
 
 #include "Utilities/utils.h"
@@ -157,7 +158,7 @@ void OnShaderChange(LPTSTR dir)
 	Log::Info("OnShaderChange(%s)\n\n", dir);
 	// we know that a change occurred in the 'dir' directory. Read source again
 	// works		: create file, delete file
-	// doesnt work	: modify file
+	// doesn't work	: modify file
 	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
 }
 //=======================================================================================================================================================
@@ -173,8 +174,7 @@ Renderer::Renderer()
 	m_Direct3D(nullptr),
 	m_device(nullptr),
 	m_deviceContext(nullptr),
-	m_bufferObjects     (std::vector<BufferObject*>     (EGeometry::MESH_TYPE_COUNT)      ),
-	m_rasterizerStates  (std::vector<RasterizerState*>  ((int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
+	m_rasterizerStates  (std::vector<RasterizerState*>  (EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
 	m_depthStencilStates(std::vector<DepthStencilState*>(EDefaultDepthStencilState::DEPTH_STENCIL_STATE_COUNT)),
 	m_blendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT)),
 	m_samplers			(std::vector<Sampler>(EDefaultSamplerState::DEFAULT_SAMPLER_COUNT))
@@ -198,12 +198,8 @@ Renderer::~Renderer(){}
 void Renderer::Exit()
 {
 	//m_Direct3D->ReportLiveObjects("BEGIN EXIT");
-	for (BufferObject*& bo : m_bufferObjects)
-	{
-		delete bo;
-		bo = nullptr;
-	}
-	m_bufferObjects.clear();
+	std::for_each(mBuiltinMeshes.begin(), mBuiltinMeshes.end(), [](Mesh& mesh) {mesh.CleanUp(); });
+	mBuiltinMeshes.clear();
 
 	CPUConstant::CleanUp();
 	
@@ -332,6 +328,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	}
 	m_device		= m_Direct3D->m_device;
 	m_deviceContext = m_Direct3D->m_deviceContext;
+	Mesh::spDevice = m_device;
 
 	// DEFAULT RENDER TARGET
 	//--------------------------------------------------------------------
@@ -578,14 +575,16 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		const unsigned sphRingCount = 25;
 		const unsigned sphSliceCount = 25;
 
-		GeometryGenerator::SetDevice(m_device);
-		m_bufferObjects[TRIANGLE] = GeometryGenerator::Triangle();
-		m_bufferObjects[QUAD] = GeometryGenerator::Quad();
-		m_bufferObjects[CUBE] = GeometryGenerator::Cube();
-		m_bufferObjects[GRID] = GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV);
-		m_bufferObjects[CYLINDER] = GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount);
-		m_bufferObjects[SPHERE] = GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount);
-		m_bufferObjects[BONE] = GeometryGenerator::Sphere(sphRadius / 40, 10, 10);
+		mBuiltinMeshes =	// this should match enum declaration order
+		{
+			GeometryGenerator::Triangle(1.0f),
+			GeometryGenerator::Quad(1.0f),
+			GeometryGenerator::Cube(),
+			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
+			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
+			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
+			GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
+		};
 	}
 
 	// SHADERS
@@ -747,28 +746,13 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	desc.CPUAccessFlags = 0;
 	desc.MiscFlags = miscFlags;
 
-	int perPixel = 0;
-	switch (texDesc.format)
-	{
-	case RGBA32F:
-		perPixel = sizeof(vec4);
-		break;
-	case R32:
-	case R32F:
-	case R32U:
-		perPixel = sizeof(float);
-		break;
-	default:
-		perPixel = sizeof(vec4); // 0?
-	}
-
 	D3D11_SUBRESOURCE_DATA dataDesc = {};	
 	D3D11_SUBRESOURCE_DATA* pDataDesc = nullptr;
-	if (texDesc.data)
+	if (texDesc.pData)
 	{
-		dataDesc.pSysMem = texDesc.data;
-		dataDesc.SysMemPitch = perPixel * (texDesc.width);
-		dataDesc.SysMemSlicePitch = 0;
+		dataDesc.pSysMem = texDesc.pData;
+		dataDesc.SysMemPitch = texDesc.dataPitch;
+		dataDesc.SysMemSlicePitch = texDesc.dataSlicePitch;
 		pDataDesc = &dataDesc;
 	}
 	m_device->CreateTexture2D(&desc, pDataDesc, &tex._tex2D);
@@ -877,7 +861,8 @@ TextureID Renderer::CreateHDRTexture(const std::string& texFileName, const std::
 	texDesc.height = height;
 	texDesc.format = EImageFormat::RGBA32F;
 	texDesc.texFileName = texFileName;
-	texDesc.data = data;
+	texDesc.pData = data;
+	texDesc.dataPitch = sizeof(vec4) * width;
 	texDesc.mipCount = 1;
 	texDesc.bGenerateMips = false;
 
@@ -1585,10 +1570,12 @@ void Renderer::Apply()
 
 	// INPUT ASSEMBLY
 	// ----------------------------------------
-	unsigned stride = sizeof(Vertex);	// layout?
+	unsigned stride = sizeof(DefaultVertexBufferData);	// layout?
 	unsigned offset = 0;
-	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &m_bufferObjects[m_state._activeInputBuffer]->m_vertexBuffer, &stride, &offset);
-	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetIndexBuffer(m_bufferObjects[m_state._activeInputBuffer]->m_indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+
+
+	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &(mBuiltinMeshes[m_state._activeInputBuffer].mVertexBuffer.mData), &stride, &offset);
+	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[m_state._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
 	if (shader)							  m_deviceContext->IASetInputLayout(shader->m_layout);
 
 	if (shader)
@@ -1689,8 +1676,10 @@ void Renderer::EndEvent()
 
 void Renderer::DrawIndexed(EPrimitiveTopology topology)
 {
+	const unsigned numIndices = mBuiltinMeshes[m_state._activeInputBuffer].mIndexBuffer.mDesc.mElementCount;
+
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
-	m_deviceContext->DrawIndexed(m_bufferObjects[m_state._activeInputBuffer]->m_indexCount, 0, 0);
+	m_deviceContext->DrawIndexed(numIndices, 0, 0);
 }
 
 void Renderer::Draw(EPrimitiveTopology topology)

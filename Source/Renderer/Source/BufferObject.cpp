@@ -18,86 +18,60 @@
 
 #include "BufferObject.h"
 
-#include <DirectXMath.h>
 #include <d3d11_1.h>
 
-using namespace DirectX;
+#include "Utilities/Log.h"
 
-BufferObject::~BufferObject()
+Buffer::Buffer(const BufferDesc& desc)
+	: 
+	mDesc(desc),
+	mData(nullptr),
+	mDirty(true),
+	mCPUData(nullptr)
+{}
+
+void Buffer::Initialize(ID3D11Device* device, const void* data /*=nullptr*/)
 {
-	if(m_vertices)
-	{ 
-		delete[] m_vertices;
-		m_vertices = nullptr;
-	}
+	D3D11_BUFFER_DESC bufDesc;
+	bufDesc.Usage = static_cast<D3D11_USAGE>(mDesc.mUsage);
+	bufDesc.BindFlags = static_cast<D3D11_BIND_FLAG>(mDesc.mType);
+	bufDesc.ByteWidth = mDesc.mStride * mDesc.mElementCount;
+	bufDesc.CPUAccessFlags = mDesc.mUsage == EBufferUsage::DYNAMIC ? D3D11_CPU_ACCESS_WRITE : 0;	// dynamic r/w?
+	bufDesc.MiscFlags = 0;
+	bufDesc.StructureByteStride = 0;
 
-	if (m_indices)
+	D3D11_SUBRESOURCE_DATA* pBufData = nullptr;
+	D3D11_SUBRESOURCE_DATA bufData = {};
+	if (data)
 	{
-		delete[] m_indices;
-		m_indices = nullptr;
+		bufData.pSysMem = data;
+		bufData.SysMemPitch = 0;		// irrelevant for non-texture sub-resources
+		bufData.SysMemSlicePitch = 0;	// irrelevant for non-texture sub-resources
+		pBufData = &bufData;
 	}
 
-	if (m_vertexBuffer)
-	{
-		m_vertexBuffer->Release();
-		m_vertexBuffer = nullptr;
-	}
-
-	if (m_indexBuffer)
-	{
-		m_indexBuffer->Release();
-		m_indexBuffer = nullptr;
-	}
-
-}
-
-bool BufferObject::FillGPUBuffers(ID3D11Device* device, bool writable)
-{
-	// vertex buffer
-	D3D11_BUFFER_DESC vertexBufferDesc;
-	vertexBufferDesc.Usage					= writable ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.ByteWidth				= sizeof(Vertex) * m_vertexCount;
-	vertexBufferDesc.BindFlags				= D3D11_BIND_VERTEX_BUFFER;
-	vertexBufferDesc.CPUAccessFlags			= writable ? D3D11_CPU_ACCESS_WRITE : 0;
-	vertexBufferDesc.MiscFlags				= 0;
-	vertexBufferDesc.StructureByteStride	= 0;
-	
-	D3D11_SUBRESOURCE_DATA vertData;
-	vertData.pSysMem			= m_vertices;
-	vertData.SysMemPitch		= 0;
-	vertData.SysMemSlicePitch	= 0;
-
-	int hr = device->CreateBuffer(&vertexBufferDesc, &vertData, &m_vertexBuffer);
+	int hr = device->CreateBuffer(&bufDesc, pBufData, &this->mData);
 	if (FAILED(hr))
 	{
-		OutputDebugString("Error: Failed to create vertex buffer!\n");
-		return false;
+		Log::Error("Failed to create vertex buffer!");
 	}
+}
 
-	// index buffer
-	D3D11_BUFFER_DESC indexBufferDesc;
-	indexBufferDesc.Usage				= D3D11_USAGE_DEFAULT;
-	indexBufferDesc.ByteWidth			= sizeof(unsigned) * m_indexCount;
-	indexBufferDesc.BindFlags			= D3D11_BIND_INDEX_BUFFER;
-	indexBufferDesc.CPUAccessFlags		= 0;
-	indexBufferDesc.MiscFlags			= 0;
-	indexBufferDesc.StructureByteStride = 0;
-
-	//set up index data
-	D3D11_SUBRESOURCE_DATA indexData;
-	indexData.pSysMem			= m_indices;
-	indexData.SysMemPitch		= 0;
-	indexData.SysMemSlicePitch	= 0;
-
-	//create index buffer
-	if (FAILED(device->CreateBuffer(
-		&indexBufferDesc, 
-		&indexData, 
-		&m_indexBuffer)))
+void Buffer::CleanUp()
+{
+	if (mData)
 	{
-		OutputDebugString("Error: Failed to create index buffer!");
-		return false;
+		mData->Release();
+		mData = nullptr;
 	}
 
-	return true;
+	if (mCPUData)
+	{
+		// todo:
+	}
+}
+
+void Buffer::Update()
+{
+	// todo
 }

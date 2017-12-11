@@ -23,10 +23,8 @@
 #include "Application/DataStructures.h"
 #include "Utilities/Color.h"
 
+#include "RenderingEnums.h"
 #include <DirectXMath.h>
-
-using InputBufferID = int; // warning: duplicate definition
-
 
 // todo: break up light into its own structs and remove 3 functions for gpu data
 struct Light
@@ -75,7 +73,7 @@ struct Light
 	};	
 
 	Transform		_transform;
-	InputBufferID	_renderMesh;
+	int	_renderMesh; // todo: mesh
 };
 
 

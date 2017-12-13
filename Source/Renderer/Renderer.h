@@ -71,15 +71,17 @@ struct DepthTarget
 
 struct PipelineState
 {
-	ShaderID			_activeShader;
 	int _activeInputBuffer; // todo, remove this
-	RasterizerStateID	_activeRSState;
-	DepthStencilStateID	_activeDepthStencilState;
-	RenderTargetIDs		_boundRenderTargets;
-	DepthTargetID		_boundDepthTarget;
-	RenderTargetID		_mainRenderTarget;		// this doesn't belong here
-	BlendStateID		_activeBlendState;
-	TextureID			_depthBufferTexture;	// ^
+
+	ShaderID			shader;
+	BufferID			vertexBuffer;
+	BufferID			indexBuffer;
+	RasterizerStateID	rasterizerState;
+	DepthStencilStateID	depthStencilState;
+	RenderTargetIDs		renderTargets;
+	DepthTargetID		depthTargets;
+	BlendStateID		blendState;
+	Viewport			viewPort;
 };
 
 class Renderer
@@ -106,17 +108,17 @@ public:
 	unsigned				WindowHeight()	const;
 	unsigned				WindowWidth()	const;
 	vec2					GetWindowDimensionsAsFloat2() const;
-	inline RenderTargetID	GetDefaultRenderTarget() const	                { return m_state._mainRenderTarget; }
-	inline DepthTargetID	GetBoundDepthTarget() const	                    { return m_state._boundDepthTarget; }
-	inline TextureID		GetDefaultRenderTargetTexture() const           { return m_renderTargets[m_state._mainRenderTarget].texture._id; }
-	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return m_renderTargets[RT].texture._id; }
-	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const   { return m_depthTargets[DT].texture._id; }
+	inline RenderTargetID	GetDefaultRenderTarget() const	                { return mBackBufferRenderTarget; }
+	inline DepthTargetID	GetBoundDepthTarget() const	                    { return mPipelineState.depthTargets; }
+	inline TextureID		GetDefaultRenderTargetTexture() const           { return mRenderTargets[mBackBufferRenderTarget].texture._id; }
+	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return mRenderTargets[RT].texture._id; }
+	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const   { return mDepthTargets[DT].texture._id; }
 	const PipelineState&	GetState() const;
 
 	const Shader*			GetShader(ShaderID shader_id) const;
 	const Texture&			GetTextureObject(TextureID) const;
 	const TextureID			GetTexture(const std::string name) const;
-	inline const ShaderID	GetActiveShader() const { return m_state._activeShader; }
+	inline const ShaderID	GetActiveShader() const { return mPipelineState.shader; }
 
 
 	// RESOURCE INITIALIZATION
@@ -135,6 +137,10 @@ public:
 	TextureID				CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot = sHDRTextureRoot);
 	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles);
 
+	BufferID				CreateBuffer(const BufferDesc& bufferDesc, const void* pData = nullptr);
+
+	// PIPELINE STATE MANAGEMENT
+	//----------------------------------------------------------------------------------
 	SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc );	// TODO: samplerDesc
 
 	RasterizerStateID		AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors);
@@ -152,14 +158,14 @@ public:
 
 	DepthTargetID			AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, Texture& surface);
 
-	// PIPELINE STATE MANAGEMENT
-	//----------------------------------------------------------------------------------
 	void					SetViewport(const unsigned width, const unsigned height);
 	void					SetViewport(const D3D11_VIEWPORT& viewport);
 	void					SetShader(ShaderID);
-	void					SetBufferObj(int BufferID);
+	void					SetBufferObj(BufferID bufferID); // deprecated
+	void					SetVertexBuffer(BufferID bufferID);
+	void					SetIndexBuffer(BufferID bufferID);
 	void					SetTexture(const char* texName, TextureID tex);
-	void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex);
+	//	void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
 	void					SetTextureArray(const char* texName, TextureID texArray);
 	void					SetSamplerState(const char* samplerName, SamplerID sampler);
 	void					SetRasterizerState(RasterizerStateID rsStateID);
@@ -168,7 +174,7 @@ public:
 	void					SetScissorsRect(int left, int right, int top, int bottom);
 
 	template <typename... Args> 	
-	inline void				BindRenderTargets(Args const&... renderTargetIDs) { m_state._boundRenderTargets = { renderTargetIDs... }; }
+	inline void				BindRenderTargets(Args const&... renderTargetIDs) { mPipelineState.renderTargets = { renderTargetIDs... }; }
 	void					BindRenderTarget(RenderTargetID rtvID);
 	void					BindDepthTarget(DepthTargetID dsvID);
 
@@ -186,6 +192,7 @@ public:
 	void					End();
 	void					Reset();
 
+	void					UpdateBuffer(BufferID buffer, const void* pData);
 	void					Apply();
 
 	void					BeginEvent(const std::string& marker);
@@ -193,7 +200,7 @@ public:
 	// DRAW FUNCTIONS
 	//----------------------------------------------------------------------------------
 	void					DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
-	void					Draw(EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
+	void Draw(int vertCount, EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
 	
 	void					DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd); // BottomLeft<x,y> = (0,0)
 	
@@ -214,33 +221,35 @@ public:
 
 	static bool						sEnableBlend; //temp
 private:	
-	Settings::Window				mWindowSettings;
+	PipelineState					mPipelineState;
+	PipelineState					mPrevPipelineState;	//todo: make states an array, index through frameCount % size
+
+	RenderTargetID					mBackBufferRenderTarget;
+	TextureID						mDefaultDepthBufferTexture;
 
 	std::vector<Mesh>				mBuiltinMeshes;
-	std::vector<Shader*>			m_shaders;
-	std::vector<Texture>			m_textures;
-	std::vector<Sampler>			m_samplers;
+	std::vector<Shader*>			mShaders;
+	std::vector<Texture>			mTextures;
+	std::vector<Sampler>			mSamplers;
 
-	std::queue<SetTextureCommand>	m_setTextureCmds;
-	std::queue<SetSamplerCommand>	m_setSamplerCmds;
+	std::queue<SetTextureCommand>	mSetTextureCmds;
+	std::queue<SetSamplerCommand>	mSetSamplerCmds;
 
-	std::vector<RasterizerState*>	m_rasterizerStates;
-	std::vector<DepthStencilState*> m_depthStencilStates;
-	std::vector<BlendState>			m_blendStates;
+	std::vector<RasterizerState*>	mRasterizerStates;
+	std::vector<DepthStencilState*> mDepthStencilStates;
+	std::vector<BlendState>			mBlendStates;
 
-	std::vector<RenderTarget>		m_renderTargets;
-	std::vector<DepthTarget>		m_depthTargets;
-
-	Viewport						m_viewPort;
-
-	PipelineState					m_state;
+	std::vector<RenderTarget>		mRenderTargets;
+	std::vector<DepthTarget>		mDepthTargets;
+	std::vector<Buffer>				mBuffers;
 	
 	// performance counters
-	unsigned long long				m_frameCount;
+	unsigned long long				mFrameCount;
 
 	//std::vector<Point>				m_debugLines;
 	
 	//Worker		m_ShaderHotswapPollWatcher;
+	Settings::Window				mWindowSettings;
 
 };
  

@@ -17,8 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "BufferObject.h"
-
-#include <d3d11_1.h>
+#include "Renderer.h"
 
 #include "Utilities/Log.h"
 
@@ -27,11 +26,12 @@ Buffer::Buffer(const BufferDesc& desc)
 	mDesc(desc),
 	mData(nullptr),
 	mDirty(true),
-	mCPUData(nullptr)
+	mCPUDataCache(nullptr)
 {}
 
-void Buffer::Initialize(ID3D11Device* device, const void* data /*=nullptr*/)
+void Buffer::Initialize(ID3D11Device* device, const void* pData /*=nullptr*/)
 {
+	// GPU BUFFER
 	D3D11_BUFFER_DESC bufDesc;
 	bufDesc.Usage = static_cast<D3D11_USAGE>(mDesc.mUsage);
 	bufDesc.BindFlags = static_cast<D3D11_BIND_FLAG>(mDesc.mType);
@@ -42,9 +42,9 @@ void Buffer::Initialize(ID3D11Device* device, const void* data /*=nullptr*/)
 
 	D3D11_SUBRESOURCE_DATA* pBufData = nullptr;
 	D3D11_SUBRESOURCE_DATA bufData = {};
-	if (data)
+	if (pData)
 	{
-		bufData.pSysMem = data;
+		bufData.pSysMem = pData;
 		bufData.SysMemPitch = 0;		// irrelevant for non-texture sub-resources
 		bufData.SysMemSlicePitch = 0;	// irrelevant for non-texture sub-resources
 		pBufData = &bufData;
@@ -54,6 +54,14 @@ void Buffer::Initialize(ID3D11Device* device, const void* data /*=nullptr*/)
 	if (FAILED(hr))
 	{
 		Log::Error("Failed to create vertex buffer!");
+	}
+
+	// CPU Buffer
+	// we'll use mCPUData only when the created buffer is dynamic or staging
+	if (mDesc.mUsage == DYNAMIC || mDesc.mUsage == STAGING)
+	{
+		//const size_t AllocSize = mDesc.mStride * mDesc.mElementCount;
+		//mCPUDataCache = mAllocator.allocate(AllocSize);
 	}
 }
 
@@ -65,13 +73,23 @@ void Buffer::CleanUp()
 		mData = nullptr;
 	}
 
-	if (mCPUData)
+	if (mCPUDataCache)
 	{
-		// todo:
+		//const size_t AllocSize = mDesc.mStride * mDesc.mElementCount;
+		//mAllocator.deallocate(static_cast<char*>(mCPUDataCache), AllocSize);
 	}
 }
 
-void Buffer::Update()
+void Buffer::Update(Renderer* pRenderer, const void* pData)
 {
-	// todo
+	auto* ctx = pRenderer->m_deviceContext;
+
+	D3D11_MAPPED_SUBRESOURCE mappedResource = {};
+	constexpr UINT Subresource = 0;
+	constexpr UINT MapFlags = 0;
+	const UINT Size = mDesc.mStride * mDesc.mElementCount;
+
+	ctx->Map(mData, Subresource, D3D11_MAP_WRITE_DISCARD, MapFlags, &mappedResource);
+	memcpy(mappedResource.pData, pData, Size);
+	ctx->Unmap(mData, Subresource);
 }

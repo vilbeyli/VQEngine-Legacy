@@ -43,20 +43,15 @@ private:
 
 // template definitions
 // --------------------------------------------------------------------------------------------------------------------------
-static const BufferDesc sDefaultBufferDesc = {EBufferType::BUFFER_TYPE_UNKNOWN, EBufferUsage::STATIC_RW, 0, 0};
-
 template<class VertexBufferType> 
 Mesh::Mesh(
 	const std::vector<VertexBufferType>& vertices, 
 	const std::vector<unsigned>& indices
 )	:
-	textures(-1),
-	mVertexBuffer(sDefaultBufferDesc),
-	mIndexBuffer(sDefaultBufferDesc)
+	textures(-1)
 {
 	BufferDesc bufferDesc = {};
 
-	mVertexBuffer.test = 1;
 	bufferDesc.mType = VERTEX_BUFER;
 	bufferDesc.mUsage = STATIC_RW;
 	bufferDesc.mElementCount = static_cast<unsigned>(vertices.size());
@@ -80,8 +75,6 @@ Mesh::Mesh(
 	const std::vector<std::string> textureFileNames
 )	:
 	textures(-1)
-	mVertexBuffer(sDefaultBufferDesc),
-	mIndexBuffer(sDefaultBufferDesc)
 {
 
 	// todo: set texture array

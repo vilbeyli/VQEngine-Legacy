@@ -141,13 +141,13 @@ void Shader::LoadShaders(Renderer* pRenderer)
 std::stack<std::string> Shader::UnloadShaders(Renderer* pRenderer)
 {
 	std::stack<std::string> fileNames;
-	for (Shader*& shd : pRenderer->m_shaders)
+	for (Shader*& shd : pRenderer->mShaders)
 	{
 		fileNames.push(shd->m_name);
 		delete shd;
 		shd = nullptr;
 	}
-	pRenderer->m_shaders.clear();
+	pRenderer->mShaders.clear();
 	CPUConstant::s_nextConstIndex = 0;
 	return fileNames;
 }

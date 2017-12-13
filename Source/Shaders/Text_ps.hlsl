@@ -34,5 +34,6 @@ SamplerState samText;
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	const float2 uv = In.texCoord;
-    return float4(color, textMap.Sample(samText, uv).r);
+	float alpha = textMap.Sample(samText, uv).r;
+    return float4(color, alpha);
 }

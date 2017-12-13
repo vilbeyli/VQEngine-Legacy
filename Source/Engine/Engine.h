@@ -127,6 +127,8 @@ private:
 	PerfTimer*						mpTimer;
 	WorkerPool						mWorkerPool;
 
+	float mCurrentFrameTime;
+
 	// scene
 	//--------------------------------------------------------
 	SceneView						mSceneView;

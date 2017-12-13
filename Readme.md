@@ -28,14 +28,14 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
  ## Feature List / Version History
 
- *v0.2.0 - Rendering Techniques & Multiple Scenes - December1-2017*
+ *v0.2.0 - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
  - Forward/Deferred Rendering
  - PBR: GGX-Smith BRDF
  - Environment Mapping (Image-Based Lighting)
  - PCF Shadows
  - Bloom
  - SSAO w/ Gaussian Blur
- - Scene files, Switchable/Reloadable scenes
+ - Custom Scene Files, Switchable/Reloadable Scenes
 
 *v0.1.0 - Simple Lighting, Texturing and Shader Reflection: July15-2017*
  - Vertex-Geometry-Pixel Shader Pipeline

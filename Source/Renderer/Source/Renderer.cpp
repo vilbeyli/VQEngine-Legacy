@@ -174,22 +174,22 @@ Renderer::Renderer()
 	m_Direct3D(nullptr),
 	m_device(nullptr),
 	m_deviceContext(nullptr),
-	m_rasterizerStates  (std::vector<RasterizerState*>  (EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
-	m_depthStencilStates(std::vector<DepthStencilState*>(EDefaultDepthStencilState::DEPTH_STENCIL_STATE_COUNT)),
-	m_blendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT)),
-	m_samplers			(std::vector<Sampler>(EDefaultSamplerState::DEFAULT_SAMPLER_COUNT))
+	mRasterizerStates  (std::vector<RasterizerState*>  (EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
+	mDepthStencilStates(std::vector<DepthStencilState*>(EDefaultDepthStencilState::DEPTH_STENCIL_STATE_COUNT)),
+	mBlendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT)),
+	mSamplers			(std::vector<Sampler>(EDefaultSamplerState::DEFAULT_SAMPLER_COUNT))
 	//,	m_ShaderHotswapPollWatcher("ShaderHotswapWatcher")
 {
 	for (int i=0; i<(int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT; ++i)
 	{
-		m_rasterizerStates[i] = (RasterizerState*)malloc(sizeof(*m_rasterizerStates[i]));
-		memset(m_rasterizerStates[i], 0, sizeof(*m_rasterizerStates[i]));
+		mRasterizerStates[i] = (RasterizerState*)malloc(sizeof(*mRasterizerStates[i]));
+		memset(mRasterizerStates[i], 0, sizeof(*mRasterizerStates[i]));
 	}
 
 	for (int i = 0; i < (int)EDefaultBlendState::BLEND_STATE_COUNT; ++i)
 	{
-		m_blendStates[i].ptr = (ID3D11BlendState*)malloc(sizeof(*m_blendStates[i].ptr));
-		memset(m_blendStates[i].ptr, 0, sizeof(*m_blendStates[i].ptr));
+		mBlendStates[i].ptr = (ID3D11BlendState*)malloc(sizeof(*mBlendStates[i].ptr));
+		memset(mBlendStates[i].ptr, 0, sizeof(*mBlendStates[i].ptr));
 	}
 }
 
@@ -201,17 +201,20 @@ void Renderer::Exit()
 	std::for_each(mBuiltinMeshes.begin(), mBuiltinMeshes.end(), [](Mesh& mesh) {mesh.CleanUp(); });
 	mBuiltinMeshes.clear();
 
-	CPUConstant::CleanUp();
+	std::for_each(mBuffers.begin(), mBuffers.end(), [](Buffer& b){b.CleanUp();} );
+	mBuffers.clear();
+
+	CPUConstant::CleanUp();	// todo: move constant buffer logic into Buffer
 	
 	Shader::UnloadShaders(this);
 
-	for (Texture& tex : m_textures)
+	for (Texture& tex : mTextures)
 	{
 		tex.Release();
 	}
-	m_textures.clear();
+	mTextures.clear();
 
-	for (Sampler& s : m_samplers)
+	for (Sampler& s : mSamplers)
 	{
 		if (s._samplerState)
 		{
@@ -220,7 +223,7 @@ void Renderer::Exit()
 		}
 	}
 
-	for (RenderTarget& rt : m_renderTargets)
+	for (RenderTarget& rt : mRenderTargets)
 	{
 		if (rt.pRenderTargetView)
 		{
@@ -239,7 +242,7 @@ void Renderer::Exit()
 		}
 	}
 
-	for (RasterizerState*& rs : m_rasterizerStates)
+	for (RasterizerState*& rs : mRasterizerStates)
 	{
 		if (rs)
 		{
@@ -248,7 +251,7 @@ void Renderer::Exit()
 		}
 	}
 
-	for (DepthStencilState*& dss : m_depthStencilStates)
+	for (DepthStencilState*& dss : mDepthStencilStates)
 	{
 		if (dss)
 		{
@@ -257,7 +260,7 @@ void Renderer::Exit()
 		}
 	}
 
-	for (BlendState& bs : m_blendStates)
+	for (BlendState& bs : mBlendStates)
 	{
 		if (bs.ptr)
 		{
@@ -266,7 +269,7 @@ void Renderer::Exit()
 		}
 	}
 
-	for (DepthTarget& dt : m_depthTargets)
+	for (DepthTarget& dt : mDepthTargets)
 	{
 		if (dt.pDepthStencilView)
 		{
@@ -294,8 +297,8 @@ HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };
 
 const Shader* Renderer::GetShader(ShaderID shader_id) const
 {
-	assert(shader_id >= 0 && (int)m_shaders.size() > shader_id);
-	return m_shaders[shader_id];
+	assert(shader_id >= 0 && (int)mShaders.size() > shader_id);
+	return mShaders[shader_id];
 }
 
 
@@ -361,11 +364,11 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 			return false;
 		}
 
-		m_textures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - don't add texture to vector
-		defaultRT.texture._id = static_cast<int>(m_textures.size() - 1);
+		mTextures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - don't add texture to vector
+		defaultRT.texture._id = static_cast<int>(mTextures.size() - 1);
 
-		m_renderTargets.push_back(defaultRT);
-		m_state._mainRenderTarget = static_cast<int>(m_renderTargets.size() - 1);
+		mRenderTargets.push_back(defaultRT);
+		mBackBufferRenderTarget = static_cast<int>(mRenderTargets.size() - 1);
 	}
 	m_Direct3D->ReportLiveObjects("Init Default RT\n");
 
@@ -383,8 +386,8 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		depthTexDesc.format = R32;
 		depthTexDesc.usage = ETextureUsage(DEPTH_TARGET | RESOURCE);
 
-		m_state._depthBufferTexture = CreateTexture2D(depthTexDesc);
-		Texture& depthTexture = static_cast<Texture>(GetTextureObject(m_state._depthBufferTexture));
+		mDefaultDepthBufferTexture = CreateTexture2D(depthTexDesc);
+		Texture& depthTexture = static_cast<Texture>(GetTextureObject(mDefaultDepthBufferTexture));
 
 		// depth stencil view and shader resource view for the shadow map (^ BindFlags)
 		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
@@ -416,21 +419,21 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		rsDesc.MultisampleEnable = true;
 
 		rsDesc.CullMode = D3D11_CULL_BACK;
-		hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_BACK]);
+		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_BACK]);
 		if (FAILED(hr))
 		{
 			Log::Error(err + "Back\n");
 		}
 
 		rsDesc.CullMode = D3D11_CULL_FRONT;
-		hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_FRONT]);
+		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_FRONT]);
 		if (FAILED(hr))
 		{
 			Log::Error(err + "Front\n");
 		}
 
 		rsDesc.CullMode = D3D11_CULL_NONE;
-		hr = m_device->CreateRasterizerState(&rsDesc, &m_rasterizerStates[(int)EDefaultRasterizerState::CULL_NONE]);
+		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_NONE]);
 		if (FAILED(hr))
 		{
 			Log::Error(err + "None\n");
@@ -455,12 +458,12 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		D3D11_BLEND_DESC desc = {};
 		desc.RenderTarget[0] = rtBlendDesc;
 
-		m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::ADDITIVE_COLOR].ptr));
-		m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::ALPHA_BLEND].ptr));
+		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::ADDITIVE_COLOR].ptr));
+		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::ALPHA_BLEND].ptr));
 
 		rtBlendDesc.BlendEnable = false;
 		desc.RenderTarget[0] = rtBlendDesc;
-		m_device->CreateBlendState(&desc, &(m_blendStates[EDefaultBlendState::DISABLED].ptr));
+		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::DISABLED].ptr));
 	}
 	m_Direct3D->ReportLiveObjects("Init Default BlendStates ");
 
@@ -473,25 +476,25 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		m_device->CreateSamplerState(&samplerDesc, &(m_samplers[EDefaultSamplerState::WRAP_SAMPLER]._samplerState));
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::WRAP_SAMPLER]._samplerState));
 
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-		m_device->CreateSamplerState(&samplerDesc, &(m_samplers[EDefaultSamplerState::POINT_SAMPLER]._samplerState));
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::POINT_SAMPLER]._samplerState));
 
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		m_device->CreateSamplerState(&samplerDesc, &(m_samplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW]._samplerState));
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW]._samplerState));
 
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		m_device->CreateSamplerState(&samplerDesc, &(m_samplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER]._samplerState));
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER]._samplerState));
 	}
 
 	// DEFAULT DEPTHSTENCIL SATATES
@@ -530,28 +533,28 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 	
 	// Create the depth stencil states.
-	HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_WRITE]);
+	HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_WRITE]);
 	if(!checkFailed(hr)) return false;
 
 	depthStencilDesc.DepthEnable = false;
 	depthStencilDesc.StencilEnable = false;
-	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED]);
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED]);
 	if (!checkFailed(hr)) return false;
 
 	depthStencilDesc.DepthEnable = true;
 	depthStencilDesc.StencilEnable = false;
-	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_WRITE]);
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_WRITE]);
 	if (!checkFailed(hr)) return false;
 
 	depthStencilDesc.DepthEnable = false;
 	depthStencilDesc.StencilEnable = true;
-	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::STENCIL_WRITE]);
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::STENCIL_WRITE]);
 	if (!checkFailed(hr)) return false;
 
 	depthStencilDesc.DepthEnable = true;
 	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
 	depthStencilDesc.StencilEnable = true;
-	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &m_depthStencilStates[EDefaultDepthStencilState::DEPTH_TEST_ONLY]);
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_TEST_ONLY]);
 	if (!checkFailed(hr)) return false;
 
 	// PRIMITIVES
@@ -600,7 +603,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 
 const PipelineState& Renderer::GetState() const
 {
-	return m_state;
+	return mPipelineState;
 }
 
 ShaderID Renderer::AddShader(const std::string&	shaderFileName,	const std::vector<InputLayout>& layouts)
@@ -609,8 +612,8 @@ ShaderID Renderer::AddShader(const std::string&	shaderFileName,	const std::vecto
 
 	Shader* shader = new Shader(shaderFileName);
 	shader->CompileShaders(m_device, paths, layouts);
-	m_shaders.push_back(shader);
-	shader->m_id = (static_cast<int>(m_shaders.size()) - 1);
+	mShaders.push_back(shader);
+	shader->m_id = (static_cast<int>(mShaders.size()) - 1);
 	return shader->ID();
 }
 
@@ -629,8 +632,8 @@ ShaderID Renderer::AddShader(
 
 	Shader* shader = new Shader(shaderName);
 	shader->CompileShaders(m_device, paths, layouts);
-	m_shaders.push_back(shader);
-	shader->m_id = (static_cast<int>(m_shaders.size()) - 1);
+	mShaders.push_back(shader);
+	shader->m_id = (static_cast<int>(mShaders.size()) - 1);
 	return shader->ID();
 	return ShaderID();
 }
@@ -654,24 +657,24 @@ RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERa
 		return -1;
 	}
 
-	m_rasterizerStates.push_back(newRS);
-	return static_cast<RasterizerStateID>(m_rasterizerStates.size() - 1);
+	mRasterizerStates.push_back(newRS);
+	return static_cast<RasterizerStateID>(mRasterizerStates.size() - 1);
 }
 
 // example params: "openart/185.png", "Data/Textures/"
 TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
 	if (texFileName.empty() || texFileName == "\"\"") return -1;
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
-	if (found != m_textures.end())
+	auto found = std::find_if(mTextures.begin(), mTextures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
+	if (found != mTextures.end())
 	{
 		return (*found)._id;
 	}
 	{	// push texture right away and hold a reference
 		Texture tex;
-		m_textures.push_back(tex);
+		mTextures.push_back(tex);
 	}
-	Texture& tex = m_textures.back();
+	Texture& tex = mTextures.back();
 
 	tex._name = texFileName;
 	std::string path = fileRoot + texFileName;
@@ -697,15 +700,15 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 		}
 		resource->Release();
 		
-		tex._id = static_cast<int>(m_textures.size() - 1);
+		tex._id = static_cast<int>(mTextures.size() - 1);
 		//m_textures.push_back(tex);
 
-		return m_textures.back()._id;
+		return mTextures.back()._id;
 	}
 	else
 	{
 		Log::Error("Cannot load texture file: %s\n", texFileName.c_str());
-		return m_textures[0]._id;
+		return mTextures[0]._id;
 	}
 
 }
@@ -820,25 +823,25 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 		}
 	}
 
-	tex._id = static_cast<int>(m_textures.size());
-	m_textures.push_back(tex);
-	return m_textures.back()._id;
+	tex._id = static_cast<int>(mTextures.size());
+	mTextures.push_back(tex);
+	return mTextures.back()._id;
 }
 
 TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc, bool initializeSRV)
 {
 	Texture tex;
 	tex.InitializeTexture2D(textureDesc, this, initializeSRV);
-	m_textures.push_back(tex);
-	m_textures.back()._id = static_cast<int>(m_textures.size() - 1);
-	return m_textures.back()._id;
+	mTextures.push_back(tex);
+	mTextures.back()._id = static_cast<int>(mTextures.size() - 1);
+	return mTextures.back()._id;
 }
 
 TextureID Renderer::CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot /*= sHDRTextureRoot*/)
 {
 	// cache lookup, return early if the texture already exists
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
-	if (found != m_textures.end())
+	auto found = std::find_if(mTextures.begin(), mTextures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
+	if (found != mTextures.end())
 	{
 		return (*found)._id;
 	}
@@ -945,10 +948,19 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	cubemapOut._tex2D = cubemapTexture;
 	cubemapOut._height = static_cast<unsigned>(faceImages[0].GetMetadata().height);
 	cubemapOut._width  = static_cast<unsigned>(faceImages[0].GetMetadata().width);
-	cubemapOut._id = static_cast<int>(m_textures.size());
-	m_textures.push_back(cubemapOut);
+	cubemapOut._id = static_cast<int>(mTextures.size());
+	mTextures.push_back(cubemapOut);
 
 	return cubemapOut._id;
+}
+
+BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData /*=nullptr*/)
+{
+	Buffer buffer(bufferDesc);
+	buffer.Initialize(m_device, pData);
+
+	mBuffers.push_back(buffer);
+	return static_cast<int>(mBuffers.size() - 1);
 }
 
 SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)
@@ -961,10 +973,10 @@ SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)
 	}
 
 	Sampler out;
-	out._id = static_cast<SamplerID>(m_samplers.size());
+	out._id = static_cast<SamplerID>(mSamplers.size());
 	out._samplerState = pSamplerState;
 	out._name = "";	// ?
-	m_samplers.push_back(out);
+	mSamplers.push_back(out);
 	return out._id;
 }
 
@@ -1005,8 +1017,8 @@ DepthStencilStateID Renderer::AddDepthStencilState(bool bEnableDepth, bool bEnab
 		return false;
 	}
 
-	m_depthStencilStates.push_back(newDSState);
-	return static_cast<DepthStencilStateID>(m_depthStencilStates.size() - 1);
+	mDepthStencilStates.push_back(newDSState);
+	return static_cast<DepthStencilStateID>(mDepthStencilStates.size() - 1);
 }
 
 DepthStencilStateID Renderer::AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC & dsDesc)
@@ -1021,8 +1033,30 @@ DepthStencilStateID Renderer::AddDepthStencilState(const D3D11_DEPTH_STENCIL_DES
 		return false;
 	}
 
-	m_depthStencilStates.push_back(newDSState);
-	return static_cast<DepthStencilStateID>(m_depthStencilStates.size() - 1);
+	mDepthStencilStates.push_back(newDSState);
+	return static_cast<DepthStencilStateID>(mDepthStencilStates.size() - 1);
+}
+
+BlendStateID Renderer::AddBlendState()
+{
+	D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
+	rtBlendDesc.BlendEnable = true;
+	rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
+	rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
+	rtBlendDesc.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	rtBlendDesc.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ONE;
+	rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
+	rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+	
+	D3D11_BLEND_DESC desc = {};
+	desc.RenderTarget[0] = rtBlendDesc;
+
+	BlendState blend;
+	m_device->CreateBlendState(&desc, &blend.ptr);
+	mBlendStates.push_back(blend);
+
+	return static_cast<BlendStateID>(mBlendStates.size() - 1);
 }
 
 RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
@@ -1036,8 +1070,8 @@ RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D
 		return -1;
 	}
 
-	m_renderTargets.push_back(newRenderTarget);
-	return static_cast<int>(m_renderTargets.size() - 1);
+	mRenderTargets.push_back(newRenderTarget);
+	return static_cast<int>(mRenderTargets.size() - 1);
 }
 
 RenderTargetID Renderer::AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
@@ -1051,8 +1085,8 @@ RenderTargetID Renderer::AddRenderTarget(const Texture& textureObj, D3D11_RENDER
 		return -1;
 	}
 
-	m_renderTargets.push_back(newRenderTarget);
-	return static_cast<int>(m_renderTargets.size() - 1);
+	mRenderTargets.push_back(newRenderTarget);
+	return static_cast<int>(mRenderTargets.size() - 1);
 }
 
 DepthTargetID Renderer::AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, Texture& depthTexture)
@@ -1068,20 +1102,20 @@ DepthTargetID Renderer::AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvD
 		return -1;
 	}
 	newDepthTarget.texture = depthTexture;
-	m_depthTargets.push_back(newDepthTarget);
-	return static_cast<int>(m_depthTargets.size() - 1);
+	mDepthTargets.push_back(newDepthTarget);
+	return static_cast<int>(mDepthTargets.size() - 1);
 }
 
 const Texture& Renderer::GetTextureObject(TextureID id) const
 {
-	assert(id >= 0 && static_cast<unsigned>(id) < m_textures.size());
-	return m_textures[id];
+	assert(id >= 0 && static_cast<unsigned>(id) < mTextures.size());
+	return mTextures[id];
 }
 
 const TextureID Renderer::GetTexture(const std::string name) const
 {
-	auto found = std::find_if(m_textures.begin(), m_textures.end(), [&name](auto& tex) { return tex._name == name; });
-	if (found != m_textures.end())
+	auto found = std::find_if(mTextures.begin(), mTextures.end(), [&name](auto& tex) { return tex._name == name; });
+	if (found != mTextures.end())
 	{
 		return found->_id;
 	}
@@ -1092,12 +1126,12 @@ const TextureID Renderer::GetTexture(const std::string name) const
 
 void Renderer::SetShader(ShaderID id)
 {
-	assert(id >= 0 && static_cast<unsigned>(id) < m_shaders.size());
-	if (m_state._activeShader != -1)		// if valid shader
+	assert(id >= 0 && static_cast<unsigned>(id) < mShaders.size());
+	if (mPipelineState.shader != -1)		// if valid shader
 	{
-		if (id != m_state._activeShader)	// if not the same shader
+		if (id != mPipelineState.shader)	// if not the same shader
 		{
-			Shader* shader = m_shaders[m_state._activeShader];
+			Shader* shader = mShaders[mPipelineState.shader];
 
 			// nullify texture units 
 			for (ShaderTexture& tex : shader->m_textures)
@@ -1172,39 +1206,56 @@ void Renderer::SetShader(ShaderID id)
 		} // if not same shader
 	}	// if valid shader
 
-	if (id != m_state._activeShader)
+	if (id != mPipelineState.shader)
 	{
-		m_state._activeShader = id;
-		m_shaders[id]->ClearConstantBuffers();
+		mPipelineState.shader = id;
+		mShaders[id]->ClearConstantBuffers();
 	}
+}
+
+void Renderer::SetVertexBuffer(BufferID bufferID)
+{
+	mPipelineState.vertexBuffer = bufferID;
+	UINT offset = 0;
+
+	// temporary
+	Buffer& b = mBuffers[bufferID];
+	m_deviceContext->IASetVertexBuffers(0, 1, &(b.mData), &b.mDesc.mStride, &offset);
+}
+
+void Renderer::SetIndexBuffer(BufferID bufferID)
+{
+	mPipelineState.indexBuffer = bufferID;
+
+	m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
 }
 
 void Renderer::Reset()
 {
-	m_state._activeShader = -1;
-	m_state._activeInputBuffer = -1;
+	mPipelineState.shader = -1;
+	mPipelineState._activeInputBuffer = -1;
 }
 
 
 void Renderer::SetViewport(const unsigned width, const unsigned height)
 {
-	m_viewPort.TopLeftX = 0;
-	m_viewPort.TopLeftY = 0;
-	m_viewPort.Width	= static_cast<float>(width);
-	m_viewPort.Height	= static_cast<float>(height);
-	m_viewPort.MinDepth = 0;
-	m_viewPort.MaxDepth = 1;
+	mPipelineState.viewPort.TopLeftX = 0;
+	mPipelineState.viewPort.TopLeftY = 0;
+	mPipelineState.viewPort.Width	= static_cast<float>(width);
+	mPipelineState.viewPort.Height	= static_cast<float>(height);
+	mPipelineState.viewPort.MinDepth = 0;
+	mPipelineState.viewPort.MaxDepth = 1;
 }
 
 void Renderer::SetViewport(const D3D11_VIEWPORT & viewport)
 {
-	m_viewPort = viewport;
+	mPipelineState.viewPort = viewport;
 }
 
 void Renderer::SetBufferObj(int BufferID)
 {
 	assert(BufferID >= 0);
-	m_state._activeInputBuffer = BufferID;
+	mPipelineState._activeInputBuffer = BufferID;
 }
 
 
@@ -1227,7 +1278,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 	// Read more here: https://developer.nvidia.com/sites/default/files/akamai/gamedev/files/gdc12/Efficient_Buffer_Management_McDonald.pdf
 	//      and  here: https://developer.nvidia.com/content/constant-buffers-without-constant-pain-0
 
-	Shader* shader = m_shaders[m_state._activeShader];
+	Shader* shader = mShaders[mPipelineState.shader];
 
 #if 1
 	// LINEAR LOOKUP
@@ -1349,7 +1400,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 
 void Renderer::SetTexture(const char * texName, TextureID tex)
 {
-	Shader* shader = m_shaders[m_state._activeShader];
+	Shader* shader = mShaders[mPipelineState.shader];
 	bool found = false;
 
 	// linear name lookup
@@ -1361,21 +1412,21 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 			SetTextureCommand cmd;
 			cmd.textureID = tex;
 			cmd.shaderTexture = shader->m_textures[i];
-			m_setTextureCmds.push(cmd);
+			mSetTextureCmds.push(cmd);
 		}
 	}
 
 #ifdef _DEBUG
 	if (!found)
 	{
-		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, m_state._activeShader, shader->Name().c_str());
+		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, mPipelineState.shader, shader->Name().c_str());
 	}
 #endif
 }
 
 void Renderer::SetTextureArray(const char * texName, TextureID texArray)
 {
-	Shader* shader = m_shaders[m_state._activeShader];
+	Shader* shader = mShaders[mPipelineState.shader];
 	bool found = false;
 
 	// linear name lookup
@@ -1387,21 +1438,21 @@ void Renderer::SetTextureArray(const char * texName, TextureID texArray)
 			SetTextureCommand cmd;
 			cmd.textureID = texArray;
 			cmd.shaderTexture = shader->m_textures[i];
-			m_setTextureCmds.push(cmd);
+			mSetTextureCmds.push(cmd);
 		}
 	}
 
 #ifdef _DEBUG
 	if (!found)
 	{
-		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, m_state._activeShader, shader->Name().c_str());
+		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, mPipelineState.shader, shader->Name().c_str());
 	}
 #endif
 }
 
 void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 {
-	Shader* shader = m_shaders[m_state._activeShader];
+	Shader* shader = mShaders[mPipelineState.shader];
 	bool found = false;
 
 	// linear name lookup
@@ -1414,34 +1465,34 @@ void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 			SetSamplerCommand cmd;
 			cmd.samplerID = samplerID;
 			cmd.shaderSampler = sampler;
-			m_setSamplerCmds.push(cmd);
+			mSetSamplerCmds.push(cmd);
 		}
 	}
 
 #ifdef _DEBUG
 	if (!found)
 	{
-		Log::Error("Sampler not found: \"%s\" in Shader(Id=%d) \"%s\"\n", samplerName, m_state._activeShader, shader->Name().c_str());
+		Log::Error("Sampler not found: \"%s\" in Shader(Id=%d) \"%s\"\n", samplerName, mPipelineState.shader, shader->Name().c_str());
 	}
 #endif
 }
 
 void Renderer::SetRasterizerState(RasterizerStateID rsStateID)
 {
-	assert(rsStateID > -1 && static_cast<size_t>(rsStateID) < m_rasterizerStates.size());
-	m_state._activeRSState = rsStateID;
+	assert(rsStateID > -1 && static_cast<size_t>(rsStateID) < mRasterizerStates.size());
+	mPipelineState.rasterizerState = rsStateID;
 }
 
 void Renderer::SetBlendState(BlendStateID blendStateID)
 {
-	assert(blendStateID > -1 && static_cast<size_t>(blendStateID) < m_blendStates.size());
-	m_state._activeBlendState = blendStateID;
+	assert(blendStateID > -1 && static_cast<size_t>(blendStateID) < mBlendStates.size());
+	mPipelineState.blendState = blendStateID;
 }
 
 void Renderer::SetDepthStencilState(DepthStencilStateID depthStencilStateID)
 {
-	assert(depthStencilStateID > -1 && static_cast<size_t>(depthStencilStateID) < m_depthStencilStates.size());
-	m_state._activeDepthStencilState = depthStencilStateID;
+	assert(depthStencilStateID > -1 && static_cast<size_t>(depthStencilStateID) < mDepthStencilStates.size());
+	mPipelineState.depthStencilState = depthStencilStateID;
 }
 
 void Renderer::SetScissorsRect(int left, int right, int top, int bottom)
@@ -1458,25 +1509,25 @@ void Renderer::SetScissorsRect(int left, int right, int top, int bottom)
 
 void Renderer::BindRenderTarget(RenderTargetID rtvID)
 {
-	assert(rtvID > -1 && static_cast<size_t>(rtvID) < m_renderTargets.size());
+	assert(rtvID > -1 && static_cast<size_t>(rtvID) < mRenderTargets.size());
 	//for(RenderTargetID& hRT : m_state._boundRenderTargets) 
-	m_state._boundRenderTargets = { rtvID };
+	mPipelineState.renderTargets = { rtvID };
 }
 
 void Renderer::BindDepthTarget(DepthTargetID dsvID)
 {
-	assert(dsvID > -1 && static_cast<size_t>(dsvID) < m_depthTargets.size());
-	m_state._boundDepthTarget = dsvID;
+	assert(dsvID > -1 && static_cast<size_t>(dsvID) < mDepthTargets.size());
+	mPipelineState.depthTargets = dsvID;
 }
 
 void Renderer::UnbindRenderTargets()
 {
-	m_state._boundRenderTargets = { -1, -1, -1, -1, -1, -1 };
+	mPipelineState.renderTargets = { -1, -1, -1, -1, -1, -1 };
 }
 
 void Renderer::UnbindDepthTarget()
 {
-	m_state._boundDepthTarget = -1;
+	mPipelineState.depthTargets = -1;
 }
 
 // temp
@@ -1490,7 +1541,7 @@ void Renderer::DrawLine()
 	SetConstant3f("p2", pos2);
 	SetConstant3f("color", LinearColor::green.Value());
 	Apply();
-	Draw(EPrimitiveTopology::POINT_LIST);
+	Draw(1, EPrimitiveTopology::POINT_LIST);
 }
 
 void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
@@ -1499,7 +1550,7 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 	SetConstant3f("p2", pos2);
 	SetConstant3f("color", color);
 	Apply();
-	Draw(EPrimitiveTopology::POINT_LIST);
+	Draw(1, EPrimitiveTopology::POINT_LIST);
 }
 
 // assumes (0, 0) is Bottom Left corner of the screen.
@@ -1530,9 +1581,9 @@ void Renderer::Begin(const ClearCommand & clearCmd)
 {
 	if (clearCmd.bDoClearColor)
 	{
-		for (const RenderTargetID rtv : m_state._boundRenderTargets)
+		for (const RenderTargetID rtv : mPipelineState.renderTargets)
 		{
-			if (rtv >= 0)	m_deviceContext->ClearRenderTargetView(m_renderTargets[rtv].pRenderTargetView, clearCmd.clearColor.data());
+			if (rtv >= 0)	m_deviceContext->ClearRenderTargetView(mRenderTargets[rtv].pRenderTargetView, clearCmd.clearColor.data());
 			else			Log::Error("Begin called with clear color command without a render target bound to pipeline!");
 		}
 	}
@@ -1540,7 +1591,7 @@ void Renderer::Begin(const ClearCommand & clearCmd)
 	const bool bClearDepthStencil = clearCmd.bDoClearDepth || clearCmd.bDoClearStencil;
 	if (bClearDepthStencil)
 	{
-		const DepthTargetID dsv = m_state._boundDepthTarget;
+		const DepthTargetID dsv = mPipelineState.depthTargets;
 		UINT clearFlag = [&]() -> UINT	{
 			if (clearCmd.bDoClearDepth && clearCmd.bDoClearStencil)
 				return D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL;
@@ -1551,7 +1602,7 @@ void Renderer::Begin(const ClearCommand & clearCmd)
 			return D3D11_CLEAR_STENCIL;
 		}();
 
-		if (dsv >= 0)	m_deviceContext->ClearDepthStencilView(m_depthTargets[dsv].pDepthStencilView, clearFlag, clearCmd.clearDepth, clearCmd.clearStencil);
+		if (dsv >= 0)	m_deviceContext->ClearDepthStencilView(mDepthTargets[dsv].pDepthStencilView, clearFlag, clearCmd.clearDepth, clearCmd.clearStencil);
 		else			Log::Error("Begin called with clear depth_stencil command without a depth target bound to pipeline!");
 	}
 }
@@ -1559,13 +1610,20 @@ void Renderer::Begin(const ClearCommand & clearCmd)
 void Renderer::End()
 {
 	m_Direct3D->EndFrame();
-	++m_frameCount;
+	++mFrameCount;
+	mPrevPipelineState = mPipelineState;
 }
 
 
+void Renderer::UpdateBuffer(BufferID buffer, const void * pData)
+{
+	assert(buffer >= 0 && buffer < mBuffers.size());
+	mBuffers[buffer].Update(this, pData);
+}
+
 void Renderer::Apply()
 {	// Here, we make all the API calls
-	Shader* shader = m_state._activeShader >= 0 ? m_shaders[m_state._activeShader] : nullptr;
+	Shader* shader = mPipelineState.shader >= 0 ? mShaders[mPipelineState.shader] : nullptr;
 
 	// INPUT ASSEMBLY
 	// ----------------------------------------
@@ -1573,8 +1631,8 @@ void Renderer::Apply()
 	unsigned offset = 0;
 
 
-	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &(mBuiltinMeshes[m_state._activeInputBuffer].mVertexBuffer.mData), &stride, &offset);
-	if (m_state._activeInputBuffer != -1) m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[m_state._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
+	if (mPipelineState._activeInputBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &(mBuiltinMeshes[mPipelineState._activeInputBuffer].mVertexBuffer.mData), &stride, &offset);
+	if (mPipelineState._activeInputBuffer != -1) m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
 	if (shader)							  m_deviceContext->IASetInputLayout(shader->m_layout);
 
 	if (shader)
@@ -1593,63 +1651,63 @@ void Renderer::Apply()
 
 		// SHADER RESOURCES
 		// ----------------------------------------
-		while (m_setSamplerCmds.size() > 0)
+		while (mSetSamplerCmds.size() > 0)
 		{
-			SetSamplerCommand& cmd = m_setSamplerCmds.front();
+			SetSamplerCommand& cmd = mSetSamplerCmds.front();
 			cmd.SetResource(this);
-			m_setSamplerCmds.pop();
+			mSetSamplerCmds.pop();
 		}
 
-		while (m_setTextureCmds.size() > 0)
+		while (mSetTextureCmds.size() > 0)
 		{
-			SetTextureCommand& cmd = m_setTextureCmds.front();
+			SetTextureCommand& cmd = mSetTextureCmds.front();
 			cmd.SetResource(this);
-			m_setTextureCmds.pop();
+			mSetTextureCmds.pop();
 		}
 
 		// RASTERIZER
 		// ----------------------------------------
-		m_deviceContext->RSSetViewports(1, &m_viewPort);
-		m_deviceContext->RSSetState(m_rasterizerStates[m_state._activeRSState]);
+		m_deviceContext->RSSetViewports(1, &mPipelineState.viewPort);
+		m_deviceContext->RSSetState(mRasterizerStates[mPipelineState.rasterizerState]);
 
 		// OUTPUT MERGER
 		// ----------------------------------------
 		if (sEnableBlend)
 		{
 			const float blendFactor[4] = { 1,1,1,1 };
-			m_deviceContext->OMSetBlendState(m_blendStates[m_state._activeBlendState].ptr, nullptr, 0xffffffff);
+			m_deviceContext->OMSetBlendState(mBlendStates[mPipelineState.blendState].ptr, nullptr, 0xffffffff);
 		}
 
-		const auto indexDSState = m_state._activeDepthStencilState;
-		const auto indexRTV = m_state._boundRenderTargets[0];
+		const auto indexDSState = mPipelineState.depthStencilState;
+		const auto indexRTV = mPipelineState.renderTargets[0];
 		
 		// get the bound render target addresses
 #if 1
 		// todo: perf: this takes as much time as set constants in debug mode
 		std::vector<ID3D11RenderTargetView*> RTVs = [&]() {				
-			std::vector<ID3D11RenderTargetView*> v(m_state._boundRenderTargets.size(), nullptr);
+			std::vector<ID3D11RenderTargetView*> v(mPipelineState.renderTargets.size(), nullptr);
 			size_t i = 0;
-			for (RenderTargetID hRT : m_state._boundRenderTargets) 
+			for (RenderTargetID hRT : mPipelineState.renderTargets) 
 				if(hRT >= 0) 
-					v[i++] = m_renderTargets[hRT].pRenderTargetView;
+					v[i++] = mRenderTargets[hRT].pRenderTargetView;
 			return std::move(v);
 		}();
 #else
 		// this is slower ~2ms in debug
 		std::vector<ID3D11RenderTargetView*> RTVs;
-		for (RenderTargetID hRT : m_state._boundRenderTargets)
+		for (RenderTargetID hRT : mPipelineState.renderTargets)
 			if (hRT >= 0)
-				RTVs.push_back(m_renderTargets[hRT].pRenderTargetView);
+				RTVs.push_back(mRenderTargets[hRT].pRenderTargetView);
 #endif
-		const auto indexDSV     = m_state._boundDepthTarget;
+		const auto indexDSV     = mPipelineState.depthTargets;
 		//ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &RTVs[0];
 		ID3D11RenderTargetView** RTV = RTVs.empty()   ? nullptr : &RTVs[0];
-		ID3D11DepthStencilView*  DSV = indexDSV == -1 ? nullptr : m_depthTargets[indexDSV].pDepthStencilView;
+		ID3D11DepthStencilView*  DSV = indexDSV == -1 ? nullptr : mDepthTargets[indexDSV].pDepthStencilView;
 
 		m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
 		
 
-		auto*  DSSTATE = m_depthStencilStates[indexDSState];
+		auto*  DSSTATE = mDepthStencilStates[indexDSState];
 		m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
 	}
 	else
@@ -1675,14 +1733,14 @@ void Renderer::EndEvent()
 
 void Renderer::DrawIndexed(EPrimitiveTopology topology)
 {
-	const unsigned numIndices = mBuiltinMeshes[m_state._activeInputBuffer].mIndexBuffer.mDesc.mElementCount;
+	const unsigned numIndices = mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mDesc.mElementCount;
 
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->DrawIndexed(numIndices, 0, 0);
 }
 
-void Renderer::Draw(EPrimitiveTopology topology)
+void Renderer::Draw(int vertCount, EPrimitiveTopology topology /*= EPrimitiveTopology::POINT_LIST*/)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
-	m_deviceContext->Draw(1, 0);
+	m_deviceContext->Draw(vertCount, 0);
 }

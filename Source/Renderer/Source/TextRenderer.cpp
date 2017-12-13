@@ -46,7 +46,7 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 {
 	TextRenderer::pRenderer = pRenderer;	// set static pRenderer
 
-	const std::vector<InputLayout> layouts = { { "POSITION",	FLOAT32_3 } };
+	const std::vector<InputLayout> layouts = { { "POSITION",	FLOAT32_4 } };
 	TextRenderer::shaderText = pRenderer->AddShader("Text", layouts);
 
 	FT_Error err; 
@@ -84,16 +84,18 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 			Log::Error("Couldn't load character glyph (%d): %c", c, c);
 		}
 
-		const int w = face->glyph->bitmap.width;
-		const int h = face->glyph->bitmap.rows;
+		int w = face->glyph->bitmap.width;
+		int h = face->glyph->bitmap.rows;
 		const int l = face->glyph->bitmap_left;
 		const int t = face->glyph->bitmap_top;
 
-		if (w == 0 || h == 0)
-			continue;
+		w = w == 0 ? 1 : w;
+		h = h == 0 ? 1 : h;
+		//if (w == 0 || h == 0)
+		//	continue;
 
 		TextureDesc texDesc;
-		texDesc.format = EImageFormat::R32U;
+		texDesc.format = EImageFormat::R8UN;
 		texDesc.width = w;
 		texDesc.height = h;
 		texDesc.pData = face->glyph->bitmap.buffer;
@@ -114,12 +116,26 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 	// cleanup
 	FT_Done_Face(face);
 	FT_Done_FreeType(ft);
+
+	// create vertex buffer
+	BufferDesc bufDesc;
+	bufDesc.mElementCount = 6;
+	bufDesc.mStride = sizeof(vec4);
+	bufDesc.mType = VERTEX_BUFER;
+	bufDesc.mUsage = DYNAMIC;
+	mQuadVertexBuffer = pRenderer->CreateBuffer(bufDesc);
+
+	// todo: blend state desc
+	mAlphaBlendState = pRenderer->AddBlendState(); 
 	return true;
+}
+
+void TextRenderer::Exit()
+{
 }
 
 void TextRenderer::RenderText(const TextDrawDescription& drawDesc)
 {
-	return;
 	assert(pRenderer);
 	const vec2 windowSizeXY = pRenderer->GetWindowDimensionsAsFloat2();
 	const XMMATRIX proj = XMMatrixOrthographicLH(windowSizeXY.x(), windowSizeXY.y(), 0.1f, 1000.0f);
@@ -132,11 +148,43 @@ void TextRenderer::RenderText(const TextDrawDescription& drawDesc)
 	pRenderer->SetShader(shaderText);
 	pRenderer->SetConstant4x4f("projection", proj);
 	pRenderer->SetConstant3f("color", drawDesc.color);
-	pRenderer->SetTexture("textMap", 0);
-	pRenderer->SetSamplerState("samText", 0);
-	pRenderer->SetBlendState(0);
-	pRenderer->SetBufferObj(0); // todo dynamic vertex
-	pRenderer->Apply();
-	pRenderer->Draw();
+	pRenderer->SetSamplerState("samText", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+	pRenderer->SetBlendState(mAlphaBlendState);
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+
+	// offset with half window size, so that (0,0) is top left corner
+	      float x =  drawDesc.screenPosition.x() - windowSizeXY.x() / 2;
+	const float y = -drawDesc.screenPosition.y() + windowSizeXY.y() / 2;
+
+	for (const char& c : drawDesc.text)
+	{
+		const Character& ch = sCharacters.at(c);
+
+		const float xpos = x + ch.bearing.x() * drawDesc.scale;
+		const float ypos = y - (ch.size.y() - ch.bearing.y()) * drawDesc.scale;
+
+		const float w = ch.size.x() * drawDesc.scale;
+		const float h = ch.size.y() * drawDesc.scale;
+
+		float vertices[6][4] = {
+			{ xpos,     ypos + h,   0.0, 0.0 },
+			{ xpos,     ypos,       0.0, 1.0 },
+			{ xpos + w, ypos,       1.0, 1.0 },
+
+			{ xpos,     ypos + h,   0.0, 0.0 },
+			{ xpos + w, ypos,       1.0, 1.0 },
+			{ xpos + w, ypos + h,   1.0, 0.0 }
+		};
+		pRenderer->UpdateBuffer(mQuadVertexBuffer, vertices);
+
+		pRenderer->SetTexture("textMap", ch.tex);
+		
+		pRenderer->Apply();
+		pRenderer->SetVertexBuffer(mQuadVertexBuffer);
+		pRenderer->Draw(6, EPrimitiveTopology::TRIANGLE_LIST);
+		x += (ch.advance >> 6) * drawDesc.scale; // Bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
+	}
+	pRenderer->SetBlendState(EDefaultBlendState::DISABLED);
+
 	pRenderer->EndEvent();
 }

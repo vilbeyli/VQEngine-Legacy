@@ -52,7 +52,7 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[6])
 void SetTextureCommand::SetResource(Renderer * pRenderer)
 {
 	assert(textureID >= 0);
-	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, 1, &pRenderer->m_textures[textureID]._srv);
+	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._srv);
 }
 
 static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[6])
@@ -69,7 +69,7 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[6])
 void SetSamplerCommand::SetResource(Renderer * pRenderer)
 {
 	assert(samplerID >= 0);
-	(pRenderer->m_deviceContext->*SetSampler[shaderSampler.shdType])(shaderSampler.bufferSlot, 1, &pRenderer->m_samplers[samplerID]._samplerState);
+	(pRenderer->m_deviceContext->*SetSampler[shaderSampler.shdType])(shaderSampler.bufferSlot, 1, &pRenderer->mSamplers[samplerID]._samplerState);
 }
 
 ClearCommand ClearCommand::Depth(float depthClearValue)

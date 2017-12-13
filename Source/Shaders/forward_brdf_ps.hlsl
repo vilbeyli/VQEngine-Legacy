@@ -83,15 +83,22 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 N = normalize(In.normal);
 	const float3 T = normalize(In.tangent);
     const float3 V = normalize(cameraPos - P);
-    const float3 R = reflect(-V, N);
     const float2 screenSpaceUV = In.position.xy / screenDimensions;
 
 	BRDF_Surface s;
-    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
-	
-	// diffuse * diffuse here??
-    s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, uv).xyz +
-					(1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
+    //s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
+	s.N = surfaceMaterial.isNormalMap > 0.0f ? UnpackNormals(texNormalMap, sLinearSampler, uv, N, T) : N;
+    const float3 R = reflect(-V, s.N);
+
+	// there's a weird issue here if garbage texture is bound and isDiffuseMap is 0.0f. 
+	//s.diffuseColor	= surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, uv).xyz + (1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
+	//s.N				= (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
+
+	// workaround -> use if else for selecting rather then blending. for some reason, the vector math fails and (0,0,0) + (1,1,1) ends up being (0,1,1). Not sure why.
+	float3 sampledDiffuse = surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, uv).xyz;
+	float3 surfaceDiffuse = surfaceMaterial.diffuse;
+	float3 finalDiffuse = surfaceMaterial.isDiffuseMap > 0.0f ? sampledDiffuse : surfaceDiffuse;
+	s.diffuseColor = finalDiffuse;
 
     s.specularColor = surfaceMaterial.specular;
     s.roughness = surfaceMaterial.roughness;

@@ -71,7 +71,6 @@ struct ShadowMapPass
 	void RenderShadowMaps(Renderer* pRenderer, const std::vector<const GameObject*> ZPassObjects, const ShadowView& shadowView) const;
 	
 	unsigned				_shadowMapDimension;
-	SamplerID				_shadowSampler;
 	ShaderID				_shadowShader;
 	RasterizerStateID		_drawRenderState;
 	RasterizerStateID		_shadowRenderState;

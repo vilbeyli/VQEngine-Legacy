@@ -21,12 +21,15 @@
 #include "RenderingEnums.h"
 #include "Utilities/utils.h"
 
+class Renderer;
+
 struct BufferDesc
 {
 	EBufferType		mType;
 	EBufferUsage	mUsage;
 	unsigned		mElementCount;
 	unsigned		mStride;
+	BufferDesc() : mType(EBufferType::BUFFER_TYPE_UNKNOWN), mUsage(EBufferUsage::STATIC_RW), mElementCount(0), mStride(0) {}
 };
 
 struct Buffer
@@ -34,16 +37,16 @@ struct Buffer
 	BufferDesc		mDesc;
 	ID3D11Buffer*	mData;
 	bool			mDirty;
-	void*			mCPUData;
-
-	int test = 0;
+	void*			mCPUDataCache;
+	std::allocator<char> mAllocator;
 
 	bool bInitialized;
 	void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
 	void CleanUp();
 
-	void Update();
+	void Update(Renderer* pRenderer, const void* pData);
 
+	Buffer() : mData(nullptr), mDirty(true), mCPUDataCache(nullptr), bInitialized(false) {}
 	Buffer(const BufferDesc& desc);
 };
 

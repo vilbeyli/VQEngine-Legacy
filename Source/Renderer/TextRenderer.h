@@ -19,6 +19,7 @@
 
 #include <string>
 #include <Utilities/Color.h>
+#include "BufferObject.h"
 
 class Renderer;
 
@@ -34,10 +35,15 @@ class TextRenderer
 {
 public:
 	bool Initialize(Renderer* pRenderer);
+	void Exit();
 
 	void RenderText(const TextDrawDescription& drawDesc);
 
 private:
+	std::vector<vec4> mQuadVertexData;
+	BufferID mQuadVertexBuffer;	// vertex buffer for rendering quad
+	BlendStateID mAlphaBlendState;
+private:
 	static Renderer* pRenderer;
-	static int shaderText;
+	static int		 shaderText;
 };

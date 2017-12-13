@@ -60,9 +60,12 @@ void Engine::CalcFrameStats(float dt)
 	std::for_each(dtSamples.begin(), dtSamples.end(), [&dtSampleSum](float dt) { dtSampleSum += dt; });
 	const float frameTime = dtSampleSum / SampleCount;
 	const int fps = static_cast<int>(1.0f / frameTime);
+	
 
 	if (frameCount % RefreshRate == 0)
 	{
+		mCurrentFrameTime = frameTime;
+
 		std::ostringstream stats;
 		stats.precision(2);
 		stats << std::fixed;
@@ -78,6 +81,7 @@ void Engine::CalcFrameStats(float dt)
 
 void Engine::Exit()
 {
+	mpTextRenderer->Exit();
 	mpRenderer->Exit();
 
 	mWorkerPool.Terminate();
@@ -489,7 +493,7 @@ void Engine::Render()
 		const TextureID texNormal = mpRenderer->GetRenderTargetTexture(gBuffer._normalRT);
 		const TextureID texDiffuseRoughness = mpRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
 		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
-		const TextureID texDepthTexture = mpRenderer->m_state._depthBufferTexture;
+		const TextureID texDepthTexture = mpRenderer->mDefaultDepthBufferTexture;
 		const TextureID tSSAO = mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled
 			? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget)
 			: mSSAOPass.whiteTexture4x4;
@@ -519,11 +523,10 @@ void Engine::Render()
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		
 		// SKYBOX
+		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 		if (pScene->HasSkybox())
 		{
-			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 			pScene->RenderSkybox(mSceneView.viewProj);
-			mpRenderer->UnbindDepthTarget();
 		}
 
 		RenderLights();
@@ -535,7 +538,7 @@ void Engine::Render()
 		const bool bZPrePass = mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled;
 		const TextureID tSSAO = bZPrePass ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
-		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler;
+		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler < 0 ? EDefaultSamplerState::POINT_SAMPLER : mSceneView.environmentMap.envMapSampler;
 		const TextureID prefilteredEnvMap = mSceneView.environmentMap.prefilteredEnvironmentMap;
 		const TextureID tBRDFLUT = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
 
@@ -607,17 +610,18 @@ void Engine::Render()
 			mpRenderer->SetTexture("texAmbientOcclusion", tSSAO);
 
 			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
-			if (mSceneView.bIsIBLEnabled)
+			const bool bSkylight = mSceneView.bIsIBLEnabled && texIrradianceMap != -1;
+			if (bSkylight)
 			{
 				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
 				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", prefilteredEnvMap);
 				mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
-				mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 			}
+			mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 			
 			if (mSelectedShader == EShaders::FORWARD_BRDF)
 			{
-				mpRenderer->SetConstant1f("isEnvironmentLightingOn", mSceneView.bIsIBLEnabled ? 1.0f : 0.0f);
+				mpRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
 				mpRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
 				mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 			}
@@ -702,8 +706,9 @@ void Engine::Render()
 		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
 		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		TextureID tBRDF				 = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
-		TextureID preFilteredEnvMap = pScene->GetEnvironmentMap().prefilteredEnvironmentMap;
+		TextureID preFilteredEnvMap  = pScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap; 
+
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);
 			std::vector<DrawQuadOnScreenCommand> c
@@ -727,18 +732,25 @@ void Engine::Render()
 		{
 			mpRenderer->DrawQuadOnScreen(cmd);
 		}
-		mpRenderer->EndEvent();
-	}
 
-	// UI / Text
-	if(true)	// mRenderGUI ?
-	{
+		// UI TEXT
+		const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
+
+		std::ostringstream stats;
+		stats.precision(2);
+		stats << std::fixed;
+		stats << "CPU: " << mCurrentFrameTime * 1000.0f << " ms (";
+		stats.precision(4);
+		stats << fps << " FPS)";
+
 		TextDrawDescription drawDesc;
-		drawDesc.text = "Test 123. HI!";
+		drawDesc.text = stats.str();
 		drawDesc.color = LinearColor::green;
-		drawDesc.scale = 1.0f;
-		drawDesc.screenPosition = {0.5f, 0.5f};
+		drawDesc.scale = 0.38f;
+		drawDesc.screenPosition = { 10, 20 };
 		mpTextRenderer->RenderText(drawDesc);
+
+		mpRenderer->EndEvent();
 	}
 
 #endif

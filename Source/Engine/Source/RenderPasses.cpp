@@ -68,26 +68,6 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 		this->_spotShadowDepthTargets[i] = pRenderer->AddDepthTarget(dsvDesc, spotShadowMaps);
 	}
 
-	// comparison sampler
-	D3D11_SAMPLER_DESC comparisonSamplerDesc;
-	ZeroMemory(&comparisonSamplerDesc, sizeof(D3D11_SAMPLER_DESC));
-	comparisonSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_BORDER;
-	comparisonSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_BORDER;
-	comparisonSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_BORDER;
-	comparisonSamplerDesc.BorderColor[0] = 1.0f;
-	comparisonSamplerDesc.BorderColor[1] = 1.0f;
-	comparisonSamplerDesc.BorderColor[2] = 1.0f;
-	comparisonSamplerDesc.BorderColor[3] = 1.0f;
-	comparisonSamplerDesc.MinLOD = 0.f;
-	comparisonSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	comparisonSamplerDesc.MipLODBias = 0.f;
-	comparisonSamplerDesc.MaxAnisotropy = 0;
-	//comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_LESS_EQUAL;	// todo: set default sampler elsewhere
-	comparisonSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	//comparisonSamplerDesc.Filter = D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
-	comparisonSamplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-	this->_shadowSampler = pRenderer->CreateSamplerState(comparisonSamplerDesc);
-
 	// render states for front face culling 
 	this->_shadowRenderState = pRenderer->AddRasterizerState(ERasterizerCullMode::FRONT, ERasterizerFillMode::SOLID, true, false);
 	this->_drawRenderState   = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK , ERasterizerFillMode::SOLID, true, false);
@@ -554,6 +534,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->SetConstant4x4f("matPorjInverse", sceneView.projectionInverse);
 	//pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+	pRenderer->SetSamplerState("sShadowSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);

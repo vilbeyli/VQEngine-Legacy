@@ -595,6 +595,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	Shader::LoadShaders(this);
 	m_Direct3D->ReportLiveObjects("Shader loaded");
 
+	mPipelineState.bRenderTargetChanged = true;
 	return true;
 }
 
@@ -1512,6 +1513,7 @@ void Renderer::BindRenderTarget(RenderTargetID rtvID)
 	assert(rtvID > -1 && static_cast<size_t>(rtvID) < mRenderTargets.size());
 	//for(RenderTargetID& hRT : m_state._boundRenderTargets) 
 	mPipelineState.renderTargets = { rtvID };
+	mPipelineState.bRenderTargetChanged = true;
 }
 
 void Renderer::BindDepthTarget(DepthTargetID dsvID)
@@ -1523,6 +1525,7 @@ void Renderer::BindDepthTarget(DepthTargetID dsvID)
 void Renderer::UnbindRenderTargets()
 {
 	mPipelineState.renderTargets = { -1, -1, -1, -1, -1, -1 };
+	mPipelineState.bRenderTargetChanged = true;
 }
 
 void Renderer::UnbindDepthTarget()
@@ -1704,8 +1707,11 @@ void Renderer::Apply()
 		ID3D11RenderTargetView** RTV = RTVs.empty()   ? nullptr : &RTVs[0];
 		ID3D11DepthStencilView*  DSV = indexDSV == -1 ? nullptr : mDepthTargets[indexDSV].pDepthStencilView;
 
-		m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
-		
+		if (mPipelineState.bRenderTargetChanged || true)
+		{
+			m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
+			mPipelineState.bRenderTargetChanged = false;
+		}
 
 		auto*  DSSTATE = mDepthStencilStates[indexDSState];
 		m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);

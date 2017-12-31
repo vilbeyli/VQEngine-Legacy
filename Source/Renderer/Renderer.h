@@ -72,6 +72,7 @@ struct DepthTarget
 struct PipelineState
 {
 	int _activeInputBuffer; // todo, remove this
+	bool				bRenderTargetChanged;
 
 	ShaderID			shader;
 	BufferID			vertexBuffer;
@@ -174,7 +175,7 @@ public:
 	void					SetScissorsRect(int left, int right, int top, int bottom);
 
 	template <typename... Args> 	
-	inline void				BindRenderTargets(Args const&... renderTargetIDs) { mPipelineState.renderTargets = { renderTargetIDs... }; }
+	inline void				BindRenderTargets(Args const&... renderTargetIDs) { mPipelineState.renderTargets = { renderTargetIDs... }; mPipelineState.bRenderTargetChanged = true;}
 	void					BindRenderTarget(RenderTargetID rtvID);
 	void					BindDepthTarget(DepthTargetID dsvID);
 

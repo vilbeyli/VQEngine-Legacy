@@ -37,6 +37,7 @@ class TextRenderer;
 class Input;
 class Parser;
 class SceneManager;
+class Profiler;
 
 class PathManager;		// unused
 class PhysicsEngine;	// unused
@@ -126,7 +127,7 @@ private:
 	SceneManager*					mpSceneManager;
 	PerfTimer*						mpTimer;
 	WorkerPool						mWorkerPool;
-
+	Profiler*						mProfiler;
 	float mCurrentFrameTime;
 
 	// scene

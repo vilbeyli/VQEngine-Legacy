@@ -24,6 +24,8 @@
 #include "Application/WorkerPool.h"
 #include "Engine/Settings.h"
 
+#include "Profiler.h"
+
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
 #include "Utilities/Camera.h"
@@ -40,6 +42,7 @@ Engine::Engine()
 	mpInput(new Input()),
 	mpTimer(new PerfTimer()),
 	mpSceneManager(new SceneManager(mLights)),
+	mProfiler(new Profiler()),
 	mbUsePaniniProjection(false)
 	//,mObjectPool(1024)
 {}

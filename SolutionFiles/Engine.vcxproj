@@ -167,6 +167,7 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\SceneManager.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Settings.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Skybox.h" />
+    <ClInclude Include="..\Source\Engine\Profiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Transform.cpp" />
@@ -176,6 +177,7 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Scene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\SceneManager.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Skybox.cpp" />
+    <ClCompile Include="..\Source\Engine\Source\Profiler.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

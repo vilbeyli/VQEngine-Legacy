@@ -78,3 +78,9 @@ Scenes:
 | **;** |	Toggle Ambient Occlusion |
 | **Backspace** | Pause App |
 | **ESC** |	Exit App |
+
+## 3rd Party Open Source Libraries
+ 
+ - [nothings/stb](https://github.com/nothings/stb)
+ - [freetype-windows-binaries](https://github.com/ubawurinna/freetype-windows-binaries)
+ - [DirectXTex](https://github.com/Microsoft/DirectXTex)

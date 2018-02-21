@@ -1,7 +1,26 @@
-# VQEngine | A DirectX11 & C++11 Real-Time Renderer
+# VQEngine - A DirectX11 & C++11 Real-Time Renderer
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
+# Feature List / Version History
+
+ *v0.2.0 - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
+ - On-the-fly-switchable Forward/Deferred Rendering
+ - PBR: GGX-Smith BRDF
+ - Environment Mapping (Image-Based Lighting)
+ - PCF Soft Shadows
+ - Bloom
+ - SSAO w/ Gaussian Blur
+ - Custom Scene Files, Switchable/Reloadable Scenes
+
+*v0.1.0 - Simple Lighting, Texturing and Shader Reflection: July15-2017*
+ - Vertex-Geometry-Pixel Shader Pipeline
+ - Shader Reflection
+ - Phong Lighting
+ - Simple Shadow Maping Algorithm
+ - Normal/Diffuse Maps
+ - Procedural Geometry: Cube, Sphere, Cylinder, Grid
+  
 
 <center><i>BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting</i></center>
 
@@ -15,10 +34,9 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 ![](Data/Screenshots/SSAO_GaussianBlur.PNG)
 
+# Prerequisites
 
-## Prerequisites
-
- - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - probably the latest version. I'm using latest Visual Studio version.
+ - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - probably the latest version. I'm using latest Visual Studio 2017 version.
   
    Note: if the linker throws the error `1>LINK : fatal error LNK1158: cannot run 'rc.exe'` do the following:
    - Copy `rc.exe` and `rcdll.dll` 
@@ -26,27 +44,12 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
  
 - **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 
- ## Feature List / Version History
+# Build
 
- *v0.2.0 - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
- - Forward/Deferred Rendering
- - PBR: GGX-Smith BRDF
- - Environment Mapping (Image-Based Lighting)
- - PCF Shadows
- - Bloom
- - SSAO w/ Gaussian Blur
- - Custom Scene Files, Switchable/Reloadable Scenes
+Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will contain the executable built in release mode and the data and shaders needed to run the demo. You need Visual Studio 2017 installed for the build scripts to work.
 
-*v0.1.0 - Simple Lighting, Texturing and Shader Reflection: July15-2017*
- - Vertex-Geometry-Pixel Shader Pipeline
- - Shader Reflection
- - Phong Lighting
- - Simple Shadow Maping Algorithm
- - Normal Maps
- - Diffuse Textures
- - Procedural Geometry: Cube, Sphere, Cylinder, Grid
-  
-## Interactive Controls
+
+# How To Use
 
 | Scene Controls |  |
 | :---: | :--- |
@@ -79,7 +82,7 @@ Scenes:
 | **Backspace** | Pause App |
 | **ESC** |	Exit App |
 
-## 3rd Party Open Source Libraries
+# 3rd Party Open Source Libraries
  
  - [nothings/stb](https://github.com/nothings/stb)
  - [freetype-windows-binaries](https://github.com/ubawurinna/freetype-windows-binaries)

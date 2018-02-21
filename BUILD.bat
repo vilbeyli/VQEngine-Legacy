@@ -32,6 +32,7 @@ REM the variables in a setlocal-endlocal scope
 setlocal
 
 rem TODO: define a function - read registry - return devenv path
+rem https://developercommunity.visualstudio.com/content/problem/2813/cant-find-registry-entries-for-visual-studio-2017.html
 set devenv=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\devenv.exe
 set msbuild=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe
 

@@ -51,14 +51,23 @@ REM set MSBuild_MultiThreaded=False
 REM call :CleanUp
 REM call :MSBuild_Build %MSBuild_MultiThreaded% %log_msbuild_s%
 
+cls
 call :CleanUp
 call :Devenv_Build RELEASE, %log_devenv%
+call :PackageBinaries
 
 REM Error checking
-if %ERRORLEVEL% GEQ 1 echo Error building solution file: %solution%
+if %ERRORLEVEL% GEQ 1 (
+    echo Error building solution file: %solution%
+    pause
+)
+
+@echo:
+echo Build Finished.
+@echo:
+echo ./Build/_artifacts contains the release version of the project executable.
 
 endlocal
-pause
 EXIT /B 0
 
 
@@ -66,10 +75,34 @@ REM Cleanup before build for a clean build
 :CleanUp
 echo Robocopy   : Cleaning up the project folders...
 cd Build
-mkdir Empty
+if not exist Empty mkdir Empty
 robocopy ./Empty ./ /purge /MT:8 > nul
 cd ..
 EXIT /B 0
+
+
+:PackageBinaries
+echo Robocopy   : Cleaning up the artifacts folders...
+cd Build
+if not exist Empty mkdir Empty
+robocopy ./Empty ./_artifacts /purge /MT:8 > nul
+set proj_dir=%cd%
+set artifacts_dir=%proj_dir%\_artifacts
+rmdir Empty
+cd ..
+set root_dir=%cd%
+REM get all .dll and .exe files from build
+for /r %proj_dir% %%f in (*.exe *.dll) do (
+    REM skip _artifacts folder itself
+    if not %%~df%%~pf == %artifacts_dir%\ (  
+        xcopy %%f %artifacts_dir% > nul
+    )
+) 
+REM copy data and shaders
+robocopy ./Data %artifacts_dir%/Data /E /MT:8 > nul
+robocopy ./Source/Shaders %artifacts_dir%/Source/Shaders /E /MT:8 > nul
+EXIT /B 0
+
 
 :MSBuild_Build
 if %1==True (echo MSBuild    : Building the project [Multi-thread]...) else (echo MSBuild    : Building the project [Single-thread]...)

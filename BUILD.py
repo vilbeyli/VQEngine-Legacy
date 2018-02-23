@@ -196,4 +196,4 @@ if CheckVisualStudio():
     print("\nBuild Finished.\n" + ARTIFACTS_PATH + " contains the release version of the project executable.")
 
 else:   # VS2017 Not Found
-    print("Cannot find Visual Studio 2017. Compilation Aborted.")
+    print("Build Failed: Cannot find Visual Studio 2017.")

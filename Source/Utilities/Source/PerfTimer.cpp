@@ -140,6 +140,13 @@ float PerfTimer::Tick()
 #else
 
 
+PerfTimer::PerfTimer()
+	:
+	bIsStopped(true)
+{
+	Reset();
+}
+
 Vtime_t GetNow() { return std::chrono::system_clock::now();}
 
 float PerfTimer::TotalTime() const
@@ -149,7 +156,7 @@ float PerfTimer::TotalTime() const
 	//--*-------*----------*------*---------|
 	//			<---------->
 	//			   Paused
-	if (isStopped)	totalTime = (stopTime - baseTime) - pausedTime;
+	if (bIsStopped)	totalTime = (stopTime - baseTime) - pausedTime;
 
 	// Base			Stop	  Start			Curr
 	//--*------------*----------*------------|
@@ -168,44 +175,41 @@ float PerfTimer::DeltaTime() const
 
 void PerfTimer::Reset()
 {
-	Vtime_t now = GetNow();
-	baseTime = now;
-	prevTime = now;
-
-	isStopped = false;
+	baseTime = prevTime = GetNow();
+	bIsStopped = true;
+	dt = duration_t::zero();
 }
 
 void PerfTimer::Start()
 {
-	if (isStopped)
+	if (bIsStopped)
 	{
-		Vtime_t now = GetNow();
 		pausedTime = startTime - stopTime;
-		prevTime = now;
-		isStopped = false;
+		prevTime = GetNow();
+		bIsStopped = false;
 	}
+	Tick();
 }
 
 void PerfTimer::Stop()
 {
-	if (!isStopped)
+	Tick();
+	if (!bIsStopped)
 	{
-		Vtime_t now = GetNow();
-		stopTime = now;
-		isStopped = true;
+		stopTime = GetNow();
+		bIsStopped = true;
 	}
 }
 
 float PerfTimer::Tick()
 {
-	if (isStopped)
+	if (bIsStopped)
 	{
 		dt = duration_t::zero();
 		return dt.count();
 	}
 
-	Vtime_t now = GetNow();
-	currTime = now;
+	currTime = GetNow();
 	dt = currTime - prevTime;
 
 	prevTime = currTime;

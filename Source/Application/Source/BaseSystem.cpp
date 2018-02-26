@@ -67,7 +67,9 @@ bool BaseSystem::Init()
 
 void BaseSystem::Run()
 {
+	ENGINE->mProfiler->BeginProfile();
 	ENGINE->mpTimer->Reset();
+	ENGINE->mpTimer->Start();
 	MSG msg = { };
 	
 	bool bExitApp = false;
@@ -76,17 +78,18 @@ void BaseSystem::Run()
 		// todo: keep dragging main window
 		// game engine architecture
 		// http://advances.realtimerendering.com/s2016/index.html
-		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);		// Translates virtual-key messages into character messages
 			DispatchMessage(&msg);		// indirectly causes Windows to invoke WndProc
 		}
-		else
-		{
-			if (msg.message == WM_QUIT)	bExitApp = true;
-			else						bExitApp = ENGINE->UpdateAndRender();
-		}
+		//else
+		//{
+		if (msg.message == WM_QUIT)	bExitApp = true;
+		else						bExitApp = ENGINE->UpdateAndRender();
+		//}
 	}
+	ENGINE->mProfiler->EndProfile();
 }
 
 void BaseSystem::Exit()

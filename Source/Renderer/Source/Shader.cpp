@@ -229,7 +229,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 {
 	HRESULT result;
 
-	std::string info("----- INFO: \tCompiling "); info += m_name; info += "...";
+	std::string info("\tCompiling "); info += m_name; info += "...";
 	Log::String(info);
 	
 	// COMPILE SHADERS

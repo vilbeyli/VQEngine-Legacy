@@ -20,6 +20,7 @@
 
 #include <windows.h>
 #include "Utilities/PerfTimer.h"
+#include "Utilities/Profiler.h"
 #include "Application/WorkerPool.h"
 #include "Application/DataStructures.h"
 

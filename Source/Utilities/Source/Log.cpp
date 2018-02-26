@@ -82,10 +82,17 @@ void Log::String(const std::string & s)
 	if (sOutFile.is_open()) sOutFile << str;
 }
 
-void Log::Info(const std::string & s)
+void Log::Warning(const std::string & s)
 {
-	std::string info("----- INFO: ");
-	info += s; info += "\n";
+	std::string warn = "[WARNING]: "; 
+	warn += s; warn += "\n";
+	OutputDebugString(warn.c_str());
+	if (sOutFile.is_open()) sOutFile << warn;
+}
+
+void Log::Info(const std::string & s)
+{	
+	std::string info = s; info += "\n";
 	OutputDebugString(info.c_str());
 	if (sOutFile.is_open()) sOutFile << info;
 }

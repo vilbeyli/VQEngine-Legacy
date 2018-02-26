@@ -24,7 +24,7 @@
 #include "Application/WorkerPool.h"
 #include "Engine/Settings.h"
 
-#include "Profiler.h"
+#include "Utilities/Profiler.h"
 
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
@@ -48,39 +48,6 @@ Engine::Engine()
 {}
 
 Engine::~Engine(){}
-
-void Engine::CalcFrameStats(float dt)
-{
-	static unsigned long long frameCount = 0;
-	constexpr size_t RefreshRate = 5;	// refresh every 5 frames
-	constexpr size_t SampleCount = 50;	// over 50 dt samples
-	
-	static std::vector<float> dtSamples(SampleCount, 0.0f);
-
-	dtSamples[frameCount % SampleCount] = dt;
-
-	float dtSampleSum = 0.0f;
-	std::for_each(dtSamples.begin(), dtSamples.end(), [&dtSampleSum](float dt) { dtSampleSum += dt; });
-	const float frameTime = dtSampleSum / SampleCount;
-	const int fps = static_cast<int>(1.0f / frameTime);
-	
-
-	if (frameCount % RefreshRate == 0)
-	{
-		mCurrentFrameTime = frameTime;
-
-		std::ostringstream stats;
-		stats.precision(2);
-		stats << std::fixed;
-		stats << "VQEngine Demo | " << "CPU Frame: " << frameTime * 1000.0f << " ms  FPS: ";
-		stats.precision(4);
-		stats << fps;
-		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
-	}
-
-	++frameCount;
-}
-
 
 void Engine::Exit()
 {
@@ -205,20 +172,22 @@ bool Engine::Initialize(HWND hwnd)
 	mDebugRender = true;
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
-
-	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
-	mpTimer->Start();
-	mpTimer->Tick();
-	Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
-	const float duration = mpTimer->Tick();
-	Log::Info("--------------------- ENVIRONMENT MAPS LOADED IN %.2fs.", duration);
-
 	return true;
 }
 
 bool Engine::Load()
 {
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
+
+	mProfiler->BeginProfile();
+	mProfiler->BeginEntry("EngineLoad");
+	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
+	mpTimer->Start();
+	Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
+	mpTimer->Stop();
+	Log::Info("--------------------- ENVIRONMENT MAPS LOADED IN %.2fs.", mpTimer->DeltaTime());
+
+
 	const bool bLoadSuccess = mpSceneManager->Load(mpRenderer, nullptr, sEngineSettings, mZPassObjects);
 	if (!bLoadSuccess)
 	{
@@ -250,6 +219,8 @@ bool Engine::Load()
 		mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
 	}
 	Log::Info("---------------- INITIALIZING RENDER PASSES DONE ---------------- ");
+	mProfiler->EndEntry();
+	mProfiler->EndProfile();
 	return true;
 }
 
@@ -299,21 +270,63 @@ bool Engine::HandleInput()
 	return true;
 }
 
+
+void Engine::CalcFrameStats(float dt)
+{
+	static unsigned long long frameCount = 0;
+	constexpr size_t RefreshRate = 5;	// refresh every 5 frames
+	constexpr size_t SampleCount = 50;	// over 50 dt samples
+
+	static std::vector<float> dtSamples(SampleCount, 0.0f);
+
+	dtSamples[frameCount % SampleCount] = dt;
+
+	float dtSampleSum = 0.0f;
+	std::for_each(dtSamples.begin(), dtSamples.end(), [&dtSampleSum](float dt) { dtSampleSum += dt; });
+	const float frameTime = dtSampleSum / SampleCount;
+	const int fps = static_cast<int>(1.0f / frameTime);
+
+
+	if (frameCount % RefreshRate == 0)
+	{
+		mCurrentFrameTime = frameTime;
+
+		std::ostringstream stats;
+		stats.precision(2);
+		stats << std::fixed;
+		stats << "VQEngine Demo | " << "CPU Frame: " << frameTime * 1000.0f << " ms  FPS: ";
+		stats.precision(4);
+		stats << fps;
+		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
+	}
+
+	++frameCount;
+}
+
+
 bool Engine::UpdateAndRender()
 {
 	const float dt = mpTimer->Tick();
+	mProfiler->BeginEntry("CPU");
+
 	const bool bExitApp = !HandleInput();
 	if (!mbIsPaused)
 	{
 		CalcFrameStats(dt);
 
+		mProfiler->BeginEntry("Update");
 		mpSceneManager->Update(dt);
+		mProfiler->EndEntry();
 
 		PreRender();
 		Render();
 	}
 
 	mpInput->Update();	// update previous state after frame;
+
+	mProfiler->EndEntry();
+
+	mProfiler->StateCheck();
 	return bExitApp;
 }
 
@@ -330,6 +343,8 @@ using pNumArray = std::array<int*, Light::ELightType::LIGHT_TYPE_COUNT>;
 
 void Engine::PreRender()
 {
+	mProfiler->BeginEntry("PreRender");
+	
 	// set scene view
 	const Camera& viewCamera = mpSceneManager->GetMainCamera();
 	const Scene* scene = mpSceneManager->mpActiveScene;
@@ -432,6 +447,8 @@ void Engine::PreRender()
 		if (obj->mRenderSettings.bRenderTBN)
 			mTBNDrawObjects.push_back(obj);
 	}
+
+	mProfiler->EndEntry();
 }
 
 void Engine::RenderLights() const
@@ -473,7 +490,9 @@ void Engine::SendLightData() const
 }
 
 void Engine::Render()
-{	
+{
+	mProfiler->BeginEntry("Render");
+	
 	const XMMATRIX& viewProj = mSceneView.viewProj;
 	const Scene* pScene = mpSceneManager->mpActiveScene;
 
@@ -740,23 +759,55 @@ void Engine::Render()
 		const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
 
 		std::ostringstream stats;
+		std::string entry;
+
+		TextDrawDescription drawDesc;
+		drawDesc.color = LinearColor::green;
+		drawDesc.scale = 0.38f;
+
+		int POS_Y_TEXT = 20;
+		const int OFFSET_Y_TEXT = 20;
+
+		// CPU
 		stats.precision(2);
 		stats << std::fixed;
 		stats << "CPU: " << mCurrentFrameTime * 1000.0f << " ms (";
 		stats.precision(4);
 		stats << fps << " FPS)";
 
-		TextDrawDescription drawDesc;
 		drawDesc.text = stats.str();
-		drawDesc.color = LinearColor::green;
-		drawDesc.scale = 0.38f;
-		drawDesc.screenPosition = { 10, 20 };
+		drawDesc.screenPosition = { 10, POS_Y_TEXT };
 		mpTextRenderer->RenderText(drawDesc);
+
+		// children of CPU
+		stats.precision(2);
+		stats << std::fixed;
+		static const std::vector<std::string> entries
+		{
+			"Update",
+			"PreRender",
+			"Render"
+		};
+		//static std::vector<float> sampleAvgs(entries.size(), 0.0f);
+
+
+
+		for (int i = 0; i < entries.size(); ++i)
+		{
+			entry = entries[i];
+			POS_Y_TEXT += OFFSET_Y_TEXT;
+			stats.clear(); stats.str("");
+			stats << entry << ": " << mProfiler->GetEntryAvg(entry) * 1000.f << " ms";
+			drawDesc.text = stats.str();
+			drawDesc.screenPosition = { 30, POS_Y_TEXT };
+			mpTextRenderer->RenderText(drawDesc);
+		}
 
 		mpRenderer->EndEvent();
 	}
 
 #endif
 	mpRenderer->End();
+	mProfiler->EndEntry();
 }
 

@@ -1,4 +1,3 @@
-
 @echo off
 REM Turn echo off - no spamming
 
@@ -28,40 +27,3 @@ echo DirectXTex.lib already built. ) ELSE (
 echo Building dependency library: DirectXTex... 
 devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")
 REM DEPENDENCY BUILDING IS HANDLED BY VISUAL STUDIO AS PRE-BUILD EVENT WITH THE ABOVE SCRIPT
-
-REM echo %0
-REM echo %CD%
-
-REM -------------------------------------
-REM ----- DEPENDENCY LOCATIONS      -----
-REM -------------------------------------
-REM Dependency : DirectXTex
-
-rem SET loc_DXTex ; by visual studio
-rem SET orig_loc=%CD%
-
-
-REM TODO: 
-REM - check if project is built
-REM - build debug/release x86/x64 whicever's missing | C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin
-REM - make this pre-build script for VDemo.sln
-
-
-REM -------------------------------------
-REM ----- COMPILE DEPENDENCIES      -----
-REM -------------------------------------
-REM goto dependency location
-cd %DXTexture_Proj_location%
-echo %CD%
-
-REM $(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)
-
-REM echo current directory 
-REM call BuildDirecXTex_Desktop2015.bat
-echo HELLOOOOOOOOOOOOOOO
-
-REM return back to original directory
-rem cd %orig_loc%
-
-REM pause to show results
-REM pause

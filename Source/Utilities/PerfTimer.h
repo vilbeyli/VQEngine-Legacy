@@ -61,14 +61,26 @@ using duration_t	= std::chrono::duration<float>;
 class PerfTimer
 {
 public:
+	PerfTimer();
+
+	// returns the time duration between Start() and Now, minus the paused duration.
 	float TotalTime() const;
+	
+	
 	//double CurrentTime();
+
+	// returns the last delta time measured between Start() and Stop()
 	float DeltaTime() const;
 
 	void Reset();
 	void Start();
 	void Stop();
+
+	// since everything is single threaded, once a timer is started, it has to be updated
+	// by calling tick. Tick() will return the time duration since the last time Tick() is called.
+	// First call will return the duration between Start() and Tick().
 	float Tick();
+
 private:
 	Vtime_t		baseTime,		
 				prevTime,
@@ -77,7 +89,7 @@ private:
 				stopTime;
 	duration_t	pausedTime,
 				dt;
-	bool		isStopped;
+	bool		bIsStopped;
 };
 
 #endif

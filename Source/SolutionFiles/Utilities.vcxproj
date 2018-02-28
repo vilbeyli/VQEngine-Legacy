@@ -137,7 +137,7 @@
     <ClInclude Include="$(SolutionDir)Source\Utilities\CustomParser.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\utils.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\Camera.h" />
-    <ClInclude Include="..\Source\Utilities\Profiler.h" />
+    <ClInclude Include="$(SolutionDir)Source\Utilities\Profiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Color.cpp" />
@@ -147,7 +147,7 @@
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\CustomParser.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\utils.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Camera.cpp" />
-    <ClCompile Include="..\Source\Utilities\Source\Profiler.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Profiler.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

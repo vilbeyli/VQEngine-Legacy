@@ -36,7 +36,7 @@ rem https://developercommunity.visualstudio.com/content/problem/2813/cant-find-r
 set devenv=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\devenv.exe
 set msbuild=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe
 
-set solution=VDemo.sln
+set solution=VQEngine.sln
 
 set log_devenv=./LogFiles/devenv_out.log
 set log_msbuild_s=./LogFiles/msbuild_out_st.log

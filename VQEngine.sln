@@ -3,12 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2010
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "SolutionFiles\Application.vcxproj", "{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "Source\SolutionFiles\Application.vcxproj", "{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00} = {EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Renderer", "SolutionFiles\Renderer.vcxproj", "{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Renderer", "Source\SolutionFiles\Renderer.vcxproj", "{EAF3C9DB-A325-40FC-BDB4-7EE2E0756B00}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571DA824-A6F1-4944-8C39-85DC665C8A81}"
 	ProjectSection(SolutionItems) = preProject
@@ -73,7 +73,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Settings", "Settings", "{38
 		Data\EngineSettings.ini = Data\EngineSettings.ini
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Utilities", "SolutionFiles\Utilities.vcxproj", "{19AECA67-F607-4DCC-847B-A6196C924945}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Utilities", "Source\SolutionFiles\Utilities.vcxproj", "{19AECA67-F607-4DCC-847B-A6196C924945}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SceneFiles", "SceneFiles", "{2C145C7D-4AE8-44FD-8933-0649D7918E13}"
 	ProjectSection(SolutionItems) = preProject
@@ -82,9 +82,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SceneFiles", "SceneFiles", 
 		Data\Scenes\SSAOTest.scn = Data\Scenes\SSAOTest.scn
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Scenes", "SolutionFiles\Scenes.vcxproj", "{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Scenes", "Source\SolutionFiles\Scenes.vcxproj", "{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Engine", "SolutionFiles\Engine.vcxproj", "{9780D393-8EF6-43C8-B821-6B6A6661831C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Engine", "Source\SolutionFiles\Engine.vcxproj", "{9780D393-8EF6-43C8-B821-6B6A6661831C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

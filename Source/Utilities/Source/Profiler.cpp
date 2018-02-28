@@ -40,6 +40,7 @@ void Profiler::EndProfile()
 
 
 	mState.bIsProfiling = false;
+	mPerfEntryHierarchy = PerfEntryHierarchy();
 }
 
 
@@ -53,22 +54,35 @@ void Profiler::BeginEntry(const std::string & entryName)
 	}
 		
 	const bool bEntryExists = mPerfEntries.find(entryName) != mPerfEntries.end();
-
-	// todo: setup hierarchy
-	std::string parent = mState.EntryNameStack.empty() ? "root" : mState.EntryNameStack.top();
-	std::string child = entryName;
-
+	
+	// hierarchy variables
+	const PerfEntry* pParentPerfEntry = mState.EntryNameStack.empty() ? nullptr : &mPerfEntries.at(mState.EntryNameStack.top());
 
 	// update state
 	mState.EntryNameStack.push(entryName);
 
-	// start the timer of the entry
+	// setup the entry settings/data and update hierarchy if entry didn't exist
 	PerfEntry& entry = mPerfEntries[entryName];
+	const PerfEntry* pCurrentPerfEntry = &mPerfEntries.at(entryName);
 	if (!bEntryExists)
 	{
+		// setup entry settings / aux data
 		entry.samples.resize(mSettings.sampleCount, 0.0f);
 		entry.name = entryName;
+
+		// update hierarchy
+		if (mPerfEntryHierarchy.root.pPerfEntry == nullptr)
+		{	// first node
+			mPerfEntryHierarchy.root.pPerfEntry = pCurrentPerfEntry;
+			mState.pLastEntryNode = &mPerfEntryHierarchy.root;
+		}
+		else
+		{	// rest of the nodes
+			mState.pLastEntryNode = mPerfEntryHierarchy.AddChild(*mState.pLastEntryNode, pCurrentPerfEntry);
+		}
 	}
+
+	// start the timer of the entry 
 	entry.UpdateSampleBegin();
 }
 
@@ -87,7 +101,7 @@ void Profiler::EndEntry()
 	PerfEntry& entry = mPerfEntries.at(entryName);
 	entry.UpdateSampleEnd();
 	
-
+	mState.pLastEntryNode = mState.pLastEntryNode->pParent;
 }
 
 
@@ -104,6 +118,23 @@ bool Profiler::StateCheck() const
 
 	return bState;
 }
+
+void Profiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& hierarchyScreenPosition, TextDrawDescription drawDesc)
+{
+	std::ostringstream stats;
+	
+
+	drawDesc.screenPosition = hierarchyScreenPosition;
+	stats.precision(2);
+	stats << std::fixed;
+
+	//for (const PerfEntryNode& node : mPerfEntryHierarchy.root.children)
+	//{
+	//
+	//}
+}
+//---------------------------------------------------------------------------------------------------------------------------
+
 
 
 //---------------------------------------------------------------------------------------------------------------------------
@@ -148,3 +179,44 @@ inline float PerfEntry::GetAvg() const
 {
 	return std::accumulate(samples.begin(), samples.end(), 0.0f) / samples.size();	
 }
+//---------------------------------------------------------------------------------------------------------------------------
+
+
+
+//---------------------------------------------------------------------------------------------------------------------------
+// PERF ENTRY HIERARCHY
+//---------------------------------------------------------------------------------------------------------------------------
+Profiler::PerfEntryNode* Profiler::PerfEntryHierarchy::AddChild(PerfEntryNode& parentNode, const PerfEntry * pPerfEntry)
+{
+	PerfEntryNode newNode = { pPerfEntry, &parentNode, std::vector<PerfEntryNode>() };
+	parentNode.children.push_back(newNode);
+	return &parentNode.children.back();	// is this safe? this might not be safe...
+}
+
+
+
+Profiler::PerfEntryNode* Profiler::PerfEntryHierarchy::FindNode(const PerfEntry * pNode)
+{
+	if (root.pPerfEntry == pNode) return &root;
+	return SearchSubTree(root, pNode);
+}
+
+Profiler::PerfEntryNode* Profiler::PerfEntryHierarchy::SearchSubTree(const PerfEntryNode & node, const PerfEntry * pSearchEntry)
+{
+	PerfEntryNode* pSearchResult = nullptr;
+
+	for (size_t i = 0; i < node.children.size(); i++)
+	{
+		PerfEntryNode* pEntryNode = &root.children[i];
+
+		if (pSearchEntry == pEntryNode->pPerfEntry)
+			return pEntryNode;
+
+		PerfEntryNode* pResult = SearchSubTree(*pEntryNode, pSearchEntry);
+		if (pResult && pResult->pPerfEntry == pSearchEntry)
+			return pResult;
+	}
+
+	return pSearchResult;
+}
+//---------------------------------------------------------------------------------------------------------------------------

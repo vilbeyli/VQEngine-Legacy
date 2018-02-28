@@ -40,7 +40,7 @@ LOG_DEVENV = r"./LogFiles/devenv_out.log"
 LOG_MSBUILD_S = r"./LogFiles/msbuild_out_st.log"
 LOG_MSBUILD_M = r"./LogFiles/msbuild_out_mt.log"
 
-SOLUTION_FILE = r"VDemo.sln"
+SOLUTION_FILE = r"VQEngine.sln"
 ARTIFACTS_PATH = r"./Build/_artifacts"  # <-- Output directory 
 
 #--------------------------- ROBOCOPY & PROCESSES ----------------------------
@@ -193,7 +193,7 @@ if CheckVisualStudio():
         print("Packaging failed. TODO output")
         exit()
 
-    print("\nBuild Finished.\n" + ARTIFACTS_PATH + " contains the release version of the project executable.")
+    print("\nBuild Finished.\n\"" + ARTIFACTS_PATH + "\" folder contains the release version of the project executable.")
 
 else:   # VS2017 Not Found
     print("Build Failed: Cannot find Visual Studio 2017.")

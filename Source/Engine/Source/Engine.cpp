@@ -498,10 +498,14 @@ void Engine::Render()
 
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
+	mProfiler->BeginEntry("Shadow Pass");
 	mpRenderer->BeginEvent("Shadow Pass");
+	
 	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass has their own render targets
 	mShadowMapPass.RenderShadowMaps(mpRenderer, mZPassObjects, mShadowView);
+	
 	mpRenderer->EndEvent();
+	mProfiler->EndEntry();
 
 	// LIGHTING PASS
 	//------------------------------------------------------------------------
@@ -521,26 +525,30 @@ void Engine::Render()
 			: mSSAOPass.whiteTexture4x4;
 
 		// GEOMETRY - DEPTH PASS
+		mProfiler->BeginEntry("Geometry Pass");
 		mpRenderer->BeginEvent("Geometry Pass");
 		mDeferredRenderingPasses.SetGeometryRenderingStates(mpRenderer);
 		mpSceneManager->Render(mpRenderer, mSceneView);
-		mpRenderer->EndEvent();
+		mpRenderer->EndEvent();	mProfiler->EndEntry();
 
 		// AMBIENT OCCLUSION  PASS
 		if (mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled)
 		{
+			mProfiler->BeginEntry("Ambient Occlusion Pass");
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mSceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
 			mSSAOPass.GaussianBlurPass(mpRenderer);
-			mpRenderer->EndEvent();
+			mpRenderer->EndEvent();	mProfiler->EndEntry();
 		}
 
 		// DEFERRED LIGHTING PASS
+		mProfiler->BeginEntry("Lighting Pass");
 		mpRenderer->BeginEvent("Lighting Pass");
 		mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
-		mpRenderer->EndEvent();
+		mpRenderer->EndEvent(); mProfiler->EndEntry();
 
+		mProfiler->BeginEntry("Skybox & Lights");
 		// LIGHT SOURCES
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		
@@ -552,6 +560,7 @@ void Engine::Render()
 		}
 
 		RenderLights();
+		mProfiler->EndEntry();
 	}
 
 
@@ -692,8 +701,9 @@ void Engine::Render()
 #if 1
 	// POST PROCESS PASS
 	//------------------------------------------------------------------------
+	mProfiler->BeginEntry("Post Process");
 	mPostProcessPass.Render(mpRenderer, sEngineSettings.rendering.bUseBRDFLighting);
-
+	mProfiler->EndEntry();
 
 	// DEBUG PASS
 	//------------------------------------------------------------------------
@@ -748,14 +758,19 @@ void Engine::Render()
 			return c;
 		}();
 
+
+		mProfiler->BeginEntry("Debug Textures");
 		mpRenderer->BeginEvent("Debug Pass");
 		mpRenderer->SetShader(EShaders::DEBUG);
 		for (const DrawQuadOnScreenCommand& cmd : quadCmds)
 		{
 			mpRenderer->DrawQuadOnScreen(cmd);
 		}
+		mProfiler->EndEntry();
+
 
 		// UI TEXT
+		mProfiler->BeginEntry("UI");
 		const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
 
 		std::ostringstream stats;
@@ -780,30 +795,59 @@ void Engine::Render()
 		mpTextRenderer->RenderText(drawDesc);
 
 		// children of CPU
-		stats.precision(2);
-		stats << std::fixed;
-		static const std::vector<std::string> entries
-		{
-			"Update",
-			"PreRender",
-			"Render"
-		};
-		//static std::vector<float> sampleAvgs(entries.size(), 0.0f);
-
-
-
-		for (int i = 0; i < entries.size(); ++i)
-		{
-			entry = entries[i];
-			POS_Y_TEXT += OFFSET_Y_TEXT;
-			stats.clear(); stats.str("");
-			stats << entry << ": " << mProfiler->GetEntryAvg(entry) * 1000.f << " ms";
-			drawDesc.text = stats.str();
-			drawDesc.screenPosition = { 30, POS_Y_TEXT };
-			mpTextRenderer->RenderText(drawDesc);
-		}
+		mProfiler->RenderPerformanceStats(mpTextRenderer, vec2(15, POS_Y_TEXT), drawDesc);
+		//stats.precision(2);
+		//stats << std::fixed;
+		//
+		//{
+		//	static const std::vector<std::string> entries
+		//	{
+		//		"Update",
+		//		"PreRender",
+		//		"Render"
+		//	};
+		//	//static std::vector<float> sampleAvgs(entries.size(), 0.0f);
+		//
+		//	for (int i = 0; i < entries.size(); ++i)
+		//	{
+		//		entry = entries[i];
+		//		POS_Y_TEXT += OFFSET_Y_TEXT;
+		//		stats.clear(); stats.str("");
+		//		stats << entry << ": " << mProfiler->GetEntryAvg(entry) * 1000.f << " ms";
+		//		drawDesc.text = stats.str();
+		//		drawDesc.screenPosition = { 30, POS_Y_TEXT };
+		//		mpTextRenderer->RenderText(drawDesc);
+		//	}
+		//}
+		//{
+		//	static const std::vector<std::string> entries
+		//	{
+		//		"Shadow Pass",
+		//		"Geometry Pass",
+		//		"Ambient Occlusion Pass",
+		//		"Lighting Pass",
+		//		"Skybox & Lights",
+		//		"Post Process",
+		//		"Debug Textures",
+		//		"UI"
+		//
+		//	};
+		//	//static std::vector<float> sampleAvgs(entries.size(), 0.0f);
+		//
+		//	for (int i = 0; i < entries.size(); ++i)
+		//	{
+		//		entry = entries[i];
+		//		POS_Y_TEXT += OFFSET_Y_TEXT;
+		//		stats.clear(); stats.str("");
+		//		stats << entry << ": " << mProfiler->GetEntryAvg(entry) * 1000.f << " ms";
+		//		drawDesc.text = stats.str();
+		//		drawDesc.screenPosition = { 50, POS_Y_TEXT };
+		//		mpTextRenderer->RenderText(drawDesc);
+		//	}
+		//}
 
 		mpRenderer->EndEvent();
+		mProfiler->EndEntry();
 	}
 
 #endif

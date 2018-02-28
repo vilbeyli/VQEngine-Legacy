@@ -199,7 +199,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Renderer.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Shader.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Texture.cpp" />
-    <ClCompile Include="..\Source\Renderer\Source\TextRenderer.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\TextRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Renderer\Light.h" />
@@ -214,7 +214,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderCommands.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\Material.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingEnums.h" />
-    <ClInclude Include="..\Source\Renderer\TextRenderer.h" />
+    <ClInclude Include="$(SolutionDir)Source\Renderer\TextRenderer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

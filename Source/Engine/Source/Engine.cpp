@@ -536,15 +536,17 @@ void Engine::Render()
 		mpRenderer->EndEvent();	mProfiler->EndEntry();
 
 		// AMBIENT OCCLUSION  PASS
+		mProfiler->BeginEntry("Ambient Occlusion Pass");
 		if (mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled)
 		{
-			mProfiler->BeginEntry("Ambient Occlusion Pass");
+			// TODO: if BeginEntry() is inside, it's never reset to 0 if ambiend occl is turned off
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mSceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
 			mSSAOPass.GaussianBlurPass(mpRenderer);
-			mpRenderer->EndEvent();	mProfiler->EndEntry();
+			mpRenderer->EndEvent();	
 		}
+		mProfiler->EndEntry();
 
 		// DEFERRED LIGHTING PASS
 		mProfiler->BeginEntry("Lighting Pass");
@@ -713,6 +715,7 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	if (mDebugRender)
 	{
+		mProfiler->BeginEntry("Debug Textures");
 		const int screenWidth  = sEngineSettings.window.width;
 		const int screenHeight = sEngineSettings.window.height;
 		const float aspectRatio = static_cast<float>(screenWidth) / screenHeight;
@@ -763,40 +766,39 @@ void Engine::Render()
 		}();
 
 
-		mProfiler->BeginEntry("Debug Textures");
-		mpRenderer->BeginEvent("Debug Pass");
+		mpRenderer->BeginEvent("Debug Textures");
 		mpRenderer->SetShader(EShaders::DEBUG);
 		for (const DrawQuadOnScreenCommand& cmd : quadCmds)
 		{
 			mpRenderer->DrawQuadOnScreen(cmd);
 		}
-		mProfiler->EndEntry();
-
-
-		// UI TEXT
-		mProfiler->BeginEntry("UI");
-		const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
-
-		std::ostringstream stats;
-		std::string entry;
-
-		TextDrawDescription drawDesc;
-		drawDesc.color = LinearColor::green;
-		drawDesc.scale = 0.38f;
-
-		// Performance stats
-		if (mbShowStats)
-		{
-			bool bSortStats = true;
-			mProfiler->RenderPerformanceStats(mpTextRenderer, vec2(sEngineSettings.window.width * 0.82f, 30.0f), drawDesc, bSortStats);
-		}
-
 		mpRenderer->EndEvent();
 		mProfiler->EndEntry();
 	}
 
+	// UI TEXT
+	mProfiler->BeginEntry("UI");
+	const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
+
+	std::ostringstream stats;
+	std::string entry;
+
+	TextDrawDescription drawDesc;
+	drawDesc.color = LinearColor::green;
+	drawDesc.scale = 0.45f;
+
+	// Performance stats
+	if (mbShowStats)
+	{
+		bool bSortStats = true;
+		mProfiler->RenderPerformanceStats(mpTextRenderer, vec2(sEngineSettings.window.width * 0.81f, 30.0f), drawDesc, bSortStats);
+	}
+	mProfiler->EndEntry();
+
 #endif
+	mProfiler->BeginEntry("Present");
 	mpRenderer->End();
+	mProfiler->EndEntry();
 	mProfiler->EndEntry();
 }
 

@@ -4,6 +4,12 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 # Feature List / Version History
 
+ *v0.2.1 - Automated Build, Performance Logging, Text Rendering - TBA(March) - **W**ork **I**n **P**rogress*
+ - Text Rendering
+ - CPU Profiler
+ - GPU Profiler (**WIP**)
+ - Build scripts (Python, Batch)
+
  *v0.2.0 - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
  - On-the-fly-switchable Forward/Deferred Rendering
  - PBR: GGX-Smith BRDF
@@ -79,6 +85,7 @@ Scenes:
 | **F8** |	Toggle Forward/Deferred Rendering |
 | **F9** |	Toggle Bloom |
 | **;** |	Toggle Ambient Occlusion |
+| **Shift+;** |	Toggle Performance Stats |
 | **Backspace** | Pause App |
 | **ESC** |	Exit App |
 

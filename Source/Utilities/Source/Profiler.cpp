@@ -229,7 +229,7 @@ Profiler::PerfEntryNode* Profiler::PerfEntryTree::SearchSubTree(const PerfEntryN
 void Profiler::PerfEntryTree::RenderSubTree(const PerfEntryNode & node, TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc, std::ostringstream & stats)
 {
 	const int X_OFFSET = 20;
-	const int Y_OFFSET = 20;
+	const int Y_OFFSET = 22;
 
 	// clear & populate text
 	stats.clear(); stats.str("");

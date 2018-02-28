@@ -246,7 +246,11 @@ bool Engine::HandleInput()
 	if (mpInput->IsKeyTriggered("F8")) ToggleRenderingPath();
 
 	if (mpInput->IsKeyTriggered("F9")) mPostProcessPass._bloomPass.ToggleBloomPass();
-	if (mpInput->IsKeyTriggered(";")) ToggleAmbientOcclusion();
+	if (mpInput->IsKeyTriggered(";")) 
+	{
+		if (mpInput->IsKeyDown("Shift"))	mbShowStats = !mbShowStats;
+		else								ToggleAmbientOcclusion();
+	}
 
 	if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
 	//if (m_input->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
@@ -314,7 +318,7 @@ bool Engine::UpdateAndRender()
 	{
 		CalcFrameStats(dt);
 
-		mProfiler->BeginEntry("Update");
+		mProfiler->BeginEntry("Update()");
 		mpSceneManager->Update(dt);
 		mProfiler->EndEntry();
 
@@ -343,7 +347,7 @@ using pNumArray = std::array<int*, Light::ELightType::LIGHT_TYPE_COUNT>;
 
 void Engine::PreRender()
 {
-	mProfiler->BeginEntry("PreRender");
+	mProfiler->BeginEntry("PreRender()");
 	
 	// set scene view
 	const Camera& viewCamera = mpSceneManager->GetMainCamera();
@@ -491,7 +495,7 @@ void Engine::SendLightData() const
 
 void Engine::Render()
 {
-	mProfiler->BeginEntry("Render");
+	mProfiler->BeginEntry("Render()");
 	
 	const XMMATRIX& viewProj = mSceneView.viewProj;
 	const Scene* pScene = mpSceneManager->mpActiveScene;
@@ -780,71 +784,12 @@ void Engine::Render()
 		drawDesc.color = LinearColor::green;
 		drawDesc.scale = 0.38f;
 
-		int POS_Y_TEXT = 20;
-		const int OFFSET_Y_TEXT = 20;
-
-		// CPU
-		stats.precision(2);
-		stats << std::fixed;
-		stats << "CPU: " << mCurrentFrameTime * 1000.0f << " ms (";
-		stats.precision(4);
-		stats << fps << " FPS)";
-
-		drawDesc.text = stats.str();
-		drawDesc.screenPosition = { 10, POS_Y_TEXT };
-		mpTextRenderer->RenderText(drawDesc);
-
-		// children of CPU
-		mProfiler->RenderPerformanceStats(mpTextRenderer, vec2(15, POS_Y_TEXT), drawDesc);
-		//stats.precision(2);
-		//stats << std::fixed;
-		//
-		//{
-		//	static const std::vector<std::string> entries
-		//	{
-		//		"Update",
-		//		"PreRender",
-		//		"Render"
-		//	};
-		//	//static std::vector<float> sampleAvgs(entries.size(), 0.0f);
-		//
-		//	for (int i = 0; i < entries.size(); ++i)
-		//	{
-		//		entry = entries[i];
-		//		POS_Y_TEXT += OFFSET_Y_TEXT;
-		//		stats.clear(); stats.str("");
-		//		stats << entry << ": " << mProfiler->GetEntryAvg(entry) * 1000.f << " ms";
-		//		drawDesc.text = stats.str();
-		//		drawDesc.screenPosition = { 30, POS_Y_TEXT };
-		//		mpTextRenderer->RenderText(drawDesc);
-		//	}
-		//}
-		//{
-		//	static const std::vector<std::string> entries
-		//	{
-		//		"Shadow Pass",
-		//		"Geometry Pass",
-		//		"Ambient Occlusion Pass",
-		//		"Lighting Pass",
-		//		"Skybox & Lights",
-		//		"Post Process",
-		//		"Debug Textures",
-		//		"UI"
-		//
-		//	};
-		//	//static std::vector<float> sampleAvgs(entries.size(), 0.0f);
-		//
-		//	for (int i = 0; i < entries.size(); ++i)
-		//	{
-		//		entry = entries[i];
-		//		POS_Y_TEXT += OFFSET_Y_TEXT;
-		//		stats.clear(); stats.str("");
-		//		stats << entry << ": " << mProfiler->GetEntryAvg(entry) * 1000.f << " ms";
-		//		drawDesc.text = stats.str();
-		//		drawDesc.screenPosition = { 50, POS_Y_TEXT };
-		//		mpTextRenderer->RenderText(drawDesc);
-		//	}
-		//}
+		// Performance stats
+		if (mbShowStats)
+		{
+			bool bSortStats = true;
+			mProfiler->RenderPerformanceStats(mpTextRenderer, vec2(sEngineSettings.window.width * 0.82f, 30.0f), drawDesc, bSortStats);
+		}
 
 		mpRenderer->EndEvent();
 		mProfiler->EndEntry();

@@ -40,7 +40,7 @@ void Profiler::EndProfile()
 
 
 	mState.bIsProfiling = false;
-	mPerfEntryHierarchy = PerfEntryHierarchy();
+	mPerfEntryTree = PerfEntryTree();
 }
 
 
@@ -71,14 +71,14 @@ void Profiler::BeginEntry(const std::string & entryName)
 		entry.name = entryName;
 
 		// update hierarchy
-		if (mPerfEntryHierarchy.root.pPerfEntry == nullptr)
+		if (mPerfEntryTree.root.pPerfEntry == nullptr)
 		{	// first node
-			mPerfEntryHierarchy.root.pPerfEntry = pCurrentPerfEntry;
-			mState.pLastEntryNode = &mPerfEntryHierarchy.root;
+			mPerfEntryTree.root.pPerfEntry = pCurrentPerfEntry;
+			mState.pLastEntryNode = &mPerfEntryTree.root;
 		}
 		else
 		{	// rest of the nodes
-			mState.pLastEntryNode = mPerfEntryHierarchy.AddChild(*mState.pLastEntryNode, pCurrentPerfEntry);
+			mState.pLastEntryNode = mPerfEntryTree.AddChild(*mState.pLastEntryNode, pCurrentPerfEntry);
 		}
 	}
 
@@ -101,7 +101,8 @@ void Profiler::EndEntry()
 	PerfEntry& entry = mPerfEntries.at(entryName);
 	entry.UpdateSampleEnd();
 	
-	mState.pLastEntryNode = mState.pLastEntryNode->pParent;
+	// update last entry node with the parent of it
+	if(mState.pLastEntryNode) mState.pLastEntryNode = mState.pLastEntryNode->pParent;
 }
 
 
@@ -119,19 +120,12 @@ bool Profiler::StateCheck() const
 	return bState;
 }
 
-void Profiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& hierarchyScreenPosition, TextDrawDescription drawDesc)
+
+
+void Profiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSort)
 {
-	std::ostringstream stats;
-	
-
-	drawDesc.screenPosition = hierarchyScreenPosition;
-	stats.precision(2);
-	stats << std::fixed;
-
-	//for (const PerfEntryNode& node : mPerfEntryHierarchy.root.children)
-	//{
-	//
-	//}
+	if(bSort) mPerfEntryTree.Sort();
+	mPerfEntryTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
 }
 //---------------------------------------------------------------------------------------------------------------------------
 
@@ -184,39 +178,77 @@ inline float PerfEntry::GetAvg() const
 
 
 //---------------------------------------------------------------------------------------------------------------------------
-// PERF ENTRY HIERARCHY
+// PERF ENTRY TREE
 //---------------------------------------------------------------------------------------------------------------------------
-Profiler::PerfEntryNode* Profiler::PerfEntryHierarchy::AddChild(PerfEntryNode& parentNode, const PerfEntry * pPerfEntry)
+Profiler::PerfEntryNode* Profiler::PerfEntryTree::AddChild(PerfEntryNode& parentNode, const PerfEntry * pPerfEntry)
 {
 	PerfEntryNode newNode = { pPerfEntry, &parentNode, std::vector<PerfEntryNode>() };
 	parentNode.children.push_back(newNode);
 	return &parentNode.children.back();	// is this safe? this might not be safe...
 }
 
+void Profiler::PerfEntryTree::Sort()
+{
+	SortSubTree(root);
+}
 
+void Profiler::PerfEntryTree::RenderTree(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc)
+{
+	// set stream properties once, and pass it to recursive function
+	std::ostringstream stats;
+	stats.precision(2);
+	stats << std::fixed;
 
-Profiler::PerfEntryNode* Profiler::PerfEntryHierarchy::FindNode(const PerfEntry * pNode)
+	RenderSubTree(root, pTextRenderer, screenPosition, drawDesc, stats);
+}
+
+Profiler::PerfEntryNode* Profiler::PerfEntryTree::FindNode(const PerfEntry * pNode)
 {
 	if (root.pPerfEntry == pNode) return &root;
 	return SearchSubTree(root, pNode);
 }
 
-Profiler::PerfEntryNode* Profiler::PerfEntryHierarchy::SearchSubTree(const PerfEntryNode & node, const PerfEntry * pSearchEntry)
+Profiler::PerfEntryNode* Profiler::PerfEntryTree::SearchSubTree(const PerfEntryNode & node, const PerfEntry * pSearchEntry)
 {
 	PerfEntryNode* pSearchResult = nullptr;
 
+	// visit children | depth first
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
 		PerfEntryNode* pEntryNode = &root.children[i];
-
 		if (pSearchEntry == pEntryNode->pPerfEntry)
 			return pEntryNode;
 
-		PerfEntryNode* pResult = SearchSubTree(*pEntryNode, pSearchEntry);
-		if (pResult && pResult->pPerfEntry == pSearchEntry)
-			return pResult;
+		pSearchResult = SearchSubTree(*pEntryNode, pSearchEntry);
+		if (pSearchResult && pSearchResult->pPerfEntry == pSearchEntry)
+			return pSearchResult;
 	}
 
 	return pSearchResult;
+}
+void Profiler::PerfEntryTree::RenderSubTree(const PerfEntryNode & node, TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc, std::ostringstream & stats)
+{
+	const int X_OFFSET = 20;
+	const int Y_OFFSET = 20;
+
+	// clear & populate text
+	stats.clear(); stats.str("");
+	stats << node.pPerfEntry->name << "  " << node.pPerfEntry->GetAvg() * 1000 << " ms";
+
+	drawDesc.screenPosition = screenPosition;
+	drawDesc.text = stats.str();
+	pTextRenderer->RenderText(drawDesc);
+	
+	size_t row_count = 0;
+	for (size_t i = 0; i < node.children.size(); i++)
+	{
+		row_count += i == 0 ? 0 : node.children[i - 1].children.size();
+		RenderSubTree(node.children[i], pTextRenderer, { screenPosition.x() + X_OFFSET, screenPosition.y() + Y_OFFSET * (i+1+ row_count)}, drawDesc, stats);
+	}
+}
+void Profiler::PerfEntryTree::SortSubTree(PerfEntryNode & node)
+{
+	std::sort(node.children.begin(), node.children.end(), [](const PerfEntryNode& l, const PerfEntryNode& r) { return l.pPerfEntry->GetAvg() >= r.pPerfEntry->GetAvg(); });
+	std::for_each(node.children.begin(), node.children.end(), [this](PerfEntryNode& n) { SortSubTree(n); });
 }
 //---------------------------------------------------------------------------------------------------------------------------

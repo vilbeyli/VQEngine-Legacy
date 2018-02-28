@@ -77,28 +77,30 @@ public:
 #endif
 
 	bool					Initialize(HWND hwnd);
-	bool					Load();
 	void					Exit();
-
+	
+	bool					Load();
 
 	bool					UpdateAndRender();
 	void					Render();
 
+	void					Pause();
+	void					Unpause();
 	
 
 	inline const Input*		INP() const { return mpInput; }
 	inline float			GetTotalTime() const { return mpTimer->TotalTime(); }
 	inline ShaderID			GetSelectedShader() const { return mSelectedShader; }
+	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
+
+	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
+	
 	void					ToggleLightingModel();	// BRDF / Blinn-Phong
 	void					ToggleRenderingPath();	// Forward / Deferred
 	void					ToggleAmbientOcclusion();
-	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
-	void					Pause();
-	void					Unpause();
 
 	void					SendLightData() const;
 	
-	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
 
 private:
 	Engine();
@@ -119,6 +121,7 @@ private:
 	static Settings::Engine			sEngineSettings;
 	
 	bool							mbIsPaused;
+	bool							mbShowStats;
 
 	// systems
 	//--------------------------------------------------------

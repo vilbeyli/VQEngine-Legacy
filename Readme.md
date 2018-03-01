@@ -2,13 +2,17 @@
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
+<center><i>BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting</i></center>
+
+![](Data/Screenshots/IBL_la.PNG)
+
 # Feature List / Version History
 
- *v0.2.1 - Automated Build, Performance Logging, Text Rendering - TBA(March) - **W**ork **I**n **P**rogress*
+ *v0.2.1 - Automated Build, Performance Logging, Text Rendering - TBA(March)
  - Text Rendering
  - CPU Profiler
  - GPU Profiler (**WIP**)
- - Build scripts (Python, Batch)
+ - Build scripts (Python, Batch) & Automated Build (Travis) (**WIP**)
 
  *v0.2.0 - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
  - On-the-fly-switchable Forward/Deferred Rendering
@@ -28,11 +32,9 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
  - Procedural Geometry: Cube, Sphere, Cylinder, Grid
   
 
-<center><i>BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting</i></center>
 
-![](Data/Screenshots/IBL_la.PNG)
 
-<center><i>BRDF, HDR, Tonemapping, Bloom, PCF Shadows</i></center>
+<center><i>PCF Shadows, CPU profiler, Text Rendering</i></center>
 
 ![](Data/Screenshots/space_gold.PNG)
 
@@ -51,6 +53,8 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 - **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 
 # Build
+
+![](https://travis-ci.org/vilbeyli/VQEngine.svg?branch=master)
 
 Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will contain the executable built in release mode and the data and shaders needed to run the demo. You need Visual Studio 2017 installed for the build scripts to work.
 

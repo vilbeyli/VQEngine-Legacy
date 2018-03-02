@@ -14,7 +14,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
  - Text Rendering
  - CPU Profiler
  - GPU Profiler (**WIP**)
- - Build scripts (Python, Batch) & Automated Build (Travis) (**WIP**)
+ - Build scripts (Python, Batch) & Automated Build (AppVeyor)
 
  *v0.2.0 - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
  - On-the-fly-switchable Forward/Deferred Rendering
@@ -46,7 +46,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 # Prerequisites
 
- - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - probably the latest version. I'm using latest Visual Studio 2017 version.
+ - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - probably the latest version. I'm using the latest Visual Studio 2017 version.
   
    Note: if the linker throws the error `1>LINK : fatal error LNK1158: cannot run 'rc.exe'` do the following:
    - Copy `rc.exe` and `rcdll.dll` 

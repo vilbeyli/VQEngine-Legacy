@@ -1,14 +1,16 @@
 # VQEngine - A DirectX11 & C++11 Real-Time Renderer
 
-A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
+![https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)
 
-<center><i>BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting</i></center>
+A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
 ![](Data/Screenshots/IBL_la.PNG)
 
+<center><i>BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting</i></center>
+
 # Feature List / Version History
 
- *v0.2.1 - Automated Build, Performance Logging, Text Rendering - TBA(March)
+ *v0.2.1 - Automated Build, Performance Logging, Text Rendering - TBA(March)*
  - Text Rendering
  - CPU Profiler
  - GPU Profiler (**WIP**)
@@ -53,8 +55,6 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 - **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 
 # Build
-
-![](https://travis-ci.org/vilbeyli/VQEngine.svg?branch=master)
 
 Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will contain the executable built in release mode and the data and shaders needed to run the demo. You need Visual Studio 2017 installed for the build scripts to work.
 

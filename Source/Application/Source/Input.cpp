@@ -44,7 +44,7 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	m["Shift"] = 16;	m["shift"] = 16;
 	m["Enter"] = 13;	m["enter"] = 13;
 	m["Backspace"] = 8; m["backspace"] = 8;
-	m["Escape"] = 0x1B; m["escape"] = 0x1B;
+	m["Escape"] = 0x1B; m["escape"] = 0x1B; m["ESC"] = 0x1B; m["esc"] = 0x1B;
 	m["PageUp"] = 33;	m["PageDown"] = 34;
 
 	m["Numpad7"] = 103; m["Numpad8"] = 104; m["Numpad9"] = 105;
@@ -56,8 +56,8 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 
 Input::Input()
 	:
-	m_isConsumed(false),
-	m_mouseScroll(0)
+	m_mouseScroll(0),
+	m_bIgnoreInput(false)
 {
 	memset(m_mouseDelta, 0, 2 * sizeof(long));
 	memset(m_mousePos  , 0, 2 * sizeof(long));
@@ -137,84 +137,83 @@ void Input::UpdateMousePos(long x, long y, short scroll)
 		m_mousePos[0], m_mousePos[1],
 		(int)scroll);
 #endif
-	m_isConsumed = false;
 	m_mouseScroll = scroll;
 }
 
 bool Input::IsScrollUp() const
 {
-	return m_mouseScroll > 0;
+	return m_mouseScroll > 0 && !m_bIgnoreInput;
 }
 
 bool Input::IsScrollDown() const
 {
-	return m_mouseScroll < 0;
+	return m_mouseScroll < 0 && !m_bIgnoreInput;
 }
 
 bool Input::IsKeyDown(KeyCode key) const
 {
-	return m_keys[key];
+	return m_keys[key] && !m_bIgnoreInput;
 }
 
 bool Input::IsKeyDown(const char * key) const
 {
 	const KeyCode code = sKeyMap.at(key);
-	return m_keys[code];
+	return m_keys[code] && !m_bIgnoreInput;
+}
+
+bool Input::IsKeyUp(const char * key) const
+{
+	const KeyCode code = sKeyMap.at(key);
+	return (!m_keys[code] && m_prevKeys[code]) && !m_bIgnoreInput;
 }
 
 bool Input::IsKeyDown(const std::string& key) const
 {
 	const KeyCode code = sKeyMap.at(key.c_str());
-	return m_keys[code];
+	return m_keys[code] && !m_bIgnoreInput;
 }
 
 bool Input::IsMouseDown(KeyCode btn) const
 {
-	return m_buttons[btn];
+	return m_buttons[btn] && !m_bIgnoreInput;
 }
 
 bool Input::IsKeyTriggered(KeyCode key) const
 {
-	return !m_prevKeys[key] && m_keys[key];
+	return !m_prevKeys[key] && m_keys[key] && !m_bIgnoreInput;
 }
 
 bool Input::IsKeyTriggered(const char *key) const
 {
 	const KeyCode code = sKeyMap.at(key);
-	return !m_prevKeys[code] && m_keys[code];
+	return !m_prevKeys[code] && m_keys[code] && !m_bIgnoreInput;
 }
 
 bool Input::IsKeyTriggered(const std::string & key) const
 {
 	const KeyCode code = sKeyMap.at(key.data());
-	return !m_prevKeys[code] && m_keys[code];
+	return !m_prevKeys[code] && m_keys[code] && !m_bIgnoreInput;
 }
 
 int Input::MouseDeltaX() const
 {
-	return m_mouseDelta[0];
+	return !m_bIgnoreInput ? m_mouseDelta[0] : 0;
 }
 
 int Input::MouseDeltaY() const
 {
-	return m_mouseDelta[1];
+	return !m_bIgnoreInput ? m_mouseDelta[1] : 0;
 }
 
 // called at the end of the frame
-void Input::Update()
+void Input::PostUpdate()
 {
 	memcpy(m_prevKeys, m_keys, sizeof(bool) * KEY_COUNT);
 	m_mouseDelta[0] = m_mouseDelta[1] = 0;
-	m_isConsumed = true;
 	m_mouseScroll = 0;
 }
 
 const long * Input::GetDelta() const
 {
 	return m_mouseDelta;
-}
-
-bool Input::IsConsumed() const
-{
-	return m_isConsumed;
 }

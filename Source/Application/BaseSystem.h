@@ -42,26 +42,28 @@ public:
 	void UpdateWindowDimensions(int w, int h);
 
 private:
+	void InitRawInputDevices();
 	void InitWindow(const Settings::Window& windowSettings);
 	void ShutdownWindows();
-	void InitRawInputDevices();
+	
+	void CaptureMouse(bool bDoCapture);
 
 private:
-	LPCSTR				m_appName;
-	HINSTANCE			m_hInstance;
-	HWND				m_hwnd;
-	int					m_windowWidth, m_windowHeight;
+	LPCSTR		m_appName;
+	HINSTANCE	m_hInstance;
+	HWND		m_hwnd;
+	int			m_windowWidth, m_windowHeight;
+
+	// state
+	bool		m_bMouseCaptured;
+	bool		m_bAppWantsExit;
+	POINT		m_capturePosition;
 };
 
-// The WndProc function and ApplicationHandle pointer are also included in this class file so we can redirect 
+// The WndProc function and ApplicationHandle pointer are also included here so we can redirect 
 // the windows system messaging into our MessageHandler function inside the system class.
 
-// FUNCTION PROTOTYPES
-//----------------------------------------------------------------------
 static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-
-// GLOBALS
-//----------------------------------------------------------------------
 static BaseSystem* gp_appHandle = 0;
 
 #endif	// _SYSTEMCLASS_H_

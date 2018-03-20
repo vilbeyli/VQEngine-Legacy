@@ -66,9 +66,9 @@ ALIGNMENT class Engine
 	friend class SceneManager;	// read/write ZPassObjects
 
 public:
-	static const Settings::Engine& ReadSettingsFromFile();
-	static const Settings::Engine& GetSettings() { return sEngineSettings; }
-	static Engine*			GetEngine();
+	static const Settings::Engine&	ReadSettingsFromFile();
+	static const Settings::Engine&	GetSettings() { return sEngineSettings; }
+	static Engine*					GetEngine();
 	~Engine();
 
 #ifdef _WIN32

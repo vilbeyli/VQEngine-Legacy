@@ -29,13 +29,14 @@ using KeyCode = unsigned int;
 class Input
 {
 	static const std::unordered_map<const char*, KeyCode> sKeyMap;
-
+	friend class BaseSystem;
 public:
 	Input();
 	Input(const Input&);
 	~Input();
 
 	void Initialize();
+	inline void ToggleInputBypassing() { m_bIgnoreInput = !m_bIgnoreInput; }
 
 	// update state
 	void KeyDown(KeyCode);
@@ -47,6 +48,7 @@ public:
 	bool IsKeyDown(KeyCode) const;
 	bool IsKeyDown(const char*) const;
 	bool IsKeyDown(const std::string&) const;
+	bool IsKeyUp(const char*) const;
 	bool IsMouseDown(KeyCode) const;
 	//bool IsMouseDown(const char*) const;
 	//bool IsMouseDown(const std::string&) const;
@@ -58,11 +60,13 @@ public:
 	bool IsScrollUp() const;
 	bool IsScrollDown() const;
 
-	void Update();
+	void PostUpdate();
 	const long* GetDelta() const;
-	bool IsConsumed() const;
 
 private:
+	// state
+	bool m_bIgnoreInput;
+
 	// keyboard
 	bool m_keys[KEY_COUNT];
 	bool m_prevKeys[KEY_COUNT];
@@ -71,7 +75,6 @@ private:
 	bool m_buttons[17];
 	long m_mouseDelta[2];
 	long m_mousePos[2];
-	bool m_isConsumed;	// experimental
 	short m_mouseScroll;
 };
 

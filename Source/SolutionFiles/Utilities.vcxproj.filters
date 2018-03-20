@@ -36,7 +36,7 @@
     <ClInclude Include="$(SolutionDir)Source\Utilities\Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Source\Utilities\Profiler.h">
+    <ClInclude Include="$(SolutionDir)Source\Utilities\Profiler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,7 +62,7 @@
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Source\Utilities\Source\Profiler.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Profiler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

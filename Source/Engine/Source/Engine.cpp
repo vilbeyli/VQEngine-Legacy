@@ -227,7 +227,6 @@ bool Engine::Load()
 
 bool Engine::HandleInput()
 {
-	if (mpInput->IsKeyDown("Escape"))			return false;
 	if (mpInput->IsKeyTriggered("Backspace"))	TogglePause();
 
 	if (!mbUseDeferredRendering)
@@ -326,7 +325,6 @@ bool Engine::UpdateAndRender()
 		Render();
 	}
 
-	mpInput->Update();	// update previous state after frame;
 
 	mProfiler->EndEntry();
 

@@ -454,7 +454,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 
 EnvironmentMap::EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory)
 {
-	Log::Info("Loading Environment Map: %s", split(rootDirectory, '/').back().c_str());
+	Log::Info("Loading Environment Map: %s", StrUtil::split(rootDirectory, '/').back().c_str());
 	irradianceMap = pRenderer->CreateHDRTexture(files.irradianceMapFileName, rootDirectory);
 	environmentMap = pRenderer->CreateHDRTexture(files.environmentMapFileName, rootDirectory);
 	InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(environmentMap), pRenderer->GetTextureObject(irradianceMap));

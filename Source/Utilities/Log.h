@@ -1,5 +1,5 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
-//	Copyright(C) 2016  - Volkan Ilbeyli
+//	VQEngine | DirectX11 Renderer
+//	Copyright(C) 2018 - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
 //	it under the terms of the GNU General Public License as published by
@@ -16,69 +16,37 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#pragma once
-
 #include <string>
-#include <fstream>
 
-enum EErrorLog
+#define VARIADIC_LOG_FN(FN_NAME)\
+template<class... Args>\
+void FN_NAME(const char* format, Args&&... args)\
+{\
+	char msg[LEN_MSG_BUFFER];\
+	sprintf_s(msg, format, args...);\
+	##FN_NAME(std::string(msg));\
+}
+
+namespace Log
 {
-	CANT_OPEN_FILE,
-	CANT_CREATE_RESOURCE,
-	CANT_CRERATE_RENDER_STATE,
+	constexpr size_t LEN_MSG_BUFFER = 2048;
 
-	ERR_LOG_COUNT
-};
-
-constexpr size_t LEN_MSG_BUFFER = 2048;
-
-class Log
-{
-public:
-	Log()  = delete;
-	~Log() = delete;
-
-	static void Initialize(bool bEnableLogging);
-	static void Exit();
-
-	static void Info(const std::string& s);
-	static void Error(const std::string& s);
-	static void String(const std::string& s);
-	static void Warning(const std::string& s);
-
-	static void Error(EErrorLog errMode, const std::string& s);
-
-	// functions for printf() style logging using variadic templates
-	template<class... Args> 
-	static void Error(const char* format, Args&&... args)
+	enum Mode : unsigned
 	{
-		char msg[LEN_MSG_BUFFER];	sprintf_s(msg, format, args...);
-		Error(std::string(msg));
-	}
+		NONE				= 0,
+		CONSOLE				= 1,
+		FILE				= 2,
+		CONSOLE_AND_FILE	= 3,
+	};
+	//-------------------------------------
+	void Initialize(Mode mode);
+	void Exit();
 
-	template<class... Args>
-	static void Warning(const char* format, Args&&... args)
-	{
-		char msg[LEN_MSG_BUFFER];	sprintf_s(msg, format, args...);
-		Warning(std::string(msg));
-	}
-
-	// adds a new line 
-	template<class... Args>
-	static void Info(const char* format, Args&&... args)
-	{
-		char msg[LEN_MSG_BUFFER];	sprintf_s(msg, format, args...);
-		Info(std::string(msg));
-	}
-
-	// prints as is 
-	template<class... Args>
-	static void String(const char* format, Args&&... args)
-	{
-		char msg[LEN_MSG_BUFFER];	sprintf_s(msg, format, args...);
-		String(std::string(msg));
-	}
-private:
-	static std::ofstream sOutFile;	
-};
-
+	void Info(const std::string& s);
+	void Error(const std::string& s);
+	void Warning(const std::string& s);
+	
+	VARIADIC_LOG_FN(Error)
+	VARIADIC_LOG_FN(Warning)
+	VARIADIC_LOG_FN(Info)
+}

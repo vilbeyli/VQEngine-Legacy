@@ -18,9 +18,7 @@
 
 #pragma once
 #include "Component.h"
-#include <DirectXMath.h>
-#include "Utilities/Quaternion.h"
-#include "Utilities/utils.h"
+#include "Utilities/vectormath.h"
 
 struct Transform : public Component
 {

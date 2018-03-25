@@ -127,7 +127,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     </Link>
     <PreBuildEvent>
       <Command>SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
-IF EXIST $(ProjectDir)..\Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
+IF EXIST $(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
 echo DirectXTex.lib already built. ) ELSE (
 echo Building dependency library: DirectXTex... 
 devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>
@@ -177,7 +177,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     </Link>
     <PreBuildEvent>
       <Command>SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
-IF EXIST $(ProjectDir)..\Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
+IF EXIST $(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
 echo DirectXTex.lib already built. ) ELSE (
 echo Building dependency library: DirectXTex... 
 devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")</Command>

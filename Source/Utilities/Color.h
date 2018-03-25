@@ -18,13 +18,11 @@
 
 #pragma once
 
-#include "utils.h"
+#include "vectormath.h"
 
 #include <map>
 #include <vector>
 #include <array>
-
-using namespace DirectX;
 
 enum class EColorValue
 {

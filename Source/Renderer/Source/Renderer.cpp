@@ -38,6 +38,8 @@
 
 #include <mutex>
 #include <cassert>
+#include <fstream>
+
 
 // HELPER FUNCTIONS
 //=======================================================================================================================================================
@@ -504,7 +506,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	{
 		if (FAILED(result))
 		{
-			Log::Error(CANT_CRERATE_RENDER_STATE, "Default Depth Stencil State");
+			Log::Error("Default Depth Stencil State");
 			return false;
 		}
 		return true;
@@ -894,7 +896,7 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 		DirectX::ScratchImage* img = &faceImages[cubeMapFaceIndex];
 		if (!SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
 		{
-			Log::Error(EErrorLog::CANT_OPEN_FILE, textureFileNames[cubeMapFaceIndex]);
+			Log::Error(textureFileNames[cubeMapFaceIndex]);
 			continue;
 		}
 
@@ -924,7 +926,7 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	HRESULT hr = m_device->CreateTexture2D(&texDesc, &pData[0], &cubemapTexture);
 	if (hr != S_OK)
 	{
-		Log::Error(std::string("Cannot create cubemap texture: ") + split(textureFileNames.front(), '_').front());
+		Log::Error(std::string("Cannot create cubemap texture: ") + StrUtil::split(textureFileNames.front(), '_').front());
 		return -1;
 	}
 
@@ -938,7 +940,7 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	hr = m_device->CreateShaderResourceView(cubemapTexture, &cubemapDesc, &cubeMapSRV);
 	if (hr != S_OK)
 	{
-		Log::Error(std::string("Cannot create Shader Resource View for ") + split(textureFileNames.front(), '_').front());
+		Log::Error(std::string("Cannot create Shader Resource View for ") + StrUtil::split(textureFileNames.front(), '_').front());
 		return -1;
 	}
 
@@ -970,7 +972,7 @@ SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)
 	HRESULT hr = m_device->CreateSamplerState(&samplerDesc, &pSamplerState);
 	if (FAILED(hr))
 	{
-		Log::Error(EErrorLog::CANT_CREATE_RESOURCE, "Cannot create sampler state\n");
+		Log::Error("Cannot create sampler state\n");
 	}
 
 	Sampler out;
@@ -1014,7 +1016,7 @@ DepthStencilStateID Renderer::AddDepthStencilState(bool bEnableDepth, bool bEnab
 	result = m_device->CreateDepthStencilState(&depthStencilDesc, &newDSState);
 	if (FAILED(result))
 	{
-		Log::Error(CANT_CRERATE_RENDER_STATE, "Depth Stencil");
+		Log::Error("Depth Stencil");
 		return false;
 	}
 
@@ -1030,7 +1032,7 @@ DepthStencilStateID Renderer::AddDepthStencilState(const D3D11_DEPTH_STENCIL_DES
 	result = m_device->CreateDepthStencilState(&dsDesc, &newDSState);
 	if (FAILED(result))
 	{
-		Log::Error(CANT_CRERATE_RENDER_STATE, "Depth Stencil");
+		Log::Error("Depth Stencil");
 		return false;
 	}
 
@@ -1067,7 +1069,7 @@ RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D
 	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget.texture._tex2D, &RTVDesc, &newRenderTarget.pRenderTargetView);
 	if (!SUCCEEDED(hr))
 	{
-		Log::Error(CANT_CREATE_RESOURCE, "Render Target View");
+		Log::Error("Render Target View");
 		return -1;
 	}
 
@@ -1082,7 +1084,7 @@ RenderTargetID Renderer::AddRenderTarget(const Texture& textureObj, D3D11_RENDER
 	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget.texture._tex2D, &RTVDesc, &newRenderTarget.pRenderTargetView);
 	if (!SUCCEEDED(hr))
 	{
-		Log::Error(CANT_CREATE_RESOURCE, "Render Target View");
+		Log::Error("Render Target View");
 		return -1;
 	}
 
@@ -1099,7 +1101,7 @@ DepthTargetID Renderer::AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvD
 	HRESULT hr = m_device->CreateDepthStencilView(depthTexture._tex2D, &dsvDesc, &newDepthTarget.pDepthStencilView);
 	if (FAILED(hr))
 	{
-		Log::Error(CANT_CREATE_RESOURCE, "Depth Stencil Target View");
+		Log::Error("Depth Stencil Target View");
 		return -1;
 	}
 	newDepthTarget.texture = depthTexture;
@@ -1725,7 +1727,7 @@ void Renderer::Apply()
 void Renderer::BeginEvent(const std::string & marker)
 {
 #if _DEBUG
-	UnicodeString umarker(marker);
+	StrUtil::UnicodeString umarker(marker);
 	m_Direct3D->m_annotation->BeginEvent(umarker.GetUnicodePtr());
 #endif
 }

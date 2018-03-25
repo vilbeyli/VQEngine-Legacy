@@ -19,7 +19,7 @@
 #ifndef _CAMERA_H
 #define _CAMERA_H
 
-#include "Utilities/utils.h"
+#include "Utilities/vectormath.h"
 #include "Engine/Settings.h"
 #include "Renderer/RenderingEnums.h"
 

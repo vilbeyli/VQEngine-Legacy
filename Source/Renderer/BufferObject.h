@@ -19,7 +19,7 @@
 #pragma once
 
 #include "RenderingEnums.h"
-#include "Utilities/utils.h"
+#include "Utilities/vectormath.h"
 
 class Renderer;
 

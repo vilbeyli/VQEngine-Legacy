@@ -133,21 +133,21 @@
     <ClInclude Include="$(SolutionDir)Source\Utilities\Color.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\Log.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\PerfTimer.h" />
-    <ClInclude Include="$(SolutionDir)Source\Utilities\Quaternion.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\CustomParser.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\utils.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\Camera.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\Profiler.h" />
+    <ClInclude Include="..\Utilities\vectormath.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Color.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Log.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\PerfTimer.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Quaternion.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\CustomParser.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\utils.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Camera.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Profiler.cpp" />
+    <ClCompile Include="..\Utilities\Source\utils.cpp" />
+    <ClCompile Include="..\Utilities\Source\vectormath.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -56,7 +56,7 @@ void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath)
 	}
 	else
 	{
-		Log::Error(EErrorLog::CANT_OPEN_FILE, shdPath);
+		Log::Error(shdPath);
 	}
 
 	// continue execution, make sure error is known
@@ -230,7 +230,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 	HRESULT result;
 
 	std::string info("\tCompiling "); info += m_name; info += "...";
-	Log::String(info);
+	Log::Info(info);
 	
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
@@ -250,7 +250,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 	for (const auto& filePath : filePaths)
 	{	// example filePath: "rootPath/filename_vs.hlsl"
 		//                                      ^^----- shaderTypeStr
-		const std::vector<std::string> RootAndFileName = split(filePath, '.');
+		const std::vector<std::string> RootAndFileName = StrUtil::split(filePath, '.');
 		const std::string shaderTypeStr = { *(RootAndFileName[0].rbegin() + 1), *RootAndFileName[0].rbegin() };
 		const EShaderType type = s_ShaderTypeStrLookup.at(shaderTypeStr);
 
@@ -376,7 +376,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 		blobs.cs->Release();
 	if(blobs.ps)
 		blobs.ps->Release();
-	Log::String(" Done.\n");
+	Log::Info(" Done.\n");
 }
 
 void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob)
@@ -561,7 +561,7 @@ ID3D10Blob* Shader::Compile(const std::string & filePath, const EShaderType & ty
 #endif
 
 
-	const UnicodeString Path = filePath;
+	const StrUtil::UnicodeString Path = filePath;
 	const WCHAR* PathStr = Path.GetUnicodePtr();
 	ID3D10Blob* errorMessage = nullptr;
 	ID3D10Blob* blob = NULL;

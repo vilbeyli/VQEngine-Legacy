@@ -149,7 +149,7 @@ bool Engine::Initialize(HWND hwnd)
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 	const Settings::Window& windowSettings = sEngineSettings.window;
 
-	Log::Initialize(bEnableLogging);
+	Log::Initialize(Log::Mode::FILE);
 	mWorkerPool.Initialize(workerCount);
 	mpInput->Initialize();
 	if (!mpRenderer->Initialize(hwnd, windowSettings))

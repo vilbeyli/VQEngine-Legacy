@@ -25,7 +25,7 @@
 
 #include "Renderer/RenderingEnums.h"
 
-#include "Utilities/utils.h"
+#include "Utilities/vectormath.h"
 
 #include <array>
 #include <vector>

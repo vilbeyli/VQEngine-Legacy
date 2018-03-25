@@ -1,5 +1,5 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
-//	Copyright(C) 2016  - Volkan Ilbeyli
+//	VQEngine | DirectX11 Renderer
+//	Copyright(C) 2018 - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
 //	it under the terms of the GNU General Public License as published by
@@ -17,38 +17,69 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Log.h"
+#include "utils.h"
+
+#include <Windows.h>
+#include "shlobj.h"
+
+#include <cassert>
+#include <cstdlib>
 
 #include <array>
-#include <Windows.h>
-#include <cassert>
+#include <fstream>
 
-const std::array<const char*, EErrorLog::ERR_LOG_COUNT> s_errorStrings =
+namespace Log
 {
-	"Can't open file ",
-	"Creating rendering resource: ",
-	"Creating render state: "
-};
 
-std::ofstream Log::sOutFile;
+static std::ofstream sOutFile;
+static const char* PATH_LOG_FILE = "LogFiles/debugLog.txt";	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb762204%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
 
-const char* debugOutputPath = "LogFiles/debugLog.txt";
-void Log::Initialize(bool bEnableLogging)
+
+void Initialize(Mode mode)
 {
-	if (bEnableLogging)
+	switch (mode)
 	{
-		sOutFile.open(debugOutputPath);
+	case NONE:
+
+		break;
+	case CONSOLE:
+		break;
+
+	case Log::FILE:
+	{
+#if 0	// msvc unsafe
+		const char* appdata = getenv("APPDATA");
+#else
+		PWSTR retPath = {};
+		HRESULT hr = SHGetKnownFolderPath(
+			FOLDERID_RoamingAppData,
+			0,
+			NULL,
+			&retPath);
+		StrUtil::UnicodeString unicodePath(retPath);
+#endif
+		Info(unicodePath);
+
+		sOutFile.open(PATH_LOG_FILE);
 		if (sOutFile)
 		{
 			sOutFile << "Log::Initialize() Done.\n";
 		}
 		else
 		{
-			Error(EErrorLog::CANT_OPEN_FILE, debugOutputPath);
+			Error(PATH_LOG_FILE);
 		}
+		break;
+	}
+	case CONSOLE_AND_FILE:
+		break;
+
+	default:
+		break;
 	}
 }
 
-void Log::Exit()
+void Exit()
 {
 	if (sOutFile.is_open())
 	{
@@ -57,16 +88,7 @@ void Log::Exit()
 	}
 }
 
-
-void Log::Error(EErrorLog errMode, const std::string& s)
-{
-	std::string err("\n***** ERROR: ");
-	err += s_errorStrings[errMode] + s;
-	OutputDebugString(err.c_str());
-	if (sOutFile.is_open()) sOutFile << err;
-}
-
-void Log::Error(const std::string & s)
+void Error(const std::string & s)
 {
 	std::string err("\n***** ERROR: ");
 	err += s;
@@ -74,25 +96,20 @@ void Log::Error(const std::string & s)
 	if (sOutFile.is_open()) sOutFile << err;
 }
 
-void Log::String(const std::string & s)
+void Warning(const std::string & s)
 {
-	std::string str;
-	str += s;
-	OutputDebugString(str.c_str());
-	if (sOutFile.is_open()) sOutFile << str;
-}
-
-void Log::Warning(const std::string & s)
-{
-	std::string warn = "[WARNING]: "; 
+	std::string warn = "[WARNING]: ";
 	warn += s; warn += "\n";
 	OutputDebugString(warn.c_str());
 	if (sOutFile.is_open()) sOutFile << warn;
 }
 
-void Log::Info(const std::string & s)
-{	
+void Info(const std::string & s)
+{
 	std::string info = s; info += "\n";
 	OutputDebugString(info.c_str());
 	if (sOutFile.is_open()) sOutFile << info;
 }
+
+
+}	// namespace Log

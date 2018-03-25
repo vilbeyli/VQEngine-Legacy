@@ -65,7 +65,7 @@ Settings::Engine Parser::ReadSettings(const std::string& settingsFileName)
 			if (line[0] == '/' || line[0] == '#')					// skip comments
 				continue;
 
-			std::vector<std::string> command = split(line, ' ');	// ignore whitespace
+			std::vector<std::string> command = StrUtil::split(line, ' ');	// ignore whitespace
 			ParseSetting(command, setting);							// process command
 		}
 	}
@@ -187,7 +187,7 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 			if (line[0] == '/' || line[0] == '#' || line[0] == '\0')	// skip comments
 				continue;
 
-			std::vector<std::string> command = split(line, ' ', '\t');	// ignore whitespace
+			std::vector<std::string> command = StrUtil::split(line, ' ', '\t');	// ignore whitespace
 			ParseScene(pRenderer, command, scene);						// process command
 		}
 		scene.loadSuccess = '1';
@@ -467,7 +467,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		// r g b a
 		//--------------------------------------------------------------
 		const std::string firstParam = GetLowercased(command[1]);
-		if (IsImageName(firstParam))
+		if (StrUtil::IsImageName(firstParam))
 		{
 			const TextureID texDiffuse = pRenderer->CreateTextureFromFile(firstParam);
 			obj.mModel.SetDiffuseMap(texDiffuse);

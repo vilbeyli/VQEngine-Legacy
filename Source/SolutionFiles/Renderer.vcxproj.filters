@@ -44,7 +44,7 @@
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Source\Renderer\Source\TextRenderer.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\TextRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -85,7 +85,7 @@
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingEnums.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Source\Renderer\TextRenderer.h">
+    <ClInclude Include="$(SolutionDir)Source\Renderer\TextRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

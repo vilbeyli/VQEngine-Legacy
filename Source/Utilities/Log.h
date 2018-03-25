@@ -29,16 +29,18 @@ void FN_NAME(const char* format, Args&&... args)\
 
 namespace Log
 {
-	constexpr size_t LEN_MSG_BUFFER = 2048;
-
 	enum Mode : unsigned
 	{
-		NONE				= 0,
-		CONSOLE				= 1,
-		FILE				= 2,
-		CONSOLE_AND_FILE	= 3,
+		NONE				= 0,	// Visual Studio Output Window
+		CONSOLE				= 1,	// Separate Console Window
+		FILE				= 2,	// Log File in %APPDATA%\VQEngine\DATE-VQEngineLog.txt
+		CONSOLE_AND_FILE	= 3,	// Both Console Window & Log File
 	};
 	//-------------------------------------
+
+	constexpr size_t LEN_MSG_BUFFER = 2048;
+	
+
 	void Initialize(Mode mode);
 	void Exit();
 

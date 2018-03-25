@@ -467,7 +467,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		// r g b a
 		//--------------------------------------------------------------
 		const std::string firstParam = GetLowercased(command[1]);
-		if (StrUtil::IsImageName(firstParam))
+		if (DirectoryUtil::IsImageName(firstParam))
 		{
 			const TextureID texDiffuse = pRenderer->CreateTextureFromFile(firstParam);
 			obj.mModel.SetDiffuseMap(texDiffuse);

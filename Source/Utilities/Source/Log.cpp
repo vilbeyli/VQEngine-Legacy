@@ -19,63 +19,89 @@
 #include "Log.h"
 #include "utils.h"
 
-#include <Windows.h>
-#include "shlobj.h"
-
 #include <cassert>
 #include <cstdlib>
 
 #include <array>
 #include <fstream>
 
+#include <Windows.h>
+
+
 namespace Log
 {
 
 static std::ofstream sOutFile;
-static const char* PATH_LOG_FILE = "LogFiles/debugLog.txt";	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb762204%28v=vs.85%29.aspx?f=255&MSPPError=-2147217396
 
+
+
+
+std::string InitLogFile()
+{
+	const std::string EngineWorkspaceDir = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "\\VQEngine";
+	const std::string LogFileDir = EngineWorkspaceDir + "\\Logs";
+
+	std::string errMsg = "";
+	if (CreateDirectory(EngineWorkspaceDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+	{
+		if (CreateDirectory(LogFileDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+		{
+			std::string fileName = GetCurrentTimeAsString() + "_VQEngineLog.txt";
+			sOutFile.open(LogFileDir + "\\" + fileName);
+			if (sOutFile)
+			{
+				sOutFile << "[" << GetCurrentTimeAsString() << "] [Log]:" << "Initialize() Done.";
+			}
+			else
+			{
+				errMsg = "Cannot open log file " + fileName;
+			}
+		}
+		else
+		{
+			errMsg = "Failed to create directory " + LogFileDir;
+		}
+	}
+	else
+	{
+		errMsg = "Failed to create directory " + EngineWorkspaceDir;
+	}
+	return errMsg;
+}
+std::string InitConsole()
+{
+	std::string errMsg = "";
+
+	return errMsg;
+}
 
 void Initialize(Mode mode)
 {
+	std::string errMsg = "";
 	switch (mode)
 	{
 	case NONE:
 
 		break;
 	case CONSOLE:
+		errMsg = InitConsole();
 		break;
 
 	case Log::FILE:
-	{
-#if 0	// msvc unsafe
-		const char* appdata = getenv("APPDATA");
-#else
-		PWSTR retPath = {};
-		HRESULT hr = SHGetKnownFolderPath(
-			FOLDERID_RoamingAppData,
-			0,
-			NULL,
-			&retPath);
-		StrUtil::UnicodeString unicodePath(retPath);
-#endif
-		Info(unicodePath);
-
-		sOutFile.open(PATH_LOG_FILE);
-		if (sOutFile)
-		{
-			sOutFile << "Log::Initialize() Done.\n";
-		}
-		else
-		{
-			Error(PATH_LOG_FILE);
-		}
+		errMsg = InitLogFile();
 		break;
-	}
+	
 	case CONSOLE_AND_FILE:
+		errMsg = InitLogFile() + InitConsole();
 		break;
 
 	default:
 		break;
+	}
+
+	if (!errMsg.empty())
+	{
+		MessageBox(NULL, errMsg.c_str(), "VQEngine: Error Initializing Logging", MB_OK);
 	}
 }
 
@@ -92,22 +118,28 @@ void Error(const std::string & s)
 {
 	std::string err("\n***** ERROR: ");
 	err += s;
+	
 	OutputDebugString(err.c_str());
-	if (sOutFile.is_open()) sOutFile << err;
+	if (sOutFile.is_open()) 
+		sOutFile << err;
 }
 
 void Warning(const std::string & s)
 {
 	std::string warn = "[WARNING]: ";
-	warn += s; warn += "\n";
+	warn += s; 
+	warn += "\n";
+	
 	OutputDebugString(warn.c_str());
 	if (sOutFile.is_open()) sOutFile << warn;
 }
 
 void Info(const std::string & s)
 {
-	std::string info = s; info += "\n";
+	std::string info = s; 
+	info += "\n";
 	OutputDebugString(info.c_str());
+	
 	if (sOutFile.is_open()) sOutFile << info;
 }
 

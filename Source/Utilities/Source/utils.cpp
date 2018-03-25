@@ -18,14 +18,16 @@
 
 #include "utils.h"
 #include <iostream>
-#include <ctime>
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
 #include <random>
 
+#include <ctime>
+
 #include <atlbase.h>
-#include <atlconv.h>
+#include <atlconv.h>	// wstr->str
+#include "shlobj.h"		// SHGetKnownFolderPath()
 
 #ifdef _DEBUG
 #include <cassert>
@@ -47,11 +49,11 @@ namespace StrUtil
 		{
 			const char* begin = s;
 
-			// skip delimiter character
-			if (*begin == c || *begin == '\0') continue;
+			if (*begin == c || *begin == '\0') 
+				continue;	// skip delimiter character
 
-			// iterate until delimiter is found
-			while (*s != c && *s) s++;
+			while (*s != c && *s)	
+				s++;	// iterate until delimiter is found
 
 			result.push_back(string(begin, s));
 
@@ -77,11 +79,11 @@ namespace StrUtil
 		{
 			const char* begin = ps;
 
-			// skip delimiter characters
-			if (IsDelimiter(*begin) || (*begin == '\0')) continue;
+			if (IsDelimiter(*begin) || (*begin == '\0')) 
+				continue;	// skip delimiter characters
 
-			// iterate until delimiter is found or string has ended
-			while (!IsDelimiter(*ps) && *ps) ps++;
+			while (!IsDelimiter(*ps) && *ps) 
+				ps++;	// iterate until delimiter is found or string has ended
 
 			result.push_back(string(begin, ps));
 
@@ -89,7 +91,8 @@ namespace StrUtil
 		return result;
 	}
 
-	UnicodeString::UnicodeString(const std::string& strIn) : str(strIn)
+	UnicodeString::UnicodeString(const std::string& strIn) 
+		: str(strIn)
 	{
 		auto stdWstr = std::wstring(str.begin(), str.end());
 		wstr = stdWstr.c_str();
@@ -104,25 +107,24 @@ namespace StrUtil
 	std::string GetFileNameWithoutExtension(const std::string& path)
 	{	// example: path: "Archetypes/player.txt" | return val: "player"
 		string no_extension = split(path.c_str(), '.')[0];
-		auto tokens = split(no_extension.c_str(), '/');
-		string name = tokens[tokens.size() - 1];
-		return name;
+		return split(no_extension.c_str(), '/').back();
 	}
+}
 
-	bool IsImageName(const std::string & str)
-	{
-		std::vector<std::string> FileNameAndExtension = split(str, '.');
-		if (FileNameAndExtension.size() < 2)
-			return false;
 
-		const std::string& extension = FileNameAndExtension[1];
 
-		bool bIsImageFile = false;
-		bIsImageFile = bIsImageFile || extension == "png";
-		bIsImageFile = bIsImageFile || extension == "jpg";
-		bIsImageFile = bIsImageFile || extension == "hdr";
-		return bIsImageFile;
-	}
+std::string GetCurrentTimeAsString()
+{
+	const std::time_t now = std::time(0);
+	std::tm tmNow;	// current time
+	localtime_s(&tmNow, &now);
+
+	// YYYY-MM-DD_HH-MM-SS
+	std::stringstream ss;
+	ss << (tmNow.tm_year + 1900) << "-" << std::setfill('0') << std::setw(2) 
+		<< tmNow.tm_mon + 1 << "-" << tmNow.tm_mday << "_"
+		<< tmNow.tm_hour << "-" << tmNow.tm_min << "-" << tmNow.tm_sec;
+	return ss.str();
 }
 
 float RandF(float l, float h)
@@ -151,3 +153,43 @@ size_t RandU(size_t l, size_t h)
 
 //---------------------------------------------------------------------------------
 
+std::string DirectoryUtil::GetSpecialFolderPath(ESpecialFolder folder)
+{
+	PWSTR retPath = {};
+	REFKNOWNFOLDERID folder_id = [&]()
+	{
+		switch (folder)
+		{
+		case DirectoryUtil::PROGRAM_FILES:	return FOLDERID_ProgramFiles;
+		case DirectoryUtil::APPDATA:		return FOLDERID_RoamingAppData;
+		case DirectoryUtil::LOCALAPPDATA:	return FOLDERID_LocalAppData;
+		case DirectoryUtil::USERPROFILE:	return FOLDERID_UserProfiles;
+		}
+		return FOLDERID_RoamingAppData;
+	}();
+	
+	HRESULT hr = SHGetKnownFolderPath(folder_id, 0, NULL, &retPath);
+	if (hr != S_OK)
+	{
+		return "";
+		// Log::Error("SHGetKnownFolderPath() returned %s.", hr == E_FAIL ? "E_FAIL" : "E_INVALIDARG");
+	}
+
+	return StrUtil::UnicodeString::ToASCII(retPath);
+}
+
+
+bool DirectoryUtil::IsImageName(const std::string & str)
+{
+	std::vector<std::string> FileNameAndExtension = StrUtil::split(str, '.');
+	if (FileNameAndExtension.size() < 2)
+		return false;
+
+	const std::string& extension = FileNameAndExtension[1];
+
+	bool bIsImageFile = false;
+	bIsImageFile = bIsImageFile || extension == "png";
+	bIsImageFile = bIsImageFile || extension == "jpg";
+	bIsImageFile = bIsImageFile || extension == "hdr";
+	return bIsImageFile;
+}

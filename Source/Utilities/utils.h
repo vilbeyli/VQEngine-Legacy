@@ -16,20 +16,20 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#ifndef UTILS_CPP
-#define UTILS_CPP
+#pragma once
 
 #include <string>
 #include <vector>
-
-// typedefs
-typedef wchar_t WCHAR;    // wc,   16-bit UNICODE character
-typedef wchar_t* PWSTR;
 
 /// STRING PROCESSING
 //===============================================================================================
 namespace StrUtil
 {
+	// typedefs
+	typedef wchar_t WCHAR;    // wc,   16-bit UNICODE character
+	typedef wchar_t* PWSTR;
+
+
 	std::vector<std::string> split(const char* s, char c = ' ');
 	std::vector<std::string> split(const std::string& s, char c = ' ');
 	std::vector<std::string> split(const std::string& s, const std::vector<char>& delimiters);
@@ -40,11 +40,12 @@ namespace StrUtil
 		return split(s, delimiters);
 	}
 
-	std::string	GetFileNameWithoutExtension(const std::string&);
-	bool IsImageName(const std::string&);
-
 	struct UnicodeString
 	{
+	public:
+		static std::string ToASCII(PWSTR pwstr) { std::wstring wstr(pwstr); return std::string(wstr.begin(), wstr.end()); }
+		static std::wstring ASCIIToUnicode(const std::string& str) { return std::wstring(str.begin(), str.end()); }
+
 	private:
 		std::string  str;
 		std::wstring wstr;
@@ -61,6 +62,26 @@ namespace StrUtil
 	};
 }
 
+namespace DirectoryUtil
+{
+	enum ESpecialFolder
+	{
+		PROGRAM_FILES,
+		APPDATA,
+		LOCALAPPDATA,
+		USERPROFILE,
+	};
+
+	std::string	GetSpecialFolderPath(ESpecialFolder folder);
+
+	std::string	GetFileNameWithoutExtension(const std::string&);
+	bool		IsImageName(const std::string&);
+}
+
+
+// returns current time in format "YYYY-MM-DD_HH-MM-SS"
+std::string GetCurrentTimeAsString();
+
 
 float inline lerp(float low, float high, float t) { return low + (high - low) * t; }
 
@@ -69,5 +90,3 @@ float inline lerp(float low, float high, float t) { return low + (high - low) * 
 float	RandF(float l, float h);
 int		RandI(int l, int h);
 size_t	RandU(size_t l, size_t h);
-
-#endif

@@ -51,6 +51,7 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
+	Log::Initialize(Log::Mode::CONSOLE_AND_FILE);
 	const Settings::Window& windowSettings = Engine::ReadSettingsFromFile().window;
 	InitWindow(windowSettings);
 

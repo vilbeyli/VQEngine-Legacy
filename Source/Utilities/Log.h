@@ -34,12 +34,15 @@ namespace Log
 		NONE				= 0,	// Visual Studio Output Window
 		CONSOLE				= 1,	// Separate Console Window
 		FILE				= 2,	// Log File in %APPDATA%\VQEngine\DATE-VQEngineLog.txt
-		CONSOLE_AND_FILE	= 3,	// Both Console Window & Log File
+		
+		CONSOLE_AND_FILE	= CONSOLE | FILE,	// Both Console Window & Log File
 	};
-	//-------------------------------------
+
+	//---------------------------------------------------------------------------------------------
 
 	constexpr size_t LEN_MSG_BUFFER = 2048;
-	
+
+	//---------------------------------------------------------------------------------------------
 
 	void Initialize(Mode mode);
 	void Exit();

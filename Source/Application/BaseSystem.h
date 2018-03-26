@@ -16,8 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#ifndef _SYSTEMCLASS_H_
-#define _SYSTEMCLASS_H_
+#pragma once 
 
 // https://stackoverflow.com/questions/11040133/what-does-defining-win32-lean-and-mean-exclude-exactly
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa383745(v=vs.85).aspx
@@ -65,5 +64,3 @@ private:
 
 static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 static BaseSystem* gp_appHandle = 0;
-
-#endif	// _SYSTEMCLASS_H_

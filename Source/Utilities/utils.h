@@ -81,6 +81,7 @@ namespace DirectoryUtil
 
 // returns current time in format "YYYY-MM-DD_HH-MM-SS"
 std::string GetCurrentTimeAsString();
+std::string GetCurrentTimeAsStringWithBrackets();
 
 
 float inline lerp(float low, float high, float t) { return low + (high - low) * t; }

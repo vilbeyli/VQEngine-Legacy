@@ -111,8 +111,55 @@ namespace StrUtil
 	}
 }
 
+//---------------------------------------------------------------------------------------------
 
+namespace DirectoryUtil
+{
+	std::string GetSpecialFolderPath(ESpecialFolder folder)
+	{
+		PWSTR retPath = {};
+		REFKNOWNFOLDERID folder_id = [&]()
+		{
+			switch (folder)
+			{
+			case PROGRAM_FILES:	return FOLDERID_ProgramFiles;
+			case APPDATA:		return FOLDERID_RoamingAppData;
+			case LOCALAPPDATA:	return FOLDERID_LocalAppData;
+			case USERPROFILE:	return FOLDERID_UserProfiles;
+			}
+			return FOLDERID_RoamingAppData;
+		}();
 
+		HRESULT hr = SHGetKnownFolderPath(folder_id, 0, NULL, &retPath);
+		if (hr != S_OK)
+		{
+			// Log::Error("SHGetKnownFolderPath() returned %s.", hr == E_FAIL ? "E_FAIL" : "E_INVALIDARG");
+			return "";
+		}
+
+		return StrUtil::UnicodeString::ToASCII(retPath);
+	}
+
+	bool IsImageName(const std::string & str)
+	{
+		std::vector<std::string> FileNameAndExtension = StrUtil::split(str, '.');
+		if (FileNameAndExtension.size() < 2)
+			return false;
+
+		const std::string& extension = FileNameAndExtension[1];
+
+		bool bIsImageFile = false;
+		bIsImageFile = bIsImageFile || extension == "png";
+		bIsImageFile = bIsImageFile || extension == "jpg";
+		bIsImageFile = bIsImageFile || extension == "hdr";
+		return bIsImageFile;
+	}
+}
+
+//---------------------------------------------------------------------------------------------
+
+// GLOBAL NAMESPACE
+//
 std::string GetCurrentTimeAsString()
 {
 	const std::time_t now = std::time(0);
@@ -121,11 +168,15 @@ std::string GetCurrentTimeAsString()
 
 	// YYYY-MM-DD_HH-MM-SS
 	std::stringstream ss;
-	ss << (tmNow.tm_year + 1900) << "-" << std::setfill('0') << std::setw(2) 
-		<< tmNow.tm_mon + 1 << "-" << tmNow.tm_mday << "_"
-		<< tmNow.tm_hour << "-" << tmNow.tm_min << "-" << tmNow.tm_sec;
+	ss << (tmNow.tm_year + 1900) << "_" 
+		<< std::setfill('0') << std::setw(2) << tmNow.tm_mon + 1 << "_" 
+		<< tmNow.tm_mday << "-"
+		<< std::setfill('0') << std::setw(2) << tmNow.tm_hour << "_" 
+		<< std::setfill('0') << std::setw(2) << tmNow.tm_min << "_" 
+		<< std::setfill('0') << std::setw(2) << tmNow.tm_sec;
 	return ss.str();
 }
+std::string GetCurrentTimeAsStringWithBrackets(){ return "[" + GetCurrentTimeAsString() + "]"; }
 
 float RandF(float l, float h)
 {
@@ -149,47 +200,3 @@ size_t RandU(size_t l, size_t h)
 	return l + static_cast<size_t>(offset);
 }
 
-
-
-//---------------------------------------------------------------------------------
-
-std::string DirectoryUtil::GetSpecialFolderPath(ESpecialFolder folder)
-{
-	PWSTR retPath = {};
-	REFKNOWNFOLDERID folder_id = [&]()
-	{
-		switch (folder)
-		{
-		case DirectoryUtil::PROGRAM_FILES:	return FOLDERID_ProgramFiles;
-		case DirectoryUtil::APPDATA:		return FOLDERID_RoamingAppData;
-		case DirectoryUtil::LOCALAPPDATA:	return FOLDERID_LocalAppData;
-		case DirectoryUtil::USERPROFILE:	return FOLDERID_UserProfiles;
-		}
-		return FOLDERID_RoamingAppData;
-	}();
-	
-	HRESULT hr = SHGetKnownFolderPath(folder_id, 0, NULL, &retPath);
-	if (hr != S_OK)
-	{
-		return "";
-		// Log::Error("SHGetKnownFolderPath() returned %s.", hr == E_FAIL ? "E_FAIL" : "E_INVALIDARG");
-	}
-
-	return StrUtil::UnicodeString::ToASCII(retPath);
-}
-
-
-bool DirectoryUtil::IsImageName(const std::string & str)
-{
-	std::vector<std::string> FileNameAndExtension = StrUtil::split(str, '.');
-	if (FileNameAndExtension.size() < 2)
-		return false;
-
-	const std::string& extension = FileNameAndExtension[1];
-
-	bool bIsImageFile = false;
-	bIsImageFile = bIsImageFile || extension == "png";
-	bIsImageFile = bIsImageFile || extension == "jpg";
-	bIsImageFile = bIsImageFile || extension == "hdr";
-	return bIsImageFile;
-}

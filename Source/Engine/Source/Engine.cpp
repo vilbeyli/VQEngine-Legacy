@@ -149,7 +149,6 @@ bool Engine::Initialize(HWND hwnd)
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 	const Settings::Window& windowSettings = sEngineSettings.window;
 
-	Log::Initialize(Log::Mode::FILE);
 	mWorkerPool.Initialize(workerCount);
 	mpInput->Initialize();
 	if (!mpRenderer->Initialize(hwnd, windowSettings))
@@ -195,6 +194,8 @@ bool Engine::Load()
 		return false;
 	}
 
+	mpTimer->Reset();
+	mpTimer->Start();
 	{	// RENDER PASS INITIALIZATION
 		Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
 		mShadowMapPass.Initialize(mpRenderer, mpRenderer->m_device, rendererSettings.shadowMap);
@@ -218,7 +219,8 @@ bool Engine::Load()
 		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 		mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
 	}
-	Log::Info("---------------- INITIALIZING RENDER PASSES DONE ---------------- ");
+	mpTimer->Stop();
+	Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
 	mProfiler->EndEntry();
 	mProfiler->EndProfile();
 	return true;

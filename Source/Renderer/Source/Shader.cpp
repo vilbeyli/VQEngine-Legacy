@@ -20,6 +20,7 @@
 #include "Renderer.h"
 #include "Utilities/Log.h"
 #include "Utilities/utils.h"
+#include "Utilities/PerfTimer.h"
 
 #include <fstream>
 #include <sstream>
@@ -97,7 +98,10 @@ bool Shader::IsForwardPassShader(ShaderID shader)
 
 void Shader::LoadShaders(Renderer* pRenderer)
 {
-	Log::Info("\r------------------------ COMPILING SHADERS ------------------------ \n");
+	PerfTimer timer;
+	timer.Start();
+
+	Log::Info("------------------------ COMPILING SHADERS ------------------------");
 	
 	// todo: layouts from reflection?
 	const std::vector<InputLayout> layout = {
@@ -135,7 +139,9 @@ void Shader::LoadShaders(Renderer* pRenderer)
 	s_shaders[EShaders::BILATERAL_BLUR			]	= pRenderer->AddShader("BilateralBlur"			, BilateralBlurShaders		, VS_PS, layout);
 	s_shaders[EShaders::GAUSSIAN_BLUR_4x4		]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders	, VS_PS, layout);
 	s_shaders[EShaders::Z_PREPRASS				]	= pRenderer->AddShader("ZPrePass"				, ZPrePassShaders			, VS_PS, layout);
-	Log::Info("\r---------------------- COMPILING SHADERS DONE ---------------------\n");
+
+	timer.Stop();
+	Log::Info("---------------------- COMPILING SHADERS DONE IN %.2fs ---------------------", timer.DeltaTime());
 }
 
 std::stack<std::string> Shader::UnloadShaders(Renderer* pRenderer)
@@ -376,7 +382,6 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 		blobs.cs->Release();
 	if(blobs.ps)
 		blobs.ps->Release();
-	Log::Info(" Done.\n");
 }
 
 void Shader::SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob)

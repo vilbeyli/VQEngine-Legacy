@@ -18,6 +18,7 @@
 
 #include "Log.h"
 #include "utils.h"
+#include "Application/BaseSystem.h"
 
 #include <fstream>
 #include <iostream>
@@ -38,37 +39,35 @@ namespace Log
 static const WORD MAX_CONSOLE_LINES = 500;
 
 
-std::string InitLogFile()
+void InitLogFile()
 {
-	const std::string EngineWorkspaceDir = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "\\VQEngine";
-	const std::string LogFileDir = EngineWorkspaceDir + "\\Logs";
+	const std::string LogFileDir = BaseSystem::s_WorkspaceDirectory + "\\Logs";
 
 	std::string errMsg = "";
-	if (CreateDirectory(EngineWorkspaceDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+	if (CreateDirectory(LogFileDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
-		if (CreateDirectory(LogFileDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+		std::string fileName = GetCurrentTimeAsString() + "_VQEngineLog.txt";
+		sOutFile.open(LogFileDir + "\\" + fileName);
+		if (sOutFile)
 		{
-			std::string fileName = GetCurrentTimeAsString() + "_VQEngineLog.txt";
-			sOutFile.open(LogFileDir + "\\" + fileName);
-			if (sOutFile)
-			{
-				sOutFile << GetCurrentTimeAsStringWithBrackets() + "[Log] " << "Initialize() Done.";
-			}
-			else
-			{
-				errMsg = "Cannot open log file " + fileName;
-			}
+			std::string msg = GetCurrentTimeAsStringWithBrackets() + "[Log] " + "Initialize() Done.";
+			sOutFile << msg;
+			cout << msg << endl;
 		}
 		else
 		{
-			errMsg = "Failed to create directory " + LogFileDir;
+			errMsg = "Cannot open log file " + fileName;
 		}
 	}
 	else
 	{
-		errMsg = "Failed to create directory " + EngineWorkspaceDir;
+		errMsg = "Failed to create directory " + LogFileDir;
 	}
-	return errMsg;
+
+	if (!errMsg.empty())
+	{
+		MessageBox(NULL, errMsg.c_str(), "VQEngine: Error Initializing Logging", MB_OK);
+	}
 }
 void InitConsole()
 {
@@ -117,7 +116,6 @@ void InitConsole()
 
 void Initialize(Mode mode)
 {
-	std::string errMsg = "";
 	switch (mode)
 	{
 	case NONE:
@@ -128,21 +126,16 @@ void Initialize(Mode mode)
 		break;
 
 	case Log::FILE:
-		errMsg = InitLogFile();
+		InitLogFile();
 		break;
 	
 	case CONSOLE_AND_FILE:
 		InitConsole();
-		errMsg = InitLogFile();
+		InitLogFile();
 		break;
 
 	default:
 		break;
-	}
-
-	if (!errMsg.empty())
-	{
-		MessageBox(NULL, errMsg.c_str(), "VQEngine: Error Initializing Logging", MB_OK);
 	}
 }
 

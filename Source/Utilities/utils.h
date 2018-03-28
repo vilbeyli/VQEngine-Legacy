@@ -73,9 +73,10 @@ namespace DirectoryUtil
 	};
 
 	std::string	GetSpecialFolderPath(ESpecialFolder folder);
-
 	std::string	GetFileNameWithoutExtension(const std::string&);
 	bool		IsImageName(const std::string&);
+	bool		FileExists(const std::string& pathToFile);
+	bool		IsFileNewer(const std::string& file0, const std::string& file1);
 }
 
 

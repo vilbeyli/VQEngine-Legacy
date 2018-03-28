@@ -154,6 +154,7 @@ private:
 
 private:
 	static ShaderArray s_shaders;
+	static std::string s_shaderCacheDirectory;
 
 	const std::string					m_name;
 	std::vector<ConstantBuffer>			m_cBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx

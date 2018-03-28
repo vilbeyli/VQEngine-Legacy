@@ -24,9 +24,6 @@
     <ClInclude Include="$(SolutionDir)Source\Scenes\SSAOTestScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Source\Scenes\SceneTemplate.h.txt">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Scenes\IBLTestScene.cpp">
@@ -38,8 +35,9 @@
     <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Source\Scenes\SceneTemplate.cpp.txt">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Source\Scenes\SceneTemplate.h.txt" />
+    <None Include="..\Source\Scenes\SceneTemplate.cpp.txt" />
   </ItemGroup>
 </Project>

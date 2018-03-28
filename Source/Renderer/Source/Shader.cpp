@@ -21,11 +21,14 @@
 #include "Utilities/Log.h"
 #include "Utilities/utils.h"
 #include "Utilities/PerfTimer.h"
+#include "Application/BaseSystem.h"
 
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
 
+
+std::string Shader::s_shaderCacheDirectory = "";
 
 CPUConstant::CPUConstantPool CPUConstant::s_constants;
 size_t CPUConstant::s_nextConstIndex = 0;
@@ -98,6 +101,16 @@ bool Shader::IsForwardPassShader(ShaderID shader)
 
 void Shader::LoadShaders(Renderer* pRenderer)
 {
+	// create the ShaderCache folder if it doesn't exist
+	s_shaderCacheDirectory = BaseSystem::s_WorkspaceDirectory + "\\ShaderCache";
+	if (CreateDirectory(s_shaderCacheDirectory.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()){;}
+	else
+	{
+		std::string errMsg = "Failed to create directory " + s_shaderCacheDirectory;
+		MessageBox(NULL, errMsg.c_str(), "VQEngine: Error Initializing ShaderCache", MB_OK);
+	}
+
+
 	PerfTimer timer;
 	timer.Start();
 
@@ -231,12 +244,14 @@ Shader::~Shader(void)
 	}
 }
 
+
+
 void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths, const std::vector<InputLayout>& layouts)
 {
 	HRESULT result;
 
-	std::string info("\tCompiling "); info += m_name; info += "...";
-	Log::Info(info);
+	PerfTimer timer;
+	timer.Start();
 	
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
@@ -253,55 +268,140 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 		ID3D10Blob* of[EShaderType::COUNT] = { nullptr };
 	} blobs;
 
-	for (const auto& filePath : filePaths)
+	bool bPrinted = false;
+	for (const auto& sourceFilePath : filePaths)
 	{	// example filePath: "rootPath/filename_vs.hlsl"
 		//                                      ^^----- shaderTypeStr
-		const std::vector<std::string> RootAndFileName = StrUtil::split(filePath, '.');
+		const std::vector<std::string> RootAndFileName = StrUtil::split(sourceFilePath, '.');
 		const std::string shaderTypeStr = { *(RootAndFileName[0].rbegin() + 1), *RootAndFileName[0].rbegin() };
 		const EShaderType type = s_ShaderTypeStrLookup.at(shaderTypeStr);
 
-		blobs.of[type] = Compile(filePath, type);
-	}
 
-	
-	SetReflections(blobs.vs, blobs.ps, blobs.gs);
-	//CheckSignatures();
+		// SHADER CACHE
+		//
+		const std::string cacheFileName = DirectoryUtil::GetFileNameWithoutExtension(sourceFilePath) + ".hlsl.bin";
+		const std::string cacheFilePath = s_shaderCacheDirectory + "\\" + cacheFileName;
 
+		// TODO: save/load shader cache static functions() ?
+		// either output or read the cache.
+		const bool bCacheIsDirty = DirectoryUtil::IsFileNewer(sourceFilePath, cacheFilePath);
+		const bool bUseCachedShaders = DirectoryUtil::FileExists(cacheFilePath) && !bCacheIsDirty;
 
-	// CREATE SHADER PROGRAMS
-	//---------------------------------------------------------------------------
-	//create vertex shader buffer
-	// TODO: specify which shaders to compile. some might not need pixel shader
-	result = device->CreateVertexShader(blobs.vs->GetBufferPointer(), blobs.vs->GetBufferSize(), NULL, &m_vertexShader);
-	if (FAILED(result))
-	{
-		OutputDebugString("Error creating vertex shader program");
-		assert(false);
-	}
-
-	//create pixel shader buffer
-	result = device->CreatePixelShader( blobs.ps->GetBufferPointer(), blobs.ps->GetBufferSize(), NULL, &m_pixelShader);
-	if (FAILED(result))
-	{
-		OutputDebugString("Error creating pixel shader program");
-		assert(false);
-	}
-
-	// create geo shader buffer
-	if (blobs.gs)
-	{
-		result = device->CreateGeometryShader(  blobs.gs->GetBufferPointer(), blobs.gs->GetBufferSize(), NULL, &m_geometryShader);
-		if (FAILED(result))
+		if (!DirectoryUtil::FileExists(cacheFilePath) || bCacheIsDirty)
 		{
-			OutputDebugString("Error creating geometry shader program");
-			assert(false);
+			blobs.of[type] = Compile(sourceFilePath, type);
+			const size_t shaderBinarySize = blobs.of[type]->GetBufferSize();
+
+			char* pBuffer = reinterpret_cast<char*>(blobs.of[type]->GetBufferPointer());
+			std::ofstream cache(cacheFilePath, std::ios::out | std::ios::binary);
+			cache.write(pBuffer, shaderBinarySize);
+			cache.close();
+
+			switch (type)
+			{
+			case EShaderType::VS:
+				result = device->CreateVertexShader(pBuffer, shaderBinarySize, NULL, &m_vertexShader);
+				if (FAILED(result))
+				{
+					const char* msg = "Error creating vertex shader program";
+					Log::Error(msg);
+					assert(false);
+				}
+				break;
+			case EShaderType::PS:
+				result = device->CreatePixelShader(pBuffer, shaderBinarySize, NULL, &m_pixelShader);
+				if (FAILED(result))
+				{
+					const char* msg = "Error creating pixel shader program";
+					Log::Error(msg);
+					assert(false);
+				}
+				break;
+			case EShaderType::GS:
+				result = device->CreateGeometryShader(pBuffer, shaderBinarySize, NULL, &m_geometryShader);
+				if (FAILED(result))
+				{
+					OutputDebugString("Error creating geometry shader program");
+					assert(false);
+				}
+				break;
+			default:
+				break;
+			}
+
+			if (!bPrinted)
+			{
+				std::string info("\tCompiling from source "); info += m_name; info += "...";
+				Log::Info(info);
+				bPrinted = true;
+			}
+		}
+		else
+		{
+			std::ifstream cache(cacheFilePath, std::ios::in | std::ios::binary | std::ios::ate);
+			size_t shaderBinarySize = cache.tellg();
+			cache.seekg(0);
+			void* pBuffer = calloc(1, shaderBinarySize);
+
+			cache.read(reinterpret_cast<char*>(pBuffer), shaderBinarySize);
+			cache.close();
+
+			LPVOID pCache     = pBuffer;
+
+			ID3D10Blob* pBlob = { nullptr };
+			D3DCreateBlob(shaderBinarySize, &pBlob);
+			memcpy(pBlob->GetBufferPointer(), pBuffer, shaderBinarySize);
+			blobs.of[type] = pBlob;
+			switch (type)
+			{
+			case EShaderType::VS:
+				result = device->CreateVertexShader(pBuffer, shaderBinarySize, NULL, &m_vertexShader);
+				if (FAILED(result))
+				{
+					const char* msg = "Error creating vertex shader program";
+					Log::Error(msg);
+					assert(false);
+				}
+				break;
+			case EShaderType::PS:
+				result = device->CreatePixelShader(pBuffer, shaderBinarySize, NULL, &m_pixelShader);
+				if (FAILED(result))
+				{
+					const char* msg = "Error creating pixel shader program";
+					Log::Error(msg);
+					assert(false);
+				}
+				break;
+			case EShaderType::GS:
+				result = device->CreateGeometryShader(pBuffer, shaderBinarySize, NULL, &m_geometryShader);
+				if (FAILED(result))
+				{
+					OutputDebugString("Error creating geometry shader program");
+					assert(false);
+				}
+				break;
+			default:
+				break;
+			}
+			free(pBuffer);
+
+			if (!bPrinted)
+			{
+				std::string info("\tCompiling from cache "); info += m_name; info += "...";
+				Log::Info(info);
+				bPrinted = true;
+			}
 		}
 	}
+
+	SetReflections(blobs.vs, blobs.ps, blobs.gs);
+	//CheckSignatures();
 
 
 	// INPUT LAYOUT
 	//---------------------------------------------------------------------------
 #if 1
+
 	//setup the layout of the data that goes into the shader
 	std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(layouts.size());
 	D3D11_SHADER_DESC shaderDesc = {};

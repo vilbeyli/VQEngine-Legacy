@@ -35,6 +35,13 @@
 
 #include <winnt.h>
 
+// 2011**L::C++11 | 201402L::C++14 | 201703L::C++17
+#if _MSVC_LANG >= 201703L	// CPP17
+#include <experimental/filesystem>
+#else
+#include <fstream>
+#endif
+
 namespace StrUtil
 {
 	using std::vector;
@@ -103,12 +110,6 @@ namespace StrUtil
 	{
 		str = std::string(wstr.begin(), wstr.end());
 	}
-
-	std::string GetFileNameWithoutExtension(const std::string& path)
-	{	// example: path: "Archetypes/player.txt" | return val: "player"
-		string no_extension = split(path.c_str(), '.')[0];
-		return split(no_extension.c_str(), '/').back();
-	}
 }
 
 //---------------------------------------------------------------------------------------------
@@ -153,6 +154,29 @@ namespace DirectoryUtil
 		bIsImageFile = bIsImageFile || extension == "jpg";
 		bIsImageFile = bIsImageFile || extension == "hdr";
 		return bIsImageFile;
+	}
+
+	std::string GetFileNameWithoutExtension(const std::string& path)
+	{	// example: path: "Archetypes/player.txt" | return val: "player"
+		std::string no_extension = StrUtil::split(path.c_str(), '.')[0];
+		return StrUtil::split(no_extension.c_str(), '/').back();
+	}
+
+
+	bool FileExists(const std::string & pathToFile)
+	{	// src: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
+#if _MSVC_LANG >= 201703L	// CPP17
+		return std::experimental::filesystem::exists(pathToFile);
+#else
+		std::ifstream infile(pathToFile);
+		return infile.good();
+#endif
+	}
+
+	bool IsFileNewer(const std::string & file0, const std::string & file1)
+	{
+
+		return false;
 	}
 }
 
@@ -199,4 +223,3 @@ size_t RandU(size_t l, size_t h)
 	int offset = rand() % (h - l);
 	return l + static_cast<size_t>(offset);
 }
-

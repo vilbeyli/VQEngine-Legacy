@@ -32,9 +32,6 @@
     <ClInclude Include="$(SolutionDir)Source\Utilities\Profiler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\vectormath.h">
       <Filter>Header Files</Filter>
     </ClInclude>

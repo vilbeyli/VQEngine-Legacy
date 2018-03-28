@@ -23,11 +23,15 @@
 #define WIN32_LEAN_AND_MEAN		// speeds up build process
 
 #include <windows.h>
+#include <string>
 
 namespace Settings { struct Window; }
 
 class BaseSystem
 {
+public: 
+	static std::string s_WorkspaceDirectory;
+
 public:
 	BaseSystem();
 	BaseSystem(const BaseSystem&);

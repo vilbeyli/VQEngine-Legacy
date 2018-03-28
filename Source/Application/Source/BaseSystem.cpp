@@ -35,6 +35,8 @@
 
 #define xLOG_WINDOW_EVENTS
 
+std::string BaseSystem::s_WorkspaceDirectory = "";
+
 BaseSystem::BaseSystem()
 	:
 	m_appName("VQEngine Demo"),
@@ -51,6 +53,8 @@ BaseSystem::~BaseSystem(){}
 
 bool BaseSystem::Init()
 {
+	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "\\VQEngine";
+
 	Log::Initialize(Log::Mode::CONSOLE_AND_FILE);
 	const Settings::Window& windowSettings = Engine::ReadSettingsFromFile().window;
 	InitWindow(windowSettings);

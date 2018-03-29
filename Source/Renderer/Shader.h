@@ -28,32 +28,11 @@
 #include <vector>
 #include <stack>
 
-// CONSTANT BUFFER STRUCTS/ENUMS
-//------------------------------------------------------------------
-// Current limitations: 
-//  todo: revise this
-//  - cbuffers with same names in different shaders (PS/VS/GS/...)
-//  - cbuffers with same names in the same shader (not tested)
-
-
-struct ConstantBufferLayout
-{	// information used to create GPU/CPU constant buffers
-	D3D11_SHADER_BUFFER_DESC					desc;
-	std::vector<D3D11_SHADER_VARIABLE_DESC>		variables;
-	std::vector<D3D11_SHADER_TYPE_DESC>			types;
-	unsigned									buffSize;
-	EShaderType									shdType;
-	unsigned									bufSlot;
-};
-
-
-
-// Cached (CPU) constant buffer
-// -------------------------------------------------------------------
-#define EQUALITY_OPTIMIZED
 constexpr size_t MAX_CONSTANT_BUFFERS = 512;
 
 using CPUConstantID = int;
+using GPU_ConstantBufferSlotIndex = int;
+using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
 
 struct CPUConstant
 {
@@ -62,7 +41,7 @@ struct CPUConstant
 
 	friend class Renderer;
 	friend class Shader;
-	
+
 	inline static	CPUConstant&			Get(int id) { return s_constants[id]; }
 	static			CPUConstantRefIDPair	GetNextAvailable();
 	static			void					CleanUp();	// call once
@@ -76,60 +55,94 @@ private:
 	static CPUConstantPool	s_constants;
 	static size_t			s_nextConstIndex;
 
-#ifdef EQUALITY_OPTIMIZED
 	inline bool operator==(const CPUConstant& c) const { return (((this->_data == c._data) && this->_size == c._size) && this->_name == c._name); }
 	inline bool operator!=(const CPUConstant& c) const { return ((this->_data != c._data) || this->_size != c._size || this->_name != c._name); }
-#endif
 };
-
-// GPU side constant buffer
 struct ConstantBuffer
-{
+{	// GPU side constant buffer
 	EShaderType shdType;
 	unsigned	bufferSlot;
 	ID3D11Buffer* data;
 	bool dirty;
 };
-//-------------------------------------------------------------
-
-// SHADER RESOURCE MANAGEMENT
-//-------------------------------------------------------------
 struct ShaderTexture
 {
 	std::string name;
 	unsigned bufferSlot;
 	EShaderType shdType;
 };
-
-
 struct ShaderSampler
 {
 	std::string name;
 	unsigned bufferSlot;
 	EShaderType shdType;
 };
-//-------------------------------------------------------------
-
 struct InputLayout
 {
 	std::string		semanticName;
 	ELayoutFormat	format;
 };
 
-using GPU_ConstantBufferSlotIndex = int;
-using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
-using ShaderArray = std::array<ShaderID, EShaders::SHADER_COUNT>;
-
 class Shader
 {
 	friend class Renderer;
+
+	using ShaderArray = std::array<ShaderID, EShaders::SHADER_COUNT>;
+
+public:
+	// STRUCTS/ENUMS
+	//------------------------------------------------------------------
+	// Current limitations for Constant Buffers: 
+	//  todo: revise this
+	//  - cbuffers with same names in different shaders (PS/VS/GS/...)
+	//  - cbuffers with same names in the same shader (not tested)
+	// --------------------------------------------------------------------------------------------------
+	union ShaderBlobs
+	{
+		struct 
+		{
+			ID3D10Blob* vs;
+			ID3D10Blob* gs;
+			ID3D10Blob* ds;
+			ID3D10Blob* hs;
+			ID3D10Blob* cs;
+			ID3D10Blob* ps;
+		};
+		ID3D10Blob* of[EShaderType::COUNT] = { nullptr };
+	};
+	union ShaderReflections
+	{
+		struct 
+		{
+			ID3D11ShaderReflection* vsRefl;
+			ID3D11ShaderReflection* gsRefl;
+			ID3D11ShaderReflection* dsRefl;
+			ID3D11ShaderReflection* hsRefl;
+			ID3D11ShaderReflection* csRefl;
+			ID3D11ShaderReflection* psRefl;
+		};
+		ID3D11ShaderReflection* of[EShaderType::COUNT] = { nullptr };
+	};
+	struct ConstantBufferLayout
+	{	// information used to create GPU/CPU constant buffers
+		D3D11_SHADER_BUFFER_DESC					desc;
+		std::vector<D3D11_SHADER_VARIABLE_DESC>		variables;
+		std::vector<D3D11_SHADER_TYPE_DESC>			types;
+		unsigned									buffSize;
+		EShaderType									shdType;
+		unsigned									bufSlot;
+	};
+	// --------------------------------------------------------------------------------------------------
+
 public:
 	static const ShaderArray&		Get() { return s_shaders; }
 	static void						LoadShaders(Renderer* pRenderer);
 	static std::stack<std::string>	UnloadShaders(Renderer* pRenderer);
-	static void						ReloadShaders(Renderer* pRenderer);
+	static void						ReloadShaders(Renderer* pRenderer);		// do we really need this?
 	static bool						IsForwardPassShader(ShaderID shader);
-	
+
+	// --------------------------------------------------------------------------------------------------
+
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
@@ -142,13 +155,28 @@ public:
 	const std::vector<ConstantBuffer>&			GetConstantBuffers() const;
 
 private:
+	static ID3D10Blob * CompileFromSource(const std::string& filename, const EShaderType& type);
+	
+	// Reads in cached binary from %APPDATA%/VQEngine/ShaderCache folder into ID3D10Blob 
+	//
+	static ID3D10Blob * CompileFromCachedBinary(const std::string& cachedBinaryFilePath);
+
+	// Writes out compiled ID3D10Blob into %APPDATA%/VQEngine/ShaderCache folder
+	//
+	static void			CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blob * pCompiledBinary);
+
+	// example filePath: "rootPath/filename_vs.hlsl"
+	//                                      ^^----- shaderTypeStr
+	//
+	static EShaderType	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
+
 	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, EShaderType type);
 	void CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths, const std::vector<InputLayout>& layouts);
-	void SetReflections(ID3D10Blob* vsBlob, ID3D10Blob* psBlob, ID3D10Blob* gsBlob);
-	void CheckSignatures();
+	void SetReflections(const ShaderBlobs& blobs);
+	void CreateShader(ID3D11Device* pDevice, EShaderType type, void* pBuffer, const size_t szShaderBinary);
 	void SetConstantBuffers(ID3D11Device* device);
+	void CheckSignatures();
 	
-	ID3D10Blob* Compile(const std::string& filename, const EShaderType& type);
 
 	void LogConstantBufferLayouts() const;
 
@@ -166,10 +194,7 @@ private:
 	ID3D11HullShader*					m_hullShader;
 	ID3D11DomainShader*					m_domainShader;
 	ID3D11ComputeShader*				m_computeShader;
-
-	ID3D11ShaderReflection*				m_vsRefl;	// shader reflections, temporary?
-	ID3D11ShaderReflection*				m_psRefl;	// shader reflections, temporary?
-	ID3D11ShaderReflection*				m_gsRefl;	// shader reflections, temporary?
+	ShaderReflections					m_shaderReflections;	// shader reflections, temporary?
 
 	ID3D11InputLayout*					m_layout;
 
@@ -181,4 +206,3 @@ private:
 	std::vector<ShaderSampler>			m_samplers;
 	
 };
-

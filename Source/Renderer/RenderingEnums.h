@@ -142,7 +142,7 @@ enum EImageFormat
 };
 
 
-enum EShaderType
+enum EShaderType : unsigned
 {	// used to map **SetShaderConstant(); function in Renderer::Apply()
 	VS = 0,
 	GS,

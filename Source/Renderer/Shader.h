@@ -166,7 +166,7 @@ private:
 	static void			CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blob * pCompiledBinary);
 
 	// example filePath: "rootPath/filename_vs.hlsl"
-	//                                      ^^----- shaderTypeStr
+	//                                      ^^----- shaderTypeString
 	//
 	static EShaderType	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
 

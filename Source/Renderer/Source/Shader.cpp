@@ -112,7 +112,10 @@ void Shader::LoadShaders(Renderer* pRenderer)
 {
 	// create the ShaderCache folder if it doesn't exist
 	s_shaderCacheDirectory = BaseSystem::s_WorkspaceDirectory + "\\ShaderCache";
-	if (CreateDirectory(s_shaderCacheDirectory.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError()){;}
+	if (CreateDirectory(s_shaderCacheDirectory.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+	{
+		;// directory either successfully created or already exists: NOP
+	}
 	else
 	{
 		std::string errMsg = "Failed to create directory " + s_shaderCacheDirectory;

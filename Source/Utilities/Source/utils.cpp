@@ -38,6 +38,8 @@
 // 2011**L::C++11 | 201402L::C++14 | 201703L::C++17
 #if _MSVC_LANG >= 201703L	// CPP17
 #include <experimental/filesystem>
+
+namespace filesys = std::experimental::filesystem;
 #else
 #include <fstream>
 #endif
@@ -166,7 +168,7 @@ namespace DirectoryUtil
 	bool FileExists(const std::string & pathToFile)
 	{	// src: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
 #if _MSVC_LANG >= 201703L	// CPP17
-		return std::experimental::filesystem::exists(pathToFile);
+		return filesys::exists(pathToFile);
 #else
 		std::ifstream infile(pathToFile);
 		return infile.good();
@@ -175,8 +177,16 @@ namespace DirectoryUtil
 
 	bool IsFileNewer(const std::string & file0, const std::string & file1)
 	{
-
-		return false;
+#if _MSVC_LANG >= 201703L // CPP17 
+		return filesys::last_write_time(file0) > filesys::last_write_time(file1);
+#else
+		FILETIME ftCreate[2], ftAccess[2], ftWrite[2];
+		HANDLE hFile0 = CreateFile(file0.data(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		HANDLE hFile1 = CreateFile(file1.data(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		GetFileTime(hFile0, &ftCreate[0], &ftAccess[0], &ftWrite[0]);
+		GetFileTime(hFile1, &ftCreate[1], &ftAccess[1], &ftWrite[1]);
+		return CompareFileTime(&ftWrite[0], &ftWrite[1]) == 1;
+#endif
 	}
 }
 

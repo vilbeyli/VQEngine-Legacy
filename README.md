@@ -4,7 +4,7 @@
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
-![](Data/Screenshots/IBL_la.PNG)
+![](Screenshots/IBL_la.PNG)
 
 <center><i>BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting</i></center>
 
@@ -39,11 +39,11 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 <center><i>PCF Shadows, CPU profiler, Text Rendering</i></center>
 
-![](Data/Screenshots/space_gold.PNG)
+![](Screenshots/space_gold.PNG)
 
 <center><i>SSAO w/ Gaussian Blur</i></center>
 
-![](Data/Screenshots/SSAO_GaussianBlur.PNG)
+![](Screenshots/SSAO_GaussianBlur.PNG)
 
 # Prerequisites
 

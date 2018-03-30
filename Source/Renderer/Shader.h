@@ -138,7 +138,6 @@ public:
 	static const ShaderArray&		Get() { return s_shaders; }
 	static void						LoadShaders(Renderer* pRenderer);
 	static std::stack<std::string>	UnloadShaders(Renderer* pRenderer);
-	static void						ReloadShaders(Renderer* pRenderer);		// do we really need this?
 	static bool						IsForwardPassShader(ShaderID shader);
 
 	// --------------------------------------------------------------------------------------------------
@@ -167,7 +166,6 @@ private:
 
 	// example filePath: "rootPath/filename_vs.hlsl"
 	//                                      ^^----- shaderTypeString
-	//
 	static EShaderType	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
 
 	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, EShaderType type);

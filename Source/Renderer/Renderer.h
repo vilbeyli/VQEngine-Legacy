@@ -100,7 +100,7 @@ public:
 	~Renderer();
 	bool					Initialize(HWND hwnd, const Settings::Window& settings);
 	void					Exit();
-	inline void				ReloadShaders() { Shader::ReloadShaders(this); }
+	inline void				ReloadShaders() { Shader::UnloadShaders(this); Shader::LoadShaders(this); }
 
 	// GETTERS
 	//----------------------------------------------------------------------------------

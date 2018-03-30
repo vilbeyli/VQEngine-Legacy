@@ -135,19 +135,14 @@ void Shader::LoadShaders(Renderer* pRenderer)
 		{ "TANGENT",	FLOAT32_3 },
 		{ "TEXCOORD",	FLOAT32_2 },
 	};
-
 	const std::vector<EShaderType> VS_PS  = { EShaderType::VS, EShaderType::PS };
-
 	const std::vector<std::string> TextureCoordinates = { "MVPTransformationWithUVs_vs", "TextureCoordinates_ps" };
-
-	const std::vector<std::string> BilateralBlurShaders			= { "FullscreenQuad_vs", "BilateralBlur_ps" };	// compute?
-	const std::vector<std::string> GaussianBlur4x4Shaders		= { "FullscreenQuad_vs", "GaussianBlur4x4_ps" };	// compute?
-
-	const std::vector<std::string> ZPrePassShaders				= { "Deferred_Geometry_vs", "ViewSpaceNormalsAndPositions_ps" };	
-
+	const std::vector<std::string> BilateralBlurShaders	= { "FullscreenQuad_vs", "BilateralBlur_ps" };	// compute?
+	const std::vector<std::string> GaussianBlur4x4Shaders= { "FullscreenQuad_vs", "GaussianBlur4x4_ps" };	// compute?
+	const std::vector<std::string> ZPrePassShaders	= { "Deferred_Geometry_vs", "ViewSpaceNormalsAndPositions_ps" };
 	const std::vector<std::string> EQSkybox = {"Skybox_vs", "SkyboxEquirectangular_ps"};
 
-	// todo: limit enumerations? probably better to store just some ids
+	// todo: limit enumerations? probably better to store just some ids...
 	s_shaders[EShaders::FORWARD_PHONG			]	= pRenderer->AddShader("Forward_Phong"			, layout);
 	s_shaders[EShaders::UNLIT					]	= pRenderer->AddShader("UnlitTextureColor"		, layout);
 	s_shaders[EShaders::TEXTURE_COORDINATES		]	= pRenderer->AddShader("TextureCoordinates"		, TextureCoordinates, VS_PS, layout);
@@ -181,14 +176,6 @@ std::stack<std::string> Shader::UnloadShaders(Renderer* pRenderer)
 	pRenderer->mShaders.clear();
 	CPUConstant::s_nextConstIndex = 0;
 	return fileNames;
-}
-
-void Shader::ReloadShaders(Renderer* pRenderer)
-{
-	Log::Info("Reloading Shaders...");
-	UnloadShaders(pRenderer);
-	LoadShaders(pRenderer);
-	Log::Info("Done");
 }
 
 Shader::Shader(const std::string& shaderFileName)

@@ -36,9 +36,10 @@ VS_PATH = r"PATH_NOT_FOUND"         # to be assigned
 DEVENV_PATH = r"PATH_NOT_FOUND"     # to be assigned
 MSBUILD_PATH = r"PATH_NOT_FOUND"    # to be assigned    
 
-LOG_DEVENV = r"./LogFiles/devenv_out.log"
-LOG_MSBUILD_S = r"./LogFiles/msbuild_out_st.log"
-LOG_MSBUILD_M = r"./LogFiles/msbuild_out_mt.log"
+APPDATA = os.getenv('APPDATA')
+LOG_DEVENV = APPDATA + r"/VQEngine/Logs/Build/devenv_out.log"
+LOG_MSBUILD_S = APPDATA +  r"/VQEngine/Logs/Build/msbuild_out_st.log"
+LOG_MSBUILD_M = APPDATA +  r"/VQEngine/Logs/Build/msbuild_out_mt.log"
 
 SOLUTION_FILE = r"VQEngine.sln"
 ARTIFACTS_PATH = r"./Build/_artifacts"  # <-- Output directory 
@@ -108,14 +109,14 @@ def PrintPaths():
 
 # CLEAN
 def CleanProjectFolders(bPrintOutput):
-    print("Robocopy:      Cleaning up project folders...")
+    print("Cleaning up project folders...")
     #TODO: handle log files. either append date or delete previous
 
     return RobocopyRemoveFolder("./Build", bPrintOutput)
 
 # MSBUILD
 def BuildProject_msbuild():
-    print("MSBuild:       Building the project...")
+    print("Building the project [MSBuild]...")
     global MSBUILD_PATH, LOG_MSBUILD_S, LOG_MSBUILD_M
     cmd = "\"" + MSBUILD_PATH + "\" /p:Configuration=Release /p:BuildInParallel=TRUE" # + LOG_MSBUILD_S
     ret = RunSubprocess(cmd, True)
@@ -124,7 +125,7 @@ def BuildProject_msbuild():
 
 # DEVENV
 def BuildProject_devenv(bPrintOutput):
-    print("devenv:        Building the project...")
+    print("Building the project [devenv]...")
     global DEVENV_PATH, LOG_DEVENV
     cmd = "\"" + DEVENV_PATH + "\" " + SOLUTION_FILE + " /build RELEASE /out " + LOG_DEVENV
     ret = RunSubprocess(cmd, bPrintOutput)
@@ -133,7 +134,7 @@ def BuildProject_devenv(bPrintOutput):
 
 # PACKAGE
 def PackageBinaries(bPrintOutput):
-    print("Robocopy:      Packaging the build artifacts...")
+    print("Packaging the build artifacts...")
     global ARTIFACTS_PATH
     
     # cleanup artifacts
@@ -174,7 +175,14 @@ def PackageBinaries(bPrintOutput):
     return True
 
 
+def InitLog():
+    log_folder = os.path.dirname(LOG_DEVENV)
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder)
+    return
+
 #---------------------------- ENTRY POINT ----------------------------
+InitLog()
 if CheckVisualStudio():
     # PrintPaths()
 

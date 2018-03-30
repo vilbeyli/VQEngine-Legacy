@@ -38,9 +38,9 @@ set msbuild=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuil
 
 set solution=VQEngine.sln
 
-set log_devenv=./LogFiles/devenv_out.log
-set log_msbuild_s=./LogFiles/msbuild_out_st.log
-set log_msbuild_m=./LogFiles/msbuild_out_mt.log
+set log_devenv=%APPDATA%\VQEngine\Logs\Build\devenv_out.log
+set log_msbuild_s=%APPDATA%\VQEngine\Logs\Build\msbuild_out_st.log
+set log_msbuild_m=%APPDATA%\VQEngine\Logs\Build\msbuild_out_mt.log
 
 REM TODO: figure out multi-threaded msbuild or faster. this takes 42s while devenv takes ~20s
 REM set MSBuild_MultiThreaded=True
@@ -52,6 +52,8 @@ REM call :CleanUp
 REM call :MSBuild_Build %MSBuild_MultiThreaded% %log_msbuild_s%
 
 cls
+if not exist "%APPDATA%\VQEngine\Logs\Build" mkdir "%APPDATA%\VQEngine\Logs\Build
+
 call :CleanUp
 call :Devenv_Build RELEASE, %log_devenv%
 call :PackageBinaries
@@ -73,7 +75,7 @@ EXIT /B 0
 
 REM Cleanup before build for a clean build
 :CleanUp
-echo Robocopy   : Cleaning up the project folders...
+echo Cleaning up the project folders...
 cd Build
 if not exist Empty mkdir Empty
 robocopy ./Empty ./ /purge /MT:8 > nul
@@ -82,7 +84,7 @@ EXIT /B 0
 
 
 :PackageBinaries
-echo Robocopy   : Cleaning up the artifacts folders...
+echo Cleaning up the artifacts folder...
 cd Build
 if not exist Empty mkdir Empty
 robocopy ./Empty ./_artifacts /purge /MT:8 > nul
@@ -105,7 +107,7 @@ EXIT /B 0
 
 
 :MSBuild_Build
-if %1==True (echo MSBuild    : Building the project [Multi-thread]...) else (echo MSBuild    : Building the project [Single-thread]...)
+if %1==True (Building the project [MSBuild Multi-thread]...) else (echo Building the project [MSBuild Single-thread]...)
 
 REM cleanup log file if it exists
 if exist %2 rm %2 
@@ -124,7 +126,7 @@ EXIT /B 0
 REM cleanup log file if it exists
 if exist %2 rm %2 
 
-echo devenv     : Building the project...
+echo Building the project [devenv]...
 echo              begin %TIME%
 "%devenv%" %solution% /build %1 /out %2
 echo              end   %TIME%

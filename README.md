@@ -10,11 +10,12 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 # Feature List / Version History
 
- *v0.2.1 - Automated Build, Performance Logging, Text Rendering - TBA(March)*
+ *v0.3.0 - Automated Build, Logging, Text Rendering, CPU & GPU Profiler - ETA: Early April*
  - Text Rendering
  - CPU Profiler
  - GPU Profiler (**WIP**)
  - Build scripts (Python, Batch) & Automated Build (AppVeyor)
+ - Logging: Console and/or Log Files
 
  *v0.2.0 - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
  - On-the-fly-switchable Forward/Deferred Rendering

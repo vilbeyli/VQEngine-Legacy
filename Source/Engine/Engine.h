@@ -121,7 +121,9 @@ private:
 	static Settings::Engine			sEngineSettings;
 	
 	bool							mbIsPaused;
-	bool							mbShowStats;
+	bool							mbShowProfiler;
+	bool							mbShowControls;
+	FrameStats						mFrameStats;
 
 	// systems
 	//--------------------------------------------------------
@@ -159,7 +161,7 @@ private:
 
 	bool							mbUseDeferredRendering;	// todo read from sceneview
 	bool							mbIsAmbientOcclusionOn;	// todo read from sceneview
-	bool							mDebugRender;			// todo read from sceneview
+	bool							mDisplayRenderTargets;			// todo read from sceneview
 	
 
 	std::vector<const GameObject*>	mZPassObjects;

@@ -22,6 +22,7 @@
 #include "Engine/Engine.h"
 #include "Engine/Settings.h"
 
+#include "Utilities/utils.h"
 #include "Utilities/CustomParser.h"
 #include "Utilities/Log.h"
 

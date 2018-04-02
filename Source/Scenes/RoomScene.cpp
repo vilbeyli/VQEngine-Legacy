@@ -144,10 +144,17 @@ void RoomScene::Update(float dt)
 
 void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj);
 
-void RoomScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
+int RoomScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
 {
 	m_room.Render(mpRenderer, sceneView, bSendMaterialData);
-	for (const auto& sph : spheres) sph.Render(mpRenderer, sceneView, bSendMaterialData);
+	int numObj = 6;
+
+	for (const auto& sph : spheres)
+	{
+		sph.Render(mpRenderer, sceneView, bSendMaterialData);
+		++numObj;
+	}
+	return numObj;
 }
 
 void RoomScene::GetShadowCasters(std::vector<const GameObject*>& casters) const

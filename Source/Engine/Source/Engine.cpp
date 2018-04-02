@@ -81,7 +81,7 @@ void Engine::ToggleLightingModel()
 	mSelectedShader = mbUseDeferredRendering 
 		? mDeferredRenderingPasses._geometryShader
 		: (isBRDF ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG);
-	Log::Info("Toggle Lighting Model: %s Ligting", isBRDF ? "PBR - BRDF" : "Blinn-Phong");
+	Log::Info("Toggle Lighting Model: %s Lighting", isBRDF ? "PBR - BRDF" : "Blinn-Phong");
 }
 
 void Engine::ToggleRenderingPath()
@@ -168,7 +168,7 @@ bool Engine::Initialize(HWND hwnd)
 	// render passes
 	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
 	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
-	mDebugRender = true;
+	mDisplayRenderTargets = true;
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 	return true;
@@ -231,31 +231,28 @@ bool Engine::HandleInput()
 {
 	if (mpInput->IsKeyTriggered("Backspace"))	TogglePause();
 
-	if (!mbUseDeferredRendering)
-	{	// forward only keys
-		if (mpInput->IsKeyTriggered("F1")) mSelectedShader = EShaders::TEXTURE_COORDINATES;
-		if (mpInput->IsKeyTriggered("F2")) mSelectedShader = EShaders::NORMAL;
-		if (mpInput->IsKeyTriggered("F3")) mSelectedShader = EShaders::UNLIT;
-		if (mpInput->IsKeyTriggered("F4")) mSelectedShader = mSelectedShader == EShaders::TBN ? (sEngineSettings.rendering.bUseBRDFLighting ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG) : EShaders::TBN;
+	if (mpInput->IsKeyTriggered("F1")) ToggleLightingModel();
+	if (mpInput->IsKeyTriggered("F2")) ToggleAmbientOcclusion();
+	if (mpInput->IsKeyTriggered("F3")) mPostProcessPass._bloomPass.ToggleBloomPass();
+	if (mpInput->IsKeyTriggered("F4")) mDisplayRenderTargets = !mDisplayRenderTargets;
+	if (mpInput->IsKeyTriggered("F5")) ToggleRenderingPath();
 
-		if (mpInput->IsKeyTriggered("F5")) mSelectedShader = IsLightingModelPBR() ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
-	}
 
-	//if (mpInput->IsKeyTriggered("F5")) mpRenderer->sEnableBlend = !mpRenderer->sEnableBlend;
-	if (mpInput->IsKeyTriggered("F6")) ToggleLightingModel();
-	if (mpInput->IsKeyTriggered("F7")) mDebugRender = !mDebugRender;
-	if (mpInput->IsKeyTriggered("F8")) ToggleRenderingPath();
-
-	if (mpInput->IsKeyTriggered("F9")) mPostProcessPass._bloomPass.ToggleBloomPass();
-	if (mpInput->IsKeyTriggered(";")) 
+	if (mpInput->IsKeyTriggered(";"))
 	{
-		if (mpInput->IsKeyDown("Shift"))	mbShowStats = !mbShowStats;
-		else								ToggleAmbientOcclusion();
+		if (mpInput->IsKeyDown("Shift"))	;
+		else								mbShowProfiler = !mbShowProfiler; 
 	}
+	if (mpInput->IsKeyTriggered("'"))
+	{
+		if (mpInput->IsKeyDown("Shift"))	mbShowControls = !mbShowControls;
+		else								mFrameStats.bShow = !mFrameStats.bShow;
+	}
+
 
 	if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
-	//if (m_input->IsKeyTriggered(";")) m_bUsePaniniProjection = !m_bUsePaniniProjection;
 
+	// todo: wire this to some UI text/control
 	if (mbIsAmbientOcclusionOn)
 	{
 		if (mpInput->IsKeyDown("Shift"))
@@ -496,7 +493,8 @@ void Engine::SendLightData() const
 void Engine::Render()
 {
 	mProfiler->BeginEntry("Render()");
-	
+	mpRenderer->BeginFrame();
+
 	const XMMATRIX& viewProj = mSceneView.viewProj;
 	const Scene* pScene = mpSceneManager->mpActiveScene;
 
@@ -513,7 +511,7 @@ void Engine::Render()
 
 	// LIGHTING PASS
 	//------------------------------------------------------------------------
-	mpRenderer->Reset();
+	mpRenderer->ResetPipelineState();
 	mpRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
 	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 
@@ -532,7 +530,7 @@ void Engine::Render()
 		mProfiler->BeginEntry("Geometry Pass");
 		mpRenderer->BeginEvent("Geometry Pass");
 		mDeferredRenderingPasses.SetGeometryRenderingStates(mpRenderer);
-		mpSceneManager->Render(mpRenderer, mSceneView);
+		mFrameStats.numSceneObjects = mpSceneManager->Render(mpRenderer, mSceneView);
 		mpRenderer->EndEvent();	mProfiler->EndEntry();
 
 		// AMBIENT OCCLUSION  PASS
@@ -600,7 +598,7 @@ void Engine::Render()
 			mpRenderer->BindRenderTarget(normals);
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
-			mpRenderer->Begin(clearCmd);
+			mpRenderer->BeginRender(clearCmd);
 			mpSceneManager->Render(mpRenderer, mSceneView);
 			mpRenderer->EndEvent();
 
@@ -625,7 +623,7 @@ void Engine::Render()
 		mpRenderer->BindRenderTarget(mPostProcessPass._worldRenderTarget);
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
-		mpRenderer->Begin(clearCmd);
+		mpRenderer->BeginRender(clearCmd);
 
 		// SKYBOX
 		// if we're not rendering the skybox, call apply() to unbind
@@ -713,7 +711,7 @@ void Engine::Render()
 
 	// DEBUG PASS
 	//------------------------------------------------------------------------
-	if (mDebugRender)
+	if (mDisplayRenderTargets)
 	{
 		mProfiler->BeginEntry("Debug Textures");
 		const int screenWidth  = sEngineSettings.window.width;
@@ -788,17 +786,80 @@ void Engine::Render()
 	drawDesc.scale = 0.45f;
 
 	// Performance stats
-	if (mbShowStats)
+	if (mbShowProfiler)
 	{
-		bool bSortStats = true;
-		mProfiler->RenderPerformanceStats(mpTextRenderer, vec2(sEngineSettings.window.width * 0.81f, 30.0f), drawDesc, bSortStats);
+		const bool bSortStats = true;
+		const float X_POS = sEngineSettings.window.width * 0.81f;
+		const float Y_POS = 30.0f;
+		mProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 	}
+	if (mFrameStats.bShow)
+	{
+		const float X_POS = sEngineSettings.window.width * 0.81f;
+		const float Y_POS = 600.0f;
+		mFrameStats.rstats = mpRenderer->GetRenderStats();
+		mFrameStats.Render(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc);
+	}
+	if (mbShowControls)
+	{
+		TextDrawDescription _drawDesc(drawDesc);
+		_drawDesc.color = vec3(1, 1, 0) * 0.8f;
+		int numLine = FrameStats::numStat + 1;
+
+		const float X_POS = sEngineSettings.window.width * 0.81f;
+		const float Y_POS = 600.0f;
+		const float LINE_HEIGHT = 25.0f;
+		vec2 screenPosition(X_POS, Y_POS);
+		
+		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		_drawDesc.text = std::string("F1 - Lighting Model: ") + (!sEngineSettings.rendering.bUseBRDFLighting ? "Blinn-Phong" : "PBR - BRDF");
+		mpTextRenderer->RenderText(_drawDesc);
+
+		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		_drawDesc.text = std::string("F2 - SSAO: ") + (mbIsAmbientOcclusionOn ? "On" : "Off");
+		mpTextRenderer->RenderText(_drawDesc);
+
+		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		_drawDesc.text = std::string("F3 - Bloom: ") + (mPostProcessPass._bloomPass._isEnabled ? "On" : "Off");
+		mpTextRenderer->RenderText(_drawDesc);
+
+		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		_drawDesc.text = std::string("F4 - Display Render Targets: ") + (mDisplayRenderTargets ? "On" : "Off");
+		mpTextRenderer->RenderText(_drawDesc);
+
+		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		_drawDesc.text = std::string("F5 - Render Mode: ") + (!mbUseDeferredRendering ? "Forward" : "Deferred");
+		mpTextRenderer->RenderText(_drawDesc);
+	}
+
 	mProfiler->EndEntry();
 
 #endif
 	mProfiler->BeginEntry("Present");
-	mpRenderer->End();
+	mpRenderer->EndFrame();
 	mProfiler->EndEntry();
 	mProfiler->EndEntry();
 }
 
+const char* FrameStats::statNames[FrameStats::numStat] =
+{
+	"Objects: ",
+	"Culled Objects: ",
+	"Vertices: ",
+	"Indices: ",
+	"Draw Calls: ",
+};
+void FrameStats::Render(TextRenderer* pTextRenderer, const vec2& screenPosition, const TextDrawDescription& drawDesc)
+{
+	TextDrawDescription _drawDesc(drawDesc);
+	const float LINE_HEIGHT = 25.0f;
+	constexpr size_t RENDER_ORDER[] = { 4, 2, 3, 0, 1 };
+
+	pTextRenderer->RenderText(_drawDesc);
+	for (size_t i = 0; i < FrameStats::numStat; ++i)
+	{
+		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + i * LINE_HEIGHT);
+		_drawDesc.text = FrameStats::statNames[RENDER_ORDER[i]] + std::to_string(FrameStats::stats[RENDER_ORDER[i]]);
+		pTextRenderer->RenderText(_drawDesc);
+	}
+}

@@ -80,19 +80,20 @@ Scenes:
 | Engine Controls |  |
 | :---: | :--- |
 | **PageUp / PageDown** | Change Environment Map / Skybox |
-| **F1** |	TexCoord Shader (Forward Rendering Only) |
-| **F2** |	Normals Shader (Forward Rendering Only) |
-| **F3** |	Diffuse Color Shader (Forward Rendering Only) |
-| **F4** |	Toggle TBN Shader (Forward Rendering Only) |
-| **F5** |	Lighting Shader (Forward Rendering Only) |
-| **F6** |	Toggle Lighting Shaders (Phong/BRDF) |
-| **F7** |	Toggle Debug Shader |
-| **F8** |	Toggle Forward/Deferred Rendering |
-| **F9** |	Toggle Bloom |
-| **;** |	Toggle Ambient Occlusion |
-| **Shift+;** |	Toggle Performance Stats |
+| **;** |	Toggle Displaying CPU/GPU Performance Numbers |
+| **'** |	Toggle Displaying Rendering Stats |
+| **Shift + '** |	Toggle Displaying Renderer Controls |
 | **Backspace** | Pause App |
 | **ESC** |	Exit App |
+
+| Renderer Controls | |
+| :---: | :--- |
+| **F1** |	Toggle Lighting Shaders (Phong/BRDF) |
+| **F2** |	Toggle Ambient Occlusion |
+| **F3** |	Toggle Bloom |
+| **F4** |	Toggle Display Render Targets |
+| **F5** |	Toggle Forward/Deferred Rendering |
+| **\\** |  Reload Shaders |
 
 # 3rd Party Open Source Libraries
  

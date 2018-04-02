@@ -92,9 +92,15 @@ void SSAOTestScene::Update(float dt)
 	
 }
 
-void SSAOTestScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
+int SSAOTestScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
 {
-	for (const auto& obj : cubes) obj.Render(mpRenderer, sceneView, bSendMaterialData);
+	int numObj = 0;
+	for (const auto& obj : cubes)
+	{
+		++numObj;
+		obj.Render(mpRenderer, sceneView, bSendMaterialData);
+	}
+	return numObj;
 }
 
 void SSAOTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const

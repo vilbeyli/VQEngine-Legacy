@@ -308,7 +308,8 @@ void Shader::CompileShaders(ID3D11Device* pDevice, const std::vector<std::string
 		CreateShader(pDevice, type, blobs.of[type]->GetBufferPointer(), blobs.of[type]->GetBufferSize());
 		if (!bPrinted)
 		{
-			Log::Info("\tCompiling from %s %s...", bUseCachedShaders ? "cached shader binaries" : "source", m_name.c_str());
+			const char* pMsgLoad = bUseCachedShaders ? "Loading cached shader binaries" : "Compiling shader from source";
+			Log::Info("\t%s %s...", pMsgLoad, m_name.c_str());
 			bPrinted = true;
 		}
 

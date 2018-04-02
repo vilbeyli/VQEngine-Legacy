@@ -142,9 +142,9 @@ void SceneManager::Update(float dt)
 }
 //-----------------------------------------------------------------------------------------------------------------------------------------
 
-void SceneManager::Render(Renderer* pRenderer, const SceneView& sceneView) const
+int SceneManager::Render(Renderer* pRenderer, const SceneView& sceneView) const
 {
-	mpActiveScene->Render(sceneView);
+	return mpActiveScene->Render(sceneView);
 }
 
 

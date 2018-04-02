@@ -17,8 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
-#include "Utilities/utils.h"
-//#include "HandleTypedefs.h"
+#include "Utilities/vectormath.h"
 
 #include <array>
 
@@ -101,4 +100,47 @@ struct SceneLightingData
 		_cb.pointLightCount = _cb.spotLightCount = _cb.directionalLightCount =
 		_cb.pointLightCount_shadow = _cb.spotLightCount_shadow = _cb.directionalLightCount_shadow = 0;
 	}
+};
+
+class TextRenderer;
+struct TextDrawDescription;
+
+struct RendererStats
+{
+	union
+	{
+		struct  
+		{
+			int numVertices;
+			int numIndices;
+			int numDrawCalls;
+		};
+		int arr[3];
+	};
+};
+struct FrameStats
+{
+	static const size_t numStat = 5;
+	union 
+	{
+		struct
+		{
+			int numSceneObjects;
+			int numCulledObjects;
+			int numDrawCalls;
+			int numVertices;
+			int numIndices;
+		};
+		struct
+		{
+			int numSceneObjects;
+			int numCulledObjects;
+			RendererStats rstats;
+		};
+		int stats[numStat];
+	};
+
+	bool bShow;
+	void Render(TextRenderer* pTextRenderer, const vec2& screenPosition, const TextDrawDescription& drawDesc);	// implementation in Engine.cpp
+	static const char* statNames[numStat];
 };

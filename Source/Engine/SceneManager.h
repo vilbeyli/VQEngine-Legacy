@@ -53,7 +53,7 @@ public:
 	bool Load(Renderer* renderer, PathManager* pathMan, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects);
 
 	void Update(float dt);
-	void Render(Renderer* pRenderer, const SceneView& sceneView) const;
+	int Render(Renderer* pRenderer, const SceneView& sceneView) const;
 
 	bool LoadScene(Renderer* pRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects);
 	void ReloadScene(Renderer* pRenderer, std::vector<const GameObject*>& ZPassObjects);

@@ -53,7 +53,7 @@ void Scene::UnloadScene()
 	Unload();
 }
 
-void Scene::Render(const SceneView& sceneView) const
+int Scene::Render(const SceneView& sceneView) const
 {
 	const ShaderID selectedShader = ENGINE->GetSelectedShader();
 	const bool bSendMaterialData = (
@@ -65,8 +65,14 @@ void Scene::Render(const SceneView& sceneView) const
 		|| selectedShader == EShaders::Z_PREPRASS
 		);
 
-	for (const auto& obj : mObjects) obj.Render(mpRenderer, sceneView, bSendMaterialData);
-	Render(sceneView, bSendMaterialData);
+	int numObj = 0;
+	for (const auto& obj : mObjects) 
+	{
+		obj.Render(mpRenderer, sceneView, bSendMaterialData);
+		++numObj;
+	}
+	numObj += Render(sceneView, bSendMaterialData);
+	return numObj;
 }
 
 void Scene::GetShadowCasters(std::vector<const GameObject*>& casters) const

@@ -99,7 +99,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 		pRenderer->Apply();
 		pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
 		pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
-		pRenderer->Begin(ClearCommand::Depth(1.0f));
+		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 		pRenderer->SetConstant4x4f("viewProj", shadowView.spots[i]->GetLightSpaceMatrix());
 		pRenderer->SetConstant4x4f("view"    , shadowView.spots[i]->GetViewMatrix());
 		pRenderer->SetConstant4x4f("proj"    , shadowView.spots[i]->GetProjectionMatrix());
@@ -384,7 +384,7 @@ void DeferredRenderingPasses::ClearGBuffer(Renderer* pRenderer)
 		{ 0, 0, 0, 0 }, 0, 0
 	);
 	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT);
-	pRenderer->Begin(clearCmd);
+	pRenderer->BeginRender(clearCmd);
 }
 
 void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) const
@@ -402,7 +402,7 @@ void DeferredRenderingPasses::SetGeometryRenderingStates(Renderer* pRenderer) co
 	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
 	pRenderer->SetDepthStencilState(_geometryStencilState); 
 	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-	pRenderer->Begin(clearCmd);
+	pRenderer->BeginRender(clearCmd);
 	pRenderer->Apply();
 }
 
@@ -432,7 +432,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
 	pRenderer->BindRenderTarget(target);
-	pRenderer->Begin(cmd);
+	pRenderer->BeginRender(cmd);
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING

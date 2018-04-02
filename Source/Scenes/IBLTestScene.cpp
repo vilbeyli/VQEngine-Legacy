@@ -222,10 +222,16 @@ void IBLTestScene::Update(float dt)
 	}
 }
 
-void IBLTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) const
+int IBLTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) const
 {
-	for (const auto& sph : spheres) sph.Render(mpRenderer, sceneView, bSendMaterialData);
+	int numObj = 0;
+	for (const auto& sph : spheres)
+	{
+		sph.Render(mpRenderer, sceneView, bSendMaterialData);
+		++numObj;
+	}
 	//testQuad.Render(mpRenderer, sceneView, bSendMaterialData);
+	return numObj;
 }
 
 void IBLTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const

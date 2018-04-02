@@ -27,6 +27,7 @@
 
 #include "Utilities/Color.h"
 #include "Utilities/utils.h"
+#include "Application/DataStructures.h"
 //#include "WorkerPool.h"
 
 #include <string>
@@ -39,7 +40,6 @@ class Camera;
 class D3DManager;
 
 namespace DirectX  { class ScratchImage; }
-
 
 // todo struct?
 using Viewport = D3D11_VIEWPORT;
@@ -115,6 +115,7 @@ public:
 	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return mRenderTargets[RT].texture._id; }
 	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const   { return mDepthTargets[DT].texture._id; }
 	const PipelineState&	GetState() const;
+	const RendererStats&	GetRenderStats() const { return mRenderStats; }
 
 	const Shader*			GetShader(ShaderID shader_id) const;
 	const Texture&			GetTextureObject(TextureID) const;
@@ -189,9 +190,16 @@ public:
 	inline void				SetConstant1i(const char* cName, const int& data)		{ SetConstant(cName, static_cast<const void*>(&data)); }
 	inline void				SetConstantStruct(const char * cName, const void* data) { SetConstant(cName, data); }
 
-	void					Begin(const ClearCommand& clearCmd);
-	void					End();
-	void					Reset();
+	// clears the bound render targets
+	//
+	void					BeginRender(const ClearCommand& clearCmd);
+
+	void					BeginFrame();
+
+	// presents the swapchain and clears shaders
+	//
+	void					EndFrame();
+	void					ResetPipelineState();
 
 	void					UpdateBuffer(BufferID buffer, const void* pData);
 	void					Apply();
@@ -201,7 +209,7 @@ public:
 	// DRAW FUNCTIONS
 	//----------------------------------------------------------------------------------
 	void					DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
-	void Draw(int vertCount, EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
+	void					Draw(int vertCount, EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
 	
 	void					DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd); // BottomLeft<x,y> = (0,0)
 	
@@ -246,6 +254,7 @@ private:
 	
 	// performance counters
 	unsigned long long				mFrameCount;
+	RendererStats					mRenderStats;
 
 	//std::vector<Point>				m_debugLines;
 	

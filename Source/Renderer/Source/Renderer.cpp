@@ -197,6 +197,303 @@ Renderer::Renderer()
 
 Renderer::~Renderer(){}
 
+bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
+{
+	// DIRECT3D 11
+	//--------------------------------------------------------------------
+	mWindowSettings = settings;
+	m_Direct3D = new D3DManager();
+	if (!m_Direct3D)
+	{
+		assert(false);
+		return false;
+	}
+
+	bool result = m_Direct3D->Initialize(
+		settings.width,
+		settings.height,
+		settings.vsync == 1,
+		hwnd,
+		settings.fullscreen == 1,
+		DXGI_FORMAT_R16G16B16A16_FLOAT
+		// swapchain should be bgra unorm 32bit
+	);
+
+	if (!result)
+	{
+		MessageBox(hwnd, "Could not initialize Direct3D", "Error", MB_OK);
+		return false;
+	}
+	m_device = m_Direct3D->m_device;
+	m_deviceContext = m_Direct3D->m_deviceContext;
+	Mesh::spDevice = m_device;
+
+	// DEFAULT RENDER TARGET
+	//--------------------------------------------------------------------
+	{
+		RenderTarget defaultRT;
+
+		ID3D11Texture2D* backBufferPtr;
+		HRESULT hr = m_Direct3D->m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
+		if (FAILED(hr))
+		{
+			Log::Error("Cannot get back buffer pointer in DefaultRenderTarget initialization");
+			return false;
+		}
+		defaultRT.texture._tex2D = backBufferPtr;
+
+		D3D11_TEXTURE2D_DESC texDesc;		// get back buffer description
+		backBufferPtr->GetDesc(&texDesc);
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;	// create shader resource view from back buffer desc
+		srvDesc.Format = texDesc.Format;
+		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		m_device->CreateShaderResourceView(backBufferPtr, &srvDesc, &defaultRT.texture._srv);
+
+		hr = m_device->CreateRenderTargetView(backBufferPtr, nullptr, &defaultRT.pRenderTargetView);
+		if (FAILED(hr))
+		{
+			Log::Error("Cannot create default render target view.");
+			return false;
+		}
+
+		mTextures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - don't add texture to vector
+		defaultRT.texture._id = static_cast<int>(mTextures.size() - 1);
+
+		mRenderTargets.push_back(defaultRT);
+		mBackBufferRenderTarget = static_cast<int>(mRenderTargets.size() - 1);
+	}
+	m_Direct3D->ReportLiveObjects("Init Default RT\n");
+
+
+	// DEFAULT DEPTH TARGET
+	//--------------------------------------------------------------------
+	{
+		// Set up the description of the depth buffer.
+		TextureDesc depthTexDesc;
+		depthTexDesc.width = settings.width;
+		depthTexDesc.height = settings.height;
+		depthTexDesc.arraySize = 1;
+		depthTexDesc.mipCount = 1;
+		//depthTexDesc.format = R24G8;
+		depthTexDesc.format = R32;
+		depthTexDesc.usage = ETextureUsage(DEPTH_TARGET | RESOURCE);
+
+		mDefaultDepthBufferTexture = CreateTexture2D(depthTexDesc);
+		Texture& depthTexture = static_cast<Texture>(GetTextureObject(mDefaultDepthBufferTexture));
+
+		// depth stencil view and shader resource view for the shadow map (^ BindFlags)
+		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+		//dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+		dsvDesc.Texture2D.MipSlice = 0;
+		AddDepthTarget(dsvDesc, depthTexture);	// assumes index 0
+	}
+	m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
+
+	// DEFAULT RASTERIZER STATES
+	//--------------------------------------------------------------------
+	{
+		HRESULT hr;
+		const std::string err("Unable to create Rasterizer State: Cull ");
+
+		// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
+		D3D11_RASTERIZER_DESC rsDesc = {};
+
+		rsDesc.FillMode = D3D11_FILL_SOLID;
+		rsDesc.FrontCounterClockwise = false;
+		rsDesc.DepthBias = 0;
+		rsDesc.ScissorEnable = false;
+		rsDesc.DepthBiasClamp = 0;
+		rsDesc.SlopeScaledDepthBias = 0.0f;
+		rsDesc.DepthClipEnable = true;
+		rsDesc.AntialiasedLineEnable = true;
+		rsDesc.MultisampleEnable = true;
+
+		rsDesc.CullMode = D3D11_CULL_BACK;
+		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_BACK]);
+		if (FAILED(hr))
+		{
+			Log::Error(err + "Back\n");
+		}
+
+		rsDesc.CullMode = D3D11_CULL_FRONT;
+		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_FRONT]);
+		if (FAILED(hr))
+		{
+			Log::Error(err + "Front\n");
+		}
+
+		rsDesc.CullMode = D3D11_CULL_NONE;
+		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_NONE]);
+		if (FAILED(hr))
+		{
+			Log::Error(err + "None\n");
+		}
+	}
+	m_Direct3D->ReportLiveObjects("Init Default RS ");
+
+
+	// DEFAULT BLEND STATES
+	//--------------------------------------------------------------------
+	{
+		D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
+		rtBlendDesc.BlendEnable = true;
+		rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
+		rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
+		rtBlendDesc.DestBlend = D3D11_BLEND_ONE;
+		rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ONE;
+		rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		rtBlendDesc.SrcBlend = D3D11_BLEND_ONE;
+		rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
+
+		D3D11_BLEND_DESC desc = {};
+		desc.RenderTarget[0] = rtBlendDesc;
+
+		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::ADDITIVE_COLOR].ptr));
+		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::ALPHA_BLEND].ptr));
+
+		rtBlendDesc.BlendEnable = false;
+		desc.RenderTarget[0] = rtBlendDesc;
+		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::DISABLED].ptr));
+	}
+	m_Direct3D->ReportLiveObjects("Init Default BlendStates ");
+
+
+	// DEFAULT SAMPLER STATES
+	//--------------------------------------------------------------------
+	{
+		D3D11_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::WRAP_SAMPLER]._samplerState));
+
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::POINT_SAMPLER]._samplerState));
+
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW]._samplerState));
+
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER]._samplerState));
+	}
+
+	// DEFAULT DEPTHSTENCIL SATATES
+	//--------------------------------------------------------------------
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
+	auto checkFailed = [&](HRESULT hr)
+	{
+		if (FAILED(result))
+		{
+			Log::Error("Default Depth Stencil State");
+			return false;
+		}
+		return true;
+	};
+
+
+	// Set up the description of the stencil state.
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+
+	depthStencilDesc.StencilEnable = true;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
+
+	// Stencil operations if pixel is front-facing.
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Stencil operations if pixel is back-facing.
+	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
+	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	// Create the depth stencil states.
+	HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_WRITE]);
+	if (!checkFailed(hr)) return false;
+
+	depthStencilDesc.DepthEnable = false;
+	depthStencilDesc.StencilEnable = false;
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED]);
+	if (!checkFailed(hr)) return false;
+
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.StencilEnable = false;
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_WRITE]);
+	if (!checkFailed(hr)) return false;
+
+	depthStencilDesc.DepthEnable = false;
+	depthStencilDesc.StencilEnable = true;
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::STENCIL_WRITE]);
+	if (!checkFailed(hr)) return false;
+
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	depthStencilDesc.StencilEnable = true;
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_TEST_ONLY]);
+	if (!checkFailed(hr)) return false;
+
+	// PRIMITIVES
+	//--------------------------------------------------------------------
+	{
+		// cylinder parameters
+		const float	 cylHeight = 3.1415f;
+		const float	 cylTopRadius = 1.0f;
+		const float	 cylBottomRadius = 1.0f;
+		const unsigned cylSliceCount = 120;
+		const unsigned cylStackCount = 100;
+
+		// grid parameters
+		const float gridWidth = 1.0f;
+		const float gridDepth = 1.0f;
+		const unsigned gridFinenessH = 100;
+		const unsigned gridFinenessV = 100;
+
+		// sphere parameters
+		const float sphRadius = 2.0f;
+		const unsigned sphRingCount = 25;
+		const unsigned sphSliceCount = 25;
+
+		mBuiltinMeshes =	// this should match enum declaration order
+		{
+			GeometryGenerator::Triangle(1.0f),
+			GeometryGenerator::Quad(1.0f),
+			GeometryGenerator::Cube(),
+			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
+			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
+			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
+			GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
+		};
+	}
+
+	// SHADERS
+	//--------------------------------------------------------------------
+	Shader::LoadShaders(this);
+	m_Direct3D->ReportLiveObjects("Shader loaded");
+
+	mPipelineState.bRenderTargetChanged = true;
+	return true;
+}
+
 void Renderer::Exit()
 {
 	//m_Direct3D->ReportLiveObjects("BEGIN EXIT");
@@ -302,305 +599,6 @@ const Shader* Renderer::GetShader(ShaderID shader_id) const
 	assert(shader_id >= 0 && (int)mShaders.size() > shader_id);
 	return mShaders[shader_id];
 }
-
-
-bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
-{
-	// DIRECT3D 11
-	//--------------------------------------------------------------------
-	mWindowSettings = settings;
-	m_Direct3D = new D3DManager();
-	if (!m_Direct3D)
-	{
-		assert(false);
-		return false;
-	}
-
-	bool result = m_Direct3D->Initialize(
-		settings.width, 
-		settings.height, 
-		settings.vsync == 1,
-		hwnd, 
-		settings.fullscreen == 1,
-		DXGI_FORMAT_R16G16B16A16_FLOAT
-		// swapchain should be bgra unorm 32bit
-	);
-	
-	if (!result)
-	{
-		MessageBox(hwnd, "Could not initialize Direct3D", "Error", MB_OK);
-		return false;
-	}
-	m_device		= m_Direct3D->m_device;
-	m_deviceContext = m_Direct3D->m_deviceContext;
-	Mesh::spDevice = m_device;
-
-	// DEFAULT RENDER TARGET
-	//--------------------------------------------------------------------
-	{
-		RenderTarget defaultRT;
-
-		ID3D11Texture2D* backBufferPtr;
-		HRESULT hr = m_Direct3D->m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
-		if (FAILED(hr))
-		{
-			Log::Error("Cannot get back buffer pointer in DefaultRenderTarget initialization");
-			return false; 
-		}
-		defaultRT.texture._tex2D = backBufferPtr;
-
-		D3D11_TEXTURE2D_DESC texDesc;		// get back buffer description
-		backBufferPtr->GetDesc(&texDesc);
-
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;	// create shader resource view from back buffer desc
-		srvDesc.Format = texDesc.Format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		m_device->CreateShaderResourceView(backBufferPtr, &srvDesc, &defaultRT.texture._srv);
-
-		hr = m_device->CreateRenderTargetView(backBufferPtr, nullptr, &defaultRT.pRenderTargetView);
-		if (FAILED(hr))
-		{
-			Log::Error("Cannot create default render target view.");
-			return false;
-		}
-
-		mTextures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - don't add texture to vector
-		defaultRT.texture._id = static_cast<int>(mTextures.size() - 1);
-
-		mRenderTargets.push_back(defaultRT);
-		mBackBufferRenderTarget = static_cast<int>(mRenderTargets.size() - 1);
-	}
-	m_Direct3D->ReportLiveObjects("Init Default RT\n");
-
-
-	// DEFAULT DEPTH TARGET
-	//--------------------------------------------------------------------
-	{
-		// Set up the description of the depth buffer.
-		TextureDesc depthTexDesc;
-		depthTexDesc.width = settings.width;
-		depthTexDesc.height = settings.height;
-		depthTexDesc.arraySize = 1;
-		depthTexDesc.mipCount = 1;
-		//depthTexDesc.format = R24G8;
-		depthTexDesc.format = R32;
-		depthTexDesc.usage = ETextureUsage(DEPTH_TARGET | RESOURCE);
-
-		mDefaultDepthBufferTexture = CreateTexture2D(depthTexDesc);
-		Texture& depthTexture = static_cast<Texture>(GetTextureObject(mDefaultDepthBufferTexture));
-
-		// depth stencil view and shader resource view for the shadow map (^ BindFlags)
-		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-		//dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-		dsvDesc.Texture2D.MipSlice = 0;
-		AddDepthTarget(dsvDesc, depthTexture);	// assumes index 0
-	}
-	m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
-
-	// DEFAULT RASTERIZER STATES
-	//--------------------------------------------------------------------
-	{	
-		HRESULT hr;
-		const std::string err("Unable to create Rasterizer State: Cull ");
-
-		// MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476198(v=vs.85).aspx
-		D3D11_RASTERIZER_DESC rsDesc = {};
-
-		rsDesc.FillMode = D3D11_FILL_SOLID;
-		rsDesc.FrontCounterClockwise = false;
-		rsDesc.DepthBias = 0;
-		rsDesc.ScissorEnable = false;
-		rsDesc.DepthBiasClamp = 0;
-		rsDesc.SlopeScaledDepthBias = 0.0f;
-		rsDesc.DepthClipEnable = true;
-		rsDesc.AntialiasedLineEnable = true;
-		rsDesc.MultisampleEnable = true;
-
-		rsDesc.CullMode = D3D11_CULL_BACK;
-		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_BACK]);
-		if (FAILED(hr))
-		{
-			Log::Error(err + "Back\n");
-		}
-
-		rsDesc.CullMode = D3D11_CULL_FRONT;
-		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_FRONT]);
-		if (FAILED(hr))
-		{
-			Log::Error(err + "Front\n");
-		}
-
-		rsDesc.CullMode = D3D11_CULL_NONE;
-		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_NONE]);
-		if (FAILED(hr))
-		{
-			Log::Error(err + "None\n");
-		}
-	}
-	m_Direct3D->ReportLiveObjects("Init Default RS ");
-
-
-	// DEFAULT BLEND STATES
-	//--------------------------------------------------------------------
-	{
-		D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
-		rtBlendDesc.BlendEnable = true;
-		rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
-		rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
-		rtBlendDesc.DestBlend = D3D11_BLEND_ONE;
-		rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ONE;
-		rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-		rtBlendDesc.SrcBlend = D3D11_BLEND_ONE;
-		rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
-
-		D3D11_BLEND_DESC desc = {};
-		desc.RenderTarget[0] = rtBlendDesc;
-
-		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::ADDITIVE_COLOR].ptr));
-		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::ALPHA_BLEND].ptr));
-
-		rtBlendDesc.BlendEnable = false;
-		desc.RenderTarget[0] = rtBlendDesc;
-		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::DISABLED].ptr));
-	}
-	m_Direct3D->ReportLiveObjects("Init Default BlendStates ");
-
-
-	// DEFAULT SAMPLER STATES
-	//--------------------------------------------------------------------
-	{
-		D3D11_SAMPLER_DESC samplerDesc = {};
-		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::WRAP_SAMPLER]._samplerState));
-
-		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::POINT_SAMPLER]._samplerState));
-
-		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW]._samplerState));
-
-		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER]._samplerState));
-	}
-
-	// DEFAULT DEPTHSTENCIL SATATES
-	//--------------------------------------------------------------------
-	D3D11_DEPTH_STENCIL_DESC depthStencilDesc = {};
-	auto checkFailed = [&](HRESULT hr) 
-	{
-		if (FAILED(result))
-		{
-			Log::Error("Default Depth Stencil State");
-			return false;
-		}
-		return true;
-	};
-
-
-	// Set up the description of the stencil state.
-	depthStencilDesc.DepthEnable = true;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
-
-	depthStencilDesc.StencilEnable = true;
-	depthStencilDesc.StencilReadMask = 0xFF;
-	depthStencilDesc.StencilWriteMask = 0xFF;
-
-	// Stencil operations if pixel is front-facing.
-	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_INCR;
-	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-
-	// Stencil operations if pixel is back-facing.
-	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
-	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
-	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-	
-	// Create the depth stencil states.
-	HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_WRITE]);
-	if(!checkFailed(hr)) return false;
-
-	depthStencilDesc.DepthEnable = false;
-	depthStencilDesc.StencilEnable = false;
-	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED]);
-	if (!checkFailed(hr)) return false;
-
-	depthStencilDesc.DepthEnable = true;
-	depthStencilDesc.StencilEnable = false;
-	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_WRITE]);
-	if (!checkFailed(hr)) return false;
-
-	depthStencilDesc.DepthEnable = false;
-	depthStencilDesc.StencilEnable = true;
-	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::STENCIL_WRITE]);
-	if (!checkFailed(hr)) return false;
-
-	depthStencilDesc.DepthEnable = true;
-	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	depthStencilDesc.StencilEnable = true;
-	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_TEST_ONLY]);
-	if (!checkFailed(hr)) return false;
-
-	// PRIMITIVES
-	//--------------------------------------------------------------------
-	{
-		// cylinder parameters
-		const float	 cylHeight = 3.1415f;
-		const float	 cylTopRadius = 1.0f;
-		const float	 cylBottomRadius = 1.0f;
-		const unsigned cylSliceCount = 120;
-		const unsigned cylStackCount = 100;
-
-		// grid parameters
-		const float gridWidth = 1.0f;
-		const float gridDepth = 1.0f;
-		const unsigned gridFinenessH = 100;
-		const unsigned gridFinenessV = 100;
-
-		// sphere parameters
-		const float sphRadius = 2.0f;
-		const unsigned sphRingCount = 25;
-		const unsigned sphSliceCount = 25;
-
-		mBuiltinMeshes =	// this should match enum declaration order
-		{
-			GeometryGenerator::Triangle(1.0f),
-			GeometryGenerator::Quad(1.0f),
-			GeometryGenerator::Cube(),
-			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
-			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
-			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
-			GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
-		};
-	}
-
-	// SHADERS
-	//--------------------------------------------------------------------
-	Shader::LoadShaders(this);
-	m_Direct3D->ReportLiveObjects("Shader loaded");
-
-	mPipelineState.bRenderTargetChanged = true;
-	return true;
-}
-
 
 
 
@@ -1233,7 +1231,7 @@ void Renderer::SetIndexBuffer(BufferID bufferID)
 	m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
 }
 
-void Renderer::Reset()
+void Renderer::ResetPipelineState()
 {
 	mPipelineState.shader = -1;
 	mPipelineState._activeInputBuffer = -1;
@@ -1582,7 +1580,7 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 }
 
 
-void Renderer::Begin(const ClearCommand & clearCmd)
+void Renderer::BeginRender(const ClearCommand & clearCmd)
 {
 	if (clearCmd.bDoClearColor)
 	{
@@ -1612,7 +1610,12 @@ void Renderer::Begin(const ClearCommand & clearCmd)
 	}
 }
 
-void Renderer::End()
+void Renderer::BeginFrame()
+{
+	mRenderStats = { 0, 0, 0 };
+}
+
+void Renderer::EndFrame()
 {
 	m_Direct3D->EndFrame();
 	++mFrameCount;
@@ -1742,13 +1745,21 @@ void Renderer::EndEvent()
 void Renderer::DrawIndexed(EPrimitiveTopology topology)
 {
 	const unsigned numIndices = mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mDesc.mElementCount;
+	const unsigned numVertices = mBuiltinMeshes[mPipelineState._activeInputBuffer].mVertexBuffer.mDesc.mElementCount;
 
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->DrawIndexed(numIndices, 0, 0);
+	
+	++mRenderStats.numDrawCalls;
+	mRenderStats.numIndices += numIndices;
+	mRenderStats.numVertices += numVertices;
 }
 
 void Renderer::Draw(int vertCount, EPrimitiveTopology topology /*= EPrimitiveTopology::POINT_LIST*/)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->Draw(vertCount, 0);
+	
+	++mRenderStats.numDrawCalls;
+	mRenderStats.numVertices += vertCount;
 }

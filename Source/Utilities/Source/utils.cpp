@@ -204,7 +204,7 @@ std::string GetCurrentTimeAsString()
 	std::stringstream ss;
 	ss << (tmNow.tm_year + 1900) << "_" 
 		<< std::setfill('0') << std::setw(2) << tmNow.tm_mon + 1 << "_" 
-		<< tmNow.tm_mday << "-"
+		<< std::setfill('0') << std::setw(2) << tmNow.tm_mday << "-"
 		<< std::setfill('0') << std::setw(2) << tmNow.tm_hour << "_" 
 		<< std::setfill('0') << std::setw(2) << tmNow.tm_min << "_" 
 		<< std::setfill('0') << std::setw(2) << tmNow.tm_sec;

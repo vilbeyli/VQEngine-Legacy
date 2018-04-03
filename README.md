@@ -12,8 +12,8 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
  *v0.3.0 - Automated Build, Logging, Text Rendering, CPU & GPU Profiler - ETA: Early April*
  - Text Rendering
- - CPU Profiler
- - GPU Profiler (**WIP**)
+ - CPU & GPU Profiler
+ - Shader Binary Cache
  - Build scripts (Python, Batch) & Automated Build (AppVeyor)
  - Logging: Console and/or Log Files
 

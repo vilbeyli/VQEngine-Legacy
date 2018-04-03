@@ -52,332 +52,56 @@ BaseSystem::BaseSystem(const BaseSystem& other){}
 
 BaseSystem::~BaseSystem(){}
 
-bool BaseSystem::Init()
-{
-	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "\\VQEngine";
-
-	Log::Initialize(Log::Mode::CONSOLE_AND_FILE);
-	const Settings::Window& windowSettings = Engine::ReadSettingsFromFile().window;
-	InitWindow(windowSettings);
-
-	if (!ENGINE->Initialize(m_hwnd))
-	{
-		Log::Error("cannot initialize engine. Exiting..");
-		return false;
-	}
-
-	if (!ENGINE->Load())
-	{
-		Log::Error("Exiting..");
-		return false;
-	}
-
-	Log::Info("Engine initialization and asset loading successful.\n");
-	return true;
-}	
-
-void BaseSystem::Run()
-{
-	ENGINE->mProfiler->BeginProfile();
-	ENGINE->mpTimer->Reset();
-	ENGINE->mpTimer->Start();
-	MSG msg = { };
-	
-	while (!m_bAppWantsExit)
-	{
-		// todo: keep dragging main window
-		// game engine architecture
-		// http://advances.realtimerendering.com/s2016/index.html
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);		// Translates virtual-key messages into character messages
-			DispatchMessage(&msg);		// indirectly causes Windows to invoke WndProc
-		}
-
-		if (ENGINE->INP()->IsKeyUp("ESC"))
-		{
-			if (m_bMouseCaptured) { this->CaptureMouse(false); }
-			else			 	  { m_bAppWantsExit = true;		}
-		}
-
-
-		if (msg.message == WM_QUIT)
-		{
-			m_bAppWantsExit = true;
-		}
-		else
-		{
-			m_bAppWantsExit |= ENGINE->UpdateAndRender();
-		}
-		const_cast<Input*>(ENGINE->INP())->PostUpdate();	// update previous state after frame;
-
-	}
-	ENGINE->mProfiler->EndProfile();
-}
-
-void BaseSystem::Exit()
-{
-	ENGINE->Exit(); 
-	ShutdownWindows();
-}
-
-
-void BaseSystem::CaptureMouse(bool bDoCapture)
-{
-	if (m_bMouseCaptured == bDoCapture)
-	{
-		//Log::Info("Capture Mouse IGNORE");
-		return;
-	}
-
-#ifdef LOG_WINDOW_EVENTS
-	Log::Info("Capture Mouse: %d", bDoCapture ? 1 : 0);
-#endif
-
-	m_bMouseCaptured = bDoCapture;
-	if (bDoCapture)
-	{
-		RECT rcClip;	GetWindowRect(m_hwnd, &rcClip);
-
-		ShowCursor(FALSE);
-		ClipCursor(&rcClip);
-		GetCursorPos(&m_capturePosition);
-		SetForegroundWindow(m_hwnd);
-		SetFocus(m_hwnd);
-
-		const_cast<Input*>(ENGINE->INP())->m_bIgnoreInput = false;
-	}
-	else
-	{
-
-		ShowCursor(TRUE);
-		ClipCursor(nullptr);
-		SetCursorPos(m_capturePosition.x, m_capturePosition.y);
-		SetForegroundWindow(NULL);
-		//SetFocus(NULL);	// we still want to register events
-		const_cast<Input*>(ENGINE->INP())->m_bIgnoreInput = true;
-	}
-}
-
-LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
-{
-	const Settings::Window& setting = Engine::sEngineSettings.window;
-	switch (umsg)
-	{
-
-	case WM_NCLBUTTONDOWN:
-		if (!m_bMouseCaptured)
-		{
-			m_bAppWantsExit = true;
-			Log::Info("[WANT EXIT]");
-		}
-		break;
-
-	// application active/inactive
-	case WM_ACTIVATE:
-		if (LOWORD(wparam) == WA_INACTIVE)
-		{
-#ifdef LOG_WINDOW_EVENTS
-			Log::Info("WM_ACTIVATE::WA_INACTIVE");
-#endif
-			this->CaptureMouse(false);
-			// paused = true
-			// timer stop
-		}
-		else
-		{
-#ifdef LOG_WINDOW_EVENTS
-			Log::Info("WM_ACTIVATE::WA_ACTIVE");
-#endif
-			//this->CaptureMouse(true);
-			// paused = false
-			// timer start
-		}
-		break;
-
-	// resize bar grab-release
-	case WM_ENTERSIZEMOVE:
-#ifdef LOG_WINDOW_EVENTS
-		Log::Info("WM_ENTERSIZEMOVE");
-#endif
-		// paused = true
-		// resizing = true
-		// timer.stop()
-		break;
-
-	case WM_EXITSIZEMOVE:
-#ifdef LOG_WINDOW_EVENTS
-		Log::Info("WM_EXITSIZEMOVE");
-#endif
-		// paused = false
-		// resizing= false
-		// timer.start()
-		// onresize()
-		break;
-
-	// prevent window from becoming too small
-	case WM_GETMINMAXINFO:
-		((MINMAXINFO*)lparam)->ptMinTrackSize.x = 200;
-		((MINMAXINFO*)lparam)->ptMinTrackSize.y = 200;
-		break;
-
-	// keyboard
-	case WM_KEYDOWN:
-	{
-#ifdef LOG_WINDOW_EVENTS
-		Log::Info("[WM_KEYDOWN]");// :\t MouseCaptured = %s", m_bMouseCaptured ? "True" : "False");
-#endif
-		if ( wparam == VK_ESCAPE)
-		{
-			if (!m_bMouseCaptured)
-			{
-				m_bAppWantsExit = true;
-				Log::Info("[WANT EXIT]");
-			}
-		}
-
-		ENGINE->mpInput->KeyDown((KeyCode)wparam);
-		break;
-	}
-
-	case WM_KEYUP:
-	{
-#ifdef LOG_WINDOW_EVENTS
-		Log::Info("WM_UP");
-#endif
-		ENGINE->mpInput->KeyUp((KeyCode)wparam);
-		break;
-	}
-
-	// mouse buttons
-	case WM_MBUTTONDOWN:
-	case WM_LBUTTONDOWN:
-	case WM_RBUTTONDOWN:
-	{
-		if (m_bMouseCaptured)	ENGINE->mpInput->KeyDown((KeyCode)wparam);
-		else					this->CaptureMouse(true);
-		break;
-	}
-
-	case WM_MBUTTONUP:
-	case WM_RBUTTONUP:
-	case WM_LBUTTONUP:
-	{
-		if (m_bMouseCaptured)
-			ENGINE->mpInput->KeyUp((KeyCode)wparam);
-		break;
-	}
-
-#ifdef ENABLE_RAW_INPUT
-	// raw input for mouse - see: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418864.aspx
-	case WM_INPUT:	
-	{
-		UINT rawInputSize = 48;
-		LPBYTE inputBuffer[48];
-		ZeroMemory(inputBuffer, rawInputSize);
-
-		GetRawInputData(
-			(HRAWINPUT)lparam, 
-			RID_INPUT,
-			inputBuffer, 
-			&rawInputSize, 
-			sizeof(RAWINPUTHEADER));
-
-		RAWINPUT* raw = (RAWINPUT*)inputBuffer;
-
-		if (raw->header.dwType == RIM_TYPEMOUSE && raw->data.mouse.usFlags == MOUSE_MOVE_RELATIVE)
-		{
-			if (m_bMouseCaptured)
-			{
-				ENGINE->mpInput->UpdateMousePos(raw->data.mouse.lLastX, raw->data.mouse.lLastY, raw->data.mouse.usButtonData);
-				//SetCursorPos(setting.width / 2, setting.height / 2);
-			}
-			
-#ifdef LOG
-			char szTempOutput[1024];
-			StringCchPrintf(szTempOutput, STRSAFE_MAX_CCH, TEXT("%u  Mouse: usFlags=%04x ulButtons=%04x usButtonFlags=%04x usButtonData=%04x ulRawButtons=%04x lLastX=%04x lLastY=%04x ulExtraInformation=%04x\r\n"),
-				rawInputSize,
-				raw->data.mouse.usFlags,
-				raw->data.mouse.ulButtons,
-				raw->data.mouse.usButtonFlags,
-				raw->data.mouse.usButtonData,
-				raw->data.mouse.ulRawButtons,
-				raw->data.mouse.lLastX,
-				raw->data.mouse.lLastY,
-				raw->data.mouse.ulExtraInformation);
-			OutputDebugString(szTempOutput);
-#endif
-		}
-		break;
-	}
-
-#else
-	// client area mouse - not good for first person camera
-	case WM_MOUSEMOVE:
-	{
-		ENGINE->mpInput->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam), scroll);
-		break;
-	}
-#endif
-
-	default:
-	{
-		return DefWindowProc(hwnd, umsg, wparam, lparam);
-	}
-	}
-
-	return 0;
-}
 
 void BaseSystem::UpdateWindowDimensions(int w, int h)
 {
 	m_windowHeight = h;
-	m_windowWidth  = w;
+	m_windowWidth = w;
 }
 
 void BaseSystem::InitWindow(const Settings::Window& windowSettings)
 {
 	int width, height;
 	int posX, posY;				// window position
-	gp_appHandle	= this;		// global handle		
+	gp_appHandle = this;		// global handle		
 
-	// default settings for windows class
+								// default settings for windows class
 	WNDCLASSEX wc;
-	wc.style			= CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-	wc.lpfnWndProc		= WndProc;
-	wc.cbClsExtra		= 0;
-	wc.cbWndExtra		= 0;
-	wc.hInstance		= m_hInstance;
-	wc.hIcon			= LoadIcon(NULL, IDI_WINLOGO);
-	wc.hIconSm			= wc.hIcon;
-	wc.hCursor			= LoadCursor(NULL, IDC_ARROW);
-	wc.hbrBackground	= (HBRUSH)GetStockObject(BLACK_BRUSH);
-	wc.lpszMenuName		= NULL;
-	wc.lpszClassName	= m_appName;
-	wc.cbSize			= sizeof(WNDCLASSEX);
+	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+	wc.lpfnWndProc = WndProc;
+	wc.cbClsExtra = 0;
+	wc.cbWndExtra = 0;
+	wc.hInstance = m_hInstance;
+	wc.hIcon = LoadIcon(NULL, IDI_WINLOGO);
+	wc.hIconSm = wc.hIcon;
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+	wc.lpszMenuName = NULL;
+	wc.lpszClassName = m_appName;
+	wc.cbSize = sizeof(WNDCLASSEX);
 	RegisterClassEx(&wc);
 
 	// get clients desktop resolution
-	width	= GetSystemMetrics(SM_CXSCREEN);
-	height	= GetSystemMetrics(SM_CYSCREEN);
+	width = GetSystemMetrics(SM_CXSCREEN);
+	height = GetSystemMetrics(SM_CYSCREEN);
 
 	// set screen settings
 	if (windowSettings.fullscreen)
 	{
 		DEVMODE dmScreenSettings;
 		memset(&dmScreenSettings, 0, sizeof(dmScreenSettings));
-		dmScreenSettings.dmSize			= sizeof(dmScreenSettings);
-		dmScreenSettings.dmPelsWidth	= (unsigned long)width;
-		dmScreenSettings.dmPelsHeight	= (unsigned long)height;
-		dmScreenSettings.dmBitsPerPel	= 32;
-		dmScreenSettings.dmFields		= DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
+		dmScreenSettings.dmSize = sizeof(dmScreenSettings);
+		dmScreenSettings.dmPelsWidth = (unsigned long)width;
+		dmScreenSettings.dmPelsHeight = (unsigned long)height;
+		dmScreenSettings.dmBitsPerPel = 32;
+		dmScreenSettings.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 		ChangeDisplaySettings(&dmScreenSettings, CDS_FULLSCREEN);
 
 		posX = posY = 0;
 	}
 	else
 	{
-		width  = windowSettings.width;
+		width = windowSettings.width;
 		height = windowSettings.height;
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
@@ -393,7 +117,7 @@ void BaseSystem::InitWindow(const Settings::Window& windowSettings)
 		posX, posY, width, height,	// Window position and dimensions
 		NULL, NULL,					// parent, menu
 		m_hInstance, NULL
-		);
+	);
 
 	if (m_hwnd == nullptr)
 	{
@@ -516,6 +240,282 @@ void BaseSystem::InitRawInputDevices()
 	}
 }
 
+
+void BaseSystem::CaptureMouse(bool bDoCapture)
+{
+	if (m_bMouseCaptured == bDoCapture)
+	{
+		//Log::Info("Capture Mouse IGNORE");
+		return;
+	}
+
+#ifdef LOG_WINDOW_EVENTS
+	Log::Info("Capture Mouse: %d", bDoCapture ? 1 : 0);
+#endif
+
+	m_bMouseCaptured = bDoCapture;
+	if (bDoCapture)
+	{
+		RECT rcClip;	GetWindowRect(m_hwnd, &rcClip);
+
+		ShowCursor(FALSE);
+		ClipCursor(&rcClip);
+		GetCursorPos(&m_capturePosition);
+		SetForegroundWindow(m_hwnd);
+		SetFocus(m_hwnd);
+
+		const_cast<Input*>(ENGINE->INP())->m_bIgnoreInput = false;
+	}
+	else
+	{
+		ShowCursor(TRUE);
+		ClipCursor(nullptr);
+		SetCursorPos(m_capturePosition.x, m_capturePosition.y);
+		//SetForegroundWindow(NULL);
+		//SetFocus(NULL);	// we still want to register events
+		const_cast<Input*>(ENGINE->INP())->m_bIgnoreInput = true;
+	}
+}
+
+void BaseSystem::Exit()
+{
+	ENGINE->Exit();
+	ShutdownWindows();
+}
+
+bool BaseSystem::Init()
+{
+	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "\\VQEngine";
+
+	Log::Initialize(Log::Mode::CONSOLE_AND_FILE);
+	const Settings::Window& windowSettings = Engine::ReadSettingsFromFile().window;
+	InitWindow(windowSettings);
+
+	if (!ENGINE->Initialize(m_hwnd))
+	{
+		Log::Error("cannot initialize engine. Exiting..");
+		return false;
+	}
+	
+	if (!ENGINE->Load())
+	{
+		Log::Error("Exiting..");
+		return false;
+	}
+
+	Log::Info("Engine initialization and asset loading successful.\n");
+	return true;
+}	
+
+void BaseSystem::Run()
+{
+	ENGINE->mProfiler->BeginProfile();
+	ENGINE->mpTimer->Reset();
+	ENGINE->mpTimer->Start();
+	MSG msg = { };
+	
+	while (!m_bAppWantsExit)
+	{
+		// todo: keep dragging main window
+		// game engine architecture
+		// http://advances.realtimerendering.com/s2016/index.html
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);		// Translates virtual-key messages into character messages
+			DispatchMessage(&msg);		// indirectly causes Windows to invoke WndProc
+		}
+
+		if (ENGINE->INP()->IsKeyUp("ESC"))
+		{
+			if (m_bMouseCaptured) { this->CaptureMouse(false); }
+			else			 	  { m_bAppWantsExit = true;		}
+		}
+
+		if (msg.message == WM_QUIT)
+		{
+			m_bAppWantsExit = true;
+		}
+		else
+		{
+			m_bAppWantsExit |= ENGINE->UpdateAndRender();
+		}
+		const_cast<Input*>(ENGINE->INP())->PostUpdate();	// update previous state after frame;
+
+	}
+	ENGINE->mProfiler->EndProfile();
+}
+
+
+LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
+{
+	const Settings::Window& setting = Engine::sEngineSettings.window;
+	switch (umsg)
+	{
+	case WM_CLOSE:		// Check if the window is being closed.
+		Log::Info("[WANT EXIT X]");
+		m_bAppWantsExit = true;
+		PostQuitMessage(0);
+		break;
+
+	case WM_SIZE:
+		Log::Info("[WM_SIZE]");
+		break;
+
+	case WM_ACTIVATE:	// application active/inactive
+		if (LOWORD(wparam) == WA_INACTIVE)
+		{
+#ifdef LOG_WINDOW_EVENTS
+			Log::Info("WM_ACTIVATE::WA_INACTIVE");
+#endif
+			//this->CaptureMouse(false);
+			// paused = true
+			// timer stop
+		}
+		else
+		{
+#ifdef LOG_WINDOW_EVENTS
+			Log::Info("WM_ACTIVATE::WA_ACTIVE");
+#endif
+			//this->CaptureMouse(true);
+			// paused = false
+			// timer start
+		}
+		break;
+
+	// resize bar grab-release
+	case WM_ENTERSIZEMOVE:
+#ifdef LOG_WINDOW_EVENTS
+		Log::Info("WM_ENTERSIZEMOVE");
+#endif
+		// paused = true
+		// resizing = true
+		// timer.stop()
+		break;
+
+	case WM_EXITSIZEMOVE:
+#ifdef LOG_WINDOW_EVENTS
+		Log::Info("WM_EXITSIZEMOVE");
+#endif
+		// paused = false
+		// resizing= false
+		// timer.start()
+		// onresize()
+		break;
+
+	// prevent window from becoming too small
+	case WM_GETMINMAXINFO:
+		((MINMAXINFO*)lparam)->ptMinTrackSize.x = 200;
+		((MINMAXINFO*)lparam)->ptMinTrackSize.y = 200;
+		break;
+
+	// keyboard
+	case WM_KEYDOWN:
+	{
+#ifdef LOG_WINDOW_EVENTS
+		Log::Info("[WM_KEYDOWN]");// :\t MouseCaptured = %s", m_bMouseCaptured ? "True" : "False");
+#endif
+		if ( wparam == VK_ESCAPE)
+		{
+			if (!m_bMouseCaptured)
+			{
+				m_bAppWantsExit = true;
+				Log::Info("[WANT EXIT ESC]");
+			}
+		}
+
+		ENGINE->mpInput->KeyDown((KeyCode)wparam);
+		break;
+	}
+
+	case WM_KEYUP:
+	{
+#ifdef LOG_WINDOW_EVENTS
+		Log::Info("WM_UP");
+#endif
+		ENGINE->mpInput->KeyUp((KeyCode)wparam);
+		break;
+	}
+
+	// mouse buttons
+	case WM_MBUTTONDOWN:
+	case WM_LBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	{
+		if (m_bMouseCaptured)	ENGINE->mpInput->KeyDown((KeyCode)wparam);
+		else					this->CaptureMouse(true);
+		break;
+	}
+
+	case WM_MBUTTONUP:
+	case WM_RBUTTONUP:
+	case WM_LBUTTONUP:
+	{
+		if (m_bMouseCaptured)
+			ENGINE->mpInput->KeyUp((KeyCode)wparam);
+		break;
+	}
+
+#ifdef ENABLE_RAW_INPUT
+	// raw input for mouse - see: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418864.aspx
+	case WM_INPUT:	
+	{
+		UINT rawInputSize = 48;
+		LPBYTE inputBuffer[48];
+		ZeroMemory(inputBuffer, rawInputSize);
+
+		GetRawInputData(
+			(HRAWINPUT)lparam, 
+			RID_INPUT,
+			inputBuffer, 
+			&rawInputSize, 
+			sizeof(RAWINPUTHEADER));
+
+		RAWINPUT* raw = (RAWINPUT*)inputBuffer;
+
+		if (raw->header.dwType == RIM_TYPEMOUSE && raw->data.mouse.usFlags == MOUSE_MOVE_RELATIVE)
+		{
+			if (m_bMouseCaptured)
+			{
+				ENGINE->mpInput->UpdateMousePos(raw->data.mouse.lLastX, raw->data.mouse.lLastY, raw->data.mouse.usButtonData);
+				//SetCursorPos(setting.width / 2, setting.height / 2);
+			}
+			
+#ifdef LOG
+			char szTempOutput[1024];
+			StringCchPrintf(szTempOutput, STRSAFE_MAX_CCH, TEXT("%u  Mouse: usFlags=%04x ulButtons=%04x usButtonFlags=%04x usButtonData=%04x ulRawButtons=%04x lLastX=%04x lLastY=%04x ulExtraInformation=%04x\r\n"),
+				rawInputSize,
+				raw->data.mouse.usFlags,
+				raw->data.mouse.ulButtons,
+				raw->data.mouse.usButtonFlags,
+				raw->data.mouse.usButtonData,
+				raw->data.mouse.ulRawButtons,
+				raw->data.mouse.lLastX,
+				raw->data.mouse.lLastY,
+				raw->data.mouse.ulExtraInformation);
+			OutputDebugString(szTempOutput);
+#endif
+		}
+		break;
+	}
+
+#else
+	// client area mouse - not good for first person camera
+	case WM_MOUSEMOVE:
+	{
+		ENGINE->mpInput->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam), scroll);
+		break;
+	}
+#endif
+
+	default:
+	{
+		return DefWindowProc(hwnd, umsg, wparam, lparam);
+	}
+	}
+
+	return 0;
+}
+
 //-----------------------------------------------------------------------------
 // The WndProc function is where windows sends its messages to. You'll notice 
 // we tell windows the name of it when we initialize the window class with 
@@ -524,24 +524,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
 {
 	switch (umessage)
 	{
-	// Check if the window is being destroyed.
-	case WM_DESTROY:
-	{
+	case WM_DESTROY:	// Check if the window is being destroyed.
 		PostQuitMessage(0);
 		return 0;
-	}
-
-	// Check if the window is being closed.
-	case WM_CLOSE:
-	{
+		
+	case WM_QUIT:		// Check if the window is being closed.
 		PostQuitMessage(0);
 		return 0;
-	}
-
-	// All other messages pass to the message handler in the system class.
-	default:
-	{
+	default: // All other messages pass to the message handler in the system class.
 		return gp_appHandle->MessageHandler(hwnd, umessage, wparam, lparam);
-	}
 	}
 }

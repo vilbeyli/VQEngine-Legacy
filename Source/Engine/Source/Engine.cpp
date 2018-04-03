@@ -43,7 +43,8 @@ Engine::Engine()
 	mpTimer(new PerfTimer()),
 	mpSceneManager(new SceneManager(mLights)),
 	mProfiler(new Profiler()),
-	mbUsePaniniProjection(false)
+	mbUsePaniniProjection(false),
+	mbShowControls(true)
 	//,mObjectPool(1024)
 {}
 
@@ -515,8 +516,11 @@ void Engine::Render()
 	mpRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
 	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 
+	//==========================================================================
+	// DEFERRED RENDERER
+	//==========================================================================
 	if (mbUseDeferredRendering)
-	{	// DEFERRED
+	{
 		const GBuffer& gBuffer = mDeferredRenderingPasses._GBuffer;
 		const TextureID texNormal = mpRenderer->GetRenderTargetTexture(gBuffer._normalRT);
 		const TextureID texDiffuseRoughness = mpRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
@@ -567,9 +571,11 @@ void Engine::Render()
 		mProfiler->EndEntry();
 	}
 
-
+	//==========================================================================
+	// FORWARD RENDERER
+	//==========================================================================
 	else
-	{	// FORWARD
+	{
 		const bool bZPrePass = mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled;
 		const TextureID tSSAO = bZPrePass ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
@@ -651,8 +657,8 @@ void Engine::Render()
 				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
 				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", prefilteredEnvMap);
 				mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
+				mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 			}
-			mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 			
 			if (mSelectedShader == EShaders::FORWARD_BRDF)
 			{
@@ -803,11 +809,12 @@ void Engine::Render()
 	if (mbShowControls)
 	{
 		TextDrawDescription _drawDesc(drawDesc);
-		_drawDesc.color = vec3(1, 1, 0) * 0.8f;
+		_drawDesc.color = vec3(1, 1, 0.1f) * 0.65f;
+		_drawDesc.scale = 0.40f;
 		int numLine = FrameStats::numStat + 1;
 
 		const float X_POS = sEngineSettings.window.width * 0.81f;
-		const float Y_POS = 600.0f;
+		const float Y_POS = 0.75f * sEngineSettings.window.height;
 		const float LINE_HEIGHT = 25.0f;
 		vec2 screenPosition(X_POS, Y_POS);
 		

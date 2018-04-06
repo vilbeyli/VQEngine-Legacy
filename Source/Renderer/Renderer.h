@@ -228,6 +228,8 @@ public:
 	ID3D11DeviceContext*			m_deviceContext;
 	D3DManager*						m_Direct3D;
 
+	//std
+
 	static bool						sEnableBlend; //temp
 private:	
 	PipelineState					mPipelineState;
@@ -253,7 +255,6 @@ private:
 	std::vector<Buffer>				mBuffers;
 	
 	// performance counters
-	unsigned long long				mFrameCount;
 	RendererStats					mRenderStats;
 
 	//std::vector<Point>				m_debugLines;

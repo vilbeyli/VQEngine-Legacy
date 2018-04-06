@@ -1618,7 +1618,6 @@ void Renderer::BeginFrame()
 void Renderer::EndFrame()
 {
 	m_Direct3D->EndFrame();
-	++mFrameCount;
 	mPrevPipelineState = mPipelineState;
 }
 
@@ -1641,7 +1640,7 @@ void Renderer::Apply()
 
 	if (mPipelineState._activeInputBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &(mBuiltinMeshes[mPipelineState._activeInputBuffer].mVertexBuffer.mData), &stride, &offset);
 	if (mPipelineState._activeInputBuffer != -1) m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
-	if (shader)							  m_deviceContext->IASetInputLayout(shader->m_layout);
+	if (shader)									 m_deviceContext->IASetInputLayout(shader->m_layout);
 
 	if (shader)
 	{	// SHADER STAGES

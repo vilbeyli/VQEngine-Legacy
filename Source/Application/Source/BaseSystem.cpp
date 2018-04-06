@@ -309,7 +309,7 @@ bool BaseSystem::Init()
 
 void BaseSystem::Run()
 {
-	ENGINE->mProfiler->BeginProfile();
+	ENGINE->mpCPUProfiler->BeginProfile();
 	ENGINE->mpTimer->Reset();
 	ENGINE->mpTimer->Start();
 	MSG msg = { };
@@ -342,7 +342,7 @@ void BaseSystem::Run()
 		const_cast<Input*>(ENGINE->INP())->PostUpdate();	// update previous state after frame;
 
 	}
-	ENGINE->mProfiler->EndProfile();
+	ENGINE->mpCPUProfiler->EndProfile();
 }
 
 

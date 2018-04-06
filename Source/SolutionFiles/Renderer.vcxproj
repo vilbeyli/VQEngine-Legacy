@@ -173,6 +173,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ExceptionHandling>false</ExceptionHandling>
+      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

@@ -38,7 +38,7 @@ class TextRenderer;
 class Input;
 class Parser;
 class SceneManager;
-class Profiler;
+class CPUProfiler;
 
 class PathManager;		// unused
 class PhysicsEngine;	// unused
@@ -133,7 +133,8 @@ private:
 	SceneManager*					mpSceneManager;
 	PerfTimer*						mpTimer;
 	WorkerPool						mWorkerPool;
-	Profiler*						mProfiler;
+	CPUProfiler*					mpCPUProfiler;
+	GPUProfiler*					mpGPUProfiler;
 	float mCurrentFrameTime;
 
 	// scene
@@ -153,19 +154,23 @@ private:
 	DepthTargetID					mWorldDepthTarget;
 	SamplerID						mNormalSampler;
 
+	// keeping passes around this doesn't make sense... todo refactor here.
 	ShadowMapPass					mShadowMapPass;
 	DeferredRenderingPasses			mDeferredRenderingPasses;
 	AmbientOcclusionPass			mSSAOPass;
 	PostProcessPass					mPostProcessPass;
 	DebugPass						mDebugPass;
 
-	bool							mbUseDeferredRendering;	// todo read from sceneview
-	bool							mbIsAmbientOcclusionOn;	// todo read from sceneview
-	bool							mDisplayRenderTargets;			// todo read from sceneview
+	bool							mbUseDeferredRendering;	// todo read from sceneview???
+	bool							mbIsAmbientOcclusionOn;	// todo read from sceneview???
+	bool							mDisplayRenderTargets;	// todo read from sceneview???
 	
 
 	std::vector<const GameObject*>	mZPassObjects;
 	std::vector<const GameObject*>	mTBNDrawObjects;
+
+
+	unsigned long long				mFrameCount;
 };
 
 #define ENGINE Engine::GetEngine()

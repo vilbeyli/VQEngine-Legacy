@@ -36,22 +36,24 @@ Settings::Engine Engine::sEngineSettings;
 Engine* Engine::sInstance = nullptr;
 
 Engine::Engine()
-	:
-	mpRenderer(new Renderer()),
-	mpTextRenderer(new TextRenderer()),
-	mpInput(new Input()),
-	mpTimer(new PerfTimer()),
-	mpSceneManager(new SceneManager(mLights)),
-	mProfiler(new Profiler()),
-	mbUsePaniniProjection(false),
-	mbShowControls(true)
+	: mpRenderer(new Renderer())
+	, mpTextRenderer(new TextRenderer())
+	, mpInput(new Input())
+	, mpTimer(new PerfTimer()) 
+	, mpSceneManager(new SceneManager(mLights))
+	, mpCPUProfiler(new CPUProfiler())
+	, mpGPUProfiler(new GPUProfiler())
+	, mbUsePaniniProjection(false)
+	, mbShowControls(true)
 	//,mObjectPool(1024)
+	, mFrameCount(0)
 {}
 
 Engine::~Engine(){}
 
 void Engine::Exit()
 {
+	mpGPUProfiler->Exit();
 	mpTextRenderer->Exit();
 	mpRenderer->Exit();
 
@@ -162,7 +164,7 @@ bool Engine::Initialize(HWND hwnd)
 		Log::Error("Cannot initialize Text Renderer.\n");
 		return false;
 	}
-
+	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
 
 	// INITIALIZE RENDERING
 	//--------------------------------------------------------------
@@ -179,8 +181,8 @@ bool Engine::Load()
 {
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 
-	mProfiler->BeginProfile();
-	mProfiler->BeginEntry("EngineLoad");
+	mpCPUProfiler->BeginProfile();
+	mpCPUProfiler->BeginEntry("EngineLoad");
 	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
 	mpTimer->Start();
 	Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
@@ -222,8 +224,8 @@ bool Engine::Load()
 	}
 	mpTimer->Stop();
 	Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
-	mProfiler->EndEntry();
-	mProfiler->EndProfile();
+	mpCPUProfiler->EndEntry();
+	mpCPUProfiler->EndProfile();
 	return true;
 }
 
@@ -310,25 +312,25 @@ void Engine::CalcFrameStats(float dt)
 bool Engine::UpdateAndRender()
 {
 	const float dt = mpTimer->Tick();
-	mProfiler->BeginEntry("CPU");
+	mpCPUProfiler->BeginEntry("CPU");
 
 	const bool bExitApp = !HandleInput();
 	if (!mbIsPaused)
 	{
 		CalcFrameStats(dt);
 
-		mProfiler->BeginEntry("Update()");
+		mpCPUProfiler->BeginEntry("Update()");
 		mpSceneManager->Update(dt);
-		mProfiler->EndEntry();
+		mpCPUProfiler->EndEntry();
 
 		PreRender();
 		Render();
 	}
 
 
-	mProfiler->EndEntry();
+	mpCPUProfiler->EndEntry();
 
-	mProfiler->StateCheck();
+	mpCPUProfiler->StateCheck();
 	return bExitApp;
 }
 
@@ -345,7 +347,7 @@ using pNumArray = std::array<int*, Light::ELightType::LIGHT_TYPE_COUNT>;
 
 void Engine::PreRender()
 {
-	mProfiler->BeginEntry("PreRender()");
+	mpCPUProfiler->BeginEntry("PreRender()");
 	
 	// set scene view
 	const Camera& viewCamera = mpSceneManager->GetMainCamera();
@@ -450,7 +452,7 @@ void Engine::PreRender()
 			mTBNDrawObjects.push_back(obj);
 	}
 
-	mProfiler->EndEntry();
+	mpCPUProfiler->EndEntry();
 }
 
 void Engine::RenderLights() const
@@ -493,7 +495,11 @@ void Engine::SendLightData() const
 
 void Engine::Render()
 {
-	mProfiler->BeginEntry("Render()");
+	mpCPUProfiler->BeginEntry("Render()");
+
+	mpGPUProfiler->BeginFrame(mFrameCount);
+	mpGPUProfiler->BeginQuery("GPU");
+
 	mpRenderer->BeginFrame();
 
 	const XMMATRIX& viewProj = mSceneView.viewProj;
@@ -501,14 +507,14 @@ void Engine::Render()
 
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
-	mProfiler->BeginEntry("Shadow Pass");
+	mpCPUProfiler->BeginEntry("Shadow Pass");
 	mpRenderer->BeginEvent("Shadow Pass");
 	
 	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass has their own render targets
 	mShadowMapPass.RenderShadowMaps(mpRenderer, mZPassObjects, mShadowView);
 	
 	mpRenderer->EndEvent();
-	mProfiler->EndEntry();
+	mpCPUProfiler->EndEntry();
 
 	// LIGHTING PASS
 	//------------------------------------------------------------------------
@@ -531,14 +537,14 @@ void Engine::Render()
 			: mSSAOPass.whiteTexture4x4;
 
 		// GEOMETRY - DEPTH PASS
-		mProfiler->BeginEntry("Geometry Pass");
+		mpCPUProfiler->BeginEntry("Geometry Pass");
 		mpRenderer->BeginEvent("Geometry Pass");
 		mDeferredRenderingPasses.SetGeometryRenderingStates(mpRenderer);
 		mFrameStats.numSceneObjects = mpSceneManager->Render(mpRenderer, mSceneView);
-		mpRenderer->EndEvent();	mProfiler->EndEntry();
+		mpRenderer->EndEvent();	mpCPUProfiler->EndEntry();
 
 		// AMBIENT OCCLUSION  PASS
-		mProfiler->BeginEntry("Ambient Occlusion Pass");
+		mpCPUProfiler->BeginEntry("Ambient Occlusion Pass");
 		if (mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled)
 		{
 			// TODO: if BeginEntry() is inside, it's never reset to 0 if ambiend occl is turned off
@@ -548,15 +554,15 @@ void Engine::Render()
 			mSSAOPass.GaussianBlurPass(mpRenderer);
 			mpRenderer->EndEvent();	
 		}
-		mProfiler->EndEntry();
+		mpCPUProfiler->EndEntry();
 
 		// DEFERRED LIGHTING PASS
-		mProfiler->BeginEntry("Lighting Pass");
+		mpCPUProfiler->BeginEntry("Lighting Pass");
 		mpRenderer->BeginEvent("Lighting Pass");
 		mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
-		mpRenderer->EndEvent(); mProfiler->EndEntry();
+		mpRenderer->EndEvent(); mpCPUProfiler->EndEntry();
 
-		mProfiler->BeginEntry("Skybox & Lights");
+		mpCPUProfiler->BeginEntry("Skybox & Lights");
 		// LIGHT SOURCES
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		
@@ -568,7 +574,7 @@ void Engine::Render()
 		}
 
 		RenderLights();
-		mProfiler->EndEntry();
+		mpCPUProfiler->EndEntry();
 	}
 
 	//==========================================================================
@@ -711,15 +717,15 @@ void Engine::Render()
 #if 1
 	// POST PROCESS PASS
 	//------------------------------------------------------------------------
-	mProfiler->BeginEntry("Post Process");
+	mpCPUProfiler->BeginEntry("Post Process");
 	mPostProcessPass.Render(mpRenderer, sEngineSettings.rendering.bUseBRDFLighting);
-	mProfiler->EndEntry();
+	mpCPUProfiler->EndEntry();
 
 	// DEBUG PASS
 	//------------------------------------------------------------------------
 	if (mDisplayRenderTargets)
 	{
-		mProfiler->BeginEntry("Debug Textures");
+		mpCPUProfiler->BeginEntry("Debug Textures");
 		const int screenWidth  = sEngineSettings.window.width;
 		const int screenHeight = sEngineSettings.window.height;
 		const float aspectRatio = static_cast<float>(screenWidth) / screenHeight;
@@ -777,11 +783,11 @@ void Engine::Render()
 			mpRenderer->DrawQuadOnScreen(cmd);
 		}
 		mpRenderer->EndEvent();
-		mProfiler->EndEntry();
+		mpCPUProfiler->EndEntry();
 	}
 
 	// UI TEXT
-	mProfiler->BeginEntry("UI");
+	mpCPUProfiler->BeginEntry("UI");
 	const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
 
 	std::ostringstream stats;
@@ -795,9 +801,13 @@ void Engine::Render()
 	if (mbShowProfiler)
 	{
 		const bool bSortStats = true;
-		const float X_POS = sEngineSettings.window.width * 0.81f;
-		const float Y_POS = 30.0f;
-		mProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
+		float X_POS = sEngineSettings.window.width * 0.81f;
+		float Y_POS = 30.0f;
+		mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
+
+		Y_POS = 30.0f;
+		X_POS = sEngineSettings.window.width * 0.15f;
+		mpGPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 	}
 	if (mFrameStats.bShow)
 	{
@@ -839,13 +849,20 @@ void Engine::Render()
 		mpTextRenderer->RenderText(_drawDesc);
 	}
 
-	mProfiler->EndEntry();
+	mpCPUProfiler->EndEntry();
 
 #endif
-	mProfiler->BeginEntry("Present");
+	mpCPUProfiler->BeginEntry("Present");
 	mpRenderer->EndFrame();
-	mProfiler->EndEntry();
-	mProfiler->EndEntry();
+	mpCPUProfiler->EndEntry();
+
+
+	mpCPUProfiler->EndEntry();	// Render() call
+
+	mpGPUProfiler->EndQuery();
+	mpGPUProfiler->EndFrame(mFrameCount);
+	mpGPUProfiler->CollectTimestamps(mFrameCount);
+	++mFrameCount;
 }
 
 const char* FrameStats::statNames[FrameStats::numStat] =

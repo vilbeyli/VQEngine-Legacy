@@ -27,6 +27,9 @@
 #include <sstream>
 #include <unordered_map>
 
+
+// CONSTANTS
+// ============================================================================
 constexpr const char* SHADER_COMPILER_VERSIONS[]	= { "vs_5_0", "gs_5_0", "", "", "", "ps_5_0" };
 constexpr const char* SHADER_ENTRY_POINTS[]			= { "VSMain", "GSMain", "DSMain", "HSMain", "CSMain", "PSMain" };
 ID3DInclude* const SHADER_INCLUDE_HANDLER = D3D_COMPILE_STANDARD_FILE_INCLUDE;		// use default include handler for using #include in shader files
@@ -37,10 +40,7 @@ const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBU
 const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS;
 #endif
 
-std::string Shader::s_shaderCacheDirectory = "";
 
-CPUConstant::CPUConstantPool CPUConstant::s_constants;
-size_t CPUConstant::s_nextConstIndex = 0;
 
 // HELPER FUNCTIONS & CONSTANTS
 // ============================================================================
@@ -102,6 +102,10 @@ static std::unordered_map <std::string, EShaderType > s_ShaderTypeStrLookup = {
 // ============================================================================
 
 std::array<ShaderID, EShaders::SHADER_COUNT> Shader::s_shaders;
+std::string Shader::s_shaderCacheDirectory = "";
+
+CPUConstant::CPUConstantPool CPUConstant::s_constants;
+size_t CPUConstant::s_nextConstIndex = 0;
 
 bool Shader::IsForwardPassShader(ShaderID shader)
 {
@@ -194,6 +198,8 @@ Shader::~Shader(void)
 #if _DEBUG 
 	//Log::Info("Shader dtor: %s", m_name.c_str());
 #endif
+
+	// todo: this really could use smart pointers...
 
 	// release constants
 	for (ConstantBuffer& cbuf : m_cBuffers)
@@ -681,7 +687,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 			}
 			context->Unmap(data, 0);
 
-			// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader, see it)
+			// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader)
 
 			// call XSSetConstantBuffers() from array using ShaderType enum
 			(context->*SetShaderConstants[CB.shdType])(CB.bufferSlot, 1, &data);

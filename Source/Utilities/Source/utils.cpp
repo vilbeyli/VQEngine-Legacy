@@ -25,8 +25,6 @@
 
 #include <ctime>
 
-#include <atlbase.h>
-#include <atlconv.h>	// wstr->str
 #include "shlobj.h"		// SHGetKnownFolderPath()
 
 #ifdef _DEBUG

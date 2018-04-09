@@ -44,24 +44,32 @@ void InitLogFile()
 	const std::string LogFileDir = BaseSystem::s_WorkspaceDirectory + "\\Logs";
 
 	std::string errMsg = "";
-	if (CreateDirectory(LogFileDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
-	{
-		std::string fileName = GetCurrentTimeAsString() + "_VQEngineLog.txt";
-		sOutFile.open(LogFileDir + "\\" + fileName);
-		if (sOutFile)
+	
+	if (CreateDirectory(BaseSystem::s_WorkspaceDirectory.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+	{	// AppData/VQEngine might not exist, 
+		if (CreateDirectory(LogFileDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
-			std::string msg = GetCurrentTimeAsStringWithBrackets() + "[Log] " + "Initialize() Done.";
-			sOutFile << msg;
-			cout << msg << endl;
+			std::string fileName = GetCurrentTimeAsString() + "_VQEngineLog.txt";
+			sOutFile.open(LogFileDir + "\\" + fileName);
+			if (sOutFile)
+			{
+				std::string msg = GetCurrentTimeAsStringWithBrackets() + "[Log] " + "Initialize() Done.";
+				sOutFile << msg;
+				cout << msg << endl;
+			}
+			else
+			{
+				errMsg = "Cannot open log file " + fileName;
+			}
 		}
 		else
 		{
-			errMsg = "Cannot open log file " + fileName;
+			errMsg = "Failed to create directory " + LogFileDir;
 		}
 	}
 	else
 	{
-		errMsg = "Failed to create directory " + LogFileDir;
+		errMsg = "Failed to create directory " + BaseSystem::s_WorkspaceDirectory;
 	}
 
 	if (!errMsg.empty())

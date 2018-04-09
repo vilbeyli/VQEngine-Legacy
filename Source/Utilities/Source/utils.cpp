@@ -24,14 +24,9 @@
 #include <algorithm>
 #include <random>
 
-#include <atlbase.h>
-#include <atlconv.h>
-
 #ifdef _DEBUG
 #include <cassert>
 #endif _DEBUG
-
-#include <winnt.h>
 
 using std::vector;
 using std::string;

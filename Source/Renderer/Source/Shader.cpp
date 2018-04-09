@@ -26,8 +26,6 @@
 #include <unordered_map>
 
 
-CPUConstant::CPUConstantPool CPUConstant::s_constants;
-size_t CPUConstant::s_nextConstIndex = 0;
 
 // HELPER FUNCTIONS & CONSTANTS
 // ============================================================================
@@ -89,6 +87,9 @@ static std::unordered_map <std::string, EShaderType > s_ShaderTypeStrLookup = {
 // ============================================================================
 
 std::array<ShaderID, EShaders::SHADER_COUNT> Shader::s_shaders;
+
+CPUConstant::CPUConstantPool CPUConstant::s_constants;
+size_t CPUConstant::s_nextConstIndex = 0;
 
 bool Shader::IsForwardPassShader(ShaderID shader)
 {
@@ -176,6 +177,8 @@ Shader::~Shader(void)
 #if _DEBUG 
 	//Log::Info("Shader dtor: %s", m_name.c_str());
 #endif
+
+	// todo: this really could use smart pointers...
 
 	// release constants
 	for (ConstantBuffer& cbuf : m_cBuffers)
@@ -664,7 +667,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 			}
 			context->Unmap(data, 0);
 
-			// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader, see it)
+			// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader)
 
 			// call XSSetConstantBuffers() from array using ShaderType enum
 			(context->*SetShaderConstants[CB.shdType])(CB.bufferSlot, 1, &data);

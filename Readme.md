@@ -4,17 +4,18 @@
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
-![](Data/Screenshots/IBL_la.PNG)
+![](Screenshots/IBL_la.PNG)
 
 <center><i>BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting</i></center>
 
 # Feature List / Version History
 
- *v0.2.1 - Automated Build, Performance Logging, Text Rendering - TBA(March)*
+ *v0.3.0 - Automated Build, Logging, Text Rendering, CPU & GPU Profiler - ETA: Early May*
  - Text Rendering
- - CPU Profiler
- - GPU Profiler (**WIP**)
+ - CPU & GPU Profiler
+ - Shader Binary Cache
  - Build scripts (Python, Batch) & Automated Build (AppVeyor)
+ - Logging: Console and/or Log Files
 
  *v0.2.0 - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
  - On-the-fly-switchable Forward/Deferred Rendering
@@ -38,11 +39,11 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 <center><i>PCF Shadows, CPU profiler, Text Rendering</i></center>
 
-![](Data/Screenshots/space_gold.PNG)
+![](Screenshots/space_gold.PNG)
 
 <center><i>SSAO w/ Gaussian Blur</i></center>
 
-![](Data/Screenshots/SSAO_GaussianBlur.PNG)
+![](Screenshots/SSAO_GaussianBlur.PNG)
 
 # Prerequisites
 
@@ -79,17 +80,17 @@ Scenes:
 | Engine Controls |  |
 | :---: | :--- |
 | **PageUp / PageDown** | Change Environment Map / Skybox |
-| **F1** |	TexCoord Shader (Forward Rendering Only) |
-| **F2** |	Normals Shader (Forward Rendering Only) |
-| **F3** |	Diffuse Color Shader (Forward Rendering Only) |
-| **F4** |	Toggle TBN Shader (Forward Rendering Only) |
-| **F5** |	Lighting Shader (Forward Rendering Only) |
-| **F6** |	Toggle Lighting Shaders (Phong/BRDF) |
-| **F7** |	Toggle Debug Shader |
-| **F8** |	Toggle Forward/Deferred Rendering |
-| **F9** |	Toggle Bloom |
-| **;** |	Toggle Ambient Occlusion |
-| **Shift+;** |	Toggle Performance Stats |
+| **F1** |     TexCoord Shader (Forward Rendering Only) |
+| **F2** |     Normals Shader (Forward Rendering Only) |
+| **F3** |     Diffuse Color Shader (Forward Rendering Only) |
+| **F4** |     Toggle TBN Shader (Forward Rendering Only) |
+| **F5** |     Lighting Shader (Forward Rendering Only) |
+| **F6** |     Toggle Lighting Shaders (Phong/BRDF) |
+| **F7** |     Toggle Debug Shader |
+| **F8** |     Toggle Forward/Deferred Rendering |
+| **F9** |     Toggle Bloom |
+| **;** |      Toggle Ambient Occlusion |
+| **Shift+;** |        Toggle Performance Stats |
 | **Backspace** | Pause App |
 | **ESC** |	Exit App |
 

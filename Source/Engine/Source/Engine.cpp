@@ -861,7 +861,6 @@ void Engine::Render()
 
 	mpGPUProfiler->EndQuery();
 	mpGPUProfiler->EndFrame(mFrameCount);
-	mpGPUProfiler->CollectTimestamps(mFrameCount);
 	++mFrameCount;
 }
 

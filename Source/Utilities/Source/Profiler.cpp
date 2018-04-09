@@ -40,7 +40,7 @@ void CPUProfiler::EndProfile()
 
 
 	mState.bIsProfiling = false;
-	mPerfEntryTree = PerfEntryTree();
+	mPerfEntryTree = /*Tree<PerfEntry>()*/PerfEntryTree();
 }
 
 
@@ -71,9 +71,9 @@ void CPUProfiler::BeginEntry(const std::string & entryName)
 		entry.name = entryName;
 
 		// update hierarchy
-		if (mPerfEntryTree.root.pPerfEntry == nullptr)
+		if (mPerfEntryTree.root.pData == nullptr)
 		{	// first node
-			mPerfEntryTree.root.pPerfEntry = pCurrentPerfEntry;
+			mPerfEntryTree.root.pData = pCurrentPerfEntry;
 			mState.pLastEntryNode = &mPerfEntryTree.root;
 		}
 		else
@@ -124,7 +124,11 @@ bool CPUProfiler::StateCheck() const
 
 void CPUProfiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSort)
 {
-	if(bSort) mPerfEntryTree.Sort();
+	if (bSort)
+	{
+		mPerfEntryTree.Sort();
+	}
+
 	mPerfEntryTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
 }
 //---------------------------------------------------------------------------------------------------------------------------
@@ -187,6 +191,11 @@ CPUProfiler::PerfEntryNode* CPUProfiler::PerfEntryTree::AddChild(PerfEntryNode& 
 	return &parentNode.children.back();	// is this safe? this might not be safe...
 }
 
+void CPUProfiler::PerfEntryTree::SortSubTree(PerfEntryNode & node)
+{
+	std::sort(node.children.begin(), node.children.end(), [](const PerfEntryNode& l, const PerfEntryNode& r) { return l.pData->GetAvg() >= r.pData->GetAvg(); });
+	std::for_each(node.children.begin(), node.children.end(), [this](PerfEntryNode& n) { SortSubTree(n); });
+}
 void CPUProfiler::PerfEntryTree::Sort()
 {
 	SortSubTree(root);
@@ -204,7 +213,7 @@ void CPUProfiler::PerfEntryTree::RenderTree(TextRenderer * pTextRenderer, const 
 
 CPUProfiler::PerfEntryNode* CPUProfiler::PerfEntryTree::FindNode(const PerfEntry * pNode)
 {
-	if (root.pPerfEntry == pNode) return &root;
+	if (root.pData == pNode) return &root;
 	return SearchSubTree(root, pNode);
 }
 
@@ -216,11 +225,11 @@ CPUProfiler::PerfEntryNode* CPUProfiler::PerfEntryTree::SearchSubTree(const Perf
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
 		PerfEntryNode* pEntryNode = &root.children[i];
-		if (pSearchEntry == pEntryNode->pPerfEntry)
+		if (pSearchEntry == pEntryNode->pData)
 			return pEntryNode;
 
 		pSearchResult = SearchSubTree(*pEntryNode, pSearchEntry);
-		if (pSearchResult && pSearchResult->pPerfEntry == pSearchEntry)
+		if (pSearchResult && pSearchResult->pData == pSearchEntry)
 			return pSearchResult;
 	}
 
@@ -233,7 +242,7 @@ void CPUProfiler::PerfEntryTree::RenderSubTree(const PerfEntryNode & node, TextR
 
 	// clear & populate text
 	stats.clear(); stats.str("");
-	stats << node.pPerfEntry->name << "  " << node.pPerfEntry->GetAvg() * 1000 << " ms";
+	stats << node.pData->name << "  " << node.pData->GetAvg() * 1000 << " ms";
 
 	drawDesc.screenPosition = screenPosition;
 	drawDesc.text = stats.str();
@@ -245,11 +254,6 @@ void CPUProfiler::PerfEntryTree::RenderSubTree(const PerfEntryNode & node, TextR
 		row_count += i == 0 ? 0 : node.children[i - 1].children.size();
 		RenderSubTree(node.children[i], pTextRenderer, { screenPosition.x() + X_OFFSET, screenPosition.y() + Y_OFFSET * (i+1+ row_count)}, drawDesc, stats);
 	}
-}
-void CPUProfiler::PerfEntryTree::SortSubTree(PerfEntryNode & node)
-{
-	std::sort(node.children.begin(), node.children.end(), [](const PerfEntryNode& l, const PerfEntryNode& r) { return l.pPerfEntry->GetAvg() >= r.pPerfEntry->GetAvg(); });
-	std::for_each(node.children.begin(), node.children.end(), [this](PerfEntryNode& n) { SortSubTree(n); });
 }
 
 //---------------------------------------------------------------------------------------------------------------------------
@@ -275,23 +279,56 @@ void GPUProfiler::Init(ID3D11DeviceContext* pContext, ID3D11Device* pDevice)
 	mpContext = pContext;
 	mpDevice = pDevice;
 
-	mPingPongBuffer.Init(pDevice);
+	D3D11_QUERY_DESC queryDesc = {};
+	queryDesc.MiscFlags = 0;
+
+	for (size_t frameIndex = 0; frameIndex < FRAME_COUNT; ++frameIndex)
+	{
+		queryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
+		pDevice->CreateQuery(&queryDesc, &pDisjointQuery[frameIndex]);
+
+		for (size_t queryIndex = 0; queryIndex < FRAME_QUERY_BUFFER_SIZE; ++queryIndex)
+		{
+			queryDesc.Query = D3D11_QUERY_TIMESTAMP;
+			pDevice->CreateQuery(&queryDesc, &mFrameQueries[frameIndex][queryIndex].pTimestampQueryBegin);
+			pDevice->CreateQuery(&queryDesc, &mFrameQueries[frameIndex][queryIndex].pTimestampQueryEnd);
+		}
+	}
 }
 
 void GPUProfiler::Exit()
 {
-	mPingPongBuffer.Exit();
+	for (size_t frameIndex = 0; frameIndex < FRAME_COUNT; ++frameIndex)
+	{
+		for (size_t queryIndex = 0; queryIndex < FRAME_QUERY_BUFFER_SIZE; ++queryIndex)
+		{
+			mFrameQueries[frameIndex][queryIndex].pTimestampQueryBegin->Release();
+			mFrameQueries[frameIndex][queryIndex].pTimestampQueryEnd->Release();
+		}
+		pDisjointQuery[frameIndex]->Release();
+	}
 }
 
 void GPUProfiler::BeginFrame(const unsigned long long FRAME_NUMBER)
 {
-	mPingPongBuffer.ResetFrameQueries(FRAME_NUMBER);
-	mpContext->Begin(mPingPongBuffer.pDisjointQuery[FRAME_NUMBER % 2]);
+	mCurrFrameNumber = FRAME_NUMBER;
+	mCurrQueryIndex = 0;
+	mpContext->Begin(pDisjointQuery[FRAME_NUMBER % FRAME_COUNT]);
 }
 
 void GPUProfiler::EndFrame(const unsigned long long FRAME_NUMBER)
 {
-	mpContext->End(mPingPongBuffer.pDisjointQuery[FRAME_NUMBER % 2]);
+	const unsigned long long PREV_FRAME_NUMBER = (FRAME_NUMBER - (FRAME_COUNT - 1));
+
+	mpContext->End(pDisjointQuery[FRAME_NUMBER % FRAME_COUNT]);
+
+	// collect previous frame queries
+	if (FRAME_NUMBER < FRAME_COUNT) return;	// skip first queries.
+	D3D10_QUERY_DATA_TIMESTAMP_DISJOINT tsDj = {};
+	if (!GetQueryResultsOfFrame(PREV_FRAME_NUMBER, mpContext, tsDj))
+	{
+		Log::Warning("[GPUProfiler]: Bad Disjoint Query (Frame: %llu)", PREV_FRAME_NUMBER);
+	}
 }
 
 float GPUProfiler::GetEntry() const
@@ -312,31 +349,21 @@ void GPUProfiler::RenderPerformanceStats(TextRenderer * pTextRenderer, const vec
 	const int X_OFFSET = 20;
 	const int Y_OFFSET = 22;
 
-	std::ostringstream stats;
-	stats.precision(2);
-	stats << std::fixed;
-
-	auto pingPongIndex = ((mPingPongBuffer.currFrameNumber - 1) % 2);
-	const QueryData& qData = mPingPongBuffer.perFrameQueries[pingPongIndex].front();
-	stats << qData.tag << "  " << qData.value << " ms";
-
-	drawDesc.screenPosition = screenPosition;
-	drawDesc.text = stats.str();
-	pTextRenderer->RenderText(drawDesc);
-}
-
-void GPUProfiler::CollectTimestamps(const unsigned long long FRAME_NUMBER)
-{
-	if (FRAME_NUMBER == 0) return;	// skip first frame.
-
-	const unsigned long long PREV_FRAME_NUMBER = (FRAME_NUMBER - 1);
-
-	D3D10_QUERY_DATA_TIMESTAMP_DISJOINT tsDj = {};
-	if ( !mPingPongBuffer.GetQueryResultsOfFrame(PREV_FRAME_NUMBER, mpContext, tsDj) )
+	for(size_t i =0; i<FRAME_COUNT; ++i)
 	{
-		Log::Warning("[GPUProfiler]: Bad Disjoint Query (Frame: %llu)", PREV_FRAME_NUMBER);
+		std::ostringstream stats;
+		stats.precision(2);
+		stats << std::fixed;
+		const QueryData& qData = mFrameQueries[i].front();
+
+		stats << qData.tag << "[" << i << "]" << "  " << qData.value << " ms";
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + i * 20);
+		drawDesc.text = stats.str();
+		pTextRenderer->RenderText(drawDesc);
 	}
+
 }
+
 
 void GPUProfiler::QueryData::Collect(float freq, ID3D11DeviceContext* pContext)
 {
@@ -359,70 +386,32 @@ void GPUProfiler::QueryData::Collect(float freq, ID3D11DeviceContext* pContext)
 	value = float(tsEnd - tsBegin) / freq * 1000.0f;
 }
 
-bool GPUProfiler::QueryPingPong::GetQueryResultsOfFrame(const unsigned long long frameNumber, ID3D11DeviceContext* pContext, D3D10_QUERY_DATA_TIMESTAMP_DISJOINT & tsDj)
+bool GPUProfiler::GetQueryResultsOfFrame(const unsigned long long frameNumber, ID3D11DeviceContext* pContext, D3D10_QUERY_DATA_TIMESTAMP_DISJOINT & tsDj)
 {
-	const size_t bufferIndex = frameNumber % 2;
+	const size_t bufferIndex = frameNumber % FRAME_COUNT;
 
 	pContext->GetData(pDisjointQuery[bufferIndex], &tsDj, sizeof(tsDj), 0);
 	if (tsDj.Disjoint != 0)
 	{
 		return false;
 	}
-	for (size_t i = 0; i < currQueryIndex; ++i)
+	for (size_t i = 0; i < mCurrQueryIndex; ++i)
 	{
-		perFrameQueries[bufferIndex][i].Collect(static_cast<float>(tsDj.Frequency), pContext);
+		mFrameQueries[bufferIndex][i].Collect(static_cast<float>(tsDj.Frequency), pContext);
 	}
 	return true;
 }
 
-void GPUProfiler::QueryPingPong::ResetFrameQueries(unsigned long long frameNum)
+void GPUProfiler::BeginQuery(const std::string & tag)
 {
-	currFrameNumber = frameNum;
-	currQueryIndex = 0;
-}
-
-void GPUProfiler::QueryPingPong::BeginQuery(ID3D11DeviceContext* pContext, const std::string & tag)
-{
-	QueryData& query = perFrameQueries[currFrameNumber % 2][currQueryIndex];
-	pContext->End(query.pTimestampQueryBegin);
+	QueryData& query = mFrameQueries[mCurrFrameNumber % FRAME_COUNT][mCurrQueryIndex];
+	mpContext->End(query.pTimestampQueryBegin);
 	query.tag = tag;
 }
 
-void GPUProfiler::QueryPingPong::EndQuery(ID3D11DeviceContext* pContext)
+void GPUProfiler::EndQuery()
 {
-	pContext->End(perFrameQueries[currFrameNumber % 2][currQueryIndex].pTimestampQueryEnd);
-	++currQueryIndex;
+	mpContext->End(mFrameQueries[mCurrFrameNumber % FRAME_COUNT][mCurrQueryIndex].pTimestampQueryEnd);
+	++mCurrQueryIndex;
 }
 
-void GPUProfiler::QueryPingPong::Init(ID3D11Device * pDevice)
-{
-	D3D11_QUERY_DESC queryDesc = {};
-	queryDesc.MiscFlags = 0;
-
-	queryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
-	pDevice->CreateQuery(&queryDesc, &pDisjointQuery[0]);
-	pDevice->CreateQuery(&queryDesc, &pDisjointQuery[1]);
-
-	queryDesc.Query = D3D11_QUERY_TIMESTAMP;
-	for (size_t pingPong = 0; pingPong < 2; ++pingPong)
-	{
-		for (size_t i = 0; i < PER_FRAME_QUERY_BUFFER_SIZE; ++i)
-		{
-			pDevice->CreateQuery(&queryDesc, &perFrameQueries[pingPong][i].pTimestampQueryBegin);
-			pDevice->CreateQuery(&queryDesc, &perFrameQueries[pingPong][i].pTimestampQueryEnd);
-		}
-	}
-}
-
-void GPUProfiler::QueryPingPong::Exit()
-{
-	for (size_t pingPong = 0; pingPong < 2; ++pingPong)
-	{
-		for (size_t i = 0; i < PER_FRAME_QUERY_BUFFER_SIZE; ++i)
-		{
-			perFrameQueries[pingPong][i].pTimestampQueryBegin->Release();
-			perFrameQueries[pingPong][i].pTimestampQueryEnd->Release();
-		}
-		pDisjointQuery[pingPong]->Release();
-	}
-}

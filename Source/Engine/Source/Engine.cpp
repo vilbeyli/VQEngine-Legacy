@@ -295,11 +295,12 @@ void Engine::CalcFrameStats(float dt)
 	if (frameCount % RefreshRate == 0)
 	{
 		mCurrentFrameTime = frameTime;
+		float frameTimeGPU = mpGPUProfiler->GetEntry("GPU");
 
 		std::ostringstream stats;
 		stats.precision(2);
 		stats << std::fixed;
-		stats << "VQEngine Demo | " << "CPU Frame: " << frameTime * 1000.0f << " ms  FPS: ";
+		stats << "VQEngine Demo | " << "CPU: " << frameTime * 1000.0f << " ms  GPU: " << frameTimeGPU * 1000.f << " | FPS: ";
 		stats.precision(4);
 		stats << fps;
 		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
@@ -508,6 +509,7 @@ void Engine::Render()
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
 	mpCPUProfiler->BeginEntry("Shadow Pass");
+	mpGPUProfiler->BeginQuery("Shadow Pass");
 	mpRenderer->BeginEvent("Shadow Pass");
 	
 	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass has their own render targets
@@ -515,6 +517,7 @@ void Engine::Render()
 	
 	mpRenderer->EndEvent();
 	mpCPUProfiler->EndEntry();
+	mpGPUProfiler->EndQuery();
 
 	// LIGHTING PASS
 	//------------------------------------------------------------------------
@@ -537,30 +540,45 @@ void Engine::Render()
 			: mSSAOPass.whiteTexture4x4;
 
 		// GEOMETRY - DEPTH PASS
+		mpGPUProfiler->BeginQuery("Geometry Pass");
 		mpCPUProfiler->BeginEntry("Geometry Pass");
 		mpRenderer->BeginEvent("Geometry Pass");
 		mDeferredRenderingPasses.SetGeometryRenderingStates(mpRenderer);
 		mFrameStats.numSceneObjects = mpSceneManager->Render(mpRenderer, mSceneView);
-		mpRenderer->EndEvent();	mpCPUProfiler->EndEntry();
+		mpRenderer->EndEvent();	
+		mpCPUProfiler->EndEntry();
+		mpGPUProfiler->EndQuery();
 
 		// AMBIENT OCCLUSION  PASS
-		mpCPUProfiler->BeginEntry("Ambient Occlusion Pass");
+		mpCPUProfiler->BeginEntry("SSAO Pass");
+		mpGPUProfiler->BeginQuery("SSAO");
 		if (mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled)
 		{
 			// TODO: if BeginEntry() is inside, it's never reset to 0 if ambiend occl is turned off
+			mpGPUProfiler->BeginQuery("Occlusion");
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mSceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
+			mpGPUProfiler->EndQuery();
+
+			mpGPUProfiler->BeginQuery("Blur");
 			mSSAOPass.GaussianBlurPass(mpRenderer);
 			mpRenderer->EndEvent();	
+			mpGPUProfiler->EndQuery();
 		}
 		mpCPUProfiler->EndEntry();
+		mpGPUProfiler->EndQuery();
 
 		// DEFERRED LIGHTING PASS
 		mpCPUProfiler->BeginEntry("Lighting Pass");
+		mpGPUProfiler->BeginQuery("Lighting Pass");
 		mpRenderer->BeginEvent("Lighting Pass");
+
 		mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
-		mpRenderer->EndEvent(); mpCPUProfiler->EndEntry();
+		
+		mpRenderer->EndEvent();
+		mpCPUProfiler->EndEntry();
+		mpGPUProfiler->EndQuery();
 
 		mpCPUProfiler->BeginEntry("Skybox & Lights");
 		// LIGHT SOURCES
@@ -718,8 +736,10 @@ void Engine::Render()
 	// POST PROCESS PASS
 	//------------------------------------------------------------------------
 	mpCPUProfiler->BeginEntry("Post Process");
+	mpGPUProfiler->BeginQuery("Post Process");
 	mPostProcessPass.Render(mpRenderer, sEngineSettings.rendering.bUseBRDFLighting);
 	mpCPUProfiler->EndEntry();
+	mpGPUProfiler->EndQuery();
 
 	// DEBUG PASS
 	//------------------------------------------------------------------------
@@ -787,6 +807,7 @@ void Engine::Render()
 	}
 
 	// UI TEXT
+	mpGPUProfiler->BeginQuery("UI");
 	mpCPUProfiler->BeginEntry("UI");
 	const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
 
@@ -805,14 +826,14 @@ void Engine::Render()
 		float Y_POS = 30.0f;
 		mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 
-		Y_POS = 30.0f;
-		X_POS = sEngineSettings.window.width * 0.15f;
+		X_POS = sEngineSettings.window.width * 0.81f;
+		Y_POS = sEngineSettings.window.height * 0.35f;
 		mpGPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 	}
 	if (mFrameStats.bShow)
 	{
-		const float X_POS = sEngineSettings.window.width * 0.81f;
-		const float Y_POS = 600.0f;
+		const float X_POS = sEngineSettings.window.width * 0.70f;
+		const float Y_POS = sEngineSettings.window.height * 0.90f;
 		mFrameStats.rstats = mpRenderer->GetRenderStats();
 		mFrameStats.Render(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc);
 	}
@@ -850,11 +871,14 @@ void Engine::Render()
 	}
 
 	mpCPUProfiler->EndEntry();
+	mpGPUProfiler->EndQuery();
 
 #endif
+	mpGPUProfiler->BeginQuery("Present");
 	mpCPUProfiler->BeginEntry("Present");
 	mpRenderer->EndFrame();
 	mpCPUProfiler->EndEntry();
+	mpGPUProfiler->EndQuery();
 
 
 	mpCPUProfiler->EndEntry();	// Render() call

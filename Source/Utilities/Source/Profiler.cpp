@@ -40,7 +40,7 @@ void CPUProfiler::EndProfile()
 
 
 	mState.bIsProfiling = false;
-	mPerfEntryTree = /*Tree<PerfEntry>()*/PerfEntryTree();
+	mPerfEntryTree = Tree<PerfEntry>();
 }
 
 
@@ -68,7 +68,7 @@ void CPUProfiler::BeginEntry(const std::string & entryName)
 	{
 		// setup entry settings / aux data
 		entry.samples.resize(mSettings.sampleCount, 0.0f);
-		entry.name = entryName;
+		entry.tag = entryName;
 
 		// update hierarchy
 		if (mPerfEntryTree.root.pData == nullptr)
@@ -138,7 +138,7 @@ void CPUProfiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2
 //---------------------------------------------------------------------------------------------------------------------------
 // PERF ENTRY
 //---------------------------------------------------------------------------------------------------------------------------
-void PerfEntry::UpdateSampleEnd()
+void CPUProfiler::PerfEntry::UpdateSampleEnd()
 {
 	timer.Stop();
 	float dt = timer.DeltaTime();
@@ -146,7 +146,7 @@ void PerfEntry::UpdateSampleEnd()
 
 	samples[currSampleIndex++ % samples.size()] = dt;
 }
-void PerfEntry::UpdateSampleBegin()
+void CPUProfiler::PerfEntry::UpdateSampleBegin()
 {
 	timer.Start();
 }
@@ -154,14 +154,14 @@ void PerfEntry::UpdateSampleBegin()
 // returns the index (i-1) in a ring-buffer fashion
 size_t GetLastIndex(size_t i, size_t count) { return i == 0 ? count - 1 : ((i - 1) % count); }
 
-void PerfEntry::PrintEntryInfo(bool bPrintAllEntries)
+void CPUProfiler::PerfEntry::PrintEntryInfo(bool bPrintAllEntries)
 {
 	size_t lastIndedx = GetLastIndex(currSampleIndex, samples.size());
 
 	std::stringstream info;
 	info.precision(5);
 	info << std::fixed;
-	info << "\nEntry\t\t\t: " + name + "\n";
+	info << "\nEntry\t\t\t: " + tag + "\n";
 	info << "Last Sample\t\t: " << samples[lastIndedx] << "ms\n";
 	info << "Avg  Sample\t\t: " << GetAvg() << "ms\n";
 	if (bPrintAllEntries)
@@ -173,90 +173,16 @@ void PerfEntry::PrintEntryInfo(bool bPrintAllEntries)
 	}
 	Log::Info(info.str());
 }
-inline float PerfEntry::GetAvg() const
+inline float CPUProfiler::PerfEntry::GetAvg() const
 {
 	return std::accumulate(samples.begin(), samples.end(), 0.0f) / samples.size();	
 }
-//---------------------------------------------------------------------------------------------------------------------------
-
-
-
-//---------------------------------------------------------------------------------------------------------------------------
-// PERF ENTRY TREE
-//---------------------------------------------------------------------------------------------------------------------------
-CPUProfiler::PerfEntryNode* CPUProfiler::PerfEntryTree::AddChild(PerfEntryNode& parentNode, const PerfEntry * pPerfEntry)
+bool CPUProfiler::PerfEntry::operator<(const PerfEntry & other) const
 {
-	PerfEntryNode newNode = { pPerfEntry, &parentNode, std::vector<PerfEntryNode>() };
-	parentNode.children.push_back(newNode);
-	return &parentNode.children.back();	// is this safe? this might not be safe...
+	return GetAvg() > other.GetAvg() + 0.000001f;	// largest time measurement appears first
 }
 
-void CPUProfiler::PerfEntryTree::SortSubTree(PerfEntryNode & node)
-{
-	std::sort(node.children.begin(), node.children.end(), [](const PerfEntryNode& l, const PerfEntryNode& r) { return l.pData->GetAvg() >= r.pData->GetAvg(); });
-	std::for_each(node.children.begin(), node.children.end(), [this](PerfEntryNode& n) { SortSubTree(n); });
-}
-void CPUProfiler::PerfEntryTree::Sort()
-{
-	SortSubTree(root);
-}
 
-void CPUProfiler::PerfEntryTree::RenderTree(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc)
-{
-	// set stream properties once, and pass it to recursive function
-	std::ostringstream stats;
-	stats.precision(2);
-	stats << std::fixed;
-
-	RenderSubTree(root, pTextRenderer, screenPosition, drawDesc, stats);
-}
-
-CPUProfiler::PerfEntryNode* CPUProfiler::PerfEntryTree::FindNode(const PerfEntry * pNode)
-{
-	if (root.pData == pNode) return &root;
-	return SearchSubTree(root, pNode);
-}
-
-CPUProfiler::PerfEntryNode* CPUProfiler::PerfEntryTree::SearchSubTree(const PerfEntryNode & node, const PerfEntry * pSearchEntry)
-{
-	PerfEntryNode* pSearchResult = nullptr;
-
-	// visit children | depth first
-	for (size_t i = 0; i < node.children.size(); i++)
-	{
-		PerfEntryNode* pEntryNode = &root.children[i];
-		if (pSearchEntry == pEntryNode->pData)
-			return pEntryNode;
-
-		pSearchResult = SearchSubTree(*pEntryNode, pSearchEntry);
-		if (pSearchResult && pSearchResult->pData == pSearchEntry)
-			return pSearchResult;
-	}
-
-	return pSearchResult;
-}
-void CPUProfiler::PerfEntryTree::RenderSubTree(const PerfEntryNode & node, TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc, std::ostringstream & stats)
-{
-	const int X_OFFSET = 20;
-	const int Y_OFFSET = 22;
-
-	// clear & populate text
-	stats.clear(); stats.str("");
-	stats << node.pData->name << "  " << node.pData->GetAvg() * 1000 << " ms";
-
-	drawDesc.screenPosition = screenPosition;
-	drawDesc.text = stats.str();
-	pTextRenderer->RenderText(drawDesc);
-	
-	size_t row_count = 0;
-	for (size_t i = 0; i < node.children.size(); i++)
-	{
-		row_count += i == 0 ? 0 : node.children[i - 1].children.size();
-		RenderSubTree(node.children[i], pTextRenderer, { screenPosition.x() + X_OFFSET, screenPosition.y() + Y_OFFSET * (i+1+ row_count)}, drawDesc, stats);
-	}
-}
-
-//---------------------------------------------------------------------------------------------------------------------------
 
 #if 0
 // todo: multi-threading this is not a good idea. use the worker thread later on as watcher on shader files for shader hotswap?
@@ -282,48 +208,41 @@ void GPUProfiler::Init(ID3D11DeviceContext* pContext, ID3D11Device* pDevice)
 	D3D11_QUERY_DESC queryDesc = {};
 	queryDesc.MiscFlags = 0;
 
-	for (size_t frameIndex = 0; frameIndex < FRAME_COUNT; ++frameIndex)
+	for (size_t bufferIndex = 0; bufferIndex < FRAME_HISTORY; ++bufferIndex)
 	{
 		queryDesc.Query = D3D11_QUERY_TIMESTAMP_DISJOINT;
-		pDevice->CreateQuery(&queryDesc, &pDisjointQuery[frameIndex]);
-
-		for (size_t queryIndex = 0; queryIndex < FRAME_QUERY_BUFFER_SIZE; ++queryIndex)
-		{
-			queryDesc.Query = D3D11_QUERY_TIMESTAMP;
-			pDevice->CreateQuery(&queryDesc, &mFrameQueries[frameIndex][queryIndex].pTimestampQueryBegin);
-			pDevice->CreateQuery(&queryDesc, &mFrameQueries[frameIndex][queryIndex].pTimestampQueryEnd);
-		}
+		pDevice->CreateQuery(&queryDesc, &pDisjointQuery[bufferIndex]);
 	}
 }
 
 void GPUProfiler::Exit()
 {
-	for (size_t frameIndex = 0; frameIndex < FRAME_COUNT; ++frameIndex)
+	for (auto it = mFrameQueries.begin(); it != mFrameQueries.end(); ++it)
 	{
-		for (size_t queryIndex = 0; queryIndex < FRAME_QUERY_BUFFER_SIZE; ++queryIndex)
+		for (size_t bufferIndex = 0; bufferIndex < FRAME_HISTORY; ++bufferIndex)
 		{
-			mFrameQueries[frameIndex][queryIndex].pTimestampQueryBegin->Release();
-			mFrameQueries[frameIndex][queryIndex].pTimestampQueryEnd->Release();
+			it->second.pTimestampQueryBegin[bufferIndex]->Release();
+			it->second.pTimestampQueryEnd[bufferIndex]->Release();
 		}
-		pDisjointQuery[frameIndex]->Release();
 	}
+	for (size_t bufferIndex = 0; bufferIndex < FRAME_HISTORY; ++bufferIndex)
+		pDisjointQuery[bufferIndex]->Release();
 }
 
 void GPUProfiler::BeginFrame(const unsigned long long FRAME_NUMBER)
 {
 	mCurrFrameNumber = FRAME_NUMBER;
-	mCurrQueryIndex = 0;
-	mpContext->Begin(pDisjointQuery[FRAME_NUMBER % FRAME_COUNT]);
+	mpContext->Begin(pDisjointQuery[FRAME_NUMBER % FRAME_HISTORY]);
 }
 
 void GPUProfiler::EndFrame(const unsigned long long FRAME_NUMBER)
 {
-	const unsigned long long PREV_FRAME_NUMBER = (FRAME_NUMBER - (FRAME_COUNT - 1));
+	const unsigned long long PREV_FRAME_NUMBER = (FRAME_NUMBER - (FRAME_HISTORY-1));
 
-	mpContext->End(pDisjointQuery[FRAME_NUMBER % FRAME_COUNT]);
+	mpContext->End(pDisjointQuery[FRAME_NUMBER % FRAME_HISTORY]);
 
 	// collect previous frame queries
-	if (FRAME_NUMBER < FRAME_COUNT) return;	// skip first queries.
+	if (FRAME_NUMBER < FRAME_HISTORY-1) return;	// skip first queries.
 	D3D10_QUERY_DATA_TIMESTAMP_DISJOINT tsDj = {};
 	if (!GetQueryResultsOfFrame(PREV_FRAME_NUMBER, mpContext, tsDj))
 	{
@@ -331,87 +250,119 @@ void GPUProfiler::EndFrame(const unsigned long long FRAME_NUMBER)
 	}
 }
 
-float GPUProfiler::GetEntry() const
+float GPUProfiler::GetEntry(const std::string& tag) const
 {
-	float time = 0.0f;
-
-	return time;
+	if (mQueryDataTree.root.pData == nullptr) return 0.0f;
+	return mQueryDataTree.FindNode(tag)->pData->GetAvg();
 }
 
 void GPUProfiler::RenderPerformanceStats(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription drawDesc, bool bSort)
 {
-	// cpu code for reference
-	//
-	//if (bSort) 
-	//	mPerfEntryTree.Sort();
-	//mPerfEntryTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
-
-	const int X_OFFSET = 20;
-	const int Y_OFFSET = 22;
-
-	for(size_t i =0; i<FRAME_COUNT; ++i)
-	{
-		std::ostringstream stats;
-		stats.precision(2);
-		stats << std::fixed;
-		const QueryData& qData = mFrameQueries[i].front();
-
-		stats << qData.tag << "[" << i << "]" << "  " << qData.value << " ms";
-		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + i * 20);
-		drawDesc.text = stats.str();
-		pTextRenderer->RenderText(drawDesc);
-	}
-
+	if (bSort) 
+		mQueryDataTree.Sort();
+	mQueryDataTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
 }
 
 
-void GPUProfiler::QueryData::Collect(float freq, ID3D11DeviceContext* pContext)
+void GPUProfiler::QueryData::Collect(float freq, ID3D11DeviceContext * pContext, size_t bufferIndex)
 {
 	UINT64 tsBegin, tsEnd;
 
-#if 0
-	bool bDataRetrieved = true;
-	int attempt = 0;
-	do 
-	{
-		bDataRetrieved &= FAILED(pContext->GetData(pTimestampQueryBegin, &tsBegin, sizeof(UINT64), 0));
-		bDataRetrieved &= FAILED(pContext->GetData(pTimestampQueryEnd, &tsEnd, sizeof(UINT64), 0));
-		Sleep(1);
-	} while(!bDataRetrieved && (++attempt < 5));
-#else
-	pContext->GetData(pTimestampQueryBegin, &tsBegin, sizeof(UINT64), 0);
-	pContext->GetData(pTimestampQueryEnd, &tsEnd, sizeof(UINT64), 0);
-#endif
+	pContext->GetData(pTimestampQueryBegin[bufferIndex], &tsBegin, sizeof(UINT64), 0);
+	pContext->GetData(pTimestampQueryEnd[bufferIndex], &tsEnd, sizeof(UINT64), 0);
 
-	value = float(tsEnd - tsBegin) / freq * 1000.0f;
+	value[bufferIndex] = float(tsEnd - tsBegin) / freq;
 }
 
 bool GPUProfiler::GetQueryResultsOfFrame(const unsigned long long frameNumber, ID3D11DeviceContext* pContext, D3D10_QUERY_DATA_TIMESTAMP_DISJOINT & tsDj)
 {
-	const size_t bufferIndex = frameNumber % FRAME_COUNT;
+	const size_t bufferIndex = frameNumber % FRAME_HISTORY;
 
 	pContext->GetData(pDisjointQuery[bufferIndex], &tsDj, sizeof(tsDj), 0);
 	if (tsDj.Disjoint != 0)
 	{
 		return false;
 	}
-	for (size_t i = 0; i < mCurrQueryIndex; ++i)
+
+	std::for_each(mFrameQueries.begin(), mFrameQueries.end(), [&tsDj, &pContext, &bufferIndex](std::pair<const std::string, QueryData>& mapEntry)
 	{
-		mFrameQueries[bufferIndex][i].Collect(static_cast<float>(tsDj.Frequency), pContext);
-	}
+		mapEntry.second.Collect(static_cast<float>(tsDj.Frequency), pContext, bufferIndex);
+	});
 	return true;
 }
 
 void GPUProfiler::BeginQuery(const std::string & tag)
 {
-	QueryData& query = mFrameQueries[mCurrFrameNumber % FRAME_COUNT][mCurrQueryIndex];
-	mpContext->End(query.pTimestampQueryBegin);
-	query.tag = tag;
+	const size_t frameQueryIndex = mCurrFrameNumber % FRAME_HISTORY;
+
+	const bool bEntryExists = mFrameQueries.find(tag) != mFrameQueries.end();
+
+	// hierarchy variables
+	const QueryData* pParentPerfEntry = mState.EntryNameStack.empty() ? nullptr : &mFrameQueries.at(mState.EntryNameStack.top());
+
+	// update state
+	mState.EntryNameStack.push(tag);
+
+	// setup the entry settings/data and update hierarchy if entry didn't exist
+	QueryData& entry = mFrameQueries[tag];
+	const QueryData* pCurrentPerfEntry = &mFrameQueries.at(tag);
+	if (!bEntryExists)
+	{
+		// setup entry settings / aux data
+		entry.tag = tag;
+
+		// update hierarchy
+		if (mQueryDataTree.root.pData == nullptr)
+		{	// first node
+			mQueryDataTree.root.pData = pCurrentPerfEntry;
+			mState.pLastEntryNode = &mQueryDataTree.root;
+		}
+		else
+		{	// rest of the nodes
+			mState.pLastEntryNode = mQueryDataTree.AddChild(*mState.pLastEntryNode, pCurrentPerfEntry);
+		}
+
+		D3D11_QUERY_DESC queryDesc = {};
+		queryDesc.Query = D3D11_QUERY_TIMESTAMP;
+		for (size_t bufferIndex = 0; bufferIndex < FRAME_HISTORY; ++bufferIndex)
+		{
+			mpDevice->CreateQuery(&queryDesc, &entry.pTimestampQueryBegin[bufferIndex]);
+			mpDevice->CreateQuery(&queryDesc, &entry.pTimestampQueryEnd[bufferIndex]);
+		}
+	}
+
+	mpContext->End(entry.pTimestampQueryBegin[frameQueryIndex]);
 }
 
 void GPUProfiler::EndQuery()
 {
-	mpContext->End(mFrameQueries[mCurrFrameNumber % FRAME_COUNT][mCurrQueryIndex].pTimestampQueryEnd);
-	++mCurrQueryIndex;
+	const size_t bufferIndex = mCurrFrameNumber % FRAME_HISTORY;
+
+	std::string tag = mState.EntryNameStack.top();
+	mState.EntryNameStack.pop();
+
+	mpContext->End(mFrameQueries.at(tag).pTimestampQueryEnd[bufferIndex]);
+
+	if (mState.pLastEntryNode)
+		mState.pLastEntryNode = mState.pLastEntryNode->pParent;
 }
 
+GPUProfiler::QueryData::QueryData()
+{
+	for (size_t i = 0; i < FRAME_HISTORY; ++i)
+	{
+		pTimestampQueryEnd[i] = pTimestampQueryEnd[i] = nullptr;
+		value[i] = 0.0f;
+	}
+}
+
+float GPUProfiler::QueryData::GetAvg() const
+{
+	return std::accumulate(std::begin(value), std::end(value), 0.0f) / static_cast<float>(FRAME_HISTORY);
+}
+
+
+bool GPUProfiler::QueryData::operator<(const QueryData & other) const
+{
+	return GetAvg() > other.GetAvg() + 0.000001f; // largest time measurement appears first
+}

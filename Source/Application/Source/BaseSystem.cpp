@@ -252,6 +252,14 @@ void BaseSystem::CaptureMouse(bool bDoCapture)
 	{
 		RECT rcClip;	GetWindowRect(m_hwnd, &rcClip);
 
+		// keep clip cursor rect inside pixel area
+		constexpr int PX_OFFSET = 15;
+		constexpr int PX_WND_TITLE_OFFSET = 30;
+		rcClip.left += PX_OFFSET;
+		rcClip.right -= PX_OFFSET;
+		rcClip.top += PX_OFFSET + PX_WND_TITLE_OFFSET;
+		rcClip.bottom -= PX_OFFSET;
+
 		ShowCursor(FALSE);
 		ClipCursor(&rcClip);
 		GetCursorPos(&m_capturePosition);

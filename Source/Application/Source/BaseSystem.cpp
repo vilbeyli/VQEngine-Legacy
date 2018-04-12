@@ -243,12 +243,6 @@ void BaseSystem::InitRawInputDevices()
 
 void BaseSystem::CaptureMouse(bool bDoCapture)
 {
-	if (m_bMouseCaptured == bDoCapture)
-	{
-		//Log::Info("Capture Mouse IGNORE");
-		return;
-	}
-
 #ifdef LOG_WINDOW_EVENTS
 	Log::Info("Capture Mouse: %d", bDoCapture ? 1 : 0);
 #endif
@@ -376,7 +370,7 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 #ifdef LOG_WINDOW_EVENTS
 			Log::Info("WM_ACTIVATE::WA_ACTIVE");
 #endif
-			//this->CaptureMouse(true);
+			this->CaptureMouse(true);
 			// paused = false
 			// timer start
 		}

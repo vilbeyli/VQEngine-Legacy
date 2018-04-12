@@ -178,7 +178,7 @@ public:	// INTERFACE
 	//
 	void RenderTree(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription& drawDesc);
 
-	// 
+	// Returns a const pointer to TreeNode with the given tag
 	//
 	const TreeNode<T>* FindNode(const std::string& tag) const;
 

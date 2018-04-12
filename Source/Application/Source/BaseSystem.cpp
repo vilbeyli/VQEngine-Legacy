@@ -260,7 +260,7 @@ void BaseSystem::CaptureMouse(bool bDoCapture)
 		rcClip.top += PX_OFFSET + PX_WND_TITLE_OFFSET;
 		rcClip.bottom -= PX_OFFSET;
 
-		ShowCursor(FALSE);
+		while(ShowCursor(FALSE)>=0);
 		ClipCursor(&rcClip);
 		GetCursorPos(&m_capturePosition);
 		SetForegroundWindow(m_hwnd);
@@ -270,11 +270,11 @@ void BaseSystem::CaptureMouse(bool bDoCapture)
 	}
 	else
 	{
-		ShowCursor(TRUE);
 		ClipCursor(nullptr);
 		SetCursorPos(m_capturePosition.x, m_capturePosition.y);
-		//SetForegroundWindow(NULL);
-		//SetFocus(NULL);	// we still want to register events
+		while(ShowCursor(TRUE) <= 0);
+		SetForegroundWindow(NULL);
+		// SetFocus(NULL);	// we still want to register events
 		const_cast<Input*>(ENGINE->INP())->m_bIgnoreInput = true;
 	}
 }

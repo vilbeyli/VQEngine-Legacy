@@ -300,7 +300,7 @@ void Engine::CalcFrameStats(float dt)
 		std::ostringstream stats;
 		stats.precision(2);
 		stats << std::fixed;
-		stats << "VQEngine Demo | " << "CPU: " << frameTime * 1000.0f << " ms  GPU: " << frameTimeGPU * 1000.f << " | FPS: ";
+		stats << "VQEngine Demo | " << "CPU: " << frameTime * 1000.0f << " ms  GPU: " << frameTimeGPU * 1000.f << "ms | FPS: ";
 		stats.precision(4);
 		stats << fps;
 		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());

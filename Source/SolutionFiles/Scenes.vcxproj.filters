@@ -37,7 +37,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Source\Scenes\SceneTemplate.h.txt" />
-    <None Include="..\Source\Scenes\SceneTemplate.cpp.txt" />
+    <Text Include="..\Scenes\SceneTemplate.cpp.txt" />
+    <Text Include="..\Scenes\SceneTemplate.h.txt" />
   </ItemGroup>
 </Project>

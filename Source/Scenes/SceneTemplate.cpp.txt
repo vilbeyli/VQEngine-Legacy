@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "SceneTemplate.h"
-#include "Application/Engine.h"
+#include "Engine/Engine.h"
 #include "Application/Input.h"
 
 
@@ -34,6 +34,7 @@ void SceneTemplate::Load(SerializedScene& scene)
 
 void SceneTemplate::Unload()
 {
+
 }
 
 void SceneTemplate::Update(float dt)
@@ -41,7 +42,7 @@ void SceneTemplate::Update(float dt)
 
 }
 
-void SceneTemplate::Render(const SceneView & sceneView, bool bSendMaterialData) const
+int SceneTemplate::Render(const SceneView & sceneView, bool bSendMaterialData) const
 {
 
 }

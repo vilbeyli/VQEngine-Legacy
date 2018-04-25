@@ -139,16 +139,22 @@
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Scenes\IBLTestScene.h" />
     <ClInclude Include="$(SolutionDir)Source\Scenes\RoomScene.h" />
-    <None Include="..\Source\Scenes\SceneTemplate.h.txt">
-      <FileType>CppHeader</FileType>
-    </None>
     <ClInclude Include="$(SolutionDir)Source\Scenes\SSAOTestScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Scenes\IBLTestScene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Scenes\RoomScene.cpp" />
-    <None Include="..\Source\Scenes\SceneTemplate.cpp.txt" />
     <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\Scenes\SceneTemplate.cpp.txt">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DeploymentContent>
+    </Text>
+    <Text Include="..\Scenes\SceneTemplate.h.txt">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DeploymentContent>
+    </Text>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

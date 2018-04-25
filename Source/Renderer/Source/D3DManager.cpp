@@ -42,9 +42,9 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hwnd, 
 	m_hwnd = hwnd;
 
 	HRESULT result;
-	IDXGIFactory* factory;
-	IDXGIAdapter* adapter;
-	IDXGIOutput* adapterOutput;
+	IDXGIFactory* pFactory;
+	IDXGIAdapter* pAdapter;
+	IDXGIOutput* pAdapterOutput;
 	unsigned numModes;
 
 	// Store the vsync setting.
@@ -54,28 +54,28 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hwnd, 
 	//----------------------------------------------------------------------------------
 
 	// Create a DirectX graphics interface factory.
-	result = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory);
+	result = CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&pFactory);
 	if (FAILED(result))
 	{
 		return false;
 	}
 
 	// Use the factory to create an adapter for the primary graphics interface (video card).
-	result = factory->EnumAdapters(0, &adapter);
+	result = pFactory->EnumAdapters(0, &pAdapter);
 	if (FAILED(result))
 	{
 		return false;
 	}
 
 	// Enumerate the primary adapter output (monitor).
-	result = adapter->EnumOutputs(0, &adapterOutput);
+	result = pAdapter->EnumOutputs(0, &pAdapterOutput);
 	if (FAILED(result))
 	{
 		return false;
 	}
 
 	// Get the number of modes that fit the DXGI_FORMAT_R8G8B8A8_UNORM display format for the adapter output (monitor).
-	result = adapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &numModes, NULL);
+	result = pAdapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &numModes, NULL);
 	if (FAILED(result))
 	{
 		return false;
@@ -90,7 +90,7 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hwnd, 
 	}
 
 	// Now fill the display mode list structures.
-	result = adapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &numModes, displayModeList);
+	result = pAdapterOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_ENUM_MODES_INTERLACED, &numModes, displayModeList);
 	if (FAILED(result))
 	{
 		return false;
@@ -130,7 +130,7 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hwnd, 
 
 	// Get the adapter (video card) description.
 	DXGI_ADAPTER_DESC adapterDesc;
-	result = adapter->GetDesc(&adapterDesc);
+	result = pAdapter->GetDesc(&adapterDesc);
 	if (FAILED(result))
 	{
 		return false;
@@ -149,10 +149,10 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hwnd, 
 	}
 
 	// Release memory
-	delete[] displayModeList;	displayModeList = 0;
-	adapterOutput->Release();	adapterOutput = 0;
-	adapter->Release();			adapter = 0;
-	factory->Release();			factory = 0;
+	delete[] displayModeList;		displayModeList = nullptr;
+	pAdapterOutput->Release();		pAdapterOutput = nullptr;
+	pAdapter->Release();			pAdapter = nullptr;
+	pFactory->Release();			pFactory = nullptr;
 
 	if (!InitSwapChain(hwnd, FULL_SCREEN, width, height, numerator, denominator, DXGI_FORMAT_B8G8R8A8_UNORM))
 	{
@@ -250,7 +250,7 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 	ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
 
 	// Set to a single back buffer.
-	swapChainDesc.BufferCount = 1;
+	swapChainDesc.BufferCount = 3;
 	swapChainDesc.BufferDesc.Width = scrWidth;
 	swapChainDesc.BufferDesc.Height = scrHeight;
 

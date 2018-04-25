@@ -37,7 +37,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\Scenes\SceneTemplate.cpp.txt" />
-    <Text Include="..\Scenes\SceneTemplate.h.txt" />
+    <Text Include="..\Scenes\SceneTemplate.h" />
+    <Text Include="..\Scenes\SceneTemplate.cpp" />
   </ItemGroup>
 </Project>

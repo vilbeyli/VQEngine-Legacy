@@ -147,11 +147,11 @@
     <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\Scenes\SceneTemplate.cpp.txt">
+    <Text Include="..\Scenes\SceneTemplate.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DeploymentContent>
     </Text>
-    <Text Include="..\Scenes\SceneTemplate.h.txt">
+    <Text Include="..\Scenes\SceneTemplate.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DeploymentContent>
     </Text>

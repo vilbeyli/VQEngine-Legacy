@@ -68,11 +68,11 @@ for /f "tokens=* delims=," %%a in (%solutionFile%) do (
   if not "x!line:%currSearchStr%=!"=="x!line!" (
        if not "x!prevLine:%prevSearchStrCompile%=!"=="x!prevLine!" (
            REM !line! currently has </ItemGroup>, !prevLine! currently has the last cpp entry
-           echo     ^<%compileXML%^> >> %updatedSolutionOutDir%
+           echo     ^<%compileXML%^>>> %updatedSolutionOutDir%
        )
        if not "x!prevLine:%prevSearchStrInclude%=!"=="x!prevLine!" (
            REM !line! currently has </ItemGroup>, !prevLine! currently has the last include entry
-           echo     ^<%includeXML%^> >> %updatedSolutionOutDir%
+           echo     ^<%includeXML%^>>> %updatedSolutionOutDir%
        )
   )
   echo %%a>> %updatedSolutionOutDir%

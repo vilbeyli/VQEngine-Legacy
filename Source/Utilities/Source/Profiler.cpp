@@ -343,7 +343,7 @@ void GPUProfiler::EndQuery()
 
 	mpContext->End(mFrameQueries.at(tag).pTimestampQueryEnd[bufferIndex]);
 
-	if (mState.pLastEntryNode)
+	if (mState.pLastEntryNode && mState.pLastEntryNode->pParent)
 		mState.pLastEntryNode = mState.pLastEntryNode->pParent;
 }
 

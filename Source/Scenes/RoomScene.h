@@ -73,8 +73,8 @@ private:
 #endif
 	} m_room;
 
-	std::vector<GameObject> spheres;
-	std::vector<Animation> m_animations;
+	std::vector<GameObject> mSpheres;
+	std::vector<Animation> mAnimations;
 };
 
 

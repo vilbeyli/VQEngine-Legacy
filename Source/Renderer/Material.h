@@ -23,6 +23,7 @@
 class Renderer;
 
 struct BlinnPhong_Material;
+struct BRDF_Material;
 struct Material
 {
 #if 0
@@ -43,6 +44,7 @@ struct Material
 
 
 	static BlinnPhong_Material RandomBlinnPhongMaterial();
+	static BRDF_Material RandomBRDFMaterial();
 
 	Material();
 	~Material();

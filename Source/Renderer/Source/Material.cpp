@@ -56,6 +56,23 @@ BlinnPhong_Material Material::RandomBlinnPhongMaterial()
 	if (r >= 0.6000f && r < 0.7999f) return BlinnPhong_Material::jade;
 	else return BlinnPhong_Material();
 }
+BRDF_Material Material::RandomBRDFMaterial()
+{
+	BRDF_Material m = BRDF_Material();
+	if (RandI(0, 100) < 50)
+	{	// PLASTIC
+		m.metalness = RandF(0.0f, 0.15f);
+		m.roughness = RandF(0.44f, 0.99f);
+	}
+	else
+	{	// METAL
+		m.metalness = RandF(0.7f, 1.0f);
+		m.roughness = RandF(0.04f, 0.7f);
+	}
+	
+	return m;
+}
+
 
 BlinnPhong_Material::BlinnPhong_Material(const vec3 & diffuse_in, const vec3 & specular_in, float shininess_in)
 	:

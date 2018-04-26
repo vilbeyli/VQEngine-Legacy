@@ -123,7 +123,7 @@ public:
 	void RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats);
 
 private:	// Internal Structs
-	static const size_t FRAME_HISTORY = 20;
+	static const size_t FRAME_HISTORY = 10;
 
 	struct QueryData
 	{

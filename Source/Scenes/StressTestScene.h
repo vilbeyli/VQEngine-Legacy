@@ -34,6 +34,8 @@ public:
 
 private:
 	// custom scene stuff here
-	// std::vector<GameObject> objs; // etc
+	std::vector<GameObject> objs;
+	std::vector<float> rotationSpeeds;
+
 };
 

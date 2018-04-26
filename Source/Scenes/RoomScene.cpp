@@ -116,7 +116,7 @@ void RoomScene::Load(SerializedScene& scene)
 			const float shininessBase = shininessMax + 7.0f;
 			mat1.shininess = shininessBase - rowStep * shininessMax;
 
-			spheres.push_back(sph);
+			mSpheres.push_back(sph);
 		}
 	}
 
@@ -132,13 +132,13 @@ void RoomScene::Load(SerializedScene& scene)
 
 void RoomScene::Unload()
 {
-	spheres.clear();
-	m_animations.clear();
+	mSpheres.clear();
+	mAnimations.clear();
 }
 
 void RoomScene::Update(float dt)
 {
-	for (auto& anim : m_animations) anim.Update(dt);
+	for (auto& anim : mAnimations) anim.Update(dt);
 	UpdateCentralObj(dt);
 }
 
@@ -149,7 +149,7 @@ int RoomScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
 	m_room.Render(mpRenderer, sceneView, bSendMaterialData);
 	int numObj = 6;
 
-	for (const auto& sph : spheres)
+	for (const auto& sph : mSpheres)
 	{
 		sph.Render(mpRenderer, sceneView, bSendMaterialData);
 		++numObj;
@@ -165,7 +165,7 @@ void RoomScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
 	casters.push_back(&m_room.wallR);
 	casters.push_back(&m_room.wallF);
 	casters.push_back(&m_room.ceiling);
-	for (const GameObject& obj : spheres)	casters.push_back(&obj);
+	for (const GameObject& obj : mSpheres)	casters.push_back(&obj);
 }
 
 void RoomScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
@@ -176,7 +176,7 @@ void RoomScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 	objs.push_back(&m_room.wallR);
 	objs.push_back(&m_room.wallF);
 	objs.push_back(&m_room.ceiling);
-	for (const GameObject& obj : spheres)	objs.push_back(&obj);
+	for (const GameObject& obj : mSpheres)	objs.push_back(&obj);
 }
 
 void RoomScene::UpdateCentralObj(const float dt)

@@ -59,7 +59,12 @@ private:
 	char						m_GPUDescription[128];
 	HWND						m_hwnd;
 
-	IDXGISwapChain*				m_swapChain;
+
+#ifndef HIGHER_FEATURE_LEVEL
+	IDXGISwapChain*			m_swapChain;
+#else
+	IDXGISwapChain1*			m_swapChain;
+#endif
 	
 	ID3D11Device*				m_device;			// shared ptr
 	ID3D11DeviceContext*		m_deviceContext;

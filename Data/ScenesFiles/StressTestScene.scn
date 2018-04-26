@@ -1,0 +1,60 @@
+// Scene File Formatting:
+// ---------------------------------------------------------------------------------------------------------------
+// - all lowercase
+// - '//' starts a comment
+
+// Object initializations
+// ---------------------------------------------------------------------------------------------------------------
+// Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
+// Camera		: near far vfov  pos(3:xyz)  yaw pitch
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
+// BRDF			:
+// Phong		:
+// Object		: transform, brdf/phong, mesh
+
+
+// Scene
+// ---------------------------------------------------------------------------------------------------------------
+camera 0.1 1500 75   0 30 -100  0 25 
+camera 0.1 1500 75   0 30 100  180 25 
+ao true 1
+skylight true
+bloom true
+
+// objects
+// =======
+
+object begin
+mesh quad
+transform 0 0 0 90 0 0 100
+object end
+
+
+object begin
+mesh cube
+transform 10 0 -50 45 0 45 5
+brdf
+diffuse 0.9 0.9 0.9
+textures openart/186.jpg openart/186_norm.jpg
+brdf
+object end
+
+object begin
+mesh sphere
+brdf
+diffuse 0.8 0.8 0.8
+brdf
+transform -10 0 -50 0 0 45 5
+object end
+
+object begin
+mesh grid
+transform -30 5 -50 0 0 -45 15
+brdf
+diffuse 0.7 0.8 0.7
+textures openart/186.jpg openart/186_norm.jpg
+brdf
+object end
+
+light       s         white      	true       9000         80	     -100    45     0	   180  0  	65  0.8	 
+light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 

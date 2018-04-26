@@ -205,7 +205,7 @@ bool Engine::Load()
 		//renderer->m_Direct3D->ReportLiveObjects();
 		
 		mDeferredRenderingPasses.Initialize(mpRenderer);
-		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
+		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess, false);
 		mDebugPass.Initialize(mpRenderer);
 		mSSAOPass.Initialize(mpRenderer);
 
@@ -405,11 +405,11 @@ void Engine::PreRender()
 		{
 		case Light::ELightType::POINT:
 			mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();
-			mSceneLightData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
+			mSceneLightData._cb.pointLightsShadowing[shadowIndex] = l.GetPointLightData();
 			break;
 		case Light::ELightType::SPOT:
 			mSceneLightData._cb.spotLights[lightIndex] = l.GetSpotLightData();
-			mSceneLightData._cb.spotLightsShadowing[lightIndex] = l.GetSpotLightData();
+			mSceneLightData._cb.spotLightsShadowing[shadowIndex] = l.GetSpotLightData();
 			break;
 		case Light::ELightType::DIRECTIONAL:
 			//mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();

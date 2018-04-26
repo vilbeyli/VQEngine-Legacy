@@ -18,6 +18,13 @@
 
 #include "vectormath.h"
 
+#include "Utilities/utils.h"
+vec3 vec3::Rand()
+{
+	vec3 v = vec3(RandF(0, 1), RandF(0, 1), RandF(0, 1));
+	return v.normalized();
+}
+
 const XMVECTOR vec3::Zero = XMVectorZero();
 const XMVECTOR vec3::Up = XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
 const XMVECTOR vec3::Down = XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);

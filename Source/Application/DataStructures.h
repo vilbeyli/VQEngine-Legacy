@@ -57,7 +57,7 @@ struct DirectionalLightGPU // 28(+4) Bytes | 2 registers
 //	XMMATRIX  lightSpaceMatrix;
 //};
 
-#define NUM_POINT_LIGHT 20
+#define NUM_POINT_LIGHT 100
 #define NUM_SPOT_LIGHT 20
 #define NUM_DIRECTIONAL_LIGHT 4
 using PointLightDataArray		= std::array<PointLightGPU, NUM_POINT_LIGHT>;

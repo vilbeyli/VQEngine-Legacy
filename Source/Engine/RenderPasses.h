@@ -118,7 +118,8 @@ struct PostProcessPass
 {
 	void Initialize(
 		Renderer*						pRenderer, 
-		const Settings::PostProcess&	postProcessSettings
+		const Settings::PostProcess&	postProcessSettings,
+		bool							bEnabled
 	);
 	void Render(Renderer* pRenderer, bool bDeferredRendering) const;
 

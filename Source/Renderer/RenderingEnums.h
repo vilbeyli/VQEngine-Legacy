@@ -163,7 +163,7 @@ enum EGeometry
 	CYLINDER,
 	SPHERE,
 	GRID,
-	BONE,
+	//BONE,
 
 	MESH_TYPE_COUNT
 };

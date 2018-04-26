@@ -31,6 +31,7 @@ using std::shared_ptr;
 #include "Scenes/RoomScene.h"
 #include "Scenes/SSAOTestScene.h"
 #include "Scenes/IBLTestScene.h"
+#include "Scenes/StressTestScene.h"
 
 class Camera;
 class PathManager;
@@ -67,7 +68,7 @@ private:
 	Scene*					mpActiveScene;
 	int						mCurrentLevel;
 
-	// current design for adding new scenes is as follows:
+	// current design for adding new scenes is as follows (and is horrible...):
 	// - add the .scn scene file to Data/Levels directory
 	// - Create a class for your scene and inherit from Scene base class
 	// - override functions as necessary. 
@@ -76,5 +77,6 @@ private:
 	RoomScene				mRoomScene;
 	SSAOTestScene			mSSAOTestScene;
 	IBLTestScene			mIBLTestScene;
+	StressTestScene			mStressTestScene;
 
 };

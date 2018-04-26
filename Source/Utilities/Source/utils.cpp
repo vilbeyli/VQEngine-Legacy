@@ -212,6 +212,12 @@ std::string GetCurrentTimeAsStringWithBrackets(){ return "[" + GetCurrentTimeAsS
 
 float RandF(float l, float h)
 {
+	if (l > h)
+	{	// swap params in case order is wrong
+		float tmp = l;
+		l = h;
+		h = tmp;
+	}
 	thread_local std::mt19937_64 generator(std::random_device{}());
 	std::uniform_real_distribution<float> distribution(l, h);
 	return distribution(generator);

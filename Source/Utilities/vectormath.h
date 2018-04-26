@@ -35,6 +35,7 @@ using VecPair = std::pair<XMVECTOR, XMVECTOR>;
 
 struct vec3
 {
+	static vec3 Rand();
 	static const XMVECTOR Zero;
 	static const XMVECTOR Up;
 	static const XMVECTOR Down;

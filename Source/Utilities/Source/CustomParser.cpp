@@ -29,7 +29,7 @@
 
 
 const std::string file_root		= "Data\\";
-const std::string scene_root	= "Data\\Scenes\\";
+const std::string scene_root	= "Data\\ScenesFiles\\";
 
 const std::unordered_map<std::string, bool> sBoolTypeReflection
 {
@@ -601,6 +601,10 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	else if (cmd == "skylight")
 	{
 		scene.settings.bSkylightEnabled= sBoolTypeReflection.at(command[1]);
+	}
+	else if (cmd == "bloom")
+	{
+		scene.settings.bBloomEnabled = sBoolTypeReflection.at(command[1]);
 	}
 	else
 	{

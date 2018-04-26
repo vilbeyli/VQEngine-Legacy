@@ -35,7 +35,8 @@ static const char* sceneNames[] =
 {
 	"Room.scn",
 	"SSAOTest.scn",
-	"IBLTest.scn"
+	"IBLTest.scn",
+	"StressTestScene.scn"
 };
 
 SceneManager::SceneManager(std::vector<Light>& lights)
@@ -43,6 +44,7 @@ SceneManager::SceneManager(std::vector<Light>& lights)
 	mRoomScene(*this, lights),
 	mSSAOTestScene(*this, lights),
 	mIBLTestScene(*this, lights),
+	mStressTestScene(*this, lights),
 	mpActiveScene(nullptr)
 {}
 
@@ -70,7 +72,7 @@ void SceneManager::ResetMainCamera()
 
 bool SceneManager::LoadScene(Renderer* pRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects)
 {
-	mSerializedScene = Parser::ReadScene(pRenderer,sceneNames[settings.levelToLoad]);
+	mSerializedScene = Parser::ReadScene(pRenderer, sceneNames[settings.levelToLoad]);
 	if (mSerializedScene.loadSuccess == '0') return false;
 	
 	mCurrentLevel = settings.levelToLoad;
@@ -79,6 +81,7 @@ bool SceneManager::LoadScene(Renderer* pRenderer, const Settings::Engine& settin
 	case 0:	mpActiveScene = &mRoomScene; break;
 	case 1:	mpActiveScene = &mSSAOTestScene; break;
 	case 2:	mpActiveScene = &mIBLTestScene; break;
+	case 3:	mpActiveScene = &mStressTestScene; break;
 	default:	break;
 	}
 	mpActiveScene->LoadScene(pRenderer, mSerializedScene, settings.window);
@@ -121,6 +124,7 @@ void SceneManager::HandleInput()
 	if (mpInput->IsKeyTriggered("1"))	LoadScene(0);
 	if (mpInput->IsKeyTriggered("2"))	LoadScene(1);
 	if (mpInput->IsKeyTriggered("3"))	LoadScene(2);
+	if (mpInput->IsKeyTriggered("4"))	LoadScene(3);
 
 
 	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.

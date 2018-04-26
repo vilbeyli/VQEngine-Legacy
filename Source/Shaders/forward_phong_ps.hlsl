@@ -18,7 +18,7 @@
 
 #define BLINN_PHONG
 
-#define LIGHT_COUNT 20  // don't forget to update CPU define too (SceneManager.cpp)
+#define LIGHT_COUNT 100  // don't forget to update CPU define too (SceneManager.cpp)
 #define SPOT_COUNT 10   // ^
 
 #include "LightingCommon.hlsl"

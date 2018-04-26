@@ -207,6 +207,9 @@ void D3DManager::Shutdown()
 
 void D3DManager::EndFrame()
 {
+	if (m_vsync_enabled)		m_swapChain->Present(0, 0);
+	else						m_swapChain->Present(0, 0);
+
 	m_deviceContext->IASetInputLayout(NULL);
 	m_deviceContext->VSSetShader(NULL, NULL, 0);
 	m_deviceContext->GSSetShader(NULL, NULL, 0);
@@ -214,8 +217,6 @@ void D3DManager::EndFrame()
 	m_deviceContext->DSSetShader(NULL, NULL, 0);
 	m_deviceContext->PSSetShader(NULL, NULL, 0);
 	m_deviceContext->CSSetShader(NULL, NULL, 0);
-	if (m_vsync_enabled)		m_swapChain->Present(1, 0);
-	else						m_swapChain->Present(0, 0);
 }
 
 void D3DManager::GetVideoCardInfo(char* cardName, int& memory)
@@ -243,7 +244,12 @@ void D3DManager::ReportLiveObjects(const std::string& LogHeader /*= ""*/) const
 bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator, DXGI_FORMAT FrameBufferFormat)
 {
 	HRESULT result;
+
+#ifndef HIGHER_FEATURE_LEVEL
 	DXGI_SWAP_CHAIN_DESC swapChainDesc;
+#else
+	DXGI_SWAP_CHAIN_DESC1 swapChainDesc;
+#endif
 	D3D_FEATURE_LEVEL featureLevel;
 
 	// Initialize the swap chain description.
@@ -251,16 +257,16 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 
 	// Set to a single back buffer.
 	swapChainDesc.BufferCount = 3;
+
+
+#ifndef HIGHER_FEATURE_LEVEL
+	// DEPRECATED
+	//
 	swapChainDesc.BufferDesc.Width = scrWidth;
 	swapChainDesc.BufferDesc.Height = scrHeight;
-
-	// Set regular 32-bit surface for the back buffer.
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb173064(v=vs.85).aspx
-	swapChainDesc.BufferDesc.Format = FrameBufferFormat;
-
-	// Set the refresh rate of the back buffer.
+	swapChainDesc.BufferDesc.Format = FrameBufferFormat;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb173064(v=vs.85).aspx
 	if (m_vsync_enabled)
-	{
+	{	// Set the refresh rate of the back buffer.
 		swapChainDesc.BufferDesc.RefreshRate.Numerator = numerator;
 		swapChainDesc.BufferDesc.RefreshRate.Denominator = denominator;
 	}
@@ -269,30 +275,22 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 		swapChainDesc.BufferDesc.RefreshRate.Numerator = 0;
 		swapChainDesc.BufferDesc.RefreshRate.Denominator = 1;
 	}
-
-	// Set the usage of the back buffer.
+	 swapChainDesc.OutputWindow = hwnd;	// Set the handle for the window to render to.
+	 swapChainDesc.Windowed = !fullscreen;
+	 swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;	// Set the scan line ordering and scaling to unspecified.
+	 swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
+#else
+	swapChainDesc.Width = scrWidth;
+	swapChainDesc.Height = scrHeight;
+	swapChainDesc.Format = FrameBufferFormat;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb173064(v=vs.85).aspx
+	swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+#endif
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_SHADER_INPUT;
-
-	// Set the handle for the window to render to.
-	swapChainDesc.OutputWindow = hwnd;
-
-	// Turn multisampling off.
 	swapChainDesc.SampleDesc.Count = 1;
 	swapChainDesc.SampleDesc.Quality = 0;
-	swapChainDesc.Windowed = !fullscreen;
-
-	// Set the scan line ordering and scaling to unspecified.
-	swapChainDesc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-	swapChainDesc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
-
-	// Discard the back buffer contents after presenting.
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-
-	// Don't set the advanced flags.
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;	
 	swapChainDesc.Flags = 0;
-
-	// Set the feature level to DirectX 11.
-	featureLevel = D3D_FEATURE_LEVEL_11_0;
+	featureLevel = D3D_FEATURE_LEVEL_11_1;
 
 #if defined( _DEBUG )
 	UINT flags = D3D11_CREATE_DEVICE_DEBUG;
@@ -301,6 +299,7 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 	UINT flags = 0;
 #endif
 
+#ifndef HIGHER_FEATURE_LEVEL
 	// Create the swap chain, Direct3D device, and Direct3D device context.
 	result = D3D11CreateDeviceAndSwapChain(NULL, 
 											D3D_DRIVER_TYPE_HARDWARE, 
@@ -312,6 +311,17 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 											&swapChainDesc, 
 											&m_swapChain, 
 											&m_device, NULL, &m_deviceContext);
+#else
+	result = IDXGIFactory2::CreateSwapChainForHwnd(
+		m_device,
+		hwnd,
+		&swapChainDesc,
+		nullptr,
+		nullptr,
+		&m_swapChain
+	);
+#endif
+
 	if (FAILED(result))
 	{
 		Log::Error("D3DManager: Cannot create swap chain");

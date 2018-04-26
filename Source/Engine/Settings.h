@@ -87,5 +87,6 @@ namespace Settings
 		bool bAmbientOcclusionEnabled;	// screen-space ambient occlusion
 		float ambientFactor;			// ambient lighting scalar
 		bool bSkylightEnabled;			// ambient environment map lighting
+		bool bBloomEnabled;				// bloom post effect
 	};
 };

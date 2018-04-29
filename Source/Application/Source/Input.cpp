@@ -21,8 +21,9 @@
 
 #include <algorithm>
 
-//#define LOG
+#include <winuser.rh>
 
+//#define LOG
 const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	// keyboard mapping for windows keycodes. 
 	// #define LOG to see each keycode when you press on output window
@@ -47,9 +48,11 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	m["Escape"] = 0x1B; m["escape"] = 0x1B; m["ESC"] = 0x1B; m["esc"] = 0x1B;
 	m["PageUp"] = 33;	m["PageDown"] = 34;
 
-	m["Numpad7"] = 103; m["Numpad8"] = 104; m["Numpad9"] = 105;
-	m["Numpad4"] = 100; m["Numpad5"] = 101; m["Numpad6"] = 102;
-	m["Numpad1"] = 97 ; m["Numpad2"] = 98 ; m["Numpad3"] = 99;
+	m["Numpad7"] = 103;		m["Numpad8"] = 104;			m["Numpad9"] = 105;
+	m["Numpad4"] = 100;		m["Numpad5"] = 101;			m["Numpad6"] = 102;
+	m["Numpad1"] = 97 ;		m["Numpad2"] = 98 ;			m["Numpad3"] = 99;
+	m["Numpad+"] = VK_ADD;	m["Numpad-"] = VK_SUBTRACT;	
+	m["+"]		 = VK_ADD;	m["-"]		 = VK_SUBTRACT;	
 	return m;
 }();
 

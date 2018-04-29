@@ -24,7 +24,12 @@ vec3 vec3::Rand()
 	vec3 v = vec3(RandF(0, 1), RandF(0, 1), RandF(0, 1));
 	return v.normalized();
 }
-
+const std::string vec3::print() const
+{
+	std::string s = "(";
+	s += std::to_string(_v.x) + ", " + std::to_string(_v.y) + ", " + std::to_string(_v.z) + ")";
+	return s;
+}
 const XMVECTOR vec3::Zero = XMVectorZero();
 const XMVECTOR vec3::Up = XMVectorSet(+0.0f, +1.0f, +0.0f, +0.0f);
 const XMVECTOR vec3::Down = XMVectorSet(+0.0f, -1.0f, +0.0f, +0.0f);

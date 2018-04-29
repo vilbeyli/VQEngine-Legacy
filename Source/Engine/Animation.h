@@ -45,6 +45,26 @@ private:
 	T _valueEnd;
 };
 
+
+template<typename T>
+void Track<T>::Update(float dt)
+{
+	const float prevNormalizedTime = _totalTime - static_cast<int>(_totalTime / _period) * _period;
+	const float prev_t = prevNormalizedTime / _period;
+
+	_totalTime += dt;
+
+	const float normalizedTime = _totalTime - static_cast<int>(_totalTime / _period) * _period;
+	const float t = normalizedTime / _period;	// [0, 1] for lerping
+												//const float prev_t = (*_data - _valueBegin) / (_valueEnd - _valueBegin);
+	if (prev_t > t)
+	{
+		std::swap(_valueBegin, _valueEnd);
+	}
+
+	*_data = _valueBegin * (1.0f - t) + _valueEnd * t;
+}
+
 struct Animation
 {
 	// lerping tracks

@@ -20,7 +20,6 @@
 class StressTestScene : public Scene
 {
 public:
-
 	void Load(SerializedScene& scene) override;
 	void Unload() override;
 	void Update(float dt) override;
@@ -34,8 +33,5 @@ public:
 
 private:
 	// custom scene stuff here
-	std::vector<GameObject> objs;
-	std::vector<float> rotationSpeeds;
-
 };
 

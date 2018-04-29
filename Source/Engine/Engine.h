@@ -99,6 +99,10 @@ public:
 	void					ToggleRenderingPath();	// Forward / Deferred
 	void					ToggleAmbientOcclusion();
 
+	void inline				ToggleProfilerRendering() { mbShowProfiler = !mbShowProfiler; }
+	void inline				ToggleControlsTextRendering() { mbShowControls = !mbShowControls; }
+	void inline				ToggleRenderingStats() { mFrameStats.bShow = !mFrameStats.bShow; }
+
 	void					SendLightData() const;
 	
 

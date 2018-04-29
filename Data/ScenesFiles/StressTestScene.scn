@@ -26,7 +26,13 @@ bloom true
 
 object begin
 mesh quad
-transform 0 0 0 90 0 0 100
+transform 0 0 0 90 0 0 600
+brdf
+diffuse 0.9 0.85 0.9
+textures openart/165.jpg openart/165_norm.jpg
+roughness 0.9
+metalness 0
+brdf
 object end
 
 
@@ -35,14 +41,16 @@ mesh cube
 transform 10 0 -50 45 0 45 5
 brdf
 diffuse 0.9 0.9 0.9
-textures openart/186.jpg openart/186_norm.jpg
+roughness 0.95
+metalness 0
+textures openart/164.jpg openart/164_norm.jpg
 brdf
 object end
 
 object begin
 mesh sphere
 brdf
-diffuse 0.8 0.8 0.8
+diffuse 1.0 0.76 0.336
 brdf
 transform -10 0 -50 0 0 45 5
 object end
@@ -51,8 +59,9 @@ object begin
 mesh grid
 transform -30 5 -50 0 0 -45 15
 brdf
-diffuse 0.7 0.8 0.7
-textures openart/186.jpg openart/186_norm.jpg
+diffuse 0.913, 0.921, 0.925
+metalness 0.8
+textures openart/199.jpg openart/199_norm.jpg
 brdf
 object end
 

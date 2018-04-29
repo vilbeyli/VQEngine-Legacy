@@ -244,12 +244,12 @@ bool Engine::HandleInput()
 	if (mpInput->IsKeyTriggered(";"))
 	{
 		if (mpInput->IsKeyDown("Shift"))	;
-		else								mbShowProfiler = !mbShowProfiler; 
+		else								ToggleProfilerRendering();
 	}
 	if (mpInput->IsKeyTriggered("'"))
 	{
-		if (mpInput->IsKeyDown("Shift"))	mbShowControls = !mbShowControls;
-		else								mFrameStats.bShow = !mFrameStats.bShow;
+		if (mpInput->IsKeyDown("Shift"))	ToggleControlsTextRendering();
+		else								ToggleRenderingStats();
 	}
 
 
@@ -300,7 +300,7 @@ void Engine::CalcFrameStats(float dt)
 		std::ostringstream stats;
 		stats.precision(2);
 		stats << std::fixed;
-		stats << "VQEngine Demo | " << "CPU: " << frameTime * 1000.0f << " ms  GPU: " << frameTimeGPU * 1000.f << "ms | FPS: ";
+		stats << "VQEngine Demo | " << "CPU: " << frameTime * 1000.0f << " ms  GPU: " << frameTimeGPU * 1000.f << " ms | FPS: ";
 		stats.precision(4);
 		stats << fps;
 		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
@@ -394,6 +394,8 @@ void Engine::PreRender()
 
 	for (const Light& l : mLights)
 	{
+		if (!l._bEnabled) continue;
+
 		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
 		const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
 
@@ -424,6 +426,8 @@ void Engine::PreRender()
 	unsigned numShd = 0;	// only for spot lights for now
 	for (const Light& l : mLights)
 	{
+		if (!l._bEnabled) continue;
+
 		// shadowing lights
 		if (l._castsShadow)
 		{
@@ -462,6 +466,8 @@ void Engine::RenderLights() const
 	mpRenderer->SetShader(EShaders::UNLIT);
 	for (const Light& light : mLights)
 	{
+		if (!light._bEnabled) continue;
+
 		mpRenderer->SetBufferObj(light._renderMesh);
 		const XMMATRIX world = light._transform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world  * mSceneView.viewProj;
@@ -896,6 +902,24 @@ const char* FrameStats::statNames[FrameStats::numStat] =
 	"Indices: ",
 	"Draw Calls: ",
 };
+
+std::string CommaSeparatedNumber(const std::string& num)
+{
+	std::string _num = "";
+	int i = 0;
+	for (auto it = num.rbegin(); it != num.rend(); ++it)
+	{
+		if (i % 3 == 0 && i != 0)
+		{
+			_num += ",";
+		}
+		_num += *it;
+		++i;
+	}
+	
+	return std::string(_num.rbegin(), _num.rend());
+}
+
 void FrameStats::Render(TextRenderer* pTextRenderer, const vec2& screenPosition, const TextDrawDescription& drawDesc)
 {
 	TextDrawDescription _drawDesc(drawDesc);
@@ -906,7 +930,7 @@ void FrameStats::Render(TextRenderer* pTextRenderer, const vec2& screenPosition,
 	for (size_t i = 0; i < FrameStats::numStat; ++i)
 	{
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + i * LINE_HEIGHT);
-		_drawDesc.text = FrameStats::statNames[RENDER_ORDER[i]] + std::to_string(FrameStats::stats[RENDER_ORDER[i]]);
+		_drawDesc.text = FrameStats::statNames[RENDER_ORDER[i]] + CommaSeparatedNumber(std::to_string(FrameStats::stats[RENDER_ORDER[i]]));
 		pTextRenderer->RenderText(_drawDesc);
 	}
 }

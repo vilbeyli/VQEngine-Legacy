@@ -26,6 +26,7 @@ struct SceneView;
 
 struct GameObjectRenderSettings
 {
+	bool bRender = true;
 	bool bRenderTBN = false;
 	bool bRenderDepth = true;
 };

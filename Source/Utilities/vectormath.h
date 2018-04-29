@@ -66,6 +66,7 @@ struct vec3
 	operator XMVECTOR() const;
 	operator XMFLOAT3() const;
 	bool operator ==(const vec3&) const;
+	inline vec3 operator +(const vec3& v) { return vec3(this->x() + v.x(), this->y() + v.y(), this->z() + v.z()); };
 	inline vec3& operator +=(const vec3& v) { *this = *this + v; return *this; };
 
 	float& x();
@@ -78,6 +79,7 @@ struct vec3
 
 	void normalize();
 	const vec3 normalized() const;
+	const std::string print() const;
 
 	XMFLOAT3 _v;
 };

@@ -77,7 +77,7 @@ namespace Settings
 
 	struct Engine 
 	{
-		Window		window;
+		Window window;
 		Rendering rendering;
 		int levelToLoad;
 	};

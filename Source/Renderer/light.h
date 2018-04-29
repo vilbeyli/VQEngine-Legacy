@@ -46,7 +46,8 @@ struct Light
 			float range,
 			float brightness,
 			float spotAngle,
-			bool castsShadows = false);
+			bool castsShadows = false,
+			bool bEnabled = true);
 	Light(const Light& l);
 	~Light();
 
@@ -65,6 +66,7 @@ struct Light
 	float			_range;
 	float			_brightness;	// 300.0f is a good default value
 	bool			_castsShadow;
+	bool			_bEnabled;
 
 	union 
 	{	// point light attributes

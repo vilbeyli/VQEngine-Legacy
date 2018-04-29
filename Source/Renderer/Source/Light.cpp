@@ -80,13 +80,14 @@ Light::Light(const Light& l)
 	_renderMesh(l._renderMesh)
 {}
 
-Light::Light(ELightType type, LinearColor color, float range, float brightness, float spotAngle, bool castsShadows) 
+Light::Light(ELightType type, LinearColor color, float range, float brightness, float spotAngle, bool castsShadows, bool bEnabled) 
 	:
 	_type(type),
 	_color(color),
 	_range(range),
 	_brightness(brightness),
-	_castsShadow(castsShadows)
+	_castsShadow(castsShadows),
+	_bEnabled(bEnabled)
 {
 	switch (_type)
 	{

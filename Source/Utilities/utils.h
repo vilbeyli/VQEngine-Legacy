@@ -76,6 +76,11 @@ namespace DirectoryUtil
 	std::string	GetFileNameWithoutExtension(const std::string&);
 	bool		FileExists(const std::string& pathToFile);
 
+	// returns the folder path given a file path
+	// e.g.: @pathToFile="C:\\Folder\\File.text" -> return "C:\\Folder\\"
+	//
+	std::string GetFolderPath(const std::string& pathToFile);
+
 	// returns true if the given @pathToImageFile ends with .jpg, .png or .hdr
 	//
 	bool		IsImageName(const std::string& pathToImageFile);

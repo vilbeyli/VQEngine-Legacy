@@ -421,7 +421,7 @@ void AddLights(std::vector<Light>& mLights)
 
 	if (mLights.size() + NUM_LIGHT > NUM_POINT_LIGHT)
 	{
-		Log::Warning("Maximum light count reached: %d", mLights.size());
+		Log::Warning("Maximum light count reached: %d", NUM_POINT_LIGHT);
 		return;
 	}
 

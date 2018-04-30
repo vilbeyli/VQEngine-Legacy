@@ -278,6 +278,60 @@ void Shader::CreateShader(ID3D11Device* pDevice, EShaderType type, void* pBuffer
 		assert(false);
 	}
 }
+
+bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
+{
+	if (!DirectoryUtil::FileExists(cachePath)) return true;
+
+	auto GetIncludeFileName = [](const std::string& line)
+	{
+		const std::string str_search = "#include \"";
+		if (line.find(str_search) != std::string::npos)
+		{
+			std::string quotedFileName = line.substr(str_search.size() - 1);
+			return quotedFileName.substr(1, quotedFileName.size() - 2);
+		}
+		return std::string();
+	};
+
+	const std::string ShaderSourceDir = DirectoryUtil::GetFolderPath(sourcePath);
+	const std::string ShaderCacheDir  = DirectoryUtil::GetFolderPath(cachePath);
+
+	auto AreIncludesDirty = [&](const std::string srcPath)
+	{
+		std::stack<std::string> includeStack;
+		includeStack.push(srcPath);
+		while (!includeStack.empty())
+		{
+			const std::string includeFilePath = includeStack.top();
+			includeStack.pop();
+			std::ifstream src = std::ifstream(includeFilePath.c_str());
+			if (!src.good())
+			{
+				Log::Error("[ShaderCompile] Cannot open source file: %s", includeFilePath.c_str());
+				continue;
+			}
+
+			std::string line;
+			while (getline(src, line))
+			{
+				const std::string includeFileName = GetIncludeFileName(line);
+				if (includeFileName.empty()) continue;
+
+				const std::string includeSourcePath = ShaderSourceDir + includeFileName;
+				const std::string includeCachePath = ShaderCacheDir + includeFileName;
+
+				if (DirectoryUtil::IsFileNewer(includeSourcePath, cachePath))
+					return true;
+				includeStack.push(includeSourcePath);
+			}
+		}
+		return false;
+	};
+
+	return DirectoryUtil::IsFileNewer(sourcePath, cachePath) || AreIncludesDirty(sourcePath);
+}
+
 void Shader::CompileShaders(ID3D11Device* pDevice, const std::vector<std::string>& filePaths, const std::vector<InputLayout>& layouts)
 {
 	HRESULT result;
@@ -297,9 +351,7 @@ void Shader::CompileShaders(ID3D11Device* pDevice, const std::vector<std::string
 		//
 		const std::string cacheFileName = DirectoryUtil::GetFileNameWithoutExtension(sourceFilePath) + ".hlsl.bin";
 		const std::string cacheFilePath = s_shaderCacheDirectory + "\\" + cacheFileName;
-		const bool bCacheIsDirty = DirectoryUtil::IsFileNewer(sourceFilePath, cacheFilePath);
-		const bool bUseCachedShaders = DirectoryUtil::FileExists(cacheFilePath) && !bCacheIsDirty;
-
+		const bool bUseCachedShaders = DirectoryUtil::FileExists(cacheFilePath) && !IsCacheDirty(sourceFilePath, cacheFilePath);
 
 		if (bUseCachedShaders)
 		{

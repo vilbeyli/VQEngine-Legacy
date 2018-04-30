@@ -42,6 +42,10 @@ namespace filesys = std::experimental::filesystem;
 #include <fstream>
 #endif
 
+#define RANGE(c) std::begin(c), std::end(c)
+#define RRANGE(c) std::rbegin(c), std::rend(c)
+#include <algorithm>
+
 namespace StrUtil
 {
 	using std::vector;
@@ -139,6 +143,14 @@ namespace DirectoryUtil
 		}
 
 		return StrUtil::UnicodeString::ToASCII(retPath);
+	}
+
+	std::string GetFolderPath(const std::string & pathToFile)
+	{
+		const auto tokens = StrUtil::split(pathToFile, '\\', '/');
+		std::string path = "";
+		std::for_each(RANGE(tokens), [&](const std::string& s) { if(s != tokens.back()) path += s + "/"; });
+		return path;
 	}
 
 	bool IsImageName(const std::string & str)

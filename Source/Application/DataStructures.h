@@ -73,6 +73,7 @@ using ShadowingDirectionalLightDataArray	= std::array<DirectionalLightGPU, NUM_D
 
 using SpotShadowViewArray = std::array<XMMATRIX, NUM_SPOT_LIGHT_SHADOW>;
 
+//#pragma pack(push, 1)
 struct SceneLightingData
 {
 	struct cb{	// shader constant buffer
@@ -103,6 +104,7 @@ struct SceneLightingData
 		_cb.pointLightCount_shadow = _cb.spotLightCount_shadow = _cb.directionalLightCount_shadow = 0;
 	}
 };
+//#pragma pack(pop)
 
 class TextRenderer;
 struct TextDrawDescription;

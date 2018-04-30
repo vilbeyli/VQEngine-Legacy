@@ -22,8 +22,11 @@ class SSAOTestScene : public Scene
 public:
 	void Load(SerializedScene& scene) override;
 	void Unload() override;
+
 	void Update(float dt) override;
 	int Render(const SceneView& sceneView, bool bSendMaterialData) const override;
+	void RenderUI() const override;
+
 	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;
 
 	SSAOTestScene(SceneManager& sceneMan, std::vector<Light>& lights);

@@ -30,7 +30,7 @@
 // STRUCTS
 //----------------------------------------------------------
 struct PointLight
-{
+{	// 48 bytes
 	float3 position;
 	float  range;
 	float3 color;
@@ -39,7 +39,7 @@ struct PointLight
 };
 
 struct SpotLight
-{
+{	// 48 bytes
 	float3 position;
 	float  halfAngle;
 	float3 color;
@@ -56,7 +56,7 @@ struct DirectionalLight
 
 // defines maximum number of dynamic lights  todo: shader defines
 // don't forget to update CPU define too (RenderPasses.h)
-#define NUM_POINT_LIGHT 20
+#define NUM_POINT_LIGHT 100
 #define NUM_POINT_LIGHT_SHADOW 5
 #define NUM_SPOT_LIGHT 20
 #define NUM_SPOT_LIGHT_SHADOW 5
@@ -77,6 +77,8 @@ struct SceneLighting	//  5152 bytes
 	PointLight point_lights[NUM_POINT_LIGHT];
 	PointLight point_casters[NUM_POINT_LIGHT_SHADOW];
 	// dir
+	// 1200 (20+5 * 48)
+	// 5040 (100+5 * 48)
 
 	SpotLight spots[NUM_SPOT_LIGHT];
 	SpotLight spot_casters[NUM_SPOT_LIGHT_SHADOW];

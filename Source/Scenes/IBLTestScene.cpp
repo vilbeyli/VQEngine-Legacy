@@ -234,6 +234,8 @@ int IBLTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) co
 	return numObj;
 }
 
+void IBLTestScene::RenderUI() const {}
+
 void IBLTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
 {
 	Scene::GetShadowCasters(casters);

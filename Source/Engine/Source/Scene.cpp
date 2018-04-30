@@ -25,12 +25,14 @@ Scene::Scene(SceneManager& sceneManager, std::vector<Light>& lights)
 	mSceneManager(sceneManager)
 	, mLights(lights)
 	, mpRenderer(nullptr)	// pRenderer is initialized at Load()
+	, mpTextRenderer(nullptr)	// mpTextRenderer is initialized at Load()
 	, mSelectedCamera(0)
 {}
 
-void Scene::LoadScene(Renderer* pRenderer, SerializedScene& scene, const Settings::Window& windowSettings)
+void Scene::LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, SerializedScene& scene, const Settings::Window& windowSettings)
 {
 	mpRenderer = pRenderer;
+	mpTextRenderer = pTextRenderer;
 	mObjects = std::move(scene.objects);
 	mLights = std::move(scene.lights);
 	mSceneRenderSettings = scene.settings;

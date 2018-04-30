@@ -103,6 +103,11 @@ int SSAOTestScene::Render(const SceneView& sceneView, bool bSendMaterialData) co
 	return numObj;
 }
 
+void SSAOTestScene::RenderUI() const
+{
+
+}
+
 void SSAOTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
 {
 	

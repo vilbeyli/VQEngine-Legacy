@@ -54,7 +54,7 @@ const Camera& SceneManager::GetMainCamera() const
 }
 
 
-void SceneManager::ReloadScene(Renderer* pRenderer, std::vector<const GameObject*>& ZPassObjects)
+void SceneManager::ReloadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, std::vector<const GameObject*>& ZPassObjects)
 {	
 	const auto& settings = Engine::GetSettings();
 	Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
@@ -62,7 +62,7 @@ void SceneManager::ReloadScene(Renderer* pRenderer, std::vector<const GameObject
 	mpActiveScene->UnloadScene();
 	ZPassObjects.clear();
 
-	LoadScene(pRenderer, settings, ZPassObjects);
+	LoadScene(pRenderer, pTextRenderer, settings, ZPassObjects);
 }
 
 void SceneManager::ResetMainCamera()
@@ -70,7 +70,7 @@ void SceneManager::ResetMainCamera()
 	mpActiveScene->ResetActiveCamera();
 }
 
-bool SceneManager::LoadScene(Renderer* pRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects)
+bool SceneManager::LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects)
 {
 	mSerializedScene = Parser::ReadScene(pRenderer, sceneNames[settings.levelToLoad]);
 	if (mSerializedScene.loadSuccess == '0') return false;
@@ -84,7 +84,7 @@ bool SceneManager::LoadScene(Renderer* pRenderer, const Settings::Engine& settin
 	case 3:	mpActiveScene = &mStressTestScene; break;
 	default:	break;
 	}
-	mpActiveScene->LoadScene(pRenderer, mSerializedScene, settings.window);
+	mpActiveScene->LoadScene(pRenderer, pTextRenderer, mSerializedScene, settings.window);
 	mpActiveScene->GetShadowCasters(zPassObjects);
 	return true;
 }
@@ -94,7 +94,7 @@ bool SceneManager::Load(Renderer* renderer, PathManager* pathMan, const Settings
 {
 	constexpr size_t numScenes = sizeof(sceneNames) / sizeof(sceneNames[0]);
 	assert(settings.levelToLoad < numScenes);
-	bool bLoadSuccess = LoadScene(renderer, settings, zPassObjects);
+	bool bLoadSuccess = LoadScene(renderer, ENGINE->mpTextRenderer, settings, zPassObjects);
 	return bLoadSuccess;
 }
 
@@ -106,18 +106,19 @@ void SceneManager::LoadScene(int level)
 	mpActiveScene->UnloadScene();
 	mZPassObjects.clear();
 	Engine::sEngineSettings.levelToLoad = level;
-	LoadScene(mpRenderer, Engine::sEngineSettings, mZPassObjects);
+	LoadScene(mpRenderer, ENGINE->mpTextRenderer, Engine::sEngineSettings, mZPassObjects);
 }
 
 void SceneManager::HandleInput()
 {
 	const Input* mpInput = ENGINE->INP();
 	Renderer* mpRenderer = ENGINE->mpRenderer;
+	TextRenderer* mpTextRenderer = ENGINE->mpTextRenderer;
 	auto& mZPassObjects  = ENGINE->mZPassObjects;
 	
 	if (mpInput->IsKeyTriggered("R"))
 	{
-		if (mpInput->IsKeyDown("Shift")) ReloadScene(mpRenderer, mZPassObjects);
+		if (mpInput->IsKeyDown("Shift")) ReloadScene(mpRenderer, mpTextRenderer, mZPassObjects);
 		else							 ResetMainCamera();
 	}
 
@@ -149,6 +150,11 @@ void SceneManager::Update(float dt)
 int SceneManager::Render(Renderer* pRenderer, const SceneView& sceneView) const
 {
 	return mpActiveScene->Render(sceneView);
+}
+
+void SceneManager::RenderUI() const
+{
+	mpActiveScene->RenderUI();
 }
 
 

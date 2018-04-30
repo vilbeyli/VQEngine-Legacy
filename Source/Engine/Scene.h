@@ -18,14 +18,18 @@
 #pragma once
 
 #include "Engine/Settings.h"
+
 #include "Renderer/Light.h"
+
+#include "Utilities/Camera.h"
+
 #include "Skybox.h"
 #include "GameObject.h"
-#include "Utilities/Camera.h"
 
 struct SerializedScene;
 class SceneManager;
 class Renderer;
+class TextRenderer;
 struct SceneView;
 
 // https://en.wikipedia.org/wiki/Template_method_pattern
@@ -45,7 +49,7 @@ public:
 
 	// sets mpRenderer and moves objects from serializedScene into objects vector
 	//
-	void LoadScene(Renderer* pRenderer, SerializedScene& scene, const Settings::Window& windowSettings);
+	void LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, SerializedScene& scene, const Settings::Window& windowSettings);
 
 	// clears object/light containers and camera settings
 	//
@@ -58,7 +62,8 @@ public:
 	// calls .Render() on objects and calls derived class RenderSceneSpecific()
 	//
 	int Render(const SceneView& sceneView) const;
-	
+	virtual void RenderUI() const = 0;
+
 	void ResetActiveCamera();
 
 	inline void RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
@@ -84,14 +89,15 @@ protected:	// customization functions for derived classes
 	// note:
 	// int Render() is not a good idea for the derived classes: to leave the responsiblity to the implementor to count the 
 	// number of objects rendered in a scene. this definitely needs refactoring... A game object factory might be a good idea.
+	virtual void Update(float dt) = 0;
 	virtual int Render(const SceneView& sceneView, bool bSendMaterialData) const = 0;
 	virtual void Load(SerializedScene& scene) = 0;
-	virtual void Update(float dt) = 0;
 	virtual void Unload() = 0;
 	
 protected:
 	SceneManager&			mSceneManager;
 	Renderer*				mpRenderer;
+	TextRenderer*			mpTextRenderer;
 
 	Skybox					mSkybox;
 	EEnvironmentMapPresets	mActiveSkyboxPreset;	// dynamic skybox changing

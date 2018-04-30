@@ -92,6 +92,8 @@ public:
 	inline float			GetTotalTime() const { return mpTimer->TotalTime(); }
 	inline ShaderID			GetSelectedShader() const { return mSelectedShader; }
 	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
+	inline bool				GetSettingShowControls() const { return mbShowControls; }
+	
 
 	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
 	
@@ -104,8 +106,6 @@ public:
 	void inline				ToggleRenderingStats() { mFrameStats.bShow = !mFrameStats.bShow; }
 
 	void					SendLightData() const;
-	
-
 private:
 	Engine();
 

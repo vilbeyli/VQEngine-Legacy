@@ -407,11 +407,11 @@ void Engine::PreRender()
 		{
 		case Light::ELightType::POINT:
 			mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();
-			mSceneLightData._cb.pointLightsShadowing[shadowIndex] = l.GetPointLightData();
+			//mSceneLightData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
 			break;
 		case Light::ELightType::SPOT:
 			mSceneLightData._cb.spotLights[lightIndex] = l.GetSpotLightData();
-			mSceneLightData._cb.spotLightsShadowing[shadowIndex] = l.GetSpotLightData();
+			mSceneLightData._cb.spotLightsShadowing[lightIndex] = l.GetSpotLightData();
 			break;
 		case Light::ELightType::DIRECTIONAL:
 			//mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();
@@ -822,22 +822,23 @@ void Engine::Render()
 
 	TextDrawDescription drawDesc;
 	drawDesc.color = LinearColor::green;
-	drawDesc.scale = 0.45f;
+	drawDesc.scale = 0.35f;
 
 	// Performance stats
 	if (mbShowProfiler)
 	{
 		const bool bSortStats = true;
-		float X_POS = sEngineSettings.window.width * 0.81f;
-		float Y_POS = 30.0f;
+		float X_POS = sEngineSettings.window.width * 0.86f;
+		float Y_POS = sEngineSettings.window.height * 0.05f;
 		mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 
-		X_POS = sEngineSettings.window.width * 0.81f;
+		drawDesc.color = LinearColor::cyan;
 		Y_POS = sEngineSettings.window.height * 0.35f;
 		mpGPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 	}
 	if (mFrameStats.bShow)
 	{
+		drawDesc.color = vec3(0.0f, 0.7f, 1.0f);
 		const float X_POS = sEngineSettings.window.width * 0.70f;
 		const float Y_POS = sEngineSettings.window.height * 0.90f;
 		mFrameStats.rstats = mpRenderer->GetRenderStats();
@@ -847,7 +848,7 @@ void Engine::Render()
 	{
 		TextDrawDescription _drawDesc(drawDesc);
 		_drawDesc.color = vec3(1, 1, 0.1f) * 0.65f;
-		_drawDesc.scale = 0.40f;
+		_drawDesc.scale = 0.35f;
 		int numLine = FrameStats::numStat + 1;
 
 		const float X_POS = sEngineSettings.window.width * 0.81f;
@@ -875,6 +876,8 @@ void Engine::Render()
 		_drawDesc.text = std::string("F5 - Render Mode: ") + (!mbUseDeferredRendering ? "Forward" : "Deferred");
 		mpTextRenderer->RenderText(_drawDesc);
 	}
+
+	mpSceneManager->RenderUI();
 
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndQuery();

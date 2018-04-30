@@ -61,6 +61,7 @@ constexpr float OFFSET_SCALING	= 20.0f;
 #define RANDOMIZE_SCALE 1
 constexpr float SCALE_LOW = 1.0f;
 constexpr float SCALE_HI = 5.0f;
+
 #define RANDOMIZE_ROTATION 1
 
 // MATERIAL
@@ -109,7 +110,7 @@ void StressTestScene::Load(SerializedScene& scene)
 	SetEnvironmentMap(EEnvironmentMapPresets::BARCELONA);
 
 	AddObjects();
-	mObjects[0].mModel.mBRDF_Material.tiling = vec2(mObjects[0].mTransform._scale / 10.0f);
+	mObjects[0].mModel.mBRDF_Material.tiling = vec2(mObjects[0].mTransform._scale / 60.0f);
 
 	ENGINE->ToggleRenderingStats();
 	ENGINE->ToggleProfilerRendering();
@@ -157,6 +158,7 @@ void StressTestScene::Update(float dt)
 
 int StressTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) const
 {
+	// objects
 	int renderedObjCount = 0;
 	std::for_each(objs.begin(), objs.end(), [&](const GameObject& o) 
 	{ 
@@ -166,7 +168,70 @@ int StressTestScene::Render(const SceneView & sceneView, bool bSendMaterialData)
 			++renderedObjCount;
 		}
 	});
+
 	return renderedObjCount;
+}
+
+void StressTestScene::RenderUI() const
+{
+	// helper ui
+	if (ENGINE->GetSettingShowControls())
+	{
+		const int NumObj = std::accumulate(RANGE(objs), 0, [](int val, const GameObject& o) { return val + (o.mRenderSettings.bRender ? 1 : 0); }) 
+			+ std::accumulate(RANGE(mObjects), 0, [](int val, const GameObject& o) { return val + (o.mRenderSettings.bRender ? 1 : 0); });
+		const int NumPointLights = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (l._bEnabled && l._type == Light::POINT) ? 1 : 0); });
+		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (l._bEnabled && l._type == Light::ELightType::SPOT) ? 1 : 0); });
+
+		TextDrawDescription drawDesc;
+		drawDesc.color = vec3(1, 1, 0.1f) * 0.85f;
+		drawDesc.scale = 0.35f;
+		int numLine = 0;
+
+		Settings::Engine sEngineSettings = ENGINE->GetSettings();
+
+		const float X_POS = sEngineSettings.window.width * 0.02f;
+		const float Y_POS = 0.05f * sEngineSettings.window.height;
+		const float LINE_HEIGHT = 25.0f;
+		vec2 screenPosition(X_POS, Y_POS);
+
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		drawDesc.text = std::string("CONTROLS");
+		mpTextRenderer->RenderText(drawDesc);
+
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		drawDesc.text = std::string("=========================================");
+		mpTextRenderer->RenderText(drawDesc);
+
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		drawDesc.text = std::string("Add/Remove Objects        : Numpad+/Numpad-");
+		mpTextRenderer->RenderText(drawDesc);
+
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		drawDesc.text = std::string("Add/Remove Point Lights : Shift + Numpad+/Numpad-");
+		mpTextRenderer->RenderText(drawDesc);
+
+		++numLine;
+
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		drawDesc.text = std::string("SCENE STATS");
+		mpTextRenderer->RenderText(drawDesc);
+
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		drawDesc.text = std::string("=========================================");
+		mpTextRenderer->RenderText(drawDesc);
+
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		drawDesc.text = std::string("Objects: ") + std::to_string(NumObj);
+		mpTextRenderer->RenderText(drawDesc);
+
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		drawDesc.text = std::string("Point Lights: ") + std::to_string(NumPointLights);
+		mpTextRenderer->RenderText(drawDesc);
+
+		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		drawDesc.text = std::string("Spot Lights: ") + std::to_string(NumSpotLights);
+		mpTextRenderer->RenderText(drawDesc);
+	}
 }
 
 void StressTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
@@ -181,7 +246,7 @@ void StressTestScene::GetSceneObjects(std::vector<const GameObject*>& objects) c
 	Scene::GetSceneObjects(objects);
 
 	// add the objects declared in the header. 
-	std::for_each(RANGE(objs), [&](const GameObject& o){ objects.push_back(&o); });
+	std::for_each(RANGE(objs), [&](const GameObject& o){ objects.push_back(&o); }); // todo: Critical error detected c0000374
 }
 #pragma endregion
 //----------------------------------------------------------------------------------------------
@@ -296,7 +361,7 @@ void AddObjects()
 	//
 	for (size_t i = 0; i < NUM_OBJ; ++i)
 	{
-		objectDisplacements.push_back(objs[i].mTransform._position - centerOfMass);
+		//objectDisplacements.push_back(objs[i].mTransform._position - centerOfMass);
 		//objs[i].mTransform._position += objectDisplacements.back();
 	}
 

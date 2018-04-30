@@ -39,6 +39,8 @@ class PathManager;
 struct SceneView;
 struct Path;
 
+class TextRenderer;
+
 
 class SceneManager
 {
@@ -55,9 +57,10 @@ public:
 
 	void Update(float dt);
 	int Render(Renderer* pRenderer, const SceneView& sceneView) const;
+	void RenderUI() const;
 
-	bool LoadScene(Renderer* pRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects);
-	void ReloadScene(Renderer* pRenderer, std::vector<const GameObject*>& ZPassObjects);
+	bool LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, const Settings::Engine& settings, std::vector<const GameObject*>& zPassObjects);
+	void ReloadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, std::vector<const GameObject*>& ZPassObjects);
 	void ResetMainCamera();
 private:
 	void LoadScene(int level);

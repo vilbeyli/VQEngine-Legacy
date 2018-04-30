@@ -157,6 +157,9 @@ int RoomScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
 	return numObj;
 }
 
+void RoomScene::RenderUI() const{}
+
+
 void RoomScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
 {
 	Scene::GetShadowCasters(casters);

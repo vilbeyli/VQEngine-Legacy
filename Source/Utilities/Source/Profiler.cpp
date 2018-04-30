@@ -40,7 +40,7 @@ void CPUProfiler::EndProfile()
 
 
 	mState.bIsProfiling = false;
-	mPerfEntryTree = Tree<PerfEntry>();
+	mPerfEntryTree = Tree<PerfEntry>();	// ?
 }
 
 

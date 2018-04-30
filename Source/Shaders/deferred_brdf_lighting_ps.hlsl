@@ -27,10 +27,6 @@ struct PSIn
 
 // CBUFFERS
 //---------------------------------------------------------
-// defines maximum number of dynamic lights
-#define LIGHT_COUNT 100  // don't forget to update CPU define too (SceneManager.cpp)
-#define SPOT_COUNT 10   // ^
-
 cbuffer SceneVariables	// frame constants
 {
 	matrix matView;

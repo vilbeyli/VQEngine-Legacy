@@ -44,6 +44,12 @@ void SceneTemplate::Update(float dt)
 
 int SceneTemplate::Render(const SceneView & sceneView, bool bSendMaterialData) const
 {
+	int numObjRendered = 0;
+	return numObjRendered;
+}
+
+void SceneTemplate::RenderUI() const
+{
 
 }
 

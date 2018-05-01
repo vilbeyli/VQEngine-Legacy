@@ -5,12 +5,27 @@
 #include <sstream>
 #include <iomanip>
 
+#define DISABLE_CPU_PROFILER 0
+#define DISABLE_GPU_PROFILER 0
+
+#if DISABLE_CPU_PROFILER
+#define CPU_PROFILER_ENABLE_CHECK return;
+#else
+#define CPU_PROFILER_ENABLE_CHECK
+#endif
+
+#if DISABLE_GPU_PROFILER
+#define GPU_PROFILER_ENABLE_CHECK return;
+#else
+#define GPU_PROFILER_ENABLE_CHECK
+#endif
 
 //---------------------------------------------------------------------------------------------------------------------------
 // CPU PROFILER
 //---------------------------------------------------------------------------------------------------------------------------
 void CPUProfiler::BeginProfile()
 {
+	CPU_PROFILER_ENABLE_CHECK
 	auto& entryStack = mState.EntryNameStack;
 
 	if (mState.bIsProfiling)
@@ -25,6 +40,7 @@ void CPUProfiler::BeginProfile()
 
 void CPUProfiler::EndProfile()
 {
+	CPU_PROFILER_ENABLE_CHECK
 	auto& entryStack = mState.EntryNameStack;
 
 	if (!mState.bIsProfiling)
@@ -47,6 +63,7 @@ void CPUProfiler::EndProfile()
 
 void CPUProfiler::BeginEntry(const std::string & entryName)
 {
+	CPU_PROFILER_ENABLE_CHECK
 	if (!mState.bIsProfiling)
 	{
 		Log::Error("Profiler::BeginProfile() hasn't been called.");
@@ -88,6 +105,7 @@ void CPUProfiler::BeginEntry(const std::string & entryName)
 
 void CPUProfiler::EndEntry()
 {
+	CPU_PROFILER_ENABLE_CHECK
 	if (!mState.bIsProfiling)
 	{
 		Log::Error("Profiler::BeginProfile() hasn't been called.");
@@ -124,6 +142,11 @@ bool CPUProfiler::StateCheck() const
 
 void CPUProfiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSort)
 {
+	CPU_PROFILER_ENABLE_CHECK
+
+	// TODO:
+	// check for inactive queries
+	// and 0 them out 
 	if (bSort)
 	{
 		mPerfEntryTree.Sort();
@@ -202,6 +225,7 @@ void GPUProfilerWatcherThread(ID3D11DeviceContext* pContext, GPUProfiler::QueryD
 //---------------------------------------------------------------------------------------------------------------------------
 void GPUProfiler::Init(ID3D11DeviceContext* pContext, ID3D11Device* pDevice)
 {
+	GPU_PROFILER_ENABLE_CHECK
 	mpContext = pContext;
 	mpDevice = pDevice;
 
@@ -217,6 +241,7 @@ void GPUProfiler::Init(ID3D11DeviceContext* pContext, ID3D11Device* pDevice)
 
 void GPUProfiler::Exit()
 {
+	GPU_PROFILER_ENABLE_CHECK
 	for (auto it = mFrameQueries.begin(); it != mFrameQueries.end(); ++it)
 	{
 		for (size_t bufferIndex = 0; bufferIndex < FRAME_HISTORY; ++bufferIndex)
@@ -231,12 +256,14 @@ void GPUProfiler::Exit()
 
 void GPUProfiler::BeginFrame(const unsigned long long FRAME_NUMBER)
 {
+	GPU_PROFILER_ENABLE_CHECK
 	mCurrFrameNumber = FRAME_NUMBER;
 	mpContext->Begin(pDisjointQuery[FRAME_NUMBER % FRAME_HISTORY]);
 }
 
 void GPUProfiler::EndFrame(const unsigned long long FRAME_NUMBER)
 {
+	GPU_PROFILER_ENABLE_CHECK
 	const unsigned long long PREV_FRAME_NUMBER = (FRAME_NUMBER - (FRAME_HISTORY-1));
 
 	mpContext->End(pDisjointQuery[FRAME_NUMBER % FRAME_HISTORY]);
@@ -258,6 +285,7 @@ float GPUProfiler::GetEntry(const std::string& tag) const
 
 void GPUProfiler::RenderPerformanceStats(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription drawDesc, bool bSort)
 {
+	GPU_PROFILER_ENABLE_CHECK
 	if (bSort) 
 		mQueryDataTree.Sort();
 	mQueryDataTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
@@ -266,6 +294,7 @@ void GPUProfiler::RenderPerformanceStats(TextRenderer * pTextRenderer, const vec
 
 void GPUProfiler::QueryData::Collect(float freq, ID3D11DeviceContext * pContext, size_t bufferIndex)
 {
+	GPU_PROFILER_ENABLE_CHECK
 	UINT64 tsBegin, tsEnd;
 
 	pContext->GetData(pTimestampQueryBegin[bufferIndex], &tsBegin, sizeof(UINT64), 0);
@@ -293,6 +322,7 @@ bool GPUProfiler::GetQueryResultsOfFrame(const unsigned long long frameNumber, I
 
 void GPUProfiler::BeginQuery(const std::string & tag)
 {
+	GPU_PROFILER_ENABLE_CHECK
 	const size_t frameQueryIndex = mCurrFrameNumber % FRAME_HISTORY;
 
 	const bool bEntryExists = mFrameQueries.find(tag) != mFrameQueries.end();
@@ -336,6 +366,7 @@ void GPUProfiler::BeginQuery(const std::string & tag)
 
 void GPUProfiler::EndQuery()
 {
+	GPU_PROFILER_ENABLE_CHECK
 	const size_t bufferIndex = mCurrFrameNumber % FRAME_HISTORY;
 
 	std::string tag = mState.EntryNameStack.top();

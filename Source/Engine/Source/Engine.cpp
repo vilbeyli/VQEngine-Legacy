@@ -628,6 +628,7 @@ void Engine::Render()
 			);
 
 
+			mpGPUProfiler->BeginQuery("Z-PrePass");
 			mpRenderer->BeginEvent("Z-PrePass");
 			mpRenderer->SetShader(EShaders::Z_PREPRASS);
 			mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
@@ -637,14 +638,23 @@ void Engine::Render()
 			mpRenderer->BeginRender(clearCmd);
 			mpSceneManager->Render(mpRenderer, mSceneView);
 			mpRenderer->EndEvent();
+			mpGPUProfiler->EndQuery();
 
+			mpGPUProfiler->BeginQuery("SSAO");
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 			mpRenderer->UnbindRenderTargets();
 			mpRenderer->Apply();
+
+			mpGPUProfiler->BeginQuery("Occlusion");
 			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mSceneView);
+			mpGPUProfiler->EndQuery();
+
+			mpGPUProfiler->BeginQuery("Blur");
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
 			mSSAOPass.GaussianBlurPass(mpRenderer);
+			mpGPUProfiler->EndQuery();
+			mpGPUProfiler->EndQuery();	// SSAO
 			mpRenderer->EndEvent();
 		}
 
@@ -672,6 +682,7 @@ void Engine::Render()
 			mpRenderer->SetShader(mSelectedShader);	// set shader so apply won't complain 
 			mpRenderer->Apply();					// apply to bind depth stencil
 		}
+
 
 		// LIGHTING
 		mpRenderer->BeginEvent("Lighting Pass");

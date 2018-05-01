@@ -84,9 +84,8 @@ float4 PSMain(PSIn In) : SV_TARGET
     s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, uv, Nw, T) +
 		  (1.0f - surfaceMaterial.isNormalMap) * Nw;
     
-	// diffuse * diffuse here??
-	s.diffuseColor = surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, uv).xyz +
-					(1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
+	s.diffuseColor = surfaceMaterial.diffuse              * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, uv).xyz +
+					(1.0f - surfaceMaterial.isDiffuseMap));
 
 	s.specularColor = surfaceMaterial.specular;
     s.shininess = surfaceMaterial.shininess;

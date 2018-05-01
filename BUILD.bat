@@ -76,6 +76,7 @@ EXIT /B 0
 REM Cleanup before build for a clean build
 :CleanUp
 echo Cleaning up the project folders...
+if not exist Build mkdir Build
 cd Build
 if not exist Empty mkdir Empty
 robocopy ./Empty ./ /purge /MT:8 > nul
@@ -94,7 +95,7 @@ rmdir Empty
 cd ..
 set root_dir=%cd%
 REM get all .dll and .exe files from build
-for /r %proj_dir% %%f in (*.exe *.dll) do (
+for /r "%proj_dir%" %%f in (*.exe *.dll) do (
     REM skip _artifacts folder itself
     if not %%~df%%~pf == %artifacts_dir%\ (  
         xcopy %%f %artifacts_dir% > nul
@@ -110,7 +111,7 @@ EXIT /B 0
 if %1==True (Building the project [MSBuild Multi-thread]...) else (echo Building the project [MSBuild Single-thread]...)
 
 REM cleanup log file if it exists
-if exist %2 rm %2 
+if exist %2 del %2 
 
 set t_msb_begin=%TIME%
 echo              begin %t_msb_begin%
@@ -124,7 +125,7 @@ EXIT /B 0
 :Devenv_Build
 
 REM cleanup log file if it exists
-if exist %2 rm %2 
+if exist %2 del %2 
 
 echo Building the project [devenv]...
 echo              begin %TIME%

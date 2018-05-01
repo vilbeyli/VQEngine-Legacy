@@ -94,13 +94,13 @@ set root_dir=%cd%
 REM get all .dll and .exe files from build
 for /r %proj_dir% %%f in (*.exe *.dll) do (
     REM skip _artifacts folder itself
-    if not %%~df%%~pf == %artifacts_dir%\ (  
-        xcopy %%f %artifacts_dir% > nul
+    if not "%%~df%%~pf" == "%artifacts_dir%\" ( 
+        xcopy "%%f" "%artifacts_dir%" > nul
     )
 ) 
 REM copy data and shaders
-robocopy ./Data %artifacts_dir%/Data /E /MT:8 > nul
-robocopy ./Source/Shaders %artifacts_dir%/Source/Shaders /E /MT:8 > nul
+robocopy ./Data "%artifacts_dir%/Data" /E /MT:8 > nul
+robocopy ./Source/Shaders "%artifacts_dir%/Source/Shaders" /E /MT:8 > nul
 EXIT /B 0
 
 

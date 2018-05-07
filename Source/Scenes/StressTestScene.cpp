@@ -112,8 +112,8 @@ void StressTestScene::Load(SerializedScene& scene)
 	AddObjects();
 	mObjects[0].mModel.mBRDF_Material.tiling = vec2(mObjects[0].mTransform._scale / 60.0f);
 
-	ENGINE->ToggleRenderingStats();
-	ENGINE->ToggleProfilerRendering();
+	if(!ENGINE->IsRenderingStatsOn()) ENGINE->ToggleRenderingStats();
+	if (!ENGINE->IsProfileRenderingOn()) ENGINE->ToggleProfilerRendering();
 }
 
 void StressTestScene::Unload()
@@ -183,7 +183,7 @@ void StressTestScene::RenderUI() const
 		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l._type == Light::ELightType::SPOT) ? 1 : 0); });
 
 		TextDrawDescription drawDesc;
-		drawDesc.color = vec3(1, 1, 0.1f) * 0.85f;
+		drawDesc.color = vec3(1, 1, 0.3f);
 		drawDesc.scale = 0.35f;
 		int numLine = 0;
 

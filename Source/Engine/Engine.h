@@ -104,6 +104,8 @@ public:
 	void inline				ToggleProfilerRendering() { mbShowProfiler = !mbShowProfiler; }
 	void inline				ToggleControlsTextRendering() { mbShowControls = !mbShowControls; }
 	void inline				ToggleRenderingStats() { mFrameStats.bShow = !mFrameStats.bShow; }
+	bool inline				IsRenderingStatsOn() const { return mFrameStats.bShow; }
+	bool inline				IsProfileRenderingOn() const { return mbShowProfiler; }
 
 	void					SendLightData() const;
 private:

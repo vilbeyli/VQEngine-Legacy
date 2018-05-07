@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "RoomScene.h"
+#include "ObjectsScene.h"
 
 #include "Application/Input.h"
 #include "Renderer/Renderer.h"
@@ -40,12 +40,12 @@ enum class WALLS
 	CEILING
 };
 
-RoomScene::RoomScene(SceneManager& sceneMan, std::vector<Light>& lights)
+ObjectsScene::ObjectsScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	:
 	Scene(sceneMan, lights)
 {}
 
-void RoomScene::Load(SerializedScene& scene)
+void ObjectsScene::Load(SerializedScene& scene)
 {
 	m_room.Initialize(mpRenderer);
 
@@ -87,6 +87,7 @@ void RoomScene::Load(SerializedScene& scene)
 
 			const float sphereStep = static_cast<float>(i) / numSph;
 			const float rowStep = static_cast<float>(row) / ((numSph - 1) / gridDimension);
+			const float rowStepInv = 1.0f - rowStep;
 			const float colStep = static_cast<float>(col) / ((numSph - 1) / gridDimension);
 
 			// offset to center the grid
@@ -102,13 +103,13 @@ void RoomScene::Load(SerializedScene& scene)
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			// col(-x->+x) -> metalness [0.0f, 1.0f]
-			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::gold)));
+			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::red) * (rowStepInv * rowStepInv)));
 			//sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::white) * rowStep));
 			mat0.metalness = 1.0;
 
 			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
 			const float roughnessLowClamp = 0.07f;
-			mat0.roughness = rowStep < roughnessLowClamp ? roughnessLowClamp : rowStep;
+			mat0.roughness = colStep * 1.2f < roughnessLowClamp ? roughnessLowClamp : colStep * 1.2f;
 			mat0.roughness = (1.0f + roughnessLowClamp) - mat0.roughness;
 
 			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
@@ -127,16 +128,16 @@ void RoomScene::Load(SerializedScene& scene)
 		;// obj.mRenderSettings.bRenderTBN = true;
 	}
 
-	mSkybox = Skybox::s_Presets[EEnvironmentMapPresets::MILKYWAY];
+	SetEnvironmentMap(EEnvironmentMapPresets::WALK_OF_FAME);
 }
 
-void RoomScene::Unload()
+void ObjectsScene::Unload()
 {
 	mSpheres.clear();
 	mAnimations.clear();
 }
 
-void RoomScene::Update(float dt)
+void ObjectsScene::Update(float dt)
 {
 	for (auto& anim : mAnimations) anim.Update(dt);
 	UpdateCentralObj(dt);
@@ -144,7 +145,7 @@ void RoomScene::Update(float dt)
 
 void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj);
 
-int RoomScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
+int ObjectsScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
 {
 	m_room.Render(mpRenderer, sceneView, bSendMaterialData);
 	int numObj = 6;
@@ -157,10 +158,10 @@ int RoomScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
 	return numObj;
 }
 
-void RoomScene::RenderUI() const{}
+void ObjectsScene::RenderUI() const{}
 
 
-void RoomScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
+void ObjectsScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
 {
 	Scene::GetShadowCasters(casters);
 	casters.push_back(&m_room.floor);
@@ -171,7 +172,7 @@ void RoomScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
 	for (const GameObject& obj : mSpheres)	casters.push_back(&obj);
 }
 
-void RoomScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
+void ObjectsScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 {
 	Scene::GetSceneObjects(objs);
 	objs.push_back(&m_room.floor);
@@ -182,7 +183,7 @@ void RoomScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 	for (const GameObject& obj : mSpheres)	objs.push_back(&obj);
 }
 
-void RoomScene::UpdateCentralObj(const float dt)
+void ObjectsScene::UpdateCentralObj(const float dt)
 {
 	float t = ENGINE->GetTotalTime();
 	const float moveSpeed = 45.0f;
@@ -222,7 +223,7 @@ void RoomScene::UpdateCentralObj(const float dt)
 #endif
 }
 
-void RoomScene::ToggleFloorNormalMap()
+void ObjectsScene::ToggleFloorNormalMap()
 {
 	TextureID nMap = m_room.floor.mModel.mBRDF_Material.normalMap;
 
@@ -230,7 +231,7 @@ void RoomScene::ToggleFloorNormalMap()
 	m_room.floor.mModel.mBRDF_Material.normalMap = nMap;
 }
 
-void RoomScene::Room::Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const
+void ObjectsScene::Room::Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const
 {
 	floor.Render(pRenderer, sceneView, sendMaterialData);
 	//wallL.Render(pRenderer, sceneView, sendMaterialData);
@@ -239,7 +240,7 @@ void RoomScene::Room::Render(Renderer* pRenderer, const SceneView& sceneView, bo
 	//ceiling.Render(pRenderer, sceneView, sendMaterialData);
 }
 
-void RoomScene::Room::Initialize(Renderer* pRenderer)
+void ObjectsScene::Room::Initialize(Renderer* pRenderer)
 {
 	const float floorWidth = 5 * 30.0f;
 	const float floorDepth = 5 * 30.0f;

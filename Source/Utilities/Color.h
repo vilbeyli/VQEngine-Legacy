@@ -39,6 +39,7 @@ enum class EColorValue
 	ORANGE,
 	PURPLE,
 	GOLD,
+	SUN,
 
 	COUNT
 };
@@ -67,7 +68,7 @@ public:
 	//static std::string GetNameByColor(Color c);
 
 public:
-	static const LinearColor black, white, red, green, blue, magenta, yellow, cyan, gray, light_gray, orange, purple;
+	static const LinearColor black, white, red, green, blue, magenta, yellow, cyan, gray, light_gray, orange, purple, sun;
 	static const LinearColor gold, aluminum;
 	static const LinearColor bp_gold, bp_ruby, bp_jade, bp_bronze;
 	static const ColorPalette s_palette;

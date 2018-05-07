@@ -18,10 +18,13 @@
     <ClInclude Include="$(SolutionDir)Source\Scenes\IBLTestScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Scenes\RoomScene.h">
+    <ClInclude Include="$(SolutionDir)Source\Scenes\SSAOTestScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Scenes\SSAOTestScene.h">
+    <ClInclude Include="$(SolutionDir)Source\Scenes\StressTestScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Scenes\ObjectsScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -29,10 +32,13 @@
     <ClCompile Include="$(SolutionDir)Source\Scenes\IBLTestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Scenes\RoomScene.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Scenes\StressTestScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Scenes\ObjectsScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

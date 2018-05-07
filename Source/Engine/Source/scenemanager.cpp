@@ -33,7 +33,7 @@
 // todo: remove this dependency
 static const char* sceneNames[] = 
 {
-	"Room.scn",
+	"Objects.scn",
 	"SSAOTest.scn",
 	"IBLTest.scn",
 	"StressTestScene.scn"
@@ -41,7 +41,7 @@ static const char* sceneNames[] =
 
 SceneManager::SceneManager(std::vector<Light>& lights)
 	:
-	mRoomScene(*this, lights),
+	mObjectsScene(*this, lights),
 	mSSAOTestScene(*this, lights),
 	mIBLTestScene(*this, lights),
 	mStressTestScene(*this, lights),
@@ -78,7 +78,7 @@ bool SceneManager::LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, c
 	mCurrentLevel = settings.levelToLoad;
 	switch (settings.levelToLoad)
 	{
-	case 0:	mpActiveScene = &mRoomScene; break;
+	case 0:	mpActiveScene = &mObjectsScene; break;
 	case 1:	mpActiveScene = &mSSAOTestScene; break;
 	case 2:	mpActiveScene = &mIBLTestScene; break;
 	case 3:	mpActiveScene = &mStressTestScene; break;

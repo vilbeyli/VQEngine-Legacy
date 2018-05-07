@@ -4,13 +4,23 @@
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
+
+
+###### PCF Shadows, CPU & GPU profiler, Text Rendering, Environment Lighting
+
+![](Screenshots/objs.PNG)
+
+###### BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting
+
 ![](Screenshots/IBL_la.PNG)
 
-<center><i>BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting</i></center>
+###### SSAO w/ Gaussian Blur
+
+![](Screenshots/SSAO_GaussianBlur.PNG)
 
 # Feature List / Version History
 
- *v0.3.0 - Automated Build, Logging, Text Rendering, CPU & GPU Profiler - ETA: Early April*
+ *v0.3.0 - Automated Build, Logging, Text Rendering, CPU & GPU Profiler - May7-2018*
  - Text Rendering
  - CPU & GPU Profiler
  - Shader Binary Cache
@@ -36,22 +46,12 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
   
 
 
-
-<center><i>PCF Shadows, CPU profiler, Text Rendering</i></center>
-
-![](Screenshots/space_gold.PNG)
-
-<center><i>SSAO w/ Gaussian Blur</i></center>
-
-![](Screenshots/SSAO_GaussianBlur.PNG)
-
 # Prerequisites
 
- - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - probably the latest version. I'm using the latest Visual Studio 2017 version.
-  
-   Note: if the linker throws the error `1>LINK : fatal error LNK1158: cannot run 'rc.exe'` do the following:
-   - Copy `rc.exe` and `rcdll.dll` 
-   from `C:\Program Files (x86)\Windows Kits\10\bin\10.0.15063.0\x64` to `C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin` (or wherever you store Visual Studio)
+The projects are set to build with the following configurations:
+
+ - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk): v10.0.16299.0
+ - Visual Studio 2017 (v141)
  
 - **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 
@@ -65,21 +65,15 @@ Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will co
 | Scene Controls |  |
 | :---: | :--- |
 | **WASD** |	Camera Movement |
-| **numpad::468239** |	Shadow Caster Light Movement |
 | **R** | Reset Camera |
-| **C** | Cycle Through Cameras |
-| **Shift+R** |	Reload Current Scene |
-| **0-9** |	Switch Scenes |
-
-Scenes:
- - 1 - Room Scene
- - 2 - SSAO Test Scene
- - 3 - IBL Test Scene
+| **C** | Cycle Through Scene Cameras |
+| **Shift+R** |	Reload Current Scene From File |
+| **0-4** |	**Switch Scenes**: <br>**1**: Objects Scene <br>**2**: SSAO Test <br>**3**: Environment Map Test <br>**4**: Stress Test
 
 
 | Engine Controls |  |
 | :---: | :--- |
-| **PageUp / PageDown** | Change Environment Map / Skybox |
+| **Page Up/Down** | Change Environment Map / Skybox |
 | **;** |	Toggle Displaying CPU/GPU Performance Numbers |
 | **'** |	Toggle Displaying Rendering Stats |
 | **Shift + '** |	Toggle Displaying Renderer Controls |

@@ -26,9 +26,9 @@
 
 using std::shared_ptr;
 
-// todo: move scene headers to cpp
+// todo: move scene headers to cpp and rework the scenes system. this is not a good design...
 // scenes
-#include "Scenes/RoomScene.h"
+#include "Scenes/ObjectsScene.h"
 #include "Scenes/SSAOTestScene.h"
 #include "Scenes/IBLTestScene.h"
 #include "Scenes/StressTestScene.h"
@@ -77,7 +77,7 @@ private:
 	// - override functions as necessary. 
 	// - edit settings.ini to start with your scene
 	// - remember to add scene name in scenemanager.cpp
-	RoomScene				mRoomScene;
+	ObjectsScene			mObjectsScene;
 	SSAOTestScene			mSSAOTestScene;
 	IBLTestScene			mIBLTestScene;
 	StressTestScene			mStressTestScene;

@@ -24,7 +24,7 @@
 #include "Engine/Skybox.h"
 
 
-class RoomScene : public Scene
+class ObjectsScene : public Scene
 {
 public:
 	void Load(SerializedScene& scene) override;
@@ -36,8 +36,8 @@ public:
 	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;	// todo: rename this... decide between depth and shadows
 	void GetSceneObjects(std::vector<const GameObject*>&) const override;
 
-	RoomScene(SceneManager& sceneMan, std::vector<Light>& lights);
-	~RoomScene() = default;
+	ObjectsScene(SceneManager& sceneMan, std::vector<Light>& lights);
+	~ObjectsScene() = default;
 
 private:
 	void InitializeLights(SerializedScene& scene);
@@ -48,7 +48,7 @@ private:
 	void ToggleFloorNormalMap();
 	
 	struct Room {
-		friend class RoomScene;
+		friend class ObjectsScene;
 		void Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const;
 		void Initialize(Renderer* pRenderer);
 #if 0

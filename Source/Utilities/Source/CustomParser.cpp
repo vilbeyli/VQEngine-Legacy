@@ -252,7 +252,8 @@ static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
 	{"gray"      , LinearColor::s_palette[ static_cast<int>(EColorValue::GRAY       )]},
 	{"light_gray", LinearColor::s_palette[ static_cast<int>(EColorValue::LIGHT_GRAY )]},
 	{"orange"    , LinearColor::s_palette[ static_cast<int>(EColorValue::ORANGE     )]},
-	{"purple"    , LinearColor::s_palette[ static_cast<int>(EColorValue::PURPLE     )]}
+	{"purple"    , LinearColor::s_palette[ static_cast<int>(EColorValue::PURPLE     )]},
+	{"sun"       , LinearColor::s_palette[ static_cast<int>(EColorValue::SUN        )]}
 };
 
 // todo: get rid of else ifs for cmd == "" comparison... 

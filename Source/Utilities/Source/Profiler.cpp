@@ -223,6 +223,8 @@ void GPUProfilerWatcherThread(ID3D11DeviceContext* pContext, GPUProfiler::QueryD
 //---------------------------------------------------------------------------------------------------------------------------
 // GPU PROFILER
 //---------------------------------------------------------------------------------------------------------------------------
+unsigned long long GPUProfiler::sCurrFrameNumber = 0;
+
 void GPUProfiler::Init(ID3D11DeviceContext* pContext, ID3D11Device* pDevice)
 {
 	GPU_PROFILER_ENABLE_CHECK
@@ -257,7 +259,7 @@ void GPUProfiler::Exit()
 void GPUProfiler::BeginFrame(const unsigned long long FRAME_NUMBER)
 {
 	GPU_PROFILER_ENABLE_CHECK
-	mCurrFrameNumber = FRAME_NUMBER;
+	sCurrFrameNumber = FRAME_NUMBER;
 	mpContext->Begin(pDisjointQuery[FRAME_NUMBER % FRAME_HISTORY]);
 }
 
@@ -323,7 +325,7 @@ bool GPUProfiler::GetQueryResultsOfFrame(const unsigned long long frameNumber, I
 void GPUProfiler::BeginQuery(const std::string & tag)
 {
 	GPU_PROFILER_ENABLE_CHECK
-	const size_t frameQueryIndex = mCurrFrameNumber % FRAME_HISTORY;
+	const size_t frameQueryIndex = sCurrFrameNumber % FRAME_HISTORY;
 
 	const bool bEntryExists = mFrameQueries.find(tag) != mFrameQueries.end();
 
@@ -362,12 +364,13 @@ void GPUProfiler::BeginQuery(const std::string & tag)
 	}
 
 	mpContext->End(entry.pTimestampQueryBegin[frameQueryIndex]);
+	entry.lastQueryFrameNumber = sCurrFrameNumber;
 }
 
 void GPUProfiler::EndQuery()
 {
 	GPU_PROFILER_ENABLE_CHECK
-	const size_t bufferIndex = mCurrFrameNumber % FRAME_HISTORY;
+	const size_t bufferIndex = sCurrFrameNumber % FRAME_HISTORY;
 
 	std::string tag = mState.EntryNameStack.top();
 	mState.EntryNameStack.pop();

@@ -75,6 +75,7 @@ private:	// Internal Structs
 		void PrintEntryInfo(bool bPrintAllEntries = false);
 		inline float GetAvg() const;
 		bool operator<(const PerfEntry& other) const;
+		bool IsStale() const { return false; } 
 	};
 	using PerfEntryTable = std::unordered_map<std::string, PerfEntry>;
 
@@ -131,23 +132,25 @@ private:	// Internal Structs
 		ID3D11Query*	pTimestampQueryBegin[FRAME_HISTORY];
 		ID3D11Query*	pTimestampQueryEnd[FRAME_HISTORY];
 		float			value[FRAME_HISTORY];
+		long long		lastQueryFrameNumber;
 
 		QueryData();
 
 		float GetAvg() const;
 		void Collect(float freq, ID3D11DeviceContext* pContext, size_t bufferIndex);
 		bool operator<(const QueryData& other) const; 
+		bool IsStale() const { return GPUProfiler::sCurrFrameNumber - lastQueryFrameNumber > FRAME_HISTORY; }
 	};
 	bool GetQueryResultsOfFrame(const unsigned long long frameNumber, ID3D11DeviceContext* pContext, D3D10_QUERY_DATA_TIMESTAMP_DISJOINT & tsDj);
 
 	using FrameQueryTable = std::unordered_map<std::string, QueryData>;
 
+	static unsigned long long		sCurrFrameNumber;
 private:
 	ID3D11DeviceContext *	mpContext = nullptr;
 	ID3D11Device*			mpDevice = nullptr;
 	
 	ID3D11Query*			pDisjointQuery[FRAME_HISTORY];
-	unsigned long long		mCurrFrameNumber = 0;
 
 	FrameQueryTable			mFrameQueries;
 

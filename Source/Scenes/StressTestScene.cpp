@@ -179,8 +179,8 @@ void StressTestScene::RenderUI() const
 	{
 		const int NumObj = std::accumulate(RANGE(objs), 0, [](int val, const GameObject& o) { return val + (o.mRenderSettings.bRender ? 1 : 0); }) 
 			+ std::accumulate(RANGE(mObjects), 0, [](int val, const GameObject& o) { return val + (o.mRenderSettings.bRender ? 1 : 0); });
-		const int NumPointLights = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (l._bEnabled && l._type == Light::POINT) ? 1 : 0); });
-		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (l._bEnabled && l._type == Light::ELightType::SPOT) ? 1 : 0); });
+		const int NumPointLights = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l._type == Light::POINT) ? 1 : 0); });
+		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l._type == Light::ELightType::SPOT) ? 1 : 0); });
 
 		TextDrawDescription drawDesc;
 		drawDesc.color = vec3(1, 1, 0.1f) * 0.85f;
@@ -406,17 +406,18 @@ Light CreateRandomPointLight()
 
 void AddLights(std::vector<Light>& mLights)
 {
-	bool bAllLightsEnabled = std::all_of(RANGE(mLights), [](const Light& l) { return l._bEnabled; });
-	if (!bAllLightsEnabled)
-	{
-		auto itDisabledLight = std::find_if(RANGE(mLights), [](Light& l) { return !l._bEnabled; });
-		for (size_t i = 0; i < NUM_LIGHT + 3; ++i)
-		{
-			itDisabledLight->_bEnabled = true;
-			++itDisabledLight;
-		}
-		return;
-	}
+	return;
+	//bool bAllLightsEnabled = std::all_of(RANGE(mLights), [](const Light& l) { return l._bEnabled; });
+	//if (!bAllLightsEnabled)
+	//{
+	//	auto itDisabledLight = std::find_if(RANGE(mLights), [](Light& l) { return !l._bEnabled; });
+	//	for (size_t i = 0; i < NUM_LIGHT + 3; ++i)
+	//	{
+	//		itDisabledLight->_bEnabled = true;
+	//		++itDisabledLight;
+	//	}
+	//	return;
+	//}
 	//----------------------------------
 
 	if (mLights.size() + NUM_LIGHT > NUM_POINT_LIGHT)
@@ -454,15 +455,16 @@ void AddLights(std::vector<Light>& mLights)
 
 void RemoveLights(std::vector<Light>& mLights)
 {
-	auto itEnabledLight = std::find_if(RRANGE(mLights), [](Light& l) { return l._bEnabled && l._type == Light::POINT; });
-	if (itEnabledLight == mLights.rend())
-		return;
-
-	for (size_t i = 0; i < NUM_LIGHT+3; ++i)
-	{
-		itEnabledLight->_bEnabled = false;
-		++itEnabledLight;
-	}
+	return;
+	//auto itEnabledLight = std::find_if(RRANGE(mLights), [](Light& l) { return l._bEnabled && l._type == Light::POINT; });
+	//if (itEnabledLight == mLights.rend())
+	//	return;
+	//
+	//for (size_t i = 0; i < NUM_LIGHT+3; ++i)
+	//{
+	//	itEnabledLight->_bEnabled = false;
+	//	++itEnabledLight;
+	//}
 }
 #pragma endregion
 //----------------------------------------------------------------------------------------------

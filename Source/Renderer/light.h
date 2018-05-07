@@ -46,8 +46,9 @@ struct Light
 			float range,
 			float brightness,
 			float spotAngle,
-			bool castsShadows = false,
-			bool bEnabled = true);
+			bool castsShadows = false
+		//, bool bEnabled = true
+	);
 	Light(const Light& l);
 	~Light();
 
@@ -75,7 +76,7 @@ struct Light
 
 	Transform		_transform;
 	int	_renderMesh; // todo: mesh
-	bool			_bEnabled;
+	//bool			_bEnabled;
 };
 
 

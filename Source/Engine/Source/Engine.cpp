@@ -394,7 +394,7 @@ void Engine::PreRender()
 
 	for (const Light& l : mLights)
 	{
-		if (!l._bEnabled) continue;
+		//if (!l._bEnabled) continue;
 
 		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
 		const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
@@ -426,7 +426,7 @@ void Engine::PreRender()
 	unsigned numShd = 0;	// only for spot lights for now
 	for (const Light& l : mLights)
 	{
-		if (!l._bEnabled) continue;
+		//if (!l._bEnabled) continue;
 
 		// shadowing lights
 		if (l._castsShadow)
@@ -466,7 +466,7 @@ void Engine::RenderLights() const
 	mpRenderer->SetShader(EShaders::UNLIT);
 	for (const Light& light : mLights)
 	{
-		if (!light._bEnabled) continue;
+		//if (!light._bEnabled) continue;
 
 		mpRenderer->SetBufferObj(light._renderMesh);
 		const XMMATRIX world = light._transform.WorldTransformationMatrix();

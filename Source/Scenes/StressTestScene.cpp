@@ -110,7 +110,7 @@ void StressTestScene::Load(SerializedScene& scene)
 	SetEnvironmentMap(EEnvironmentMapPresets::BARCELONA);
 
 	AddObjects();
-	mObjects[0].mModel.mBRDF_Material.tiling = vec2(mObjects[0].mTransform._scale / 60.0f);
+	mObjects[0].mModel.SetTextureTiling(vec2(mObjects[0].mTransform._scale / 60.0f));
 
 	if(!ENGINE->IsRenderingStatsOn()) ENGINE->ToggleRenderingStats();
 	if (!ENGINE->IsProfileRenderingOn()) ENGINE->ToggleProfilerRendering();

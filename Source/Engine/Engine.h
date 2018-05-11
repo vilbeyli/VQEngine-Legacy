@@ -118,6 +118,8 @@ private:
 	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 	void PreRender();
 
+	void RenderLoadingScreen();
+
 	void RenderLights() const;
 
 //--------------------------------------------------------------

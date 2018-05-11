@@ -15,6 +15,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+
 #include "Engine.h"
 #include "Application/Input.h"
 #include "Utilities/Log.h"
@@ -31,6 +32,8 @@
 #include "Utilities/Camera.h"
 
 #include <sstream>
+
+#include <DirectXMath.h>
 
 Settings::Engine Engine::sEngineSettings;
 Engine* Engine::sInstance = nullptr;
@@ -139,6 +142,7 @@ const Settings::Engine& Engine::ReadSettingsFromFile()
 
 bool Engine::Initialize(HWND hwnd)
 {
+	mpTimer->Start();
 	if (!mpRenderer || !mpInput || !mpSceneManager || !mpTimer)
 	{
 		Log::Error("Nullptr Engine::Init()\n");
@@ -174,11 +178,40 @@ bool Engine::Initialize(HWND hwnd)
 	mDisplayRenderTargets = true;
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
+
+
+	mpTimer->Stop();
+	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
 	return true;
 }
 
+void Engine::RenderLoadingScreen()
+{
+	const TextureID texLoadingScreen = mpRenderer->CreateTextureFromFile("LoadingScreen0.png");
+	const XMMATRIX matTransformation = XMMatrixIdentity();
+
+	mpRenderer->BeginFrame();
+	mpRenderer->BindRenderTarget(0);
+	mpRenderer->SetShader(EShaders::UNLIT);
+	mpRenderer->SetBufferObj(EGeometry::QUAD);
+	mpRenderer->SetTexture("texDiffuseMap", texLoadingScreen);
+	mpRenderer->SetConstant1f("isDiffuseMap", 1.0f);
+	mpRenderer->SetConstant3f("diffuse", vec3(1.0f, 1, 1));
+	mpRenderer->SetConstant4x4f("worldViewProj", matTransformation);
+	mpRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
+	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
+	mpRenderer->Apply();
+	mpRenderer->DrawIndexed();
+	mpRenderer->EndFrame();
+
+	mpRenderer->UnbindRenderTargets();
+}
+
+
 bool Engine::Load()
 {
+	RenderLoadingScreen();
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 
 	mpCPUProfiler->BeginProfile();
@@ -459,6 +492,7 @@ void Engine::PreRender()
 
 	mpCPUProfiler->EndEntry();
 }
+
 
 void Engine::RenderLights() const
 {

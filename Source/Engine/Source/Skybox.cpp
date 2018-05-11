@@ -387,7 +387,8 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 		pRenderer->DrawIndexed();
 	}
 	pRenderer->m_deviceContext->GenerateMips(mippedEnvironmentCubemapTex._srv);
-	pRenderer->EndFrame();	// present frame or device removed...
+	pRenderer->m_deviceContext->Flush();
+	//pRenderer->EndFrame();	// present frame or device removed...
 
 	// PREFILTER PASS
 	// pre-filter environment map into each cube face and mip level (~ roughness)
@@ -440,7 +441,8 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	envMapSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	envMapSamplerDesc.MaxAnisotropy = 1;
 	this->envMapSampler = spRenderer->CreateSamplerState(envMapSamplerDesc);
-	pRenderer->EndFrame();	// present frame or device removed...
+	pRenderer->m_deviceContext->Flush();
+	//pRenderer->EndFrame();	// present frame or device removed...
 
 	// RENDER IRRADIANCE CUBEMAP PASS
 	// TODO: irradiance cubemap

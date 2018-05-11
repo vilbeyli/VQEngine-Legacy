@@ -113,7 +113,7 @@ void BaseSystem::InitWindow(const Settings::Window& windowSettings)
 		WS_EX_APPWINDOW,			// Forces a top-level window onto the taskbar when the window is visible.
 		m_appName,					// class name
 		m_appName,					// Window name
-		WS_OVERLAPPEDWINDOW, //WS_POPUP,					// Window style
+		WS_POPUP,					// Window style
 		posX, posY, width, height,	// Window position and dimensions
 		NULL, NULL,					// parent, menu
 		m_hInstance, NULL
@@ -360,7 +360,9 @@ LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam,
 		break;
 
 	case WM_SIZE:
+#ifdef LOG_WINDOW_EVENTS
 		Log::Info("[WM_SIZE]");
+#endif
 		break;
 
 	case WM_ACTIVATE:	// application active/inactive

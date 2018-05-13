@@ -96,11 +96,6 @@ void RemoveLights(std::vector<Light>&);
 
 //----------------------------------------------------------------------------------------------
 #pragma region SCENE_INTERFACE
-StressTestScene::StressTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
-	:
-	Scene(sceneMan, lights)
-{
-}
 
 void StressTestScene::Load(SerializedScene& scene)
 {

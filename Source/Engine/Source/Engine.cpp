@@ -21,7 +21,6 @@
 #include "Utilities/Log.h"
 #include "Utilities/PerfTimer.h"
 #include "Utilities/CustomParser.h"
-#include "SceneManager.h"
 #include "Application/WorkerPool.h"
 #include "Engine/Settings.h"
 
@@ -43,7 +42,6 @@ Engine::Engine()
 	, mpTextRenderer(new TextRenderer())
 	, mpInput(new Input())
 	, mpTimer(new PerfTimer()) 
-	, mpSceneManager(new SceneManager(mLights))
 	, mpCPUProfiler(new CPUProfiler())
 	, mpGPUProfiler(new GPUProfiler())
 	, mbUsePaniniProjection(false)
@@ -137,13 +135,20 @@ const Settings::Engine& Engine::ReadSettingsFromFile()
 }
 
 
-
+// todo: remove this dependency
+static const char* sceneNames[] =
+{
+	"Objects.scn",
+	"SSAOTest.scn",
+	"IBLTest.scn",
+	"StressTestScene.scn"
+};
 
 
 bool Engine::Initialize(HWND hwnd)
 {
 	mpTimer->Start();
-	if (!mpRenderer || !mpInput || !mpSceneManager || !mpTimer)
+	if (!mpRenderer || !mpInput || !mpTimer)
 	{
 		Log::Error("Nullptr Engine::Init()\n");
 		return false;
@@ -208,6 +213,44 @@ void Engine::RenderLoadingScreen()
 	mpRenderer->UnbindRenderTargets();
 }
 
+bool Engine::ReloadScene()
+{
+	const auto& settings = Engine::GetSettings();
+	Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
+
+	mpActiveScene->UnloadScene();
+	mZPassObjects.clear();
+
+	return LoadScene();
+}
+
+bool Engine::LoadScene()
+{
+	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sceneNames[sEngineSettings.levelToLoad]);
+	if (mSerializedScene.loadSuccess == '0') return false;
+
+	// TODO: refactor here
+	mCurrentLevel = sEngineSettings.levelToLoad;
+	switch (sEngineSettings.levelToLoad)
+	{
+	case 0:	mpActiveScene = &mObjectsScene; break;
+	case 1:	mpActiveScene = &mSSAOTestScene; break;
+	case 2:	mpActiveScene = &mIBLTestScene; break;
+	case 3:	mpActiveScene = &mStressTestScene; break;
+	default:	break;
+	}
+	mpActiveScene->LoadScene(mpRenderer, mpTextRenderer, mSerializedScene, sEngineSettings.window);
+	mpActiveScene->GetShadowCasters(mZPassObjects);
+	return true;
+}
+
+bool Engine::LoadScene(int level)
+{
+	mpActiveScene->UnloadScene();
+	mZPassObjects.clear();
+	Engine::sEngineSettings.levelToLoad = level;
+	return LoadScene();
+}
 
 bool Engine::Load()
 {
@@ -222,13 +265,16 @@ bool Engine::Load()
 	mpTimer->Stop();
 	Log::Info("--------------------- ENVIRONMENT MAPS LOADED IN %.2fs.", mpTimer->DeltaTime());
 
-
-	const bool bLoadSuccess = mpSceneManager->Load(mpRenderer, nullptr, sEngineSettings, mZPassObjects);
-	if (!bLoadSuccess)
+	// --- SCENE MANAGER
+	constexpr size_t numScenes = sizeof(sceneNames) / sizeof(sceneNames[0]);
+	assert(sEngineSettings.levelToLoad < numScenes);
+	if (!LoadScene())
 	{
 		Log::Error("Engine couldn't load scene.");
 		return false;
 	}
+
+	// --- SCENE MANAGER
 
 	mpTimer->Reset();
 	mpTimer->Start();
@@ -305,6 +351,31 @@ bool Engine::HandleInput()
 		}
 	}
 
+	// SCENE -------------------------------------------------------------
+	if (mpInput->IsKeyTriggered("R"))
+	{
+		if (mpInput->IsKeyDown("Shift")) ReloadScene();
+		else							 mpActiveScene->ResetActiveCamera();
+	}
+
+	if (mpInput->IsKeyTriggered("1"))	LoadScene(0);
+	if (mpInput->IsKeyTriggered("2"))	LoadScene(1);
+	if (mpInput->IsKeyTriggered("3"))	LoadScene(2);
+	if (mpInput->IsKeyTriggered("4"))	LoadScene(3);
+
+
+	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
+	const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
+	const EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
+		static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
+		);
+
+	EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
+	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
+	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
+	if (ENGINE->INP()->IsKeyTriggered("PageUp") || ENGINE->INP()->IsKeyTriggered("PageDown"))
+		mpActiveScene->SetEnvironmentMap(selectedEnvironmentMap);
+
 	return true;
 }
 
@@ -354,7 +425,7 @@ bool Engine::UpdateAndRender()
 		CalcFrameStats(dt);
 
 		mpCPUProfiler->BeginEntry("Update()");
-		mpSceneManager->Update(dt);
+		mpActiveScene->UpdateScene(dt);
 		mpCPUProfiler->EndEntry();
 
 		PreRender();
@@ -368,24 +439,13 @@ bool Engine::UpdateAndRender()
 	return bExitApp;
 }
 
-// can't use std::array<T&, 2>, hence std::array<T*, 2> 
-// array of 2: light data for non-shadowing and shadowing lights
-constexpr size_t NON_SHADOWING_LIGHT_INDEX	= 0;
-constexpr size_t SHADOWING_LIGHT_INDEX		= 1;
-using pPointLightDataArray		 = std::array<PointLightDataArray*, 2>;
-using pSpotLightDataArray		 = std::array<SpotLightDataArray*, 2>;
-using pDirectionalLightDataArray = std::array<DirectionalLightDataArray*, 2>;
-
-// stores the number of lights per light type
-using pNumArray = std::array<int*, Light::ELightType::LIGHT_TYPE_COUNT>;
 
 void Engine::PreRender()
 {
 	mpCPUProfiler->BeginEntry("PreRender()");
 	
 	// set scene view
-	const Camera& viewCamera = mpSceneManager->GetMainCamera();
-	const Scene* scene = mpSceneManager->mpActiveScene;
+	const Camera& viewCamera = mpActiveScene->GetActiveCamera();
 	const XMMATRIX view = viewCamera.GetViewMatrix();
 	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
 	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
@@ -400,90 +460,20 @@ void Engine::PreRender()
 
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
 
-	mSceneView.sceneRenderSettings = scene->GetSceneRenderSettings();
+	mSceneView.sceneRenderSettings = mpActiveScene->GetSceneRenderSettings();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
-	mSceneView.bIsIBLEnabled = scene->mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
+	mSceneView.bIsIBLEnabled = mpActiveScene->mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
 
-	mSceneView.environmentMap = scene->GetEnvironmentMap();
+	mSceneView.environmentMap = mpActiveScene->GetEnvironmentMap();
 
 	// gather scene lights
-	mSceneLightData.ResetCounts();
-	mShadowView.spots.clear();
-	mShadowView.directionals.clear();
-	mShadowView.points.clear();
-	pNumArray lightCounts
-	{ 
-		&mSceneLightData._cb.pointLightCount,
-		&mSceneLightData._cb.spotLightCount,
-		&mSceneLightData._cb.directionalLightCount
-	};
-	pNumArray casterCounts
-	{ 
-		&mSceneLightData._cb.pointLightCount_shadow,
-		&mSceneLightData._cb.spotLightCount_shadow,
-		&mSceneLightData._cb.directionalLightCount_shadow
-	};
-
-	for (const Light& l : mLights)
-	{
-		//if (!l._bEnabled) continue;	// #BreaksRelease
-
-		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
-		const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
-
-		// add to the count of the current light type & whether its shadow casting or not
-		pNumArray& refLightCounts = l._castsShadow ? casterCounts : lightCounts;
-		const size_t lightIndex = (*refLightCounts[l._type])++;
-
-		switch (l._type)
-		{
-		case Light::ELightType::POINT:
-			mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();
-			//mSceneLightData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
-			break;
-		case Light::ELightType::SPOT:
-			mSceneLightData._cb.spotLights[lightIndex] = l.GetSpotLightData();
-			mSceneLightData._cb.spotLightsShadowing[lightIndex] = l.GetSpotLightData();
-			break;
-		case Light::ELightType::DIRECTIONAL:
-			//mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();
-			//mSceneLightData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
-			break;
-		default:
-			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
-			continue;
-		}
-	}
-
-	unsigned numShd = 0;	// only for spot lights for now
-	for (const Light& l : mLights)
-	{
-		//if (!l._bEnabled) continue; // #BreaksRelease
-
-		// shadowing lights
-		if (l._castsShadow)
-		{
-			switch (l._type)
-			{
-			case Light::ELightType::SPOT:
-				mShadowView.spots.push_back(&l);
-				mSceneLightData._cb.shadowViews[numShd++] = l.GetLightSpaceMatrix();
-				break;
-			case Light::ELightType::POINT:
-				mShadowView.points.push_back(&l);
-				break;
-			case Light::ELightType::DIRECTIONAL:
-				mShadowView.directionals.push_back(&l);
-				break;
-			}
-		}
-
-	}
+	mpActiveScene->GatherLightData(mSceneLightData, mShadowView);
+	
 
 	mTBNDrawObjects.clear();
 	std::vector<const GameObject*> objects;
-	mpSceneManager->mpActiveScene->GetSceneObjects(objects);
+	mpActiveScene->GetSceneObjects(objects);
 	for (const GameObject* obj : objects)
 	{
 		if (obj->mRenderSettings.bRenderTBN)
@@ -498,7 +488,7 @@ void Engine::RenderLights() const
 {
 	mpRenderer->BeginEvent("Render Lights Pass");
 	mpRenderer->SetShader(EShaders::UNLIT);
-	for (const Light& light : mLights)
+	for (const Light& light : mpActiveScene->mLights)
 	{
 		//if (!light._bEnabled) continue; // #BreaksRelease
 
@@ -544,7 +534,6 @@ void Engine::Render()
 	mpRenderer->BeginFrame();
 
 	const XMMATRIX& viewProj = mSceneView.viewProj;
-	const Scene* pScene = mpSceneManager->mpActiveScene;
 
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
@@ -584,7 +573,7 @@ void Engine::Render()
 		mpCPUProfiler->BeginEntry("Geometry Pass");
 		mpRenderer->BeginEvent("Geometry Pass");
 		mDeferredRenderingPasses.SetGeometryRenderingStates(mpRenderer);
-		mFrameStats.numSceneObjects = mpSceneManager->Render(mpRenderer, mSceneView);
+		mFrameStats.numSceneObjects = mpActiveScene->Render(mSceneView);
 		mpRenderer->EndEvent();	
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndQuery();
@@ -626,9 +615,9 @@ void Engine::Render()
 		
 		// SKYBOX
 		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
-		if (pScene->HasSkybox())
+		if (mpActiveScene->HasSkybox())
 		{
-			pScene->RenderSkybox(mSceneView.viewProj);
+			mpActiveScene->RenderSkybox(mSceneView.viewProj);
 		}
 
 		RenderLights();
@@ -670,7 +659,7 @@ void Engine::Render()
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->BeginRender(clearCmd);
-			mpSceneManager->Render(mpRenderer, mSceneView);
+			mpActiveScene->Render(mSceneView);
 			mpRenderer->EndEvent();
 			mpGPUProfiler->EndQuery();
 
@@ -709,7 +698,7 @@ void Engine::Render()
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
-		if (pScene->HasSkybox())	pScene->RenderSkybox(mSceneView.viewProj);
+		if (mpActiveScene->HasSkybox())	mpActiveScene->RenderSkybox(mSceneView.viewProj);
 		else
 		{
 			// todo: this might be costly, profile this
@@ -753,7 +742,7 @@ void Engine::Render()
 			SendLightData();
 		}
 
-		mpSceneManager->Render(mpRenderer, mSceneView);
+		mpActiveScene->Render(mSceneView);
 		mpRenderer->EndEvent();
 
 		RenderLights();
@@ -826,7 +815,7 @@ void Engine::Render()
 		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
 		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		TextureID tBRDF				 = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
-		TextureID preFilteredEnvMap  = pScene->GetEnvironmentMap().prefilteredEnvironmentMap;
+		TextureID preFilteredEnvMap  = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap; 
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
@@ -922,7 +911,7 @@ void Engine::Render()
 		mpTextRenderer->RenderText(_drawDesc);
 	}
 
-	mpSceneManager->RenderUI();
+	mpActiveScene->RenderUI();
 
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndQuery();

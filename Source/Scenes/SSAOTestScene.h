@@ -29,7 +29,7 @@ public:
 
 	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;
 
-	SSAOTestScene(SceneManager& sceneMan, std::vector<Light>& lights);
+	SSAOTestScene() = default;
 	~SSAOTestScene() = default;
 
 	std::vector<GameObject> cubes; 

@@ -20,7 +20,6 @@
 
 #include "Application/Input.h"
 #include "Renderer/Renderer.h"
-#include "Engine/SceneManager.h"
 #include "Engine/Engine.h"
 
 #define ENABLE_POINT_LIGHTS
@@ -39,11 +38,6 @@ enum class WALLS
 	BACK,
 	CEILING
 };
-
-ObjectsScene::ObjectsScene(SceneManager& sceneMan, std::vector<Light>& lights)
-	:
-	Scene(sceneMan, lights)
-{}
 
 #ifdef min
 #undef min

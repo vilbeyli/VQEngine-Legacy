@@ -29,6 +29,14 @@
 #include "Renderer/Light.h"
 #include "Skybox.h"
 
+
+// todo: move scene headers to cpp and rework the scenes system. this is not a good design...
+// scenes
+#include "Scenes/ObjectsScene.h"
+#include "Scenes/SSAOTestScene.h"
+#include "Scenes/IBLTestScene.h"
+#include "Scenes/StressTestScene.h"
+
 #include <memory>
 using std::shared_ptr;
 using std::unique_ptr;
@@ -80,6 +88,9 @@ public:
 	void					Exit();
 	
 	bool					Load();
+	bool					LoadScene();
+	bool					LoadScene(int level);	// TODO: unify LoadScene()s.
+	bool					ReloadScene();
 
 	bool					UpdateAndRender();
 	void					Render();
@@ -122,7 +133,7 @@ private:
 
 	void RenderLights() const;
 
-//--------------------------------------------------------------
+//==============================================================================================================
 
 private:
 	static Engine*					sInstance;
@@ -132,30 +143,44 @@ private:
 	bool							mbShowProfiler;
 	bool							mbShowControls;
 	FrameStats						mFrameStats;
-
-	// systems
+	
+	//--------------------------------------------------------
+	// SYSTEMS
 	//--------------------------------------------------------
 	Input*							mpInput;
 	Renderer*						mpRenderer;
 	TextRenderer*					mpTextRenderer;
-	SceneManager*					mpSceneManager;
 	PerfTimer*						mpTimer;
-	WorkerPool						mWorkerPool;
 	CPUProfiler*					mpCPUProfiler;
 	GPUProfiler*					mpGPUProfiler;
 	float mCurrentFrameTime;
+	
+	WorkerPool						mWorkerPool;
 
-	// scene
 	//--------------------------------------------------------
+	// SCENE
+	//--------------------------------------------------------
+	Scene*							mpActiveScene;
 	SceneView						mSceneView;
-	SceneLightingData				mSceneLightData;
-
-	std::vector<Light>				mLights;
 	ShadowView						mShadowView;
+	SceneLightingData				mSceneLightData;	// more memory than required?
+
+	// current design for adding new scenes is as follows (and is horrible...):
+	// - add the .scn scene file to Data/Levels directory
+	// - Create a class for your scene and inherit from Scene base class 
+	//    - use the .BAT file with scene name as an argument in the Scenes directory
+	// - edit settings.ini to start with your scene
+	// - remember to add scene name in engine.cpp::LoadScene
+	int						mCurrentLevel;
+	ObjectsScene			mObjectsScene;
+	SSAOTestScene			mSSAOTestScene;
+	IBLTestScene			mIBLTestScene;
+	StressTestScene			mStressTestScene;
 
 	bool							mbUsePaniniProjection;
 
-	// rendering 
+	//--------------------------------------------------------
+	// RENDERING 
 	//--------------------------------------------------------
 	ShaderID						mSelectedShader;
 	

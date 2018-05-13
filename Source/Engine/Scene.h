@@ -17,7 +17,8 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
-#include "Engine/Settings.h"
+#include "Engine/Settings.h"	// todo: is this needed?
+
 
 #include "Renderer/Light.h"
 
@@ -31,6 +32,7 @@ class SceneManager;
 class Renderer;
 class TextRenderer;
 struct SceneView;
+struct ShadowView;
 
 // https://en.wikipedia.org/wiki/Template_method_pattern
 // https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
@@ -44,7 +46,7 @@ class Scene
 {
 	friend class Engine;
 public:
-	Scene(SceneManager& sceneManager, std::vector<Light>& lights);
+	Scene();
 	~Scene() = default;
 
 	// sets mpRenderer and moves objects from serializedScene into objects vector
@@ -77,6 +79,8 @@ public:
 	virtual void GetSceneObjects(std::vector<const GameObject*>& objs) const;
 
 
+	void GatherLightData(SceneLightingData& outLightingData, ShadowView& outShadowView) const;
+
 	inline const EnvironmentMap& GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }
 	inline const Camera& GetActiveCamera() const	{ return mCameras[mSelectedCamera]; }
 	inline const Settings::SceneRender& GetSceneRenderSettings() const { return mSceneRenderSettings; }
@@ -95,7 +99,7 @@ protected:	// customization functions for derived classes
 	virtual void Unload() = 0;
 	
 protected:
-	SceneManager&			mSceneManager;
+	//SceneManager&			mSceneManager;
 	Renderer*				mpRenderer;
 	TextRenderer*			mpTextRenderer;
 
@@ -103,7 +107,7 @@ protected:
 	EEnvironmentMapPresets	mActiveSkyboxPreset;	// dynamic skybox changing
 
 	std::vector<Camera>		mCameras;
-	std::vector<Light>&		mLights;
+	std::vector<Light>		mLights;
 	std::vector<GameObject> mObjects;
 
 	int mSelectedCamera;

@@ -20,11 +20,6 @@
 #include "Renderer/Renderer.h"
 #include "Engine/RenderPasses.h"
 
-SSAOTestScene::SSAOTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
-	:
-	Scene(sceneMan, lights)
-{}
-
 void SSAOTestScene::Load(SerializedScene& scene)
 {
 #if 0

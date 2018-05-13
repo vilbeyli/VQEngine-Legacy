@@ -26,12 +26,6 @@
 
 static const vec3 sSphereCenter = vec3(0, 1, 20);
 
-IBLTestScene::IBLTestScene(SceneManager& sceneMan, std::vector<Light>& lights)
-	:
-	Scene(sceneMan, lights)
-{
-}
-
 void IBLTestScene::Load(SerializedScene& scene)
 {
 	// sphere grid

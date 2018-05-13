@@ -36,7 +36,7 @@ public:
 	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;	// todo: rename this... decide between depth and shadows
 	void GetSceneObjects(std::vector<const GameObject*>&) const override;
 
-	ObjectsScene(SceneManager& sceneMan, std::vector<Light>& lights);
+	ObjectsScene() = default;
 	~ObjectsScene() = default;
 
 private:

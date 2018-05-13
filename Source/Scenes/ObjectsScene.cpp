@@ -45,6 +45,12 @@ ObjectsScene::ObjectsScene(SceneManager& sceneMan, std::vector<Light>& lights)
 	Scene(sceneMan, lights)
 {}
 
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
 void ObjectsScene::Load(SerializedScene& scene)
 {
 	m_room.Initialize(mpRenderer);
@@ -103,8 +109,42 @@ void ObjectsScene::Load(SerializedScene& scene)
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			// col(-x->+x) -> metalness [0.0f, 1.0f]
-			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::red) * (rowStepInv * rowStepInv)));
+			//sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::red) * (rowStepInv * rowStepInv)));
 			//sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::white) * rowStep));
+			//const float gradientStep = rowStepInv * rowStepInv;
+			const float gradientStep = 1.0f;
+
+			auto sRGBtoLinear = [](const vec3& sRGB)
+			{
+				return vec3(
+					std::pow(sRGB.x(), 2.2f),
+					std::pow(sRGB.y(), 2.2f),
+					std::pow(sRGB.z(), 2.2f)
+				);
+			};
+			
+#if 0
+			const float r = std::pow(44.0f * gradientStep / 255.0f, 2.2f);
+			const float g = std::pow(107.0f* gradientStep / 255.0f, 2.2f);
+			const float b = std::pow(171.0f* gradientStep / 255.0f, 2.2f);
+#else
+			const float r = std::pow(128.0f * gradientStep / 255.0f, 2.2f);
+			const float g = std::pow(146.0f * gradientStep / 255.0f, 2.2f);
+			const float b = std::pow(217.0f * gradientStep / 255.0f, 2.2f);
+#endif
+
+			// COLORS:
+			// ---------------------------------
+			// 128 146 217 - lila
+			// 44 107 171  - 'facebook' blue
+			// 129 197 216 - turuaz/yesil
+			// 41 113 133  - koyu yesil
+			// 177 206 149 - acik yesil
+			// 211 235 82  - lime
+			// 247 198 51  - turuncu/sari
+
+			
+			sph.mModel.SetDiffuseColor(LinearColor(r, g, b));
 			mat0.metalness = 1.0;
 
 			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
@@ -279,8 +319,9 @@ void ObjectsScene::Room::Initialize(Renderer* pRenderer)
 		floor.mModel.mBlinnPhong_Material.shininess = 40.0f;
 		floor.mModel.mBRDF_Material.roughness = 0.8f;
 		floor.mModel.mBRDF_Material.metalness = 0.0f;
-		floor.mModel.SetDiffuseAlpha(LinearColor::gray, 1.0f);
-		floor.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/161_norm.JPG"));
+		//floor.mModel.SetDiffuseAlpha(LinearColor::gray, 1.0f);
+		floor.mModel.SetDiffuseAlpha(LinearColor::white, 1.0f);
+		//floor.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/161_norm.JPG"));
 		floor.mModel.SetTextureTiling(vec2(10, 10));
 		//mat = Material::bronze;
 		//floor.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("185.JPG"));

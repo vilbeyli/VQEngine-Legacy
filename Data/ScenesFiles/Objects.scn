@@ -20,8 +20,8 @@ camera 0.1 1500 75   0 50 -190  0 15
 ao true 0.23
 skylight true
 
-light       s         sun      	true       9000         80	     -100    45     0	   180  0  	65  0.8	 
-light       s         sun      	true       500         70	     0    65     40	   190  0 	0  0.8	 
+light       s         white      	true       9000         80	     -100    45     80	   210  0  	65  0.8	 
+light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 
 //light       p         orange       	false      1800         60	      0     30     0  	   0.3
 //light       p         cyan      	false      2400          84	      60    25    -2 	   0.4
 //light       p         red        	false      1500         60	    -140   100   140       0.5
@@ -37,65 +37,5 @@ metalness 1.0
 textures openart/155.JPG openart/155_norm.JPG
 brdf end
 //Phong
-transform 85 10 30 30 30 0 11
-object end
-
-object begin
-mesh grid
-brdf begin
-roughness 0.14
-metalness 0.0
-brdf end
-//Phong
-transform 85 5 -90 0 0 45 30
-object end
-
-
-object begin
-mesh cylinder
-brdf begin
-roughness 0.9
-metalness 0.18 
-diffuse 0.80 0.54 0.04
-brdf end
-//Phong
-transform 85 5 -60 0 0 0 7
-object end
-
-
-
-
-object begin
-mesh triangle
-brdf begin
-textures "" openart/190_norm.JPG
-diffuse 0.24 0.74 0.74
-roughness 0.4
-metalness 0.9
-brdf end
-//Phong
-transform 85 5 -30 30 120 0 20
-object end
-
-object begin
-mesh sphere
-brdf begin
-diffuse 0.04 0.64 0.04
-roughness 0.9
-metalness 0.0
-brdf end
-//Phong
-transform 85 5 0 0 0 0 5.5
-object end
-
-object begin
-mesh quad
-brdf begin
-textures "" openart/190_norm.JPG
-diffuse 0.04 0.24 0.74
-roughness 0.8
-metalness 0.0
-brdf end
-//Phong
-transform 85 5 60 30 30 0 20
+transform 85 10000 30 30 30 0 11
 object end

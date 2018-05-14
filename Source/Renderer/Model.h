@@ -34,7 +34,7 @@ public:
 	void SetTextureTiling(const vec2& tiling);
 
 public:
-	int				mMesh;
+	int					mMesh;
 	BRDF_Material		mBRDF_Material;
 	BlinnPhong_Material mBlinnPhong_Material;
 };

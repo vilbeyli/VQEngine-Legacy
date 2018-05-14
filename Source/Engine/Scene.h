@@ -19,8 +19,8 @@
 
 #include "Engine/Settings.h"	// todo: is this needed?
 
-
 #include "Renderer/Light.h"
+#include "Renderer/Mesh.h"
 
 #include "Utilities/Camera.h"
 
@@ -34,21 +34,16 @@ class TextRenderer;
 struct SceneView;
 struct ShadowView;
 
-// https://en.wikipedia.org/wiki/Template_method_pattern
-// https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
-// https://isocpp.org/wiki/faq/strange-inheritance#two-strategies-for-virtuals
-// template method seems like a good idea here.
-// the idea is that base class takes care of the common tasks among all scenes and calls the 
-// customized functions of the derived classes through pure virtual functions
-
-// Base class for scenes
-class Scene
+class Scene	// Base class for scenes
 {
 	friend class Engine;
 public:
 	Scene();
 	~Scene() = default;
 
+	//----------------------------------------------------------------------------------------------------------------
+	// CORE INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
 	// sets mpRenderer and moves objects from serializedScene into objects vector
 	//
 	void LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, SerializedScene& scene, const Settings::Window& windowSettings);
@@ -64,10 +59,14 @@ public:
 	// calls .Render() on objects and calls derived class RenderSceneSpecific()
 	//
 	int Render(const SceneView& sceneView) const;
+
+	// each scene has to implement scene-specific RenderUI() function. RenderUI() is called
+	// after post processing is finished and is the last rendering workload before presenting the frame.
+	//
 	virtual void RenderUI() const = 0;
 
-	void ResetActiveCamera();
-
+	// calls Render() on skybox.
+	//
 	inline void RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
 
 	// puts objects into provided vector if the RenderSetting.bRenderDepth is true
@@ -85,29 +84,44 @@ public:
 	inline const Camera& GetActiveCamera() const	{ return mCameras[mSelectedCamera]; }
 	inline const Settings::SceneRender& GetSceneRenderSettings() const { return mSceneRenderSettings; }
 	inline bool  HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
+	void ResetActiveCamera();
 
 	EEnvironmentMapPresets GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
 	void SetEnvironmentMap(EEnvironmentMapPresets preset);
 
-protected:	// customization functions for derived classes
-	// note:
-	// int Render() is not a good idea for the derived classes: to leave the responsiblity to the implementor to count the 
-	// number of objects rendered in a scene. this definitely needs refactoring... A game object factory might be a good idea.
+protected:
+	//----------------------------------------------------------------------------------------------------------------
+	// CUSTOMIZATION FUNCTIONS FOR DERIVED CLASSES
+	//----------------------------------------------------------------------------------------------------------------
+	// https://en.wikipedia.org/wiki/Template_method_pattern
+	// https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
+	// https://isocpp.org/wiki/faq/strange-inheritance#two-strategies-for-virtuals
+	// template method seems like a good idea here.
+	// the idea is that base class takes care of the common tasks among all scenes and calls the 
+	// customized functions of the derived classes through pure virtual functions
+	// note:	int Render() is not a good idea for the derived classes: to leave the responsiblity to the implementor to count the 
+	//			number of objects rendered in a scene. this definitely needs refactoring... A game object factory might be a good idea.
 	virtual void Update(float dt) = 0;
 	virtual int Render(const SceneView& sceneView, bool bSendMaterialData) const = 0;
 	virtual void Load(SerializedScene& scene) = 0;
 	virtual void Unload() = 0;
 	
 protected:
-	//SceneManager&			mSceneManager;
+	//----------------------------------------------------------------------------------------------------------------
+	// DATA
+	//----------------------------------------------------------------------------------------------------------------
 	Renderer*				mpRenderer;
 	TextRenderer*			mpTextRenderer;
 
 	Skybox					mSkybox;
-	EEnvironmentMapPresets	mActiveSkyboxPreset;	// dynamic skybox changing
+	EEnvironmentMapPresets	mActiveSkyboxPreset;
 
 	std::vector<Camera>		mCameras;
 	std::vector<Light>		mLights;
+	std::vector<Material>	mMaterials;
+	std::vector<Mesh>		mGeometry;
+
+	// TODO: dissect game objects 
 	std::vector<GameObject> mObjects;
 
 	int mSelectedCamera;

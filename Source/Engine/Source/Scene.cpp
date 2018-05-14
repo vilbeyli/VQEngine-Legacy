@@ -32,6 +32,7 @@ void Scene::LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, Serializ
 {
 	mpRenderer = pRenderer;
 	mpTextRenderer = pTextRenderer;
+
 	mObjects = std::move(scene.objects);
 	mLights = std::move(scene.lights);
 	mSceneRenderSettings = scene.settings;

@@ -19,25 +19,15 @@
 #pragma once
 
 #include <windows.h>
-#include "Utilities/PerfTimer.h"
-#include "Utilities/Profiler.h"
+
 #include "Application/WorkerPool.h"
 #include "Application/DataStructures.h"
 
 #include "Settings.h"
 #include "RenderPasses.h"
-#include "Renderer/Light.h"
-#include "Skybox.h"
-
-
-// todo: move scene headers to cpp and rework the scenes system. this is not a good design...
-// scenes
-#include "Scenes/ObjectsScene.h"
-#include "Scenes/SSAOTestScene.h"
-#include "Scenes/IBLTestScene.h"
-#include "Scenes/StressTestScene.h"
 
 #include <memory>
+
 using std::shared_ptr;
 using std::unique_ptr;
 
@@ -45,12 +35,16 @@ class Renderer;
 class TextRenderer;
 class Input;
 class Parser;
-class SceneManager;
+
 class CPUProfiler;
+class GPUProfiler;
+class PerfTimer;
 
-class PathManager;		// unused
-class PhysicsEngine;	// unused
-
+class Scene;
+class ObjectsScene;
+class SSAOTestScene;
+class IBLTestScene;
+class StressTestScene;
 
 struct ObjectPool
 {
@@ -73,77 +67,81 @@ ALIGNMENT class Engine
 	friend class BaseSystem;
 	friend class SceneManager;	// read/write ZPassObjects
 
-public:
+public:	
+	//--------------------------------------------------------
+	// STATIC INTERFACE
+	//--------------------------------------------------------
 	static const Settings::Engine&	ReadSettingsFromFile();
 	static const Settings::Engine&	GetSettings() { return sEngineSettings; }
 	static Engine*					GetEngine();
+
 	~Engine();
 
 #ifdef _WIN32
 	void*					operator new(size_t size) { return _mm_malloc(size, 16); }
 	void					operator delete(void* p)  { _mm_free(p); }
 #endif
-
+	//--------------------------------------------------------
+	// CORE INTERFACE
+	//--------------------------------------------------------
 	bool					Initialize(HWND hwnd);
 	void					Exit();
 	
 	bool					Load();
-	bool					LoadScene();
-	bool					LoadScene(int level);	// TODO: unify LoadScene()s.
+	bool					LoadSceneFromFile();
+	bool					LoadScene(int level);
 	bool					ReloadScene();
 
+	void					SendLightData() const;
 	bool					UpdateAndRender();
 	void					Render();
 
 	void					Pause();
 	void					Unpause();
 	
-
+	//--------------------------------------------------------
+	// GETTERS
+	//--------------------------------------------------------
 	inline const Input*		INP() const { return mpInput; }
-	inline float			GetTotalTime() const { return mpTimer->TotalTime(); }
+	float					GetTotalTime() const;
 	inline ShaderID			GetSelectedShader() const { return mSelectedShader; }
 	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
 	inline bool				GetSettingShowControls() const { return mbShowControls; }
-	
-
 	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
-	
-	void					ToggleLightingModel();	// BRDF / Blinn-Phong
-	void					ToggleRenderingPath();	// Forward / Deferred
-	void					ToggleAmbientOcclusion();
-
-	void inline				ToggleProfilerRendering() { mbShowProfiler = !mbShowProfiler; }
-	void inline				ToggleControlsTextRendering() { mbShowControls = !mbShowControls; }
-	void inline				ToggleRenderingStats() { mFrameStats.bShow = !mFrameStats.bShow; }
 	bool inline				IsRenderingStatsOn() const { return mFrameStats.bShow; }
 	bool inline				IsProfileRenderingOn() const { return mbShowProfiler; }
 
-	void					SendLightData() const;
+	//--------------------------------------------------------
+	// TOGGLES
+	//--------------------------------------------------------
+	void					ToggleLightingModel();	// BRDF / Blinn-Phong
+	void					ToggleRenderingPath();	// Forward / Deferred
+	void					ToggleAmbientOcclusion();
+	void inline				ToggleProfilerRendering() { mbShowProfiler = !mbShowProfiler; }
+	void inline				ToggleControlsTextRendering() { mbShowControls = !mbShowControls; }
+	void inline				ToggleRenderingStats() { mFrameStats.bShow = !mFrameStats.bShow; }
+
 private:
 	Engine();
-
 	inline void TogglePause() { mbIsPaused = !mbIsPaused; }
+
 	void CalcFrameStats(float dt);
 	bool HandleInput();
 
 	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 	void PreRender();
-
 	void RenderLoadingScreen();
-
 	void RenderLights() const;
 
 //==============================================================================================================
 
 private:
+	//--------------------------------------------------------
+	// STATIC
+	//--------------------------------------------------------
 	static Engine*					sInstance;
 	static Settings::Engine			sEngineSettings;
-	
-	bool							mbIsPaused;
-	bool							mbShowProfiler;
-	bool							mbShowControls;
-	FrameStats						mFrameStats;
-	
+
 	//--------------------------------------------------------
 	// SYSTEMS
 	//--------------------------------------------------------
@@ -155,7 +153,7 @@ private:
 	GPUProfiler*					mpGPUProfiler;
 	float mCurrentFrameTime;
 	
-	WorkerPool						mWorkerPool;
+	WorkerPool						mWorkerPool;//(UNSUED)
 
 	//--------------------------------------------------------
 	// SCENE
@@ -171,13 +169,13 @@ private:
 	//    - use the .BAT file with scene name as an argument in the Scenes directory
 	// - edit settings.ini to start with your scene
 	// - remember to add scene name in engine.cpp::LoadScene
-	int						mCurrentLevel;
-	ObjectsScene			mObjectsScene;
-	SSAOTestScene			mSSAOTestScene;
-	IBLTestScene			mIBLTestScene;
-	StressTestScene			mStressTestScene;
+	int								mCurrentLevel;
+	ObjectsScene*					mpObjectsScene;
+	SSAOTestScene*					mpSSAOTestScene;
+	IBLTestScene*					mpIBLTestScene;
+	StressTestScene*				mpStressTestScene;
 
-	bool							mbUsePaniniProjection;
+	bool							mbUsePaniniProjection;//(UNUSED)
 
 	//--------------------------------------------------------
 	// RENDERING 
@@ -194,15 +192,20 @@ private:
 	PostProcessPass					mPostProcessPass;
 	DebugPass						mDebugPass;
 
-	bool							mbUseDeferredRendering;	// todo read from sceneview???
-	bool							mbIsAmbientOcclusionOn;	// todo read from sceneview???
-	bool							mDisplayRenderTargets;	// todo read from sceneview???
-	
-
 	std::vector<const GameObject*>	mZPassObjects;
 	std::vector<const GameObject*>	mTBNDrawObjects;
 
+	//--------------------------------------------------------
+	// ENGINE STATE
+	//--------------------------------------------------------
+	FrameStats						mFrameStats;
+	bool							mbIsPaused;
+	bool							mbShowProfiler;
+	bool							mbShowControls;
 
+	bool							mbUseDeferredRendering;	// todo read from sceneview???
+	bool							mbIsAmbientOcclusionOn;	// todo read from sceneview???
+	bool							mDisplayRenderTargets;	// todo read from sceneview???
 	unsigned long long				mFrameCount;
 };
 

@@ -18,17 +18,21 @@
 
 #include "Engine.h"
 #include "Application/Input.h"
+#include "Application/WorkerPool.h"
+
 #include "Utilities/Log.h"
 #include "Utilities/PerfTimer.h"
 #include "Utilities/CustomParser.h"
-#include "Application/WorkerPool.h"
-#include "Engine/Settings.h"
-
 #include "Utilities/Profiler.h"
+#include "Utilities/Camera.h"
 
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
-#include "Utilities/Camera.h"
+
+#include "Scenes/ObjectsScene.h"
+#include "Scenes/SSAOTestScene.h"
+#include "Scenes/IBLTestScene.h"
+#include "Scenes/StressTestScene.h"
 
 #include <sstream>
 
@@ -51,6 +55,57 @@ Engine::Engine()
 {}
 
 Engine::~Engine(){}
+
+
+bool Engine::Initialize(HWND hwnd)
+{
+	mpObjectsScene = new ObjectsScene();
+	mpSSAOTestScene = new SSAOTestScene();
+	mpIBLTestScene = new IBLTestScene();
+	mpStressTestScene = new StressTestScene();
+
+	mpTimer->Start();
+	if (!mpRenderer || !mpInput || !mpTimer)
+	{
+		Log::Error("Nullptr Engine::Init()\n");
+		return false;
+	}
+
+	// INITIALIZE SYSTEMS
+	//--------------------------------------------------------------
+	const bool bEnableLogging = true;	// todo: read from settings
+	constexpr size_t workerCount = 1;
+	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
+	const Settings::Window& windowSettings = sEngineSettings.window;
+
+	mWorkerPool.Initialize(workerCount);
+	mpInput->Initialize();
+	if (!mpRenderer->Initialize(hwnd, windowSettings))
+	{
+		Log::Error("Cannot initialize Renderer.\n");
+		return false;
+	}
+	if (!mpTextRenderer->Initialize(mpRenderer))
+	{
+		Log::Error("Cannot initialize Text Renderer.\n");
+		return false;
+	}
+	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
+
+	// INITIALIZE RENDERING
+	//--------------------------------------------------------------
+	// render passes
+	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
+	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
+	mDisplayRenderTargets = true;
+	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
+	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
+
+
+	mpTimer->Stop();
+	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
+	return true;
+}
 
 void Engine::Exit()
 {
@@ -128,6 +183,8 @@ void Engine::Unpause()
 	mbIsPaused = false;
 }
 
+float Engine::GetTotalTime() const { return mpTimer->TotalTime(); }
+
 const Settings::Engine& Engine::ReadSettingsFromFile()
 {
 	sEngineSettings = Parser::ReadSettings("EngineSettings.ini");
@@ -143,52 +200,6 @@ static const char* sceneNames[] =
 	"IBLTest.scn",
 	"StressTestScene.scn"
 };
-
-
-bool Engine::Initialize(HWND hwnd)
-{
-	mpTimer->Start();
-	if (!mpRenderer || !mpInput || !mpTimer)
-	{
-		Log::Error("Nullptr Engine::Init()\n");
-		return false;
-	}
-
-	// INITIALIZE SYSTEMS
-	//--------------------------------------------------------------
-	const bool bEnableLogging = true;	// todo: read from settings
-	constexpr size_t workerCount = 1;
-	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
-	const Settings::Window& windowSettings = sEngineSettings.window;
-
-	mWorkerPool.Initialize(workerCount);
-	mpInput->Initialize();
-	if (!mpRenderer->Initialize(hwnd, windowSettings))
-	{
-		Log::Error("Cannot initialize Renderer.\n");
-		return false;
-	}
-	if (!mpTextRenderer->Initialize(mpRenderer))
-	{
-		Log::Error("Cannot initialize Text Renderer.\n");
-		return false;
-	}
-	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
-
-	// INITIALIZE RENDERING
-	//--------------------------------------------------------------
-	// render passes
-	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
-	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
-	mDisplayRenderTargets = true;
-	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
-	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
-
-
-	mpTimer->Stop();
-	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
-	return true;
-}
 
 void Engine::RenderLoadingScreen()
 {
@@ -221,10 +232,10 @@ bool Engine::ReloadScene()
 	mpActiveScene->UnloadScene();
 	mZPassObjects.clear();
 
-	return LoadScene();
+	return LoadSceneFromFile();
 }
 
-bool Engine::LoadScene()
+bool Engine::LoadSceneFromFile()
 {
 	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sceneNames[sEngineSettings.levelToLoad]);
 	if (mSerializedScene.loadSuccess == '0') return false;
@@ -233,10 +244,10 @@ bool Engine::LoadScene()
 	mCurrentLevel = sEngineSettings.levelToLoad;
 	switch (sEngineSettings.levelToLoad)
 	{
-	case 0:	mpActiveScene = &mObjectsScene; break;
-	case 1:	mpActiveScene = &mSSAOTestScene; break;
-	case 2:	mpActiveScene = &mIBLTestScene; break;
-	case 3:	mpActiveScene = &mStressTestScene; break;
+	case 0:	mpActiveScene = mpObjectsScene; break;
+	case 1:	mpActiveScene = mpSSAOTestScene; break;
+	case 2:	mpActiveScene = mpIBLTestScene; break;
+	case 3:	mpActiveScene = mpStressTestScene; break;
 	default:	break;
 	}
 	mpActiveScene->LoadScene(mpRenderer, mpTextRenderer, mSerializedScene, sEngineSettings.window);
@@ -249,7 +260,7 @@ bool Engine::LoadScene(int level)
 	mpActiveScene->UnloadScene();
 	mZPassObjects.clear();
 	Engine::sEngineSettings.levelToLoad = level;
-	return LoadScene();
+	return LoadSceneFromFile();
 }
 
 bool Engine::Load()
@@ -268,7 +279,7 @@ bool Engine::Load()
 	// --- SCENE MANAGER
 	constexpr size_t numScenes = sizeof(sceneNames) / sizeof(sceneNames[0]);
 	assert(sEngineSettings.levelToLoad < numScenes);
-	if (!LoadScene())
+	if (!LoadSceneFromFile())
 	{
 		Log::Error("Engine couldn't load scene.");
 		return false;

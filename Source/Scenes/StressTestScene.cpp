@@ -27,6 +27,7 @@
 
 #include "Renderer/Light.h"
 #include "Renderer/Renderer.h"
+#include "Renderer/TextRenderer.h"
 
 #include <numeric>
 #include <algorithm>

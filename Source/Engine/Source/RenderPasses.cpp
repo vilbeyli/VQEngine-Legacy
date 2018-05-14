@@ -22,10 +22,12 @@
 #include "GameObject.h"
 
 #include "Renderer/Renderer.h"
-#include "Utilities/Camera.h"
 #include "Renderer/D3DManager.h"
+#include "Renderer/Light.h"
 
+#include "Utilities/Camera.h"
 #include "Utilities/Log.h"
+
 
 #include <array>
 

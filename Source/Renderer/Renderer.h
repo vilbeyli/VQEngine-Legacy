@@ -47,6 +47,10 @@ using RasterizerState   = ID3D11RasterizerState;
 using DepthStencilState = ID3D11DepthStencilState;
 using RenderTargetIDs	= std::vector<RenderTargetID>;
 
+
+//----------------------------------------------------------------------------------------------------------------
+// RENDERING STRUCTS
+//----------------------------------------------------------------------------------------------------------------
 struct BlendState
 {
 	BlendState() : ptr(nullptr) {}
@@ -64,7 +68,6 @@ struct RenderTarget
 
 struct DepthTarget
 {
-	//--------------------------------------------
 	Texture						texture;
 	ID3D11DepthStencilView*		pDepthStencilView;
 };
@@ -85,6 +88,10 @@ struct PipelineState
 	Viewport			viewPort;
 };
 
+
+
+
+
 class Renderer
 {
 	friend class Engine;		
@@ -95,15 +102,19 @@ class Renderer
 	friend struct SetSamplerCommand;	// todo: refactor commands - don't use friend for commands
 
 public:
-	// use > tabs w/ 4spaces
 	Renderer();
 	~Renderer();
+
+	//----------------------------------------------------------------------------------------------------------------
+	// CORE INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
 	bool					Initialize(HWND hwnd, const Settings::Window& settings);
 	void					Exit();
 	inline void				ReloadShaders() { Shader::UnloadShaders(this); Shader::LoadShaders(this); }
 
+	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
-	//----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	HWND					GetWindow()		const; 
 	float					AspectRatio()	const;
 	unsigned				WindowHeight()	const;
@@ -123,8 +134,9 @@ public:
 	inline const ShaderID	GetActiveShader() const { return mPipelineState.shader; }
 
 
+	//----------------------------------------------------------------------------------------------------------------
 	// RESOURCE INITIALIZATION
-	//----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	ShaderID				AddShader(const std::string& shaderFileName, const std::vector<InputLayout>& layouts);
 	ShaderID				AddShader(	const std::string&				shaderName, 
 										const std::vector<std::string>&	shaderFileNames, 
@@ -141,8 +153,9 @@ public:
 
 	BufferID				CreateBuffer(const BufferDesc& bufferDesc, const void* pData = nullptr);
 
+	//----------------------------------------------------------------------------------------------------------------
 	// PIPELINE STATE MANAGEMENT
-	//----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc );	// TODO: samplerDesc
 
 	RasterizerStateID		AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors);
@@ -167,7 +180,7 @@ public:
 	void					SetVertexBuffer(BufferID bufferID);
 	void					SetIndexBuffer(BufferID bufferID);
 	void					SetTexture(const char* texName, TextureID tex);
-	//	void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
+	//void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
 	void					SetTextureArray(const char* texName, TextureID texArray);
 	void					SetSamplerState(const char* samplerName, SamplerID sampler);
 	void					SetRasterizerState(RasterizerStateID rsStateID);
@@ -206,8 +219,10 @@ public:
 
 	void					BeginEvent(const std::string& marker);
 	void					EndEvent();
+
+	//----------------------------------------------------------------------------------------------------------------
 	// DRAW FUNCTIONS
-	//----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	void					DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
 	void					Draw(int vertCount, EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
 	
@@ -218,12 +233,18 @@ public:
 
 private:
 	void					SetConstant(const char* cName, const void* data);
-//==================================================================================================================================================
+
 public:
+	//----------------------------------------------------------------------------------------------------------------
+	// WORKSPACE DIRECTORIES (STATIC)
+	//----------------------------------------------------------------------------------------------------------------
 	static const char*				sShaderRoot;
 	static const char*				sTextureRoot;
 	static const char*				sHDRTextureRoot;
 
+	//----------------------------------------------------------------------------------------------------------------
+	// DATA
+	//----------------------------------------------------------------------------------------------------------------
 	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;
 	D3DManager*						m_Direct3D;

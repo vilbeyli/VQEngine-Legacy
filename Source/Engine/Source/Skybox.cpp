@@ -216,7 +216,7 @@ void Skybox::Render(const XMMATRIX& viewProj) const
 	pRenderer->SetTexture("texSkybox", skyboxTexture);
 	//pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
 	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-	pRenderer->SetBufferObj(EGeometry::CUBE);
+	pRenderer->SetGeometry(EGeometry::CUBE);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 	pRenderer->EndEvent();
@@ -289,7 +289,7 @@ void EnvironmentMap::CalculateBRDFIntegralLUT()
 	spRenderer->UnbindDepthTarget();
 	spRenderer->SetShader(sBRDFIntegrationLUTShader);
 	spRenderer->SetViewport(2048, 2048);
-	spRenderer->SetBufferObj(EGeometry::QUAD);
+	spRenderer->SetGeometry(EGeometry::QUAD);
 	spRenderer->Apply();
 	spRenderer->DrawIndexed();
 }
@@ -350,7 +350,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetShader(sRenderIntoCubemapShader);
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
-	pRenderer->SetBufferObj(EGeometry::CUBE);
+	pRenderer->SetGeometry(EGeometry::CUBE);
 	pRenderer->SetTexture("tEnvironmentMap", envMap);
 	pRenderer->SetSamplerState("sLinear", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 

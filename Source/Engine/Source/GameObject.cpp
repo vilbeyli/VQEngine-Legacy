@@ -65,7 +65,9 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 
 	}
 
-	pRenderer->SetBufferObj(mModel.mMesh);
+	//pRenderer->SetVertexBuffer();
+	//pRenderer->SetIndexBuffer();
+	pRenderer->SetGeometry(static_cast<EGeometry>(mModel.mMesh));
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 }
@@ -79,7 +81,7 @@ void GameObject::RenderZ(Renderer * pRenderer) const
 		mModel.mMesh == EGeometry::GRID;
 	const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 
-	pRenderer->SetBufferObj(mModel.mMesh);
+	pRenderer->SetGeometry(static_cast<EGeometry>(mModel.mMesh));
 	pRenderer->SetRasterizerState(rasterizerState);
 	pRenderer->SetConstant4x4f("world", world);
 	pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));

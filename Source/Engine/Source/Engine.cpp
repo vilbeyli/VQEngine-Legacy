@@ -149,7 +149,6 @@ void Engine::Exit()
 
 	mWorkerPool.Terminate();
 
-	std::for_each(mBuiltinMeshes.begin(), mBuiltinMeshes.end(), [](Mesh& mesh) {mesh.CleanUp(); });
 	mBuiltinMeshes.clear();
 
 	Log::Exit();
@@ -246,7 +245,7 @@ void Engine::RenderLoadingScreen()
 	mpRenderer->BeginFrame();
 	mpRenderer->BindRenderTarget(0);
 	mpRenderer->SetShader(EShaders::UNLIT);
-	mpRenderer->SetBufferObj(EGeometry::QUAD);
+	mpRenderer->SetGeometry(EGeometry::QUAD);
 	mpRenderer->SetTexture("texDiffuseMap", texLoadingScreen);
 	mpRenderer->SetConstant1f("isDiffuseMap", 1.0f);
 	mpRenderer->SetConstant3f("diffuse", vec3(1.0f, 1, 1));
@@ -540,7 +539,7 @@ void Engine::RenderLights() const
 	{
 		//if (!light._bEnabled) continue; // #BreaksRelease
 
-		mpRenderer->SetBufferObj(light._renderMesh);
+		mpRenderer->SetGeometry(light._renderMesh);
 		const XMMATRIX world = light._transform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world  * mSceneView.viewProj;
 		const vec3 color = light._color.Value();

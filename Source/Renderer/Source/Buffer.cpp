@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "BufferObject.h"
+//#include "BufferObject.h"
 #include "Renderer.h"
 
 #include "Utilities/Log.h"

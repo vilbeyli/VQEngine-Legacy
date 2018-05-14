@@ -225,7 +225,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	}
 	m_device = m_Direct3D->m_device;
 	m_deviceContext = m_Direct3D->m_deviceContext;
-	Mesh::spDevice = m_device;
+	Mesh::spRenderer = this;
 
 	// DEFAULT RENDER TARGET
 	//--------------------------------------------------------------------
@@ -464,8 +464,13 @@ void Renderer::Exit()
 {
 	//m_Direct3D->ReportLiveObjects("BEGIN EXIT");
 
-	std::for_each(mBuffers.begin(), mBuffers.end(), [](Buffer& b){b.CleanUp();} );
-	mBuffers.clear();
+	std::vector<Buffer>* buffers[2] = { &mVertexBuffers, &mIndexBuffers };
+	for (int i = 0; i < 2; ++i)
+	{
+		auto refBuffer = *buffers[i];
+		std::for_each(refBuffer.begin(), refBuffer.end(), [](Buffer& b) {b.CleanUp(); });
+		refBuffer.clear();
+	}
 
 	CPUConstant::CleanUp();	// todo: move constant buffer logic into Buffer
 	
@@ -919,13 +924,27 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	return cubemapOut._id;
 }
 
+#ifdef max
+#undef max
+#endif
 BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData /*=nullptr*/)
 {
 	Buffer buffer(bufferDesc);
 	buffer.Initialize(m_device, pData);
-
-	mBuffers.push_back(buffer);
-	return static_cast<int>(mBuffers.size() - 1);
+	return static_cast<int>([&]() {
+		switch (bufferDesc.mType)
+		{
+		case VERTEX_BUFER:
+			mVertexBuffers.push_back(buffer);
+			return mVertexBuffers.size() - 1;
+		case INDEX_BUFFER:
+			mIndexBuffers.push_back(buffer);
+			return mIndexBuffers.size() - 1;
+		default:
+			Log::Warning("Unknown Buffer Type");
+			return std::numeric_limits<size_t>::max();
+		}
+	}());
 }
 
 SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)
@@ -1184,7 +1203,7 @@ void Renderer::SetVertexBuffer(BufferID bufferID)
 	UINT offset = 0;
 
 	// temporary
-	Buffer& b = mBuffers[bufferID];
+	Buffer& b = mVertexBuffers[bufferID];
 	m_deviceContext->IASetVertexBuffers(0, 1, &(b.mData), &b.mDesc.mStride, &offset);
 }
 
@@ -1192,13 +1211,21 @@ void Renderer::SetIndexBuffer(BufferID bufferID)
 {
 	mPipelineState.indexBuffer = bufferID;
 
-	m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
+	
+	m_deviceContext->IASetIndexBuffer(mIndexBuffers[mPipelineState.indexBuffer].mData, DXGI_FORMAT_R32_UINT, 0);
+}
+
+#include "Engine/Engine.h"
+void Renderer::SetGeometry(EGeometry GeomEnum)
+{
+	const auto VertedAndIndexBuffer = ENGINE->GetGeometryVertexAndIndexBuffers(GeomEnum);
+	mPipelineState.vertexBuffer = VertedAndIndexBuffer.first;
+	mPipelineState.indexBuffer = VertedAndIndexBuffer.second;
 }
 
 void Renderer::ResetPipelineState()
 {
 	mPipelineState.shader = -1;
-	mPipelineState._activeInputBuffer = -1;
 }
 
 
@@ -1216,13 +1243,6 @@ void Renderer::SetViewport(const D3D11_VIEWPORT & viewport)
 {
 	mPipelineState.viewPort = viewport;
 }
-
-void Renderer::SetBufferObj(int BufferID)
-{
-	assert(BufferID >= 0);
-	mPipelineState._activeInputBuffer = BufferID;
-}
-
 
 void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 {
@@ -1538,7 +1558,7 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 	SetConstant4x4f("screenSpaceTransformation", transformation);
 	SetConstant1f("isDepthTexture", cmd.bIsDepthTexture ? 1.0f : 0.0f);
 	SetTexture("inputTexture", cmd.texture);
-	SetBufferObj(EGeometry::QUAD);
+	SetGeometry(EGeometry::QUAD);
 	Apply();
 	DrawIndexed();
 }
@@ -1588,8 +1608,8 @@ void Renderer::EndFrame()
 
 void Renderer::UpdateBuffer(BufferID buffer, const void * pData)
 {
-	assert(buffer >= 0 && buffer < mBuffers.size());
-	mBuffers[buffer].Update(this, pData);
+	assert(buffer >= 0 && buffer < mVertexBuffers.size());
+	mVertexBuffers[buffer].Update(this, pData);
 }
 
 void Renderer::Apply()
@@ -1598,13 +1618,24 @@ void Renderer::Apply()
 
 	// INPUT ASSEMBLY
 	// ----------------------------------------
-	unsigned stride = sizeof(DefaultVertexBufferData);	// layout?
+	const Buffer& VertexBuffer = mVertexBuffers[mPipelineState.vertexBuffer];
+	const Buffer& IndexBuffer = mIndexBuffers[mPipelineState.indexBuffer];
+
+	unsigned stride = VertexBuffer.mDesc.mStride;
 	unsigned offset = 0;
 
-
-	if (mPipelineState._activeInputBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &(mBuiltinMeshes[mPipelineState._activeInputBuffer].mVertexBuffer.mData), &stride, &offset);
-	if (mPipelineState._activeInputBuffer != -1) m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
-	if (shader)									 m_deviceContext->IASetInputLayout(shader->m_layout);
+	if (mPipelineState.vertexBuffer != -1)
+	{
+		m_deviceContext->IASetVertexBuffers(0, 1, &(VertexBuffer.mData), &stride, &offset);
+	}
+	if (mPipelineState.indexBuffer != -1)
+	{
+		m_deviceContext->IASetIndexBuffer(IndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
+	}
+	if (shader)
+	{
+		m_deviceContext->IASetInputLayout(shader->m_layout);
+	}
 
 	if (shader)
 	{	// SHADER STAGES
@@ -1707,8 +1738,11 @@ void Renderer::EndEvent()
 
 void Renderer::DrawIndexed(EPrimitiveTopology topology)
 {
-	const unsigned numIndices = mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mDesc.mElementCount;
-	const unsigned numVertices = mBuiltinMeshes[mPipelineState._activeInputBuffer].mVertexBuffer.mDesc.mElementCount;
+	const Buffer& VertexBuffer = mVertexBuffers[mPipelineState.vertexBuffer];
+	const Buffer& IndexBuffer = mIndexBuffers[mPipelineState.indexBuffer];
+
+	const unsigned numIndices = IndexBuffer.mDesc.mElementCount;
+	const unsigned numVertices = VertexBuffer.mDesc.mElementCount;
 
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->DrawIndexed(numIndices, 0, 0);

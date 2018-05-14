@@ -23,9 +23,6 @@
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\BufferObject.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\D3DManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -47,15 +44,15 @@
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\TextRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Renderer\Source\Buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Renderer\Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="$(SolutionDir)Source\Renderer\Model.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Renderer\BufferObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="$(SolutionDir)Source\Renderer\D3DManager.h">

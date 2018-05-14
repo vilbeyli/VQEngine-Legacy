@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "GeometryGenerator.h"
-#include "BufferObject.h"
+#include "Renderer.h"
 
 #include "Utilities/Log.h"
 

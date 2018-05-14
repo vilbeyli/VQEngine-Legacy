@@ -197,7 +197,7 @@ devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2015.sln" /Build "$(Configu
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\RenderCommands.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Light.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Model.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\BufferObject.cpp" />
+    <ClCompile Include="..\Renderer\Source\Buffer.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\D3DManager.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\GeometryGenerator.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Mesh.cpp" />
@@ -209,7 +209,6 @@ devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2015.sln" /Build "$(Configu
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Renderer\Light.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\Model.h" />
-    <ClInclude Include="$(SolutionDir)Source\Renderer\BufferObject.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\D3DManager.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\GeometryGenerator.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\Mesh.h" />

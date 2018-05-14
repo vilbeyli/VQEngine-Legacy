@@ -75,7 +75,7 @@ struct Light
 	};	
 
 	Transform		_transform;
-	int	_renderMesh; // todo: mesh
+	EGeometry		_renderMesh;
 	//bool			_bEnabled; 
 };
 

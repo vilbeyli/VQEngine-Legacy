@@ -94,3 +94,4 @@ Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will co
  - [nothings/stb](https://github.com/nothings/stb)
  - [freetype-windows-binaries](https://github.com/ubawurinna/freetype-windows-binaries)
  - [DirectXTex](https://github.com/Microsoft/DirectXTex)
+ - [assimp](https://github.com/assimp/assimp)

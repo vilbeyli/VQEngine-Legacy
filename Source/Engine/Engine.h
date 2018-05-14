@@ -20,9 +20,16 @@
 
 #include <windows.h>
 
+#include "Utilities/PerfTimer.h"
+#include "Utilities/Profiler.h"
+
 #include "Application/WorkerPool.h"
 #include "Application/DataStructures.h"
 
+#include "Renderer/Light.h"
+#include "Renderer/Mesh.h"
+
+#include "Skybox.h"
 #include "Settings.h"
 #include "RenderPasses.h"
 
@@ -176,6 +183,7 @@ private:
 	StressTestScene*				mpStressTestScene;
 
 	bool							mbUsePaniniProjection;//(UNUSED)
+	std::vector<Mesh>				mBuiltinMeshes;
 
 	//--------------------------------------------------------
 	// RENDERING 

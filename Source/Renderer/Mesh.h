@@ -37,35 +37,36 @@ public:
 	void CleanUp();	// ctor initializes d3d buffer, should be cleaned up;
 private:
 	TextureID textures;
-	Buffer	mVertexBuffer;
-	Buffer	mIndexBuffer;
+	BufferID  mVertexBuffer;
+	BufferID  mIndexBuffer;
 };
 
 // template definitions
 // --------------------------------------------------------------------------------------------------------------------------
-template<class VertexBufferType> 
-Mesh::Mesh(
-	const std::vector<VertexBufferType>& vertices, 
-	const std::vector<unsigned>& indices
-)	:
-	textures(-1)
-{
-	BufferDesc bufferDesc = {};
-
-	bufferDesc.mType = VERTEX_BUFER;
-	bufferDesc.mUsage = STATIC_RW;
-	bufferDesc.mElementCount = static_cast<unsigned>(vertices.size());
-	bufferDesc.mStride = sizeof(vertices[0]);
-	mVertexBuffer = Buffer(bufferDesc); 
-	mVertexBuffer.Initialize(spDevice, static_cast<const void*>(vertices.data()));
-	
-	bufferDesc.mType = INDEX_BUFFER;
-	bufferDesc.mUsage = STATIC_RW;
-	bufferDesc.mElementCount = static_cast<unsigned>(indices.size());
-	bufferDesc.mStride = sizeof(unsigned);
-	mIndexBuffer = Buffer(bufferDesc);
-	mIndexBuffer.Initialize(spDevice, static_cast<const void*>(indices.data()));
-}
+//template<class VertexBufferType> 
+//Mesh::Mesh(
+//	const std::vector<VertexBufferType>& vertices, 
+//	const std::vector<unsigned>& indices
+//)	:
+//	textures(-1)
+//{
+//	BufferDesc bufferDesc = {};
+//
+//	bufferDesc.mType = VERTEX_BUFER;
+//	bufferDesc.mUsage = STATIC_RW;
+//	bufferDesc.mElementCount = static_cast<unsigned>(vertices.size());
+//	bufferDesc.mStride = sizeof(vertices[0]);
+//	
+//	mVertexBuffer = Buffer(bufferDesc); 
+//	mVertexBuffer.Initialize(spDevice, static_cast<const void*>(vertices.data()));
+//	
+//	bufferDesc.mType = INDEX_BUFFER;
+//	bufferDesc.mUsage = STATIC_RW;
+//	bufferDesc.mElementCount = static_cast<unsigned>(indices.size());
+//	bufferDesc.mStride = sizeof(unsigned);
+//	mIndexBuffer = Buffer(bufferDesc);
+//	mIndexBuffer.Initialize(spDevice, static_cast<const void*>(indices.data()));
+//}
 
 #if 0	// TODO
 template<class VertexBufferType> 

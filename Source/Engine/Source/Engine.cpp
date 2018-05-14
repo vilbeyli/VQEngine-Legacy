@@ -17,6 +17,7 @@
 
 
 #include "Engine.h"
+
 #include "Application/Input.h"
 #include "Application/WorkerPool.h"
 
@@ -28,6 +29,7 @@
 
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
+#include "Renderer/GeometryGenerator.h"
 
 #include "Scenes/ObjectsScene.h"
 #include "Scenes/SSAOTestScene.h"
@@ -35,7 +37,6 @@
 #include "Scenes/StressTestScene.h"
 
 #include <sstream>
-
 #include <DirectXMath.h>
 
 Settings::Engine Engine::sEngineSettings;
@@ -92,6 +93,39 @@ bool Engine::Initialize(HWND hwnd)
 	}
 	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
 
+	// PRIMITIVES
+	//--------------------------------------------------------------------
+	{
+		// cylinder parameters
+		const float	 cylHeight = 3.1415f;
+		const float	 cylTopRadius = 1.0f;
+		const float	 cylBottomRadius = 1.0f;
+		const unsigned cylSliceCount = 120;
+		const unsigned cylStackCount = 100;
+
+		// grid parameters
+		const float gridWidth = 1.0f;
+		const float gridDepth = 1.0f;
+		const unsigned gridFinenessH = 100;
+		const unsigned gridFinenessV = 100;
+
+		// sphere parameters
+		const float sphRadius = 2.0f;
+		const unsigned sphRingCount = 25;
+		const unsigned sphSliceCount = 25;
+
+		mBuiltinMeshes =	// this should match enum declaration order
+		{
+			GeometryGenerator::Triangle(1.0f),
+			GeometryGenerator::Quad(1.0f),
+			GeometryGenerator::Cube(),
+			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
+			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
+			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
+			GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
+		};
+	}
+
 	// INITIALIZE RENDERING
 	//--------------------------------------------------------------
 	// render passes
@@ -114,6 +148,9 @@ void Engine::Exit()
 	mpRenderer->Exit();
 
 	mWorkerPool.Terminate();
+
+	std::for_each(mBuiltinMeshes.begin(), mBuiltinMeshes.end(), [](Mesh& mesh) {mesh.CleanUp(); });
+	mBuiltinMeshes.clear();
 
 	Log::Exit();
 	if (sInstance)

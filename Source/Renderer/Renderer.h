@@ -252,6 +252,8 @@ public:
 	//std
 
 	static bool						sEnableBlend; //temp
+
+
 private:	
 	PipelineState					mPipelineState;
 	PipelineState					mPrevPipelineState;	//todo: make states an array, index through frameCount % size
@@ -259,7 +261,7 @@ private:
 	RenderTargetID					mBackBufferRenderTarget;
 	TextureID						mDefaultDepthBufferTexture;
 
-	std::vector<Mesh>				mBuiltinMeshes;
+	//std::vector<Mesh>				mBuiltinMeshes;
 	std::vector<Shader*>			mShaders;
 	std::vector<Texture>			mTextures;
 	std::vector<Sampler>			mSamplers;

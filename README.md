@@ -20,14 +20,29 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 # Feature List / Version History
 
- *v0.3.0 - Automated Build, Logging, Text Rendering, CPU & GPU Profiler - May7-2018*
+See [Milestones](https://github.com/vilbeyli/VQEngine/milestones) for the planned upcoming changes and [Releases page](https://github.com/vilbeyli/VQEngine/releases) for the version histroy.
+
+## What's Next
+
+The latest changes can be found in the [dev branch](https://github.com/vilbeyli/VQEngine/tree/dev), or another branch named with the feature being implemented. _These branches might be unstable before the release_.
+
+ *v0.4.0 - Data-Oriented Engine, Multi-threaded Tasking System, assimp Integration - TBA*
+ - Loading Screen
+ - Asynchronous Model Loading using [assimp](https://github.com/assimp/assimp)
+ - Task-based Threading System
+ - Refactored Scene, Engine and Renderer classes in favor of [Data-Oriented Design](https://en.wikipedia.org/wiki/Data-oriented_design)
+ - Documentation
+
+## Released
+
+ *[v0.3.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.3.0) - May7-2018*
  - Text Rendering
  - CPU & GPU Profiler
  - Shader Binary Cache
  - Build scripts (Python, Batch) & Automated Build (AppVeyor)
  - Logging: Console and/or Log Files
 
- *v0.2.0 - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
+ *[v0.2.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.2.0) - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
  - On-the-fly-switchable Forward/Deferred Rendering
  - PBR: GGX-Smith BRDF
  - Environment Mapping (Image-Based Lighting)
@@ -36,7 +51,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
  - SSAO w/ Gaussian Blur
  - Custom Scene Files, Switchable/Reloadable Scenes
 
-*v0.1.0 - Simple Lighting, Texturing and Shader Reflection: July15-2017*
+*[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - Simple Lighting, Texturing and Shader Reflection: July15-2017*
  - Vertex-Geometry-Pixel Shader Pipeline
  - Shader Reflection
  - Phong Lighting
@@ -44,14 +59,12 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
  - Normal/Diffuse Maps
  - Procedural Geometry: Cube, Sphere, Cylinder, Grid
   
-
-
 # Prerequisites
 
 The projects are set to build with the following configurations:
 
- - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk): v10.0.16299.0
- - Visual Studio 2017 (v141)
+ - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - 10.0.16299.0
+ - Visual Studio 2017 - v141
  
 - **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 
@@ -87,7 +100,6 @@ Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will co
 | **F3** |	Toggle Bloom |
 | **F4** |	Toggle Display Render Targets |
 | **F5** |	Toggle Forward/Deferred Rendering |
-| **\\** |  Reload Shaders |
 
 # 3rd Party Open Source Libraries
  

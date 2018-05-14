@@ -35,7 +35,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 
 ## Released
 
- *[v0.3.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.3.0) - May7-2018*
+ *[v0.3.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.3.0) - Automated Build, Logging, Text Rendering, CPU & GPU Profiler - May7-2018*
  - Text Rendering
  - CPU & GPU Profiler
  - Shader Binary Cache

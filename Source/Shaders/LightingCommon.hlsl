@@ -27,7 +27,8 @@
 #endif
 #define POINTLIGHT_BRIGHTNESS_SCALAR_PHONG 0.002f
 
-// STRUCTS
+//----------------------------------------------------------
+// LIGHTS
 //----------------------------------------------------------
 struct PointLight
 {	// 48 bytes
@@ -88,6 +89,10 @@ struct SceneLighting	//  5152 bytes
 	matrix shadowViews[NUM_SPOT_LIGHT_SHADOW /*+ directionalLightViews*/];
 };
 
+
+//----------------------------------------------------------
+// MATERIALS
+//----------------------------------------------------------
 // CPU - GPU struct for both lighting models
 struct SurfaceMaterial
 {
@@ -123,6 +128,7 @@ struct PHONG_Surface
 	float shininess;
 };
 
+//----------------------------------------------------------
 // FUNCTIONS
 //----------------------------------------------------------
 inline float AttenuationBRDF(float2 coeffs, float dist)

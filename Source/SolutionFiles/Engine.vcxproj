@@ -171,6 +171,8 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\Scene.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Settings.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Skybox.h" />
+    <ClInclude Include="..\Engine\DataStructures.h" />
+    <ClInclude Include="..\Engine\PerfTree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Transform.cpp" />

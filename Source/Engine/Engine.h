@@ -24,11 +24,11 @@
 #include "Utilities/Profiler.h"
 
 #include "Application/WorkerPool.h"
-#include "Application/DataStructures.h"
 
 #include "Renderer/Light.h"
 #include "Renderer/Mesh.h"
 
+#include "DataStructures.h"
 #include "Skybox.h"
 #include "Settings.h"
 #include "RenderPasses.h"

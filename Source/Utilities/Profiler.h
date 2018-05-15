@@ -10,7 +10,7 @@
 
 #include "PerfTimer.h"
 #include "Renderer/TextRenderer.h"
-#include "Application/DataStructures.h"
+#include "Engine/DataStructures.h"
 
 #ifdef max
 #undef max

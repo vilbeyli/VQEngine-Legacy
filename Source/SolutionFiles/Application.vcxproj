@@ -181,7 +181,6 @@
     <ClCompile Include="$(SolutionDir)Source\Application\Source\WorkerPool.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(SolutionDir)Source\Application\DataStructures.h" />
     <ClInclude Include="$(SolutionDir)Source\Application\BaseSystem.h" />
     <ClInclude Include="$(SolutionDir)Source\Application\Input.h" />
     <ClInclude Include="$(SolutionDir)Source\Application\resource.h" />

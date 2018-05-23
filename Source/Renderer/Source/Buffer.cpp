@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -22,11 +22,10 @@
 #include "Utilities/Log.h"
 
 Buffer::Buffer(const BufferDesc& desc)
-	: 
-	mDesc(desc),
-	mData(nullptr),
-	mDirty(true),
-	mCPUDataCache(nullptr)
+	: mDesc(desc)
+	, mDirty(true)
+	, mpCPUData(nullptr)
+	, mpGPUData(nullptr)
 {}
 
 void Buffer::Initialize(ID3D11Device* device, const void* pData /*=nullptr*/)
@@ -50,7 +49,7 @@ void Buffer::Initialize(ID3D11Device* device, const void* pData /*=nullptr*/)
 		pBufData = &bufData;
 	}
 
-	int hr = device->CreateBuffer(&bufDesc, pBufData, &this->mData);
+	int hr = device->CreateBuffer(&bufDesc, pBufData, &this->mpGPUData);
 	if (FAILED(hr))
 	{
 		Log::Error("Failed to create vertex buffer!");
@@ -67,13 +66,13 @@ void Buffer::Initialize(ID3D11Device* device, const void* pData /*=nullptr*/)
 
 void Buffer::CleanUp()
 {
-	if (mData)
+	if (mpGPUData)
 	{
-		mData->Release();
-		mData = nullptr;
+		mpGPUData->Release();
+		mpGPUData = nullptr;
 	}
 
-	if (mCPUDataCache)
+	if (mpCPUData)
 	{
 		//const size_t AllocSize = mDesc.mStride * mDesc.mElementCount;
 		//mAllocator.deallocate(static_cast<char*>(mCPUDataCache), AllocSize);
@@ -89,7 +88,7 @@ void Buffer::Update(Renderer* pRenderer, const void* pData)
 	constexpr UINT MapFlags = 0;
 	const UINT Size = mDesc.mStride * mDesc.mElementCount;
 
-	ctx->Map(mData, Subresource, D3D11_MAP_WRITE_DISCARD, MapFlags, &mappedResource);
+	ctx->Map(mpGPUData, Subresource, D3D11_MAP_WRITE_DISCARD, MapFlags, &mappedResource);
 	memcpy(mappedResource.pData, pData, Size);
-	ctx->Unmap(mData, Subresource);
+	ctx->Unmap(mpGPUData, Subresource);
 }

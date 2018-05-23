@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -21,7 +21,7 @@
 #include "RenderingEnums.h"
 #include "Texture.h"
 #include "Shader.h"
-#include "Mesh.h"
+#include "Engine/Mesh.h"	// todo: is this needed?
 
 #include "Engine/Settings.h"
 
@@ -95,12 +95,13 @@ struct BufferDesc
 
 struct Buffer
 {
-	bool			mDirty			= true;
-	void*			mCPUDataCache	= nullptr;
-	ID3D11Buffer*	mData			= nullptr;
 	BufferDesc		mDesc;
-	std::allocator<char> mAllocator;
+	bool			mDirty			= true;
+	void*			mpCPUData		= nullptr;
+	ID3D11Buffer*	mpGPUData		= nullptr;
+	
 	bool			bInitialized	= false;
+	std::allocator<char> mAllocator;
 
 	void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
 	void CleanUp();
@@ -209,7 +210,6 @@ public:
 	void					SetShader(ShaderID);
 	void					SetVertexBuffer(BufferID bufferID);
 	void					SetIndexBuffer(BufferID bufferID);
-	void					SetGeometry(EGeometry GeomEnum);
 	void					SetTexture(const char* texName, TextureID tex);
 	//void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
 	void					SetTextureArray(const char* texName, TextureID texArray);

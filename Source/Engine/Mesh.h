@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -17,13 +17,14 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
-#include "RenderingEnums.h"
-#include "BufferObject.h"
+#include "Renderer/RenderingEnums.h"
+#include "Renderer/BufferObject.h"
 
 #include "Utilities/utils.h"
 
 #include <vector>
 
+using MeshID = int;
 class Mesh
 {
 	friend class Renderer;
@@ -34,8 +35,8 @@ public:
 
 	inline std::pair<BufferID, BufferID> GetIABuffers() const { return std::make_pair(mVertexBufferID, mIndexBufferID); }
 
+	Mesh() = default;
 private:
-	TextureID mTextureID = -1;
 	BufferID  mVertexBufferID = -1;
 	BufferID  mIndexBufferID = -1;
 };

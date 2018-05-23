@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify

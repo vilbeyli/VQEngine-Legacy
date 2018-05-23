@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -17,15 +17,16 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
-#include "Engine/Settings.h"	// todo: is this needed?
-
-#include "Renderer/Light.h"
-#include "Renderer/Mesh.h"
+#include "Settings.h"	// todo: is this needed?
+#include "Light.h"
+#include "Mesh.h"
+#include "Skybox.h"
+#include "GameObject.h"
+#include "GameObjectFactory.h"
 
 #include "Utilities/Camera.h"
 
-#include "Skybox.h"
-#include "GameObject.h"
+#include <memory>
 
 struct SerializedScene;
 class SceneManager;
@@ -33,6 +34,9 @@ class Renderer;
 class TextRenderer;
 struct SceneView;
 struct ShadowView;
+class MaterialBuffer;
+
+#define DO_NOT_LOAD_SCENES 1
 
 class Scene	// Base class for scenes
 {
@@ -44,9 +48,15 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// CORE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
-	// sets mpRenderer and moves objects from serializedScene into objects vector
+
+	// Initializes scene-independent variables such as renderers.
 	//
-	void LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, SerializedScene& scene, const Settings::Window& windowSettings);
+	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer);
+	// void Exit(); ?
+
+	// Moves objects from serializedScene into objects vector and sets the scene pointer in objects
+	//
+	void LoadScene(SerializedScene& scene, const Settings::Window& windowSettings, const std::vector<Mesh>& builtinMeshes);
 
 	// clears object/light containers and camera settings
 	//
@@ -69,14 +79,6 @@ public:
 	//
 	inline void RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
 
-	// puts objects into provided vector if the RenderSetting.bRenderDepth is true
-	//
-	virtual void GetShadowCasters(std::vector<const GameObject*>& casters) const;
-
-	// puts addresses of game objects in provided vector
-	//
-	virtual void GetSceneObjects(std::vector<const GameObject*>& objs) const;
-
 
 	void GatherLightData(SceneLightingData& outLightingData, ShadowView& outShadowView) const;
 
@@ -91,7 +93,7 @@ public:
 
 protected:
 	//----------------------------------------------------------------------------------------------------------------
-	// CUSTOMIZATION FUNCTIONS FOR DERIVED CLASSES
+	// VIRTUAL FUNCTIONS FOR SCENE-SPECIFIC LOGIC
 	//----------------------------------------------------------------------------------------------------------------
 	// https://en.wikipedia.org/wiki/Template_method_pattern
 	// https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
@@ -102,28 +104,35 @@ protected:
 	// note:	int Render() is not a good idea for the derived classes: to leave the responsiblity to the implementor to count the 
 	//			number of objects rendered in a scene. this definitely needs refactoring... A game object factory might be a good idea.
 	virtual void Update(float dt) = 0;
-	virtual int Render(const SceneView& sceneView, bool bSendMaterialData) const = 0;
 	virtual void Load(SerializedScene& scene) = 0;
 	virtual void Unload() = 0;
 	
+	GameObject*		CreateNewGameObject();
+
 protected:
+	friend class SceneResourceView; // using attorney method, alternatively can use friend function
+
 	//----------------------------------------------------------------------------------------------------------------
-	// DATA
+	// SCENE DATA
 	//----------------------------------------------------------------------------------------------------------------
-	Renderer*				mpRenderer;
-	TextRenderer*			mpTextRenderer;
+	std::vector<Mesh>		mGeometry;
+	std::vector<Camera>		mCameras;
+	std::vector<Light>		mLights;
+	MaterialBuffer			mMaterials;
+
+	// GameObjects hold indices to the Scene Data described above
+	ObjectPool mObjectPool;
+	//std::vector<GameObject> mObjects;
+
+	//----------------------------------------------------------------------------------------------------------------
+	// RENDERING
+	//----------------------------------------------------------------------------------------------------------------
+	Renderer*				mpRenderer;		 // static?
+	TextRenderer*			mpTextRenderer;	 // static?
 
 	Skybox					mSkybox;
 	EEnvironmentMapPresets	mActiveSkyboxPreset;
-
-	std::vector<Camera>		mCameras;
-	std::vector<Light>		mLights;
-	std::vector<Material>	mMaterials;
-	std::vector<Mesh>		mGeometry;
-
-	// TODO: dissect game objects 
-	std::vector<GameObject> mObjects;
-
+	
 	int mSelectedCamera;
 
 	Settings::SceneRender	mSceneRenderSettings;
@@ -131,9 +140,16 @@ protected:
 
 struct SerializedScene
 {
+	GameObject*		CreateNewGameObject();
+
 	std::vector<Settings::Camera>	cameras;
 	std::vector<Light>				lights;
+	MaterialBuffer					materials;
 	std::vector<GameObject>			objects;
 	Settings::SceneRender			settings;
 	char loadSuccess = '0';
 };
+
+constexpr size_t SIZE_BRDF = sizeof(BRDF_Material);			// 64 Bytes
+constexpr size_t SIZE_PHNG = sizeof(BlinnPhong_Material);	// 60 Bytes
+// if we use 64 bits for the MaterialID, we can use 32-bit to index each array

@@ -136,6 +136,11 @@ bool Engine::Initialize(HWND hwnd)
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
 
+	mpObjectsScene->Initialize(mpRenderer, mpTextRenderer);
+	mpSSAOTestScene->Initialize(mpRenderer, mpTextRenderer);
+	mpIBLTestScene->Initialize(mpRenderer, mpTextRenderer);
+	mpStressTestScene->Initialize(mpRenderer, mpTextRenderer);
+
 	mpTimer->Stop();
 	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
 	return true;
@@ -237,15 +242,17 @@ static const char* sceneNames[] =
 	"StressTestScene.scn"
 };
 
-void Engine::RenderLoadingScreen()
+void Engine::RenderLoadingScreen() const
 {
 	const TextureID texLoadingScreen = mpRenderer->CreateTextureFromFile("LoadingScreen0.png");
 	const XMMATRIX matTransformation = XMMatrixIdentity();
+	const auto IABuffers = mBuiltinMeshes[EGeometry::QUAD].GetIABuffers();
 
 	mpRenderer->BeginFrame();
 	mpRenderer->BindRenderTarget(0);
 	mpRenderer->SetShader(EShaders::UNLIT);
-	mpRenderer->SetGeometry(EGeometry::QUAD);
+	mpRenderer->SetVertexBuffer(IABuffers.first);
+	mpRenderer->SetIndexBuffer(IABuffers.second);
 	mpRenderer->SetTexture("texDiffuseMap", texLoadingScreen);
 	mpRenderer->SetConstant1f("isDiffuseMap", 1.0f);
 	mpRenderer->SetConstant3f("diffuse", vec3(1.0f, 1, 1));
@@ -276,7 +283,8 @@ bool Engine::LoadSceneFromFile()
 	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sceneNames[sEngineSettings.levelToLoad]);
 	if (mSerializedScene.loadSuccess == '0') return false;
 
-	// TODO: refactor here
+	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
+	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
 	mCurrentLevel = sEngineSettings.levelToLoad;
 	switch (sEngineSettings.levelToLoad)
 	{
@@ -286,8 +294,10 @@ bool Engine::LoadSceneFromFile()
 	case 3:	mpActiveScene = mpStressTestScene; break;
 	default:	break;
 	}
-	mpActiveScene->LoadScene(mpRenderer, mpTextRenderer, mSerializedScene, sEngineSettings.window);
-	mpActiveScene->GetShadowCasters(mZPassObjects);
+	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
+
+	// TODO: #RenderPass or Scene should manage this.
+	// mpActiveScene->GetShadowCasters(mZPassObjects);
 	return true;
 }
 
@@ -518,14 +528,15 @@ void Engine::PreRender()
 	mpActiveScene->GatherLightData(mSceneLightData, mShadowView);
 	
 
-	mTBNDrawObjects.clear();
-	std::vector<const GameObject*> objects;
-	mpActiveScene->GetSceneObjects(objects);
-	for (const GameObject* obj : objects)
-	{
-		if (obj->mRenderSettings.bRenderTBN)
-			mTBNDrawObjects.push_back(obj);
-	}
+	// TODO: #RenderPass or Scene should manage this.
+	// mTBNDrawObjects.clear();
+	// std::vector<const GameObject*> objects;
+	// mpActiveScene->GetSceneObjects(objects);
+	// for (const GameObject* obj : objects)
+	// {
+	// 	if (obj->mRenderSettings.bRenderTBN)
+	// 		mTBNDrawObjects.push_back(obj);
+	// }
 
 	mpCPUProfiler->EndEntry();
 }
@@ -538,8 +549,10 @@ void Engine::RenderLights() const
 	for (const Light& light : mpActiveScene->mLights)
 	{
 		//if (!light._bEnabled) continue; // #BreaksRelease
+		auto IABuffers = mBuiltinMeshes[light._renderMesh].GetIABuffers();
 
-		mpRenderer->SetGeometry(light._renderMesh);
+		mpRenderer->SetVertexBuffer(IABuffers.first);
+		mpRenderer->SetIndexBuffer(IABuffers.second);
 		const XMMATRIX world = light._transform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world  * mSceneView.viewProj;
 		const vec3 color = light._color.Value();
@@ -809,7 +822,7 @@ void Engine::Render()
 		mpRenderer->SetShader(EShaders::TBN);
 
 		for (const GameObject* obj : mTBNDrawObjects)
-			obj->Render(mpRenderer, mSceneView, bSendMaterial);
+			obj->Render(mpRenderer, mSceneView, bSendMaterial, mpActiveScene->mMaterials);
 		
 
 		if (mbUseDeferredRendering)

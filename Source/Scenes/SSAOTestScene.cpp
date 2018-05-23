@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -19,7 +19,12 @@
 #include "SSAOTestScene.h"
 #include "Renderer/Renderer.h"
 #include "Engine/RenderPasses.h"
-
+#if DO_NOT_LOAD_SCENES
+void SSAOTestScene::Load(SerializedScene& scene) {}
+void SSAOTestScene::Unload() {}
+void SSAOTestScene::Update(float dt) {}
+void SSAOTestScene::RenderUI() const {}
+#else
 void SSAOTestScene::Load(SerializedScene& scene)
 {
 #if 0
@@ -61,7 +66,7 @@ void SSAOTestScene::Load(SerializedScene& scene)
 				cube.mModel.SetNormalMap(mpRenderer->CreateTextureFromFile("simple_normalmap.png"));
 
 				// set model
-				cube.mModel.mMesh = EGeometry::CUBE;
+				cube.mModel.mMeshID = EGeometry::CUBE;
 
 				cubes.push_back(cube);
 			}
@@ -87,23 +92,9 @@ void SSAOTestScene::Update(float dt)
 	
 }
 
-int SSAOTestScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
-{
-	int numObj = 0;
-	for (const auto& obj : cubes)
-	{
-		++numObj;
-		obj.Render(mpRenderer, sceneView, bSendMaterialData);
-	}
-	return numObj;
-}
-
 void SSAOTestScene::RenderUI() const
 {
 
 }
 
-void SSAOTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
-{
-	
-}
+#endif

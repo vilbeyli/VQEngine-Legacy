@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -77,6 +77,18 @@ Light::Light(const Light& l)
 	_castsShadow(l._castsShadow),
 	_spotAngle(l._spotAngle),
 	_transform(l._transform),
+	_renderMesh(l._renderMesh)
+{}
+
+Light::Light(const Light && l)
+	:
+	_type(l._type),
+	_color(std::move(l._color)),
+	_range(l._range),
+	_brightness(l._brightness),
+	_castsShadow(l._castsShadow),
+	_spotAngle(l._spotAngle),
+	_transform(std::move(l._transform)),
 	_renderMesh(l._renderMesh)
 {}
 

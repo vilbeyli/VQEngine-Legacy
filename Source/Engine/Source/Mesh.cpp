@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -16,25 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#pragma once
+#include "Mesh.h"
+#include "Utilities/Log.h"
 
-#include "Material.h"
-
-class Model
-{
-public:
-	Model() : mMesh(-1) {}
-	//Model()  = default;
-	~Model() = default;
-
-	void SetDiffuseAlpha(const LinearColor & diffuseColor, float alpha);
-	void SetDiffuseColor(const LinearColor & diffuseColor);
-	void SetNormalMap(const TextureID normalMap);
-	void SetDiffuseMap(const TextureID diffuseMap);
-	void SetTextureTiling(const vec2& tiling);
-
-public:
-	int					mMesh;
-	BRDF_Material		mBRDF_Material;
-	BlinnPhong_Material mBlinnPhong_Material;
-};
+Renderer* Mesh::spRenderer = nullptr;

@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -19,13 +19,19 @@
 #pragma once
 
 #include "Engine/Transform.h"
-#include "Renderer/Model.h"	// todo: engine? model's kinda component...
+#include "Engine/Model.h"
 
-class Renderer;
+#include <memory>
+
 struct SceneView;
+class Renderer;
+class Scene;
+class Parser;
 
 struct GameObjectRenderSettings
 {
+	// #DataOptimization:
+	// this can be reduced to a char with the help of bit manipulation
 	bool bRender = true;
 	bool bRenderTBN = false;
 	bool bRenderDepth = true;
@@ -34,12 +40,40 @@ struct GameObjectRenderSettings
 class GameObject
 {
 public:
-	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const;
+	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialBuffer& materialBuffer) const;
 	void RenderZ(Renderer* pRenderer) const;
 	void Clear();
 
+	void SetTransform(const Transform& transform) { mTransform = transform; }
+
+	void AddMesh(MeshID meshID);
+
+	// Adds materialID to the newest meshID (meshes.back())
+	//
+	void AddMaterial(MaterialID materialID);
+
+	// friend std::shared_ptr<GameObject> Scene::CreateNewGameObject();
+	// friend std::shared_ptr<GameObject> SerializedScene::CreateNewGameObject();
+	//friend void Parser::ParseScene(Renderer*, const std::vector<std::string>&, SerializedScene&);
+	friend class Scene;
+	friend struct SerializedScene;
+	friend class Parser;
+	friend class ObjectPool;
+private:
+	GameObject(Scene* pScene);
+
+ private:
 	Transform					mTransform;
 	Model						mModel;
 	GameObjectRenderSettings	mRenderSettings;
+
+	// After a game object is created, we use the pointer field
+	// as the Scene*. Otherwise, we keep a pointer for the object pool
+	// to the next available object - a free list of GameObject pointers
+	union
+	{
+		GameObject*				pNextFreeObject;
+		Scene*					mpScene;
+	};
 };
 

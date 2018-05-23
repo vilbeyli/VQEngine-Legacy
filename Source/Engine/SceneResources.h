@@ -15,14 +15,22 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
+#pragma once
 
-struct GSIn
+#include "Application/HandleTypedefs.h"
+
+#include "Mesh.h"
+
+#include <memory>
+
+class Scene;
+
+
+// https://en.wikibooks.org/wiki/More_C++_Idioms/Friendship_and_the_Attorney-Client
+class SceneResourceView
 {
+private:
+	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(Scene* pScene, MeshID meshID);
 
+	friend class GameObject;
 };
-
-GSIn VSMain()
-{
-	GSIn Out;
-	return Out;
-}

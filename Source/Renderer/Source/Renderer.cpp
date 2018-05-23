@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -19,12 +19,12 @@
 #define LOG_SEARCH 0
 
 #include "Renderer.h"
-#include "Mesh.h"
 #include "D3DManager.h"
 #include "BufferObject.h"
 #include "Shader.h"
-#include "Light.h"
 
+#include "Engine/Mesh.h"
+#include "Engine/Light.h"
 #include "Engine/Settings.h"
 
 #include "Application/SystemDefs.h"
@@ -1204,7 +1204,7 @@ void Renderer::SetVertexBuffer(BufferID bufferID)
 
 	// temporary
 	Buffer& b = mVertexBuffers[bufferID];
-	m_deviceContext->IASetVertexBuffers(0, 1, &(b.mData), &b.mDesc.mStride, &offset);
+	m_deviceContext->IASetVertexBuffers(0, 1, &(b.mpGPUData), &b.mDesc.mStride, &offset);
 }
 
 void Renderer::SetIndexBuffer(BufferID bufferID)
@@ -1212,15 +1212,7 @@ void Renderer::SetIndexBuffer(BufferID bufferID)
 	mPipelineState.indexBuffer = bufferID;
 
 	
-	m_deviceContext->IASetIndexBuffer(mIndexBuffers[mPipelineState.indexBuffer].mData, DXGI_FORMAT_R32_UINT, 0);
-}
-
-#include "Engine/Engine.h"
-void Renderer::SetGeometry(EGeometry GeomEnum)
-{
-	const auto VertedAndIndexBuffer = ENGINE->GetGeometryVertexAndIndexBuffers(GeomEnum);
-	mPipelineState.vertexBuffer = VertedAndIndexBuffer.first;
-	mPipelineState.indexBuffer = VertedAndIndexBuffer.second;
+	m_deviceContext->IASetIndexBuffer(mIndexBuffers[mPipelineState.indexBuffer].mpGPUData, DXGI_FORMAT_R32_UINT, 0);
 }
 
 void Renderer::ResetPipelineState()
@@ -1540,6 +1532,8 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 	Draw(1, EPrimitiveTopology::POINT_LIST);
 }
 
+// todo: try to remove this dependency
+#include "Engine/Engine.h"	
 // assumes (0, 0) is Bottom Left corner of the screen.
 void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 {														// warning:
@@ -1554,11 +1548,14 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 	const XMVECTOR scale = vec3(dimx / screenWidth, dimy / screenHeight, 0.0f);
 	const XMVECTOR translation = vec3(posCenter.x(), posCenter.y(), 0);
 	const XMMATRIX transformation = XMMatrixAffineTransformation(scale, vec3::Zero, XMQuaternionIdentity(), translation);
+	
+	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
 
 	SetConstant4x4f("screenSpaceTransformation", transformation);
 	SetConstant1f("isDepthTexture", cmd.bIsDepthTexture ? 1.0f : 0.0f);
 	SetTexture("inputTexture", cmd.texture);
-	SetGeometry(EGeometry::QUAD);
+	SetVertexBuffer(IABuffers.first);
+	SetIndexBuffer(IABuffers.second);
 	Apply();
 	DrawIndexed();
 }
@@ -1626,11 +1623,11 @@ void Renderer::Apply()
 
 	if (mPipelineState.vertexBuffer != -1)
 	{
-		m_deviceContext->IASetVertexBuffers(0, 1, &(VertexBuffer.mData), &stride, &offset);
+		m_deviceContext->IASetVertexBuffers(0, 1, &(VertexBuffer.mpGPUData), &stride, &offset);
 	}
 	if (mPipelineState.indexBuffer != -1)
 	{
-		m_deviceContext->IASetIndexBuffer(IndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
+		m_deviceContext->IASetIndexBuffer(IndexBuffer.mpGPUData, DXGI_FORMAT_R32_UINT, 0);
 	}
 	if (shader)
 	{

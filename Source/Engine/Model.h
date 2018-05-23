@@ -16,13 +16,20 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-struct GSIn
-{
+#pragma once
 
+#include "Material.h"
+#include "Mesh.h"
+
+#include <vector>
+#include <unordered_map>
+
+using MeshToMaterialLookup = std::unordered_map<MeshID, std::vector<MaterialID>>;
+struct Model
+{
+	void AddMaterialToMesh(MeshID meshID, MaterialID materialID);
+
+	std::string				mModelName;
+	std::vector<MeshID>		mMeshIDs;
+	MeshToMaterialLookup	mMaterialLookupPerMesh;
 };
-
-GSIn VSMain()
-{
-	GSIn Out;
-	return Out;
-}

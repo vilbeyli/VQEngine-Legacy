@@ -193,30 +193,22 @@ devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2015.sln" /Build "$(Configu
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Material.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\RenderCommands.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Light.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Model.cpp" />
     <ClCompile Include="..\Renderer\Source\Buffer.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\D3DManager.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\GeometryGenerator.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Mesh.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Renderer.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Shader.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Texture.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\TextRenderer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(SolutionDir)Source\Renderer\Light.h" />
-    <ClInclude Include="$(SolutionDir)Source\Renderer\Model.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\D3DManager.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\GeometryGenerator.h" />
-    <ClInclude Include="$(SolutionDir)Source\Renderer\Mesh.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\Renderer.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\Shader.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\Texture.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderCommands.h" />
-    <ClInclude Include="$(SolutionDir)Source\Renderer\Material.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingEnums.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\TextRenderer.h" />
   </ItemGroup>

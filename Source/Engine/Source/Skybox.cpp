@@ -206,17 +206,21 @@ Skybox::Skybox()
 	skyboxShader(EShaders::SHADER_COUNT)
 {}
 
-
+// todo: try to remove this dependency
+#include "Engine.h"	
 void Skybox::Render(const XMMATRIX& viewProj) const
 {
 	const XMMATRIX& wvp = viewProj;
+	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::CUBE);
+
 	pRenderer->BeginEvent("Skybox Pass");
 	pRenderer->SetShader(skyboxShader);
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);
 	pRenderer->SetTexture("texSkybox", skyboxTexture);
 	//pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
 	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-	pRenderer->SetGeometry(EGeometry::CUBE);
+	pRenderer->SetVertexBuffer(IABuffers.first);
+	pRenderer->SetIndexBuffer(IABuffers.second);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 	pRenderer->EndEvent();
@@ -285,11 +289,14 @@ void EnvironmentMap::CalculateBRDFIntegralLUT()
 	RTVDesc.Texture2D.MipSlice = 0;
 	sBRDFIntegrationLUTRT = spRenderer->AddRenderTarget(rtDesc, RTVDesc);
 
+	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+
 	spRenderer->BindRenderTarget(sBRDFIntegrationLUTRT);
 	spRenderer->UnbindDepthTarget();
 	spRenderer->SetShader(sBRDFIntegrationLUTShader);
 	spRenderer->SetViewport(2048, 2048);
-	spRenderer->SetGeometry(EGeometry::QUAD);
+	spRenderer->SetVertexBuffer(IABuffers.first);
+	spRenderer->SetIndexBuffer(IABuffers.second);
 	spRenderer->Apply();
 	spRenderer->DrawIndexed();
 }
@@ -347,10 +354,13 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	viewPort.MaxDepth = 1.0f;
 	viewPort.MinDepth = 0.0f;
 
+	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::CUBE);
+
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetShader(sRenderIntoCubemapShader);
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
-	pRenderer->SetGeometry(EGeometry::CUBE);
+	pRenderer->SetVertexBuffer(IABuffers.first);
+	pRenderer->SetIndexBuffer(IABuffers.second);
 	pRenderer->SetTexture("tEnvironmentMap", envMap);
 	pRenderer->SetSamplerState("sLinear", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 

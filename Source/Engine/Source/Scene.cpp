@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -28,19 +28,34 @@ Scene::Scene()
 	, mSelectedCamera(0)
 {}
 
-void Scene::LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, SerializedScene& scene, const Settings::Window& windowSettings)
+void Scene::Initialize(Renderer * pRenderer, TextRenderer * pTextRenderer)
 {
 	mpRenderer = pRenderer;
 	mpTextRenderer = pTextRenderer;
+}
 
-	mObjects = std::move(scene.objects);
+void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSettings, const std::vector<Mesh>& builtinMeshes)
+{
+	mObjectPool.Initialize(1024);
+	for (size_t i = 0; i < scene.objects.size(); ++i)
+	{
+		GameObject* pObj = mObjectPool.Create(this);
+		*pObj = scene.objects[i];
+	}
+	// mObjects = std::move(scene.objects);
+	//std::for_each(mObjects.begin(), mObjects.end(), [&](GameObject& obj) { obj.mpScene = this; });
+	
 	mLights = std::move(scene.lights);
+	mMaterials = std::move(scene.materials);
 	mSceneRenderSettings = scene.settings;
+
+	mGeometry.resize(builtinMeshes.size());
+	std::copy(builtinMeshes.begin(), builtinMeshes.end(), mGeometry.begin());
 
 	for (const Settings::Camera& camSetting : scene.cameras)
 	{
 		Camera c;
-		c.ConfigureCamera(camSetting, windowSettings, pRenderer);
+		c.ConfigureCamera(camSetting, windowSettings, mpRenderer);
 		mCameras.push_back(c);
 	}
 
@@ -50,7 +65,7 @@ void Scene::LoadScene(Renderer* pRenderer, TextRenderer* pTextRenderer, Serializ
 void Scene::UnloadScene()
 {
 	mCameras.clear();
-	mObjects.clear();
+	mObjectPool.Cleanup();
 	mLights.clear();
 	Unload();
 }
@@ -68,34 +83,37 @@ int Scene::Render(const SceneView& sceneView) const
 		);
 
 	int numObj = 0;
-	for (const auto& obj : mObjects) 
+	for (const auto& obj : mObjectPool.mObjects) 
 	{
-		obj.Render(mpRenderer, sceneView, bSendMaterialData);
-		++numObj;
+		if (obj.mpScene == this)
+		{
+			obj.Render(mpRenderer, sceneView, bSendMaterialData, mMaterials);
+			++numObj;
+		}
 	}
-	numObj += Render(sceneView, bSendMaterialData);
 	return numObj;
 }
 
-void Scene::GetShadowCasters(std::vector<const GameObject*>& casters) const
-{
-	for (const GameObject& obj : mObjects) 
-		if(obj.mRenderSettings.bRenderDepth)
-			casters.push_back(&obj);
-}
-
-void Scene::GetSceneObjects(std::vector<const GameObject*>& objs) const
-{
-#if 0
-	for (size_t i = 0; i < objects.size(); i++)
-	{
-		objs[i] = &objects[i];
-	}
-#else
-	for (const GameObject& obj : mObjects)
-		objs.push_back(&obj);
-#endif
-}
+// TODO: 
+//void Scene::GetShadowCasters(std::vector<const GameObject*>& casters) const
+//{
+//	for (const GameObject& obj : mObjects) 
+//		if(obj.mRenderSettings.bRenderDepth)
+//			casters.push_back(&obj);
+//}
+//
+//void Scene::GetSceneObjects(std::vector<const GameObject*>& objs) const
+//{
+//#if 0
+//	for (size_t i = 0; i < objects.size(); i++)
+//	{
+//		objs[i] = &objects[i];
+//	}
+//#else
+//	for (const GameObject& obj : mObjects)
+//		objs.push_back(&obj);
+//#endif
+//}
 
 // can't use std::array<T&, 2>, hence std::array<T*, 2> 
 // array of 2: light data for non-shadowing and shadowing lights
@@ -203,4 +221,60 @@ void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
 {
 	mActiveSkyboxPreset = preset;
 	mSkybox = Skybox::s_Presets[mActiveSkyboxPreset];
+}
+
+GameObject* Scene::CreateNewGameObject()
+{
+	return mObjectPool.Create(this);
+	//mObjects.push_back(GameObject(this));
+	//return &mObjects.back();
+}
+
+
+// SceneResourceView ------------------------------------------
+
+#include "SceneResources.h"
+std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBuffersOfMesh(Scene* pScene, MeshID meshID)
+{
+	return pScene->mGeometry[meshID].GetIABuffers();
+}
+
+GameObject* SerializedScene::CreateNewGameObject()
+{
+	objects.push_back(GameObject(nullptr));
+	return &objects.back();
+}
+
+
+// Game Object Pool ------------------------------------------
+
+void ObjectPool::Initialize(size_t poolSize)
+{
+	mObjects.resize(poolSize, GameObject(nullptr));
+	pNextAvailable = &mObjects[0];
+	for (size_t i = 0; i < mObjects.size()-1; ++i)
+	{
+		mObjects[i].pNextFreeObject = &mObjects[i + 1];
+	}
+	mObjects.back().pNextFreeObject = nullptr;
+}
+
+GameObject* ObjectPool::Create(Scene* pScene)
+{
+	assert(pNextAvailable);
+	GameObject* pNewObj = pNextAvailable;
+	pNextAvailable = pNextAvailable->pNextFreeObject;
+	pNewObj->mpScene = pScene;
+	return pNewObj;
+}
+
+void ObjectPool::Destroy(GameObject* pObj)
+{
+	pObj->pNextFreeObject = pNextAvailable;
+	pNextAvailable = pObj;
+}
+
+void ObjectPool::Cleanup()
+{
+	mObjects.clear();
 }

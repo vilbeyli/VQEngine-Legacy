@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -25,9 +25,8 @@
 
 #include "Application/WorkerPool.h"
 
-#include "Renderer/Light.h"
-#include "Renderer/Mesh.h"
-
+#include "Light.h"
+#include "Mesh.h"
 #include "DataStructures.h"
 #include "Skybox.h"
 #include "Settings.h"
@@ -53,11 +52,6 @@ class SSAOTestScene;
 class IBLTestScene;
 class StressTestScene;
 
-struct ObjectPool
-{
-	std::vector<GameObject> pool;
-
-};
 
 #ifdef _WIN32
 // usage of XMMATRIX in Engine class causes alignment warning: 
@@ -138,7 +132,7 @@ private:
 
 	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 	void PreRender();
-	void RenderLoadingScreen();
+	void RenderLoadingScreen() const;
 	void RenderLights() const;
 
 //==============================================================================================================

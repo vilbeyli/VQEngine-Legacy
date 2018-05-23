@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -23,18 +23,14 @@ public:
 	void Load(SerializedScene& scene) override;
 	void Unload() override;
 	void Update(float dt) override;
-	int Render(const SceneView& sceneView, bool bSendMaterialData) const override;
 	void RenderUI() const override;
-
-	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;	// todo: rename this... decide between depth and shadows
-	void GetSceneObjects(std::vector<const GameObject*>&) const override;
-
+	
 	IBLTestScene() = default;
 	~IBLTestScene() = default;
 	
 private:
-	std::vector<GameObject> spheres;
-
-	GameObject testQuad;
+	//std::vector<GameObject> spheres;
+	//
+	//GameObject testQuad;
 };
 

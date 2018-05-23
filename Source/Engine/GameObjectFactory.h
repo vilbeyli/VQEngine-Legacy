@@ -1,5 +1,5 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
-//	Copyright(C) 2016  - Volkan Ilbeyli
+//	VQEngine | DirectX11 Renderer
+//	Copyright(C) 2018  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
 //	it under the terms of the GNU General Public License as published by
@@ -16,7 +16,46 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "Mesh.h"
-#include "Utilities/Log.h"
+#pragma once
 
-Renderer* Mesh::spRenderer = nullptr;
+class GameObjectFactory
+{
+	
+};
+
+//template <class T>
+//class Pool<T>
+//{
+//	void Initialize(size_t poolSize);
+//	void Cleanup();
+//
+//	T* Allocate();
+//
+//	std::vector<T> mMemory;
+//};
+//
+//
+//template <class T>
+//void Pool<T>::Initialize(size_t poolSize)
+//{
+//	mMemory.resize(poolSize);
+//	for (size_t i = 0; i < poolSize; ++i)
+//	{
+//
+//	}
+//}
+
+class ObjectPool
+{
+public:
+	void Initialize(size_t poolSize);
+	void Cleanup();
+
+	GameObject* Create(Scene* pScene);
+	void Destroy(GameObject* pObj);
+
+private:
+	friend class Scene;
+	std::vector<GameObject> mObjects;
+	GameObject* pNextAvailable;
+};

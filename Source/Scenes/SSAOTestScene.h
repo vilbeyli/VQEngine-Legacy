@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -24,14 +24,11 @@ public:
 	void Unload() override;
 
 	void Update(float dt) override;
-	int Render(const SceneView& sceneView, bool bSendMaterialData) const override;
 	void RenderUI() const override;
-
-	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;
-
+	
 	SSAOTestScene() = default;
 	~SSAOTestScene() = default;
 
-	std::vector<GameObject> cubes; 
+	//std::vector<GameObject> cubes; 
 };
 

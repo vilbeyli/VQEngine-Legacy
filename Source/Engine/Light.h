@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -19,11 +19,13 @@
 #pragma once
 
 
-#include "Engine/Transform.h"
-#include "Engine/DataStructures.h"
+#include "Transform.h"
+#include "DataStructures.h"
+
+#include "Renderer/RenderingEnums.h"
+
 #include "Utilities/Color.h"
 
-#include "RenderingEnums.h"
 #include <DirectXMath.h>
 
 // todo: break up light into its own structs and remove 3 functions for gpu data
@@ -50,6 +52,7 @@ struct Light
 		//, bool bEnabled = true // #BreaksRelease
 	);
 	Light(const Light& l);
+	Light(const Light&& l);
 	~Light();
 
 	void SetLightRange(float range);
@@ -75,7 +78,7 @@ struct Light
 	};	
 
 	Transform		_transform;
-	EGeometry		_renderMesh;
+	EGeometry		_renderMesh;	// todo: rename to _builtinMeshID;
 	//bool			_bEnabled; 
 };
 

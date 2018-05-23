@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -19,13 +19,13 @@
 #include "StressTestScene.h"
 
 #include "Engine/Engine.h"
+#include "Engine/Light.h"
 
 #include "Application/Input.h"
 
 #include "Utilities/utils.h"
 #include "Utilities/Log.h"
 
-#include "Renderer/Light.h"
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
 
@@ -80,7 +80,7 @@ static Renderer* pRenderer = nullptr;
 
 static int sObjectLayer = 0;
 
-static std::vector<GameObject> objs;
+//static std::vector<GameObject> objs; // TODO:
 static std::vector<float> rotationSpeeds;
 
 static vec3 centerOfMass;
@@ -97,6 +97,13 @@ void RemoveLights(std::vector<Light>&);
 
 //----------------------------------------------------------------------------------------------
 #pragma region SCENE_INTERFACE
+
+#if DO_NOT_LOAD_SCENES
+void StressTestScene::Load(SerializedScene& scene) {}
+void StressTestScene::Unload() {}
+void StressTestScene::Update(float dt) {}
+void StressTestScene::RenderUI() const {}
+#else
 
 void StressTestScene::Load(SerializedScene& scene)
 {
@@ -260,15 +267,15 @@ GameObject CreateRandomGameObject()
 	// MESH
 	//
 #if RANDOMIZE_MESH
-	obj.mModel.mMesh = static_cast<EGeometry>(RandI(0, EGeometry::MESH_TYPE_COUNT));
+	obj.mModel.mMeshID = static_cast<EGeometry>(RandI(0, EGeometry::MESH_TYPE_COUNT));
 #else
-	obj.mModel.mMesh = EGeometry::SPHERE;
+	obj.mModel.mMeshID = EGeometry::SPHERE;
 #endif
 
 	// TRANSFORM
 	//
 #if RANDOMIZE_SCALE
-	const float RandScale = RandF(SCALE_LOW, SCALE_HI) * (obj.mModel.mMesh == EGeometry::GRID ? 5.0f : 1.0f);
+	const float RandScale = RandF(SCALE_LOW, SCALE_HI) * (obj.mModel.mMeshID == EGeometry::GRID ? 5.0f : 1.0f);
 #else
 	const float RandScale = 1.0f;
 #endif
@@ -464,3 +471,5 @@ void RemoveLights(std::vector<Light>& mLights)
 }
 #pragma endregion
 //----------------------------------------------------------------------------------------------
+
+#endif

@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -26,6 +26,12 @@
 
 static const vec3 sSphereCenter = vec3(0, 1, 20);
 
+#if DO_NOT_LOAD_SCENES
+void IBLTestScene::Load(SerializedScene& scene) {}
+void IBLTestScene::Unload() {}
+void IBLTestScene::Update(float dt) {}
+void IBLTestScene::RenderUI() const {}
+#else
 void IBLTestScene::Load(SerializedScene& scene)
 {
 	// sphere grid
@@ -70,7 +76,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			pos.x() += sphereGroupOffset;
 			sph.mTransform.SetPosition(pos);
 			sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
-			sph.mModel.mMesh = EGeometry::SPHERE;
+			sph.mModel.mMeshID = EGeometry::SPHERE;
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			sph.mModel.SetDiffuseColor(LinearColor(vec3(1.0f)));
@@ -92,7 +98,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			GameObject sph;
 			sph.mTransform.SetPosition(pos);
 			sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
-			sph.mModel.mMesh = EGeometry::SPHERE;
+			sph.mModel.mMeshID = EGeometry::SPHERE;
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::gold)));
@@ -119,7 +125,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			pos.x() += sphereGroupOffset;
 			sph.mTransform.SetPosition(pos);
 			sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
-			sph.mModel.mMesh = EGeometry::SPHERE;
+			sph.mModel.mMeshID = EGeometry::SPHERE;
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			sph.mModel.SetDiffuseColor(LinearColor::bp_ruby);
@@ -141,7 +147,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			GameObject sph;
 			sph.mTransform.SetPosition(pos);
 			sph.mTransform.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
-			sph.mModel.mMesh = EGeometry::SPHERE;
+			sph.mModel.mMeshID = EGeometry::SPHERE;
 
 			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
 			sph.mModel.SetDiffuseColor(vec3(0.04f));
@@ -242,3 +248,4 @@ void IBLTestScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 	for (const GameObject& obj : spheres)	objs.push_back(&obj);
 	//objs.push_back(&testQuad);
 }
+#endif

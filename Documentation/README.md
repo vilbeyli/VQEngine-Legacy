@@ -5,6 +5,7 @@ This page is Currently to serve as a collection of resources that influenced the
 - [CppCon2017: Nicolas Guillemot “Design Patterns for Low-Level Real-Time Rendering”](https://www.youtube.com/watch?v=mdPeXJ0eiGc)
 - [GCAP 2016: Parallel Game Engine Design - Brooke Hodgman](https://www.youtube.com/watch?v=JpmK0zu4Mts)
 - [CppCon 2016: Jason Jurecka “Game engine using STD C++ 11"](https://www.youtube.com/watch?v=8AjRD6mU96s)
+- [Game Programming Patterns: Data Locality](http://gameprogrammingpatterns.com/data-locality.html)
 
 ![](renderer-design.PNG)
 ![](commands.PNG)

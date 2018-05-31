@@ -26,10 +26,12 @@ struct MaterialID
 {
 	int ID;
 	EMaterialType GetType() const;
+	
 };
 
 struct BlinnPhong_Material;
 struct BRDF_Material;
+
 
 struct Material				// 56 Bytes
 {
@@ -43,7 +45,8 @@ struct Material				// 56 Bytes
 	TextureID	diffuseMap;
 	TextureID	normalMap;
 
-	
+	Material* pNextAvailable = nullptr;	// making this class a pool object
+
 	Material(MaterialID _ID);
 	~Material();
 	void SetMaterialConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const;
@@ -56,34 +59,45 @@ struct BRDF_Material : public Material
 	float		metalness;
 	float		roughness;
 	
+	BRDF_Material() : Material({ -1 }), metalness(0.0f), roughness(0.0f) {}
 	void SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const override;
 	void Clear() override;
 
-	friend class MaterialBuffer;	// only MaterialBuffer can create Material instances
 private:
+	friend class MaterialPool;	// only MaterialPool can create Material instances
 	BRDF_Material(MaterialID _ID) : Material(_ID), metalness(0.1f), roughness(0.6f) {}
 };
 
 struct BlinnPhong_Material : public Material
 {
-	static const BlinnPhong_Material jade, ruby, bronze, gold;	// todo: handle preset materials in scene
-
 	float		shininess;
-	
+
+	BlinnPhong_Material() : Material(MaterialID{ -1 }), shininess(0) {}
 	void SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const override;
 	void Clear() override;
 
-	friend class MaterialBuffer;	// only MaterialBuffer can create Material instances
+	static const BlinnPhong_Material jade, ruby, bronze, gold;	// todo: handle preset materials in scene
 private:
+	friend class MaterialPool;	// only MaterialPool can create Material instances
 	BlinnPhong_Material(MaterialID _ID) : Material(_ID), shininess(90) {}
 	BlinnPhong_Material(MaterialID _ID, const vec3& diffuse, const vec3& specular, float shininess);
 };
 
 
-
-class MaterialBuffer
+// Each new type of material currently requires its own Create/Get/Random/pNextAvailable/vector<>
+// This is quite inflexible at this moment, however, this was done in favor of data oriented design.
+//
+// MaterialPool can be refactored later using some macro/template functionality.
+//
+class MaterialPool
 {
 public:
+	MaterialPool() = default;
+	MaterialPool(MaterialPool&& other);
+	MaterialPool& operator=(const MaterialPool&& other);
+	void Initialize(size_t poolSize);
+	void Clear();
+
 	MaterialID CreateMaterial(EMaterialType type);
 	MaterialID CreateRandomMaterial(EMaterialType type);
 
@@ -100,11 +114,29 @@ private:
 private:
 	std::vector<BRDF_Material>			BRDFs;
 	std::vector<BlinnPhong_Material>	Phongs;
+
+	BRDF_Material* pNextAvailableBRDF = nullptr;
+	BlinnPhong_Material* pNextAvailablePhong = nullptr;
+
+private:
+	template<class T>
+	void InitializePool(std::vector<T>& pool, T*& pNextObject, const size_t poolSz, EMaterialType type)
+	{
+		pool.resize(poolSz);
+		pNextObject = &pool[0];
+		for (size_t i = 0; i < pool.size() - 1; ++i)
+		{
+			pool[i].pNextAvailable = &pool[i + 1];
+			pool[i].ID = GenerateMaterialID(type, i);
+		}
+		pool.back().pNextAvailable = nullptr;
+	}
+
 };
 
 constexpr size_t SZ_MATERIAL = sizeof(Material);
 constexpr size_t SZ_MATERIAL_BRDF = sizeof(BRDF_Material);
 constexpr size_t SZ_MATERIAL_PHONG = sizeof(BlinnPhong_Material);
-constexpr size_t SZ_MATERIAL_BUFFER = sizeof(MaterialBuffer);
+constexpr size_t SZ_MATERIAL_BUFFER = sizeof(MaterialPool);
 constexpr size_t SZ_MATERIAL_ID = sizeof(MaterialID);
 constexpr size_t SZ_LINEAR_COLOR = sizeof(LinearColor);

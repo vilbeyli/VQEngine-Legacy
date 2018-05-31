@@ -37,16 +37,19 @@ void Scene::Initialize(Renderer * pRenderer, TextRenderer * pTextRenderer)
 void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSettings, const std::vector<Mesh>& builtinMeshes)
 {
 	mObjectPool.Initialize(1024);
+	mMaterials.Initialize(4096);
 	for (size_t i = 0; i < scene.objects.size(); ++i)
 	{
 		GameObject* pObj = mObjectPool.Create(this);
 		*pObj = scene.objects[i];
+		pObj->mpScene = this;
 	}
 	// mObjects = std::move(scene.objects);
 	//std::for_each(mObjects.begin(), mObjects.end(), [&](GameObject& obj) { obj.mpScene = this; });
 	
 	mLights = std::move(scene.lights);
 	mMaterials = std::move(scene.materials);
+
 	mSceneRenderSettings = scene.settings;
 
 	mGeometry.resize(builtinMeshes.size());
@@ -67,6 +70,9 @@ void Scene::UnloadScene()
 	mCameras.clear();
 	mObjectPool.Cleanup();
 	mLights.clear();
+	mMaterials.Clear();
+	mGeometry.clear();
+	mObjectPool.Cleanup();
 	Unload();
 }
 
@@ -85,7 +91,7 @@ int Scene::Render(const SceneView& sceneView) const
 	int numObj = 0;
 	for (const auto& obj : mObjectPool.mObjects) 
 	{
-		if (obj.mpScene == this)
+		if (obj.mpScene == this)	// #FutureOptimization: sort and iterate for branch prediction gains
 		{
 			obj.Render(mpRenderer, sceneView, bSendMaterialData, mMaterials);
 			++numObj;
@@ -95,13 +101,6 @@ int Scene::Render(const SceneView& sceneView) const
 }
 
 // TODO: 
-//void Scene::GetShadowCasters(std::vector<const GameObject*>& casters) const
-//{
-//	for (const GameObject& obj : mObjects) 
-//		if(obj.mRenderSettings.bRenderDepth)
-//			casters.push_back(&obj);
-//}
-//
 //void Scene::GetSceneObjects(std::vector<const GameObject*>& objs) const
 //{
 //#if 0
@@ -201,6 +200,17 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 	}
 }
 
+void Scene::GatherShadowCasters(std::vector<const GameObject*>& casters) const
+{
+	for (const GameObject& obj : mObjectPool.mObjects)
+	{
+		if (obj.mpScene == this && obj.mRenderSettings.bRenderDepth)
+		{
+			casters.push_back(&obj);
+		}
+	}
+}
+
 void Scene::ResetActiveCamera()
 {
 	mCameras[mSelectedCamera].Reset();
@@ -226,8 +236,11 @@ void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
 GameObject* Scene::CreateNewGameObject()
 {
 	return mObjectPool.Create(this);
-	//mObjects.push_back(GameObject(this));
-	//return &mObjects.back();
+}
+
+Material* Scene::CreateNewMaterial(EMaterialType type)
+{
+	return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type));
 }
 
 
@@ -245,36 +258,3 @@ GameObject* SerializedScene::CreateNewGameObject()
 	return &objects.back();
 }
 
-
-// Game Object Pool ------------------------------------------
-
-void ObjectPool::Initialize(size_t poolSize)
-{
-	mObjects.resize(poolSize, GameObject(nullptr));
-	pNextAvailable = &mObjects[0];
-	for (size_t i = 0; i < mObjects.size()-1; ++i)
-	{
-		mObjects[i].pNextFreeObject = &mObjects[i + 1];
-	}
-	mObjects.back().pNextFreeObject = nullptr;
-}
-
-GameObject* ObjectPool::Create(Scene* pScene)
-{
-	assert(pNextAvailable);
-	GameObject* pNewObj = pNextAvailable;
-	pNextAvailable = pNextAvailable->pNextFreeObject;
-	pNewObj->mpScene = pScene;
-	return pNewObj;
-}
-
-void ObjectPool::Destroy(GameObject* pObj)
-{
-	pObj->pNextFreeObject = pNextAvailable;
-	pNextAvailable = pObj;
-}
-
-void ObjectPool::Cleanup()
-{
-	mObjects.clear();
-}

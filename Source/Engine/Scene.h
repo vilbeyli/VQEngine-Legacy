@@ -22,7 +22,7 @@
 #include "Mesh.h"
 #include "Skybox.h"
 #include "GameObject.h"
-#include "GameObjectFactory.h"
+#include "GameObjectPool.h"
 
 #include "Utilities/Camera.h"
 
@@ -34,7 +34,7 @@ class Renderer;
 class TextRenderer;
 struct SceneView;
 struct ShadowView;
-class MaterialBuffer;
+class MaterialPool;
 
 #define DO_NOT_LOAD_SCENES 1
 
@@ -46,9 +46,8 @@ public:
 	~Scene() = default;
 
 	//----------------------------------------------------------------------------------------------------------------
-	// CORE INTERFACE
+	// ENGINE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
-
 	// Initializes scene-independent variables such as renderers.
 	//
 	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer);
@@ -70,30 +69,24 @@ public:
 	//
 	int Render(const SceneView& sceneView) const;
 
-	// each scene has to implement scene-specific RenderUI() function. RenderUI() is called
-	// after post processing is finished and is the last rendering workload before presenting the frame.
-	//
-	virtual void RenderUI() const = 0;
-
 	// calls Render() on skybox.
 	//
 	inline void RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
 
 
 	void GatherLightData(SceneLightingData& outLightingData, ShadowView& outShadowView) const;
+	void GatherShadowCasters(std::vector<const GameObject*>& casters) const;
 
-	inline const EnvironmentMap& GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }
-	inline const Camera& GetActiveCamera() const	{ return mCameras[mSelectedCamera]; }
+	inline const EnvironmentMap&		GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }
+	inline const Camera&				GetActiveCamera() const { return mCameras[mSelectedCamera]; }
 	inline const Settings::SceneRender& GetSceneRenderSettings() const { return mSceneRenderSettings; }
-	inline bool  HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
-	void ResetActiveCamera();
+	inline bool							HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
 
 	EEnvironmentMapPresets GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
 	void SetEnvironmentMap(EEnvironmentMapPresets preset);
+	void ResetActiveCamera();
 
 protected:
-	//----------------------------------------------------------------------------------------------------------------
-	// VIRTUAL FUNCTIONS FOR SCENE-SPECIFIC LOGIC
 	//----------------------------------------------------------------------------------------------------------------
 	// https://en.wikipedia.org/wiki/Template_method_pattern
 	// https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
@@ -101,32 +94,48 @@ protected:
 	// template method seems like a good idea here.
 	// the idea is that base class takes care of the common tasks among all scenes and calls the 
 	// customized functions of the derived classes through pure virtual functions
-	// note:	int Render() is not a good idea for the derived classes: to leave the responsiblity to the implementor to count the 
-	//			number of objects rendered in a scene. this definitely needs refactoring... A game object factory might be a good idea.
+	//----------------------------------------------------------------------------------------------------------------
+
+	//----------------------------------------------------------------------------------------------------------------
+	// SCENE INSTANCE INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
+	// Update() is called each frame
+	//
 	virtual void Update(float dt) = 0;
+
+	// Scene-specific loading logic
+	//
 	virtual void Load(SerializedScene& scene) = 0;
-	virtual void Unload() = 0;
 	
+	// Scene-specific unloading logic
+	//
+	virtual void Unload() = 0;
+
+	// each scene has to implement scene-specific RenderUI() function. RenderUI() is called
+	// after post processing is finished and is the last rendering workload before presenting the frame.
+	//
+	virtual void RenderUI() const = 0;
+	
+	// Each scene can use this function to create new game objects. Scene handles the object's memory management.
+	//
 	GameObject*		CreateNewGameObject();
+	Material*		CreateNewMaterial(EMaterialType type);	// todo: pool the materials and let derived scenes use this interface
+
+	
+	//----------------------------------------------------------------------------------------------------------------
+	// SCENE DATA
+	//----------------------------------------------------------------------------------------------------------------
+private:
+	GameObjectPool				mObjectPool;
+	MaterialPool			mMaterials;	// todo: make it pooled
 
 protected:
 	friend class SceneResourceView; // using attorney method, alternatively can use friend function
 
-	//----------------------------------------------------------------------------------------------------------------
-	// SCENE DATA
-	//----------------------------------------------------------------------------------------------------------------
 	std::vector<Mesh>		mGeometry;
 	std::vector<Camera>		mCameras;
 	std::vector<Light>		mLights;
-	MaterialBuffer			mMaterials;
 
-	// GameObjects hold indices to the Scene Data described above
-	ObjectPool mObjectPool;
-	//std::vector<GameObject> mObjects;
-
-	//----------------------------------------------------------------------------------------------------------------
-	// RENDERING
-	//----------------------------------------------------------------------------------------------------------------
 	Renderer*				mpRenderer;		 // static?
 	TextRenderer*			mpTextRenderer;	 // static?
 
@@ -144,7 +153,7 @@ struct SerializedScene
 
 	std::vector<Settings::Camera>	cameras;
 	std::vector<Light>				lights;
-	MaterialBuffer					materials;
+	MaterialPool					materials;
 	std::vector<GameObject>			objects;
 	Settings::SceneRender			settings;
 	char loadSuccess = '0';

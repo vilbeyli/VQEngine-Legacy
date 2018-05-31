@@ -35,7 +35,6 @@ public:
 private:
 	void InitializeLights(SerializedScene& scene);
 	void UpdateCentralObj(const float dt);
-	void RenderCentralObjects(const SceneView& sceneView, bool sendMaterialData) const;
 // ----------------------------------------------------------------------
 	
 	void ToggleFloorNormalMap();
@@ -43,8 +42,7 @@ private:
 	struct Room 
 	{
 		friend class ObjectsScene;
-		void Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const;
-		void Initialize(MaterialBuffer& materials, Renderer* pRenderer);
+		void Initialize(Renderer* pRenderer, TextureID floorNormalMap, Material*& pMat);
 
 		union 
 		{
@@ -62,4 +60,7 @@ private:
 
 	std::vector<GameObject*> mSpheres;
 	std::vector<Animation> mAnimations;
+
+	Material* pFloorMaterial = nullptr;
+	TextureID floorNormalMap = -1;
 };

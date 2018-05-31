@@ -47,10 +47,92 @@ void ObjectsScene::Load(SerializedScene& scene)
 	SetEnvironmentMap(EEnvironmentMapPresets::WALK_OF_FAME);
 
 	//---------------------------------------------------------------
-	// ROOM
+	// FLOOR / WALL
 	//---------------------------------------------------------------
 	std::for_each(std::begin(m_room.walls), std::end(m_room.walls), [&](GameObject*& pObj) { pObj = CreateNewGameObject(); });
-	m_room.Initialize(mMaterials, mpRenderer);
+	floorNormalMap = mpRenderer->CreateTextureFromFile("openart/185_norm.JPG");
+	{
+		const float floorWidth = 5 * 30.0f;
+		const float floorDepth = 5 * 30.0f;
+		const float wallHieght = 3.8*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
+		const float YOffset = wallHieght - 9.0f;
+		const float thickness = 3.7f;
+
+		// FLOOR
+		{
+			// Transform
+			Transform tf;
+			tf.SetPosition(0, -wallHieght + YOffset, 0);
+			tf.SetScale(floorWidth, thickness, floorDepth);
+			m_room.floor->SetTransform(tf);
+
+			// Mesh
+			m_room.floor->AddMesh(EGeometry::CUBE);
+
+			// Materials
+			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
+			pBRDF->roughness = 0.8f;
+			pBRDF->metalness = 0.0f;
+
+			BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
+			pPhong->shininess = 40.0f;
+
+			// set common material properties
+			std::array<Material*, 2> materials{ pBRDF, pPhong };
+			std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
+			{
+				pMat->diffuse = LinearColor::white;
+				pMat->alpha = 1.0f;
+				pMat->tiling = vec2(10, 10);
+				pMat->normalMap = floorNormalMap;
+				m_room.floor->AddMaterial(pMat->ID);
+			});
+			pFloorMaterial = static_cast<Material*>(&(*pBRDF));
+
+
+			//floor->AddMesh(EGeometry::SPHERE);
+			//floor->AddMaterial(pBRDF->ID);
+		}
+
+		const float ratio = floorWidth / wallHieght;
+		const vec2 wallTiling = vec2(ratio, 1.3f) * 1.7f;
+		const vec2 wallTilingInv = vec2(1.3f, ratio) * 1.7f;
+
+		// RIGHT WALL
+		{
+			// Transform
+			Transform tf;
+			tf.SetScale(floorDepth, thickness, wallHieght);
+			tf.SetPosition(floorWidth, YOffset, 0);
+			tf.SetXRotationDeg(90.0f);
+			tf.RotateAroundGlobalYAxisDegrees(-90);
+			//tf.RotateAroundGlobalXAxisDegrees(-180.0f);
+			m_room.wallR->SetTransform(tf);
+
+			// Mesh
+			m_room.wallR->AddMesh(EGeometry::CUBE);
+
+			// Materials
+			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
+			pBRDF->roughness = 0.8f;
+			pBRDF->metalness = 0.0f;
+
+			BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
+			pPhong->shininess = 40.0f;
+
+			// set common material properties
+			std::array<Material*, 2> materials{ pBRDF, pPhong };
+			std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
+			{
+				pMat->diffuse = LinearColor::white;
+				pMat->alpha = 1.0f;
+				pMat->tiling = wallTiling;
+				pMat->diffuseMap = mpRenderer->CreateTextureFromFile("openart/190.JPG");
+				pMat->normalMap = mpRenderer->CreateTextureFromFile("openart/190_norm.JPG");
+				m_room.wallR->AddMaterial(pMat->ID);
+			});
+		}
+	}
 
 	//Animation anim;
 	//anim._fTracks.push_back(Track<float>(&mLights[1]._brightness, 40.0f, 800.0f, 3.0f));
@@ -117,7 +199,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 #endif
 
 			
-			BRDF_Material* pMat0 = static_cast<BRDF_Material*>(mMaterials.CreateAndGetMaterial(GGX_BRDF));
+			BRDF_Material* pMat0 = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 			pMat0->diffuse = LinearColor(r, g, b);	
 			pMat0->metalness = 1.0;	// col(-x->+x) -> metalness [0.0f, 1.0f]
 
@@ -154,6 +236,8 @@ void ObjectsScene::Update(float dt)
 {
 	for (auto& anim : mAnimations) anim.Update(dt);
 	UpdateCentralObj(dt);
+
+	if (ENGINE->INP()->IsKeyTriggered("N")) ToggleFloorNormalMap();
 }
 
 void ObjectsScene::RenderUI() const{}
@@ -174,172 +258,10 @@ void ObjectsScene::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad9")) tr += vec3::Up;
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
 	mLights[0]._transform.Translate(dt * tr * moveSpeed);
-
-#if 0
-	float angle = (dt * XM_PI * 0.08f) + (sinf(t) * sinf(dt * XM_PI * 0.03f));
-	size_t sphIndx = 0;
-	for (auto& sph : spheres)
-	{
-		if (sphIndx < 15)	// don't rotate grid spheres
-		{
-			const vec3 rotAxis = vec3::Up;
-			const vec3 rotPoint = vec3::Zero;
-			sph.mTransform.RotateAroundPointAndAxis(rotAxis, angle, rotPoint);
-		}
-		++sphIndx;
-	}
-#endif
-
-#if 0
-	// assume first object is the cube
-	const float cubeRotSpeed = 100.0f; // degs/s
-	mObjects.front()->mTransform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
-
-#ifdef ROTATE_SHADOW_LIGHT
-	mLights[0]._transform.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);
-#endif
-#endif
 }
 
-#if 1 
-void ObjectsScene::ToggleFloorNormalMap() {}
-#else
 void ObjectsScene::ToggleFloorNormalMap()
 {
-	TextureID nMap = m_room.floor.mModel.mBRDF_Material.normalMap;
-
-	nMap = nMap == mpRenderer->GetTexture("openart/185_norm.JPG") ? -1 : mpRenderer->CreateTextureFromFile("openart/185_norm.JPG");
-	m_room.floor.mModel.mBRDF_Material.normalMap = nMap;
+	pFloorMaterial->normalMap = pFloorMaterial->normalMap == -1 ? floorNormalMap : -1;
 }
-#endif
 
-
-void ObjectsScene::Room::Initialize(MaterialBuffer& materials, Renderer* pRenderer)
-{
-	const float floorWidth = 5 * 30.0f;
-	const float floorDepth = 5 * 30.0f;
-	const float wallHieght = 3.8*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
-	const float YOffset = wallHieght - 9.0f;
-	const float thickness = 3.7f;
-
-	// FLOOR
-	{
-		// Transform
-		Transform tf;
-		tf.SetPosition(0, -wallHieght + YOffset, 0);
-		tf.SetScale(floorWidth, thickness, floorDepth);
-		floor->SetTransform(tf);
-
-		// Mesh
-		floor->AddMesh(EGeometry::CUBE);
-
-		// Materials
-		BRDF_Material* pBRDF = static_cast<BRDF_Material*>(materials.CreateAndGetMaterial(GGX_BRDF));
-		pBRDF->roughness = 0.8f;
-		pBRDF->metalness = 0.0f;
-
-		BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(materials.CreateAndGetMaterial(BLINN_PHONG));
-		pPhong->shininess = 40.0f;
-
-		// set common material properties
-		std::array<Material*, 2> materials{ pBRDF, pPhong };
-		std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
-		{ 
-			pMat->diffuse = LinearColor::white;
-			pMat->alpha = 1.0f;
-			pMat->tiling = vec2(10, 10);
-			pMat->normalMap = pRenderer->CreateTextureFromFile("openart/161_norm.JPG");
-			floor->AddMaterial(pMat->ID);
-		});
-	}
-
-	const float ratio = floorWidth / wallHieght;
-	const vec2 wallTiling = vec2(ratio, 1.3f) * 1.7f;
-	const vec2 wallTilingInv = vec2(1.3f, ratio) * 1.7f;
-	
-	// RIGHT WALL
-	{
-		// Transform
-		Transform tf;
-		tf.SetScale(floorDepth, thickness, wallHieght);
-		tf.SetPosition(floorWidth, YOffset, 0);
-		tf.SetXRotationDeg(90.0f);
-		tf.RotateAroundGlobalYAxisDegrees(-90);
-		//tf.RotateAroundGlobalXAxisDegrees(-180.0f);
-		wallR->SetTransform(tf);
-
-		// Mesh
-		wallR->AddMesh(EGeometry::CUBE);
-
-		// Materials
-		BRDF_Material* pBRDF = static_cast<BRDF_Material*>(materials.CreateAndGetMaterial(GGX_BRDF));
-		pBRDF->roughness = 0.8f;
-		pBRDF->metalness = 0.0f;
-
-		BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(materials.CreateAndGetMaterial(BLINN_PHONG));
-		pPhong->shininess = 40.0f;
-
-		// set common material properties
-		std::array<Material*, 2> materials{ pBRDF, pPhong };
-		std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
-		{
-			pMat->diffuse = LinearColor::white;
-			pMat->alpha = 1.0f;
-			pMat->tiling = wallTiling;
-			pMat->diffuseMap = pRenderer->CreateTextureFromFile("openart/190.JPG");
-			pMat->normalMap = pRenderer->CreateTextureFromFile("openart/190_norm.JPG");
-			wallR->AddMaterial(pMat->ID);
-		});
-	}
-
-
-#if 0
-	// This scene used to be a room scene, but now its an 'objects' scene with only floor and the right wall left
-	// from the original scene. The code below is initialization code for the old room scene, without the
-	// data oriented design refactoring applied, hence not compilable anymore. 
-	//
-	// CEILING
-	{
-		Transform& tf = ceiling.mTransform;
-		tf.SetScale(floorWidth, thickness, floorDepth);
-		tf.SetPosition(0, wallHieght + YOffset, 0);
-		//ceiling.mModel.SetDiffuseAlpha(LinearColor::bp_bronze, 1.0f);
-
-		ceiling.mModel.mBlinnPhong_Material.shininess = 20.0f;
-	}
-
-
-
-	// LEFT WALL
-	{
-		Transform& tf = wallL.mTransform;
-		tf.SetScale(floorDepth, thickness, wallHieght);
-		tf.SetPosition(-floorWidth, YOffset, 0);
-		tf.SetXRotationDeg(-90.0f);
-		tf.RotateAroundGlobalYAxisDegrees(-90.0f);
-		//tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
-
-		wallL.mModel.mBlinnPhong_Material.shininess = 60.0f;
-		wallL.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
-		wallL.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
-		wallL.mModel.SetTextureTiling(wallTilingInv);
-	}
-	// WALL
-	{
-		Transform& tf = wallF.mTransform;
-		tf.SetScale(floorWidth, thickness, wallHieght);
-		tf.SetPosition(0, YOffset, floorDepth);
-		tf.SetXRotationDeg(-90.0f);
-
-		wallF.mModel.mBlinnPhong_Material.shininess = 90.0f;
-		wallF.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
-		wallF.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
-		wallL.mModel.SetTextureTiling(vec2(1, 3));
-	}
-
-	wallL->AddMesh(EGeometry::CUBE);
-	wallR->AddMesh(EGeometry::CUBE);
-	wallF->AddMesh(EGeometry::CUBE);
-	ceiling->AddMesh(EGeometry::CUBE);
-#endif
-}

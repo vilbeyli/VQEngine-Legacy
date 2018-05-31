@@ -295,9 +295,6 @@ bool Engine::LoadSceneFromFile()
 	default:	break;
 	}
 	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
-
-	// TODO: #RenderPass or Scene should manage this.
-	// mpActiveScene->GetShadowCasters(mZPassObjects);
 	return true;
 }
 
@@ -489,7 +486,6 @@ bool Engine::UpdateAndRender()
 		Render();
 	}
 
-
 	mpCPUProfiler->EndEntry();
 
 	mpCPUProfiler->StateCheck();
@@ -537,6 +533,9 @@ void Engine::PreRender()
 	// 	if (obj->mRenderSettings.bRenderTBN)
 	// 		mTBNDrawObjects.push_back(obj);
 	// }
+
+	mZPassObjects.clear();	// WARNING: potential garbage collection. Mitigation: track last valid data index
+	mpActiveScene->GatherShadowCasters(mZPassObjects);
 
 	mpCPUProfiler->EndEntry();
 }

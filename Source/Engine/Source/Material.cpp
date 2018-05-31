@@ -86,7 +86,7 @@ EMaterialType GetMaterialType(MaterialID matID)
 }
 
 
-BlinnPhong_Material MaterialBuffer::RandomBlinnPhongMaterial(MaterialID matID)
+BlinnPhong_Material MaterialPool::RandomBlinnPhongMaterial(MaterialID matID)
 {
 	assert(false);	// TODO: fix preset blinn-phong material IDs
 	float r = RandF(0.0f, 1.0f);
@@ -96,7 +96,7 @@ BlinnPhong_Material MaterialBuffer::RandomBlinnPhongMaterial(MaterialID matID)
 	if (r >= 0.6000f && r < 0.7999f) return BlinnPhong_Material::jade;
 	else return BlinnPhong_Material(matID);
 }
-BRDF_Material MaterialBuffer::RandomBRDFMaterial(MaterialID matID)
+BRDF_Material MaterialPool::RandomBRDFMaterial(MaterialID matID)
 {
 	BRDF_Material m = BRDF_Material(matID);
 	if (RandI(0, 100) < 50)
@@ -111,7 +111,7 @@ BRDF_Material MaterialBuffer::RandomBRDFMaterial(MaterialID matID)
 	}
 	return m;
 }
-MaterialID MaterialBuffer::CreateRandomMaterial(EMaterialType type)
+MaterialID MaterialPool::CreateRandomMaterial(EMaterialType type)
 {
 	long long newIndex = -1;
 	MaterialID returnID = { -1 };
@@ -130,10 +130,68 @@ MaterialID MaterialBuffer::CreateRandomMaterial(EMaterialType type)
 	}
 	return returnID;
 }
-MaterialID MaterialBuffer::CreateMaterial(EMaterialType type)
+
+
+MaterialPool::MaterialPool(MaterialPool && other)
 {
-	long long newIndex = -1;
+	BRDFs = std::move(other.BRDFs);
+	Phongs = std::move(other.Phongs);
+	pNextAvailableBRDF = other.pNextAvailableBRDF;
+	pNextAvailablePhong = other.pNextAvailablePhong;
+}
+
+MaterialPool& MaterialPool::operator=(const MaterialPool && other)
+{
+	BRDFs = std::move(other.BRDFs);
+	Phongs = std::move(other.Phongs);
+	pNextAvailableBRDF = other.pNextAvailableBRDF;
+	pNextAvailablePhong = other.pNextAvailablePhong;
+	return *this;
+}
+
+void MaterialPool::Initialize(size_t poolSize)
+{
+	InitializePool(BRDFs, pNextAvailableBRDF, poolSize, EMaterialType::GGX_BRDF);
+	InitializePool(Phongs, pNextAvailablePhong, poolSize, EMaterialType::BLINN_PHONG);
+}
+
+void MaterialPool::Clear()
+{
+	BRDFs.clear();
+	Phongs.clear();
+	pNextAvailablePhong = nullptr;
+	pNextAvailableBRDF = nullptr;
+}
+
+
+template<class T>
+T* Create(T*& pNext)
+{
+	assert(pNext);
+	T* pNewObj = pNext;
+	pNext = static_cast<T*>(pNext->pNextAvailable);
+	return pNext;
+}
+
+MaterialID MaterialPool::CreateMaterial(EMaterialType type)
+{
 	MaterialID returnID = { -1 };
+#if 1
+	switch (type)
+	{
+	case GGX_BRDF:
+		returnID = Create(pNextAvailableBRDF)->ID;
+		break;
+	case BLINN_PHONG:
+		returnID = Create(pNextAvailablePhong)->ID;
+		//returnID = Create(static_cast<Material*>(std::ref(pNextAvailablePhong)))->ID;
+		break;
+	default:
+		Log::Error("Unknown material type: %d", type);
+		break;
+	}
+#else
+	long long newIndex = -1;
 	switch (type)
 	{
 	case GGX_BRDF:
@@ -150,10 +208,11 @@ MaterialID MaterialBuffer::CreateMaterial(EMaterialType type)
 		Log::Error("Unknown material type: %d", type);
 		break;
 	}
+#endif
 	return returnID;
 }
 
-Material* MaterialBuffer::GetMaterial(MaterialID matID)
+Material* MaterialPool::GetMaterial(MaterialID matID)
 {
 	const size_t bufferIndex = GetBufferIndex(matID);
 	const EMaterialType type = GetMaterialType(matID);
@@ -173,7 +232,7 @@ Material* MaterialBuffer::GetMaterial(MaterialID matID)
 	}
 	return ptr;
 }
-const Material* MaterialBuffer::GetMaterial_const(MaterialID matID) const
+const Material* MaterialPool::GetMaterial_const(MaterialID matID) const
 {
 	const size_t bufferIndex = GetBufferIndex(matID);
 	const EMaterialType type = GetMaterialType(matID);

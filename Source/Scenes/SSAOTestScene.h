@@ -29,6 +29,6 @@ public:
 	SSAOTestScene() = default;
 	~SSAOTestScene() = default;
 
-	//std::vector<GameObject> cubes; 
+	std::vector<GameObject*> pCubes; 
 };
 

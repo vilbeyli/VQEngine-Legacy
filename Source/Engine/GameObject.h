@@ -37,10 +37,13 @@ struct GameObjectRenderSettings
 	bool bRenderDepth = true;
 };
 
+
+// GameObjects hold references to the Scene Data, as well as to resources in Renderer. 
+// GameObjects only contain Transform data, and the rest of the members are references.
 class GameObject
 {
 public:
-	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialBuffer& materialBuffer) const;
+	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
 	void RenderZ(Renderer* pRenderer) const;
 	void Clear();
 
@@ -51,15 +54,20 @@ public:
 	// Adds materialID to the newest meshID (meshes.back())
 	//
 	void AddMaterial(MaterialID materialID);
+	
+	// Adds materialID to the specified mesh
+	//
+	void AddMaterial(MeshID meshID, MaterialID materialID);
 
+
+private:
 	// friend std::shared_ptr<GameObject> Scene::CreateNewGameObject();
 	// friend std::shared_ptr<GameObject> SerializedScene::CreateNewGameObject();
 	//friend void Parser::ParseScene(Renderer*, const std::vector<std::string>&, SerializedScene&);
 	friend class Scene;
 	friend struct SerializedScene;
 	friend class Parser;
-	friend class ObjectPool;
-private:
+	friend class GameObjectPool;
 	GameObject(Scene* pScene);
 
  private:

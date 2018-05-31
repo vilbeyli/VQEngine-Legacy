@@ -36,10 +36,15 @@ void GameObject::AddMaterial(MaterialID materialID)
 	mModel.AddMaterialToMesh(mModel.mMeshIDs.back(), materialID);
 }
 
+void GameObject::AddMaterial(MeshID meshID, MaterialID materialID)
+{
+	mModel.AddMaterialToMesh(meshID, materialID);
+}
+
 void GameObject::Render(Renderer* pRenderer
 	, const SceneView& sceneView
 	, bool UploadMaterialDataToGPU
-	, const MaterialBuffer& materialBuffer) const
+	, const MaterialPool& materialBuffer) const
 {
 	const EShaders shader = static_cast<EShaders>(pRenderer->GetActiveShader());
 	const XMMATRIX world = mTransform.WorldTransformationMatrix();
@@ -80,7 +85,9 @@ void GameObject::Render(Renderer* pRenderer
 		// SET MATERIAL CONSTANTS
 		if (UploadMaterialDataToGPU)
 		{
-			const MaterialID materialID = mModel.mMaterialLookupPerMesh.at(id)[0];	//[0] BRDF; [1] PHONG
+			const bool bMeshHasMaterial = mModel.mMaterialLookupPerMesh.find(id) != mModel.mMaterialLookupPerMesh.end();
+
+			const MaterialID materialID = bMeshHasMaterial ? mModel.mMaterialLookupPerMesh.at(id)[0] : MaterialID{ -1 };	//[0] BRDF; [1] PHONG
 			materialBuffer.GetMaterial_const(materialID)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
 		}
 

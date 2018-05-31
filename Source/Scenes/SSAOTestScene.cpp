@@ -19,7 +19,7 @@
 #include "SSAOTestScene.h"
 #include "Renderer/Renderer.h"
 #include "Engine/RenderPasses.h"
-#if DO_NOT_LOAD_SCENES
+#if xDO_NOT_LOAD_SCENES
 void SSAOTestScene::Load(SerializedScene& scene) {}
 void SSAOTestScene::Unload() {}
 void SSAOTestScene::Update(float dt) {}
@@ -33,6 +33,8 @@ void SSAOTestScene::Load(SerializedScene& scene)
 		obj.mRenderSettings.bRenderTBN = true;
 	}
 #endif
+
+	SetEnvironmentMap(EEnvironmentMapPresets::MILKYWAY);
 
 	// grid arrangement ( (row * col) cubes that are 'CUBE_DISTANCE' apart from each other )
 	constexpr size_t	CUBE_ROW_COUNT = 4;
@@ -49,42 +51,56 @@ void SSAOTestScene::Load(SerializedScene& scene)
 			//Color color = c_colors[i % c_colors.size()];
 			LinearColor color = vec3(1, 1, 1) * static_cast<float>(i) / (float)(CUBE_ROW_COUNT - 1);
 
-			for (int j = 0; j < CUBE_COLUMN_COUNT; ++j)
+			for (int j = 0; j < CUBE_COLUMN_COUNT && false; ++j)
 			{
-				GameObject cube;
+				GameObject* pCube = Scene::CreateNewGameObject();
 
-				// set transform
+				// Transform
+				Transform tf;
 				float x, y, z;	// position
 				x = i * CUBE_DISTANCE - CUBE_ROW_COUNT * CUBE_DISTANCE / 2;
-				y = 5.0f + cubes.size();
+				y = 5.0f + pCubes.size();
 				z = j * CUBE_DISTANCE - CUBE_COLUMN_COUNT * CUBE_DISTANCE / 2 + 50;
-				cube.mTransform.SetPosition(x, y, z);
-				cube.mTransform.SetUniformScale(4.0f);
 
-				// set material
-				cube.mModel.SetDiffuseColor(color);
-				cube.mModel.SetNormalMap(mpRenderer->CreateTextureFromFile("simple_normalmap.png"));
+				tf.SetPosition(x, y, z);
+				tf.SetUniformScale(4.0f);
+				pCube->SetTransform(tf);
 
-				// set model
-				cube.mModel.mMeshID = EGeometry::CUBE;
+				// Mesh
+				pCube->AddMesh(EGeometry::CUBE);
 
-				cubes.push_back(cube);
+				// Materials
+				
+				BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
+				BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
+
+				const TextureID texNormalMap = mpRenderer->CreateTextureFromFile("simple_normalmap.png");
+
+				// set common material properties
+				std::array<Material*, 2> materials{ pBRDF, pPhong };
+				std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
+				{
+					pMat->diffuse = color;
+					pMat->alpha = 1.0f;
+					pMat->diffuseMap = AmbientOcclusionPass::whiteTexture4x4;
+					pMat->normalMap = texNormalMap;
+					pCube->AddMaterial(pMat->ID);
+				});
+
+				pCubes.push_back(pCube);
 			}
 		}
 	}
 
-	for (auto& obj : mObjects)
-	{
-		obj.mModel.SetDiffuseMap(AmbientOcclusionPass::whiteTexture4x4);
-	}
-
-	mSkybox = Skybox::s_Presets[MILKYWAY];
-
+	//for (auto& obj : mObjects)
+	//{
+	//	obj.mModel.SetDiffuseMap();
+	//}
 }
 
 void SSAOTestScene::Unload()
 {
-	cubes.clear();
+	pCubes.clear();
 }
 
 void SSAOTestScene::Update(float dt)

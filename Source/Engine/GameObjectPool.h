@@ -18,11 +18,6 @@
 
 #pragma once
 
-class GameObjectFactory
-{
-	
-};
-
 //template <class T>
 //class Pool<T>
 //{
@@ -45,7 +40,12 @@ class GameObjectFactory
 //	}
 //}
 
-class ObjectPool
+#include <vector>
+
+class GameObject;
+class Scene;
+
+class GameObjectPool
 {
 public:
 	void Initialize(size_t poolSize);

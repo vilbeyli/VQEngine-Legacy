@@ -179,6 +179,9 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 	std::string filePath = scene_root + sceneFileName;
 	std::ifstream sceneFile(filePath.c_str());
 
+	scene.materials.Clear();
+	scene.materials.Initialize(4096);
+
 	if (sceneFile.is_open())
 	{
 		std::string	line;

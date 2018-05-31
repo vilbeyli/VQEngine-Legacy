@@ -115,6 +115,7 @@
       <ExceptionHandling>false</ExceptionHandling>
       <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -172,6 +173,7 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\Settings.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Skybox.h" />
     <ClInclude Include="..\Engine\DataStructures.h" />
+    <ClInclude Include="..\Engine\GameObjectPool.h" />
     <ClInclude Include="..\Engine\Light.h" />
     <ClInclude Include="..\Engine\Material.h" />
     <ClInclude Include="..\Engine\Mesh.h" />
@@ -186,6 +188,7 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\RenderPasses.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Scene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Skybox.cpp" />
+    <ClCompile Include="..\Engine\Source\GameObjectPool.cpp" />
     <ClCompile Include="..\Engine\Source\Light.cpp" />
     <ClCompile Include="..\Engine\Source\Material.cpp" />
     <ClCompile Include="..\Engine\Source\Mesh.cpp" />

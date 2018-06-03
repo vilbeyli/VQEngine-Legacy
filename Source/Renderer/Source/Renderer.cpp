@@ -178,7 +178,7 @@ Renderer::Renderer()
 	mRasterizerStates  (std::vector<RasterizerState*>  (EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
 	mDepthStencilStates(std::vector<DepthStencilState*>(EDefaultDepthStencilState::DEPTH_STENCIL_STATE_COUNT)),
 	mBlendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT)),
-	mSamplers			(std::vector<Sampler>(EDefaultSamplerState::DEFAULT_SAMPLER_COUNT))
+	mSamplers		   (std::vector<Sampler>(EDefaultSamplerState::DEFAULT_SAMPLER_COUNT))
 	//,	m_ShaderHotswapPollWatcher("ShaderHotswapWatcher")
 {
 	for (int i=0; i<(int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT; ++i)

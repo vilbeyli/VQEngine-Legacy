@@ -42,7 +42,6 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 #else
 	mObjectPool.Initialize(4096 * 8);
 	mMaterials.Initialize(4096 * 8);
-
 #endif
 
 	for (size_t i = 0; i < scene.objects.size(); ++i)
@@ -50,6 +49,7 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 		GameObject* pObj = mObjectPool.Create(this);
 		*pObj = scene.objects[i];
 		pObj->mpScene = this;
+		mpObjects.push_back(pObj);
 	}
 	// mObjects = std::move(scene.objects);
 	//std::for_each(mObjects.begin(), mObjects.end(), [&](GameObject& obj) { obj.mpScene = this; });
@@ -98,7 +98,7 @@ int Scene::Render(const SceneView& sceneView) const
 	int numObj = 0;
 	for (const auto& obj : mObjectPool.mObjects) 
 	{
-		if (obj.mpScene == this)	// #FutureOptimization: sort and iterate for branch prediction gains
+		if (obj.mpScene == this && obj.mRenderSettings.bRender)	// #FutureOptimization: sort and iterate for branch prediction gains
 		{
 			obj.Render(mpRenderer, sceneView, bSendMaterialData, mMaterials);
 			++numObj;
@@ -211,7 +211,7 @@ void Scene::GatherShadowCasters(std::vector<const GameObject*>& casters) const
 {
 	for (const GameObject& obj : mObjectPool.mObjects)
 	{
-		if (obj.mpScene == this && obj.mRenderSettings.bRenderDepth)
+		if (obj.mpScene == this && obj.mRenderSettings.bCastShadow)
 		{
 			casters.push_back(&obj);
 		}
@@ -251,7 +251,7 @@ Material* Scene::CreateNewMaterial(EMaterialType type)
 	return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type));
 }
 
-Material * Scene::CreateRandomMaterialOfType(EMaterialType type)
+Material* Scene::CreateRandomMaterialOfType(EMaterialType type)
 {
 	return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type));
 }

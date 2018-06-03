@@ -34,7 +34,7 @@ struct GameObjectRenderSettings
 	// this can be reduced to a char with the help of bit manipulation
 	bool bRender = true;
 	bool bRenderTBN = false;
-	bool bRenderDepth = true;
+	bool bCastShadow = true;
 };
 
 

@@ -89,12 +89,17 @@ private:
 //
 // MaterialPool can be refactored later using some macro/template functionality.
 //
+struct PoolStats
+{
+	size_t mObjectsFree = 0;
+};
+
 class MaterialPool
 {
 public:
 	MaterialPool() = default;
 	MaterialPool(MaterialPool&& other);
-	MaterialPool& operator=(const MaterialPool&& other);
+	MaterialPool& operator=(MaterialPool&& other);
 	void Initialize(size_t poolSize);
 	void Clear();
 
@@ -119,6 +124,9 @@ private:
 	BRDF_Material* pNextAvailableBRDF = nullptr;
 	BlinnPhong_Material* pNextAvailablePhong = nullptr;
 
+	PoolStats mStatsBRDF;
+	PoolStats mStatsPhong;
+
 private:
 	template<class T>
 	void InitializePool(std::vector<T>& pool, T*& pNextObject, const size_t poolSz, EMaterialType type)
@@ -130,9 +138,19 @@ private:
 			pool[i].pNextAvailable = &pool[i + 1];
 			pool[i].ID = GenerateMaterialID(type, i);
 		}
+		pool.back().ID = GenerateMaterialID(type, pool.size() - 1);
 		pool.back().pNextAvailable = nullptr;
 	}
-
+	template<class T>
+	void mv(std::vector<T>& vTarget, std::vector<T>& vSource, T*& pNext, T* pNextOther)
+	{
+		std::move(vSource.begin(), vSource.end(), vTarget.begin());
+		pNext = &vTarget[GetBufferIndex(pNextOther->ID)];
+		for (size_t i = 1; i < vTarget.size(); ++i)
+		{
+			vTarget[i - 1].pNextAvailable = &vTarget[i];
+		}
+	}
 };
 
 constexpr size_t SZ_MATERIAL = sizeof(Material);

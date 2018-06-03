@@ -111,10 +111,7 @@ void StressTestScene::Load(SerializedScene& scene)
 	AddObjects();
 	// #TODO:
 	//mpObjects[0]->mModel.SetTextureTiling(vec2(mpObjects[0].mTransform._scale / 60.0f));
-	std::for_each(mpTestObjects.begin(), mpTestObjects.end(), [&](GameObject* o)
-	{
-		o->mRenderSettings.bRenderDepth = false;
-	});
+
 
 	if(!ENGINE->IsRenderingStatsOn()) ENGINE->ToggleRenderingStats();
 	if (!ENGINE->IsProfileRenderingOn()) ENGINE->ToggleProfilerRendering();
@@ -330,6 +327,10 @@ void StressTestScene::AddObjects()
 		rotationSpeeds.push_back(RandF(5.0f, 15.0f) * (RandF(0, 1) < 0.5f ? 1.0f : -1.0f));
 		initialPositions.push_back(pObj->GetPosition());
 	}
+	std::for_each(mpTestObjects.begin(), mpTestObjects.end(), [&](GameObject* o)
+	{
+		o->mRenderSettings.bCastShadow = false;
+	});
 
 	// CENTER OF MASS
 	//

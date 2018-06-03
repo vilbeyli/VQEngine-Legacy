@@ -111,25 +111,6 @@ BRDF_Material MaterialPool::RandomBRDFMaterial(MaterialID matID)
 	}
 	return m;
 }
-MaterialID MaterialPool::CreateRandomMaterial(EMaterialType type)
-{
-	long long newIndex = -1;
-	MaterialID returnID = { -1 };
-	switch (type)
-	{
-	case GGX_BRDF:
-		newIndex = static_cast<long long>(BRDFs.size());
-		BRDFs.push_back(RandomBRDFMaterial(GenerateMaterialID(type, newIndex)));
-		returnID = BRDFs.back().ID;
-		break;
-	case BLINN_PHONG:
-		newIndex = static_cast<long long>(Phongs.size());
-		Phongs.push_back(RandomBlinnPhongMaterial(GenerateMaterialID(type, newIndex)));
-		returnID = Phongs.back().ID;
-		break;
-	}
-	return returnID;
-}
 
 
 MaterialPool::MaterialPool(MaterialPool && other)
@@ -140,40 +121,43 @@ MaterialPool::MaterialPool(MaterialPool && other)
 	pNextAvailablePhong = other.pNextAvailablePhong;
 }
 
-MaterialPool& MaterialPool::operator=(const MaterialPool && other)
+
+MaterialPool& MaterialPool::operator=(MaterialPool&& other)
 {
-	BRDFs = std::move(other.BRDFs);
-	Phongs = std::move(other.Phongs);
-	pNextAvailableBRDF = other.pNextAvailableBRDF;
-	pNextAvailablePhong = other.pNextAvailablePhong;
+	mv(BRDFs, other.BRDFs, pNextAvailableBRDF, other.pNextAvailableBRDF);
+	mv(Phongs, other.Phongs, pNextAvailablePhong, other.pNextAvailablePhong);
 	return *this;
 }
 
 void MaterialPool::Initialize(size_t poolSize)
 {
 	InitializePool(BRDFs, pNextAvailableBRDF, poolSize, EMaterialType::GGX_BRDF);
-	InitializePool(Phongs, pNextAvailablePhong, poolSize, EMaterialType::BLINN_PHONG);
 	CreateMaterial(EMaterialType::GGX_BRDF);
+	mStatsBRDF.mObjectsFree = poolSize - 1;
+
+	InitializePool(Phongs, pNextAvailablePhong, poolSize, EMaterialType::BLINN_PHONG);
 	CreateMaterial(EMaterialType::BLINN_PHONG);
+	mStatsPhong.mObjectsFree = poolSize - 1;
 }
 
 void MaterialPool::Clear()
 {
 	BRDFs.clear();
 	Phongs.clear();
+	mStatsPhong.mObjectsFree = 0;
+	mStatsBRDF.mObjectsFree = 0;
 	pNextAvailablePhong = nullptr;
 	pNextAvailableBRDF = nullptr;
 }
 
-
-// #TODO: there seems to be an issue with large number of materials
 template<class T>
 Material* Create(T*& pNext)
 {
 	assert(pNext);
-	Material* pReturn = pNext->pNextAvailable;
-	T* pNewObj = pNext;
-	pNext = static_cast<T*>(pReturn);
+	Material* pReturn = pNext;
+	pNext = static_cast<T*>(pReturn->pNextAvailable);
+	assert(pNext);
+	assert(pNext->ID.ID > -1);
 	return pReturn;
 }
 
@@ -184,16 +168,40 @@ MaterialID MaterialPool::CreateMaterial(EMaterialType type)
 	{
 	case GGX_BRDF:
 		returnID = Create(pNextAvailableBRDF)->ID;
+		--mStatsBRDF.mObjectsFree;
 		break;
 	case BLINN_PHONG:
 		returnID = Create(pNextAvailablePhong)->ID;
-		//returnID = Create(static_cast<Material*>(std::ref(pNextAvailablePhong)))->ID;
+		--mStatsPhong.mObjectsFree;
 		break;
 	default:
 		Log::Error("Unknown material type: %d", type);
 		break;
 	}
+	assert(returnID.ID > -1);
 	return returnID;
+}
+MaterialID MaterialPool::CreateRandomMaterial(EMaterialType type)
+{
+	Material* pNewRandomMaterial = nullptr;
+	switch (type)
+	{
+	case GGX_BRDF:
+	{
+		pNewRandomMaterial = Create(pNextAvailableBRDF);
+		BRDF_Material* pBRDF = static_cast<BRDF_Material*>(pNewRandomMaterial);
+		*pBRDF = RandomBRDFMaterial(pNewRandomMaterial->ID);
+	}
+	break;
+	case BLINN_PHONG:
+	{
+		pNewRandomMaterial = Create(pNextAvailablePhong);
+		BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(pNewRandomMaterial);
+		*pPhong = RandomBlinnPhongMaterial(pNewRandomMaterial->ID);
+	}
+	break;
+	}
+	return pNewRandomMaterial->ID;
 }
 
 Material* MaterialPool::GetMaterial(MaterialID matID)

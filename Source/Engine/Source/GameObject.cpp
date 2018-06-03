@@ -36,6 +36,11 @@ void GameObject::AddMaterial(MaterialID materialID)
 	mModel.AddMaterialToMesh(mModel.mMeshIDs.back(), materialID);
 }
 
+void GameObject::AddMaterial(Material * pMat)
+{
+	mModel.AddMaterialToMesh(mModel.mMeshIDs.back(), pMat->ID);
+}
+
 void GameObject::AddMaterial(MeshID meshID, MaterialID materialID)
 {
 	mModel.AddMaterialToMesh(meshID, materialID);

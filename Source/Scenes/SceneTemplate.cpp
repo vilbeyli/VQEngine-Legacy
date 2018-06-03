@@ -21,48 +21,33 @@
 #include "Application/Input.h"
 
 
-SceneTemplate::SceneTemplate(SceneManager& sceneMan, std::vector<Light>& lights)
-	:
-	Scene(sceneMan, lights)
-{
-}
-
+// Scene-specific loading logic
+//
 void SceneTemplate::Load(SerializedScene& scene)
 {
-
+	pHelloObject = Scene::CreateNewGameObject();
+	pHelloObject->AddMesh(EGeometry::CUBE);
+	pHelloObject->AddMaterial(Scene::CreateRandomMaterialOfType(GGX_BRDF));
 }
 
+// Scene-specific unloading logic
+//
 void SceneTemplate::Unload()
 {
 
 }
 
+// Update() is called each frame
+//
 void SceneTemplate::Update(float dt)
 {
-
+	pHelloObject->RotateAroundGlobalYAxisDegrees(dt * 45.0f);
 }
 
-int SceneTemplate::Render(const SceneView & sceneView, bool bSendMaterialData) const
+// RenderUI() is called at the last stage of rendering before presenting the frame.
+// Scene-specific UI rendering goes in here.
+//
+void SceneTemplate::RenderUI() const 
 {
-	int numObjRendered = 0;
-	return numObjRendered;
-}
-
-void SceneTemplate::RenderUI() const
-{
-
-}
-
-void SceneTemplate::GetShadowCasters(std::vector<const GameObject*>& casters) const
-{
-	Scene::GetShadowCasters(casters);
-
-	// add the objects declared in the header. 
-}
-
-void SceneTemplate::GetSceneObjects(std::vector<const GameObject*>& objs) const
-{
-	Scene::GetSceneObjects(objs);
-
-	// add the objects declared in the header. 
+	
 }

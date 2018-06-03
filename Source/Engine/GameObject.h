@@ -57,6 +57,7 @@ public:
 	// Adds materialID to the newest meshID (meshes.back())
 	//
 	void AddMaterial(MaterialID materialID);
+	void AddMaterial(Material* pMat);
 	
 	// Adds materialID to the specified mesh
 	//

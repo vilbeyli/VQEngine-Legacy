@@ -24,7 +24,7 @@
     <ClInclude Include="$(SolutionDir)Source\Scenes\StressTestScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Scenes\ObjectsScene.h">
+    <ClInclude Include="$(SolutionDir)Source\Scenes\ObjectsScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -38,7 +38,7 @@
     <ClCompile Include="$(SolutionDir)Source\Scenes\StressTestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Scenes\ObjectsScene.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Scenes\ObjectsScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

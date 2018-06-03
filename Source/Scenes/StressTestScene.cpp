@@ -80,16 +80,12 @@ static Renderer* pRenderer = nullptr;
 
 static int sObjectLayer = 0;
 
-//static std::vector<GameObject> objs; // TODO:
 static std::vector<float> rotationSpeeds;
 
 static vec3 centerOfMass;
 static std::vector<vec3> objectDisplacements;
 
 // ===============
-
-void AddObjects();
-void RemoveObjects();
 
 void AddLights(std::vector<Light>&);
 void RemoveLights(std::vector<Light>&);
@@ -113,7 +109,12 @@ void StressTestScene::Load(SerializedScene& scene)
 	SetEnvironmentMap(EEnvironmentMapPresets::BARCELONA);
 
 	AddObjects();
-	mObjects[0].mModel.SetTextureTiling(vec2(mObjects[0].mTransform._scale / 60.0f));
+	// #TODO:
+	//mpObjects[0]->mModel.SetTextureTiling(vec2(mpObjects[0].mTransform._scale / 60.0f));
+	std::for_each(mpTestObjects.begin(), mpTestObjects.end(), [&](GameObject* o)
+	{
+		o->mRenderSettings.bRenderDepth = false;
+	});
 
 	if(!ENGINE->IsRenderingStatsOn()) ENGINE->ToggleRenderingStats();
 	if (!ENGINE->IsProfileRenderingOn()) ENGINE->ToggleProfilerRendering();
@@ -122,7 +123,7 @@ void StressTestScene::Load(SerializedScene& scene)
 void StressTestScene::Unload()
 {
 	mLights.clear();
-	objs.clear();
+	mpTestObjects.clear();
 	objectDisplacements.clear();
 	rotationSpeeds.clear();
 }
@@ -144,44 +145,30 @@ void StressTestScene::Update(float dt)
 			RemoveObjects();
 	}
 
-
+	// old, inactive code
+	//
 	//if (rotationSpeeds.size() > 0)
 	//{
 	//	for (size_t i = 0; i < NUM_OBJ; ++i)
 	//	{
-	//		GameObject& o = objs[i];
+	//		GameObject& o = mpTestObjects[i];
 	//		o.mTransform.RotateAroundGlobalYAxisDegrees(dt * rotationSpeeds[i]);
 	//	}
 	//}
-	std::for_each(objs.begin(), objs.end(), [&](GameObject& o)
+	
+	std::for_each(mpTestObjects.begin(), mpTestObjects.end(), [&](GameObject* o)
 	{
-		o.mTransform.RotateAroundGlobalYAxisDegrees(dt * 5);
+		o->RotateAroundGlobalYAxisDegrees(dt * 5);
 	});
 }
 
-int StressTestScene::Render(const SceneView & sceneView, bool bSendMaterialData) const
-{
-	// objects
-	int renderedObjCount = 0;
-	std::for_each(objs.begin(), objs.end(), [&](const GameObject& o) 
-	{ 
-		if (o.mRenderSettings.bRender)
-		{
-			o.Render(mpRenderer, sceneView, bSendMaterialData);
-			++renderedObjCount;
-		}
-	});
-
-	return renderedObjCount;
-}
 
 void StressTestScene::RenderUI() const
 {
 	// helper ui
 	if (ENGINE->GetSettingShowControls())
 	{
-		const int NumObj = std::accumulate(RANGE(objs), 0, [](int val, const GameObject& o) { return val + (o.mRenderSettings.bRender ? 1 : 0); }) 
-			+ std::accumulate(RANGE(mObjects), 0, [](int val, const GameObject& o) { return val + (o.mRenderSettings.bRender ? 1 : 0); });
+		const int NumObj = std::accumulate(RANGE(mpObjects), 0, [](int val, const GameObject* o) { return val + (o->mRenderSettings.bRender ? 1 : 0); });
 		const int NumPointLights = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l._type == Light::POINT) ? 1 : 0); });
 		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l._type == Light::ELightType::SPOT) ? 1 : 0); });
 
@@ -236,51 +223,33 @@ void StressTestScene::RenderUI() const
 		mpTextRenderer->RenderText(drawDesc);
 	}
 }
-
-void StressTestScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
-{
-	Scene::GetShadowCasters(casters);
-
-	// add the objects declared in the header. 
-}
-
-void StressTestScene::GetSceneObjects(std::vector<const GameObject*>& objects) const
-{
-	Scene::GetSceneObjects(objects);
-
-	// add the objects declared in the header. 
-	std::for_each(RANGE(objs), [&](const GameObject& o){ objects.push_back(&o); }); // todo: Critical error detected c0000374
-}
 #pragma endregion
 //----------------------------------------------------------------------------------------------
 
 //----------------------------------------------------------------------------------------------
 #pragma region HELPER_FUNCTIONS
 
-GameObject CreateRandomGameObject()
+GameObject* StressTestScene::CreateRandomGameObject()
 {
-	GameObject obj;
-	Transform& tf = obj.mTransform;
-
-	const size_t i = objs.size() - 1;
+	const size_t i = mpTestObjects.size() - 1;
+	GameObject* pObj = Scene::CreateNewGameObject();
 
 	// MESH
 	//
 #if RANDOMIZE_MESH
-	obj.mModel.mMeshID = static_cast<EGeometry>(RandI(0, EGeometry::MESH_TYPE_COUNT));
+	const EGeometry meshType = static_cast<EGeometry>(RandI(0, EGeometry::MESH_TYPE_COUNT));
 #else
-	obj.mModel.mMeshID = EGeometry::SPHERE;
+	const EGeometry meshType = EGeometry::SPHERE;
 #endif
 
 	// TRANSFORM
 	//
+	Transform tf;
 #if RANDOMIZE_SCALE
-	const float RandScale = RandF(SCALE_LOW, SCALE_HI) * (obj.mModel.mMeshID == EGeometry::GRID ? 5.0f : 1.0f);
+	const float RandScale = RandF(SCALE_LOW, SCALE_HI) * (meshType == EGeometry::GRID ? 5.0f : 1.0f);
 #else
 	const float RandScale = 1.0f;
 #endif
-
-	tf.SetUniformScale(RandScale);
 
 	vec3 position = vec3(
 		static_cast<float>(i / DIV % DIV),			// X
@@ -289,23 +258,28 @@ GameObject CreateRandomGameObject()
 	)* OFFSET_SCALING
 		+ ORIGIN_OFFSET;// +(vec3(0, 20, 0) * (sObjectLayer / 3));
 
+	tf.SetUniformScale(RandScale);
 	tf.SetPosition(position);
 #if RANDOMIZE_ROTATION
 	tf.RotateAroundAxisDegrees(vec3::Rand(), RandF(0, 360));
 #endif
 
+
+
 	// MATERIAL
 	//
-	BRDF_Material& m = obj.mModel.mBRDF_Material;
+	Material* pMat = nullptr;
 	if (RandI(0, 100) < 15)
 	{
-		obj.mModel.SetDiffuseColor(LinearColor::gold);
-		m.metalness = 0.98f;
-		m.roughness = RandF(0.04f, 0.15f);
+		BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
+		pBRDF->diffuse = LinearColor::gold;
+		pBRDF->metalness = 0.98f;
+		pBRDF->roughness = RandF(0.04f, 0.15f);
+		pMat = static_cast<Material*>(pBRDF);
 	}
 	else
 	{
-		m = Material::RandomBRDFMaterial();
+		pMat = Scene::CreateRandomMaterialOfType(GGX_BRDF);
 	}
 	if (RandI(0, 100) < TEXTURED_OBJECT_PERCENTAGE)
 	{
@@ -317,20 +291,26 @@ GameObject CreateRandomGameObject()
 #endif
 	}
 
-	return obj;
+
+	// GAME OBJECT
+	//
+	pObj->AddMesh(meshType);
+	pObj->SetTransform(tf);
+	pObj->AddMaterial(pMat->ID);
+	return pObj;
 }
 
-void AddObjects()
+void StressTestScene::AddObjects()
 {
 	// TOGGLE VISIBILITY
 	//
-	bool bAllObjectsRendered = std::all_of(RANGE(objs), [](const GameObject& o) { return o.mRenderSettings.bRender; });
+	bool bAllObjectsRendered = std::all_of(RANGE(mpTestObjects), [](const GameObject* o) { return o->mRenderSettings.bRender; });
 	if (!bAllObjectsRendered)
 	{
-		auto itNonRenderingFirst = std::find_if(RANGE(objs), [](GameObject& o) { return !o.mRenderSettings.bRender; });
+		auto itNonRenderingFirst = std::find_if(RANGE(mpTestObjects), [](GameObject* o) { return !o->mRenderSettings.bRender; });
 		for (size_t i = 0; i < NUM_OBJ; ++i)
 		{
-			itNonRenderingFirst->mRenderSettings.bRender = true;
+			(*itNonRenderingFirst)->mRenderSettings.bRender = true;
 			++itNonRenderingFirst;
 		}
 		++sObjectLayer;
@@ -344,11 +324,11 @@ void AddObjects()
 	std::vector<vec3> initialPositions;
 	for (size_t i = 0; i < NUM_OBJ; ++i)
 	{
-		GameObject obj = CreateRandomGameObject();
-		objs.push_back(obj);
+		GameObject* pObj = CreateRandomGameObject();
+		mpTestObjects.push_back(pObj);
 
 		rotationSpeeds.push_back(RandF(5.0f, 15.0f) * (RandF(0, 1) < 0.5f ? 1.0f : -1.0f));
-		initialPositions.push_back(obj.mTransform._position);
+		initialPositions.push_back(pObj->GetPosition());
 	}
 
 	// CENTER OF MASS
@@ -364,8 +344,8 @@ void AddObjects()
 	//
 	for (size_t i = 0; i < NUM_OBJ; ++i)
 	{
-		//objectDisplacements.push_back(objs[i].mTransform._position - centerOfMass);
-		//objs[i].mTransform._position += objectDisplacements.back();
+		//objectDisplacements.push_back(mpTestObjects[i].mTransform._position - centerOfMass);
+		//mpTestObjects[i].mTransform._position += objectDisplacements.back();
 	}
 
 	++sObjectLayer;
@@ -375,16 +355,16 @@ void AddObjects()
 
 // Toggles bRender of NUM_OBJ objects starting from the end of the game obj vector going backwards
 //
-void RemoveObjects()
+void StressTestScene::RemoveObjects()
 {
 	// range check
-	auto itRenderToggleOn = std::find_if(RRANGE(objs), [](GameObject& o) { return o.mRenderSettings.bRender; });
-	if (itRenderToggleOn == objs.rend())
+	auto itRenderToggleOn = std::find_if(RRANGE(mpTestObjects), [](GameObject* o) { return o->mRenderSettings.bRender; });
+	if (itRenderToggleOn == mpTestObjects.rend())
 		return;
 	
 	for (size_t i = 0; i < NUM_OBJ; ++i)
 	{
-		itRenderToggleOn->mRenderSettings.bRender = false;
+		(*itRenderToggleOn)->mRenderSettings.bRender = false;
 		++itRenderToggleOn;
 	}
 

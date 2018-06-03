@@ -29,8 +29,10 @@ public:
 	~IBLTestScene() = default;
 	
 private:
-	//std::vector<GameObject> spheres;
+	void MakeSphereGrid();
+
+	std::vector<GameObject*> spheres;
 	//
-	//GameObject testQuad;
+	//GameObject* testQuad;
 };
 

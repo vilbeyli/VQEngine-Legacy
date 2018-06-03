@@ -36,18 +36,75 @@ struct SceneView;
 struct ShadowView;
 class MaterialPool;
 
-#define DO_NOT_LOAD_SCENES 1
+#define DO_NOT_LOAD_SCENES 0
 
-class Scene	// Base class for scenes
+//----------------------------------------------------------------------------------------------------------------
+// https://en.wikipedia.org/wiki/Template_method_pattern
+// https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
+// https://isocpp.org/wiki/faq/strange-inheritance#two-strategies-for-virtuals
+// template method seems like a good idea here.
+// the idea is that base class takes care of the common tasks among all scenes and calls the 
+// customized functions of the derived classes through pure virtual functions
+//----------------------------------------------------------------------------------------------------------------
+class Scene
 {
+protected:
+	//----------------------------------------------------------------------------------------------------------------
+	// SCENE INTERFACE FOR DERIVED SCENES
+	//----------------------------------------------------------------------------------------------------------------
+	// Update() is called each frame
+	//
+	virtual void Update(float dt) = 0;
+
+	// Scene-specific loading logic
+	//
+	virtual void Load(SerializedScene& scene) = 0;
+	
+	// Scene-specific unloading logic
+	//
+	virtual void Unload() = 0;
+
+	// each scene has to implement scene-specific RenderUI() function. RenderUI() is called
+	// after post processing is finished and is the last rendering workload before presenting the frame.
+	//
+	virtual void RenderUI() const = 0;
+
+	//	Use this function to programmatically create new objects in the scene.
+	//
+	GameObject*		CreateNewGameObject();
+
+	//	Use these functions to programmatically create material instances which you can add to game objects in the scene. 
+	//
+	Material*		CreateNewMaterial(EMaterialType type);
+	Material*		CreateRandomMaterialOfType(EMaterialType type);
+
+protected:
+	friend class SceneResourceView; // using attorney method, alternatively can use friend function
+
+	std::vector<Mesh>			mGeometry;
+	std::vector<Camera>			mCameras;
+	std::vector<Light>			mLights;
+	std::vector<GameObject*>	mpObjects;
+
+	Renderer*					mpRenderer;		 // static?
+	TextRenderer*				mpTextRenderer;	 // static?
+
+	Skybox						mSkybox;
+	EEnvironmentMapPresets		mActiveSkyboxPreset;
+	
+	int mSelectedCamera;
+
+	Settings::SceneRender		mSceneRenderSettings;
+
+
+	//----------------------------------------------------------------------------------------------------------------
+	// ENGINE INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
 	friend class Engine;
 public:
 	Scene();
 	~Scene() = default;
 
-	//----------------------------------------------------------------------------------------------------------------
-	// ENGINE INTERFACE
-	//----------------------------------------------------------------------------------------------------------------
 	// Initializes scene-independent variables such as renderers.
 	//
 	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer);
@@ -86,66 +143,16 @@ public:
 	void SetEnvironmentMap(EEnvironmentMapPresets preset);
 	void ResetActiveCamera();
 
-protected:
-	//----------------------------------------------------------------------------------------------------------------
-	// https://en.wikipedia.org/wiki/Template_method_pattern
-	// https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
-	// https://isocpp.org/wiki/faq/strange-inheritance#two-strategies-for-virtuals
-	// template method seems like a good idea here.
-	// the idea is that base class takes care of the common tasks among all scenes and calls the 
-	// customized functions of the derived classes through pure virtual functions
-	//----------------------------------------------------------------------------------------------------------------
-
-	//----------------------------------------------------------------------------------------------------------------
-	// SCENE INSTANCE INTERFACE
-	//----------------------------------------------------------------------------------------------------------------
-	// Update() is called each frame
-	//
-	virtual void Update(float dt) = 0;
-
-	// Scene-specific loading logic
-	//
-	virtual void Load(SerializedScene& scene) = 0;
-	
-	// Scene-specific unloading logic
-	//
-	virtual void Unload() = 0;
-
-	// each scene has to implement scene-specific RenderUI() function. RenderUI() is called
-	// after post processing is finished and is the last rendering workload before presenting the frame.
-	//
-	virtual void RenderUI() const = 0;
-	
-	// Each scene can use this function to create new game objects. Scene handles the object's memory management.
-	//
-	GameObject*		CreateNewGameObject();
-	Material*		CreateNewMaterial(EMaterialType type);	// todo: pool the materials and let derived scenes use this interface
-
-	
-	//----------------------------------------------------------------------------------------------------------------
-	// SCENE DATA
-	//----------------------------------------------------------------------------------------------------------------
 private:
-	GameObjectPool				mObjectPool;
-	MaterialPool			mMaterials;	// todo: make it pooled
-
-protected:
-	friend class SceneResourceView; // using attorney method, alternatively can use friend function
-
-	std::vector<Mesh>		mGeometry;
-	std::vector<Camera>		mCameras;
-	std::vector<Light>		mLights;
-
-	Renderer*				mpRenderer;		 // static?
-	TextRenderer*			mpTextRenderer;	 // static?
-
-	Skybox					mSkybox;
-	EEnvironmentMapPresets	mActiveSkyboxPreset;
-	
-	int mSelectedCamera;
-
-	Settings::SceneRender	mSceneRenderSettings;
+	GameObjectPool			mObjectPool;
+	MaterialPool			mMaterials;
 };
+
+
+
+
+
+
 
 struct SerializedScene
 {
@@ -159,6 +166,6 @@ struct SerializedScene
 	char loadSuccess = '0';
 };
 
-constexpr size_t SIZE_BRDF = sizeof(BRDF_Material);			// 64 Bytes
-constexpr size_t SIZE_PHNG = sizeof(BlinnPhong_Material);	// 60 Bytes
+constexpr size_t SIZE_BRDF = sizeof(BRDF_Material);			// 72 Bytes
+constexpr size_t SIZE_PHNG = sizeof(BlinnPhong_Material);	// 72 Bytes
 // if we use 64 bits for the MaterialID, we can use 32-bit to index each array

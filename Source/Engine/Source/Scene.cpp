@@ -36,8 +36,15 @@ void Scene::Initialize(Renderer * pRenderer, TextRenderer * pTextRenderer)
 
 void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSettings, const std::vector<Mesh>& builtinMeshes)
 {
-	mObjectPool.Initialize(1024);
+#ifdef _DEBUG
+	mObjectPool.Initialize(4096);
 	mMaterials.Initialize(4096);
+#else
+	mObjectPool.Initialize(4096 * 8);
+	mMaterials.Initialize(4096 * 8);
+
+#endif
+
 	for (size_t i = 0; i < scene.objects.size(); ++i)
 	{
 		GameObject* pObj = mObjectPool.Create(this);
@@ -235,12 +242,18 @@ void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
 
 GameObject* Scene::CreateNewGameObject()
 {
-	return mObjectPool.Create(this);
+	mpObjects.push_back(mObjectPool.Create(this));
+	return mpObjects.back();
 }
 
 Material* Scene::CreateNewMaterial(EMaterialType type)
 {
 	return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type));
+}
+
+Material * Scene::CreateRandomMaterialOfType(EMaterialType type)
+{
+	return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type));
 }
 
 

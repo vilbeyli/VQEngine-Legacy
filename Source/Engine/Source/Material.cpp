@@ -153,6 +153,8 @@ void MaterialPool::Initialize(size_t poolSize)
 {
 	InitializePool(BRDFs, pNextAvailableBRDF, poolSize, EMaterialType::GGX_BRDF);
 	InitializePool(Phongs, pNextAvailablePhong, poolSize, EMaterialType::BLINN_PHONG);
+	CreateMaterial(EMaterialType::GGX_BRDF);
+	CreateMaterial(EMaterialType::BLINN_PHONG);
 }
 
 void MaterialPool::Clear()
@@ -164,19 +166,20 @@ void MaterialPool::Clear()
 }
 
 
+// #TODO: there seems to be an issue with large number of materials
 template<class T>
-T* Create(T*& pNext)
+Material* Create(T*& pNext)
 {
 	assert(pNext);
+	Material* pReturn = pNext->pNextAvailable;
 	T* pNewObj = pNext;
-	pNext = static_cast<T*>(pNext->pNextAvailable);
-	return pNext;
+	pNext = static_cast<T*>(pReturn);
+	return pReturn;
 }
 
 MaterialID MaterialPool::CreateMaterial(EMaterialType type)
 {
 	MaterialID returnID = { -1 };
-#if 1
 	switch (type)
 	{
 	case GGX_BRDF:
@@ -190,25 +193,6 @@ MaterialID MaterialPool::CreateMaterial(EMaterialType type)
 		Log::Error("Unknown material type: %d", type);
 		break;
 	}
-#else
-	long long newIndex = -1;
-	switch (type)
-	{
-	case GGX_BRDF:
-		newIndex = static_cast<long long>(BRDFs.size());
-		BRDFs.push_back(BRDF_Material(GenerateMaterialID(type, newIndex)));
-		returnID = BRDFs.back().ID;
-		break;
-	case BLINN_PHONG:
-		newIndex = static_cast<long long>(Phongs.size());
-		Phongs.push_back(BlinnPhong_Material(GenerateMaterialID(type, newIndex)));
-		returnID = Phongs.back().ID;
-		break;
-	default:
-		Log::Error("Unknown material type: %d", type);
-		break;
-	}
-#endif
 	return returnID;
 }
 
@@ -251,6 +235,23 @@ const Material* MaterialPool::GetMaterial_const(MaterialID matID) const
 		break;
 	}
 	return ptr;
+}
+const Material * MaterialPool::GetDefaultMaterial(EMaterialType type) const
+{
+	const Material* pMat = nullptr;
+	switch (type)
+	{
+	case GGX_BRDF:
+		pMat = static_cast<const Material*>(&BRDFs[0]);
+		break;
+	case BLINN_PHONG:
+		pMat = static_cast<const Material*>(&Phongs[0]);
+		break;
+	default:
+		Log::Error("Incorrect material type: %d from material", type);
+		break;
+	}
+	return pMat;
 }
 BlinnPhong_Material::BlinnPhong_Material(MaterialID _ID, const vec3 & diffuse_in, const vec3 & specular_in, float shininess_in)
 	:

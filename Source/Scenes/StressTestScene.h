@@ -29,6 +29,12 @@ public:
 	~StressTestScene() = default;
 
 private:
-	// custom scene stuff here
+	GameObject* CreateRandomGameObject();
+	void AddObjects();
+	void RemoveObjects();
+
+private:
+	// objects added/removed for stress testing
+	std::vector<GameObject*> mpTestObjects;
 };
 

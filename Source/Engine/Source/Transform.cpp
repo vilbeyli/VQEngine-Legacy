@@ -16,18 +16,15 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-// Component header files
-//#include "PhysicsComponent.h"
 #include "Transform.h"
 
 Transform::Transform(const vec3& position, const Quaternion& rotation, const vec3& scale)
-	:
-	_position(position),
-	_rotation(rotation),
-	_originalPosition(position),
-	_originalRotation(rotation),
-	_scale(scale),
-	Component(ComponentType::TRANSFORM, "Transform")
+	: _position(position)
+	, _rotation(rotation)
+	, _originalPosition(position)
+	, _originalRotation(rotation)
+	, _scale(scale)
+	//, Component(ComponentType::TRANSFORM, "Transform")
 {}
 
 Transform::~Transform() {}

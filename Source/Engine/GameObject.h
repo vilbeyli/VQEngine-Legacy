@@ -48,6 +48,12 @@ public:
 	void Clear();
 
 	void SetTransform(const Transform& transform) { mTransform = transform; }
+	
+	const vec3& GetPosition() const { return mTransform._position; }
+	
+	// #TODO: either add all the other transform update functions to game object or expose Transform member.
+	inline void RotateAroundGlobalYAxisDegrees(float angle) { mTransform.RotateAroundGlobalYAxisDegrees(angle); }
+
 
 	void AddMesh(MeshID meshID);
 
@@ -58,10 +64,13 @@ public:
 	// Adds materialID to the specified mesh
 	//
 	void AddMaterial(MeshID meshID, MaterialID materialID);
+	
+public:
+	GameObjectRenderSettings	mRenderSettings;
 
-
+//---------------------------------------------------------------------------------------------------
 private:
-	// friend std::shared_ptr<GameObject> Scene::CreateNewGameObject();
+	// friend std::shared_ptr<GameObject> Scene::CreateNewGameObject();					// #TODO: clean up: use either friend functions or ...
 	// friend std::shared_ptr<GameObject> SerializedScene::CreateNewGameObject();
 	//friend void Parser::ParseScene(Renderer*, const std::vector<std::string>&, SerializedScene&);
 	friend class Scene;
@@ -73,7 +82,6 @@ private:
  private:
 	Transform					mTransform;
 	Model						mModel;
-	GameObjectRenderSettings	mRenderSettings;
 
 	// After a game object is created, we use the pointer field
 	// as the Scene*. Otherwise, we keep a pointer for the object pool

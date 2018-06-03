@@ -87,8 +87,15 @@ void GameObject::Render(Renderer* pRenderer
 		{
 			const bool bMeshHasMaterial = mModel.mMaterialLookupPerMesh.find(id) != mModel.mMaterialLookupPerMesh.end();
 
-			const MaterialID materialID = bMeshHasMaterial ? mModel.mMaterialLookupPerMesh.at(id)[0] : MaterialID{ -1 };	//[0] BRDF; [1] PHONG
-			materialBuffer.GetMaterial_const(materialID)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
+			if (bMeshHasMaterial)
+			{
+				const MaterialID materialID = mModel.mMaterialLookupPerMesh.at(id)[0]; //[0] BRDF; [1] PHONG
+				materialBuffer.GetMaterial_const(materialID)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
+			}
+			else
+			{
+				materialBuffer.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
+			}
 		}
 
 		pRenderer->SetVertexBuffer(IABuffer.first);

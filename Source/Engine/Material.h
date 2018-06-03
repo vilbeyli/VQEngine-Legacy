@@ -103,6 +103,7 @@ public:
 
 	Material* GetMaterial(MaterialID matID);
 	const Material* GetMaterial_const(MaterialID matID) const;
+	const Material* GetDefaultMaterial(EMaterialType type) const;
 
 	inline Material* CreateAndGetMaterial(EMaterialType type) { return GetMaterial(CreateMaterial(type)); };
 	inline Material* CreateAndGetRandomMaterial(EMaterialType type) { return GetMaterial(CreateRandomMaterial(type)); };

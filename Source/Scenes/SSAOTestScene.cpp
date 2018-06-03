@@ -19,7 +19,8 @@
 #include "SSAOTestScene.h"
 #include "Renderer/Renderer.h"
 #include "Engine/RenderPasses.h"
-#if xDO_NOT_LOAD_SCENES
+
+#if DO_NOT_LOAD_SCENES
 void SSAOTestScene::Load(SerializedScene& scene) {}
 void SSAOTestScene::Unload() {}
 void SSAOTestScene::Update(float dt) {}
@@ -27,13 +28,6 @@ void SSAOTestScene::RenderUI() const {}
 #else
 void SSAOTestScene::Load(SerializedScene& scene)
 {
-#if 0
-	for (GameObject& obj : objects)
-	{
-		obj.mRenderSettings.bRenderTBN = true;
-	}
-#endif
-
 	SetEnvironmentMap(EEnvironmentMapPresets::MILKYWAY);
 
 	// grid arrangement ( (row * col) cubes that are 'CUBE_DISTANCE' apart from each other )
@@ -91,11 +85,6 @@ void SSAOTestScene::Load(SerializedScene& scene)
 			}
 		}
 	}
-
-	//for (auto& obj : mObjects)
-	//{
-	//	obj.mModel.SetDiffuseMap();
-	//}
 }
 
 void SSAOTestScene::Unload()
@@ -103,14 +92,6 @@ void SSAOTestScene::Unload()
 	pCubes.clear();
 }
 
-void SSAOTestScene::Update(float dt)
-{
-	
-}
-
-void SSAOTestScene::RenderUI() const
-{
-
-}
-
+void SSAOTestScene::Update(float dt){}
+void SSAOTestScene::RenderUI() const {}
 #endif

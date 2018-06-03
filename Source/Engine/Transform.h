@@ -17,16 +17,11 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
-#include "Component.h"
 #include "Utilities/vectormath.h"
 
-struct Transform : public Component
+struct Transform
 {
-	friend class RigidBody;
 public:
-	//static Transform* Deserialize(Document & params);
-	//virtual void		Serialize(Value& val, Document::AllocatorType& allocator) override;
-	static const ComponentType ComponentId = Component::TRANSFORM;
 
 	//----------------------------------------------------------------------------------------------------------------
 	// CONSTRUCTOR / DESTRUCTOR

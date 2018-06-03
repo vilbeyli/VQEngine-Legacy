@@ -30,7 +30,8 @@ class Mesh
 	friend class Renderer;
 	static Renderer* spRenderer;
 public:
-	template<class VertexBufferType> Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices);
+	template<class VertexBufferType> 
+	Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices);
 	//	template<class VertexBufferType> Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices, const std::vector<std::string> textureFileNames);	// TODO
 
 	inline std::pair<BufferID, BufferID> GetIABuffers() const { return std::make_pair(mVertexBufferID, mIndexBufferID); }

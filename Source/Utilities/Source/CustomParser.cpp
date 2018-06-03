@@ -499,6 +499,22 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			}
 		}
 	}
+	else if (cmd == "tiling")
+	{
+		if (!bIsReadingMaterial)
+		{
+			Log::Error(" Cannot define Material Property: %s", cmd.c_str());
+			return;
+		}
+
+		// #Parameters: 2 (1 optional)
+		//--------------------------------------------------------------
+		// tiling(@parm1, @param1) | OR | tiling(@param1, @param2)
+		//--------------------------------------------------------------
+		const float tiling1 = stof(command[1]);
+		const float tiling2 = command.size() > 2 ? stof(command[2]) : tiling1;
+		pMaterial->tiling = vec2(tiling1, tiling2);
+	}
 	else if (cmd == "roughness")
 	{
 		if (!bIsReadingMaterial || materialType != BRDF)

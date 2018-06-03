@@ -28,7 +28,8 @@ void SSAOTestScene::RenderUI() const {}
 #else
 void SSAOTestScene::Load(SerializedScene& scene)
 {
-	SetEnvironmentMap(EEnvironmentMapPresets::MILKYWAY);
+	//SetEnvironmentMap(EEnvironmentMapPresets::MILKYWAY);
+	mSkybox = Skybox::s_Presets[MILKYWAY];
 
 	// grid arrangement ( (row * col) cubes that are 'CUBE_DISTANCE' apart from each other )
 	constexpr size_t	CUBE_ROW_COUNT = 4;
@@ -45,7 +46,7 @@ void SSAOTestScene::Load(SerializedScene& scene)
 			//Color color = c_colors[i % c_colors.size()];
 			LinearColor color = vec3(1, 1, 1) * static_cast<float>(i) / (float)(CUBE_ROW_COUNT - 1);
 
-			for (int j = 0; j < CUBE_COLUMN_COUNT && false; ++j)
+			for (int j = 0; j < CUBE_COLUMN_COUNT; ++j)
 			{
 				GameObject* pCube = Scene::CreateNewGameObject();
 
@@ -76,7 +77,7 @@ void SSAOTestScene::Load(SerializedScene& scene)
 				{
 					pMat->diffuse = color;
 					pMat->alpha = 1.0f;
-					pMat->diffuseMap = AmbientOcclusionPass::whiteTexture4x4;
+					pMat->diffuseMap = -1;// AmbientOcclusionPass::whiteTexture4x4;
 					pMat->normalMap = texNormalMap;
 					pCube->AddMaterial(pMat->ID);
 				});

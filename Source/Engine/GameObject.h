@@ -30,16 +30,13 @@ class Parser;
 
 struct GameObjectRenderSettings
 {
-	// #DataOptimization:
-	// this can be reduced to a char with the help of bit manipulation
 	bool bRender = true;
 	bool bRenderTBN = false;
 	bool bCastShadow = true;
 };
 
 
-// GameObjects hold references to the Scene Data, as well as to resources in Renderer. 
-// GameObjects only contain Transform data, and the rest of the members are references.
+// GameObjects only contain Transform data, and the rest of the members are references to data either in Scene or Renderer.
 class GameObject
 {
 public:

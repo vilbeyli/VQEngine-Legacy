@@ -21,7 +21,6 @@
 #include "RenderingEnums.h"
 #include "Texture.h"
 #include "Shader.h"
-#include "Engine/Mesh.h"	// todo: is this needed?
 
 #include "Engine/Settings.h"
 

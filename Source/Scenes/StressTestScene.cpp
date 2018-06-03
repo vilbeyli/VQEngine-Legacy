@@ -109,9 +109,6 @@ void StressTestScene::Load(SerializedScene& scene)
 	SetEnvironmentMap(EEnvironmentMapPresets::BARCELONA);
 
 	AddObjects();
-	// #TODO:
-	//mpObjects[0]->mModel.SetTextureTiling(vec2(mpObjects[0].mTransform._scale / 60.0f));
-
 
 	if(!ENGINE->IsRenderingStatsOn()) ENGINE->ToggleRenderingStats();
 	if (!ENGINE->IsProfileRenderingOn()) ENGINE->ToggleProfilerRendering();

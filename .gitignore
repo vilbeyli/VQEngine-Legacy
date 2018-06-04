@@ -27,11 +27,6 @@ bld/
 Build/_artifacts/
 Source/3rdParty/assimp-4.1.0/
 
-!Source/3rdParty/assimp/lib/x64/
-
-Source/3rdParty/assimp/lib/x64/*
-!Source/3rdParty/assimp/lib/x64/Debug/
-!Source/3rdParty/assimp/lib/x64/Release/
 
 # Visual Studio 2015 cache/options directory
 .vs/
@@ -79,6 +74,14 @@ artifacts/
 *.pidb
 *.svclog
 *.scc
+
+
+!Source/3rdParty/assimp/lib/x64/
+
+Source/3rdParty/assimp/lib/x64/*
+!Source/3rdParty/assimp/lib/x64/Debug/
+!Source/3rdParty/assimp/lib/x64/Release/
+!Source/3rdParty/assimp/lib/x64/Debug/assimp-vc140-mt.pdb
 
 # Chutzpah Test files
 _Chutzpah*

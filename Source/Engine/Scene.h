@@ -72,6 +72,10 @@ protected:
 	//	Use this function to programmatically create new objects in the scene.
 	//
 	GameObject*		CreateNewGameObject();
+	
+	//	Load an assimp model
+	//
+	GameObject*		LoadModel(const std::string& modelPath);
 
 	//	Use these functions to programmatically create material instances which you can add to game objects in the scene. 
 	//
@@ -81,20 +85,19 @@ protected:
 protected:
 	friend class SceneResourceView; // using attorney method, alternatively can use friend function
 
-	std::vector<Mesh>			mGeometry;
+	std::vector<Mesh>			mMeshes;
 	std::vector<Camera>			mCameras;
 	std::vector<Light>			mLights;
 	std::vector<GameObject*>	mpObjects;
 
-	Renderer*					mpRenderer;		 // static?
-	TextRenderer*				mpTextRenderer;	 // static?
-
 	Skybox						mSkybox;
 	EEnvironmentMapPresets		mActiveSkyboxPreset;
-	
 	int mSelectedCamera;
 
 	Settings::SceneRender		mSceneRenderSettings;
+	Renderer*					mpRenderer;
+	TextRenderer*				mpTextRenderer;
+
 
 
 	//----------------------------------------------------------------------------------------------------------------
@@ -143,9 +146,11 @@ public:
 	void SetEnvironmentMap(EEnvironmentMapPresets preset);
 	void ResetActiveCamera();
 
+
 private:
 	GameObjectPool			mObjectPool;
 	MaterialPool			mMaterials;
+	ModelLoader				mModelLoader;
 };
 
 

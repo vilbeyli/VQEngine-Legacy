@@ -60,6 +60,9 @@ Engine::~Engine(){}
 
 bool Engine::Initialize(HWND hwnd)
 {
+	// #SceneRefactoring
+	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
+	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
 	mpObjectsScene = new ObjectsScene();
 	mpSSAOTestScene = new SSAOTestScene();
 	mpIBLTestScene = new IBLTestScene();
@@ -135,7 +138,9 @@ bool Engine::Initialize(HWND hwnd)
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
-
+	// #SceneRefactoring
+	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
+	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
 	mpObjectsScene->Initialize(mpRenderer, mpTextRenderer);
 	mpSSAOTestScene->Initialize(mpRenderer, mpTextRenderer);
 	mpIBLTestScene->Initialize(mpRenderer, mpTextRenderer);
@@ -232,8 +237,9 @@ const Settings::Engine& Engine::ReadSettingsFromFile()
 	return sEngineSettings;
 }
 
-
-// todo: remove this dependency
+// #SceneRefactoring
+// TODO: every new scene should be cast like this following an enum is really not a creative solution.
+//		this bad design needs to be refactored and automated in a way either through macros or type deduction
 static const char* sceneNames[] =
 {
 	"Objects.scn",
@@ -283,6 +289,7 @@ bool Engine::LoadSceneFromFile()
 	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sceneNames[sEngineSettings.levelToLoad]);
 	if (mSerializedScene.loadSuccess == '0') return false;
 
+	// #SceneRefactoring
 	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
 	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
 	mCurrentLevel = sEngineSettings.levelToLoad;

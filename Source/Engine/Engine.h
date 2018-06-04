@@ -165,6 +165,7 @@ private:
 	ShadowView						mShadowView;
 	SceneLightingData				mSceneLightData;	// more memory than required?
 
+	// #SceneRefactoring
 	// current design for adding new scenes is as follows (and is horrible...):
 	// - add the .scn scene file to Data/Levels directory
 	// - Create a class for your scene and inherit from Scene base class 

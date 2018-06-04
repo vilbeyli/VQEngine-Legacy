@@ -24,12 +24,36 @@
 #include <vector>
 #include <unordered_map>
 
+class GameObject;
+struct aiScene;
+struct aiNode;
+struct aiMesh;
+
+
 using MeshToMaterialLookup = std::unordered_map<MeshID, std::vector<MaterialID>>;
+
 struct Model
 {
 	void AddMaterialToMesh(MeshID meshID, MaterialID materialID);
 
-	std::string				mModelName;
 	std::vector<MeshID>		mMeshIDs;
 	MeshToMaterialLookup	mMaterialLookupPerMesh;
+	
+	// cold data
+	std::string				mModelName;
+	std::string				mModelDirectory;
+};
+
+class ModelLoader
+{
+public:
+	void LoadModel(GameObject*& pObj, const std::string& modelPath);
+
+private:
+	void processNode(aiNode* const pNode, const aiScene* pScene);
+	void processMesh(aiMesh* mesh, const aiScene *scene);
+
+private:
+	static const char*		sRootFolderModels;
+	//std::unordered_map<std::string, > mLoadedModels;
 };

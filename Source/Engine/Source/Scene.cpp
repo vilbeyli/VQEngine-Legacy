@@ -59,8 +59,8 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 
 	mSceneRenderSettings = scene.settings;
 
-	mGeometry.resize(builtinMeshes.size());
-	std::copy(builtinMeshes.begin(), builtinMeshes.end(), mGeometry.begin());
+	mMeshes.resize(builtinMeshes.size());
+	std::copy(builtinMeshes.begin(), builtinMeshes.end(), mMeshes.begin());
 
 	for (const Settings::Camera& camSetting : scene.cameras)
 	{
@@ -78,7 +78,7 @@ void Scene::UnloadScene()
 	mObjectPool.Cleanup();
 	mLights.clear();
 	mMaterials.Clear();
-	mGeometry.clear();
+	mMeshes.clear();
 	mObjectPool.Cleanup();
 	Unload();
 }
@@ -223,6 +223,7 @@ void Scene::ResetActiveCamera()
 	mCameras[mSelectedCamera].Reset();
 }
 
+
 void Scene::UpdateScene(float dt)
 {
 	if (ENGINE->INP()->IsKeyTriggered("C"))
@@ -240,29 +241,23 @@ void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
 	mSkybox = Skybox::s_Presets[mActiveSkyboxPreset];
 }
 
-GameObject* Scene::CreateNewGameObject()
-{
-	mpObjects.push_back(mObjectPool.Create(this));
-	return mpObjects.back();
-}
+GameObject* Scene::CreateNewGameObject(){ mpObjects.push_back(mObjectPool.Create(this)); return mpObjects.back(); }
+Material* Scene::CreateNewMaterial(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type)); }
+Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type)); }
 
-Material* Scene::CreateNewMaterial(EMaterialType type)
+GameObject* Scene::LoadModel(const std::string & modelPath)
 {
-	return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type));
+	GameObject* pObj = CreateNewGameObject();
+	mModelLoader.LoadModel(pObj, modelPath);
+	return pObj;
 }
-
-Material* Scene::CreateRandomMaterialOfType(EMaterialType type)
-{
-	return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type));
-}
-
 
 // SceneResourceView ------------------------------------------
 
 #include "SceneResources.h"
 std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBuffersOfMesh(Scene* pScene, MeshID meshID)
 {
-	return pScene->mGeometry[meshID].GetIABuffers();
+	return pScene->mMeshes[meshID].GetIABuffers();
 }
 
 GameObject* SerializedScene::CreateNewGameObject()

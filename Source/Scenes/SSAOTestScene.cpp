@@ -86,6 +86,9 @@ void SSAOTestScene::Load(SerializedScene& scene)
 			}
 		}
 	}
+
+	// load model
+	Scene::LoadModel("nanosuit/nanosuit.obj");
 }
 
 void SSAOTestScene::Unload()

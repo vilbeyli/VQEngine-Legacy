@@ -31,7 +31,7 @@ class Mesh
 	static Renderer* spRenderer;
 public:
 	template<class VertexBufferType> 
-	Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices);
+	Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices, const std::string& name);
 	//	template<class VertexBufferType> Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices, const std::vector<std::string> textureFileNames);	// TODO
 
 	inline std::pair<BufferID, BufferID> GetIABuffers() const { return std::make_pair(mVertexBufferID, mIndexBufferID); }
@@ -40,13 +40,16 @@ public:
 private:
 	BufferID  mVertexBufferID = -1;
 	BufferID  mIndexBufferID = -1;
+
+	std::string mMeshName;
 };
 
 
 template<class VertexBufferType>
 Mesh::Mesh(
 	const std::vector<VertexBufferType>& vertices,
-	const std::vector<unsigned>& indices
+	const std::vector<unsigned>& indices,
+	const std::string& name
 )
 {
 	BufferDesc bufferDesc = {};
@@ -62,6 +65,8 @@ Mesh::Mesh(
 	bufferDesc.mElementCount = static_cast<unsigned>(indices.size());
 	bufferDesc.mStride = sizeof(unsigned);
 	mIndexBufferID = spRenderer->CreateBuffer(bufferDesc, indices.data());
+
+	mMeshName = name;
 }
 
 #if 0	// TODO

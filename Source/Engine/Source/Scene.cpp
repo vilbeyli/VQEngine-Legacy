@@ -248,7 +248,7 @@ Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_
 GameObject* Scene::LoadModel(const std::string & modelPath)
 {
 	GameObject* pObj = CreateNewGameObject();
-	mModelLoader.LoadModel(pObj, modelPath);
+	mModelLoader.LoadModel(pObj, modelPath, this);
 	return pObj;
 }
 

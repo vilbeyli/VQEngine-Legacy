@@ -68,17 +68,3 @@ Mesh::Mesh(
 
 	mMeshName = name;
 }
-
-#if 0	// TODO
-template<class VertexBufferType> 
-Mesh::Mesh(
-	const std::vector<VertexBufferType>& vertices, 
-	const std::vector<unsigned>& indices, 
-	const std::vector<std::string> textureFileNames
-)	:
-	textures(-1)
-{
-
-	// todo: set texture array
-}
-#endif

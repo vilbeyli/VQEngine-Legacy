@@ -84,6 +84,7 @@ protected:
 
 protected:
 	friend class SceneResourceView; // using attorney method, alternatively can use friend function
+	friend class ModelLoader;
 
 	std::vector<Mesh>			mMeshes;
 	std::vector<Camera>			mCameras;

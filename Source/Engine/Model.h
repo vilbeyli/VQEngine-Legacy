@@ -28,6 +28,7 @@ class GameObject;
 struct aiScene;
 struct aiNode;
 struct aiMesh;
+class Scene;
 
 
 using MeshToMaterialLookup = std::unordered_map<MeshID, std::vector<MaterialID>>;
@@ -47,11 +48,11 @@ struct Model
 class ModelLoader
 {
 public:
-	void LoadModel(GameObject*& pObj, const std::string& modelPath);
+	void LoadModel(GameObject*& pObj, const std::string& modelPath, Scene* pScene);
 
 private:
-	void processNode(aiNode* const pNode, const aiScene* pScene);
-	void processMesh(aiMesh* mesh, const aiScene *scene);
+	std::vector<MeshID> processNode(aiNode* const pNode, const aiScene* pScene, std::vector<Mesh>& SceneMeshes);
+	Mesh processMesh(aiMesh* mesh, const aiScene *scene);
 
 private:
 	static const char*		sRootFolderModels;

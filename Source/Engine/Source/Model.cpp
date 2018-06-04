@@ -36,6 +36,10 @@ void Model::AddMaterialToMesh(MeshID meshID, MaterialID materialID)
 
 #include "Utilities/Log.h"
 
+#include "Renderer/Renderer.h"
+
+#include "Scene.h"
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -44,7 +48,7 @@ const char* ModelLoader::sRootFolderModels = "Data/Models/";
 
 using namespace Assimp;
 
-void ModelLoader::LoadModel(GameObject*& pObj, const std::string & modelPath)
+void ModelLoader::LoadModel(GameObject*& pObj, const std::string & modelPath, Scene* pScene)
 {
 	const std::string fullPath = sRootFolderModels + modelPath;
 
@@ -59,84 +63,99 @@ void ModelLoader::LoadModel(GameObject*& pObj, const std::string & modelPath)
 	// TODO: set models directory
 	// directory = path.substr(0, path.find_last_of('/'));
 
-	processNode(scene->mRootNode, scene);
-
+	std::vector<MeshID> mMeshes = processNode(scene->mRootNode, scene, pScene->mMeshes);
+	for(MeshID id : mMeshes)
+		pObj->AddMesh(id);
 }
 
 
 
-void ModelLoader::processNode(aiNode* const pNode, const aiScene * pScene)
+std::vector<MeshID> ModelLoader::processNode(aiNode* const pNode, const aiScene * pScene, std::vector<Mesh>& SceneMeshes)
 {
+	std::vector<MeshID> ModelMeshes;
+
 	// process all the node's meshes (if any)
 	for (unsigned int i = 0; i < pNode->mNumMeshes; i++)
 	{
 		aiMesh *mesh = pScene->mMeshes[pNode->mMeshes[i]];
-		//meshes.push_back(processMesh(mesh, pScene));
+		SceneMeshes.push_back(processMesh(mesh, pScene));
+		ModelMeshes.push_back(SceneMeshes.size() - 1);
 	}
 	// then do the same for each of its children
 	for (unsigned int i = 0; i < pNode->mNumChildren; i++)
 	{
-		processNode(pNode->mChildren[i], pScene);
+		std::vector<MeshID> ChildMeshes = processNode(pNode->mChildren[i], pScene, SceneMeshes);
+		std::copy(ChildMeshes.begin(), ChildMeshes.end(), std::back_inserter(ModelMeshes));
 	}
+	return ModelMeshes;
 }
 
-#if 1
+#if 0
 void ModelLoader::processMesh(aiMesh * mesh, const aiScene * scene) {}
 #else
-void ModelLoader::processMesh(aiMesh * mesh, const aiScene * scene)
+Mesh ModelLoader::processMesh(aiMesh * mesh, const aiScene * scene)
 {
-	// data to fill
-	vector<Vertex> vertices;
-	vector<unsigned int> indices;
-	vector<Texture> textures;
+	std::vector<DefaultVertexBufferData> Vertices;
+	std::vector<unsigned> Indices;
 
 	// Walk through each of the mesh's vertices
 	for (unsigned int i = 0; i < mesh->mNumVertices; i++)
 	{
-		Vertex vertex;
-		glm::vec3 vector; // we declare a placeholder vector since assimp uses its own vector class that doesn't directly convert to glm's vec3 class so we transfer the data to this placeholder glm::vec3 first.
-						  // positions
-		vector.x = mesh->mVertices[i].x;
-		vector.y = mesh->mVertices[i].y;
-		vector.z = mesh->mVertices[i].z;
-		vertex.Position = vector;
-		// normals
-		vector.x = mesh->mNormals[i].x;
-		vector.y = mesh->mNormals[i].y;
-		vector.z = mesh->mNormals[i].z;
-		vertex.Normal = vector;
-		// texture coordinates
-		if (mesh->mTextureCoords[0]) // does the mesh contain texture coordinates?
+		DefaultVertexBufferData Vert;
+		// we declare a placeholder vector since assimp uses its own vector class that doesn't directly 
+		// convert to glm's vec3 class so we transfer the data to this placeholder glm::vec3 first.
+		
+		// POSITIONS
+		Vert.position = vec3(
+			mesh->mVertices[i].x,
+			mesh->mVertices[i].y,
+			mesh->mVertices[i].z
+		);
+
+		// NORMALS
+		Vert.normal = vec3(
+			mesh->mNormals[i].x,
+			mesh->mNormals[i].y,
+			mesh->mNormals[i].z
+		);
+		
+		// TEXTURE COORDINATES
+		// a vertex can contain up to 8 different texture coordinates. We thus make the assumption that we won't 
+		// use models where a vertex can have multiple texture coordinates so we always take the first set (0).
+		Vert.uv = mesh->mTextureCoords[0]
+			? vec2(mesh->mTextureCoords[0][i].x, mesh->mTextureCoords[0][i].y)
+			: vec2(0, 0);
+
+		// TANGENT
+		if (mesh->mTangents)
 		{
-			glm::vec2 vec;
-			// a vertex can contain up to 8 different texture coordinates. We thus make the assumption that we won't 
-			// use models where a vertex can have multiple texture coordinates so we always take the first set (0).
-			vec.x = mesh->mTextureCoords[0][i].x;
-			vec.y = mesh->mTextureCoords[0][i].y;
-			vertex.TexCoords = vec;
+			Vert.tangent = vec3(
+				mesh->mTangents[i].x,
+				mesh->mTangents[i].y,
+				mesh->mTangents[i].z
+			);
 		}
-		else
-			vertex.TexCoords = glm::vec2(0.0f, 0.0f);
-		// tangent
-		vector.x = mesh->mTangents[i].x;
-		vector.y = mesh->mTangents[i].y;
-		vector.z = mesh->mTangents[i].z;
-		vertex.Tangent = vector;
-		// bitangent
-		vector.x = mesh->mBitangents[i].x;
-		vector.y = mesh->mBitangents[i].y;
-		vector.z = mesh->mBitangents[i].z;
-		vertex.Bitangent = vector;
-		vertices.push_back(vertex);
+
+		// BITANGENT ( NOT USED )
+		// Vert.bitangent = vec3(
+		// 	mesh->mBitangents[i].x,
+		// 	mesh->mBitangents[i].y,
+		// 	mesh->mBitangents[i].z
+		// );
+		Vertices.push_back(Vert);
 	}
+
 	// now wak through each of the mesh's faces (a face is a mesh its triangle) and retrieve the corresponding vertex indices.
 	for (unsigned int i = 0; i < mesh->mNumFaces; i++)
 	{
 		aiFace face = mesh->mFaces[i];
 		// retrieve all indices of the face and store them in the indices vector
 		for (unsigned int j = 0; j < face.mNumIndices; j++)
-			indices.push_back(face.mIndices[j]);
+			Indices.push_back(face.mIndices[j]);
 	}
+
+#if 0
+	//vector<Texture> textures;
 	// process materials
 	aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 	// we assume a convention for sampler names in the shaders. Each diffuse texture should be named
@@ -150,16 +169,17 @@ void ModelLoader::processMesh(aiMesh * mesh, const aiScene * scene)
 	vector<Texture> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
 	textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 	// 2. specular maps
-	vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
-	textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+	//vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
+	//textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 	// 3. normal maps
 	std::vector<Texture> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
 	textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
 	// 4. height maps
-	std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
-	textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
+	//std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
+	//textures.insert(textures.end(), heightMaps.begin(), heightMaps.end());
+#endif
 
 	// return a mesh object created from the extracted mesh data
-	return Mesh(vertices, indices, textures);
+	return Mesh(Vertices, Indices, "ImportedModelMesh0");
 }
 #endif

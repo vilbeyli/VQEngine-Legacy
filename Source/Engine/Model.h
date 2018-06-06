@@ -28,19 +28,27 @@ class GameObject;
 struct aiScene;
 struct aiNode;
 struct aiMesh;
+struct aiMaterial;
 class Scene;
 
 
-using MeshToMaterialLookup = std::unordered_map<MeshID, std::vector<MaterialID>>;
+using MeshToMaterialLookup = std::unordered_map<MeshID, MaterialID>;
+
+struct ModelData
+{
+	std::vector<MeshID>		mMeshIDs;
+	MeshToMaterialLookup	mMaterialLookupPerMesh;
+};
 
 struct Model
 {
 	void AddMaterialToMesh(MeshID meshID, MaterialID materialID);
+	Model() = default;
+	Model(const std::string& directoryFullPath, const std::string& modelName, ModelData&& modelDataIn);
 
-	std::vector<MeshID>		mMeshIDs;
-	MeshToMaterialLookup	mMaterialLookupPerMesh;
+	ModelData mData;
 	
-	// cold data
+	// cold data (wasting cache line if Model[]s or anything that contains a model in an array are iterated over)
 	std::string				mModelName;
 	std::string				mModelDirectory;
 };
@@ -48,13 +56,12 @@ struct Model
 class ModelLoader
 {
 public:
-	void LoadModel(GameObject*& pObj, const std::string& modelPath, Scene* pScene);
+	inline void Initialize(Renderer* pRenderer) { mpRenderer = pRenderer; }
+	Model LoadModel(const std::string& modelPath, Scene* pScene);
 
 private:
-	std::vector<MeshID> processNode(aiNode* const pNode, const aiScene* pScene, std::vector<Mesh>& SceneMeshes);
-	Mesh processMesh(aiMesh* mesh, const aiScene *scene);
-
-private:
-	static const char*		sRootFolderModels;
-	//std::unordered_map<std::string, > mLoadedModels;
+	static const char*						sRootFolderModels;
+	
+	std::unordered_map<std::string, Model>	mLoadedModels;
+	Renderer*								mpRenderer;
 };

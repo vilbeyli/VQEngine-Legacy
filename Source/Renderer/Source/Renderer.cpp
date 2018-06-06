@@ -640,6 +640,11 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 	{
 		return (*found)._id;
 	}
+
+	const std::string path = fileRoot + texFileName;
+#if _DEBUG
+	Log::Info("Loading Texture\t\t%s", path.c_str());
+#endif
 	{	// push texture right away and hold a reference
 		Texture tex;
 		mTextures.push_back(tex);
@@ -647,7 +652,6 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 	Texture& tex = mTextures.back();
 
 	tex._name = texFileName;
-	std::string path = fileRoot + texFileName;
 	std::wstring wpath(path.begin(), path.end());
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))

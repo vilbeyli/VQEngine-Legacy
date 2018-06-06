@@ -20,6 +20,10 @@
 #include "Renderer/Renderer.h"
 #include "Engine/RenderPasses.h"
 
+#undef min
+#undef max
+constexpr int MODEL_COUNT = 10;
+
 #if DO_NOT_LOAD_SCENES
 void SSAOTestScene::Load(SerializedScene& scene) {}
 void SSAOTestScene::Unload() {}
@@ -44,7 +48,7 @@ void SSAOTestScene::Load(SerializedScene& scene)
 		for (int i = 0; i < CUBE_ROW_COUNT; ++i)
 		{
 			//Color color = c_colors[i % c_colors.size()];
-			LinearColor color = vec3(1, 1, 1) * static_cast<float>(i) / (float)(CUBE_ROW_COUNT - 1);
+			LinearColor color = vec3(1, 1, 1) * std::max(0.08f, static_cast<float>(i)) / (float)(CUBE_ROW_COUNT - 1);
 
 			for (int j = 0; j < CUBE_COLUMN_COUNT; ++j)
 			{
@@ -64,38 +68,61 @@ void SSAOTestScene::Load(SerializedScene& scene)
 				// Mesh
 				pCube->AddMesh(EGeometry::CUBE);
 
-				// Materials
-				
-				BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
-				BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
-
+				// Material
 				const TextureID texNormalMap = mpRenderer->CreateTextureFromFile("simple_normalmap.png");
-
-				// set common material properties
-				std::array<Material*, 2> materials{ pBRDF, pPhong };
-				std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
-				{
-					pMat->diffuse = color;
-					pMat->alpha = 1.0f;
-					pMat->diffuseMap = -1;// AmbientOcclusionPass::whiteTexture4x4;
-					pMat->normalMap = texNormalMap;
-					pCube->AddMaterial(pMat->ID);
-				});
+				BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
+				pBRDF->diffuse = color;
+				pBRDF->alpha = 1.0f;
+				pBRDF->diffuseMap = -1;// AmbientOcclusionPass::whiteTexture4x4;
+				pBRDF->normalMap = texNormalMap;
+				pCube->AddMaterial(pBRDF->ID);
 
 				pCubes.push_back(pCube);
 			}
 		}
 	}
 
-	// load model
-	Scene::LoadModel("nanosuit/nanosuit.obj");
+	// load nanosuit models
+	for (int i = 0; i < MODEL_COUNT; ++i)
+	{
+		// linear position - left to right with
+		const float stepLinear = 20.0f;
+		const vec3 posLinear((i - MODEL_COUNT / 2) * stepLinear, 0, 0);
+
+		// arc position - models make a pie / circle
+		const float arcRange = 55.0f;	// how far away models are from center
+		const float arcSweepAngle = 160.0f * DEG2RAD;
+		const float arcInitialOffsetAngle = (180.0f - arcSweepAngle) * 0.5f;
+		const float translationOffsetZ = -55.0f;	// get a bit closer to the camera
+		const Quaternion arcRotation = Quaternion::FromAxisAngle(vec3::Up, i * (arcSweepAngle / MODEL_COUNT) + PI);
+		const vec3 arcInitialPosition = Quaternion::FromAxisAngle(vec3::Up, arcInitialOffsetAngle).TransformVector(vec3::Right * arcRange);
+		const vec3 posArc = arcRotation.TransformVector(arcInitialPosition) + vec3(0, 0, translationOffsetZ);
+
+		const vec3 position(posArc);	// use linear/arc position
+		const Quaternion rotation = Quaternion::Identity();
+		const vec3 scale(2.0f);
+
+		GameObject* pModel = Scene::CreateNewGameObject();
+		pModel->SetModel(Scene::LoadModel("nanosuit/nanosuit.obj"));
+		pModel->SetTransform(Transform(position, rotation, scale));
+		pModel->RotateAroundGlobalYAxisDegrees(90.0f * (i % 4));
+		pModels.push_back(pModel);
+	}
 }
 
 void SSAOTestScene::Unload()
 {
 	pCubes.clear();
+	pModels.clear();
 }
 
-void SSAOTestScene::Update(float dt){}
+void SSAOTestScene::Update(float dt)
+{
+	constexpr float ROTATION_SPEED_DEG_PER_SEC = 15.0f;
+	for (GameObject* pModel : pModels)
+	{
+		pModel->RotateAroundGlobalYAxisDegrees(dt * ROTATION_SPEED_DEG_PER_SEC);
+	}
+}
 void SSAOTestScene::RenderUI() const {}
 #endif

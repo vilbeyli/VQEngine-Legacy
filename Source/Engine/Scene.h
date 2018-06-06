@@ -75,7 +75,7 @@ protected:
 	
 	//	Load an assimp model
 	//
-	GameObject*		LoadModel(const std::string& modelPath);
+	Model			LoadModel(const std::string& modelPath);
 
 	//	Use these functions to programmatically create material instances which you can add to game objects in the scene. 
 	//

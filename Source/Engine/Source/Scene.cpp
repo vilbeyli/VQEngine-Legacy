@@ -32,6 +32,7 @@ void Scene::Initialize(Renderer * pRenderer, TextRenderer * pTextRenderer)
 {
 	mpRenderer = pRenderer;
 	mpTextRenderer = pTextRenderer;
+	mModelLoader.Initialize(pRenderer);
 }
 
 void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSettings, const std::vector<Mesh>& builtinMeshes)
@@ -245,11 +246,9 @@ GameObject* Scene::CreateNewGameObject(){ mpObjects.push_back(mObjectPool.Create
 Material* Scene::CreateNewMaterial(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type)); }
 Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type)); }
 
-GameObject* Scene::LoadModel(const std::string & modelPath)
+Model Scene::LoadModel(const std::string & modelPath)
 {
-	GameObject* pObj = CreateNewGameObject();
-	mModelLoader.LoadModel(pObj, modelPath, this);
-	return pObj;
+	return mModelLoader.LoadModel(modelPath, this);
 }
 
 // SceneResourceView ------------------------------------------

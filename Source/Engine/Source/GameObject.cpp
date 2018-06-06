@@ -28,17 +28,17 @@ GameObject::GameObject(Scene* pScene) : mpScene(pScene) {};
 
 void GameObject::AddMesh(MeshID meshID)
 {
-	mModel.mMeshIDs.push_back(meshID);
+	mModel.mData.mMeshIDs.push_back(meshID);
 }
 
 void GameObject::AddMaterial(MaterialID materialID)
 {
-	mModel.AddMaterialToMesh(mModel.mMeshIDs.back(), materialID);
+	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), materialID);
 }
 
 void GameObject::AddMaterial(Material * pMat)
 {
-	mModel.AddMaterialToMesh(mModel.mMeshIDs.back(), pMat->ID);
+	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), pMat->ID);
 }
 
 void GameObject::AddMaterial(MeshID meshID, MaterialID materialID)
@@ -83,18 +83,18 @@ void GameObject::Render(Renderer* pRenderer
 	}
 
 	// SET GEOMETRY & MATERIAL, THEN DRAW
-	for_each(mModel.mMeshIDs.begin(), mModel.mMeshIDs.end(), [&](MeshID id) 
+	for_each(mModel.mData.mMeshIDs.begin(), mModel.mData.mMeshIDs.end(), [&](MeshID id) 
 	{
 		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
 
 		// SET MATERIAL CONSTANTS
 		if (UploadMaterialDataToGPU)
 		{
-			const bool bMeshHasMaterial = mModel.mMaterialLookupPerMesh.find(id) != mModel.mMaterialLookupPerMesh.end();
+			const bool bMeshHasMaterial = mModel.mData.mMaterialLookupPerMesh.find(id) != mModel.mData.mMaterialLookupPerMesh.end();
 
 			if (bMeshHasMaterial)
 			{
-				const MaterialID materialID = mModel.mMaterialLookupPerMesh.at(id)[0]; //[0] BRDF; [1] PHONG
+				const MaterialID materialID = mModel.mData.mMaterialLookupPerMesh.at(id);
 				materialBuffer.GetMaterial_const(materialID)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
 			}
 			else
@@ -124,7 +124,7 @@ void GameObject::RenderZ(Renderer * pRenderer) const
 
 	pRenderer->SetConstant4x4f("world", world);
 	pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
-	for_each(mModel.mMeshIDs.begin(), mModel.mMeshIDs.end(), [&](MeshID id)
+	for_each(mModel.mData.mMeshIDs.begin(), mModel.mData.mMeshIDs.end(), [&](MeshID id)
 	{
 		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
 		pRenderer->SetVertexBuffer(IABuffer.first);

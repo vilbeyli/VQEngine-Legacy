@@ -63,6 +63,8 @@ public:
 	//
 	void AddMaterial(MeshID meshID, MaterialID materialID);
 	
+	inline void SetModel(Model model) { mModel = model; } // i don't like this setter...
+
 public:
 	GameObjectRenderSettings	mRenderSettings;
 
@@ -70,7 +72,7 @@ public:
 private:
 	// friend std::shared_ptr<GameObject> Scene::CreateNewGameObject();					// #TODO: clean up: use either friend functions or ...
 	// friend std::shared_ptr<GameObject> SerializedScene::CreateNewGameObject();
-	//friend void Parser::ParseScene(Renderer*, const std::vector<std::string>&, SerializedScene&);
+	// friend void Parser::ParseScene(Renderer*, const std::vector<std::string>&, SerializedScene&);
 	friend class Scene;
 	friend struct SerializedScene;
 	friend class Parser;
@@ -78,16 +80,16 @@ private:
 	GameObject(Scene* pScene);
 
  private:
-	Transform					mTransform;
-	Model						mModel;
+	Transform			mTransform;
+	Model				mModel;
 
 	// After a game object is created, we use the pointer field
 	// as the Scene*. Otherwise, we keep a pointer for the object pool
 	// to the next available object - a free list of GameObject pointers
 	union
 	{
-		GameObject*				pNextFreeObject;
-		Scene*					mpScene;
+		GameObject*		pNextFreeObject;
+		Scene*			mpScene;
 	};
 };
 

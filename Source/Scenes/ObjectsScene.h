@@ -60,6 +60,8 @@ private:
 
 	std::vector<GameObject*> mSpheres;
 	std::vector<Animation> mAnimations;
+	GameObject* mpBall;
+	GameObject* mpGlass;
 
 	Material* pFloorMaterial = nullptr;
 	TextureID floorNormalMap = -1;

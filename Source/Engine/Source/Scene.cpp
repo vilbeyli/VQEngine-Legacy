@@ -75,10 +75,16 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 
 void Scene::UnloadScene()
 {
+	//---------------------------------------------------------------------------
+	// if we clear materials and dont clear the models loaded with them,
+	// we'll crashh in lookups. this can be improved by only reloading
+	// the materials instead of the whole mesh data. #TODO: more granular reload
+	mModelLoader.UnloadSceneModels(this);
+	mMaterials.Clear();
+	//---------------------------------------------------------------------------
 	mCameras.clear();
 	mObjectPool.Cleanup();
 	mLights.clear();
-	mMaterials.Clear();
 	mMeshes.clear();
 	mObjectPool.Cleanup();
 	Unload();

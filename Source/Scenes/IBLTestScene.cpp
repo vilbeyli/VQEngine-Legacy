@@ -75,6 +75,8 @@ void IBLTestScene::Load(SerializedScene& scene)
 		vec3 pos = origin + offset;
 		const float sphereGroupOffset = gridDimension[0] * r / 2;
 
+		// TODO: Remove the copy paste... this is dumb.
+
 		// GOLD / SILVER PAIR
 		{
 			GameObject* sph = Scene::CreateNewGameObject();
@@ -83,31 +85,19 @@ void IBLTestScene::Load(SerializedScene& scene)
 			pos.x() += sphereGroupOffset;
 			tf.SetPosition(pos);
 			tf.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
-			sph->SetTransform(tf);
-
-			sph->AddMesh(EGeometry::SPHERE);
 
 			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 			const float roughnessLowClamp = 0.03f;
 			//pBRDF->roughness = powf(std::max(rowStep, 0.04f), 2.01f);	
 			pBRDF->roughness = std::max(0.04f, rowStep);// roughness [roughnessLowClamp, 1.0f]
 			pBRDF->metalness = 1.0f - colStep;			// metalness [0.0f, 1.0f]
-
-			BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
-			const float shininessMax = 150.f;
-			const float shininessBase = shininessMax + 7.0f;
-			pPhong->shininess = shininessBase - rowStep * shininessMax;
-
-			// set common material properties
-			std::array<Material*, 2> materials{ pBRDF, pPhong };
-			std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
-			{
-				pMat->diffuse = LinearColor::white;
-				//pMat->diffuseMap = mpRenderer->CreateTextureFromFile("openart/190.JPG");
-				//pMat->normalMap = mpRenderer->CreateTextureFromFile("openart/190_norm.JPG");
-				sph->AddMaterial(pMat->ID);
-			});
-
+			pBRDF->diffuse = LinearColor::white;
+			//pBRDF->diffuseMap = mpRenderer->CreateTextureFromFile("openart/190.JPG");
+			//pBRDF->normalMap = mpRenderer->CreateTextureFromFile("openart/190_norm.JPG");
+			
+			sph->AddMesh(EGeometry::SPHERE);
+			sph->AddMaterial(pBRDF->ID);
+			sph->SetTransform(tf);
 			spheres.push_back(sph);
 		}
 		{
@@ -117,29 +107,17 @@ void IBLTestScene::Load(SerializedScene& scene)
 			pos.x() -= 2 * sphereGroupOffset;
 			tf.SetPosition(pos);
 			tf.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
-			sph->SetTransform(tf);
-
-			sph->AddMesh(EGeometry::SPHERE);
 
 			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 			const float roughnessLowClamp = 0.1f;
 			//pBRDF->roughness = // powf(std::max(rowStep, 0.04f), 2.01f);
 			pBRDF->roughness = std::max(0.04f, 1.0f - rowStep);	// roughness [roughnessLowClamp, 1.0f];
 			pBRDF->metalness = 1.0f - colStep;					// metalness [0.0f, 1.0f]
-
-			BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
-			const float shininessMax = 150.f;
-			const float shininessBase = shininessMax + 7.0f;
-			pPhong->shininess = shininessBase - rowStep * shininessMax;
-
-			// set common material properties
-			std::array<Material*, 2> materials{ pBRDF, pPhong };
-			std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
-			{
-				pMat->diffuse = LinearColor::gold;
-				sph->AddMaterial(pMat->ID);
-			});
-
+			pBRDF->diffuse = LinearColor::gold;
+			
+			sph->SetTransform(tf);
+			sph->AddMesh(EGeometry::SPHERE);
+			sph->AddMaterial(pBRDF->ID);
 			spheres.push_back(sph);
 		}
 
@@ -163,19 +141,8 @@ void IBLTestScene::Load(SerializedScene& scene)
 			const float roughnessLowClamp = 0.1f;
 			pBRDF->roughness = std::max(0.04f, rowStep);
 			pBRDF->metalness = colStep;	
-
-			BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
-			const float shininessMax = 150.f;
-			const float shininessBase = shininessMax + 7.0f;
-			pPhong->shininess = shininessBase - rowStep * shininessMax;
-
-			// set common material properties
-			std::array<Material*, 2> materials{ pBRDF, pPhong };
-			std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
-			{
-				pMat->diffuse = LinearColor::bp_ruby;
-				sph->AddMaterial(pMat->ID);
-			});
+			pBRDF->diffuse = LinearColor::bp_ruby;
+			sph->AddMaterial(pBRDF->ID);
 
 			spheres.push_back(sph);
 		}
@@ -194,19 +161,8 @@ void IBLTestScene::Load(SerializedScene& scene)
 			const float roughnessLowClamp = 0.1f;
 			pBRDF->roughness = pBRDF->roughness == 0.0f ? 0.04f : pBRDF->roughness;
 			pBRDF->metalness = colStep;
-
-			BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
-			const float shininessMax = 150.f;
-			const float shininessBase = shininessMax + 7.0f;
-			pPhong->shininess = shininessBase - rowStep * shininessMax;
-
-			// set common material properties
-			std::array<Material*, 2> materials{ pBRDF, pPhong };
-			std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
-			{
-				pMat->diffuse = vec3(0.04f);
-				sph->AddMaterial(pMat->ID);
-			});
+			pBRDF->diffuse = vec3(0.04f);
+			sph->AddMaterial(pBRDF->ID);
 
 			spheres.push_back(sph);
 		}

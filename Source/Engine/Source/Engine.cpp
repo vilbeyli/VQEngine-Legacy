@@ -179,16 +179,6 @@ Engine * Engine::GetEngine()
 	return sInstance;
 }
 
-void Engine::ToggleLightingModel()
-{
-	// enable toggling only on forward rendering for now
-	const bool isBRDF = sEngineSettings.rendering.bUseBRDFLighting = !sEngineSettings.rendering.bUseBRDFLighting;
-	mSelectedShader = mbUseDeferredRendering 
-		? mDeferredRenderingPasses._geometryShader
-		: (isBRDF ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG);
-	Log::Info("Toggle Lighting Model: %s Lighting", isBRDF ? "PBR - BRDF" : "Blinn-Phong");
-}
-
 void Engine::ToggleRenderingPath()
 {
 	mbUseDeferredRendering = !mbUseDeferredRendering;
@@ -374,11 +364,10 @@ bool Engine::HandleInput()
 {
 	if (mpInput->IsKeyTriggered("Backspace"))	TogglePause();
 
-	if (mpInput->IsKeyTriggered("F1")) ToggleLightingModel();
+	if (mpInput->IsKeyTriggered("F1")) ToggleRenderingPath();
 	if (mpInput->IsKeyTriggered("F2")) ToggleAmbientOcclusion();
 	if (mpInput->IsKeyTriggered("F3")) mPostProcessPass._bloomPass.ToggleBloomPass();
 	if (mpInput->IsKeyTriggered("F4")) mDisplayRenderTargets = !mDisplayRenderTargets;
-	if (mpInput->IsKeyTriggered("F5")) ToggleRenderingPath();
 
 
 	if (mpInput->IsKeyTriggered(";"))
@@ -550,6 +539,7 @@ void Engine::PreRender()
 
 void Engine::RenderLights() const
 {
+	return;
 	mpRenderer->BeginEvent("Render Lights Pass");
 	mpRenderer->SetShader(EShaders::UNLIT);
 	for (const Light& light : mpActiveScene->mLights)
@@ -957,7 +947,7 @@ void Engine::Render()
 		vec2 screenPosition(X_POS, Y_POS);
 		
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
-		_drawDesc.text = std::string("F1 - Lighting Model: ") + (!sEngineSettings.rendering.bUseBRDFLighting ? "Blinn-Phong" : "PBR - BRDF");
+		_drawDesc.text = std::string("F1 - Render Mode: ") + (!mbUseDeferredRendering ? "Forward" : "Deferred");
 		mpTextRenderer->RenderText(_drawDesc);
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
@@ -970,10 +960,6 @@ void Engine::Render()
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
 		_drawDesc.text = std::string("F4 - Display Render Targets: ") + (mDisplayRenderTargets ? "On" : "Off");
-		mpTextRenderer->RenderText(_drawDesc);
-
-		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
-		_drawDesc.text = std::string("F5 - Render Mode: ") + (!mbUseDeferredRendering ? "Forward" : "Deferred");
 		mpTextRenderer->RenderText(_drawDesc);
 	}
 

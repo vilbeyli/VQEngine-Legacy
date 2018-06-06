@@ -174,6 +174,19 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 			if (!diffuseMaps.empty()) pBRDF->diffuseMap = diffuseMaps[0];
 			if (!normalMaps.empty()) pBRDF->normalMap = normalMaps[0];
 
+			aiColor3D color(0.f, 0.f, 0.f);
+			if (aiReturn_SUCCESS == material->Get(AI_MATKEY_COLOR_DIFFUSE, color))
+			{
+				pBRDF->diffuse = vec3(color.r, color.g, color.b);
+			}
+
+			aiColor3D specular(0.f, 0.f, 0.f);
+			if (aiReturn_SUCCESS == material->Get(AI_MATKEY_COLOR_SPECULAR, specular))
+			{
+				pBRDF->specular = vec3(specular.r, specular.g, specular.b);
+			}
+
+
 			SceneMeshes.push_back(processMesh(mesh, pAiScene));
 			ModelMeshIDs.push_back(MeshID(SceneMeshes.size() - 1));
 			modelData.mMaterialLookupPerMesh[ModelMeshIDs.back()] = pBRDF->ID;
@@ -216,10 +229,26 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 	ModelData data = processNode(scene->mRootNode, scene, pScene->mMeshes);
 
 	// cache the model
-	mLoadedModels[fullPath] = Model		
-	    ( modelDirectory
-		, modelName
-		, std::move(data));
+	Model model = Model(modelDirectory, modelName, std::move(data));
+	mLoadedModels[fullPath] = model;
 
-	return mLoadedModels.at(fullPath);
+	// register scene and the model loaded
+	if (mSceneModels.find(pScene) == mSceneModels.end())	// THIS BEGS FOR TEMPLATE PROGRAMMING
+	{	// first
+		mSceneModels[pScene] = std::vector<std::string> { fullPath };
+	}
+	else
+	{
+		mSceneModels.at(pScene).push_back(fullPath);
+	}
+	return model;
+}
+
+void ModelLoader::UnloadSceneModels(Scene * pScene)
+{
+	if (mSceneModels.find(pScene) == mSceneModels.end()) return;
+	for (std::string& modelDirectory : mSceneModels.at(pScene))
+	{
+		mLoadedModels.erase(modelDirectory);
+	}
 }

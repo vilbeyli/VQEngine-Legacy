@@ -116,7 +116,6 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// TOGGLES
 	//----------------------------------------------------------------------------------------------------------------
-	void					ToggleLightingModel();	// BRDF / Blinn-Phong
 	void					ToggleRenderingPath();	// Forward / Deferred
 	void					ToggleAmbientOcclusion();
 	void inline				ToggleProfilerRendering() { mbShowProfiler = !mbShowProfiler; }

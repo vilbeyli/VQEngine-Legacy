@@ -58,10 +58,21 @@ class ModelLoader
 public:
 	inline void Initialize(Renderer* pRenderer) { mpRenderer = pRenderer; }
 	Model LoadModel(const std::string& modelPath, Scene* pScene);
+	
+	void UnloadSceneModels(Scene* pScene);
+
 
 private:
 	static const char*						sRootFolderModels;
 	
-	std::unordered_map<std::string, Model>	mLoadedModels;
-	Renderer*								mpRenderer;
+	// Key -> Value := model_path -> ModelData
+	using ModelLookUpTable = std::unordered_map<std::string, Model>;
+
+	// Key -> Value := Scene* -> model_path[]
+	using PerSceneModelNameLookupTable = std::unordered_map<Scene*, std::vector<std::string>>;
+
+	ModelLookUpTable				mLoadedModels;
+	PerSceneModelNameLookupTable	mSceneModels;
+
+	Renderer*						mpRenderer;
 };

@@ -76,7 +76,6 @@ void SSAOTestScene::Load(SerializedScene& scene)
 				pBRDF->diffuseMap = -1;// AmbientOcclusionPass::whiteTexture4x4;
 				pBRDF->normalMap = texNormalMap;
 				pCube->AddMaterial(pBRDF->ID);
-
 				pCubes.push_back(pCube);
 			}
 		}

@@ -33,6 +33,10 @@ void GameObject::AddMesh(MeshID meshID)
 
 void GameObject::AddMaterial(MaterialID materialID)
 {
+#if _DEBUG
+	// You called AddMaterial() before AddMesh(). We need a mesh to add the material to.
+	assert(!mModel.mData.mMeshIDs.empty());
+#endif
 	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), materialID);
 }
 

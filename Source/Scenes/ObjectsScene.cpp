@@ -42,6 +42,8 @@ enum class WALLS
 #undef max
 #endif
 
+#define TEST_EGEMEN 0
+
 void ObjectsScene::Load(SerializedScene& scene)
 {
 	SetEnvironmentMap(EEnvironmentMapPresets::WALK_OF_FAME);
@@ -73,20 +75,11 @@ void ObjectsScene::Load(SerializedScene& scene)
 			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 			pBRDF->roughness = 0.8f;
 			pBRDF->metalness = 0.0f;
-
-			BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
-			pPhong->shininess = 40.0f;
-
-			// set common material properties
-			std::array<Material*, 2> materials{ pBRDF, pPhong };
-			std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
-			{
-				pMat->diffuse = LinearColor::white;
-				pMat->alpha = 1.0f;
-				pMat->tiling = vec2(10, 10);
-				pMat->normalMap = floorNormalMap;
-				m_room.floor->AddMaterial(pMat->ID);
-			});
+			pBRDF->diffuse = LinearColor::white;
+			pBRDF->alpha = 1.0f;
+			pBRDF->tiling = vec2(10, 10);
+			pBRDF->normalMap = floorNormalMap;
+			m_room.floor->AddMaterial(pBRDF->ID);
 			pFloorMaterial = static_cast<Material*>(&(*pBRDF));
 
 
@@ -116,21 +109,12 @@ void ObjectsScene::Load(SerializedScene& scene)
 			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 			pBRDF->roughness = 0.8f;
 			pBRDF->metalness = 0.0f;
-
-			BlinnPhong_Material* pPhong = static_cast<BlinnPhong_Material*>(Scene::CreateNewMaterial(BLINN_PHONG));
-			pPhong->shininess = 40.0f;
-
-			// set common material properties
-			std::array<Material*, 2> materials{ pBRDF, pPhong };
-			std::for_each(materials.begin(), materials.end(), [&](Material* pMat)
-			{
-				pMat->diffuse = LinearColor::white;
-				pMat->alpha = 1.0f;
-				pMat->tiling = wallTiling;
-				pMat->diffuseMap = mpRenderer->CreateTextureFromFile("openart/190.JPG");
-				pMat->normalMap = mpRenderer->CreateTextureFromFile("openart/190_norm.JPG");
-				m_room.wallR->AddMaterial(pMat->ID);
-			});
+			pBRDF->diffuse = LinearColor::white;
+			pBRDF->alpha = 1.0f;
+			pBRDF->tiling = wallTiling;
+			pBRDF->diffuseMap = mpRenderer->CreateTextureFromFile("openart/190.JPG");
+			pBRDF->normalMap = mpRenderer->CreateTextureFromFile("openart/190_norm.JPG");
+			m_room.wallR->AddMaterial(pBRDF->ID);
 		}
 	}
 
@@ -223,6 +207,16 @@ void ObjectsScene::Load(SerializedScene& scene)
 			//pSphereObject->AddMaterial(pMat1->ID);
 			mSpheres.push_back(pSphereObject);
 		}
+
+#if TEST_EGEMEN
+		mpBall = Scene::CreateNewGameObject();
+		mpBall->SetModel(Scene::LoadModel("zen_orb.obj"));
+		mpBall->SetTransform(Transform(vec3::Up * 25, Quaternion::Identity(), vec3(1)));
+
+		mpGlass = Scene::CreateNewGameObject();
+		mpGlass->SetModel(Scene::LoadModel("sise2.obj"));
+		mpGlass->SetTransform(Transform(vec3::Up * 15 + vec3::Forward * 50, Quaternion::Identity(), vec3(1)));
+#endif
 	}
 }
 
@@ -258,6 +252,11 @@ void ObjectsScene::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad9")) tr += vec3::Up;
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
 	mLights[0]._transform.Translate(dt * tr * moveSpeed);
+
+
+#if TEST_EGEMEN
+	mpBall->RotateAroundGlobalYAxisDegrees(dt * 15.0f);
+#endif
 }
 
 void ObjectsScene::ToggleFloorNormalMap()

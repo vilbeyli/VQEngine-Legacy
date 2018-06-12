@@ -2,7 +2,6 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Application\Source\Input.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Application\Source\Main.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Application\Source\BaseSystem.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Application\Source\WorkerPool.cpp" />
   </ItemGroup>

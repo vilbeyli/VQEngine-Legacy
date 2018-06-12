@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}</ProjectGuid>
+    <ProjectGuid>{54C90DA7-E2C5-4042-BFA0-2699F3403C77}</ProjectGuid>
     <RootNamespace>DX11Renderer</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
-    <ProjectName>Application</ProjectName>
+    <ProjectName>VQEngine</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -39,13 +39,13 @@
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -177,17 +177,24 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="$(SolutionDir)Source\Application\Source\Input.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Application\Source\BaseSystem.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Application\Source\WorkerPool.cpp" />
+    <ProjectReference Include="Application.vcxproj">
+      <Project>{ab5bc0cc-a11f-4edc-9338-9ba351c624a8}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Engine.vcxproj">
+      <Project>{9780d393-8ef6-43c8-b821-6b6a6661831c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Renderer.vcxproj">
+      <Project>{eaf3c9db-a325-40fc-bdb4-7ee2e0756b00}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Scenes.vcxproj">
+      <Project>{ba3ede91-c0be-4b6b-a6cb-95a1c06c43c9}</Project>
+    </ProjectReference>
+    <ProjectReference Include="Utilities.vcxproj">
+      <Project>{19aeca67-f607-4dcc-847b-a6196c924945}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(SolutionDir)Source\Application\BaseSystem.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\Input.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\resource.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\SystemDefs.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\WorkerPool.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\HandleTypedefs.h" />
+    <ClCompile Include="..\Application\Source\Main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

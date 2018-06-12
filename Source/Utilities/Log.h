@@ -16,6 +16,8 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#pragma once
+
 #include <string>
 
 #define VARIADIC_LOG_FN(FN_NAME)\

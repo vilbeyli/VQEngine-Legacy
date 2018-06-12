@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -19,27 +19,77 @@
 #pragma once
 
 #include "Engine/Transform.h"
-#include "Renderer/Model.h"	// todo: engine? model's kinda component...
+#include "Engine/Model.h"
 
-class Renderer;
+#include <memory>
+
 struct SceneView;
+class Renderer;
+class Scene;
+class Parser;
 
 struct GameObjectRenderSettings
 {
 	bool bRender = true;
 	bool bRenderTBN = false;
-	bool bRenderDepth = true;
+	bool bCastShadow = true;
 };
 
+
+// GameObjects only contain Transform data, and the rest of the members are references to data either in Scene or Renderer.
 class GameObject
 {
 public:
-	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const;
+	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
 	void RenderZ(Renderer* pRenderer) const;
 	void Clear();
 
-	Transform					mTransform;
-	Model						mModel;
+	void SetTransform(const Transform& transform) { mTransform = transform; }
+	
+	const vec3& GetPosition() const { return mTransform._position; }
+	
+	// #TODO: either add all the other transform update functions to game object or expose Transform member.
+	inline void RotateAroundGlobalYAxisDegrees(float angle) { mTransform.RotateAroundGlobalYAxisDegrees(angle); }
+
+
+	void AddMesh(MeshID meshID);
+
+	// Adds materialID to the newest meshID (meshes.back())
+	//
+	void AddMaterial(MaterialID materialID);
+	void AddMaterial(Material* pMat);
+	
+	// Adds materialID to the specified mesh
+	//
+	void AddMaterial(MeshID meshID, MaterialID materialID);
+	
+	inline void SetModel(Model model) { mModel = model; } // i don't like this setter...
+
+public:
 	GameObjectRenderSettings	mRenderSettings;
+
+//---------------------------------------------------------------------------------------------------
+private:
+	// friend std::shared_ptr<GameObject> Scene::CreateNewGameObject();					// #TODO: clean up: use either friend functions or ...
+	// friend std::shared_ptr<GameObject> SerializedScene::CreateNewGameObject();
+	// friend void Parser::ParseScene(Renderer*, const std::vector<std::string>&, SerializedScene&);
+	friend class Scene;
+	friend struct SerializedScene;
+	friend class Parser;
+	friend class GameObjectPool;
+	GameObject(Scene* pScene);
+
+ private:
+	Transform			mTransform;
+	Model				mModel;
+
+	// After a game object is created, we use the pointer field
+	// as the Scene*. Otherwise, we keep a pointer for the object pool
+	// to the next available object - a free list of GameObject pointers
+	union
+	{
+		GameObject*		pNextFreeObject;
+		Scene*			mpScene;
+	};
 };
 

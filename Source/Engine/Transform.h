@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -17,27 +17,24 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #pragma once
-#include "Component.h"
 #include "Utilities/vectormath.h"
 
-struct Transform : public Component
+struct Transform
 {
-	friend class RigidBody;
 public:
-	//static Transform* Deserialize(Document & params);
-	//virtual void		Serialize(Value& val, Document::AllocatorType& allocator) override;
-	static const ComponentType ComponentId = Component::TRANSFORM;
-	
+
+	//----------------------------------------------------------------------------------------------------------------
 	// CONSTRUCTOR / DESTRUCTOR
-	//-----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	Transform(  const vec3&			position = vec3(0.0f, 0.0f, 0.0f),
 				const Quaternion&	rotation = Quaternion::Identity(),
 				const vec3&			scale    = vec3(1.0f, 1.0f, 1.0f));
 	~Transform();
 	Transform& operator=(const Transform&);
 
+	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS & SETTERS
-	//-----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	inline void SetXRotationDeg(float xDeg)            { _rotation = Quaternion::FromAxisAngle(vec3::Right  , xDeg * DEG2RAD); }
 	inline void SetYRotationDeg(float yDeg)            { _rotation = Quaternion::FromAxisAngle(vec3::Up     , yDeg * DEG2RAD); }
 	inline void SetZRotationDeg(float zDeg)            { _rotation = Quaternion::FromAxisAngle(vec3::Forward, zDeg * DEG2RAD); }
@@ -46,8 +43,9 @@ public:
 	inline void SetPosition(float x, float y, float z) { _position = vec3(x, y, z); }
 	inline void SetPosition(const vec3& pos)		   { _position = pos; }
 
+	//----------------------------------------------------------------------------------------------------------------
 	// TRANSFORMATIONS
-	//-----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	void Translate(const vec3& translation);
 	void Translate(float x, float y, float z);
 	void Scale(const vec3& scl);
@@ -72,6 +70,9 @@ public:
 	static XMMATRIX NormalMatrix(const XMMATRIX& world);
 	XMMATRIX RotationMatrix() const;
 
+	//----------------------------------------------------------------------------------------------------------------
+	// DATA
+	//----------------------------------------------------------------------------------------------------------------
 	vec3				_position;
 	Quaternion			_rotation;
 	vec3				_scale;

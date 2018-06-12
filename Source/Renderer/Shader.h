@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -34,6 +34,9 @@ using CPUConstantID = int;
 using GPU_ConstantBufferSlotIndex = int;
 using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
 
+//----------------------------------------------------------------------------------------------------------------
+// PRIMITIVE STRUCTS
+//----------------------------------------------------------------------------------------------------------------
 struct CPUConstant
 {
 	using CPUConstantPool = std::array<CPUConstant, MAX_CONSTANT_BUFFERS>;
@@ -90,13 +93,13 @@ class Shader
 	using ShaderArray = std::array<ShaderID, EShaders::SHADER_COUNT>;
 
 public:
+	//----------------------------------------------------------------------------------------------------------------
 	// STRUCTS/ENUMS
-	//------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	// Current limitations for Constant Buffers: 
 	//  todo: revise this
 	//  - cbuffers with same names in different shaders (PS/VS/GS/...)
 	//  - cbuffers with same names in the same shader (not tested)
-	// --------------------------------------------------------------------------------------------------
 	union ShaderBlobs
 	{
 		struct 
@@ -132,29 +135,41 @@ public:
 		EShaderType									shdType;
 		unsigned									bufSlot;
 	};
-	// --------------------------------------------------------------------------------------------------
 
 public:
+	//----------------------------------------------------------------------------------------------------------------
+	// STATIC INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
 	static const ShaderArray&		Get() { return s_shaders; }
 	static void						LoadShaders(Renderer* pRenderer);
 	static std::stack<std::string>	UnloadShaders(Renderer* pRenderer);
 	static bool						IsForwardPassShader(ShaderID shader);
 
-	// --------------------------------------------------------------------------------------------------
-
+public:
+	//----------------------------------------------------------------------------------------------------------------
+	// MEMBER INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
 	void ClearConstantBuffers();
 	void UpdateConstants(ID3D11DeviceContext* context);
 
+	//----------------------------------------------------------------------------------------------------------------
+	// GETTERS
+	//----------------------------------------------------------------------------------------------------------------
 	const std::string&							Name() const;
 	ShaderID									ID() const;
 	const std::vector<ConstantBufferLayout>&	GetConstantBufferLayouts() const;
 	const std::vector<ConstantBuffer>&			GetConstantBuffers() const;
 
 private:
-	static ID3D10Blob * CompileFromSource(const std::string& filename, const EShaderType& type);
+	//----------------------------------------------------------------------------------------------------------------
+	// STATIC PRIVATE INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
+	// Compiles shader from source file
+	//
+	static ID3D10Blob * CompileFromSource(const std::string& pathToFile, const EShaderType& type);
 	
 	// Reads in cached binary from %APPDATA%/VQEngine/ShaderCache folder into ID3D10Blob 
 	//
@@ -168,6 +183,9 @@ private:
 	//                                      ^^----- shaderTypeString
 	static EShaderType	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
 
+	//----------------------------------------------------------------------------------------------------------------
+	// HELPER FUNCTIONS
+	//----------------------------------------------------------------------------------------------------------------
 	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, EShaderType type);
 	void CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths, const std::vector<InputLayout>& layouts);
 	void SetReflections(const ShaderBlobs& blobs);
@@ -179,6 +197,9 @@ private:
 	void LogConstantBufferLayouts() const;
 
 private:
+	//----------------------------------------------------------------------------------------------------------------
+	// DATA
+	//----------------------------------------------------------------------------------------------------------------
 	static ShaderArray s_shaders;
 	static std::string s_shaderCacheDirectory;
 

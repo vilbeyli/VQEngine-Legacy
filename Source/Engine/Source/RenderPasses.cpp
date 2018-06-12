@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -20,12 +20,14 @@
 #include "RenderPasses.h"
 #include "Engine.h"
 #include "GameObject.h"
+#include "Light.h"
 
 #include "Renderer/Renderer.h"
-#include "Utilities/Camera.h"
 #include "Renderer/D3DManager.h"
 
+#include "Utilities/Camera.h"
 #include "Utilities/Log.h"
+
 
 #include <array>
 
@@ -188,6 +190,7 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
 	pRenderer->BeginEvent("Post Processing");
 
 	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
 
 	// ======================================================================================
 	// BLOOM  PASS
@@ -204,7 +207,8 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
 		pRenderer->SetShader(_bloomPass._bloomFilterShader);
 		pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
 		pRenderer->UnbindDepthTarget();
-		pRenderer->SetBufferObj(EGeometry::QUAD);
+		pRenderer->SetVertexBuffer(IABuffersQuad.first);
+		pRenderer->SetIndexBuffer(IABuffersQuad.second);
 		pRenderer->Apply();
 		pRenderer->SetTexture("worldRenderTarget", worldTexture);
 		pRenderer->SetConstant1f("BrightnessThreshold", brightnessThreshold);
@@ -261,7 +265,8 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
 	pRenderer->BeginEvent("Tonemapping");
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetShader(_tonemappingPass._toneMappingShader);
-	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->SetVertexBuffer(IABuffersQuad.first);
+	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
 	pRenderer->SetConstant1f("exposure", _settings.toneMapping.exposure);
 	pRenderer->SetConstant1f("isHDR", isHDR);
@@ -305,7 +310,7 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 	_pointLightShader	 = pRenderer->AddShader("Deferred_BRDF_Spot", DeferredBRDF_SpotLight, VS_PS, layout);
 
 	// deferred geometry is accessed from elsewhere, needs to be globally defined
-	assert(EShaders::DEFERRED_GEOMETRY == _geometryShader);	// this assumption may break, make sure it doesnt...
+	assert(EShaders::DEFERRED_GEOMETRY == _geometryShader);	// this assumption may break, make sure it doesn't...
 }
 
 void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
@@ -430,6 +435,8 @@ void DeferredRenderingPasses::RenderLightingPass(
 	const TextureID tBRDFLUT = pRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
 	pRenderer->BindRenderTarget(target);
@@ -465,7 +472,8 @@ void DeferredRenderingPasses::RenderLightingPass(
 	}
 	pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetConstant1f("ambientFactor", sceneView.sceneRenderSettings.ambientFactor);
-	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->SetVertexBuffer(IABuffersQuad.first);
+	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 	pRenderer->EndEvent();
@@ -479,6 +487,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	// as the scene gets more complex or depending on performance needs.
 #ifdef USE_LIGHT_VOLUMES
 #if 0
+	const auto IABuffersSphere = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::SPHERE);
 
 	pRenderer->SetConstant3f("CameraWorldPosition", sceneView.pCamera->GetPositionF());
 	pRenderer->SetConstant2f("ScreenSize", screenSize);
@@ -488,7 +497,8 @@ void DeferredRenderingPasses::RenderLightingPass(
 
 	// POINT LIGHTS
 	pRenderer->SetShader(SHADERS::DEFERRED_BRDF_POINT);
-	pRenderer->SetBufferObj(GEOMETRY::SPHERE);
+	pRenderer->SetVertexBuffer(IABuffersSphere.first);
+	pRenderer->SetIndexBuffer(IABuffersSphere.second);
 	//pRenderer->SetRasterizerState(ERasterizerCullMode::)
 	for(const Light& light : lights)
 	{
@@ -518,7 +528,8 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->SetShader(SHADERS::DEFERRED_BRDF);
 	pRenderer->SetConstant3f("cameraPos", m_pCamera->GetPositionF());
 
-	pRenderer->SetBufferObj(GEOMETRY::QUAD);
+	pRenderer->SetVertexBuffer(IABuffersQuad.first);
+	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	
 	// for spot lights
 	
@@ -540,7 +551,8 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);
 	pRenderer->SetTexture("texDepth", depthTexture);
-	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->SetVertexBuffer(IABuffersQuad.first);
+	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 #endif	// light volumes
@@ -674,6 +686,7 @@ struct SSAOConstants
 void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView)
 {
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
 	
 	XMFLOAT4X4 proj = {};
 	XMStoreFloat4x4(&proj, sceneView.projection);
@@ -713,7 +726,8 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->SetTexture("texNoise", this->noiseTexture);
 	pRenderer->SetTexture("texDepth", depthTexture);
 	pRenderer->SetConstantStruct("SSAO_constants", &ssaoConsts);
-	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->SetVertexBuffer(IABuffersQuad.first);
+	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 	
@@ -729,7 +743,9 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer)
 	
 	//pRenderer->BindRenderTarget(this->renderTarget);
 
-	pRenderer->SetBufferObj(EGeometry::QUAD);
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+	pRenderer->SetVertexBuffer(IABuffersQuad.first);
+	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 
@@ -740,6 +756,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 {
 	const TextureID texOcclusion = pRenderer->GetRenderTargetTexture(this->occlusionRenderTarget);
 	const vec2 texDimensions = pRenderer->GetWindowDimensionsAsFloat2();
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
 
 	pRenderer->BeginEvent("Blur Pass");
 
@@ -748,7 +765,8 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	pRenderer->SetTexture("tOcclusion", texOcclusion);
 	pRenderer->SetSamplerState("BlurSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetConstant2f("inputTextureDimensions", texDimensions);
-	pRenderer->SetBufferObj(EGeometry::QUAD);
+	pRenderer->SetVertexBuffer(IABuffersQuad.first);
+	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 

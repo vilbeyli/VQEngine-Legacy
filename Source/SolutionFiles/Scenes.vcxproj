@@ -138,13 +138,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Scenes\IBLTestScene.h" />
-    <ClInclude Include="..\Scenes\ObjectsScene.h" />
+    <ClInclude Include="$(SolutionDir)Source\Scenes\ObjectsScene.h" />
     <ClInclude Include="$(SolutionDir)Source\Scenes\SSAOTestScene.h" />
     <ClInclude Include="$(SolutionDir)Source\Scenes\StressTestScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Scenes\IBLTestScene.cpp" />
-    <ClCompile Include="..\Scenes\ObjectsScene.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Scenes\ObjectsScene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Scenes\StressTestScene.cpp" />
   </ItemGroup>
@@ -152,10 +152,14 @@
     <Text Include="..\Scenes\SceneTemplate.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DeploymentContent>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</DeploymentContent>
     </Text>
     <Text Include="..\Scenes\SceneTemplate.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</DeploymentContent>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</DeploymentContent>
     </Text>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

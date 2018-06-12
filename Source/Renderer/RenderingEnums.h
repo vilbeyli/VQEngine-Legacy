@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -215,5 +215,12 @@ enum EBufferType
 	BUFFER_TYPE_COUNT
 };
 
+enum EMaterialType
+{
+	GGX_BRDF = 0,
+	BLINN_PHONG,
+
+	MATERIAL_TYPE_COUNT
+};
 
 #include "Application/HandleTypedefs.h"

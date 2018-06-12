@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "GeometryGenerator.h"
-#include "BufferObject.h"
+#include "Renderer.h"
 
 #include "Utilities/Log.h"
 
@@ -122,7 +122,7 @@ Mesh GeometryGenerator::Triangle(float scale)
 	vertices[2].uv			= vec2(1.0f, 1.0f);
 	
 	CalculateTangentsAndBitangents(vertices, indices);
-	return Mesh(vertices, indices);
+	return Mesh(vertices, indices, "Builtin_Triangle");
 }
 
 Mesh GeometryGenerator::Quad(float scale)
@@ -159,7 +159,7 @@ Mesh GeometryGenerator::Quad(float scale)
 	vertices[3].uv			= vec2(1.0f, 1.0f);
 	
 	CalculateTangentsAndBitangents(vertices, indices);
-	return Mesh(vertices, indices);
+	return Mesh(vertices, indices, "Builtin_Quad");
 }
 
 Mesh GeometryGenerator::Cube()
@@ -345,7 +345,7 @@ Mesh GeometryGenerator::Cube()
 	//}
 
 	CalculateTangentsAndBitangents(vertices, indices);
-	return Mesh(vertices, indices);
+	return Mesh(vertices, indices, "Builtin_Cube");
 }
 
 
@@ -434,7 +434,7 @@ Mesh GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceC
 
 	//------------------------------------------------
 
-	return Mesh(Vertices, Indices);
+	return Mesh(Vertices, Indices, "Builtin_Sphere");
 }
 
 Mesh GeometryGenerator::Grid(float width, float depth, unsigned m, unsigned n)
@@ -534,7 +534,7 @@ Mesh GeometryGenerator::Grid(float width, float depth, unsigned m, unsigned n)
 	}
 
 	CalculateTangentsAndBitangents(vertices, indices);
-	return Mesh(vertices, indices);
+	return Mesh(vertices, indices, "Builtin_Grid");
 }
 
 Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount)
@@ -707,5 +707,5 @@ Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadi
 
 	//------------------------------------------------
 
-	return Mesh(Vertices, Indices);
+	return Mesh(Vertices, Indices, "Builtin_Cylinder");
 }

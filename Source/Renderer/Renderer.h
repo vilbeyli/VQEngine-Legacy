@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -21,13 +21,12 @@
 #include "RenderingEnums.h"
 #include "Texture.h"
 #include "Shader.h"
-#include "Mesh.h"
 
 #include "Engine/Settings.h"
 
 #include "Utilities/Color.h"
 #include "Utilities/utils.h"
-#include "Application/DataStructures.h"
+#include "Engine/DataStructures.h"
 //#include "WorkerPool.h"
 
 #include <string>
@@ -47,31 +46,31 @@ using RasterizerState   = ID3D11RasterizerState;
 using DepthStencilState = ID3D11DepthStencilState;
 using RenderTargetIDs	= std::vector<RenderTargetID>;
 
+
+//----------------------------------------------------------------------------------------------------------------
+// RENDERING STRUCTS
+//----------------------------------------------------------------------------------------------------------------
 struct BlendState
 {
-	BlendState() : ptr(nullptr) {}
-	ID3D11BlendState* ptr; 
+	ID3D11BlendState* ptr = nullptr; 
 };
 
 struct RenderTarget
 {
-	RenderTarget() : pRenderTargetView(nullptr) {}
 	ID3D11Resource*	GetTextureResource() const { return texture._tex2D; }
-	//--------------------------------------------
+
 	Texture						texture;
-	ID3D11RenderTargetView*		pRenderTargetView;
+	ID3D11RenderTargetView*		pRenderTargetView = nullptr;
 };
 
 struct DepthTarget
 {
-	//--------------------------------------------
 	Texture						texture;
 	ID3D11DepthStencilView*		pDepthStencilView;
 };
 
 struct PipelineState
 {
-	int _activeInputBuffer; // todo, remove this
 	bool				bRenderTargetChanged;
 
 	ShaderID			shader;
@@ -85,6 +84,42 @@ struct PipelineState
 	Viewport			viewPort;
 };
 
+struct BufferDesc
+{
+	EBufferType		mType			= EBufferType::BUFFER_TYPE_UNKNOWN;
+	EBufferUsage	mUsage			= EBufferUsage::STATIC_RW;
+	unsigned		mElementCount	= 0;
+	unsigned		mStride			= 0;
+};
+
+struct Buffer
+{
+	BufferDesc		mDesc;
+	bool			mDirty			= true;
+	void*			mpCPUData		= nullptr;
+	ID3D11Buffer*	mpGPUData		= nullptr;
+	
+	bool			bInitialized	= false;
+	std::allocator<char> mAllocator;
+
+	void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
+	void CleanUp();
+	void Update(Renderer* pRenderer, const void* pData);
+
+	Buffer(const BufferDesc& desc);
+};
+
+struct DefaultVertexBufferData
+{
+	vec3 position;
+	vec3 normal;
+	vec3 tangent;
+	vec2 uv;
+};
+
+
+
+
 class Renderer
 {
 	friend class Engine;		
@@ -95,15 +130,19 @@ class Renderer
 	friend struct SetSamplerCommand;	// todo: refactor commands - don't use friend for commands
 
 public:
-	// use > tabs w/ 4spaces
 	Renderer();
 	~Renderer();
+
+	//----------------------------------------------------------------------------------------------------------------
+	// CORE INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
 	bool					Initialize(HWND hwnd, const Settings::Window& settings);
 	void					Exit();
 	inline void				ReloadShaders() { Shader::UnloadShaders(this); Shader::LoadShaders(this); }
 
+	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
-	//----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	HWND					GetWindow()		const; 
 	float					AspectRatio()	const;
 	unsigned				WindowHeight()	const;
@@ -123,15 +162,17 @@ public:
 	inline const ShaderID	GetActiveShader() const { return mPipelineState.shader; }
 
 
+	//----------------------------------------------------------------------------------------------------------------
 	// RESOURCE INITIALIZATION
-	//----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
+	// --- SHADER
 	ShaderID				AddShader(const std::string& shaderFileName, const std::vector<InputLayout>& layouts);
 	ShaderID				AddShader(	const std::string&				shaderName, 
 										const std::vector<std::string>&	shaderFileNames, 
 										const std::vector<EShaderType>&	shaderTypes, 
 										const std::vector<InputLayout>&	layouts
 							);
-
+	// --- TEXTURE
 	//						example params:			"bricks_d.png", "Data/Textures/"
 	TextureID				CreateTextureFromFile(	const std::string&	texFileName, const std::string&	fileRoot = sTextureRoot);
 	TextureID				CreateTexture2D(const TextureDesc& texDesc);
@@ -139,10 +180,10 @@ public:
 	TextureID				CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot = sHDRTextureRoot);
 	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles);
 
+	// --- BUFFER
 	BufferID				CreateBuffer(const BufferDesc& bufferDesc, const void* pData = nullptr);
 
-	// PIPELINE STATE MANAGEMENT
-	//----------------------------------------------------------------------------------
+	// --- PIPELINE STATE OBJECTS
 	SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc );	// TODO: samplerDesc
 
 	RasterizerStateID		AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors);
@@ -160,14 +201,16 @@ public:
 
 	DepthTargetID			AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, Texture& surface);
 
+	//----------------------------------------------------------------------------------------------------------------
+	// PIPELINE STATE MANAGEMENT
+	//----------------------------------------------------------------------------------------------------------------
 	void					SetViewport(const unsigned width, const unsigned height);
 	void					SetViewport(const D3D11_VIEWPORT& viewport);
 	void					SetShader(ShaderID);
-	void					SetBufferObj(BufferID bufferID); // deprecated
 	void					SetVertexBuffer(BufferID bufferID);
 	void					SetIndexBuffer(BufferID bufferID);
 	void					SetTexture(const char* texName, TextureID tex);
-	//	void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
+	//void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
 	void					SetTextureArray(const char* texName, TextureID texArray);
 	void					SetSamplerState(const char* samplerName, SamplerID sampler);
 	void					SetRasterizerState(RasterizerStateID rsStateID);
@@ -190,15 +233,10 @@ public:
 	inline void				SetConstant1i(const char* cName, const int& data)		{ SetConstant(cName, static_cast<const void*>(&data)); }
 	inline void				SetConstantStruct(const char * cName, const void* data) { SetConstant(cName, data); }
 
-	// clears the bound render targets
-	//
-	void					BeginRender(const ClearCommand& clearCmd);
+	void					BeginRender(const ClearCommand& clearCmd);	// clears the bound render targets
 
-	void					BeginFrame();
-
-	// presents the swapchain and clears shaders
-	//
-	void					EndFrame();
+	void					BeginFrame();	// resets render stats
+	void					EndFrame();		// presents the swapchain and clears shaders
 	void					ResetPipelineState();
 
 	void					UpdateBuffer(BufferID buffer, const void* pData);
@@ -206,8 +244,10 @@ public:
 
 	void					BeginEvent(const std::string& marker);
 	void					EndEvent();
+
+	//----------------------------------------------------------------------------------------------------------------
 	// DRAW FUNCTIONS
-	//----------------------------------------------------------------------------------
+	//----------------------------------------------------------------------------------------------------------------
 	void					DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
 	void					Draw(int vertCount, EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
 	
@@ -216,14 +256,22 @@ public:
 	void					DrawLine();
 	void					DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color = LinearColor().Value());
 
+
+
 private:
 	void					SetConstant(const char* cName, const void* data);
-//==================================================================================================================================================
+
 public:
+	//----------------------------------------------------------------------------------------------------------------
+	// WORKSPACE DIRECTORIES (STATIC)
+	//----------------------------------------------------------------------------------------------------------------
 	static const char*				sShaderRoot;
 	static const char*				sTextureRoot;
 	static const char*				sHDRTextureRoot;
 
+	//----------------------------------------------------------------------------------------------------------------
+	// DATA
+	//----------------------------------------------------------------------------------------------------------------
 	ID3D11Device*					m_device;
 	ID3D11DeviceContext*			m_deviceContext;
 	D3DManager*						m_Direct3D;
@@ -231,36 +279,47 @@ public:
 	//std
 
 	static bool						sEnableBlend; //temp
+
+
 private:	
+	// PIPELINE STATE
+	//
 	PipelineState					mPipelineState;
 	PipelineState					mPrevPipelineState;	//todo: make states an array, index through frameCount % size
-
-	RenderTargetID					mBackBufferRenderTarget;
-	TextureID						mDefaultDepthBufferTexture;
-
-	std::vector<Mesh>				mBuiltinMeshes;
-	std::vector<Shader*>			mShaders;
-	std::vector<Texture>			mTextures;
-	std::vector<Sampler>			mSamplers;
-
-	std::queue<SetTextureCommand>	mSetTextureCmds;
-	std::queue<SetSamplerCommand>	mSetSamplerCmds;
-
+	
 	std::vector<RasterizerState*>	mRasterizerStates;
 	std::vector<DepthStencilState*> mDepthStencilStates;
 	std::vector<BlendState>			mBlendStates;
 
+	RenderTargetID					mBackBufferRenderTarget;	// todo: remove or rename
+	TextureID						mDefaultDepthBufferTexture;	// todo: remove or rename
+
+	// DATA
+	//
+	std::vector<Shader*>			mShaders;
+	std::vector<Texture>			mTextures;
+	std::vector<Sampler>			mSamplers;
+	std::vector<Buffer>				mVertexBuffers;
+	std::vector<Buffer>				mIndexBuffers;
+
 	std::vector<RenderTarget>		mRenderTargets;
 	std::vector<DepthTarget>		mDepthTargets;
-	std::vector<Buffer>				mBuffers;
+
+
+	// TODO: refactor command processing
+	std::queue<SetTextureCommand>	mSetTextureCmds;
+	std::queue<SetSamplerCommand>	mSetSamplerCmds;
+
 	
-	// performance counters
+	// PERFORMANCE COUNTERS
+	//
 	RendererStats					mRenderStats;
 
-	//std::vector<Point>				m_debugLines;
-	
-	//Worker		m_ShaderHotswapPollWatcher;
+	// WINDOW SETTINGS
+	//
 	Settings::Window				mWindowSettings;
 
+	//std::vector<Point>			m_debugLines;
+	//Worker						m_ShaderHotswapPollWatcher;
 };
  

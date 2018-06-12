@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -20,9 +20,6 @@
 
 #include "Engine/Scene.h"
 #include "Engine/Animation.h"
-#include "Engine/GameObject.h"
-#include "Engine/Skybox.h"
-
 
 class ObjectsScene : public Scene
 {
@@ -30,111 +27,42 @@ public:
 	void Load(SerializedScene& scene) override;
 	void Unload() override;
 	void Update(float dt) override;
-	int Render(const SceneView& sceneView, bool bSendMaterialData) const override;
 	void RenderUI() const override;
 
-	void GetShadowCasters(std::vector<const GameObject*>& casters) const override;	// todo: rename this... decide between depth and shadows
-	void GetSceneObjects(std::vector<const GameObject*>&) const override;
-
-	ObjectsScene(SceneManager& sceneMan, std::vector<Light>& lights);
+	ObjectsScene() = default;
 	~ObjectsScene() = default;
 
 private:
 	void InitializeLights(SerializedScene& scene);
 	void UpdateCentralObj(const float dt);
-	void RenderCentralObjects(const SceneView& sceneView, bool sendMaterialData) const;
 // ----------------------------------------------------------------------
 	
 	void ToggleFloorNormalMap();
 	
-	struct Room {
+	struct Room 
+	{
 		friend class ObjectsScene;
-		void Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const;
-		void Initialize(Renderer* pRenderer);
-#if 0
-		// union -> deleted dtor??
-		union
+		void Initialize(Renderer* pRenderer, TextureID floorNormalMap, Material*& pMat);
+
+		union 
 		{
 			struct 
 			{
-				GameObject floor;
-				GameObject wallL;
-				GameObject wallR;
-				GameObject wallF;
-				GameObject ceiling;
+				GameObject* floor;
+				GameObject* wallL;
+				GameObject* wallR;
+				GameObject* wallF;
+				GameObject* ceiling;
 			};
-			GameObject walls[5];
+			GameObject* walls[5];
 		};
-#else
-		GameObject floor;
-		GameObject wallL;
-		GameObject wallR;
-		GameObject wallF;
-		GameObject ceiling;
-#endif
 	} m_room;
 
-	std::vector<GameObject> mSpheres;
+	std::vector<GameObject*> mSpheres;
 	std::vector<Animation> mAnimations;
+	GameObject* mpBall;
+	GameObject* mpGlass;
+
+	Material* pFloorMaterial = nullptr;
+	TextureID floorNormalMap = -1;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// junkyard
-#ifdef ENABLE_VPHYSICS
-void InitializePhysicsObjects();
-void UpdateAnchors(float dt);
-#endif
-#ifdef ENABLE_ANIMATION
-void UpdateAnimatedModel(const float dt);
-#endif
-#define xENABLE_ANIMATION	
-#define xENABLE_VPHYSICS
-#ifdef ENABLE_ANIMATION
-#include "../Animation/Include/AnimatedModel.h"
-#endif
-#ifdef ENABLE_VPHYSICS
-#include "PhysicsEngine.h"
-#endif
-
-#ifdef ENABLE_VPHYSICS
-// physics simulation
-GameObject				m_anchor1;
-GameObject				m_anchor2;
-GameObject				m_physObj;
-std::vector<GameObject> m_vPhysObj;
-
-SpringSystem m_springSys;
-#endif
-
-#ifdef ENABLE_ANIMATION
-// hierarchical model
-AnimatedModel m_model;
-#endif

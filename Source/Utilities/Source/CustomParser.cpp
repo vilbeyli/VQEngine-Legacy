@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -179,6 +179,9 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 	std::string filePath = scene_root + sceneFileName;
 	std::ifstream sceneFile(filePath.c_str());
 
+	scene.materials.Clear();
+	scene.materials.Initialize(4096);
+
 	if (sceneFile.is_open())
 	{
 		std::string	line;
@@ -221,12 +224,11 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 // state tracking
 static bool bIsReadingGameObject = false;
 static bool bIsReadingMaterial = false;
-static GameObject obj;
 
 enum MaterialType { UNKNOWN, BRDF, PHONG };
 static MaterialType materialType = MaterialType::UNKNOWN;
-static BRDF_Material brdf;
-static BlinnPhong_Material phong;
+static Material* pMaterial = nullptr;
+static GameObject* pObject = nullptr;
 
 using ParseFunctionType = void(__cdecl *)(const std::vector<std::string>&);
 using ParseFunctionLookup = std::unordered_map<std::string, ParseFunctionType>;
@@ -362,7 +364,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 				return;
 			}
 			bIsReadingGameObject = true;
-			obj.Clear();
+			pObject = scene.CreateNewGameObject();
 		}
 
 		if (objCmd == "end")
@@ -373,7 +375,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 				return;
 			}
 			bIsReadingGameObject = false;
-			scene.objects.push_back(obj);
+			pObject = nullptr;
 		}
 	}
 	else if (cmd == "mesh")
@@ -398,7 +400,10 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			// todo: assimp mesh
 		};
 		const std::string mesh = GetLowercased(command[1]);
-		obj.mModel.mMesh = sMeshLookup.at(mesh);
+
+		
+		pObject->AddMesh(sMeshLookup.at(mesh));
+		//obj.mModel.mMeshID = sMeshLookup.at(mesh);
 	}
 	else if (cmd == "brdf")
 	{
@@ -413,7 +418,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		{
 			if (materialType != BRDF)
 			{
-				Log::Error(" Syntax Error: Already defining a phong material!");
+				Log::Error(" Syntax Error: Already defining a Phong material!");
 				return;
 			}
 
@@ -424,7 +429,8 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 
 		bIsReadingMaterial = true;
 		materialType = BRDF;
-		obj.mModel.mBRDF_Material.Clear();
+		pMaterial = scene.materials.CreateAndGetMaterial(GGX_BRDF);
+		pObject->AddMaterial(pMaterial->ID);
 	}
 	else if (cmd == "blinnphong")
 	{
@@ -452,7 +458,8 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 
 		bIsReadingMaterial = true;
 		materialType = PHONG;
-		obj.mModel.mBlinnPhong_Material.Clear();
+		pMaterial = scene.materials.CreateAndGetMaterial(BLINN_PHONG);
+		pObject->AddMaterial(pMaterial->ID);
 	}
 
 	else if (cmd == "diffuse" || cmd == "albedo")
@@ -471,7 +478,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		if (DirectoryUtil::IsImageName(firstParam))
 		{
 			const TextureID texDiffuse = pRenderer->CreateTextureFromFile(firstParam);
-			obj.mModel.SetDiffuseMap(texDiffuse);
+			pMaterial->diffuseMap = texDiffuse;
 		}
 		else
 		{
@@ -483,13 +490,30 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			if (command.size() == 5)
 			{
 				const float a = stof(command[4]);
-				obj.mModel.SetDiffuseAlpha(LinearColor(r, g, b), a);
+				pMaterial->diffuse = LinearColor(r, g, b);
+				pMaterial->alpha = a;
 			}
 			else
 			{
-				obj.mModel.SetDiffuseColor(LinearColor(r, g, b));
+				pMaterial->diffuse = LinearColor(r, g, b);
 			}
 		}
+	}
+	else if (cmd == "tiling")
+	{
+		if (!bIsReadingMaterial)
+		{
+			Log::Error(" Cannot define Material Property: %s", cmd.c_str());
+			return;
+		}
+
+		// #Parameters: 2 (1 optional)
+		//--------------------------------------------------------------
+		// tiling(@parm1, @param1) | OR | tiling(@param1, @param2)
+		//--------------------------------------------------------------
+		const float tiling1 = stof(command[1]);
+		const float tiling2 = command.size() > 2 ? stof(command[2]) : tiling1;
+		pMaterial->tiling = vec2(tiling1, tiling2);
 	}
 	else if (cmd == "roughness")
 	{
@@ -502,7 +526,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		//--------------------------------------------------------------
 		// roughness [0.0f, 1.0f]
 		//--------------------------------------------------------------
-		obj.mModel.mBRDF_Material.roughness = stof(command[1]);
+		static_cast<BRDF_Material*>(pMaterial)->roughness = stof(command[1]);
 	}
 	else if (cmd == "metalness")
 	{
@@ -515,7 +539,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		//--------------------------------------------------------------
 		// metalness [0.0f, 1.0f]
 		//--------------------------------------------------------------
-		obj.mModel.mBRDF_Material.metalness = stof(command[1]);
+		static_cast<BRDF_Material*>(pMaterial)->metalness = stof(command[1]);
 	}
 	else if (cmd == "shininess")
 	{
@@ -528,7 +552,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		//--------------------------------------------------------------
 		// shininess [0.04 - inf]
 		//--------------------------------------------------------------
-		obj.mModel.mBlinnPhong_Material.shininess = stof(command[1]);
+		static_cast<BlinnPhong_Material*>(pMaterial)->shininess = stof(command[1]);
 	}
 	else if (cmd == "textures")
 	{
@@ -543,12 +567,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		// albedoMap normalMap
 		//--------------------------------------------------------------
 		const TextureID texDiffuse = pRenderer->CreateTextureFromFile(command[1]);
-		obj.mModel.SetDiffuseMap(texDiffuse);
+		pMaterial->diffuseMap = texDiffuse;
 
 		if (command.size() > 2)
 		{
 			const TextureID texNormal = pRenderer->CreateTextureFromFile(command[2]);
-			obj.mModel.SetNormalMap(texNormal);
+			pMaterial->normalMap= texNormal;
 		}
 
 		if (command.size() > 3)
@@ -569,7 +593,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			return;
 		}
 		
-		Transform& tf = obj.mTransform;
+		Transform tf;
 		float x	= stof(command[1]);
 		float y = stof(command[2]);
 		float z = stof(command[3]);
@@ -593,6 +617,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			float sclZ = stof(command[9]);
 			tf.SetScale(sclX, sclY, sclZ);
 		}
+		pObject->SetTransform(tf);
 	}
 	else if (cmd == "ao")
 	{

@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -20,15 +20,10 @@
 
 #include "Application/Input.h"
 #include "Renderer/Renderer.h"
-#include "Engine/SceneManager.h"
 #include "Engine/Engine.h"
 
 #define ENABLE_POINT_LIGHTS
 #define xROTATE_SHADOW_LIGHT	// todo: fix frustum for shadow
-
-constexpr size_t	RAND_LIGHT_COUNT	= 0;
-
-constexpr float		DISCO_PERIOD		= 0.25f;
 
 enum class WALLS
 {
@@ -40,43 +35,95 @@ enum class WALLS
 	CEILING
 };
 
-ObjectsScene::ObjectsScene(SceneManager& sceneMan, std::vector<Light>& lights)
-	:
-	Scene(sceneMan, lights)
-{}
-
 #ifdef min
 #undef min
 #endif
 #ifdef max
 #undef max
 #endif
+
+#define TEST_EGEMEN 0
+
 void ObjectsScene::Load(SerializedScene& scene)
 {
-	m_room.Initialize(mpRenderer);
+	SetEnvironmentMap(EEnvironmentMapPresets::WALK_OF_FAME);
 
-	for (size_t i = 0; i < RAND_LIGHT_COUNT; i++)
+	//---------------------------------------------------------------
+	// FLOOR / WALL
+	//---------------------------------------------------------------
+	std::for_each(std::begin(m_room.walls), std::end(m_room.walls), [&](GameObject*& pObj) { pObj = CreateNewGameObject(); });
+	floorNormalMap = mpRenderer->CreateTextureFromFile("openart/185_norm.JPG");
 	{
-		unsigned rndIndex = rand() % LinearColor::Palette().size();
-		LinearColor rndColor = LinearColor::Palette()[rndIndex];
-		Light l;
-		float x = RandF(-20.0f, 20.0f);
-		float y = RandF(-15.0f, 15.0f);
-		float z = RandF(-10.0f, 20.0f);
-		l._transform.SetPosition(x, y, z);
-		l._transform.SetUniformScale(0.1f);
-		l._renderMesh = EGeometry::SPHERE;
-		l._color = rndColor;
-		l.SetLightRange(static_cast<float>(rand() % 50 + 10));
-		mLights.push_back(l);
+		const float floorWidth = 5 * 30.0f;
+		const float floorDepth = 5 * 30.0f;
+		const float wallHieght = 3.8*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
+		const float YOffset = wallHieght - 9.0f;
+		const float thickness = 3.7f;
+
+		// FLOOR
+		{
+			// Transform
+			Transform tf;
+			tf.SetPosition(0, -wallHieght + YOffset, 0);
+			tf.SetScale(floorWidth, thickness, floorDepth);
+			m_room.floor->SetTransform(tf);
+
+			// Mesh
+			m_room.floor->AddMesh(EGeometry::CUBE);
+
+			// Materials
+			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
+			pBRDF->roughness = 0.8f;
+			pBRDF->metalness = 0.0f;
+			pBRDF->diffuse = LinearColor::white;
+			pBRDF->alpha = 1.0f;
+			pBRDF->tiling = vec2(10, 10);
+			pBRDF->normalMap = floorNormalMap;
+			m_room.floor->AddMaterial(pBRDF->ID);
+			pFloorMaterial = static_cast<Material*>(&(*pBRDF));
+
+
+			//floor->AddMesh(EGeometry::SPHERE);
+			//floor->AddMaterial(pBRDF->ID);
+		}
+
+		const float ratio = floorWidth / wallHieght;
+		const vec2 wallTiling = vec2(ratio, 1.3f) * 1.7f;
+		const vec2 wallTilingInv = vec2(1.3f, ratio) * 1.7f;
+
+		// RIGHT WALL
+		{
+			// Transform
+			Transform tf;
+			tf.SetScale(floorDepth, thickness, wallHieght);
+			tf.SetPosition(floorWidth, YOffset, 0);
+			tf.SetXRotationDeg(90.0f);
+			tf.RotateAroundGlobalYAxisDegrees(-90);
+			//tf.RotateAroundGlobalXAxisDegrees(-180.0f);
+			m_room.wallR->SetTransform(tf);
+
+			// Mesh
+			m_room.wallR->AddMesh(EGeometry::CUBE);
+
+			// Materials
+			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
+			pBRDF->roughness = 0.8f;
+			pBRDF->metalness = 0.0f;
+			pBRDF->diffuse = LinearColor::white;
+			pBRDF->alpha = 1.0f;
+			pBRDF->tiling = wallTiling;
+			pBRDF->diffuseMap = mpRenderer->CreateTextureFromFile("openart/190.JPG");
+			pBRDF->normalMap = mpRenderer->CreateTextureFromFile("openart/190_norm.JPG");
+			m_room.wallR->AddMaterial(pBRDF->ID);
+		}
 	}
 
 	//Animation anim;
 	//anim._fTracks.push_back(Track<float>(&mLights[1]._brightness, 40.0f, 800.0f, 3.0f));
 	//m_animations.push_back(anim);
 
-
-	// objects
+	//---------------------------------------------------------------
+	// SPHERES
 	//---------------------------------------------------------------
 	const float sphHeight[2] = { 10.0f, 19.0f };
 	{	// sphere grid
@@ -88,34 +135,36 @@ void ObjectsScene::Load(SerializedScene& scene)
 
 		for (size_t i = 0; i < numSph; i++)
 		{
+			// TRANSFORM
+			//
 			const size_t row = i / gridDimension;
 			const size_t col = i % gridDimension;
-
 			const float sphereStep = static_cast<float>(i) / numSph;
 			const float rowStep = static_cast<float>(row) / ((numSph - 1) / gridDimension);
 			const float rowStepInv = 1.0f - rowStep;
 			const float colStep = static_cast<float>(col) / ((numSph - 1) / gridDimension);
-
-			// offset to center the grid
-			const float offsetDim = -static_cast<float>(gridDimension) * r / 2 + r / 2.0f;
+			const float offsetDim = -static_cast<float>(gridDimension) * r / 2 + r / 2.0f;	// offset to center the grid
 			const vec3 offset = vec3(col * r, -1.0f, row * r) + vec3(offsetDim, 0.75f, offsetDim);
-
 			const vec3 pos = origin + offset;
+			Transform transformObj(pos, Quaternion::Identity(), 2.5f);
 
-			GameObject sph;
-			sph.mTransform = pos;
-			sph.mTransform.SetUniformScale(2.5f);
-			sph.mModel.mMesh = EGeometry::SPHERE;
 
-			BRDF_Material&		 mat0 = sph.mModel.mBRDF_Material;
-			// col(-x->+x) -> metalness [0.0f, 1.0f]
-			//sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::red) * (rowStepInv * rowStepInv)));
-			//sph.mModel.SetDiffuseColor(LinearColor(vec3(LinearColor::white) * rowStep));
+			// MATERIALS
+			//
 			//const float gradientStep = rowStepInv * rowStepInv;
 			const float gradientStep = 1.0f;
-
 			auto sRGBtoLinear = [](const vec3& sRGB)
 			{
+				// some sRGB references
+				// ---------------------------------
+				// 128 146 217 - lila
+				// 44 107 171  - 'facebook' blue
+				// 129 197 216 - turuaz/yesil
+				// 41 113 133  - koyu yesil
+				// 177 206 149 - acik yesil
+				// 211 235 82  - lime
+				// 247 198 51  - turuncu/sari
+				// ---------------------------------
 				return vec3(
 					std::pow(sRGB.x(), 2.2f),
 					std::pow(sRGB.y(), 2.2f),
@@ -133,42 +182,48 @@ void ObjectsScene::Load(SerializedScene& scene)
 			const float b = std::pow(217.0f * gradientStep / 255.0f, 2.2f);
 #endif
 
-			// COLORS:
-			// ---------------------------------
-			// 128 146 217 - lila
-			// 44 107 171  - 'facebook' blue
-			// 129 197 216 - turuaz/yesil
-			// 41 113 133  - koyu yesil
-			// 177 206 149 - acik yesil
-			// 211 235 82  - lime
-			// 247 198 51  - turuncu/sari
-
 			
-			sph.mModel.SetDiffuseColor(LinearColor(r, g, b));
-			mat0.metalness = 1.0;
+			BRDF_Material* pMat0 = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
+			pMat0->diffuse = LinearColor(r, g, b);	
+			pMat0->metalness = 1.0;	// col(-x->+x) -> metalness [0.0f, 1.0f]
 
-			// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
 			const float roughnessLowClamp = 0.07f;
-			mat0.roughness = colStep * 1.2f < roughnessLowClamp ? roughnessLowClamp : colStep * 1.2f;
-			mat0.roughness = (1.0f + roughnessLowClamp) - mat0.roughness;
+			pMat0->roughness = colStep * 1.2f < roughnessLowClamp ? roughnessLowClamp : colStep * 1.2f;
+			pMat0->roughness = (1.0f + roughnessLowClamp) - pMat0->roughness;	// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
 
-			BlinnPhong_Material& mat1 = sph.mModel.mBlinnPhong_Material;
-			const float shininessMax = 150.f;
-			const float shininessBase = shininessMax + 7.0f;
-			mat1.shininess = shininessBase - rowStep * shininessMax;
 
-			mSpheres.push_back(sph);
+			//shared_ptr<BlinnPhong_Material> pMat1 = std::static_pointer_cast<BlinnPhong_Material>(mMaterials.CreateAndGetMaterial(BLINN_PHONG));
+			//const float shininessMax = 150.f;
+			//const float shininessBase = shininessMax + 7.0f;
+			//pMat1->shininess = shininessBase - rowStep * shininessMax;
+
+
+			// GAME OBJECT
+			//
+			GameObject* pSphereObject = Scene::CreateNewGameObject();
+			pSphereObject->SetTransform(transformObj);
+			pSphereObject->AddMesh(EGeometry::SPHERE);
+			pSphereObject->AddMaterial(pMat0->ID);
+			//pSphereObject->AddMaterial(pMat1->ID);
+			mSpheres.push_back(pSphereObject);
 		}
-	}
 
-	// objects from scene file
-	for (GameObject& obj : mObjects)
-	{
-		//if (obj.mModel.mMesh == EGeometry::SPHERE || obj.mModel.mMesh == EGeometry::CUBE)
-		;// obj.mRenderSettings.bRenderTBN = true;
-	}
+#if TEST_EGEMEN
+		mpBall = Scene::CreateNewGameObject();
+		mpBall->SetModel(Scene::LoadModel("zen_orb.obj"));
+		mpBall->SetTransform(Transform(vec3::Up * 25, Quaternion::Identity(), vec3(1)));
 
-	SetEnvironmentMap(EEnvironmentMapPresets::WALK_OF_FAME);
+		Material* pBRDF = Scene::CreateNewMaterial(GGX_BRDF);
+		pBRDF->diffuse  = LinearColor::gold;
+		static_cast<BRDF_Material*>(pBRDF)->metalness = 0.85f;
+		static_cast<BRDF_Material*>(pBRDF)->roughness = 0.09f;
+		mpBall->AddMaterial(pBRDF);
+
+		mpGlass = Scene::CreateNewGameObject();
+		mpGlass->SetModel(Scene::LoadModel("sise2.obj"));
+		mpGlass->SetTransform(Transform(vec3::Up * 15 + vec3::Forward * 50, Quaternion::Identity(), vec3(1)));
+#endif
+	}
 }
 
 void ObjectsScene::Unload()
@@ -181,47 +236,12 @@ void ObjectsScene::Update(float dt)
 {
 	for (auto& anim : mAnimations) anim.Update(dt);
 	UpdateCentralObj(dt);
-}
 
-void ExampleRender(Renderer* pRenderer, const XMMATRIX& viewProj);
-
-int ObjectsScene::Render(const SceneView& sceneView, bool bSendMaterialData) const
-{
-	m_room.Render(mpRenderer, sceneView, bSendMaterialData);
-	int numObj = 6;
-
-	for (const auto& sph : mSpheres)
-	{
-		sph.Render(mpRenderer, sceneView, bSendMaterialData);
-		++numObj;
-	}
-	return numObj;
+	if (ENGINE->INP()->IsKeyTriggered("N")) ToggleFloorNormalMap();
 }
 
 void ObjectsScene::RenderUI() const{}
 
-
-void ObjectsScene::GetShadowCasters(std::vector<const GameObject*>& casters) const
-{
-	Scene::GetShadowCasters(casters);
-	casters.push_back(&m_room.floor);
-	casters.push_back(&m_room.wallL);
-	casters.push_back(&m_room.wallR);
-	casters.push_back(&m_room.wallF);
-	casters.push_back(&m_room.ceiling);
-	for (const GameObject& obj : mSpheres)	casters.push_back(&obj);
-}
-
-void ObjectsScene::GetSceneObjects(std::vector<const GameObject*>& objs) const
-{
-	Scene::GetSceneObjects(objs);
-	objs.push_back(&m_room.floor);
-	objs.push_back(&m_room.wallL);
-	objs.push_back(&m_room.wallR);
-	objs.push_back(&m_room.wallF);
-	objs.push_back(&m_room.ceiling);
-	for (const GameObject& obj : mSpheres)	objs.push_back(&obj);
-}
 
 void ObjectsScene::UpdateCentralObj(const float dt)
 {
@@ -239,155 +259,14 @@ void ObjectsScene::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
 	mLights[0]._transform.Translate(dt * tr * moveSpeed);
 
-#if 0
-	float angle = (dt * XM_PI * 0.08f) + (sinf(t) * sinf(dt * XM_PI * 0.03f));
-	size_t sphIndx = 0;
-	for (auto& sph : spheres)
-	{
-		if (sphIndx < 15)	// don't rotate grid spheres
-		{
-			const vec3 rotAxis = vec3::Up;
-			const vec3 rotPoint = vec3::Zero;
-			sph.mTransform.RotateAroundPointAndAxis(rotAxis, angle, rotPoint);
-		}
-		++sphIndx;
-	}
-#endif
 
-	// assume first object is the cube
-	const float cubeRotSpeed = 100.0f; // degs/s
-	mObjects.front().mTransform.RotateAroundGlobalYAxisDegrees(-cubeRotSpeed / 10 * dt);
-
-#ifdef ROTATE_SHADOW_LIGHT
-	mLights[0]._transform.RotateAroundGlobalYAxisDegrees(dt * cubeRotSpeed);
+#if TEST_EGEMEN
+	mpBall->RotateAroundGlobalYAxisDegrees(dt * 15.0f);
 #endif
 }
 
 void ObjectsScene::ToggleFloorNormalMap()
 {
-	TextureID nMap = m_room.floor.mModel.mBRDF_Material.normalMap;
-
-	nMap = nMap == mpRenderer->GetTexture("openart/185_norm.JPG") ? -1 : mpRenderer->CreateTextureFromFile("openart/185_norm.JPG");
-	m_room.floor.mModel.mBRDF_Material.normalMap = nMap;
-}
-
-void ObjectsScene::Room::Render(Renderer* pRenderer, const SceneView& sceneView, bool sendMaterialData) const
-{
-	floor.Render(pRenderer, sceneView, sendMaterialData);
-	//wallL.Render(pRenderer, sceneView, sendMaterialData);
-	wallR.Render(pRenderer, sceneView, sendMaterialData);
-	//wallF.Render(pRenderer, sceneView, sendMaterialData);
-	//ceiling.Render(pRenderer, sceneView, sendMaterialData);
-}
-
-void ObjectsScene::Room::Initialize(Renderer* pRenderer)
-{
-	const float floorWidth = 5 * 30.0f;
-	const float floorDepth = 5 * 30.0f;
-	const float wallHieght = 3.8*15.0f;	// amount from middle to top and bottom: because gpu cube is 2 units in length
-	const float YOffset = wallHieght - 9.0f;
-
-#if 0
-	constexpr size_t WallCount = 5;
-	std::array<Material&, WallCount> mats = 
-	{
-		floor.m_model.m_material,
-		wallL.m_model.m_material,
-		wallR.m_model.m_material,
-		wallF.m_model.m_material,
-		ceiling.m_model.m_material
-	};
-
-	std::array<Transform&, WallCount> tfs =
-	{
-
-		  floor.m_transform,
-		  wallL.m_transform,
-		  wallR.m_transform,
-		  wallF.m_transform,
-		ceiling.m_transform
-	};
-#endif
-
-	const float thickness = 3.7f;
-	// FLOOR
-	{
-		Transform& tf = floor.mTransform;
-		tf.SetScale(floorWidth, thickness, floorDepth);
-		tf.SetPosition(0, -wallHieght + YOffset, 0);
-
-		floor.mModel.mBlinnPhong_Material.shininess = 40.0f;
-		floor.mModel.mBRDF_Material.roughness = 0.8f;
-		floor.mModel.mBRDF_Material.metalness = 0.0f;
-		//floor.mModel.SetDiffuseAlpha(LinearColor::gray, 1.0f);
-		floor.mModel.SetDiffuseAlpha(LinearColor::white, 1.0f);
-		//floor.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/161_norm.JPG"));
-		floor.mModel.SetTextureTiling(vec2(10, 10));
-		//mat = Material::bronze;
-		//floor.m_model.SetDiffuseMap(pRenderer->CreateTextureFromFile("185.JPG"));
-		//floor.m_model.SetNormalMap(pRenderer->CreateTextureFromFile("185_norm.JPG"));
-		//floor.m_model.SetNormalMap(pRenderer->CreateTextureFromFile("BumpMapTexturePreview.JPG"));
-	}
-#if 1
-	// CEILING
-	{
-		Transform& tf = ceiling.mTransform;
-		tf.SetScale(floorWidth, thickness, floorDepth);
-		tf.SetPosition(0, wallHieght + YOffset, 0);
-		//ceiling.mModel.SetDiffuseAlpha(LinearColor::bp_bronze, 1.0f);
-
-		ceiling.mModel.mBlinnPhong_Material.shininess = 20.0f;
-	}
-
-	const float ratio = floorWidth / wallHieght;
-	const vec2 wallTiling    = vec2(ratio, 1.3f) * 1.7f;
-	const vec2 wallTilingInv = vec2(1.3f, ratio) * 1.7f;
-	// RIGHT WALL
-	{
-		Transform& tf = wallR.mTransform;
-		tf.SetScale(floorDepth, thickness, wallHieght);
-		tf.SetPosition(floorWidth, YOffset, 0);
-		tf.SetXRotationDeg(90.0f);
-		tf.RotateAroundGlobalYAxisDegrees(-90);
-		//tf.RotateAroundGlobalXAxisDegrees(-180.0f);
-
-		wallR.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
-		wallR.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
-		wallR.mModel.SetTextureTiling(wallTiling);
-	}
-
-	// LEFT WALL
-	{
-		Transform& tf = wallL.mTransform;
-		tf.SetScale(floorDepth, thickness, wallHieght);
-		tf.SetPosition(-floorWidth, YOffset, 0);
-		tf.SetXRotationDeg(-90.0f);
-		tf.RotateAroundGlobalYAxisDegrees(-90.0f);
-		//tf.SetRotationDeg(90.0f, 0.0f, -90.0f);
-
-		wallL.mModel.mBlinnPhong_Material.shininess = 60.0f;
-		wallL.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
-		wallL.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
-		wallL.mModel.SetTextureTiling(wallTilingInv);
-	}
-	// WALL
-	{
-		Transform& tf = wallF.mTransform;
-		tf.SetScale(floorWidth, thickness, wallHieght);
-		tf.SetPosition(0, YOffset, floorDepth);
-		tf.SetXRotationDeg(-90.0f);
-
-		wallF.mModel.mBlinnPhong_Material.shininess = 90.0f;
-		wallF.mModel.SetDiffuseMap(pRenderer->CreateTextureFromFile("openart/190.JPG"));
-		wallF.mModel.SetNormalMap(pRenderer->CreateTextureFromFile("openart/190_norm.JPG"));
-		wallL.mModel.SetTextureTiling(vec2(1, 3));
-	}
-
-	wallL.mModel.mMesh = EGeometry::CUBE;
-	wallR.mModel.mMesh = EGeometry::CUBE;
-	wallF.mModel.mMesh = EGeometry::CUBE;
-	ceiling.mModel.mMesh = EGeometry::CUBE;
-#endif
-	floor.mModel.mMesh = EGeometry::CUBE;
+	pFloorMaterial->normalMap = pFloorMaterial->normalMap == -1 ? floorNormalMap : -1;
 }
 

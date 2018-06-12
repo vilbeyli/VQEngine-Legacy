@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -19,13 +19,12 @@
 #define LOG_SEARCH 0
 
 #include "Renderer.h"
-#include "Mesh.h"
-#include "GeometryGenerator.h"
 #include "D3DManager.h"
 #include "BufferObject.h"
 #include "Shader.h"
-#include "Light.h"
 
+#include "Engine/Mesh.h"
+#include "Engine/Light.h"
 #include "Engine/Settings.h"
 
 #include "Application/SystemDefs.h"
@@ -179,7 +178,7 @@ Renderer::Renderer()
 	mRasterizerStates  (std::vector<RasterizerState*>  (EDefaultRasterizerState::RASTERIZER_STATE_COUNT)),
 	mDepthStencilStates(std::vector<DepthStencilState*>(EDefaultDepthStencilState::DEPTH_STENCIL_STATE_COUNT)),
 	mBlendStates       (std::vector<BlendState>(EDefaultBlendState::BLEND_STATE_COUNT)),
-	mSamplers			(std::vector<Sampler>(EDefaultSamplerState::DEFAULT_SAMPLER_COUNT))
+	mSamplers		   (std::vector<Sampler>(EDefaultSamplerState::DEFAULT_SAMPLER_COUNT))
 	//,	m_ShaderHotswapPollWatcher("ShaderHotswapWatcher")
 {
 	for (int i=0; i<(int)EDefaultRasterizerState::RASTERIZER_STATE_COUNT; ++i)
@@ -226,7 +225,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	}
 	m_device = m_Direct3D->m_device;
 	m_deviceContext = m_Direct3D->m_deviceContext;
-	Mesh::spDevice = m_device;
+	Mesh::spRenderer = this;
 
 	// DEFAULT RENDER TARGET
 	//--------------------------------------------------------------------
@@ -452,39 +451,6 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_TEST_ONLY]);
 	if (!checkFailed(hr)) return false;
 
-	// PRIMITIVES
-	//--------------------------------------------------------------------
-	{
-		// cylinder parameters
-		const float	 cylHeight = 3.1415f;
-		const float	 cylTopRadius = 1.0f;
-		const float	 cylBottomRadius = 1.0f;
-		const unsigned cylSliceCount = 120;
-		const unsigned cylStackCount = 100;
-
-		// grid parameters
-		const float gridWidth = 1.0f;
-		const float gridDepth = 1.0f;
-		const unsigned gridFinenessH = 100;
-		const unsigned gridFinenessV = 100;
-
-		// sphere parameters
-		const float sphRadius = 2.0f;
-		const unsigned sphRingCount = 25;
-		const unsigned sphSliceCount = 25;
-
-		mBuiltinMeshes =	// this should match enum declaration order
-		{
-			GeometryGenerator::Triangle(1.0f),
-			GeometryGenerator::Quad(1.0f),
-			GeometryGenerator::Cube(),
-			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
-			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
-			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
-			GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
-		};
-	}
-
 	// SHADERS
 	//--------------------------------------------------------------------
 	Shader::LoadShaders(this);
@@ -497,11 +463,14 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 void Renderer::Exit()
 {
 	//m_Direct3D->ReportLiveObjects("BEGIN EXIT");
-	std::for_each(mBuiltinMeshes.begin(), mBuiltinMeshes.end(), [](Mesh& mesh) {mesh.CleanUp(); });
-	mBuiltinMeshes.clear();
 
-	std::for_each(mBuffers.begin(), mBuffers.end(), [](Buffer& b){b.CleanUp();} );
-	mBuffers.clear();
+	std::vector<Buffer>* buffers[2] = { &mVertexBuffers, &mIndexBuffers };
+	for (int i = 0; i < 2; ++i)
+	{
+		auto refBuffer = *buffers[i];
+		std::for_each(refBuffer.begin(), refBuffer.end(), [](Buffer& b) {b.CleanUp(); });
+		refBuffer.clear();
+	}
 
 	CPUConstant::CleanUp();	// todo: move constant buffer logic into Buffer
 	
@@ -671,6 +640,11 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 	{
 		return (*found)._id;
 	}
+
+	const std::string path = fileRoot + texFileName;
+#if _DEBUG
+	Log::Info("Loading Texture\t\t%s", path.c_str());
+#endif
 	{	// push texture right away and hold a reference
 		Texture tex;
 		mTextures.push_back(tex);
@@ -678,7 +652,6 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 	Texture& tex = mTextures.back();
 
 	tex._name = texFileName;
-	std::string path = fileRoot + texFileName;
 	std::wstring wpath(path.begin(), path.end());
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
@@ -955,13 +928,27 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	return cubemapOut._id;
 }
 
+#ifdef max
+#undef max
+#endif
 BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData /*=nullptr*/)
 {
 	Buffer buffer(bufferDesc);
 	buffer.Initialize(m_device, pData);
-
-	mBuffers.push_back(buffer);
-	return static_cast<int>(mBuffers.size() - 1);
+	return static_cast<int>([&]() {
+		switch (bufferDesc.mType)
+		{
+		case VERTEX_BUFER:
+			mVertexBuffers.push_back(buffer);
+			return mVertexBuffers.size() - 1;
+		case INDEX_BUFFER:
+			mIndexBuffers.push_back(buffer);
+			return mIndexBuffers.size() - 1;
+		default:
+			Log::Warning("Unknown Buffer Type");
+			return std::numeric_limits<size_t>::max();
+		}
+	}());
 }
 
 SamplerID Renderer::CreateSamplerState(D3D11_SAMPLER_DESC & samplerDesc)
@@ -1220,21 +1207,21 @@ void Renderer::SetVertexBuffer(BufferID bufferID)
 	UINT offset = 0;
 
 	// temporary
-	Buffer& b = mBuffers[bufferID];
-	m_deviceContext->IASetVertexBuffers(0, 1, &(b.mData), &b.mDesc.mStride, &offset);
+	Buffer& b = mVertexBuffers[bufferID];
+	m_deviceContext->IASetVertexBuffers(0, 1, &(b.mpGPUData), &b.mDesc.mStride, &offset);
 }
 
 void Renderer::SetIndexBuffer(BufferID bufferID)
 {
 	mPipelineState.indexBuffer = bufferID;
 
-	m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
+	
+	m_deviceContext->IASetIndexBuffer(mIndexBuffers[mPipelineState.indexBuffer].mpGPUData, DXGI_FORMAT_R32_UINT, 0);
 }
 
 void Renderer::ResetPipelineState()
 {
 	mPipelineState.shader = -1;
-	mPipelineState._activeInputBuffer = -1;
 }
 
 
@@ -1252,13 +1239,6 @@ void Renderer::SetViewport(const D3D11_VIEWPORT & viewport)
 {
 	mPipelineState.viewPort = viewport;
 }
-
-void Renderer::SetBufferObj(int BufferID)
-{
-	assert(BufferID >= 0);
-	mPipelineState._activeInputBuffer = BufferID;
-}
-
 
 void Renderer::SetConstant4x4f(const char* cName, const XMMATRIX& matrix)
 {
@@ -1556,6 +1536,8 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 	Draw(1, EPrimitiveTopology::POINT_LIST);
 }
 
+// todo: try to remove this dependency
+#include "Engine/Engine.h"	
 // assumes (0, 0) is Bottom Left corner of the screen.
 void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 {														// warning:
@@ -1570,11 +1552,14 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 	const XMVECTOR scale = vec3(dimx / screenWidth, dimy / screenHeight, 0.0f);
 	const XMVECTOR translation = vec3(posCenter.x(), posCenter.y(), 0);
 	const XMMATRIX transformation = XMMatrixAffineTransformation(scale, vec3::Zero, XMQuaternionIdentity(), translation);
+	
+	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
 
 	SetConstant4x4f("screenSpaceTransformation", transformation);
 	SetConstant1f("isDepthTexture", cmd.bIsDepthTexture ? 1.0f : 0.0f);
 	SetTexture("inputTexture", cmd.texture);
-	SetBufferObj(EGeometry::QUAD);
+	SetVertexBuffer(IABuffers.first);
+	SetIndexBuffer(IABuffers.second);
 	Apply();
 	DrawIndexed();
 }
@@ -1624,8 +1609,8 @@ void Renderer::EndFrame()
 
 void Renderer::UpdateBuffer(BufferID buffer, const void * pData)
 {
-	assert(buffer >= 0 && buffer < mBuffers.size());
-	mBuffers[buffer].Update(this, pData);
+	assert(buffer >= 0 && buffer < mVertexBuffers.size());
+	mVertexBuffers[buffer].Update(this, pData);
 }
 
 void Renderer::Apply()
@@ -1634,13 +1619,24 @@ void Renderer::Apply()
 
 	// INPUT ASSEMBLY
 	// ----------------------------------------
-	unsigned stride = sizeof(DefaultVertexBufferData);	// layout?
+	const Buffer& VertexBuffer = mVertexBuffers[mPipelineState.vertexBuffer];
+	const Buffer& IndexBuffer = mIndexBuffers[mPipelineState.indexBuffer];
+
+	unsigned stride = VertexBuffer.mDesc.mStride;
 	unsigned offset = 0;
 
-
-	if (mPipelineState._activeInputBuffer != -1) m_deviceContext->IASetVertexBuffers(0, 1, &(mBuiltinMeshes[mPipelineState._activeInputBuffer].mVertexBuffer.mData), &stride, &offset);
-	if (mPipelineState._activeInputBuffer != -1) m_deviceContext->IASetIndexBuffer(mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mData, DXGI_FORMAT_R32_UINT, 0);
-	if (shader)									 m_deviceContext->IASetInputLayout(shader->m_layout);
+	if (mPipelineState.vertexBuffer != -1)
+	{
+		m_deviceContext->IASetVertexBuffers(0, 1, &(VertexBuffer.mpGPUData), &stride, &offset);
+	}
+	if (mPipelineState.indexBuffer != -1)
+	{
+		m_deviceContext->IASetIndexBuffer(IndexBuffer.mpGPUData, DXGI_FORMAT_R32_UINT, 0);
+	}
+	if (shader)
+	{
+		m_deviceContext->IASetInputLayout(shader->m_layout);
+	}
 
 	if (shader)
 	{	// SHADER STAGES
@@ -1743,8 +1739,11 @@ void Renderer::EndEvent()
 
 void Renderer::DrawIndexed(EPrimitiveTopology topology)
 {
-	const unsigned numIndices = mBuiltinMeshes[mPipelineState._activeInputBuffer].mIndexBuffer.mDesc.mElementCount;
-	const unsigned numVertices = mBuiltinMeshes[mPipelineState._activeInputBuffer].mVertexBuffer.mDesc.mElementCount;
+	const Buffer& VertexBuffer = mVertexBuffers[mPipelineState.vertexBuffer];
+	const Buffer& IndexBuffer = mIndexBuffers[mPipelineState.indexBuffer];
+
+	const unsigned numIndices = IndexBuffer.mDesc.mElementCount;
+	const unsigned numVertices = VertexBuffer.mDesc.mElementCount;
 
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
 	m_deviceContext->DrawIndexed(numIndices, 0, 0);

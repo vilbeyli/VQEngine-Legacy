@@ -1,6 +1,6 @@
 # VQEngine - A DirectX11 & C++11 Real-Time Renderer
 
-![https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)
+![https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true](https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true)
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
@@ -106,3 +106,4 @@ Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will co
  - [nothings/stb](https://github.com/nothings/stb)
  - [freetype-windows-binaries](https://github.com/ubawurinna/freetype-windows-binaries)
  - [DirectXTex](https://github.com/Microsoft/DirectXTex)
+ - [assimp](https://github.com/assimp/assimp)

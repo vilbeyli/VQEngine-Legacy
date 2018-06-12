@@ -17,22 +17,26 @@
 
 
 #include "Engine.h"
+
 #include "Application/Input.h"
+#include "Application/WorkerPool.h"
+
 #include "Utilities/Log.h"
 #include "Utilities/PerfTimer.h"
 #include "Utilities/CustomParser.h"
-#include "SceneManager.h"
-#include "Application/WorkerPool.h"
-#include "Engine/Settings.h"
-
 #include "Utilities/Profiler.h"
+#include "Utilities/Camera.h"
 
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
-#include "Utilities/Camera.h"
+#include "Renderer/GeometryGenerator.h"
+
+#include "Scenes/ObjectsScene.h"
+#include "Scenes/SSAOTestScene.h"
+#include "Scenes/IBLTestScene.h"
+#include "Scenes/StressTestScene.h"
 
 #include <sstream>
-
 #include <DirectXMath.h>
 
 Settings::Engine Engine::sEngineSettings;
@@ -43,7 +47,6 @@ Engine::Engine()
 	, mpTextRenderer(new TextRenderer())
 	, mpInput(new Input())
 	, mpTimer(new PerfTimer()) 
-	, mpSceneManager(new SceneManager(mLights))
 	, mpCPUProfiler(new CPUProfiler())
 	, mpGPUProfiler(new GPUProfiler())
 	, mbUsePaniniProjection(false)
@@ -54,6 +57,100 @@ Engine::Engine()
 
 Engine::~Engine(){}
 
+
+bool Engine::Initialize(HWND hwnd)
+{
+	// #SceneRefactoring
+	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
+	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
+	mpObjectsScene = new ObjectsScene();
+	mpSSAOTestScene = new SSAOTestScene();
+	mpIBLTestScene = new IBLTestScene();
+	mpStressTestScene = new StressTestScene();
+
+	mpTimer->Start();
+	if (!mpRenderer || !mpInput || !mpTimer)
+	{
+		Log::Error("Nullptr Engine::Init()\n");
+		return false;
+	}
+
+	// INITIALIZE SYSTEMS
+	//--------------------------------------------------------------
+	const bool bEnableLogging = true;	// todo: read from settings
+	constexpr size_t workerCount = 1;
+	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
+	const Settings::Window& windowSettings = sEngineSettings.window;
+
+	mWorkerPool.Initialize(workerCount);
+	mpInput->Initialize();
+	if (!mpRenderer->Initialize(hwnd, windowSettings))
+	{
+		Log::Error("Cannot initialize Renderer.\n");
+		return false;
+	}
+	if (!mpTextRenderer->Initialize(mpRenderer))
+	{
+		Log::Error("Cannot initialize Text Renderer.\n");
+		return false;
+	}
+	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
+
+	// PRIMITIVES
+	//--------------------------------------------------------------------
+	{
+		// cylinder parameters
+		const float	 cylHeight = 3.1415f;
+		const float	 cylTopRadius = 1.0f;
+		const float	 cylBottomRadius = 1.0f;
+		const unsigned cylSliceCount = 120;
+		const unsigned cylStackCount = 100;
+
+		// grid parameters
+		const float gridWidth = 1.0f;
+		const float gridDepth = 1.0f;
+		const unsigned gridFinenessH = 100;
+		const unsigned gridFinenessV = 100;
+
+		// sphere parameters
+		const float sphRadius = 2.0f;
+		const unsigned sphRingCount = 25;
+		const unsigned sphSliceCount = 25;
+
+		mBuiltinMeshes =	// this should match enum declaration order
+		{
+			GeometryGenerator::Triangle(1.0f),
+			GeometryGenerator::Quad(1.0f),
+			GeometryGenerator::Cube(),
+			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
+			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
+			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
+			GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
+		};
+	}
+
+	// INITIALIZE RENDERING
+	//--------------------------------------------------------------
+	// render passes
+	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
+	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
+	mDisplayRenderTargets = true;
+	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
+	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
+
+	// #SceneRefactoring
+	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
+	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
+	mpObjectsScene->Initialize(mpRenderer, mpTextRenderer);
+	mpSSAOTestScene->Initialize(mpRenderer, mpTextRenderer);
+	mpIBLTestScene->Initialize(mpRenderer, mpTextRenderer);
+	mpStressTestScene->Initialize(mpRenderer, mpTextRenderer);
+
+	mpTimer->Stop();
+	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
+	return true;
+}
+
 void Engine::Exit()
 {
 	mpGPUProfiler->Exit();
@@ -61,6 +158,8 @@ void Engine::Exit()
 	mpRenderer->Exit();
 
 	mWorkerPool.Terminate();
+
+	mBuiltinMeshes.clear();
 
 	Log::Exit();
 	if (sInstance)
@@ -78,16 +177,6 @@ Engine * Engine::GetEngine()
 	}
 
 	return sInstance;
-}
-
-void Engine::ToggleLightingModel()
-{
-	// enable toggling only on forward rendering for now
-	const bool isBRDF = sEngineSettings.rendering.bUseBRDFLighting = !sEngineSettings.rendering.bUseBRDFLighting;
-	mSelectedShader = mbUseDeferredRendering 
-		? mDeferredRenderingPasses._geometryShader
-		: (isBRDF ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG);
-	Log::Info("Toggle Lighting Model: %s Lighting", isBRDF ? "PBR - BRDF" : "Blinn-Phong");
 }
 
 void Engine::ToggleRenderingPath()
@@ -130,70 +219,36 @@ void Engine::Unpause()
 	mbIsPaused = false;
 }
 
+float Engine::GetTotalTime() const { return mpTimer->TotalTime(); }
+
 const Settings::Engine& Engine::ReadSettingsFromFile()
 {
 	sEngineSettings = Parser::ReadSettings("EngineSettings.ini");
 	return sEngineSettings;
 }
 
-
-
-
-
-bool Engine::Initialize(HWND hwnd)
+// #SceneRefactoring
+// TODO: every new scene should be cast like this following an enum is really not a creative solution.
+//		this bad design needs to be refactored and automated in a way either through macros or type deduction
+static const char* sceneNames[] =
 {
-	mpTimer->Start();
-	if (!mpRenderer || !mpInput || !mpSceneManager || !mpTimer)
-	{
-		Log::Error("Nullptr Engine::Init()\n");
-		return false;
-	}
+	"Objects.scn",
+	"SSAOTest.scn",
+	"IBLTest.scn",
+	"StressTestScene.scn"
+};
 
-	// INITIALIZE SYSTEMS
-	//--------------------------------------------------------------
-	const bool bEnableLogging = true;	// todo: read from settings
-	constexpr size_t workerCount = 1;
-	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
-	const Settings::Window& windowSettings = sEngineSettings.window;
-
-	mWorkerPool.Initialize(workerCount);
-	mpInput->Initialize();
-	if (!mpRenderer->Initialize(hwnd, windowSettings))
-	{
-		Log::Error("Cannot initialize Renderer.\n");
-		return false;
-	}
-	if (!mpTextRenderer->Initialize(mpRenderer))
-	{
-		Log::Error("Cannot initialize Text Renderer.\n");
-		return false;
-	}
-	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
-
-	// INITIALIZE RENDERING
-	//--------------------------------------------------------------
-	// render passes
-	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
-	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
-	mDisplayRenderTargets = true;
-	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
-	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
-
-
-	mpTimer->Stop();
-	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
-	return true;
-}
-
-void Engine::RenderLoadingScreen()
+void Engine::RenderLoadingScreen() const
 {
 	const TextureID texLoadingScreen = mpRenderer->CreateTextureFromFile("LoadingScreen0.png");
 	const XMMATRIX matTransformation = XMMatrixIdentity();
+	const auto IABuffers = mBuiltinMeshes[EGeometry::QUAD].GetIABuffers();
 
 	mpRenderer->BeginFrame();
 	mpRenderer->BindRenderTarget(0);
 	mpRenderer->SetShader(EShaders::UNLIT);
-	mpRenderer->SetBufferObj(EGeometry::QUAD);
+	mpRenderer->SetVertexBuffer(IABuffers.first);
+	mpRenderer->SetIndexBuffer(IABuffers.second);
 	mpRenderer->SetTexture("texDiffuseMap", texLoadingScreen);
 	mpRenderer->SetConstant1f("isDiffuseMap", 1.0f);
 	mpRenderer->SetConstant3f("diffuse", vec3(1.0f, 1, 1));
@@ -208,6 +263,45 @@ void Engine::RenderLoadingScreen()
 	mpRenderer->UnbindRenderTargets();
 }
 
+bool Engine::ReloadScene()
+{
+	const auto& settings = Engine::GetSettings();
+	Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
+
+	mpActiveScene->UnloadScene();
+	mZPassObjects.clear();
+
+	return LoadSceneFromFile();
+}
+
+bool Engine::LoadSceneFromFile()
+{
+	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sceneNames[sEngineSettings.levelToLoad]);
+	if (mSerializedScene.loadSuccess == '0') return false;
+
+	// #SceneRefactoring
+	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
+	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
+	mCurrentLevel = sEngineSettings.levelToLoad;
+	switch (sEngineSettings.levelToLoad)
+	{
+	case 0:	mpActiveScene = mpObjectsScene; break;
+	case 1:	mpActiveScene = mpSSAOTestScene; break;
+	case 2:	mpActiveScene = mpIBLTestScene; break;
+	case 3:	mpActiveScene = mpStressTestScene; break;
+	default:	break;
+	}
+	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
+	return true;
+}
+
+bool Engine::LoadScene(int level)
+{
+	mpActiveScene->UnloadScene();
+	mZPassObjects.clear();
+	Engine::sEngineSettings.levelToLoad = level;
+	return LoadSceneFromFile();
+}
 
 bool Engine::Load()
 {
@@ -222,13 +316,16 @@ bool Engine::Load()
 	mpTimer->Stop();
 	Log::Info("--------------------- ENVIRONMENT MAPS LOADED IN %.2fs.", mpTimer->DeltaTime());
 
-
-	const bool bLoadSuccess = mpSceneManager->Load(mpRenderer, nullptr, sEngineSettings, mZPassObjects);
-	if (!bLoadSuccess)
+	// --- SCENE MANAGER
+	constexpr size_t numScenes = sizeof(sceneNames) / sizeof(sceneNames[0]);
+	assert(sEngineSettings.levelToLoad < numScenes);
+	if (!LoadSceneFromFile())
 	{
 		Log::Error("Engine couldn't load scene.");
 		return false;
 	}
+
+	// --- SCENE MANAGER
 
 	mpTimer->Reset();
 	mpTimer->Start();
@@ -267,11 +364,10 @@ bool Engine::HandleInput()
 {
 	if (mpInput->IsKeyTriggered("Backspace"))	TogglePause();
 
-	if (mpInput->IsKeyTriggered("F1")) ToggleLightingModel();
+	if (mpInput->IsKeyTriggered("F1")) ToggleRenderingPath();
 	if (mpInput->IsKeyTriggered("F2")) ToggleAmbientOcclusion();
 	if (mpInput->IsKeyTriggered("F3")) mPostProcessPass._bloomPass.ToggleBloomPass();
 	if (mpInput->IsKeyTriggered("F4")) mDisplayRenderTargets = !mDisplayRenderTargets;
-	if (mpInput->IsKeyTriggered("F5")) ToggleRenderingPath();
 
 
 	if (mpInput->IsKeyTriggered(";"))
@@ -304,6 +400,31 @@ bool Engine::HandleInput()
 			if (mpInput->IsScrollDown()) { mSSAOPass.radius -= step; if (mSSAOPass.radius < 0.301) mSSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
 		}
 	}
+
+	// SCENE -------------------------------------------------------------
+	if (mpInput->IsKeyTriggered("R"))
+	{
+		if (mpInput->IsKeyDown("Shift")) ReloadScene();
+		else							 mpActiveScene->ResetActiveCamera();
+	}
+
+	if (mpInput->IsKeyTriggered("1"))	LoadScene(0);
+	if (mpInput->IsKeyTriggered("2"))	LoadScene(1);
+	if (mpInput->IsKeyTriggered("3"))	LoadScene(2);
+	if (mpInput->IsKeyTriggered("4"))	LoadScene(3);
+
+
+	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
+	const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
+	const EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
+		static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
+		);
+
+	EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
+	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
+	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
+	if (ENGINE->INP()->IsKeyTriggered("PageUp") || ENGINE->INP()->IsKeyTriggered("PageDown"))
+		mpActiveScene->SetEnvironmentMap(selectedEnvironmentMap);
 
 	return true;
 }
@@ -354,13 +475,12 @@ bool Engine::UpdateAndRender()
 		CalcFrameStats(dt);
 
 		mpCPUProfiler->BeginEntry("Update()");
-		mpSceneManager->Update(dt);
+		mpActiveScene->UpdateScene(dt);
 		mpCPUProfiler->EndEntry();
 
 		PreRender();
 		Render();
 	}
-
 
 	mpCPUProfiler->EndEntry();
 
@@ -368,24 +488,13 @@ bool Engine::UpdateAndRender()
 	return bExitApp;
 }
 
-// can't use std::array<T&, 2>, hence std::array<T*, 2> 
-// array of 2: light data for non-shadowing and shadowing lights
-constexpr size_t NON_SHADOWING_LIGHT_INDEX	= 0;
-constexpr size_t SHADOWING_LIGHT_INDEX		= 1;
-using pPointLightDataArray		 = std::array<PointLightDataArray*, 2>;
-using pSpotLightDataArray		 = std::array<SpotLightDataArray*, 2>;
-using pDirectionalLightDataArray = std::array<DirectionalLightDataArray*, 2>;
-
-// stores the number of lights per light type
-using pNumArray = std::array<int*, Light::ELightType::LIGHT_TYPE_COUNT>;
 
 void Engine::PreRender()
 {
 	mpCPUProfiler->BeginEntry("PreRender()");
 	
 	// set scene view
-	const Camera& viewCamera = mpSceneManager->GetMainCamera();
-	const Scene* scene = mpSceneManager->mpActiveScene;
+	const Camera& viewCamera = mpActiveScene->GetActiveCamera();
 	const XMMATRIX view = viewCamera.GetViewMatrix();
 	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
 	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
@@ -400,95 +509,29 @@ void Engine::PreRender()
 
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
 
-	mSceneView.sceneRenderSettings = scene->GetSceneRenderSettings();
+	mSceneView.sceneRenderSettings = mpActiveScene->GetSceneRenderSettings();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
-	mSceneView.bIsIBLEnabled = scene->mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
+	mSceneView.bIsIBLEnabled = mpActiveScene->mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
 
-	mSceneView.environmentMap = scene->GetEnvironmentMap();
+	mSceneView.environmentMap = mpActiveScene->GetEnvironmentMap();
 
 	// gather scene lights
-	mSceneLightData.ResetCounts();
-	mShadowView.spots.clear();
-	mShadowView.directionals.clear();
-	mShadowView.points.clear();
-	pNumArray lightCounts
-	{ 
-		&mSceneLightData._cb.pointLightCount,
-		&mSceneLightData._cb.spotLightCount,
-		&mSceneLightData._cb.directionalLightCount
-	};
-	pNumArray casterCounts
-	{ 
-		&mSceneLightData._cb.pointLightCount_shadow,
-		&mSceneLightData._cb.spotLightCount_shadow,
-		&mSceneLightData._cb.directionalLightCount_shadow
-	};
+	mpActiveScene->GatherLightData(mSceneLightData, mShadowView);
+	
 
-	for (const Light& l : mLights)
-	{
-		//if (!l._bEnabled) continue;	// #BreaksRelease
+	// TODO: #RenderPass or Scene should manage this.
+	// mTBNDrawObjects.clear();
+	// std::vector<const GameObject*> objects;
+	// mpActiveScene->GetSceneObjects(objects);
+	// for (const GameObject* obj : objects)
+	// {
+	// 	if (obj->mRenderSettings.bRenderTBN)
+	// 		mTBNDrawObjects.push_back(obj);
+	// }
 
-		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
-		const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
-
-		// add to the count of the current light type & whether its shadow casting or not
-		pNumArray& refLightCounts = l._castsShadow ? casterCounts : lightCounts;
-		const size_t lightIndex = (*refLightCounts[l._type])++;
-
-		switch (l._type)
-		{
-		case Light::ELightType::POINT:
-			mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();
-			//mSceneLightData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
-			break;
-		case Light::ELightType::SPOT:
-			mSceneLightData._cb.spotLights[lightIndex] = l.GetSpotLightData();
-			mSceneLightData._cb.spotLightsShadowing[lightIndex] = l.GetSpotLightData();
-			break;
-		case Light::ELightType::DIRECTIONAL:
-			//mSceneLightData._cb.pointLights[lightIndex] = l.GetPointLightData();
-			//mSceneLightData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
-			break;
-		default:
-			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
-			continue;
-		}
-	}
-
-	unsigned numShd = 0;	// only for spot lights for now
-	for (const Light& l : mLights)
-	{
-		//if (!l._bEnabled) continue; // #BreaksRelease
-
-		// shadowing lights
-		if (l._castsShadow)
-		{
-			switch (l._type)
-			{
-			case Light::ELightType::SPOT:
-				mShadowView.spots.push_back(&l);
-				mSceneLightData._cb.shadowViews[numShd++] = l.GetLightSpaceMatrix();
-				break;
-			case Light::ELightType::POINT:
-				mShadowView.points.push_back(&l);
-				break;
-			case Light::ELightType::DIRECTIONAL:
-				mShadowView.directionals.push_back(&l);
-				break;
-			}
-		}
-
-	}
-
-	mTBNDrawObjects.clear();
-	std::vector<const GameObject*> objects;
-	mpSceneManager->mpActiveScene->GetSceneObjects(objects);
-	for (const GameObject* obj : objects)
-	{
-		if (obj->mRenderSettings.bRenderTBN)
-			mTBNDrawObjects.push_back(obj);
-	}
+	mZPassObjects.clear();	// WARNING: potential garbage collection. Mitigation: track last valid data index
+	mpActiveScene->GatherShadowCasters(mZPassObjects);
 
 	mpCPUProfiler->EndEntry();
 }
@@ -496,13 +539,16 @@ void Engine::PreRender()
 
 void Engine::RenderLights() const
 {
+	return;
 	mpRenderer->BeginEvent("Render Lights Pass");
 	mpRenderer->SetShader(EShaders::UNLIT);
-	for (const Light& light : mLights)
+	for (const Light& light : mpActiveScene->mLights)
 	{
 		//if (!light._bEnabled) continue; // #BreaksRelease
+		auto IABuffers = mBuiltinMeshes[light._renderMesh].GetIABuffers();
 
-		mpRenderer->SetBufferObj(light._renderMesh);
+		mpRenderer->SetVertexBuffer(IABuffers.first);
+		mpRenderer->SetIndexBuffer(IABuffers.second);
 		const XMMATRIX world = light._transform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world  * mSceneView.viewProj;
 		const vec3 color = light._color.Value();
@@ -544,7 +590,6 @@ void Engine::Render()
 	mpRenderer->BeginFrame();
 
 	const XMMATRIX& viewProj = mSceneView.viewProj;
-	const Scene* pScene = mpSceneManager->mpActiveScene;
 
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
@@ -584,7 +629,7 @@ void Engine::Render()
 		mpCPUProfiler->BeginEntry("Geometry Pass");
 		mpRenderer->BeginEvent("Geometry Pass");
 		mDeferredRenderingPasses.SetGeometryRenderingStates(mpRenderer);
-		mFrameStats.numSceneObjects = mpSceneManager->Render(mpRenderer, mSceneView);
+		mFrameStats.numSceneObjects = mpActiveScene->Render(mSceneView);
 		mpRenderer->EndEvent();	
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndQuery();
@@ -626,9 +671,9 @@ void Engine::Render()
 		
 		// SKYBOX
 		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
-		if (pScene->HasSkybox())
+		if (mpActiveScene->HasSkybox())
 		{
-			pScene->RenderSkybox(mSceneView.viewProj);
+			mpActiveScene->RenderSkybox(mSceneView.viewProj);
 		}
 
 		RenderLights();
@@ -670,7 +715,7 @@ void Engine::Render()
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->BeginRender(clearCmd);
-			mpSceneManager->Render(mpRenderer, mSceneView);
+			mpActiveScene->Render(mSceneView);
 			mpRenderer->EndEvent();
 			mpGPUProfiler->EndQuery();
 
@@ -709,7 +754,7 @@ void Engine::Render()
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
-		if (pScene->HasSkybox())	pScene->RenderSkybox(mSceneView.viewProj);
+		if (mpActiveScene->HasSkybox())	mpActiveScene->RenderSkybox(mSceneView.viewProj);
 		else
 		{
 			// todo: this might be costly, profile this
@@ -753,7 +798,7 @@ void Engine::Render()
 			SendLightData();
 		}
 
-		mpSceneManager->Render(mpRenderer, mSceneView);
+		mpActiveScene->Render(mSceneView);
 		mpRenderer->EndEvent();
 
 		RenderLights();
@@ -773,7 +818,7 @@ void Engine::Render()
 		mpRenderer->SetShader(EShaders::TBN);
 
 		for (const GameObject* obj : mTBNDrawObjects)
-			obj->Render(mpRenderer, mSceneView, bSendMaterial);
+			obj->Render(mpRenderer, mSceneView, bSendMaterial, mpActiveScene->mMaterials);
 		
 
 		if (mbUseDeferredRendering)
@@ -826,7 +871,7 @@ void Engine::Render()
 		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
 		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		TextureID tBRDF				 = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
-		TextureID preFilteredEnvMap  = pScene->GetEnvironmentMap().prefilteredEnvironmentMap;
+		TextureID preFilteredEnvMap  = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap; 
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
@@ -902,7 +947,7 @@ void Engine::Render()
 		vec2 screenPosition(X_POS, Y_POS);
 		
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
-		_drawDesc.text = std::string("F1 - Lighting Model: ") + (!sEngineSettings.rendering.bUseBRDFLighting ? "Blinn-Phong" : "PBR - BRDF");
+		_drawDesc.text = std::string("F1 - Render Mode: ") + (!mbUseDeferredRendering ? "Forward" : "Deferred");
 		mpTextRenderer->RenderText(_drawDesc);
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
@@ -916,13 +961,9 @@ void Engine::Render()
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
 		_drawDesc.text = std::string("F4 - Display Render Targets: ") + (mDisplayRenderTargets ? "On" : "Off");
 		mpTextRenderer->RenderText(_drawDesc);
-
-		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
-		_drawDesc.text = std::string("F5 - Render Mode: ") + (!mbUseDeferredRendering ? "Forward" : "Deferred");
-		mpTextRenderer->RenderText(_drawDesc);
 	}
 
-	mpSceneManager->RenderUI();
+	mpActiveScene->RenderUI();
 
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndQuery();

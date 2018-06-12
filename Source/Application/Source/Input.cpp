@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -23,7 +23,7 @@
 
 #include <winuser.rh>
 
-//#define LOG
+#define xLOG
 const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	// keyboard mapping for windows keycodes. 
 	// #define LOG to see each keycode when you press on output window
@@ -37,7 +37,7 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	m["4"] = 52;		m["5"] = 53;	m["6"] = 54;	m["7"] = 55;
 	m["8"] = 56;		m["9"] = 57;
 
-	m["C"] = 67;		m["c"] = 67;
+	m["C"] = 67;		m["c"] = 67;	m["N"] = 78;	m["n"] = 78;
 	m["R"] = 82;		m["r"] = 82;
 
 	m["\\"] = 220;		m[";"] = 186;

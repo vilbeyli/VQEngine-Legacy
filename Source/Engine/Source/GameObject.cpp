@@ -1,4 +1,4 @@
-//	DX11Renderer - VDemo | DirectX11 Renderer
+//	VQEngine | DirectX11 Renderer
 //	Copyright(C) 2016  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
@@ -20,22 +20,44 @@
 #include "Renderer/Renderer.h"
 #include "RenderPasses.h"
 
-void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU) const
+#include "SceneResources.h"
+
+#include "Engine.h"
+
+GameObject::GameObject(Scene* pScene) : mpScene(pScene) {};
+
+void GameObject::AddMesh(MeshID meshID)
+{
+	mModel.mData.mMeshIDs.push_back(meshID);
+}
+
+void GameObject::AddMaterial(MaterialID materialID)
+{
+#if _DEBUG
+	// You called AddMaterial() before AddMesh(). We need a mesh to add the material to.
+	assert(!mModel.mData.mMeshIDs.empty());
+#endif
+	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), materialID);
+}
+
+void GameObject::AddMaterial(Material * pMat)
+{
+	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), pMat->ID);
+}
+
+void GameObject::AddMaterial(MeshID meshID, MaterialID materialID)
+{
+	mModel.AddMaterialToMesh(meshID, materialID);
+}
+
+void GameObject::Render(Renderer* pRenderer
+	, const SceneView& sceneView
+	, bool UploadMaterialDataToGPU
+	, const MaterialPool& materialBuffer) const
 {
 	const EShaders shader = static_cast<EShaders>(pRenderer->GetActiveShader());
 	const XMMATRIX world = mTransform.WorldTransformationMatrix();
 	const XMMATRIX wvp = world * sceneView.viewProj;
-	
-	const Material* mat = [&]() -> const Material*{
-		if(sceneView.bIsPBRLightingUsed)
-			return &mModel.mBRDF_Material;
-		return &mModel.mBlinnPhong_Material;
-	}();
-
-	if (UploadMaterialDataToGPU)
-	{
-		mat->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
-	}
 
 	// SET MATRICES
 	switch (shader)
@@ -62,29 +84,58 @@ void GameObject::Render(Renderer* pRenderer, const SceneView& sceneView, bool Up
 		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 		pRenderer->SetConstant4x4f("worldViewProj", wvp);
 		break;
-
 	}
 
-	pRenderer->SetBufferObj(mModel.mMesh);
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
+	// SET GEOMETRY & MATERIAL, THEN DRAW
+	for_each(mModel.mData.mMeshIDs.begin(), mModel.mData.mMeshIDs.end(), [&](MeshID id) 
+	{
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
+
+		// SET MATERIAL CONSTANTS
+		if (UploadMaterialDataToGPU)
+		{
+			const bool bMeshHasMaterial = mModel.mData.mMaterialLookupPerMesh.find(id) != mModel.mData.mMaterialLookupPerMesh.end();
+
+			if (bMeshHasMaterial)
+			{
+				const MaterialID materialID = mModel.mData.mMaterialLookupPerMesh.at(id);
+				materialBuffer.GetMaterial_const(materialID)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
+			}
+			else
+			{
+				materialBuffer.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
+			}
+		}
+
+		pRenderer->SetVertexBuffer(IABuffer.first);
+		pRenderer->SetIndexBuffer(IABuffer.second);
+		pRenderer->Apply();
+		pRenderer->DrawIndexed();
+	});
 }
 
 void GameObject::RenderZ(Renderer * pRenderer) const
 {
 	const XMMATRIX world = mTransform.WorldTransformationMatrix();
-	const bool bIs2DGeometry = 
-		mModel.mMesh == EGeometry::TRIANGLE || 
-		mModel.mMesh == EGeometry::QUAD || 
-		mModel.mMesh == EGeometry::GRID;
-	const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-
-	pRenderer->SetBufferObj(mModel.mMesh);
-	pRenderer->SetRasterizerState(rasterizerState);
 	pRenderer->SetConstant4x4f("world", world);
 	pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
+	for_each(mModel.mData.mMeshIDs.begin(), mModel.mData.mMeshIDs.end(), [&](MeshID id)
+	{
+		// TODO: #Optimization
+		// changing state for each mesh is not a good idea -> sort and render | render list.
+		const bool bIs2DGeometry =
+			id == EGeometry::TRIANGLE ||
+			id == EGeometry::QUAD ||
+			id == EGeometry::GRID;
+		const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+		pRenderer->SetRasterizerState(rasterizerState);
+
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
+		pRenderer->SetVertexBuffer(IABuffer.first);
+		pRenderer->SetIndexBuffer(IABuffer.second);
+		pRenderer->Apply();
+		pRenderer->DrawIndexed();
+	});
 }
 
 void GameObject::Clear()

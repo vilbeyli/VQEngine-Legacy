@@ -117,19 +117,19 @@ void GameObject::Render(Renderer* pRenderer
 void GameObject::RenderZ(Renderer * pRenderer) const
 {
 	const XMMATRIX world = mTransform.WorldTransformationMatrix();
-	
-	// TODO: figure out how to set rasterizer state for 2D objects
-	//const bool bIs2DGeometry = 
-	//	mModel.mMeshID == EGeometry::TRIANGLE || 
-	//	mModel.mMeshID == EGeometry::QUAD || 
-	//	mModel.mMeshID == EGeometry::GRID;
-	//const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-	//pRenderer->SetRasterizerState(rasterizerState);
-
 	pRenderer->SetConstant4x4f("world", world);
 	pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 	for_each(mModel.mData.mMeshIDs.begin(), mModel.mData.mMeshIDs.end(), [&](MeshID id)
 	{
+		// TODO: #Optimization
+		// changing state for each mesh is not a good idea -> sort and render | render list.
+		const bool bIs2DGeometry =
+			id == EGeometry::TRIANGLE ||
+			id == EGeometry::QUAD ||
+			id == EGeometry::GRID;
+		const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+		pRenderer->SetRasterizerState(rasterizerState);
+
 		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
 		pRenderer->SetVertexBuffer(IABuffer.first);
 		pRenderer->SetIndexBuffer(IABuffer.second);

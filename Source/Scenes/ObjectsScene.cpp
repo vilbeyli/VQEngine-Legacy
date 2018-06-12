@@ -213,6 +213,12 @@ void ObjectsScene::Load(SerializedScene& scene)
 		mpBall->SetModel(Scene::LoadModel("zen_orb.obj"));
 		mpBall->SetTransform(Transform(vec3::Up * 25, Quaternion::Identity(), vec3(1)));
 
+		Material* pBRDF = Scene::CreateNewMaterial(GGX_BRDF);
+		pBRDF->diffuse  = LinearColor::gold;
+		static_cast<BRDF_Material*>(pBRDF)->metalness = 0.85f;
+		static_cast<BRDF_Material*>(pBRDF)->roughness = 0.09f;
+		mpBall->AddMaterial(pBRDF);
+
 		mpGlass = Scene::CreateNewGameObject();
 		mpGlass->SetModel(Scene::LoadModel("sise2.obj"));
 		mpGlass->SetTransform(Transform(vec3::Up * 15 + vec3::Forward * 50, Quaternion::Identity(), vec3(1)));

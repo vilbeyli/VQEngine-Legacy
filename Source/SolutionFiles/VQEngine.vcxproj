@@ -82,7 +82,7 @@
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Application;$(SolutionDir)Source\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(SolutionDir)Source\Application;$(SolutionDir)Source</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration);$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)</LibraryPath>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
@@ -131,6 +131,9 @@
       <Command>xcopy "$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\freetype271.dll" "$(TargetDir)" /Y
 xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\assimp-vc140-mt.dll" "$(TargetDir)" /Y</Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <ResourceOutputFileName>$(IntDir)VQEngine.res</ResourceOutputFileName>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -195,6 +198,15 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\Application\Source\Main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="VQEngine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\Data\Icons\VQEngine.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

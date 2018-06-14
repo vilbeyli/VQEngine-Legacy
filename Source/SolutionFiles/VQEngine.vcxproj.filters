@@ -3,4 +3,13 @@
   <ItemGroup>
     <ClCompile Include="..\Application\Source\Main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="VQEngine.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\Data\Icons\VQEngine.ico" />
+  </ItemGroup>
 </Project>

@@ -19,7 +19,7 @@
 #include "Engine.h"
 
 #include "Application/Input.h"
-#include "Application/WorkerPool.h"
+#include "Application/ThreadPool.h"
 
 #include "Utilities/Log.h"
 #include "Utilities/PerfTimer.h"
@@ -35,9 +35,12 @@
 #include "Scenes/SSAOTestScene.h"
 #include "Scenes/IBLTestScene.h"
 #include "Scenes/StressTestScene.h"
+#include "Scenes/SponzaScene.h"
 
 #include <sstream>
 #include <DirectXMath.h>
+
+using namespace VQEngine;
 
 Settings::Engine Engine::sEngineSettings;
 Engine* Engine::sInstance = nullptr;
@@ -51,7 +54,6 @@ Engine::Engine()
 	, mpGPUProfiler(new GPUProfiler())
 	, mbUsePaniniProjection(false)
 	, mbShowControls(true)
-	//,mObjectPool(1024)
 	, mFrameCount(0)
 {}
 
@@ -60,14 +62,6 @@ Engine::~Engine(){}
 
 bool Engine::Initialize(HWND hwnd)
 {
-	// #SceneRefactoring
-	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
-	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
-	mpObjectsScene = new ObjectsScene();
-	mpSSAOTestScene = new SSAOTestScene();
-	mpIBLTestScene = new IBLTestScene();
-	mpStressTestScene = new StressTestScene();
-
 	mpTimer->Start();
 	if (!mpRenderer || !mpInput || !mpTimer)
 	{
@@ -78,11 +72,9 @@ bool Engine::Initialize(HWND hwnd)
 	// INITIALIZE SYSTEMS
 	//--------------------------------------------------------------
 	const bool bEnableLogging = true;	// todo: read from settings
-	constexpr size_t workerCount = 1;
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 	const Settings::Window& windowSettings = sEngineSettings.window;
 
-	mWorkerPool.Initialize(workerCount);
 	mpInput->Initialize();
 	if (!mpRenderer->Initialize(hwnd, windowSettings))
 	{
@@ -138,13 +130,12 @@ bool Engine::Initialize(HWND hwnd)
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
-	// #SceneRefactoring
-	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
-	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
-	mpObjectsScene->Initialize(mpRenderer, mpTextRenderer);
-	mpSSAOTestScene->Initialize(mpRenderer, mpTextRenderer);
-	mpIBLTestScene->Initialize(mpRenderer, mpTextRenderer);
-	mpStressTestScene->Initialize(mpRenderer, mpTextRenderer);
+
+	mpScenes.push_back(new ObjectsScene(mpRenderer, mpTextRenderer));
+	mpScenes.push_back(new SSAOTestScene(mpRenderer, mpTextRenderer));
+	mpScenes.push_back(new IBLTestScene(mpRenderer, mpTextRenderer));
+	mpScenes.push_back(new StressTestScene(mpRenderer, mpTextRenderer));
+	mpScenes.push_back(new SponzaScene(mpRenderer, mpTextRenderer));
 
 	mpTimer->Stop();
 	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
@@ -156,9 +147,7 @@ void Engine::Exit()
 	mpGPUProfiler->Exit();
 	mpTextRenderer->Exit();
 	mpRenderer->Exit();
-
-	mWorkerPool.Terminate();
-
+	
 	mBuiltinMeshes.clear();
 
 	Log::Exit();
@@ -209,15 +198,6 @@ void Engine::ToggleAmbientOcclusion()
 	Log::Info("Toggle Ambient Occlusion: %s", mbIsAmbientOcclusionOn ? "On" : "Off");
 }
 
-void Engine::Pause()
-{
-	mbIsPaused = true;
-}
-
-void Engine::Unpause()
-{
-	mbIsPaused = false;
-}
 
 float Engine::GetTotalTime() const { return mpTimer->TotalTime(); }
 
@@ -227,23 +207,11 @@ const Settings::Engine& Engine::ReadSettingsFromFile()
 	return sEngineSettings;
 }
 
-// #SceneRefactoring
-// TODO: every new scene should be cast like this following an enum is really not a creative solution.
-//		this bad design needs to be refactored and automated in a way either through macros or type deduction
-static const char* sceneNames[] =
-{
-	"Objects.scn",
-	"SSAOTest.scn",
-	"IBLTest.scn",
-	"StressTestScene.scn"
-};
-
 void Engine::RenderLoadingScreen() const
 {
 	const TextureID texLoadingScreen = mpRenderer->CreateTextureFromFile("LoadingScreen0.png");
 	const XMMATRIX matTransformation = XMMatrixIdentity();
 	const auto IABuffers = mBuiltinMeshes[EGeometry::QUAD].GetIABuffers();
-
 	mpRenderer->BeginFrame();
 	mpRenderer->BindRenderTarget(0);
 	mpRenderer->SetShader(EShaders::UNLIT);
@@ -259,7 +227,6 @@ void Engine::RenderLoadingScreen() const
 	mpRenderer->Apply();
 	mpRenderer->DrawIndexed();
 	mpRenderer->EndFrame();
-
 	mpRenderer->UnbindRenderTargets();
 }
 
@@ -276,21 +243,17 @@ bool Engine::ReloadScene()
 
 bool Engine::LoadSceneFromFile()
 {
-	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sceneNames[sEngineSettings.levelToLoad]);
-	if (mSerializedScene.loadSuccess == '0') return false;
-
-	// #SceneRefactoring
-	// TODO: every new scene should be cast like this following an enum is really not a creative solution.
-	//		this bad design needs to be refactored and automated in a way either through macros or type deduction
 	mCurrentLevel = sEngineSettings.levelToLoad;
-	switch (sEngineSettings.levelToLoad)
+	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sEngineSettings.sceneNames[mCurrentLevel]);
+	if (mSerializedScene.loadSuccess == '0')
 	{
-	case 0:	mpActiveScene = mpObjectsScene; break;
-	case 1:	mpActiveScene = mpSSAOTestScene; break;
-	case 2:	mpActiveScene = mpIBLTestScene; break;
-	case 3:	mpActiveScene = mpStressTestScene; break;
-	default:	break;
+		Log::Error("Scene[%d] did not load.", mCurrentLevel);
+		return false;
 	}
+
+	assert(mCurrentLevel < mpScenes.size());
+	mpActiveScene = mpScenes[mCurrentLevel];
+
 	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
 	return true;
 }
@@ -303,11 +266,15 @@ bool Engine::LoadScene(int level)
 	return LoadSceneFromFile();
 }
 
-bool Engine::Load()
+bool Engine::Load(ThreadPool* pThreadPool)
 {
-	RenderLoadingScreen();
+	mpThreadPool = pThreadPool;
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
+	
+	RenderLoadingScreen();
 
+	// LOAD ENVIRONMENT MAPS
+	//
 	mpCPUProfiler->BeginProfile();
 	mpCPUProfiler->BeginEntry("EngineLoad");
 	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
@@ -316,8 +283,9 @@ bool Engine::Load()
 	mpTimer->Stop();
 	Log::Info("--------------------- ENVIRONMENT MAPS LOADED IN %.2fs.", mpTimer->DeltaTime());
 
-	// --- SCENE MANAGER
-	constexpr size_t numScenes = sizeof(sceneNames) / sizeof(sceneNames[0]);
+	// SCENE INITIALIZATION
+	//
+	const size_t numScenes = sEngineSettings.sceneNames.size();
 	assert(sEngineSettings.levelToLoad < numScenes);
 	if (!LoadSceneFromFile())
 	{
@@ -325,11 +293,11 @@ bool Engine::Load()
 		return false;
 	}
 
-	// --- SCENE MANAGER
-
+	// RENDER PASS INITIALIZATION
+	//
 	mpTimer->Reset();
 	mpTimer->Start();
-	{	// RENDER PASS INITIALIZATION
+	{	
 		Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
 		mShadowMapPass.Initialize(mpRenderer, mpRenderer->m_device, rendererSettings.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
@@ -356,6 +324,81 @@ bool Engine::Load()
 	Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
 	mpCPUProfiler->EndEntry();
 	mpCPUProfiler->EndProfile();
+
+
+	// Thread Pool Unit Test ------------------------------------------------
+	if(false)
+	{
+		constexpr long long sz = 40000000;
+		auto sumRnd = [&]() 
+		{
+			std::vector<long long> nums(sz, 0);
+			for (int i = 0; i < sz; ++i)
+			{
+				nums[i] = RandI(0, 5000);
+			}
+			unsigned long long result = 0;
+			for (int i = 0; i < sz; ++i)
+			{
+				if (nums[i] > 3000)
+					result += nums[i];
+			}
+			return result;
+		};
+		auto sum = [&]()
+		{
+			std::vector<long long> nums(sz, 0);
+			for (int i = 0; i < sz; ++i)
+			{
+				nums[i] = RandI(0, 5000);
+			}
+			unsigned long long result = 0;
+			for (int i = 0; i < sz; ++i)
+			{
+				result += nums[i];
+			}
+			return result;
+		};
+
+		constexpr int threadCount = 16;
+		std::future<unsigned long long> futures[threadCount] =
+		{
+			mpThreadPool->AddTask(sumRnd),
+			mpThreadPool->AddTask(sumRnd),
+			mpThreadPool->AddTask(sumRnd),
+			mpThreadPool->AddTask(sumRnd),
+			mpThreadPool->AddTask(sumRnd),
+			mpThreadPool->AddTask(sumRnd),
+			mpThreadPool->AddTask(sumRnd),
+			mpThreadPool->AddTask(sumRnd),
+
+			mpThreadPool->AddTask(sum),
+			mpThreadPool->AddTask(sum),
+			mpThreadPool->AddTask(sum),
+			mpThreadPool->AddTask(sum),
+			mpThreadPool->AddTask(sum),
+			mpThreadPool->AddTask(sum),
+			mpThreadPool->AddTask(sum),
+			mpThreadPool->AddTask(sum),
+		};
+
+		std::vector<unsigned long long> results;
+		unsigned long long total = 0;
+		std::for_each(std::begin(futures), std::end(futures), [&](decltype(futures[0]) f)
+		{
+			results.push_back(f.get());
+			total += results.back();
+		});
+
+		std::string strResult = "total (" + std::to_string(total) + ") = ";
+		for (int i = 0; i < threadCount; ++i)
+		{
+			strResult += "(" + std::to_string(results[i]) + ") " + (i == threadCount-1 ? "" : " + ");
+		}
+		Log::Info(strResult);
+	}
+	// Thread Pool Unit Test ------------------------------------------------
+
 	return true;
 }
 

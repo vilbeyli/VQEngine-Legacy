@@ -22,16 +22,11 @@
 
 #include "Utilities/Log.h"
 
-Scene::Scene()
-	: mpRenderer(nullptr)	// pRenderer is initialized at Load()
-	, mpTextRenderer(nullptr)	// mpTextRenderer is initialized at Load()
+Scene::Scene(Renderer * pRenderer, TextRenderer * pTextRenderer)
+	: mpRenderer(pRenderer)
+	, mpTextRenderer(pTextRenderer)
 	, mSelectedCamera(0)
-{}
-
-void Scene::Initialize(Renderer * pRenderer, TextRenderer * pTextRenderer)
 {
-	mpRenderer = pRenderer;
-	mpTextRenderer = pTextRenderer;
 	mModelLoader.Initialize(pRenderer);
 }
 
@@ -45,29 +40,32 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 	mMaterials.Initialize(4096 * 8);
 #endif
 
-	for (size_t i = 0; i < scene.objects.size(); ++i)
-	{
-		GameObject* pObj = mObjectPool.Create(this);
-		*pObj = scene.objects[i];
-		pObj->mpScene = this;
-		mpObjects.push_back(pObj);
-	}
-	// mObjects = std::move(scene.objects);
-	//std::for_each(mObjects.begin(), mObjects.end(), [&](GameObject& obj) { obj.mpScene = this; });
-	
+	mMeshes.resize(builtinMeshes.size());
+	std::copy(builtinMeshes.begin(), builtinMeshes.end(), mMeshes.begin());
+
 	mLights = std::move(scene.lights);
 	mMaterials = std::move(scene.materials);
 
 	mSceneRenderSettings = scene.settings;
 
-	mMeshes.resize(builtinMeshes.size());
-	std::copy(builtinMeshes.begin(), builtinMeshes.end(), mMeshes.begin());
 
 	for (const Settings::Camera& camSetting : scene.cameras)
 	{
 		Camera c;
 		c.ConfigureCamera(camSetting, windowSettings, mpRenderer);
 		mCameras.push_back(c);
+	}
+
+	for (size_t i = 0; i < scene.objects.size(); ++i)
+	{
+		GameObject* pObj = mObjectPool.Create(this);
+		*pObj = scene.objects[i];
+		pObj->mpScene = this;
+		if (!pObj->mModel.mbLoaded && !pObj->mModel.mModelName.empty())
+		{
+			pObj->mModel = LoadModel(pObj->mModel.mModelName);
+		}
+		mpObjects.push_back(pObj);
 	}
 
 	Load(scene);

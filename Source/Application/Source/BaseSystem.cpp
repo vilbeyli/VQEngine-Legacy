@@ -19,6 +19,7 @@
 #include "BaseSystem.h"
 #include "Input.h"
 
+
 #include "Engine/Engine.h"
 #include "Engine/Settings.h"
 
@@ -43,13 +44,11 @@ BaseSystem::BaseSystem()
 	:
 	m_appName("VQEngine Demo"),
 	m_bMouseCaptured(false),
-	m_bAppWantsExit(false)
+	m_bAppWantsExit(false),
+	m_threadPool(VQEngine::ThreadPool::sHardwareThreadCount - 2)
 {
 	m_hInstance		= GetModuleHandle(NULL);	// instance of this application
 }
-
-
-BaseSystem::BaseSystem(const BaseSystem& other){}
 
 BaseSystem::~BaseSystem(){}
 
@@ -300,7 +299,7 @@ bool BaseSystem::Init()
 		return false;
 	}
 	
-	if (!ENGINE->Load())
+	if (!ENGINE->Load(&m_threadPool))
 	{
 		Log::Error("Exiting..");
 		return false;

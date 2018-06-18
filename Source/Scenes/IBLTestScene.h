@@ -25,7 +25,7 @@ public:
 	void Update(float dt) override;
 	void RenderUI() const override;
 	
-	IBLTestScene() = default;
+	IBLTestScene(Renderer* pRenderer, TextRenderer* pTextRenderer) : Scene(pRenderer, pTextRenderer) {}
 	~IBLTestScene() = default;
 	
 private:

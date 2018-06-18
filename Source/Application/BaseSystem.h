@@ -22,6 +22,8 @@
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa383745(v=vs.85).aspx
 #define WIN32_LEAN_AND_MEAN		// speeds up build process
 
+#include "ThreadPool.h"
+
 #include <windows.h>
 #include <string>
 
@@ -34,7 +36,6 @@ public:
 
 public:
 	BaseSystem();
-	BaseSystem(const BaseSystem&);
 	~BaseSystem();
 
 	bool Init();
@@ -61,6 +62,8 @@ private:
 	bool		m_bMouseCaptured;
 	bool		m_bAppWantsExit;
 	POINT		m_capturePosition;
+
+	VQEngine::ThreadPool	m_threadPool;
 };
 
 // The WndProc function and ApplicationHandle pointer are also included here so we can redirect 

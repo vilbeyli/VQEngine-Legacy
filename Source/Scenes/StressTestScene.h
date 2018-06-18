@@ -25,7 +25,7 @@ public:
 	void Update(float dt) override;
 	void RenderUI() const override;
 
-	StressTestScene() = default;
+	StressTestScene(Renderer* pRenderer, TextRenderer* pTextRenderer) : Scene(pRenderer, pTextRenderer) {}
 	~StressTestScene() = default;
 
 private:

@@ -76,6 +76,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SceneFiles", "SceneFiles", 
 	ProjectSection(SolutionItems) = preProject
 		Data\ScenesFiles\IBLTest.scn = Data\ScenesFiles\IBLTest.scn
 		Data\ScenesFiles\Objects.scn = Data\ScenesFiles\Objects.scn
+		Data\ScenesFiles\Sponza.scn = Data\ScenesFiles\Sponza.scn
 		Data\ScenesFiles\SSAOTest.scn = Data\ScenesFiles\SSAOTest.scn
 		Data\ScenesFiles\StressTestScene.scn = Data\ScenesFiles\StressTestScene.scn
 	EndProjectSection

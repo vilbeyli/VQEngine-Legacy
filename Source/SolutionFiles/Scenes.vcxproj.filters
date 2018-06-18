@@ -27,6 +27,9 @@
     <ClInclude Include="$(SolutionDir)Source\Scenes\ObjectsScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\Scenes\SponzaScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Scenes\IBLTestScene.cpp">
@@ -39,6 +42,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="$(SolutionDir)Source\Scenes\ObjectsScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Scenes\SponzaScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

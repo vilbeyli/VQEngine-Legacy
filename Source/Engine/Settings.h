@@ -18,6 +18,9 @@
 
 #pragma once
 
+#include <vector>
+#include <string>
+
 namespace Settings
 {
 	struct Window
@@ -80,6 +83,7 @@ namespace Settings
 		Window window;
 		Rendering rendering;
 		int levelToLoad;
+		std::vector<std::string> sceneNames;
 	};
 
 	struct SceneRender

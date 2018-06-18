@@ -106,13 +106,9 @@ protected:
 	//----------------------------------------------------------------------------------------------------------------
 	friend class Engine;
 public:
-	Scene();
+	Scene(Renderer* pRenderer, TextRenderer* pTextRenderer);
 	~Scene() = default;
 
-	// Initializes scene-independent variables such as renderers.
-	//
-	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer);
-	// void Exit(); ?
 
 	// Moves objects from serializedScene into objects vector and sets the scene pointer in objects
 	//

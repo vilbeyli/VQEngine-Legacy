@@ -36,9 +36,11 @@ struct GameObjectRenderSettings
 };
 
 
-// GameObjects only contain Transform data, and the rest of the members are references to data either in Scene or Renderer.
 class GameObject
 {
+// GameObjects only contain Transform data, and the rest of 
+// the members are references to data either in Scene or Renderer.
+//
 public:
 	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
 	void RenderZ(Renderer* pRenderer) const;

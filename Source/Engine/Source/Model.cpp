@@ -45,12 +45,14 @@ Model::Model(const std::string& directoryFullPath, const std::string & modelName
 	mModelName = modelName;
 	mData.mMeshIDs = std::move(modelDataIn.mMeshIDs);
 	mData.mMaterialLookupPerMesh = std::move(modelDataIn.mMaterialLookupPerMesh);
+	mbLoaded = true;
 }
 
 
 
 
 #include "Utilities/Log.h"
+#include "Utilities/PerfTimer.h"
 
 #include "Renderer/Renderer.h"
 
@@ -73,6 +75,7 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 	const std::string modelDirectory = DirectoryUtil::GetFolderPath(fullPath);
 	const std::string modelName = DirectoryUtil::GetFileNameWithoutExtension(fullPath);
 	
+
 	// ASSIMP_LOAD_LAMBDA_FUNCTIONS (nothing much interesting here)
 	//
 	#pragma region ASSIMP_LOAD_LAMBDA_FUNCTIONS
@@ -217,6 +220,11 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 		return mLoadedModels.at(fullPath);
 	}
 
+	PerfTimer t;
+	t.Start();
+
+	Log::Info("Loading Model: %s ...", modelName.c_str());
+
 	// IMPORT SCENE
 	//
 	Importer importer;
@@ -241,8 +249,21 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 	{
 		mSceneModels.at(pScene).push_back(fullPath);
 	}
+	t.Stop();
+	Log::Info("Loaded Model '%s' in %.2f seconds.", modelName.c_str(), t.DeltaTime());
 	return model;
 }
+
+#if 0
+void ModelLoader::LoadModel_Begin(const std::string & modelPath, Scene * pScene)
+{
+}
+
+Model ModelLoader::LoadModel_End(const std::string & modelPath)
+{
+	return Model();
+}
+#endif
 
 void ModelLoader::UnloadSceneModels(Scene * pScene)
 {

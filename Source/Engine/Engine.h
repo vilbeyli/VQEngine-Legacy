@@ -23,8 +23,6 @@
 #include "Utilities/PerfTimer.h"
 #include "Utilities/Profiler.h"
 
-#include "Application/WorkerPool.h"
-
 #include "Light.h"
 #include "Mesh.h"
 #include "DataStructures.h"
@@ -37,6 +35,8 @@
 using std::shared_ptr;
 using std::unique_ptr;
 
+namespace VQEngine { class ThreadPool; }
+
 class Renderer;
 class TextRenderer;
 class Input;
@@ -47,10 +47,6 @@ class GPUProfiler;
 class PerfTimer;
 
 class Scene;
-class ObjectsScene;
-class SSAOTestScene;
-class IBLTestScene;
-class StressTestScene;
 
 
 #ifdef _WIN32
@@ -88,7 +84,7 @@ public:
 	bool					Initialize(HWND hwnd);
 	void					Exit();
 	
-	bool					Load();
+	bool					Load(VQEngine::ThreadPool* pThreadPool);
 	bool					LoadSceneFromFile();
 	bool					LoadScene(int level);
 	bool					ReloadScene();
@@ -97,8 +93,8 @@ public:
 	bool					UpdateAndRender();
 	void					Render();
 
-	void					Pause();
-	void					Unpause();
+	inline void Engine::Pause()  { mbIsPaused = true; }
+	inline void Engine::Unpause(){ mbIsPaused = false; }
 	
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
@@ -153,12 +149,13 @@ private:
 	CPUProfiler*					mpCPUProfiler;
 	GPUProfiler*					mpGPUProfiler;
 	float mCurrentFrameTime;
-	
-	WorkerPool						mWorkerPool;//(UNSUED)
-
+public:
+	VQEngine::ThreadPool*			mpThreadPool;
+private:
 	//----------------------------------------------------------------------------------------------------------------
 	// SCENE
 	//----------------------------------------------------------------------------------------------------------------
+	std::vector<Scene*>				mpScenes;
 	Scene*							mpActiveScene;
 	SceneView						mSceneView;
 	ShadowView						mShadowView;
@@ -172,10 +169,6 @@ private:
 	// - edit settings.ini to start with your scene
 	// - remember to add scene name in engine.cpp::LoadScene
 	int								mCurrentLevel;
-	ObjectsScene*					mpObjectsScene;
-	SSAOTestScene*					mpSSAOTestScene;
-	IBLTestScene*					mpIBLTestScene;
-	StressTestScene*				mpStressTestScene;
 
 	bool							mbUsePaniniProjection;//(UNUSED)
 	std::vector<Mesh>				mBuiltinMeshes;
@@ -188,7 +181,8 @@ private:
 	DepthTargetID					mWorldDepthTarget;
 	SamplerID						mNormalSampler;
 
-	// keeping passes around this doesn't make sense... todo refactor here.
+	// #RenderPassRefactoring
+	// keeping passes around this doesn't make sense...
 	ShadowMapPass					mShadowMapPass;
 	DeferredRenderingPasses			mDeferredRenderingPasses;
 	AmbientOcclusionPass			mSSAOPass;

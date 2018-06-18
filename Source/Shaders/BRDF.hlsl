@@ -132,7 +132,7 @@ inline float3 Fresnel(float3 N, float3 V, float3 F0)
 	return F0 + (float3(1,1,1) - F0) * pow(1.0f - max(0.0f, dot(N, V)), 5.0f);
 }
 
-// Fresnel-Schlight with roughness factored in used in image-based lighting 
+// Fresnel-Schlick with roughness factored in used in image-based lighting 
 // for factoring in irradiance coming from environment map
 // src: https://seblagarde.wordpress.com/2011/08/17/hello-world/ 
 float3 FresnelWithRoughness(float cosTheta, float3 F0, float roughness)

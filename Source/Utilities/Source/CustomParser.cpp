@@ -157,6 +157,19 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		//---------------------------------------------------------------
 		settings.rendering.postProcess.HDREnabled = sBoolTypeReflection.at(GetLowercased(line[1]));
 	}
+	else if (cmd == "levels")
+	{
+		const size_t countScenes = line.size() - 1;
+		for (size_t i = 0; i < countScenes; ++i)
+		{
+			// all lines except the las one will contain a ',' in the end, e.g. "Objects.scn,"
+			// the following will remove the commas except for the last scene in the line[] array
+			settings.sceneNames.push_back(i == countScenes - 1
+				? line[i + 1]
+				: StrUtil::split(line[i + 1], ',')[0]	
+			);
+		}
+	}
 	else if (cmd == "level")
 	{
 		// Parameters
@@ -618,6 +631,20 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			tf.SetScale(sclX, sclY, sclZ);
 		}
 		pObject->SetTransform(tf);
+	}
+	else if (cmd == "model")
+	{
+		if (!bIsReadingGameObject)
+		{
+			Log::Error(" Creating Transform without defining a game object (missing cmd: \"%s\"", "object begin");
+			return;
+		}
+
+		Model m;
+		m.mbLoaded = false;
+		m.mModelDirectory = "";
+		m.mModelName = command[1];
+		pObject->SetModel(m);
 	}
 	else if (cmd == "ao")
 	{

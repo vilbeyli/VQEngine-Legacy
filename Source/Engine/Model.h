@@ -43,22 +43,40 @@ struct ModelData
 struct Model
 {
 	void AddMaterialToMesh(MeshID meshID, MaterialID materialID);
-	Model() = default;
-	Model(const std::string& directoryFullPath, const std::string& modelName, ModelData&& modelDataIn);
 
-	ModelData mData;
+	Model() = default;
+	Model(const std::string&	directoryFullPath
+		, const std::string&	modelName
+		, ModelData&&			modelDataIn);
+
+
+	ModelData		mData;
 	
 	// cold data (wasting cache line if Model[]s or anything that contains a model in an array are iterated over)
-	std::string				mModelName;
-	std::string				mModelDirectory;
+	std::string		mModelName;
+	std::string		mModelDirectory;
+	bool			mbLoaded = false;
 };
 
 class ModelLoader
 {
 public:
 	inline void Initialize(Renderer* pRenderer) { mpRenderer = pRenderer; }
-	Model LoadModel(const std::string& modelPath, Scene* pScene);
+
+	// Loads the Model in a serial fashion - blocks thread
+	//
+	Model	LoadModel(const std::string& modelPath, Scene* pScene);
 	
+#if 0
+	// Begins async loading - doesn't block the thread
+	//
+	void	LoadModel_Begin(const std::string& modelPath, Scene* pScene);
+	
+	// Ends async loading.
+	//
+	Model	LoadModel_End(const std::string& modelPath);
+#endif
+
 	void UnloadSceneModels(Scene* pScene);
 
 

@@ -317,4 +317,4 @@ $RECYCLE.BIN/
 *.lnk
 
 # EXCEPTIONS
-!Data/Models/*.obj
+!Data/Models/*/*.obj

@@ -100,7 +100,6 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 		std::vector<unsigned> Indices;
 
 		// Walk through each of the mesh's vertices
-		bool bMissingTangents = true;
 		for (unsigned int i = 0; i < mesh->mNumVertices; i++)
 		{
 			DefaultVertexBufferData Vert;
@@ -129,7 +128,6 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 			// TANGENT
 			if (mesh->mTangents)
 			{
-				bMissingTangents = false;
 				Vert.tangent = vec3(
 					mesh->mTangents[i].x,
 					mesh->mTangents[i].y,
@@ -155,11 +153,6 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 			for (unsigned int j = 0; j < face.mNumIndices; j++)
 				Indices.push_back(face.mIndices[j]);
 		}
-
-		//if (bMissingTangents)
-		//{
-		//	GeometryGenerator::CalculateTangentsAndBitangents(Vertices, Indices);
-		//}
 
 		return Mesh(Vertices, Indices, "ImportedModelMesh0");	// return a mesh object created from the extracted mesh data
 	};

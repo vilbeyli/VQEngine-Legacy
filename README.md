@@ -16,7 +16,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 ###### SSAO w/ Gaussian Blur
 
-![](Screenshots/SSAO_GaussianBlur.PNG)
+![](Screenshots/SSAO.gif)
 
 # Feature List / Version History
 
@@ -26,7 +26,7 @@ See [Milestones](https://github.com/vilbeyli/VQEngine/milestones) for the planne
 
 The latest changes can be found in the [dev branch](https://github.com/vilbeyli/VQEngine/tree/dev), or another branch named with the feature being implemented. _These branches might be unstable before the release_.
 
- *v0.4.0 - Data-Oriented Engine, Multi-threaded Tasking System, assimp Integration - TBA*
+ *v0.4.0 - **Data-Oriented Engine, Multi-threaded Tasking System, assimp Integration** - TBA*
  - Loading Screen
  - Asynchronous Model Loading using [assimp](https://github.com/assimp/assimp)
  - Task-based Threading System
@@ -35,14 +35,14 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 
 ## Released
 
- *[v0.3.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.3.0) - Automated Build, Logging, Text Rendering, CPU & GPU Profiler - May7-2018*
+ *[v0.3.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.3.0) - **Automated Build, Logging, Text Rendering, CPU & GPU Profiler** - May7-2018*
  - Text Rendering
  - CPU & GPU Profiler
  - Shader Binary Cache
  - Build scripts (Python, Batch) & Automated Build (AppVeyor)
  - Logging: Console and/or Log Files
 
- *[v0.2.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.2.0) - PBR, Deferred Rendering & Multiple Scenes - December1-2017*
+ *[v0.2.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.2.0) - **PBR, Deferred Rendering & Multiple Scenes** - December1-2017*
  - On-the-fly-switchable Forward/Deferred Rendering
  - PBR: GGX-Smith BRDF
  - Environment Mapping (Image-Based Lighting)
@@ -51,7 +51,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
  - SSAO w/ Gaussian Blur
  - Custom Scene Files, Switchable/Reloadable Scenes
 
-*[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - Simple Lighting, Texturing and Shader Reflection: July15-2017*
+*[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - **Phong Lighting, Shadow Mapping, Texturing and Shader Reflection** July15-2017*
  - Vertex-Geometry-Pixel Shader Pipeline
  - Shader Reflection
  - Phong Lighting

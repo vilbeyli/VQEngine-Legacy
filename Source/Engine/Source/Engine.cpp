@@ -455,6 +455,7 @@ bool Engine::HandleInput()
 	if (mpInput->IsKeyTriggered("2"))	LoadScene(1);
 	if (mpInput->IsKeyTriggered("3"))	LoadScene(2);
 	if (mpInput->IsKeyTriggered("4"))	LoadScene(3);
+	if (mpInput->IsKeyTriggered("5"))	LoadScene(4);
 
 
 	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.

@@ -20,6 +20,8 @@
 
 #include "Engine/Mesh.h"
 
+#include "Renderer.h"
+
 namespace GeometryGenerator
 {
 	Mesh Triangle(float scale);
@@ -28,5 +30,8 @@ namespace GeometryGenerator
 	Mesh Sphere(float radius, unsigned ringCount, unsigned sliceCount);
 	Mesh Grid(float width, float depth, unsigned m, unsigned n);
 	Mesh Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount);
+
+	void CalculateTangentsAndBitangents(std::vector<DefaultVertexBufferData>& vertices, const std::vector<unsigned> indices);	// Only Tangents
+
 };
 

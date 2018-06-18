@@ -28,6 +28,7 @@ void SponzaScene::Load(SerializedScene& scene)
 	pNanosuitObj = Scene::CreateNewGameObject();
 	pNanosuitObj->SetModel(Scene::LoadModel("nanosuit/nanosuit.obj"));
 	pNanosuitObj->SetTransform(Transform{ vec3(270, 0, 0), Quaternion::FromAxisAngle(vec3::Up, -90.0f * DEG2RAD), vec3(10, 10, 10) });
+	Scene::SetEnvironmentMap(WALK_OF_FAME);
 }
 
 // Scene-specific unloading logic

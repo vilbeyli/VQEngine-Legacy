@@ -27,7 +27,7 @@ using std::vector;
 
 // Direct3D Transformation Pipeline: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418867(v=vs.85).aspx
 
-void CalculateTangentsAndBitangents(vector<DefaultVertexBufferData>& vertices, const vector<unsigned> indices)	// Only Tangents
+void GeometryGenerator::CalculateTangentsAndBitangents(vector<DefaultVertexBufferData>& vertices, const vector<unsigned> indices)	// Only Tangents
 {
 	//  Bitangent
 	//	

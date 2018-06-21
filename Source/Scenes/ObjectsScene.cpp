@@ -79,12 +79,12 @@ void ObjectsScene::Load(SerializedScene& scene)
 			pBRDF->alpha = 1.0f;
 			pBRDF->tiling = vec2(10, 10);
 			pBRDF->normalMap = floorNormalMap;
-			m_room.floor->AddMaterial(pBRDF->ID);
+			m_room.floor->AddMaterial(pBRDF);
 			pFloorMaterial = static_cast<Material*>(&(*pBRDF));
 
 
 			//floor->AddMesh(EGeometry::SPHERE);
-			//floor->AddMaterial(pBRDF->ID);
+			//floor->AddMaterial(pBRDF);
 		}
 
 		const float ratio = floorWidth / wallHieght;
@@ -114,7 +114,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 			pBRDF->tiling = wallTiling;
 			pBRDF->diffuseMap = mpRenderer->CreateTextureFromFile("openart/190.JPG");
 			pBRDF->normalMap = mpRenderer->CreateTextureFromFile("openart/190_norm.JPG");
-			m_room.wallR->AddMaterial(pBRDF->ID);
+			m_room.wallR->AddMaterial(pBRDF);
 		}
 	}
 
@@ -203,7 +203,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 			GameObject* pSphereObject = Scene::CreateNewGameObject();
 			pSphereObject->SetTransform(transformObj);
 			pSphereObject->AddMesh(EGeometry::SPHERE);
-			pSphereObject->AddMaterial(pMat0->ID);
+			pSphereObject->AddMaterial(pMat0);
 			//pSphereObject->AddMaterial(pMat1->ID);
 			mSpheres.push_back(pSphereObject);
 		}

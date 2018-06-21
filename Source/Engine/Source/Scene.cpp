@@ -74,8 +74,8 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 void Scene::UnloadScene()
 {
 	//---------------------------------------------------------------------------
-	// if we clear materials and dont clear the models loaded with them,
-	// we'll crashh in lookups. this can be improved by only reloading
+	// if we clear materials and don't clear the models loaded with them,
+	// we'll crash in lookups. this can be improved by only reloading
 	// the materials instead of the whole mesh data. #TODO: more granular reload
 	mModelLoader.UnloadSceneModels(this);
 	mMaterials.Clear();
@@ -88,7 +88,7 @@ void Scene::UnloadScene()
 	Unload();
 }
 
-int Scene::Render(const SceneView& sceneView) const
+int Scene::RenderOpaque(const SceneView& sceneView) const
 {
 	const ShaderID selectedShader = ENGINE->GetSelectedShader();
 	const bool bSendMaterialData = (
@@ -101,30 +101,36 @@ int Scene::Render(const SceneView& sceneView) const
 		);
 
 	int numObj = 0;
-	for (const auto& obj : mObjectPool.mObjects) 
+	for (const auto* obj : mDrawLists.opaqueList) 
 	{
-		if (obj.mpScene == this && obj.mRenderSettings.bRender)	// #FutureOptimization: sort and iterate for branch prediction gains
-		{
-			obj.Render(mpRenderer, sceneView, bSendMaterialData, mMaterials);
-			++numObj;
-		}
+		obj->RenderOpaque(mpRenderer, sceneView, bSendMaterialData, mMaterials);
+		++numObj;
 	}
 	return numObj;
 }
 
-// TODO: 
-//void Scene::GetSceneObjects(std::vector<const GameObject*>& objs) const
-//{
-//#if 0
-//	for (size_t i = 0; i < objects.size(); i++)
-//	{
-//		objs[i] = &objects[i];
-//	}
-//#else
-//	for (const GameObject& obj : mObjects)
-//		objs.push_back(&obj);
-//#endif
-//}
+int Scene::RenderAlpha(const SceneView & sceneView) const
+{
+	const ShaderID selectedShader = ENGINE->GetSelectedShader();
+	const bool bSendMaterialData = (
+		selectedShader == EShaders::FORWARD_PHONG
+		|| selectedShader == EShaders::UNLIT
+		|| selectedShader == EShaders::NORMAL
+		|| selectedShader == EShaders::FORWARD_BRDF
+		|| selectedShader == EShaders::DEFERRED_GEOMETRY
+		|| selectedShader == EShaders::Z_PREPRASS
+		);
+
+	int numObj = 0;
+	for (const auto* obj : mDrawLists.alphaList)
+	{
+		obj->RenderTransparent(mpRenderer, sceneView, bSendMaterialData, mMaterials);
+		++numObj;
+	}
+	return numObj;
+}
+
+
 
 // can't use std::array<T&, 2>, hence std::array<T*, 2> 
 // array of 2: light data for non-shadowing and shadowing lights
@@ -223,6 +229,7 @@ void Scene::GatherShadowCasters(std::vector<const GameObject*>& casters) const
 	}
 }
 
+
 void Scene::ResetActiveCamera()
 {
 	mCameras[mSelectedCamera].Reset();
@@ -238,6 +245,24 @@ void Scene::UpdateScene(float dt)
 
 	mCameras[mSelectedCamera].Update(dt);
 	Update(dt);
+}
+
+void Scene::PreRender()
+{
+	mDrawLists.opaqueList.clear();
+	mDrawLists.alphaList.clear();
+	for (const GameObject& obj : mObjectPool.mObjects)
+	{
+		if (obj.mpScene == this && obj.mRenderSettings.bRender)
+		{
+			if (!obj.mModel.mData.mTransparentMeshIDs.empty())
+			{
+				mDrawLists.alphaList.push_back(&obj);
+			}
+			
+			mDrawLists.opaqueList.push_back(&obj);
+		}
+	}
 }
 
 void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)

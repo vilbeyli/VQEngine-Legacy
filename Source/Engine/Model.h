@@ -37,12 +37,13 @@ using MeshToMaterialLookup = std::unordered_map<MeshID, MaterialID>;
 struct ModelData
 {
 	std::vector<MeshID>		mMeshIDs;
+	std::vector<MeshID>		mTransparentMeshIDs;
 	MeshToMaterialLookup	mMaterialLookupPerMesh;
 };
 
 struct Model
 {
-	void AddMaterialToMesh(MeshID meshID, MaterialID materialID);
+	void AddMaterialToMesh(MeshID meshID, MaterialID materialID, bool bTransparent);
 
 	Model() = default;
 	Model(const std::string&	directoryFullPath

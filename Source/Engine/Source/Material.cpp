@@ -278,6 +278,9 @@ Material::Material(MaterialID _ID)
 	tiling(1, 1),
 	diffuseMap(-1),
 	normalMap(-1),
+	heightMap(-1),
+	specularMap(-1),
+	mask(-1),
 	ID(_ID)
 {}
 
@@ -292,9 +295,13 @@ struct SurfaceMaterial
 	vec3  specular;
 	float roughness;
 
-	// todo: remove is*Map after shader permutation is implemented
-	float isDiffuseMap;
-	float isNormalMap;
+	
+	// bit 0: hasDiffuseMap
+	// bit 1: hasNormalMap
+	// bit 2: hasSpecularMap
+	// bit 3: hasAlphaMask
+	int textureConfig;
+	int pad;
 
 	float metalness;
 	float shininess;
@@ -316,13 +323,25 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 		renderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0.0f : 1.0f);
 		if (diffuseMap != -1) renderer->SetTexture("texDiffuseMap", diffuseMap);
 		break;
+	case EShaders::FORWARD_BRDF:
+		if (mask >= 0)			renderer->SetTexture("texAlphaMask", mask);
+		if (diffuseMap >= 0)	renderer->SetTexture("texDiffuseMap", diffuseMap);
+		if (normalMap >= 0)		renderer->SetTexture("texNormalMap", normalMap);
+		if (specularMap >= 0)	renderer->SetTexture("texSpecularMap", specularMap);
+		break;
 	default:
-		if (diffuseMap >= 0) renderer->SetTexture("texDiffuseMap", diffuseMap);
-		if (normalMap >= 0) renderer->SetTexture("texNormalMap", normalMap);
+		if (diffuseMap >= 0)	renderer->SetTexture("texDiffuseMap", diffuseMap);
+		if (normalMap >= 0)		renderer->SetTexture("texNormalMap", normalMap);
+		if (specularMap >= 0)	renderer->SetTexture("texSpecularMap", specularMap);
 		break;
 	}
 
 	SetMaterialSpecificConstants(renderer, shader, bIsDeferredRendering);
+}
+
+bool Material::IsTransparent() const
+{
+	return alpha != 1.0f || mask != -1;
 }
 
 void BRDF_Material::Clear() 
@@ -333,6 +352,9 @@ void BRDF_Material::Clear()
 	roughness = 0.04f;
 	diffuseMap = -1;
 	normalMap = -1;
+	specularMap = -1;
+	mask = -1;
+	roughnessMap = -1;
 	alpha = 1.0f;
 }
 
@@ -343,6 +365,9 @@ void BlinnPhong_Material::Clear()
 	specular = vec3(1,1,1);
 	diffuseMap = -1;
 	normalMap = -1;
+	mask = -1;
+	roughnessMap = -1;
+	specularMap = -1;
 	alpha = 1.0f;
 }
 
@@ -357,6 +382,12 @@ void BRDF_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders sh
 	case EShaders::UNLIT:
 		break;
 	default:
+		int textureConfig = 0;
+		textureConfig |= diffuseMap == -1	? 0 : (1 << 0);
+		textureConfig |= normalMap == -1	? 0 : (1 << 1);
+		textureConfig |= specularMap == -1	? 0 : (1 << 2);
+		textureConfig |= mask == -1			? 0 : (1 << 3);
+
 		SurfaceMaterial mat{
 			diffuse.Value(),
 			alpha,
@@ -364,8 +395,9 @@ void BRDF_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders sh
 			specular,
 			roughness,
 
-			diffuseMap == -1 ? 0.0f : 1.0f,
-			normalMap == -1 ? 0.0f : 1.0f,
+			textureConfig,
+			0,
+
 			metalness,
 			0.0f,
 			tiling
@@ -397,6 +429,10 @@ void BlinnPhong_Material::SetMaterialSpecificConstants(Renderer* renderer, EShad
 		break;
 
 	default:
+		int textureConfig = 0;
+		textureConfig |= diffuseMap == -1 ? 0 : 1 << 0;
+		textureConfig |= normalMap == -1 ? 0 : 1 << 1;
+		textureConfig |= specularMap == -1 ? 0 : 1 << 2;
 		SurfaceMaterial mat{
 			diffuse.Value(),
 			alpha,
@@ -404,8 +440,9 @@ void BlinnPhong_Material::SetMaterialSpecificConstants(Renderer* renderer, EShad
 			specular,
 			0.0f,	// brdf roughness
 
-			diffuseMap == -1 ? 0.0f : 1.0f,
-			normalMap == -1 ? 0.0f : 1.0f,
+			textureConfig,
+			0,
+
 			0.0f,	// brdf metalness
 			shininess,
 			tiling

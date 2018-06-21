@@ -14,6 +14,7 @@ newmtl leaf
 	Ke 0.0000 0.0000 0.0000
 	map_Ka textures\sponza_thorn_diff.png
 	map_Kd textures\sponza_thorn_diff.png
+	map_Ks textures\sponza_thorn_spec.png
 	map_d textures\sponza_thorn_mask.png
 	map_bump textures\sponza_thorn_bump.png
 

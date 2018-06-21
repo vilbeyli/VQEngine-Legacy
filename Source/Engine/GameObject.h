@@ -42,7 +42,8 @@ class GameObject
 // the members are references to data either in Scene or Renderer.
 //
 public:
-	void Render(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
+	void RenderOpaque(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
+	void RenderTransparent(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
 	void RenderZ(Renderer* pRenderer) const;
 	void Clear();
 
@@ -58,12 +59,8 @@ public:
 
 	// Adds materialID to the newest meshID (meshes.back())
 	//
-	void AddMaterial(MaterialID materialID);
 	void AddMaterial(Material* pMat);
 	
-	// Adds materialID to the specified mesh
-	//
-	void AddMaterial(MeshID meshID, MaterialID materialID);
 	
 	inline void SetModel(Model model) { mModel = model; } // i don't like this setter...
 

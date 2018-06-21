@@ -31,26 +31,14 @@ void GameObject::AddMesh(MeshID meshID)
 	mModel.mData.mMeshIDs.push_back(meshID);
 }
 
-void GameObject::AddMaterial(MaterialID materialID)
-{
-#if _DEBUG
-	// You called AddMaterial() before AddMesh(). We need a mesh to add the material to.
-	assert(!mModel.mData.mMeshIDs.empty());
-#endif
-	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), materialID);
-}
 
 void GameObject::AddMaterial(Material * pMat)
 {
-	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), pMat->ID);
+	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), pMat->ID, pMat->IsTransparent());
 }
 
-void GameObject::AddMaterial(MeshID meshID, MaterialID materialID)
-{
-	mModel.AddMaterialToMesh(meshID, materialID);
-}
 
-void GameObject::Render(Renderer* pRenderer
+void GameObject::RenderOpaque(Renderer* pRenderer
 	, const SceneView& sceneView
 	, bool UploadMaterialDataToGPU
 	, const MaterialPool& materialBuffer) const
@@ -99,7 +87,10 @@ void GameObject::Render(Renderer* pRenderer
 			if (bMeshHasMaterial)
 			{
 				const MaterialID materialID = mModel.mData.mMaterialLookupPerMesh.at(id);
-				materialBuffer.GetMaterial_const(materialID)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
+				const Material* pMat = materialBuffer.GetMaterial_const(materialID);
+				if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
+					return;
+				pMat->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
 			}
 			else
 			{
@@ -131,6 +122,72 @@ void GameObject::RenderZ(Renderer * pRenderer) const
 		pRenderer->SetRasterizerState(rasterizerState);
 
 		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
+		pRenderer->SetVertexBuffer(IABuffer.first);
+		pRenderer->SetIndexBuffer(IABuffer.second);
+		pRenderer->Apply();
+		pRenderer->DrawIndexed();
+	});
+}
+
+void GameObject::RenderTransparent(
+	  Renderer * pRenderer
+	, const SceneView& sceneView
+	, bool UploadMaterialDataToGPU
+	, const MaterialPool& materialBuffer) const
+{
+	const EShaders shader = static_cast<EShaders>(pRenderer->GetActiveShader());
+	const XMMATRIX world = mTransform.WorldTransformationMatrix();
+	const XMMATRIX wvp = world * sceneView.viewProj;
+
+	// SET MATRICES
+	switch (shader)
+	{
+	case EShaders::TBN:
+		pRenderer->SetConstant4x4f("world", world);
+		pRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
+		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
+		break;
+	case EShaders::Z_PREPRASS:
+	case EShaders::DEFERRED_GEOMETRY:
+		pRenderer->SetConstant4x4f("worldView", world * sceneView.view);
+		pRenderer->SetConstant4x4f("normalViewMatrix", mTransform.NormalMatrix(world) * sceneView.view);
+		pRenderer->SetConstant4x4f("worldViewProj", wvp);
+		break;
+	case EShaders::NORMAL:
+		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
+	case EShaders::UNLIT:
+	case EShaders::TEXTURE_COORDINATES:
+		pRenderer->SetConstant4x4f("worldViewProj", wvp);
+		break;
+	default:	// lighting shaders
+		pRenderer->SetConstant4x4f("world", world);
+		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
+		pRenderer->SetConstant4x4f("worldViewProj", wvp);
+		break;
+	}
+
+	// SET GEOMETRY & MATERIAL, THEN DRAW
+	for_each(mModel.mData.mTransparentMeshIDs.begin(), mModel.mData.mTransparentMeshIDs.end(), [&](MeshID id)
+	{
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
+
+		// SET MATERIAL CONSTANTS
+		if (UploadMaterialDataToGPU)
+		{
+			const bool bMeshHasMaterial = mModel.mData.mMaterialLookupPerMesh.find(id) != mModel.mData.mMaterialLookupPerMesh.end();
+
+			if (bMeshHasMaterial)
+			{
+				const MaterialID materialID = mModel.mData.mMaterialLookupPerMesh.at(id);
+				const Material* pMat = materialBuffer.GetMaterial_const(materialID);
+				pMat->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
+			}
+			else
+			{
+				materialBuffer.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
+			}
+		}
+
 		pRenderer->SetVertexBuffer(IABuffer.first);
 		pRenderer->SetIndexBuffer(IABuffer.second);
 		pRenderer->Apply();

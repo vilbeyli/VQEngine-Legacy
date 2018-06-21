@@ -48,6 +48,7 @@ cbuffer cbSurfaceMaterial
 
 Texture2D texDiffuseMap;
 Texture2D texNormalMap;
+Texture2D texSpecularMap;
 
 SamplerState sNormalSampler;
 
@@ -65,18 +66,19 @@ PSOut PSMain(PSIn In) : SV_TARGET
     BRDF_Surface s;
 	
 	// there's a weird issue here if garbage texture is bound and isDiffuseMap is 0.0f. 
-	//s.diffuseColor	= surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, uv).xyz + (1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
+	//s.diffuseColor	= surfaceMaterial.diffuse * (sHasDiffuseMap(surfaceMaterial.textureConfig) * texDiffuseMap.Sample(sNormalSampler, uv).xyz + (1.0f - sHasDiffuseMap(surfaceMaterial.textureConfig)) * surfaceMaterial.diffuse);
 	//s.N				= (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
 
 	// workaround -> use if else for selecting rather then blending. for some reason, the vector math fails and (0,0,0) + (1,1,1) ends up being (0,1,1). Not sure why.
 	float3 sampledDiffuse = texDiffuseMap.Sample(sNormalSampler, uv).xyz;
 	float3 surfaceDiffuse = surfaceMaterial.diffuse;
-	float3 finalDiffuse = surfaceMaterial.isDiffuseMap > 0.0f ? sampledDiffuse : surfaceDiffuse;
+	float3 finalDiffuse = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 ? sampledDiffuse : surfaceDiffuse;
 	
 	s.diffuseColor = finalDiffuse;
-	s.N = surfaceMaterial.isNormalMap > 0.0f ? UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) : N;
 	
-	s.specularColor = surfaceMaterial.specular;
+	s.N = HasNormalMap(surfaceMaterial.textureConfig) > 0 ? UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) : N;
+	
+	s.specularColor = HasSpecularMap(surfaceMaterial.textureConfig) > 0 ? texSpecularMap.Sample(sNormalSampler, uv).xxx : surfaceMaterial.specular;
     s.roughness = // use s.roughness for either roughness (PBR) or shininess (Phong)
 	surfaceMaterial.roughness * BRDFOrPhong + 
 	surfaceMaterial.shininess * (1.0f - BRDFOrPhong);

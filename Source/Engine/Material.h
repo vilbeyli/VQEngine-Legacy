@@ -35,23 +35,33 @@ struct BRDF_Material;
 
 struct Material				// 56 Bytes
 {
-	MaterialID	ID;			// 4 Bytes
+	//-----------------------------------
+	MaterialID	ID;			// 4  Bytes
 	LinearColor	diffuse;	// 12 Bytes
-	float		alpha;		// 4 Bytes
+	//-----------------------------------
+	float		alpha;		// 4  Bytes
 	vec3		specular;	// 12 Bytes
-
+	//-----------------------------------
 	vec2		tiling;	// default=(1,1)
-
 	TextureID	diffuseMap;
 	TextureID	normalMap;
+	//-----------------------------------
+	TextureID	heightMap;
+	TextureID	specularMap;
+	TextureID	roughnessMap;
+	TextureID	mask;
+	//-----------------------------------
 
 	Material* pNextAvailable = nullptr;	// making this class a pool object
+
+	//=========================================================================
 
 	Material(MaterialID _ID);
 	~Material();
 	void SetMaterialConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const;
 	virtual void SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const = 0;
 	virtual void Clear() = 0;
+	bool IsTransparent() const;
 };
 
 struct BRDF_Material : public Material	

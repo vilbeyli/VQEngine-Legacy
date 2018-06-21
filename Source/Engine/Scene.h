@@ -122,9 +122,17 @@ public:
 	//
 	void UpdateScene(float dt);
 
-	// calls .Render() on objects and calls derived class RenderSceneSpecific()
+	// Prepares the mDrawLists
 	//
-	int Render(const SceneView& sceneView) const;
+	void PreRender();
+
+	// TODO
+	//
+	int RenderOpaque(const SceneView& sceneView) const;
+
+	// TODO
+	//
+	int RenderAlpha(const SceneView& sceneView) const;
 
 	// calls Render() on skybox.
 	//
@@ -148,6 +156,14 @@ private:
 	GameObjectPool			mObjectPool;
 	MaterialPool			mMaterials;
 	ModelLoader				mModelLoader;
+
+	struct DrawLists
+	{
+		std::vector<const GameObject*>	opaqueList;
+		std::vector<const GameObject*>	alphaList;
+	};
+
+	DrawLists				mDrawLists;
 };
 
 

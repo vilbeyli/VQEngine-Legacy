@@ -236,7 +236,7 @@ bool Engine::ReloadScene()
 	Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
 
 	mpActiveScene->UnloadScene();
-	mZPassObjects.clear();
+	mShadowCasters.clear();
 
 	return LoadSceneFromFile();
 }
@@ -261,7 +261,7 @@ bool Engine::LoadSceneFromFile()
 bool Engine::LoadScene(int level)
 {
 	mpActiveScene->UnloadScene();
-	mZPassObjects.clear();
+	mShadowCasters.clear();
 	Engine::sEngineSettings.levelToLoad = level;
 	return LoadSceneFromFile();
 }
@@ -574,8 +574,10 @@ void Engine::PreRender()
 	// 		mTBNDrawObjects.push_back(obj);
 	// }
 
-	mZPassObjects.clear();	// WARNING: potential garbage collection. Mitigation: track last valid data index
-	mpActiveScene->GatherShadowCasters(mZPassObjects);
+	mShadowCasters.clear();
+	mpActiveScene->GatherShadowCasters(mShadowCasters);
+
+	mpActiveScene->PreRender();
 
 	mpCPUProfiler->EndEntry();
 }
@@ -642,7 +644,7 @@ void Engine::Render()
 	mpRenderer->BeginEvent("Shadow Pass");
 	
 	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass has their own render targets
-	mShadowMapPass.RenderShadowMaps(mpRenderer, mZPassObjects, mShadowView);
+	mShadowMapPass.RenderShadowMaps(mpRenderer, mShadowCasters, mShadowView);
 	
 	mpRenderer->EndEvent();
 	mpCPUProfiler->EndEntry();
@@ -673,7 +675,7 @@ void Engine::Render()
 		mpCPUProfiler->BeginEntry("Geometry Pass");
 		mpRenderer->BeginEvent("Geometry Pass");
 		mDeferredRenderingPasses.SetGeometryRenderingStates(mpRenderer);
-		mFrameStats.numSceneObjects = mpActiveScene->Render(mSceneView);
+		mFrameStats.numSceneObjects = mpActiveScene->RenderOpaque(mSceneView);
 		mpRenderer->EndEvent();	
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndQuery();
@@ -703,8 +705,28 @@ void Engine::Render()
 		mpGPUProfiler->BeginQuery("Lighting Pass");
 		mpRenderer->BeginEvent("Lighting Pass");
 
+		mpGPUProfiler->BeginQuery("Opaque Pass (ScreenSpace)");
+		mpCPUProfiler->BeginEntry("Opaque Pass (ScreenSpace)");
 		mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
-		
+		mpCPUProfiler->EndEntry();
+		mpGPUProfiler->EndQuery();
+
+		// TRANSPARENT OBJECTS - FORWARD RENDER
+#if 0
+		mpGPUProfiler->BeginQuery("Alpha Pass (Forward)");
+		mpCPUProfiler->BeginEntry("Alpha Pass (Forward)");
+
+		mpRenderer->BindDepthTarget(GetWorldDepthTarget());
+		mpRenderer->SetShader(_geometryShader);
+		mpRenderer->SetDepthStencilState(_geometryStencilState);
+		mpRenderer->SetBlendState(_geometryStencilState);
+		mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+		mpRenderer->Apply();
+		mFrameStats.numSceneObjects += mpActiveScene->RenderAlpha(mSceneView);
+
+		mpCPUProfiler->EndEntry();
+		mpGPUProfiler->EndQuery();
+#endif
 		mpRenderer->EndEvent();
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndQuery();
@@ -759,7 +781,7 @@ void Engine::Render()
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->BeginRender(clearCmd);
-			mpActiveScene->Render(mSceneView);
+			mpActiveScene->RenderOpaque(mSceneView);
 			mpRenderer->EndEvent();
 			mpGPUProfiler->EndQuery();
 
@@ -842,7 +864,11 @@ void Engine::Render()
 			SendLightData();
 		}
 
-		mpActiveScene->Render(mSceneView);
+		mpActiveScene->RenderOpaque(mSceneView);
+
+		mpRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
+		mpActiveScene->RenderAlpha(mSceneView);
+		mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 		mpRenderer->EndEvent();
 
 		RenderLights();
@@ -862,7 +888,7 @@ void Engine::Render()
 		mpRenderer->SetShader(EShaders::TBN);
 
 		for (const GameObject* obj : mTBNDrawObjects)
-			obj->Render(mpRenderer, mSceneView, bSendMaterial, mpActiveScene->mMaterials);
+			obj->RenderOpaque(mpRenderer, mSceneView, bSendMaterial, mpActiveScene->mMaterials);
 		
 
 		if (mbUseDeferredRendering)

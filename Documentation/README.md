@@ -4,6 +4,8 @@ This page is Currently to serve as a collection of resources that influenced the
 
 # Engine Design
 
+Below is the collection of resources used for building the VQEngine.
+
 ## Youtube
 
 - [CppCon2017: Nicolas Guillemot “Design Patterns for Low-Level Real-Time Rendering”](https://www.youtube.com/watch?v=mdPeXJ0eiGc)
@@ -33,9 +35,9 @@ This page is Currently to serve as a collection of resources that influenced the
 
 - Linearized Depth Buffer
   - [NVidia - Depth Precision Visualized](https://developer.nvidia.com/content/depth-precision-visualized)
-	- [Linear Depth](http://dev.theomader.com/linear-depth/)
-	- [LinearZ](https://www.mvps.org/directx/articles/linear_z/linearz.htm)
-	- [link1](http://www.humus.name/index.php?ID=255)
+  - [Linear Depth](http://dev.theomader.com/linear-depth/)
+  - [LinearZ](https://www.mvps.org/directx/articles/linear_z/linearz.htm)
+  - [link1](http://www.humus.name/index.php?ID=255)
 
 - Reconstructing position from depth
 	- [link1](https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/)
@@ -45,7 +47,13 @@ This page is Currently to serve as a collection of resources that influenced the
    - [link1](http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html )
    - [link2](https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/monte-carlo-methods-in-practice/introduction-quas-monte-carlo)
 
-## Screenshots
+
+
+// - Converting to/from cubemaps: http://paulbourke.net/miscellaneous/cubemaps/
+// - Convolution: https://learnopengl.com/#!PBR/IBL/Diffuse-irradiance
+// - Projections: https://gamedev.stackexchange.com/questions/114412/how-to-get-uv-coordinates-for-sphere-cylindrical-projection
+
+## Figures
 
 ![](renderer-design.PNG)
 ![](commands.PNG)

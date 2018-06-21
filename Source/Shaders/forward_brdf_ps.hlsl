@@ -57,6 +57,8 @@ cbuffer cbSurfaceMaterial
 
 Texture2D texDiffuseMap;
 Texture2D texNormalMap;
+Texture2D texSpecularMap;
+Texture2D texAlphaMask;
 
 Texture2D texAmbientOcclusion;
 
@@ -87,20 +89,20 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	BRDF_Surface s;
     //s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
-	s.N = surfaceMaterial.isNormalMap > 0.0f ? UnpackNormals(texNormalMap, sLinearSampler, uv, N, T) : N;
+	s.N = HasNormalMap(surfaceMaterial.textureConfig) > 0 ? UnpackNormals(texNormalMap, sLinearSampler, uv, N, T) : N;
     const float3 R = reflect(-V, s.N);
 
 	// there's a weird issue here if garbage texture is bound and isDiffuseMap is 0.0f. 
-	//s.diffuseColor	= surfaceMaterial.diffuse * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sNormalSampler, uv).xyz + (1.0f - surfaceMaterial.isDiffuseMap) * surfaceMaterial.diffuse);
+	//s.diffuseColor	= surfaceMaterial.diffuse * (HasDiffuseMap(surfaceMaterial.textureConfig) * texDiffuseMap.Sample(sNormalSampler, uv).xyz + (1.0f - sHasDiffuseMap(surfaceMaterial.textureConfig)) * surfaceMaterial.diffuse);
 	//s.N				= (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
 
 	// workaround -> use if else for selecting rather then blending. for some reason, the vector math fails and (0,0,0) + (1,1,1) ends up being (0,1,1). Not sure why.
-	float3 sampledDiffuse = surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, uv).xyz;
+	float3 sampledDiffuse = HasDiffuseMap(surfaceMaterial.textureConfig) * texDiffuseMap.Sample(sLinearSampler, uv).xyz;
 	float3 surfaceDiffuse = surfaceMaterial.diffuse;
-	float3 finalDiffuse = surfaceMaterial.isDiffuseMap > 0.0f ? sampledDiffuse : surfaceDiffuse;
+	float3 finalDiffuse = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 ? sampledDiffuse : surfaceDiffuse;
 	s.diffuseColor = finalDiffuse;
 
-    s.specularColor = surfaceMaterial.specular;
+    s.specularColor = HasSpecularMap(surfaceMaterial.textureConfig) > 0 ? texSpecularMap.Sample(sLinearSampler, uv) : surfaceMaterial.specular;
     s.roughness = surfaceMaterial.roughness;
     s.metalness = surfaceMaterial.metalness;
 
@@ -167,5 +169,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 		IEnv -= Ia; // cancel ambient lighting
     }
 	const float3 illumination = Ia + IdIs + IEnv;
-	return float4(illumination, 1);
+
+	float alpha = HasAlphaMask(surfaceMaterial.textureConfig) ? texAlphaMask.Sample(sLinearSampler, uv).r : 1.0f;
+	//float alpha = 1.0f;
+
+	return float4(illumination * alpha, alpha);
 }

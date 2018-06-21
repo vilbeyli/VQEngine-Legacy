@@ -26,11 +26,13 @@ See [Milestones](https://github.com/vilbeyli/VQEngine/milestones) for the planne
 
 The latest changes can be found in the [dev branch](https://github.com/vilbeyli/VQEngine/tree/dev), or another branch named with the feature being implemented. _These branches might be unstable before the release_.
 
- *v0.4.0 - **Data-Oriented Engine, Multi-threaded Tasking System, assimp Integration** - TBA*
- - Loading Screen
- - Asynchronous Model Loading using [assimp](https://github.com/assimp/assimp)
- - Task-based Threading System
+ *v0.4.0 - **Data-Oriented Engine, Multi-threaded Tasking System, Model Loading w/ assimp** - TBA*
  - Refactored Scene, Engine and Renderer classes in favor of [Data-Oriented Design](https://en.wikipedia.org/wiki/Data-oriented_design)
+ - Asynchronous Model Loading using [assimp](https://github.com/assimp/assimp)
+ - Transparency Rendering & Sponza Scene
+ - Task-based Threading System
+ - Directional Lights
+ - Loading Screen
  - Documentation
 
 ## Released
@@ -54,7 +56,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 *[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - **Phong Lighting, Shadow Mapping, Texturing and Shader Reflection** July15-2017*
  - Vertex-Geometry-Pixel Shader Pipeline
  - Shader Reflection
- - Phong Lighting
+ - Phong Lighting & Point/Spot Lights
  - Simple Shadow Maping Algorithm
  - Normal/Diffuse Maps
  - Procedural Geometry: Cube, Sphere, Cylinder, Grid
@@ -70,7 +72,7 @@ The projects are set to build with the following configurations:
 
 # Build
 
-Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will contain the executable built in release mode and the data and shaders needed to run the demo. You need Visual Studio 2017 installed for the build scripts to work.
+Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will contain the VQEngine executable built in release mode and the data and shaders needed to run the demo. You need Visual Studio 2017 installed for the build scripts to work.
 
 
 # How To Use
@@ -81,25 +83,23 @@ Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will co
 | **R** | Reset Camera |
 | **C** | Cycle Through Scene Cameras |
 | **Shift+R** |	Reload Current Scene From File |
-| **0-4** |	**Switch Scenes**: <br>**1**: Objects Scene <br>**2**: SSAO Test <br>**3**: Environment Map Test <br>**4**: Stress Test
+| **0-5** |	**Switch Scenes**: <br>**1**: Objects Scene <br>**2**: SSAO Test <br>**3**: Environment Map Test <br>**4**: Stress Test <br>**5**: Sponza Scene
 
 
 | Engine Controls |  |
 | :---: | :--- |
-| **Page Up/Down** | Change Environment Map / Skybox |
+| **Page Up/Down** | Change Environment Map |
 | **;** |	Toggle Displaying CPU/GPU Performance Numbers |
-| **'** |	Toggle Displaying Rendering Stats |
-| **Shift + '** |	Toggle Displaying Renderer Controls |
+| **'** / **Shift + '** |	Toggle Displaying Rendering Stats / Renderer Controls |
 | **Backspace** | Pause App |
 | **ESC** |	Exit App |
 
 | Renderer Controls | |
 | :---: | :--- |
-| **F1** |	Toggle Lighting Shaders (Phong/BRDF) |
+| **F1** |	Toggle Forward/Deferred Rendering |
 | **F2** |	Toggle Ambient Occlusion |
 | **F3** |	Toggle Bloom |
 | **F4** |	Toggle Display Render Targets |
-| **F5** |	Toggle Forward/Deferred Rendering |
 
 # 3rd Party Open Source Libraries
  

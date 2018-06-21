@@ -290,7 +290,7 @@ GameObject* StressTestScene::CreateRandomGameObject()
 	//
 	pObj->AddMesh(meshType);
 	pObj->SetTransform(tf);
-	pObj->AddMaterial(pMat->ID);
+	pObj->AddMaterial(pMat);
 	return pObj;
 }
 

@@ -23,7 +23,7 @@
 #include "Utilities/Log.h"
 #endif
 
-void Model::AddMaterialToMesh(MeshID meshID, MaterialID materialID)
+void Model::AddMaterialToMesh(MeshID meshID, MaterialID materialID, bool bTransparent)
 {
 	MeshToMaterialLookup& mMaterialLookupPerMesh = mData.mMaterialLookupPerMesh;
 	auto it = mMaterialLookupPerMesh.find(meshID);
@@ -37,6 +37,12 @@ void Model::AddMaterialToMesh(MeshID meshID, MaterialID materialID)
 		Log::Warning("Overriding Material");
 #endif
 		mMaterialLookupPerMesh[meshID] = materialID;
+
+		if (bTransparent)
+		{
+			mData.mTransparentMeshIDs.push_back(meshID);
+		}
+
 	}
 }
 
@@ -46,6 +52,7 @@ Model::Model(const std::string& directoryFullPath, const std::string & modelName
 	mModelName = modelName;
 	mData.mMeshIDs = std::move(modelDataIn.mMeshIDs);
 	mData.mMaterialLookupPerMesh = std::move(modelDataIn.mMaterialLookupPerMesh);
+	mData.mTransparentMeshIDs = std::move(modelDataIn.mTransparentMeshIDs);
 	mbLoaded = true;
 }
 
@@ -166,18 +173,32 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 		{	// process all the node's meshes (if any)
 			aiMesh *mesh = pAiScene->mMeshes[pNode->mMeshes[i]];
 
-			// MATERIALS
+			// MATERIAL - http://assimp.sourceforge.net/lib_html/materials.html
 			aiMaterial* material = pAiScene->mMaterials[mesh->mMaterialIndex];
-			std::vector<TextureID> diffuseMaps = loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
-			//vector<Texture> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
-			std::vector<TextureID> normalMaps = loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal");
-			//std::vector<Texture> heightMaps = loadMaterialTextures(material, aiTextureType_AMBIENT, "texture_height");
+			std::vector<TextureID> diffuseMaps  = loadMaterialTextures(material, aiTextureType_DIFFUSE	, "texture_diffuse");
+			std::vector<TextureID> specularMaps = loadMaterialTextures(material, aiTextureType_SPECULAR , "texture_specular");
+			std::vector<TextureID> normalMaps   = loadMaterialTextures(material, aiTextureType_NORMALS	, "texture_normal");
+			std::vector<TextureID> heightMaps   = loadMaterialTextures(material, aiTextureType_HEIGHT   , "texture_height");
+			std::vector<TextureID> alphaMaps    = loadMaterialTextures(material, aiTextureType_OPACITY	, "texture_alpha");
 
 			Material* pBRDF = pScene->CreateNewMaterial(GGX_BRDF);
-			assert(diffuseMaps.size() <= 1);
-			assert(normalMaps.size() <= 1);
-			if (!diffuseMaps.empty()) pBRDF->diffuseMap = diffuseMaps[0];
-			if (!normalMaps.empty()) pBRDF->normalMap = normalMaps[0];
+			assert(diffuseMaps.size() <= 1);	assert(normalMaps.size() <= 1);
+			assert(specularMaps.size() <= 1);	assert(heightMaps.size() <= 1);
+			assert(alphaMaps.size() <= 1);
+			if (!diffuseMaps.empty())	pBRDF->diffuseMap = diffuseMaps[0];
+			if (!normalMaps.empty())	pBRDF->normalMap = normalMaps[0];
+			if (!specularMaps.empty())	pBRDF->specularMap = specularMaps[0];
+			if (!heightMaps.empty())	pBRDF->heightMap = heightMaps[0];
+			if (!alphaMaps.empty())		pBRDF->mask = alphaMaps[0];
+
+			aiString name;
+			if (aiReturn_SUCCESS == material->Get(AI_MATKEY_NAME, name))
+			{
+				// we don't store names for materials. probably best to store them in a lookup somewhere,
+				// away from the material data.
+				//
+				// pBRDF->
+			}
 
 			aiColor3D color(0.f, 0.f, 0.f);
 			if (aiReturn_SUCCESS == material->Get(AI_MATKEY_COLOR_DIFFUSE, color))
@@ -191,17 +212,57 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 				pBRDF->specular = vec3(specular.r, specular.g, specular.b);
 			}
 
+			aiColor3D transparent(0.0f, 0.0f, 0.0f);
+			if (aiReturn_SUCCESS == material->Get(AI_MATKEY_COLOR_TRANSPARENT, transparent))
+			{	// Defines the transparent color of the material, this is the color to be multiplied 
+				// with the color of translucent light to construct the final 'destination color' 
+				// for a particular position in the screen buffer. T
+				//
+				//pBRDF->specular = vec3(specular.r, specular.g, specular.b);
+			}
+
+			float opacity = 0.0f;
+			if (aiReturn_SUCCESS == material->Get(AI_MATKEY_OPACITY, opacity))
+			{
+				pBRDF->alpha = opacity;
+			}
+
+			float shininess = 0.0f;
+			if (aiReturn_SUCCESS == material->Get(AI_MATKEY_SHININESS, shininess))
+			{
+				// Phong Shininess -> Beckmann BRDF Roughness conversion
+				//
+				// https://simonstechblog.blogspot.com/2011/12/microfacet-brdf.html
+				// https://computergraphics.stackexchange.com/questions/1515/what-is-the-accepted-method-of-converting-shininess-to-roughness-and-vice-versa
+				//
+				static_cast<BRDF_Material*>(pBRDF)->roughness = sqrtf(2.0f / (2.0f + shininess));
+			}
+
+			// other material keys to consider
+			//
+			// AI_MATKEY_TWOSIDED
+			// AI_MATKEY_ENABLE_WIREFRAME
+			// AI_MATKEY_BLEND_FUNC
+			// AI_MATKEY_BUMPSCALING
+
+			
 
 			SceneMeshes.push_back(processMesh(mesh, pAiScene));
 			ModelMeshIDs.push_back(MeshID(SceneMeshes.size() - 1));
 			modelData.mMaterialLookupPerMesh[ModelMeshIDs.back()] = pBRDF->ID;
+			if (pBRDF->IsTransparent())
+			{
+				modelData.mTransparentMeshIDs.push_back(ModelMeshIDs.back());
+			}
 		}
 		for (unsigned int i = 0; i < pNode->mNumChildren; i++)
 		{	// then do the same for each of its children
 			ModelData childModelData = processNode(pNode->mChildren[i], pAiScene, SceneMeshes);
 			std::vector<MeshID>& ChildMeshes = childModelData.mMeshIDs;
+			std::vector<MeshID>& ChildMeshesTransparent = childModelData.mTransparentMeshIDs;
 
 			std::copy(ChildMeshes.begin(), ChildMeshes.end(), std::back_inserter(ModelMeshIDs));
+			std::copy(ChildMeshesTransparent.begin(), ChildMeshesTransparent.end(), std::back_inserter(modelData.mTransparentMeshIDs));
 			for (auto& kvp : childModelData.mMaterialLookupPerMesh)
 			{
 #if _DEBUG
@@ -230,7 +291,15 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 	// IMPORT SCENE
 	//
 	Importer importer;
-	const aiScene* scene = importer.ReadFile(fullPath, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+	const aiScene* scene = importer.ReadFile(fullPath
+		, aiProcess_Triangulate 
+		| aiProcess_CalcTangentSpace 
+		| aiProcess_MakeLeftHanded 
+		| aiProcess_FlipUVs 
+		| aiProcess_FlipWindingOrder 
+		//| aiProcess_TransformUVCoords 
+		| aiProcess_FixInfacingNormals
+	);
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
 		Log::Error("Assimp error: %s", importer.GetErrorString());

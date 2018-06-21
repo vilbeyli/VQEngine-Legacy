@@ -94,6 +94,12 @@ struct SceneLighting	//  5152 bytes
 // MATERIALS
 //----------------------------------------------------------
 // CPU - GPU struct for both lighting models
+
+inline int HasDiffuseMap(int textureConfig)  { return ((textureConfig & 1) > 0 ? 1 : 0); }
+inline int HasNormalMap(int textureConfig)	 { return ((textureConfig & 2) > 0 ? 1 : 0); }
+inline int HasSpecularMap(int textureConfig) { return ((textureConfig & 4) > 0 ? 1 : 0); }
+inline int HasAlphaMask(int textureConfig)   { return ((textureConfig & 8) > 0 ? 1 : 0); }
+
 struct SurfaceMaterial
 {
     float3 diffuse;
@@ -102,9 +108,8 @@ struct SurfaceMaterial
     float3 specular;
     float roughness;
 
-	// todo: remove is*Map after shader permutation is implemented
-    float isDiffuseMap;
-    float isNormalMap;
+	int textureConfig;
+	int pad;
 
     float metalness;
     float shininess;

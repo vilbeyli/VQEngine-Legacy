@@ -443,7 +443,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		bIsReadingMaterial = true;
 		materialType = BRDF;
 		pMaterial = scene.materials.CreateAndGetMaterial(GGX_BRDF);
-		pObject->AddMaterial(pMaterial->ID);
+		pObject->AddMaterial(pMaterial);
 	}
 	else if (cmd == "blinnphong")
 	{
@@ -472,7 +472,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		bIsReadingMaterial = true;
 		materialType = PHONG;
 		pMaterial = scene.materials.CreateAndGetMaterial(BLINN_PHONG);
-		pObject->AddMaterial(pMaterial->ID);
+		pObject->AddMaterial(pMaterial);
 	}
 
 	else if (cmd == "diffuse" || cmd == "albedo")

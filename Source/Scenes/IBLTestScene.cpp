@@ -96,7 +96,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			//pBRDF->normalMap = mpRenderer->CreateTextureFromFile("openart/190_norm.JPG");
 			
 			sph->AddMesh(EGeometry::SPHERE);
-			sph->AddMaterial(pBRDF->ID);
+			sph->AddMaterial(pBRDF);
 			sph->SetTransform(tf);
 			spheres.push_back(sph);
 		}
@@ -117,7 +117,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			
 			sph->SetTransform(tf);
 			sph->AddMesh(EGeometry::SPHERE);
-			sph->AddMaterial(pBRDF->ID);
+			sph->AddMaterial(pBRDF);
 			spheres.push_back(sph);
 		}
 
@@ -142,7 +142,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			pBRDF->roughness = std::max(0.04f, rowStep);
 			pBRDF->metalness = colStep;	
 			pBRDF->diffuse = LinearColor::bp_ruby;
-			sph->AddMaterial(pBRDF->ID);
+			sph->AddMaterial(pBRDF);
 
 			spheres.push_back(sph);
 		}
@@ -162,7 +162,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			pBRDF->roughness = pBRDF->roughness == 0.0f ? 0.04f : pBRDF->roughness;
 			pBRDF->metalness = colStep;
 			pBRDF->diffuse = vec3(0.04f);
-			sph->AddMaterial(pBRDF->ID);
+			sph->AddMaterial(pBRDF);
 
 			spheres.push_back(sph);
 		}

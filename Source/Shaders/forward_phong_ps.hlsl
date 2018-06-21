@@ -81,11 +81,11 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float2 uv = In.texCoord * surfaceMaterial.uvScale;
 
 	PHONG_Surface s;
-    s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, uv, Nw, T) +
-		  (1.0f - surfaceMaterial.isNormalMap) * Nw;
+    s.N = (HasNormalMap(surfaceMaterial.textureConfig)) * UnpackNormals(texNormalMap, sLinearSampler, uv, Nw, T) +
+		  (1.0f - HasNormalMap(surfaceMaterial.textureConfig)) * Nw;
     
-	s.diffuseColor = surfaceMaterial.diffuse              * (surfaceMaterial.isDiffuseMap * texDiffuseMap.Sample(sLinearSampler, uv).xyz +
-					(1.0f - surfaceMaterial.isDiffuseMap));
+	s.diffuseColor = surfaceMaterial.diffuse              * (HasDiffuseMap(surfaceMaterial.textureConfig) * texDiffuseMap.Sample(sLinearSampler, uv).xyz +
+					(1.0f - HasDiffuseMap(surfaceMaterial.textureConfig)));
 
 	s.specularColor = surfaceMaterial.specular;
     s.shininess = surfaceMaterial.shininess;

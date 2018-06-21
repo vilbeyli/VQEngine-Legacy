@@ -180,7 +180,7 @@ void GameObject::RenderTransparent(
 			{
 				const MaterialID materialID = mModel.mData.mMaterialLookupPerMesh.at(id);
 				const Material* pMat = materialBuffer.GetMaterial_const(materialID);
-				pMat->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
+				pMat->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering && shader != FORWARD_BRDF);
 			}
 			else
 			{

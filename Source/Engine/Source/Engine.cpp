@@ -707,23 +707,48 @@ void Engine::Render()
 
 		mpGPUProfiler->BeginQuery("Opaque Pass (ScreenSpace)");
 		mpCPUProfiler->BeginEntry("Opaque Pass (ScreenSpace)");
-		mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
+		{
+			mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
+		}
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndQuery();
 
 		// TRANSPARENT OBJECTS - FORWARD RENDER
-#if 0
+#if 1
 		mpGPUProfiler->BeginQuery("Alpha Pass (Forward)");
 		mpCPUProfiler->BeginEntry("Alpha Pass (Forward)");
+		{
+			mpRenderer->BindDepthTarget(GetWorldDepthTarget());
+			mpRenderer->SetShader(EShaders::FORWARD_BRDF);
+			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+			mpRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
 
-		mpRenderer->BindDepthTarget(GetWorldDepthTarget());
-		mpRenderer->SetShader(_geometryShader);
-		mpRenderer->SetDepthStencilState(_geometryStencilState);
-		mpRenderer->SetBlendState(_geometryStencilState);
-		mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-		mpRenderer->Apply();
-		mFrameStats.numSceneObjects += mpActiveScene->RenderAlpha(mSceneView);
 
+			mpRenderer->SetConstant1f("ambientFactor", mSceneView.sceneRenderSettings.ambientFactor);
+			mpRenderer->SetConstant3f("cameraPos", mSceneView.cameraPosition);
+			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
+			const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
+			const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler < 0 ? EDefaultSamplerState::POINT_SAMPLER : mSceneView.environmentMap.envMapSampler;
+			const TextureID prefilteredEnvMap = mSceneView.environmentMap.prefilteredEnvironmentMap;
+			const TextureID tBRDFLUT = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
+			const bool bSkylight = mSceneView.bIsIBLEnabled && texIrradianceMap != -1;
+			if (bSkylight)
+			{
+				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
+				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", prefilteredEnvMap);
+				mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
+				mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
+			}
+
+			mpRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
+			mpRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
+			mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
+			mpRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+
+			mpRenderer->Apply();
+			mFrameStats.numSceneObjects += mpActiveScene->RenderAlpha(mSceneView);
+			
+		}
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndQuery();
 #endif
@@ -744,6 +769,7 @@ void Engine::Render()
 
 		RenderLights();
 		mpCPUProfiler->EndEntry();
+		mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 	}
 
 	//==========================================================================

@@ -343,11 +343,11 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		rtBlendDesc.BlendEnable = true;
 		rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
 		rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
-		rtBlendDesc.DestBlend = D3D11_BLEND_ONE;
-		rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ONE;
-		rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 		rtBlendDesc.SrcBlend = D3D11_BLEND_ONE;
-		rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
+		rtBlendDesc.DestBlend = D3D11_BLEND_ONE;
+		rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_SRC_ALPHA;
+		rtBlendDesc.DestBlendAlpha = D3D11_BLEND_DEST_ALPHA;
+		rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
 		D3D11_BLEND_DESC desc = {};
 		desc.RenderTarget[0] = rtBlendDesc;

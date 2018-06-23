@@ -49,6 +49,7 @@ cbuffer cbSurfaceMaterial
 Texture2D texDiffuseMap;
 Texture2D texNormalMap;
 Texture2D texSpecularMap;
+Texture2D texAlphaMask;
 
 SamplerState sNormalSampler;
 
@@ -62,6 +63,10 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 T = normalize(In.viewTangent);
 	const float3 V = normalize(-P);
 	float2 uv = In.uv * surfaceMaterial.uvScale;
+
+	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 ? texAlphaMask.Sample(sNormalSampler, uv).r : 1.0f;
+	if (alpha < 0.01f)
+		discard;
 
     BRDF_Surface s;
 	

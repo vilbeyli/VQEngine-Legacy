@@ -80,6 +80,10 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
 	const float2 uv = In.texCoord * surfaceMaterial.uvScale;
 
+	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 ? texAlphaMask.Sample(sLinearSampler, uv).r : 1.0f;
+	if (alpha < 0.01f)
+		discard;
+
 	// lighting & surface parameters (World Space)
 	const float3 P = In.worldPos;
 	const float3 N = normalize(In.normal);
@@ -170,8 +174,5 @@ float4 PSMain(PSIn In) : SV_TARGET
     }
 	const float3 illumination = Ia + IdIs + IEnv;
 
-	float alpha = HasAlphaMask(surfaceMaterial.textureConfig) ? texAlphaMask.Sample(sLinearSampler, uv).r : 1.0f;
-	//float alpha = 1.0f;
-
-	return float4(illumination * alpha, alpha);
+	return float4(illumination, 1.0f);
 }

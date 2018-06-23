@@ -281,6 +281,7 @@ Material::Material(MaterialID _ID)
 	heightMap(-1),
 	specularMap(-1),
 	mask(-1),
+	roughnessMap(-1),
 	ID(_ID)
 {}
 
@@ -317,22 +318,19 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 		renderer->SetConstant2f("uvScale", tiling);
 		renderer->SetConstant1f("isNormalMap", normalMap == -1 ? 0.0f : 1.0f);
 		if (normalMap != -1) renderer->SetTexture("texNormalMap", normalMap);
+		if (mask >= 0)		renderer->SetTexture("texAlphaMask", mask);
+
 		break;
 	case EShaders::UNLIT:
 		renderer->SetConstant3f("diffuse", diffuse);
 		renderer->SetConstant1f("isDiffuseMap", diffuseMap == -1 ? 0.0f : 1.0f);
 		if (diffuseMap != -1) renderer->SetTexture("texDiffuseMap", diffuseMap);
 		break;
-	case EShaders::FORWARD_BRDF:
-		if (mask >= 0)			renderer->SetTexture("texAlphaMask", mask);
-		if (diffuseMap >= 0)	renderer->SetTexture("texDiffuseMap", diffuseMap);
-		if (normalMap >= 0)		renderer->SetTexture("texNormalMap", normalMap);
-		if (specularMap >= 0)	renderer->SetTexture("texSpecularMap", specularMap);
-		break;
 	default:
 		if (diffuseMap >= 0)	renderer->SetTexture("texDiffuseMap", diffuseMap);
 		if (normalMap >= 0)		renderer->SetTexture("texNormalMap", normalMap);
 		if (specularMap >= 0)	renderer->SetTexture("texSpecularMap", specularMap);
+		if (mask >= 0)			renderer->SetTexture("texAlphaMask", mask);
 		break;
 	}
 
@@ -341,7 +339,7 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 
 bool Material::IsTransparent() const
 {
-	return alpha != 1.0f || mask != -1;
+	return alpha != 1.0f;
 }
 
 void BRDF_Material::Clear() 
@@ -373,21 +371,23 @@ void BlinnPhong_Material::Clear()
 
 void BRDF_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const
 {
+	
+	int textureConfig = 0;
+	textureConfig |= diffuseMap == -1	? 0 : (1 << 0);
+	textureConfig |= normalMap == -1	? 0 : (1 << 1);
+	textureConfig |= specularMap == -1	? 0 : (1 << 2);
+	textureConfig |= mask == -1			? 0 : (1 << 3);
+
 	switch (shader)
 	{
 	case EShaders::NORMAL:
 	case EShaders::Z_PREPRASS:
 		renderer->SetConstant2f("uvScale", tiling);
+		renderer->SetConstant1i("textureConfig", textureConfig);
 		break;
 	case EShaders::UNLIT:
 		break;
 	default:
-		int textureConfig = 0;
-		textureConfig |= diffuseMap == -1	? 0 : (1 << 0);
-		textureConfig |= normalMap == -1	? 0 : (1 << 1);
-		textureConfig |= specularMap == -1	? 0 : (1 << 2);
-		textureConfig |= mask == -1			? 0 : (1 << 3);
-
 		SurfaceMaterial mat{
 			diffuse.Value(),
 			alpha,

@@ -15,6 +15,9 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+// skeleton code for transparency, detailed implementation will be done later on.
+// disable it for now.
+#define ENABLE_TRANSPARENCY 0
 
 #include "Engine.h"
 
@@ -713,15 +716,15 @@ void Engine::Render()
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndQuery();
 
+#if ENABLE_TRANSPARENCY
 		// TRANSPARENT OBJECTS - FORWARD RENDER
-#if 1
 		mpGPUProfiler->BeginQuery("Alpha Pass (Forward)");
 		mpCPUProfiler->BeginEntry("Alpha Pass (Forward)");
 		{
 			mpRenderer->BindDepthTarget(GetWorldDepthTarget());
 			mpRenderer->SetShader(EShaders::FORWARD_BRDF);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
-			mpRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
+			//mpRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
 
 
 			mpRenderer->SetConstant1f("ambientFactor", mSceneView.sceneRenderSettings.ambientFactor);
@@ -864,6 +867,7 @@ void Engine::Render()
 
 			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
 			const bool bSkylight = mSceneView.bIsIBLEnabled && texIrradianceMap != -1;
+			//mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 			if (bSkylight)
 			{
 				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
@@ -892,9 +896,11 @@ void Engine::Render()
 
 		mpActiveScene->RenderOpaque(mSceneView);
 
+#if ENABLE_TRANSPARENCY
 		mpRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
 		mpActiveScene->RenderAlpha(mSceneView);
 		mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
+#endif
 		mpRenderer->EndEvent();
 
 		RenderLights();
@@ -1014,7 +1020,7 @@ void Engine::Render()
 	if (mbShowProfiler)
 	{
 		const bool bSortStats = true;
-		float X_POS = sEngineSettings.window.width * 0.86f;
+		float X_POS = sEngineSettings.window.width * 0.005f;
 		float Y_POS = sEngineSettings.window.height * 0.05f;
 		mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 

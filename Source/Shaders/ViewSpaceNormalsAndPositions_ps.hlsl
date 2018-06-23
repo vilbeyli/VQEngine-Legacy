@@ -16,6 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "LightingCommon.hlsl"
 #include "ShadingMath.hlsl"
 
 struct PSIn
@@ -36,9 +37,11 @@ cbuffer cbSurfaceMaterial
 {
     float isNormalMap;
 	float2 uvScale;
+	int textureConfig;
 };
 
 Texture2D texNormalMap;
+Texture2D texAlphaMask;
 
 SamplerState sNormalSampler;
 
@@ -53,6 +56,10 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 V = normalize(-P);
 	const float2 uv = In.uv * uvScale;
 	
+	const float alpha = HasAlphaMask(textureConfig) > 0 ? texAlphaMask.Sample(sNormalSampler, uv).r : 1.0f;
+	if (alpha < 0.01f)
+		discard;
+
 	float3 surfaceN				= (isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) +	(1.0f - isNormalMap) * N;
 	GBuffer.normals				= surfaceN;
 	return GBuffer;

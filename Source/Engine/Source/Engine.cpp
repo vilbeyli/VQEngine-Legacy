@@ -707,14 +707,17 @@ void Engine::Render()
 		mpCPUProfiler->BeginEntry("Lighting Pass");
 		mpGPUProfiler->BeginQuery("Lighting Pass");
 		mpRenderer->BeginEvent("Lighting Pass");
-
+#if ENABLE_TRANSPARENCY
 		mpGPUProfiler->BeginQuery("Opaque Pass (ScreenSpace)");
 		mpCPUProfiler->BeginEntry("Opaque Pass (ScreenSpace)");
+#endif
 		{
 			mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
 		}
+#if ENABLE_TRANSPARENCY
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndQuery();
+#endif
 
 #if ENABLE_TRANSPARENCY
 		// TRANSPARENT OBJECTS - FORWARD RENDER

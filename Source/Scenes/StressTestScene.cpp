@@ -35,12 +35,9 @@
 using std::begin;
 using std::end;
 
-#define RANGE(c) begin(c), end(c)
-#define RRANGE(c) rbegin(c), rend(c)
-
 #pragma region CONSTANTS
 //----------------------------------------------------------------------------------------------
-// CONSTANTS
+// CONSTANTS | SCENE CONFIG
 //----------------------------------------------------------------------------------------------
 
 // LIGHTS
@@ -56,7 +53,7 @@ constexpr size_t DIV = 25;
 #endif
 
 // TRANSFORMS
-const vec3		ORIGIN_OFFSET	= vec3(-40, 20, -90);
+const vec3		ORIGIN_OFFSET	= vec3(-200, 20, 0);
 constexpr float OFFSET_SCALING	= 20.0f;
 
 #define RANDOMIZE_SCALE 1
@@ -69,7 +66,16 @@ constexpr float SCALE_HI = 5.0f;
 #define NO_TEXTURES 1
 constexpr int TEXTURED_OBJECT_PERCENTAGE = 45;
 
+// MESH
+//
+// selects a random mesh among built-in meshes 
+// when creating the object instances
 #define RANDOMIZE_MESH 1
+
+// MODEL
+#define LOAD_MODELS 1			// toggle model loading
+#define LOAD_MODELS_ASYNC 1		// 30-40% performance gain with the current test data
+#define LOAD_FREE3D_MODELS 1	// use this flag if you have the assets (Models/free3D/)
 #pragma endregion
 
 #pragma region GLOBALS
@@ -109,6 +115,79 @@ void StressTestScene::Load(SerializedScene& scene)
 	SetEnvironmentMap(EEnvironmentMapPresets::BARCELONA);
 
 	AddObjects();
+
+#if LOAD_MODELS
+
+	std::vector<std::string> ModelLoadList = 
+	{
+		"sponza/sponza.obj",
+		"nanosuit/nanosuit.obj",
+
+		"platform.obj",
+		"nanosuit/nanosuit.obj",	// test for multiple entry async loading
+
+		"SaiNarayan/Wanderer/Wanderer_LP.obj",
+		"SaiNarayan/CorinthianPillar/column.obj",
+
+		"EgemenIlbeyli/sise2.obj",
+		"EgemenIlbeyli/zen_orb.obj",
+
+#if LOAD_FREE3D_MODELS
+		"free3D/IronMan/IronMan.obj",
+		"free3D/Spider/Only_Spider_with_Animations_Export.obj",
+
+#if !_DEBUG
+		"free3D/Room/Room.obj",
+#endif
+#endif
+
+	};
+
+	const Quaternion Q_I = Quaternion::Identity();
+	const Quaternion Q_Pillar = Quaternion::FromAxisAngle(vec3::Up, DEG2RAD * 20.0f) * Quaternion::FromAxisAngle(vec3::Forward, DEG2RAD * 90.0f);
+	const Quaternion Q_Platform = Quaternion::FromAxisAngle(vec3::Right, DEG2RAD * -45.0f);
+	const Quaternion Q_Nanosuit = Quaternion::FromAxisAngle(vec3::Up, DEG2RAD * 180.0f);
+	const int X_UNITS = 500;
+	const int Z_UNITS = 250;
+	std::vector<Transform> transforms = 
+	{
+		Transform(vec3(-X_UNITS, 20, 0), Q_I, vec3(0.08f)),					// sponza
+		Transform(vec3(-X_UNITS, 0, Z_UNITS), Q_Nanosuit, vec3(5.0f)),		// nano
+
+		Transform(vec3(+X_UNITS, 20, 0), Q_Platform, vec3(70.0f)),			// platform
+		Transform(vec3(+X_UNITS, 0 , Z_UNITS), Q_I, vec3(15.0f)),			// nano (big)
+
+		Transform(vec3(-X_UNITS, 0 , -Z_UNITS), Q_I, vec3(7.0f)),			// wanderer
+		Transform(vec3(+X_UNITS, 25, -Z_UNITS), Q_Pillar, vec3(15.0f)),		// pillar
+
+		Transform(vec3(-X_UNITS, 0 , -Z_UNITS* 2), Q_I, vec3(1.0f)),		// bottle
+		Transform(vec3(+X_UNITS, 20, -Z_UNITS* 2), Q_I, vec3(1.0f)),		// zen ball
+
+		Transform(vec3(+X_UNITS, 0, +Z_UNITS * 2), Q_I, vec3(1.0f)),		// ironman
+		Transform(vec3(0, 10, -Z_UNITS), Q_I, vec3(1.0f)),					// spider
+		
+#if !_DBEUG
+		Transform(vec3(-X_UNITS, 83, +Z_UNITS * 2), Q_I, vec3(0.7f)),		// room
+#endif
+	};
+
+	int i = 0;
+	std::for_each(RANGE(ModelLoadList), [&](const std::string& modelPath)
+	{
+		GameObject* pObj = Scene::CreateNewGameObject();
+		pObj->SetTransform(transforms[i]);
+#if LOAD_MODELS_ASYNC
+		// Debug: 35s | Release: 4.9s
+		Scene::LoadModel_Async(pObj, modelPath);
+#else
+		// Debug: 55s | Release: 7.3s
+		pObj->SetModel(Scene::LoadModel(modelPath));
+#endif
+		mpLoadedModels.push_back(pObj);
+		++i;
+	});
+
+#endif
 
 	if(!ENGINE->IsRenderingStatsOn()) ENGINE->ToggleRenderingStats();
 	if (!ENGINE->IsProfileRenderingOn()) ENGINE->ToggleProfilerRendering();
@@ -173,7 +252,7 @@ void StressTestScene::RenderUI() const
 
 		Settings::Engine sEngineSettings = ENGINE->GetSettings();
 
-		const float X_POS = sEngineSettings.window.width * 0.02f;
+		const float X_POS = sEngineSettings.window.width * 0.72f;
 		const float Y_POS = 0.05f * sEngineSettings.window.height;
 		const float LINE_HEIGHT = 25.0f;
 		vec2 screenPosition(X_POS, Y_POS);

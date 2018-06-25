@@ -47,6 +47,41 @@ using namespace VQEngine;
 
 Settings::Engine Engine::sEngineSettings;
 Engine* Engine::sInstance = nullptr;
+Engine * Engine::GetEngine()
+{
+	if (sInstance == nullptr){sInstance = new Engine();}
+	return sInstance;
+}
+void Engine::ToggleRenderingPath()
+{
+	mbUseDeferredRendering = !mbUseDeferredRendering;
+
+	// initialize GBuffer if its not initialized, i.e., 
+	// Renderer started in forward mode and we're toggling deferred for the first time
+	if (!mDeferredRenderingPasses._GBuffer.bInitialized && mbUseDeferredRendering)
+	{
+		mDeferredRenderingPasses.InitializeGBuffer(mpRenderer);
+	}
+	Log::Info("Toggle Rendering Path: %s Rendering enabled", mbUseDeferredRendering ? "Deferred" : "Forward");
+
+	// if we just turned deferred rendering off, clear the gbuffer textures
+	if (!mbUseDeferredRendering)
+	{
+		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
+		mSelectedShader = sEngineSettings.rendering.bUseBRDFLighting ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
+	}
+}
+void Engine::ToggleAmbientOcclusion()
+{
+	mbIsAmbientOcclusionOn = !mbIsAmbientOcclusionOn;
+	if (!mbIsAmbientOcclusionOn)
+	{
+		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
+	}
+	Log::Info("Toggle Ambient Occlusion: %s", mbIsAmbientOcclusionOn ? "On" : "Off");
+}
+
+float Engine::GetTotalTime() const { return mpTimer->TotalTime(); }
 
 Engine::Engine()
 	: mpRenderer(new Renderer())
@@ -161,48 +196,6 @@ void Engine::Exit()
 	}
 }
 
-Engine * Engine::GetEngine()
-{
-	if (sInstance == nullptr)
-	{
-		sInstance = new Engine();
-	}
-
-	return sInstance;
-}
-
-void Engine::ToggleRenderingPath()
-{
-	mbUseDeferredRendering = !mbUseDeferredRendering;
-
-	// initialize GBuffer if its not initialized, i.e., 
-	// Renderer started in forward mode and we're toggling deferred for the first time
-	if (!mDeferredRenderingPasses._GBuffer.bInitialized && mbUseDeferredRendering)
-	{	
-		mDeferredRenderingPasses.InitializeGBuffer(mpRenderer);
-	}
-	Log::Info("Toggle Rendering Path: %s Rendering enabled", mbUseDeferredRendering ? "Deferred" : "Forward");
-
-	// if we just turned deferred rendering off, clear the gbuffer textures
-	if (!mbUseDeferredRendering)
-	{
-		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
-		mSelectedShader = sEngineSettings.rendering.bUseBRDFLighting ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
-	}
-}
-
-void Engine::ToggleAmbientOcclusion()
-{
-	mbIsAmbientOcclusionOn = !mbIsAmbientOcclusionOn;
-	if (!mbIsAmbientOcclusionOn)
-	{
-		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
-	}
-	Log::Info("Toggle Ambient Occlusion: %s", mbIsAmbientOcclusionOn ? "On" : "Off");
-}
-
-
-float Engine::GetTotalTime() const { return mpTimer->TotalTime(); }
 
 const Settings::Engine& Engine::ReadSettingsFromFile()
 {
@@ -210,28 +203,6 @@ const Settings::Engine& Engine::ReadSettingsFromFile()
 	return sEngineSettings;
 }
 
-void Engine::RenderLoadingScreen() const
-{
-	const TextureID texLoadingScreen = mpRenderer->CreateTextureFromFile("LoadingScreen0.png");
-	const XMMATRIX matTransformation = XMMatrixIdentity();
-	const auto IABuffers = mBuiltinMeshes[EGeometry::QUAD].GetIABuffers();
-	mpRenderer->BeginFrame();
-	mpRenderer->BindRenderTarget(0);
-	mpRenderer->SetShader(EShaders::UNLIT);
-	mpRenderer->SetVertexBuffer(IABuffers.first);
-	mpRenderer->SetIndexBuffer(IABuffers.second);
-	mpRenderer->SetTexture("texDiffuseMap", texLoadingScreen);
-	mpRenderer->SetConstant1f("isDiffuseMap", 1.0f);
-	mpRenderer->SetConstant3f("diffuse", vec3(1.0f, 1, 1));
-	mpRenderer->SetConstant4x4f("worldViewProj", matTransformation);
-	mpRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
-	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
-	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
-	mpRenderer->Apply();
-	mpRenderer->DrawIndexed();
-	mpRenderer->EndFrame();
-	mpRenderer->UnbindRenderTargets();
-}
 
 bool Engine::ReloadScene()
 {
@@ -256,6 +227,7 @@ bool Engine::LoadSceneFromFile()
 
 	assert(mCurrentLevel < mpScenes.size());
 	mpActiveScene = mpScenes[mCurrentLevel];
+	mpActiveScene->mpThreadPool = mpThreadPool;
 
 	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
 	return true;
@@ -284,10 +256,13 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpTimer->Start();
 	Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
 	mpTimer->Stop();
-	Log::Info("--------------------- ENVIRONMENT MAPS LOADED IN %.2fs.", mpTimer->DeltaTime());
+	Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
+	mpTimer->Reset();
 
 	// SCENE INITIALIZATION
 	//
+	Log::Info("-------------------- LOADING SCENE --------------------- ");
+	mpTimer->Start();
 	const size_t numScenes = sEngineSettings.sceneNames.size();
 	assert(sEngineSettings.levelToLoad < numScenes);
 	if (!LoadSceneFromFile())
@@ -295,10 +270,12 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		Log::Error("Engine couldn't load scene.");
 		return false;
 	}
+	mpTimer->Stop();
+	Log::Info("-------------------- SCENE LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
+	mpTimer->Reset();
 
 	// RENDER PASS INITIALIZATION
 	//
-	mpTimer->Reset();
 	mpTimer->Start();
 	{	
 		Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
@@ -1086,6 +1063,29 @@ void Engine::Render()
 	mpGPUProfiler->EndQuery();
 	mpGPUProfiler->EndFrame(mFrameCount);
 	++mFrameCount;
+}
+
+void Engine::RenderLoadingScreen() const
+{
+	const TextureID texLoadingScreen = mpRenderer->CreateTextureFromFile("LoadingScreen0.png");
+	const XMMATRIX matTransformation = XMMatrixIdentity();
+	const auto IABuffers = mBuiltinMeshes[EGeometry::QUAD].GetIABuffers();
+	mpRenderer->BeginFrame();
+	mpRenderer->BindRenderTarget(0);
+	mpRenderer->SetShader(EShaders::UNLIT);
+	mpRenderer->SetVertexBuffer(IABuffers.first);
+	mpRenderer->SetIndexBuffer(IABuffers.second);
+	mpRenderer->SetTexture("texDiffuseMap", texLoadingScreen);
+	mpRenderer->SetConstant1f("isDiffuseMap", 1.0f);
+	mpRenderer->SetConstant3f("diffuse", vec3(1.0f, 1, 1));
+	mpRenderer->SetConstant4x4f("worldViewProj", matTransformation);
+	mpRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
+	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
+	mpRenderer->Apply();
+	mpRenderer->DrawIndexed();
+	mpRenderer->EndFrame();
+	mpRenderer->UnbindRenderTargets();
 }
 
 const char* FrameStats::statNames[FrameStats::numStat] =

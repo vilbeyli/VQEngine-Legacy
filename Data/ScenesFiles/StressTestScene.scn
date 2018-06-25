@@ -15,7 +15,7 @@
 
 // Scene
 // ---------------------------------------------------------------------------------------------------------------
-camera 0.1 1500 75   0 30 -100  0 25 
+camera 0.1 2000 75   0 30 -100  0 25 
 camera 0.1 1500 75   0 30 100  180 25 
 ao true 1
 skylight true
@@ -26,7 +26,7 @@ bloom true
 
 object begin
 mesh quad
-transform 0 0 0 90 0 0 600
+transform 0 0 0 90 0 0 700
 brdf
 diffuse 0.9 0.85 0.9
 textures openart/165.jpg openart/165_norm.jpg
@@ -36,35 +36,6 @@ metalness 0
 brdf
 object end
 
-
-object begin
-mesh cube
-transform 10 0 -50 45 0 45 5
-brdf
-diffuse 0.9 0.9 0.9
-roughness 0.95
-metalness 0
-textures openart/164.jpg openart/164_norm.jpg
-brdf
-object end
-
-object begin
-mesh sphere
-brdf
-diffuse 1.0 0.76 0.336
-brdf
-transform -10 0 -50 0 0 45 5
-object end
-
-object begin
-mesh grid
-transform -30 5 -50 0 0 -45 15
-brdf
-diffuse 0.913, 0.921, 0.925
-metalness 0.8
-textures openart/199.jpg openart/199_norm.jpg
-brdf
-object end
 
 light       s         white      	true       9000         80	     -100    45     0	   180  0  	65  0.8	 
 light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 

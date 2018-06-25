@@ -36,5 +36,6 @@ private:
 private:
 	// objects added/removed for stress testing
 	std::vector<GameObject*> mpTestObjects;
+	std::vector<GameObject*> mpLoadedModels;
 };
 

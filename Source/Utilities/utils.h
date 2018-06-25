@@ -21,6 +21,9 @@
 #include <string>
 #include <vector>
 
+#define RANGE(c) std::begin(c), std::end(c)
+#define RRANGE(c) std::rbegin(c), std::rend(c)
+
 /// STRING PROCESSING
 //===============================================================================================
 namespace StrUtil

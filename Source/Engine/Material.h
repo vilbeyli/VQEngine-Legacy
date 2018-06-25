@@ -20,6 +20,8 @@
 #include "Application/HandleTypedefs.h"
 #include "Renderer/RenderingEnums.h"
 
+#include <mutex>
+
 class Renderer;
 
 struct MaterialID
@@ -128,6 +130,7 @@ private:
 	static BlinnPhong_Material RandomBlinnPhongMaterial(MaterialID matID);
 
 private:
+	std::mutex mBufferMutex;
 	std::vector<BRDF_Material>			BRDFs;
 	std::vector<BlinnPhong_Material>	Phongs;
 

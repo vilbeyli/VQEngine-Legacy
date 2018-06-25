@@ -3,6 +3,10 @@
 
 # Custom Files
 
+Data/Models/free3D/*/
+Data/Models/free3D/*
+!Data/Models/free3D/README.md
+
 # User-specific files
 *.suo
 *.user

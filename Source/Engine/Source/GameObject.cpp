@@ -88,8 +88,9 @@ void GameObject::RenderOpaque(Renderer* pRenderer
 			{
 				const MaterialID materialID = mModel.mData.mMaterialLookupPerMesh.at(id);
 				const Material* pMat = materialBuffer.GetMaterial_const(materialID);
-				if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
-					return;
+				// #TODO: uncomment below when transparency is implemented.
+				//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
+				//	return;
 				pMat->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
 			}
 			else

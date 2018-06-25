@@ -42,8 +42,6 @@ namespace filesys = std::experimental::filesystem;
 #include <fstream>
 #endif
 
-#define RANGE(c) std::begin(c), std::end(c)
-#define RRANGE(c) std::rbegin(c), std::rend(c)
 #include <algorithm>
 
 namespace StrUtil

@@ -19,8 +19,13 @@
 #include "Scene.h"
 #include "Engine.h"
 #include "Application/Input.h"
+#include "Application/ThreadPool.h"
+
+#include "Renderer/GeometryGenerator.h"
 
 #include "Utilities/Log.h"
+
+#include <set>
 
 Scene::Scene(Renderer * pRenderer, TextRenderer * pTextRenderer)
 	: mpRenderer(pRenderer)
@@ -69,6 +74,10 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 	}
 
 	Load(scene);
+
+	// async model loading
+	StartLoadingModels();
+	EndLoadingModels();
 }
 
 void Scene::UnloadScene()
@@ -235,6 +244,61 @@ void Scene::ResetActiveCamera()
 	mCameras[mSelectedCamera].Reset();
 }
 
+MeshID Scene::AddMesh_Async(Mesh mesh)
+{
+	std::unique_lock<std::mutex> l(mSceneMeshMutex);
+	mMeshes.push_back(mesh);
+	return MeshID(mMeshes.size() - 1);
+}
+
+void Scene::StartLoadingModels()
+{
+	// can have multiple objects pointing to the same path
+	// get all the unique paths 
+	//
+	std::set<std::string> uniqueModelList;
+	
+	std::for_each(RANGE(mModelLoadQueue.objectModelMap), [&](auto kvp)
+	{	// 'value' (.second) of the 'key value pair' (kvp) contains the model path
+		uniqueModelList.emplace(kvp.second);
+	});
+	
+	Log::Info("Async Model Load List: ");
+
+	// so we load the models only once
+	//
+	std::for_each(RANGE(uniqueModelList), [&](const std::string& modelPath)
+	{
+		Log::Info("\t%s", modelPath.c_str());
+		mModelLoadQueue.asyncModelResults[modelPath] = mpThreadPool->AddTask([=]() 
+		{ 
+			return mModelLoader.LoadModel_Async(modelPath, this);
+		});
+	});
+}
+
+void Scene::EndLoadingModels()
+{
+	std::unordered_map<std::string, Model> loadedModels;
+	std::for_each(RANGE(mModelLoadQueue.objectModelMap), [&](auto kvp)
+	{
+		const std::string& modelPath = kvp.second;
+		GameObject* pObj = kvp.first;
+		
+		// this will wait on the longest item.
+		if (loadedModels.find(modelPath) == loadedModels.end())
+		{
+			Model m = mModelLoadQueue.asyncModelResults.at(modelPath).get();
+			pObj->SetModel(m);
+			loadedModels[modelPath] = m;
+		}
+		else
+		{
+			pObj->SetModel(loadedModels.at(modelPath));
+		}
+	});
+}
+
 
 void Scene::UpdateScene(float dt)
 {
@@ -272,12 +336,18 @@ void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
 }
 
 GameObject* Scene::CreateNewGameObject(){ mpObjects.push_back(mObjectPool.Create(this)); return mpObjects.back(); }
-Material* Scene::CreateNewMaterial(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type)); }
+Material* Scene::CreateNewMaterial(EMaterialType type){ return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type)); }
 Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type)); }
 
 Model Scene::LoadModel(const std::string & modelPath)
 {
 	return mModelLoader.LoadModel(modelPath, this);
+}
+
+void Scene::LoadModel_Async(GameObject* pObject, const std::string& modelPath)
+{
+	std::unique_lock<std::mutex> lock(mModelLoadQueue.mutex);
+	mModelLoadQueue.objectModelMap[pObject] = modelPath;
 }
 
 // SceneResourceView ------------------------------------------

@@ -24,6 +24,8 @@
 #include <vector>
 #include <unordered_map>
 
+#include <mutex>
+
 class GameObject;
 struct aiScene;
 struct aiNode;
@@ -68,30 +70,31 @@ public:
 	//
 	Model	LoadModel(const std::string& modelPath, Scene* pScene);
 	
-#if 0
-	// Begins async loading - doesn't block the thread
-	//
-	void	LoadModel_Begin(const std::string& modelPath, Scene* pScene);
-	
 	// Ends async loading.
 	//
-	Model	LoadModel_End(const std::string& modelPath);
-#endif
+	Model	LoadModel_Async(const std::string& modelPath, Scene* pScene);
+
 
 	void UnloadSceneModels(Scene* pScene);
 
 
 private:
-	static const char*						sRootFolderModels;
+	static const char* sRootFolderModels;
 	
+
 	// Key -> Value := model_path -> ModelData
 	using ModelLookUpTable = std::unordered_map<std::string, Model>;
 
 	// Key -> Value := Scene* -> model_path[]
 	using PerSceneModelNameLookupTable = std::unordered_map<Scene*, std::vector<std::string>>;
 
+
+private:
 	ModelLookUpTable				mLoadedModels;
 	PerSceneModelNameLookupTable	mSceneModels;
 
 	Renderer*						mpRenderer;
+
+	std::mutex						mLoadedModelMutex;
+	std::mutex						mSceneModelsMutex;
 };

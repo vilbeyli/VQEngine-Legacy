@@ -634,22 +634,31 @@ RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERa
 // example params: "openart/185.png", "Data/Textures/"
 TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
 {
-	if (texFileName.empty() || texFileName == "\"\"") return -1;
+	// renderer is single threaded in general, therefore finer granularity is not currently provided
+	// and instead, a mutex lcok is employed for the entire duration of creating a texture from file.
+	// this will require refactoring if its decided to go for a truely multi-threaded renderer.
+	//
+	std::unique_lock<std::mutex> l(mTexturesMutex);	
+
+	if (texFileName.empty() || texFileName == "\"\"")
+	{
+		Log::Warning("Warning: CreateTextureFromFile() - empty texture file name passed as parameter");
+		return -1;
+	}
+	
 	auto found = std::find_if(mTextures.begin(), mTextures.end(), [&texFileName](auto& tex) { return tex._name == texFileName; });
 	if (found != mTextures.end())
 	{
 		return (*found)._id;
 	}
+	
 
 	const std::string path = fileRoot + texFileName;
 #if _DEBUG
 	Log::Info("Loading Texture\t\t%s", path.c_str());
 #endif
-	{	// push texture right away and hold a reference
-		Texture tex;
-		mTextures.push_back(tex);
-	}
-	Texture& tex = mTextures.back();
+
+	Texture tex;
 
 	tex._name = texFileName;
 	std::wstring wpath(path.begin(), path.end());
@@ -673,10 +682,9 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 			tex._height = desc.Height;
 		}
 		resource->Release();
-		
-		tex._id = static_cast<int>(mTextures.size() - 1);
-		//m_textures.push_back(tex);
 
+		tex._id = static_cast<int>(mTextures.size());
+		mTextures.emplace_back(std::move(tex));
 		return mTextures.back()._id;
 	}
 	else
@@ -684,7 +692,6 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 		Log::Error("Cannot load texture file: %s\n", texFileName.c_str());
 		return mTextures[0]._id;
 	}
-
 }
 
 TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)

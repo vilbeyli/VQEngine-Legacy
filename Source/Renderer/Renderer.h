@@ -33,6 +33,7 @@
 #include <vector>
 #include <stack>
 #include <queue>
+#include <mutex>
 
 class BufferObject;
 class Camera;
@@ -320,6 +321,10 @@ private:
 	Settings::Window				mWindowSettings;
 
 	//std::vector<Point>			m_debugLines;
+
+	// MULTI-THREADING
+	//
+	std::mutex						mTexturesMutex;
 	//Worker						m_ShaderHotswapPollWatcher;
 };
  

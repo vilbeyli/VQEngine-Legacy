@@ -27,6 +27,8 @@
 #include "Utilities/Camera.h"
 
 #include <memory>
+#include <mutex>
+#include <future>
 
 struct SerializedScene;
 class SceneManager;
@@ -35,6 +37,8 @@ class TextRenderer;
 struct SceneView;
 struct ShadowView;
 class MaterialPool;
+
+namespace VQEngine { class ThreadPool; }
 
 #define DO_NOT_LOAD_SCENES 0
 
@@ -46,12 +50,21 @@ class MaterialPool;
 // the idea is that base class takes care of the common tasks among all scenes and calls the 
 // customized functions of the derived classes through pure virtual functions
 //----------------------------------------------------------------------------------------------------------------
+
+struct ModelLoadQueue 
+{
+	std::mutex mutex;
+	std::unordered_map<GameObject*, std::string> objectModelMap;
+	std::unordered_map<std::string, std::future<Model>> asyncModelResults;
+};
+
 class Scene
 {
 protected:
 	//----------------------------------------------------------------------------------------------------------------
 	// SCENE INTERFACE FOR DERIVED SCENES
 	//----------------------------------------------------------------------------------------------------------------
+
 	// Update() is called each frame
 	//
 	virtual void Update(float dt) = 0;
@@ -73,14 +86,20 @@ protected:
 	//
 	GameObject*		CreateNewGameObject();
 	
-	//	Load an assimp model
+	//	Loads an assimp model - blocks the thread until the model loads
 	//
 	Model			LoadModel(const std::string& modelPath);
 
+	// Queues a task for loading an assimp model for the GameObject* pObject
+	// - ModelData will be assigned when the models finish loading which is sometime 
+	//   after Load() and before Render(), it won't be immediately available.
+	//
+	void LoadModel_Async(GameObject* pObject, const std::string& modelPath);
+
 	//	Use these functions to programmatically create material instances which you can add to game objects in the scene. 
 	//
-	Material*		CreateNewMaterial(EMaterialType type);
-	Material*		CreateRandomMaterialOfType(EMaterialType type);
+	// CreateNewMaterial(EMaterialType type);
+	// CreateRandomMaterialOfType(EMaterialType type);
 
 protected:
 	friend class SceneResourceView; // using attorney method, alternatively can use friend function
@@ -98,12 +117,14 @@ protected:
 	Settings::SceneRender		mSceneRenderSettings;
 	Renderer*					mpRenderer;
 	TextRenderer*				mpTextRenderer;
+	VQEngine::ThreadPool*		mpThreadPool;	// initialized by the Engine
 
 
 
 	//----------------------------------------------------------------------------------------------------------------
 	// ENGINE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
+
 	friend class Engine;
 public:
 	Scene(Renderer* pRenderer, TextRenderer* pTextRenderer);
@@ -122,40 +143,47 @@ public:
 	//
 	void UpdateScene(float dt);
 
-	// Prepares the mDrawLists
+	// Prepares the mDrawLists for various processing (culling, render pass object lists etc.)
 	//
 	void PreRender();
+	void GatherLightData(SceneLightingData& outLightingData, ShadowView& outShadowView) const;
+	void GatherShadowCasters(std::vector<const GameObject*>& casters) const;
 
-	// TODO
+
+	// Renders the meshes in the scene which have materials with alpha=1.0f
 	//
 	int RenderOpaque(const SceneView& sceneView) const;
 
-	// TODO
+	// Renders the transparent meshes in the scene, on a separate draw pass
 	//
 	int RenderAlpha(const SceneView& sceneView) const;
 
-	// calls Render() on skybox.
+
+	//	Use these functions to programmatically create material instances which you can add to game objects in the scene. 
 	//
-	inline void RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
-
-
-	void GatherLightData(SceneLightingData& outLightingData, ShadowView& outShadowView) const;
-	void GatherShadowCasters(std::vector<const GameObject*>& casters) const;
+	Material* CreateNewMaterial(EMaterialType type); // <Thread safe>
+	Material* CreateRandomMaterialOfType(EMaterialType type); // <Thread safe>
 
 	inline const EnvironmentMap&		GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }
 	inline const Camera&				GetActiveCamera() const { return mCameras[mSelectedCamera]; }
 	inline const Settings::SceneRender& GetSceneRenderSettings() const { return mSceneRenderSettings; }
 	inline bool							HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
+	inline void							RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
 
 	EEnvironmentMapPresets GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
 	void SetEnvironmentMap(EEnvironmentMapPresets preset);
 	void ResetActiveCamera();
 
+	
+	MeshID AddMesh_Async(Mesh m);
 
 private:
 	GameObjectPool			mObjectPool;
 	MaterialPool			mMaterials;
 	ModelLoader				mModelLoader;
+	ModelLoadQueue			mModelLoadQueue;
+
+	std::mutex mSceneMeshMutex;
 
 	struct DrawLists
 	{
@@ -164,6 +192,11 @@ private:
 	};
 
 	DrawLists				mDrawLists;
+
+
+private:
+	void StartLoadingModels();
+	void EndLoadingModels();
 };
 
 

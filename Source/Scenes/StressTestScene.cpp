@@ -139,7 +139,7 @@ void StressTestScene::Load(SerializedScene& scene)
 #if !_DEBUG
 		"free3D/Room/Room.obj",
 #endif
-#endif
+#endif // LOAD_FREE3D_MODELS
 
 	};
 
@@ -187,7 +187,7 @@ void StressTestScene::Load(SerializedScene& scene)
 		++i;
 	});
 
-#endif
+#endif	// LOAD_MODELS
 
 	if(!ENGINE->IsRenderingStatsOn()) ENGINE->ToggleRenderingStats();
 	if (!ENGINE->IsProfileRenderingOn()) ENGINE->ToggleProfilerRendering();

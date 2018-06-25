@@ -48,7 +48,7 @@ float2 SphericalSample(float3 v)
 	// within the range of -PI to PI. The atan2 HLSL intrinsic function is well-defined for every point 
 	// other than the origin, even if y equals 0 and x does not equal 0.
     float2 uv = float2(atan2(v.z, v.x), asin(-v.y));
-    uv /= float2(TWO_PI, PI);
+    uv /= float2(-TWO_PI, PI);
     uv += float2(0.5, 0.5);
     return uv;
 }

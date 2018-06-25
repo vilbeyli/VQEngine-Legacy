@@ -263,6 +263,8 @@ void Scene::StartLoadingModels()
 		uniqueModelList.emplace(kvp.second);
 	});
 	
+	if (uniqueModelList.empty()) return;
+
 	Log::Info("Async Model Load List: ");
 
 	// so we load the models only once

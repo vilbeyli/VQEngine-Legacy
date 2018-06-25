@@ -565,7 +565,6 @@ void Engine::PreRender()
 
 void Engine::RenderLights() const
 {
-	return;
 	mpRenderer->BeginEvent("Render Lights Pass");
 	mpRenderer->SetShader(EShaders::UNLIT);
 	for (const Light& light : mpActiveScene->mLights)

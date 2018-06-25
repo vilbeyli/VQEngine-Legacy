@@ -96,11 +96,6 @@ protected:
 	//
 	void LoadModel_Async(GameObject* pObject, const std::string& modelPath);
 
-	//	Use these functions to programmatically create material instances which you can add to game objects in the scene. 
-	//
-	// CreateNewMaterial(EMaterialType type);
-	// CreateRandomMaterialOfType(EMaterialType type);
-
 protected:
 	friend class SceneResourceView; // using attorney method, alternatively can use friend function
 	friend class ModelLoader;

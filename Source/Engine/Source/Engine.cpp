@@ -196,51 +196,6 @@ void Engine::Exit()
 	}
 }
 
-
-const Settings::Engine& Engine::ReadSettingsFromFile()
-{
-	sEngineSettings = Parser::ReadSettings("EngineSettings.ini");
-	return sEngineSettings;
-}
-
-
-bool Engine::ReloadScene()
-{
-	const auto& settings = Engine::GetSettings();
-	Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
-
-	mpActiveScene->UnloadScene();
-	mShadowCasters.clear();
-
-	return LoadSceneFromFile();
-}
-
-bool Engine::LoadSceneFromFile()
-{
-	mCurrentLevel = sEngineSettings.levelToLoad;
-	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sEngineSettings.sceneNames[mCurrentLevel]);
-	if (mSerializedScene.loadSuccess == '0')
-	{
-		Log::Error("Scene[%d] did not load.", mCurrentLevel);
-		return false;
-	}
-
-	assert(mCurrentLevel < mpScenes.size());
-	mpActiveScene = mpScenes[mCurrentLevel];
-	mpActiveScene->mpThreadPool = mpThreadPool;
-
-	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
-	return true;
-}
-
-bool Engine::LoadScene(int level)
-{
-	mpActiveScene->UnloadScene();
-	mShadowCasters.clear();
-	Engine::sEngineSettings.levelToLoad = level;
-	return LoadSceneFromFile();
-}
-
 bool Engine::Load(ThreadPool* pThreadPool)
 {
 	mpThreadPool = pThreadPool;
@@ -383,6 +338,31 @@ bool Engine::Load(ThreadPool* pThreadPool)
 }
 
 
+bool Engine::UpdateAndRender()
+{
+	const float dt = mpTimer->Tick();
+	mpCPUProfiler->BeginEntry("CPU");
+
+	const bool bExitApp = !HandleInput();
+	if (!mbIsPaused)
+	{
+		CalcFrameStats(dt);
+
+		mpCPUProfiler->BeginEntry("Update()");
+		mpActiveScene->UpdateScene(dt);
+		mpCPUProfiler->EndEntry();
+
+		PreRender();
+		Render();
+	}
+
+	mpCPUProfiler->EndEntry();
+
+	mpCPUProfiler->StateCheck();
+	return bExitApp;
+}
+
+
 bool Engine::HandleInput()
 {
 	if (mpInput->IsKeyTriggered("Backspace"))	TogglePause();
@@ -453,7 +433,6 @@ bool Engine::HandleInput()
 	return true;
 }
 
-
 void Engine::CalcFrameStats(float dt)
 {
 	static unsigned long long frameCount = 0;
@@ -487,30 +466,49 @@ void Engine::CalcFrameStats(float dt)
 	++frameCount;
 }
 
-
-bool Engine::UpdateAndRender()
+const Settings::Engine& Engine::ReadSettingsFromFile()
 {
-	const float dt = mpTimer->Tick();
-	mpCPUProfiler->BeginEntry("CPU");
+	sEngineSettings = Parser::ReadSettings("EngineSettings.ini");
+	return sEngineSettings;
+}
 
-	const bool bExitApp = !HandleInput();
-	if (!mbIsPaused)
+bool Engine::ReloadScene()
+{
+	const auto& settings = Engine::GetSettings();
+	Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
+
+	mpActiveScene->UnloadScene();
+	mShadowCasters.clear();
+
+	return LoadSceneFromFile();
+}
+
+bool Engine::LoadSceneFromFile()
+{
+	mCurrentLevel = sEngineSettings.levelToLoad;
+	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sEngineSettings.sceneNames[mCurrentLevel]);
+	if (mSerializedScene.loadSuccess == '0')
 	{
-		CalcFrameStats(dt);
-
-		mpCPUProfiler->BeginEntry("Update()");
-		mpActiveScene->UpdateScene(dt);
-		mpCPUProfiler->EndEntry();
-
-		PreRender();
-		Render();
+		Log::Error("Scene[%d] did not load.", mCurrentLevel);
+		return false;
 	}
 
-	mpCPUProfiler->EndEntry();
+	assert(mCurrentLevel < mpScenes.size());
+	mpActiveScene = mpScenes[mCurrentLevel];
+	mpActiveScene->mpThreadPool = mpThreadPool;
 
-	mpCPUProfiler->StateCheck();
-	return bExitApp;
+	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
+	return true;
 }
+
+bool Engine::LoadScene(int level)
+{
+	mpActiveScene->UnloadScene();
+	mShadowCasters.clear();
+	Engine::sEngineSettings.levelToLoad = level;
+	return LoadSceneFromFile();
+}
+
 
 
 void Engine::PreRender()
@@ -562,41 +560,19 @@ void Engine::PreRender()
 	mpCPUProfiler->EndEntry();
 }
 
-
-void Engine::RenderLights() const
-{
-	mpRenderer->BeginEvent("Render Lights Pass");
-	mpRenderer->SetShader(EShaders::UNLIT);
-	for (const Light& light : mpActiveScene->mLights)
-	{
-		//if (!light._bEnabled) continue; // #BreaksRelease
-		auto IABuffers = mBuiltinMeshes[light._renderMesh].GetIABuffers();
-
-		mpRenderer->SetVertexBuffer(IABuffers.first);
-		mpRenderer->SetIndexBuffer(IABuffers.second);
-		const XMMATRIX world = light._transform.WorldTransformationMatrix();
-		const XMMATRIX worldViewProj = world  * mSceneView.viewProj;
-		const vec3 color = light._color.Value();
-		mpRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
-		mpRenderer->SetConstant3f("diffuse", color);
-		mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
-		mpRenderer->Apply();
-		mpRenderer->DrawIndexed();
-	}
-	mpRenderer->EndEvent();
-}
-
 void Engine::SendLightData() const
 {
 	const float shadowDimension = static_cast<float>(mShadowMapPass._shadowMapDimension);
-	// SPOT & POINT LIGHTS
-	//--------------------------------------------------------------
-	mpRenderer->SetConstantStruct("sceneLightData", &mSceneLightData._cb);
+
+	// LIGHTS ( POINT | SPOT | DIRECTIONAL )
+	//
+	mpRenderer->SetConstantStruct("Lights", &mSceneLightData._cb);
 	mpRenderer->SetConstant2f("spotShadowMapDimensions", vec2(shadowDimension, shadowDimension));
 
 	// SHADOW MAPS
-	//--------------------------------------------------------------
+	//
 	mpRenderer->SetTextureArray("texSpotShadowMaps", mShadowMapPass._spotShadowMaps);
+	mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass._directionalShadowMaps);
 
 #ifdef _DEBUG
 	const SceneLightingData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
@@ -1062,6 +1038,29 @@ void Engine::Render()
 	mpGPUProfiler->EndQuery();
 	mpGPUProfiler->EndFrame(mFrameCount);
 	++mFrameCount;
+}
+
+void Engine::RenderLights() const
+{
+	mpRenderer->BeginEvent("Render Lights Pass");
+	mpRenderer->SetShader(EShaders::UNLIT);
+	for (const Light& light : mpActiveScene->mLights)
+	{
+		//if (!light._bEnabled) continue; // #BreaksRelease
+		auto IABuffers = mBuiltinMeshes[light._renderMesh].GetIABuffers();
+
+		mpRenderer->SetVertexBuffer(IABuffers.first);
+		mpRenderer->SetIndexBuffer(IABuffers.second);
+		const XMMATRIX world = light._transform.WorldTransformationMatrix();
+		const XMMATRIX worldViewProj = world * mSceneView.viewProj;
+		const vec3 color = light._color.Value();
+		mpRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
+		mpRenderer->SetConstant3f("diffuse", color);
+		mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+		mpRenderer->Apply();
+		mpRenderer->DrawIndexed();
+	}
+	mpRenderer->EndEvent();
 }
 
 void Engine::RenderLoadingScreen() const

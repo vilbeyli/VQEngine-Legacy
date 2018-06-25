@@ -49,10 +49,11 @@ struct SpotLight
 };
 
 struct DirectionalLight
-{	// work in progress
+{	// 32 bytes
 	float3 lightDirection;
 	float  brightness;
 	float3 color;
+	float pad;
 };
 
 // defines maximum number of dynamic lights  todo: shader defines
@@ -83,10 +84,13 @@ struct SceneLighting	//  5152 bytes
 
 	SpotLight spots[NUM_SPOT_LIGHT];
 	SpotLight spot_casters[NUM_SPOT_LIGHT_SHADOW];
-	// dir
+
+
+	DirectionalLight directional_lights[NUM_DIRECTIONAL_LIGHT];
+	DirectionalLight directional_casters[NUM_DIRECTIONAL_LIGHT_SHADOW];
 
 	
-	matrix shadowViews[NUM_SPOT_LIGHT_SHADOW /*+ directionalLightViews*/];
+	matrix shadowViews[NUM_SPOT_LIGHT_SHADOW + NUM_DIRECTIONAL_LIGHT_SHADOW];
 };
 
 
@@ -153,7 +157,7 @@ inline float AttenuationPhong(float2 coeffs, float dist)
 
 
 // spotlight intensity calculataion
-float Intensity(SpotLight l, float3 worldPos)
+float SpotlightIntensity(SpotLight l, float3 worldPos)
 {   
 	const float3 L         = normalize(l.position - worldPos);
 	const float3 spotDir   = normalize(-l.spotDir);

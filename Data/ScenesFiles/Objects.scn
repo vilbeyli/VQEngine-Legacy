@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------------------------------------------
 // Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
 // Camera		: near far vfov  pos(3:xyz)  yaw pitch
-// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
+// Light		: [p]oint/[s]pot/[d]irectional,  color,   shadowing?, pos(3),  brightness,  range/angle, rot(X>Y>Z)
 // BRDF			:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
@@ -20,8 +20,10 @@ camera 0.1 1500 75   0 50 -190  0 15
 ao true 0.23
 skylight true
 
-light       s         sun      	true       2500         80	     -80    45     -240	   120  0  	65  0.8	 
-light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 
+light d sun true 1.5   3   -6   5  
+//light s cyan true  2500   -80  45 -240  80    120 0 65   0.8	 
+// light d sun true
+// light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 
 //light       p         orange       	false      1800         60	      0     30     0  	   0.3
 //light       p         cyan      	false      2400          84	      60    25    -2 	   0.4
 //light       p         red        	false      1500         60	    -140   100   140       0.5

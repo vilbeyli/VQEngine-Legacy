@@ -24,7 +24,6 @@
 
 // defines
 #define _DEBUG
-#define DIRECT_LIGHTING
 
 // ================================== BRDF NOTES =========================================
 //	src: https://learnopengl.com/#!PBR/Theory

@@ -82,7 +82,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	for (int j = 0; j < spotCount; ++j)			
 	{
 		const float3 Wi       = normalize(spots[j].position - P);
-		const float3 radiance = Intensity(spots[j], P) * spots[j].color;
+		const float3 radiance = SpotlightIntensity(spots[j], P) * spots[j].color;
 		IdIs += BRDF(Wi, s, V, P) * radiance * ShadowTest(P, In.lightSpacePos) * dW;
 	}
 

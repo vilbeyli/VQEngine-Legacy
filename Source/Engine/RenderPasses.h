@@ -75,13 +75,14 @@ struct ShadowMapPass
 	RasterizerStateID		_drawRenderState;
 	RasterizerStateID		_shadowRenderState;
 	D3D11_VIEWPORT			_shadowViewport;
+	D3D11_VIEWPORT			_shadowViewportDirectional;
 	
-	TextureID				_pointShadowMaps;			// tex2D array
+	TextureID				_pointShadowMaps;			// cubemap array
 	TextureID				_spotShadowMaps;			// tex2D array
-	TextureID				_directionalShadowMaps;		// cubemap array
+	TextureID				_directionalShadowMaps;		// tex2D array
 
 	DepthTargetIDArray		_spotShadowDepthTargets;
-	DepthTargetID			_directionalShadowDepthTargets;
+	DepthTargetIDArray		_directionalShadowDepthTargets;
 	DepthTargetID			_pointShadowDepthTargets;
 };
 

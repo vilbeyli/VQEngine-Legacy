@@ -28,7 +28,8 @@
 
 #include <DirectXMath.h>
 
-// todo: break up light into its own structs and remove 3 functions for gpu data
+// this needs refactoring. design is pretty old and convoluted.
+//
 struct Light
 {
 	friend class Graphics;
@@ -67,14 +68,15 @@ struct Light
 	
 	ELightType		_type;
 	LinearColor		_color;
-	float			_range;
+	float			_range;			// used by directional light to store Z channel of the direction vector
 	float			_brightness;	// 300.0f is a good default value
 	bool			_castsShadow;
 
-	union 
-	{	// point light attributes
-		vec2		_attenuation;
-		vec2		_spotAngle;	// uses only X channel of the vec2
+	union // each light uses this vec2 for light-specific data
+	{	
+		vec2		_attenuation;	
+		vec2		_spotAngle;		// spot light uses only X channel 
+		vec2		_directionXY;	// directional light stores XY of the direction, Z in _range
 	};	
 
 	Transform		_transform;

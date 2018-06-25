@@ -175,7 +175,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 		//if (!l._bEnabled) continue;	// #BreaksRelease
 
 		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
-		const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
+		//const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
 
 		// add to the count of the current light type & whether its shadow casting or not
 		pNumArray& refLightCounts = l._castsShadow ? casterCounts : lightCounts;
@@ -192,8 +192,8 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 			outLightingData._cb.spotLightsShadowing[lightIndex] = l.GetSpotLightData();
 			break;
 		case Light::ELightType::DIRECTIONAL:
-			//outLightingData._cb.pointLights[lightIndex] = l.GetPointLightData();
-			//outLightingData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
+			outLightingData._cb.directionalLights[lightIndex] = l.GetDirectionalLightData();
+			outLightingData._cb.directionalLightsShadowing[lightIndex] = l.GetDirectionalLightData();
 			break;
 		default:
 			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
@@ -201,7 +201,8 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 		}
 	}
 
-	unsigned numShd = 0;	// only for spot lights for now
+	unsigned numShdSpot = 0;
+	unsigned numShdDirectional = 0;
 	for (const Light& l : mLights)
 	{
 		//if (!l._bEnabled) continue; // #BreaksRelease
@@ -213,13 +214,14 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 			{
 			case Light::ELightType::SPOT:
 				outShadowView.spots.push_back(&l);
-				outLightingData._cb.shadowViews[numShd++] = l.GetLightSpaceMatrix();
+				outLightingData._cb.shadowViews[numShdSpot++] = l.GetLightSpaceMatrix();
 				break;
 			case Light::ELightType::POINT:
 				outShadowView.points.push_back(&l);
 				break;
 			case Light::ELightType::DIRECTIONAL:
 				outShadowView.directionals.push_back(&l);
+				outLightingData._cb.shadowViews[*casterCounts[Light::ELightType::SPOT] + numShdDirectional++] = l.GetLightSpaceMatrix();
 				break;
 			}
 		}

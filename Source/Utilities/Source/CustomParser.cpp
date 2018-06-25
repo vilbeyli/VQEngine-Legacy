@@ -326,19 +326,20 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		// | Light Type	| Color	| Shadowing? |  Brightness | Spot.Angle OR Point.Range | Position3 | Rotation3
 		//--------------------------------------------------------------
 
-
+		const bool bCommandHasRange = command.size() > 9;
 		const bool bCommandHasRotationEntry = command.size() > 10;
 		const bool bCommandHasScaleEntry = command.size() > 12;
 
 		const std::string lightType	 = GetLowercased(command[1]);	// lookups have lowercase keys
 		const std::string colorValue = GetLowercased(command[2]);
 		const std::string shadowing	 = GetLowercased(command[3]);
+		const float brightness = stof(command[4]);
+
+		const float range = bCommandHasRange ? stof(command[8]) : 1.0f;
 		const float rotX = bCommandHasRotationEntry ? stof(command[9])  : 0.0f;
 		const float rotY = bCommandHasRotationEntry ? stof(command[10]) : 0.0f;
 		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
 		const float scl  = bCommandHasScaleEntry ? stof(command[12]) : 1.0f;
-		const float range      = stof(command[5]);
-		const float brightness = stof(command[4]);
 		const bool  bCastsShadows = sBoolTypeReflection.at(shadowing);
 
 		if (lightType != "s" && lightType != "p" && lightType != "d")
@@ -355,7 +356,17 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			range,	// = spot angle
 			bCastsShadows
 		);
-		l._transform.SetPosition(stof(command[6]), stof(command[7]), stof(command[8]));
+		if (Light::ELightType::DIRECTIONAL == l._type)
+		{	// direction vector is stored in two variables for directional lights
+			vec3 dir = vec3(stof(command[5]), stof(command[6]), stof(command[7])).normalized();
+			l._directionXY = vec2(dir.x(), dir.y());
+			l._range = dir.z();	// serves as the Z channel for the direction.
+		}
+		else
+		{
+			l._transform.SetPosition(stof(command[5]), stof(command[6]), stof(command[7]));
+		}
+
 		l._transform.RotateAroundGlobalXAxisDegrees(rotX);
 		l._transform.RotateAroundGlobalYAxisDegrees(rotY);
 		l._transform.RotateAroundGlobalZAxisDegrees(rotZ);
@@ -579,8 +590,11 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		//--------------------------------------------------------------
 		// albedoMap normalMap
 		//--------------------------------------------------------------
-		const TextureID texDiffuse = pRenderer->CreateTextureFromFile(command[1]);
-		pMaterial->diffuseMap = texDiffuse;
+		if (command[1] != "\"\"")
+		{
+			const TextureID texDiffuse = pRenderer->CreateTextureFromFile(command[1]);
+			pMaterial->diffuseMap = texDiffuse;
+		}
 
 		if (command.size() > 2)
 		{

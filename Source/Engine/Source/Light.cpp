@@ -21,11 +21,8 @@
 
 #include "Utilities/Log.h"
 
-#include <iostream>
 #include <unordered_map>
 
-using std::cout;
-using std::endl;
 using std::string;
 
 // For Phong Lighting
@@ -103,15 +100,9 @@ Light::Light(ELightType type, LinearColor color, float range, float brightness, 
 {
 	switch (_type)
 	{
-	case ELightType::POINT:
-		SetLightRange(_range);
-		break;
-	case ELightType::SPOT:
-		_spotAngle.x() = spotAngle;
-		break;
-	case ELightType::DIRECTIONAL:
-		Log::Error("todo: directional lights...");
-		break;
+	case ELightType::POINT: SetLightRange(_range);		break;
+	case ELightType::SPOT:	_spotAngle.x() = spotAngle;	break;
+	case ELightType::DIRECTIONAL:  /* nothing to do */	break;
 	}
 
 	_renderMesh = sLightTypeMeshLookup.at(_type);
@@ -143,30 +134,10 @@ void Light::SetLightRange(float range)
 
 XMMATRIX Light::GetLightSpaceMatrix() const
 {
-	XMMATRIX LSpaceMat = XMMatrixIdentity();
-	switch (_type)
-	{
-	case ELightType::POINT:
-		break;
-	case ELightType::SPOT:
-	{
-		XMVECTOR pos = _transform._position;
-		XMMATRIX view = GetViewMatrix();
-		XMMATRIX proj = XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 500);
-		
-		// remember:
-		//	when we're sending	 world * view * projection
-		//		in shader		 projection * view * world;
-		LSpaceMat =  view * proj;	// same as: XMMatrixTranspose(proj)  * XMMatrixTranspose(view);
-		break;
-	}
-
-	default:
-		//OutputDebugString("INVALID LIGHT TYPE for GetLightSpaceMatrix()\n");
-		break;
-	}
-
-	return LSpaceMat;
+	// remember:
+	//	when we're sending	 world * view * projection
+	//		in shader		 projection * view * world;
+	return GetViewMatrix() * GetProjectionMatrix();
 }
 
 XMMATRIX Light::GetViewMatrix() const
@@ -182,16 +153,22 @@ XMMATRIX Light::GetViewMatrix() const
 		case ELightType::SPOT:
 		{
 			XMVECTOR up		= vec3::Back;
-			XMVECTOR lookAt = vec3::Up;
+			XMVECTOR lookAt = vec3::Up;	// spot light default orientation looks up
 			lookAt	= XMVector3TransformCoord(lookAt, _transform.RotationMatrix());
 			up		= XMVector3TransformCoord(up,	  _transform.RotationMatrix());
 			XMVECTOR pos = _transform._position;
 			XMVECTOR taraget = pos + lookAt;
 			return XMMatrixLookAtLH(pos, taraget, up);
 		}	
-
+		case ELightType::DIRECTIONAL:
+		{
+			XMVECTOR up = vec3::Up;
+			XMVECTOR lookAt = vec3::Zero;
+			XMVECTOR lightDir = vec3(_directionXY.x(), _directionXY.y(), _range);
+			return XMMatrixLookAtLH(lightDir, lookAt, up);
+		}
 		default:
-			std::cout << "INVALID LIGHT TYPE for GetViewMatrix()" << std::endl;
+			Log::Warning("INVALID LIGHT TYPE for GetViewMatrix()");
 			return XMMatrixIdentity();
 		}
 	}();
@@ -207,16 +184,18 @@ XMMATRIX Light::GetProjectionMatrix() const
 		{
 			return XMMatrixIdentity();
 		}
-			
 		case ELightType::SPOT:
 		{
 			return XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 500.0f);
 		}	
+		case ELightType::DIRECTIONAL:
+		{
+			return XMMatrixOrthographicLH(1024, 1024, 0.5f, 1500.0f);
+		}
 
 		default:
-			std::cout << "INVALID LIGHT TYPE for GetProjectionMatrix()" << std::endl;
+			Log::Warning("INVALID LIGHT TYPE for GetProjectionMatrix()");
 			return XMMatrixIdentity();
-
 		}
 	}();
 	return proj;
@@ -256,13 +235,8 @@ SpotLightGPU Light::GetSpotLightData() const
 DirectionalLightGPU Light::GetDirectionalLightData() const
 {
 	DirectionalLightGPU l;
-	// todo
-	//l.position = _transform._position;
-	//l.color = _color.Value();
-	//l.brightness = _brightness;
-	//l.halfAngle = _spotAngle.x() * DEG2RAD / 2;
-	//l.spotDir = spotDirection;
-	//l.attenuation = _attenuation;
-	//l.range = _range;
+	l.brightness = _brightness;
+	l.color = _color;
+	l.lightDirection = vec3(_directionXY.x(), _directionXY.y(), _range);
 	return l;
 }

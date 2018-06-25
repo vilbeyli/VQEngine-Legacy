@@ -17,7 +17,6 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #define _DEBUG
-#define DIRECT_LIGHTING
 
 #include "BRDF.hlsl"
 
@@ -142,7 +141,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float4 Pl		   = mul(matShadowView, float4(P, 1));
 		const float3 Lw        = sceneLightData.spot_casters[k].position;
 		const float3 Wi        = normalize(Lw - P);
-		const float3 radiance  = Intensity(sceneLightData.spot_casters[k], P) * sceneLightData.spot_casters[k].color * sceneLightData.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float3 radiance  = SpotlightIntensity(sceneLightData.spot_casters[k], P) * sceneLightData.spot_casters[k].color * sceneLightData.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		const float  NdotL	   = saturate(dot(s.N, Wi));
 		const float3 shadowing = ShadowTestPCF(P, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
@@ -154,7 +153,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	{
 		const float3 Lw        = sceneLightData.spots[j].position;
 		const float3 Wi        = normalize(Lw - P);
-		const float3 radiance  = Intensity(sceneLightData.spots[j], P) * sceneLightData.spots[j].color * sceneLightData.spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float3 radiance  = SpotlightIntensity(sceneLightData.spots[j], P) * sceneLightData.spots[j].color * sceneLightData.spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		const float NdotL	   = saturate(dot(s.N, Wi));
 		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}

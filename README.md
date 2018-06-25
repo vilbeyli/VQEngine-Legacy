@@ -29,11 +29,11 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
  *v0.4.0 - **Data-Oriented Engine, Multi-threaded Tasking System, Model Loading w/ assimp** - TBA*
  - Refactored Scene, Engine and Renderer classes in favor of [Data-Oriented Design](https://en.wikipedia.org/wiki/Data-oriented_design)
  - Asynchronous Model Loading using [assimp](https://github.com/assimp/assimp)
- - Transparency Rendering & Sponza Scene
+ - Sponza Scene & More Models
  - Task-based Threading System
- - Directional Lights
+ - Rendering: Directional Lights, Alpha Mask Textures
  - Loading Screen
- - Documentation
+ - Documentation Template / Bibliography
 
 ## Released
 

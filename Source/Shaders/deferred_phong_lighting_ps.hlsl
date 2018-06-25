@@ -103,7 +103,7 @@ float4 PSMain(PSIn In) : SV_TARGET
         float NdotL = saturate(dot(Nw, Lw));
         IdIs +=
 		Phong(s, Lw, Vw, sceneLightData.spots[j].color)
-		* Intensity(sceneLightData.spots[j], Pw)
+		* SpotlightIntensity(sceneLightData.spots[j], Pw)
 		* sceneLightData.spots[j].brightness 
 		* NdotL
 		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
@@ -118,7 +118,7 @@ float4 PSMain(PSIn In) : SV_TARGET
         float NdotL = saturate(dot(Nw, Lw));
         IdIs +=
 		Phong(s, Lw, Vw, sceneLightData.spot_casters[k].color)
-		* Intensity(sceneLightData.spot_casters[k], Pw)
+		* SpotlightIntensity(sceneLightData.spot_casters[k], Pw)
 		* ShadowTestPCF(Pw, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions)
 		* sceneLightData.spot_casters[k].brightness 
 		* NdotL

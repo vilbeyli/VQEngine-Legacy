@@ -18,6 +18,16 @@
 
 #include "BRDF.hlsl"
 
+
+#define ENABLE_POINT_LIGHTS 1
+#define ENABLE_POINT_LIGHTS_SHADOW 0
+
+#define ENABLE_SPOT_LIGHTS 1
+#define ENABLE_SPOT_LIGHTS_SHADOW 1
+
+#define ENABLE_DIRECTIONAL_LIGHTS 1
+#define ENABLE_DIRECTIONAL_LIGHTS_SHADOW 1
+
 struct PSIn
 {
 	float4 position		 : SV_POSITION;
@@ -26,7 +36,7 @@ struct PSIn
 
 
 // CBUFFERS
-//---------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------------------
 cbuffer SceneVariables	// frame constants
 {
 	matrix matView;
@@ -35,9 +45,9 @@ cbuffer SceneVariables	// frame constants
 	
 	//float2 pointShadowMapDimensions;
 	float2 spotShadowMapDimensions;
-	float2 pad;
+	float2 pad;	// directionalShadowMapDimensions?
 	
-	SceneLighting sceneLightData;
+	SceneLighting Lights;
 };
 
 TextureCubeArray texPointShadowMaps;
@@ -47,7 +57,7 @@ Texture2DArray   texDirectionalShadowMaps;
 
 
 // TEXTURES & SAMPLERS
-//---------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------------------------------------
 Texture2D texDiffuseRoughnessMap;
 Texture2D texSpecularMetalnessMap;
 Texture2D texNormals;
@@ -61,7 +71,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	// base indices for indexing shadow views
 	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
 	const int spotShadowsBaseIndex = 0;		
-	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
+	const int directionalShadowBaseIndex = spotShadowsBaseIndex + Lights.numSpotCasters;
 
 	// lighting & surface parameters (View Space Lighting)
     const float nonLinearDepth = texDepth.Sample(sLinearSampler, In.uv).r;
@@ -83,62 +93,103 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.metalness = specularMetalness.a;
 	
 
-#if 1
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
-	
-	// POINT Lights
+
+//-----------------------------------------------------------------------------------------------------------------------------------------
+
+#if ENABLE_POINT_LIGHTS
 	// brightness default: 300
-	//---------------------------------
-	for (int i = 0; i < sceneLightData.numPointLights; ++i)		
+	for (int i = 0; i < Lights.numPointLights; ++i)		
 	{
-		const float3 Lv       = mul(matView, float4(sceneLightData.point_lights[i].position, 1));
+		const float3 Lv       = mul(matView, float4(Lights.point_lights[i].position, 1));
 		const float3 Wi       = normalize(Lv - P);
-		const float D = length(sceneLightData.point_lights[i].position - Pw);
+		const float D = length(Lights.point_lights[i].position - Pw);
 		const float NdotL	  = saturate(dot(s.N, Wi));
 		const float3 radiance = 
-			AttenuationBRDF(sceneLightData.point_lights[i].attenuation, D)
-			* sceneLightData.point_lights[i].color 
-			* sceneLightData.point_lights[i].brightness;
+			AttenuationBRDF(Lights.point_lights[i].attenuation, D)
+			* Lights.point_lights[i].color 
+			* Lights.point_lights[i].brightness;
 		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
+#endif
 
+#if ENABLE_POINT_LIGHTS_SHADOW
+	for (int i = 0; i < Lights.numPointCasters; ++i)
+	{
 	// todo shadow caster points
-	//for (int i = 0; i < sceneLightData.numPointLights; ++i)		
-	//{
-	//	const float3 Lv       = mul(matView, float4(sceneLightData.point_lights[i].position, 1));
+	//	const float3 Lv       = mul(matView, float4(Lights.point_lights[i].position, 1));
 	//	const float3 Wi       = normalize(Lv - P);
 	//	const float3 radiance = 
-	//		AttenuationBRDF(sceneLightData.point_lights[i].attenuation, length(sceneLightData.point_lights[i].position - Pw))
-	//		* sceneLightData.point_lights[i].color 
-	//		* sceneLightData.point_lights[i].brightness;
+	//		AttenuationBRDF(Lights.point_lights[i].attenuation, length(Lights.point_lights[i].position - Pw))
+	//		* Lights.point_lights[i].color 
+	//		* Lights.point_lights[i].brightness;
 	//	IdIs += BRDF(Wi, s, V, P) * radiance;
-	//}
+	}
+#endif
 
-	
-	// SPOT Lights
-	//---------------------------------
-	for (int j = 0; j < sceneLightData.numSpots; ++j)
+//-----------------------------------------------------------------------------------------------------------------------------------------
+
+#if ENABLE_SPOT_LIGHTS
+	for (int j = 0; j < Lights.numSpots; ++j)
 	{
-		const float3 Lv        = mul(matView, float4(sceneLightData.spots[j].position, 1));
+		const float3 Lv        = mul(matView, float4(Lights.spots[j].position, 1));
 		const float3 Wi        = normalize(Lv - P);
-		const float3 radiance  = Intensity(sceneLightData.spots[j], Pw) * sceneLightData.spots[j].color * sceneLightData.spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float3 radiance  = SpotlightIntensity(Lights.spots[j], Pw) * Lights.spots[j].color * Lights.spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		const float NdotL	   = saturate(dot(s.N, Wi));
 		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
+#endif
 
-	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)
+#if ENABLE_SPOT_LIGHTS_SHADOW
+	for (int k = 0; k < Lights.numSpotCasters; ++k)
 	{
-		const matrix matShadowView = sceneLightData.shadowViews[spotShadowsBaseIndex + k];
+		const matrix matShadowView = Lights.shadowViews[spotShadowsBaseIndex + k];
 		const float4 Pl		   = mul(matShadowView, float4(Pw, 1));
-		const float3 Lv        = mul(matView, float4(sceneLightData.spot_casters[k].position, 1));
+		const float3 Lv        = mul(matView, float4(Lights.spot_casters[k].position, 1));
 		const float3 Wi        = normalize(Lv - P);
-		const float3 radiance  = Intensity(sceneLightData.spot_casters[k], Pw) * sceneLightData.spot_casters[k].color * sceneLightData.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float3 radiance  = SpotlightIntensity(Lights.spot_casters[k], Pw) * Lights.spot_casters[k].color * Lights.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		const float  NdotL	   = saturate(dot(s.N, Wi));
 		const float3 shadowing = ShadowTestPCF(Pw, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
 	}
+#endif
+
+//-----------------------------------------------------------------------------------------------------------------------------------------
+
+#if ENABLE_DIRECTIONAL_LIGHTS
+	for (int j = 0; j < Lights.numDirectionals; ++j)
+	{
+		const float3 Lv = mul(matView, float4(Lights.directional_lights[j].lightDirection, 0.0f));
+		const float3 Wi = normalize(-Lv);
+		const float3 radiance 
+			= Lights.directional_lights[j].color * Lights.directional_lights[j].brightness 
+			//* SPOTLIGHT_BRIGHTNESS_SCALAR
+			;
+		const float NdotL = saturate(dot(s.N, Wi));
+		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
+	}
+#endif
+
+#if ENABLE_DIRECTIONAL_LIGHTS_SHADOW
+	for (int k = 0; k < Lights.numDirectionalCasters; ++k)
+	{
+		const matrix matShadowView = Lights.shadowViews[directionalShadowBaseIndex + k];
+		const float4 Pl = mul(matShadowView, float4(Pw, 1));
+		const float3 Lv = mul(matView, float4(Lights.directional_lights[j].lightDirection, 0.0f));
+		const float3 Wi = normalize(-Lv);
+		const float3 radiance 
+			= Lights.directional_lights[k].color
+			* Lights.directional_lights[k].brightness
+			//* SPOTLIGHT_BRIGHTNESS_SCALAR
+			;
+		const float  NdotL = saturate(dot(s.N, Wi));
+		const float3 shadowing = ShadowTestPCF(Pw, Pl, texDirectionalShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
+	}
+#endif
+
+//-----------------------------------------------------------------------------------------------------------------------------------------
 
 	const float3 illumination = IdIs;
 	return float4(illumination, 1);
-#endif
 }

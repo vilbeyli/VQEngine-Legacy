@@ -48,6 +48,7 @@ struct DirectionalLightGPU // 28(+4) Bytes | 2 registers
 	vec3 lightDirection;
 	float  brightness;
 	vec3 color;
+	float pad;
 };
 
 //struct ShadowView
@@ -57,16 +58,21 @@ struct DirectionalLightGPU // 28(+4) Bytes | 2 registers
 //	XMMATRIX  lightSpaceMatrix;
 //};
 
-#define NUM_POINT_LIGHT 100
-#define NUM_SPOT_LIGHT 20
-#define NUM_DIRECTIONAL_LIGHT 4
-using PointLightDataArray		= std::array<PointLightGPU, NUM_POINT_LIGHT>;
-using SpotLightDataArray		= std::array<SpotLightGPU, NUM_SPOT_LIGHT>;
-using DirectionalLightDataArray = std::array<DirectionalLightGPU, NUM_DIRECTIONAL_LIGHT>;
+// #SHADER: These defines should match the LightingCommon.hlsl
 
+#define NUM_POINT_LIGHT 100
 #define NUM_POINT_LIGHT_SHADOW 5
+
+#define NUM_SPOT_LIGHT 20
 #define NUM_SPOT_LIGHT_SHADOW 5
+
+#define NUM_DIRECTIONAL_LIGHT 4
 #define NUM_DIRECTIONAL_LIGHT_SHADOW 4
+
+using PointLightDataArray					= std::array<PointLightGPU, NUM_POINT_LIGHT>;
+using SpotLightDataArray					= std::array<SpotLightGPU, NUM_SPOT_LIGHT>;
+using DirectionalLightDataArray				= std::array<DirectionalLightGPU, NUM_DIRECTIONAL_LIGHT>;
+
 using ShadowingPointLightDataArray			= std::array<PointLightGPU, NUM_POINT_LIGHT_SHADOW>;
 using ShadowingSpotLightDataArray			= std::array<SpotLightGPU, NUM_SPOT_LIGHT_SHADOW>;
 using ShadowingDirectionalLightDataArray	= std::array<DirectionalLightGPU, NUM_DIRECTIONAL_LIGHT_SHADOW>;
@@ -92,8 +98,8 @@ struct SceneLightingData
 		SpotLightDataArray spotLights;
 		ShadowingSpotLightDataArray spotLightsShadowing;
 
-		// todo directional
-		// todo directional shadowing
+		DirectionalLightDataArray directionalLights;
+		ShadowingDirectionalLightDataArray directionalLightsShadowing;
 
 		SpotShadowViewArray shadowViews;
 	} _cb;

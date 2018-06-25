@@ -47,16 +47,24 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	const bool bDepthOnly = true;
 	const EImageFormat format = bDepthOnly ? R32 : R24G8;
 
+
+	// CREATE DEPTH TEXTURES
+	//
 	TextureDesc texDesc;
 	texDesc.height = texDesc.width = dimension;
 	texDesc.format = format;
-	texDesc.arraySize = NUM_SPOT_LIGHT_SHADOW;
 	texDesc.usage = static_cast<ETextureUsage>(DEPTH_TARGET | RESOURCE);
 
+	texDesc.arraySize = NUM_SPOT_LIGHT_SHADOW;
 	this->_spotShadowMaps = pRenderer->CreateTexture2D(texDesc);
 	Texture& spotShadowMaps = const_cast<Texture&>(pRenderer->GetTextureObject(_spotShadowMaps));
 
-	// depth targets
+	texDesc.arraySize = NUM_DIRECTIONAL_LIGHT_SHADOW;
+	this->_directionalShadowMaps = pRenderer->CreateTexture2D(texDesc);
+	Texture& directionalShadowMaps = const_cast<Texture&>(pRenderer->GetTextureObject(_directionalShadowMaps));
+
+	// CREATE DEPTH TARGETS
+	//
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
 	dsvDesc.Format = static_cast<DXGI_FORMAT>(bDepthOnly ? D32F : D24UNORM_S8U);
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
@@ -68,6 +76,14 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 		dsvDesc.Texture2DArray.ArraySize = NUM_SPOT_LIGHT_SHADOW - i;
 		dsvDesc.Texture2DArray.FirstArraySlice = i;
 		this->_spotShadowDepthTargets[i] = pRenderer->AddDepthTarget(dsvDesc, spotShadowMaps);
+	}
+
+	this->_directionalShadowDepthTargets.resize(NUM_DIRECTIONAL_LIGHT_SHADOW);
+	for (int i = 0; i < NUM_DIRECTIONAL_LIGHT_SHADOW; i++)
+	{
+		dsvDesc.Texture2DArray.ArraySize = NUM_DIRECTIONAL_LIGHT_SHADOW - i;
+		dsvDesc.Texture2DArray.FirstArraySlice = i;
+		this->_directionalShadowDepthTargets[i] = pRenderer->AddDepthTarget(dsvDesc, directionalShadowMaps);
 	}
 
 	// render states for front face culling 
@@ -87,6 +103,11 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	_shadowViewport.Width = static_cast<float>(_shadowMapDimension);
 	_shadowViewport.MinDepth = 0.f;
 	_shadowViewport.MaxDepth = 1.f;
+
+	_shadowViewportDirectional.Width = 1024.f;
+	_shadowViewportDirectional.Height = 1024.f;
+	_shadowViewportDirectional.MinDepth = 0.f;
+	_shadowViewportDirectional.MaxDepth = 1.f;
 }
 
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<const GameObject*> ZPassObjects, const ShadowView& shadowView) const
@@ -95,19 +116,35 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 	if (bNoShadowingLights) return;
 
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
+	pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
+	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
 		pRenderer->BindDepthTarget(_spotShadowDepthTargets[i]);	// only depth stencil buffer
-		pRenderer->Apply();
-		pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
-		pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 		pRenderer->SetConstant4x4f("viewProj", shadowView.spots[i]->GetLightSpaceMatrix());
 		pRenderer->SetConstant4x4f("view"    , shadowView.spots[i]->GetViewMatrix());
 		pRenderer->SetConstant4x4f("proj"    , shadowView.spots[i]->GetProjectionMatrix());
 		pRenderer->Apply();
 
-		pRenderer->BeginEvent("DrawScene");
+		pRenderer->BeginEvent("Spot[" + std::to_string(i)  + "]: DrawSceneZ()");
+		for (const GameObject* obj : ZPassObjects)
+			obj->RenderZ(pRenderer);
+		pRenderer->EndEvent();
+	}
+
+	pRenderer->SetViewport(_shadowViewportDirectional);				// lights viewport 512x512
+	for (size_t i = 0; i < shadowView.directionals.size(); i++)
+	{
+		pRenderer->BindDepthTarget(_directionalShadowDepthTargets[i]);	// only depth stencil buffer
+		pRenderer->Apply();
+		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
+		pRenderer->SetConstant4x4f("viewProj", shadowView.directionals[i]->GetLightSpaceMatrix());
+		pRenderer->SetConstant4x4f("view", shadowView.directionals[i]->GetViewMatrix());
+		pRenderer->SetConstant4x4f("proj", shadowView.directionals[i]->GetProjectionMatrix());
+		pRenderer->Apply();
+
+		pRenderer->BeginEvent("Directional[" + std::to_string(i) + "]: DrawSceneZ()");
 		for (const GameObject* obj : ZPassObjects)
 			obj->RenderZ(pRenderer);
 		pRenderer->EndEvent();

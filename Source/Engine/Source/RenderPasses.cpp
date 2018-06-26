@@ -104,8 +104,8 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	_shadowViewport.MinDepth = 0.f;
 	_shadowViewport.MaxDepth = 1.f;
 
-	_shadowViewportDirectional.Width = 1024.f;
-	_shadowViewportDirectional.Height = 1024.f;
+	_shadowViewportDirectional.Width = 2048.f;
+	_shadowViewportDirectional.Height = 2048.f;
 	_shadowViewportDirectional.MinDepth = 0.f;
 	_shadowViewportDirectional.MaxDepth = 1.f;
 }
@@ -117,7 +117,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
 	pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
-	pRenderer->SetViewport(_shadowViewport);				// lights viewport 512x512
+	pRenderer->SetViewport(_shadowViewport);
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
 		pRenderer->BindDepthTarget(_spotShadowDepthTargets[i]);	// only depth stencil buffer
@@ -133,7 +133,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 		pRenderer->EndEvent();
 	}
 
-	pRenderer->SetViewport(_shadowViewportDirectional);				// lights viewport 512x512
+	pRenderer->SetViewport(_shadowViewportDirectional);
 	for (size_t i = 0; i < shadowView.directionals.size(); i++)
 	{
 		pRenderer->BindDepthTarget(_directionalShadowDepthTargets[i]);	// only depth stencil buffer

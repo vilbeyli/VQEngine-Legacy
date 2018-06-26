@@ -164,7 +164,7 @@ XMMATRIX Light::GetViewMatrix() const
 		{
 			XMVECTOR up = vec3::Up;
 			XMVECTOR lookAt = vec3::Zero;
-			XMVECTOR lightDir = vec3(_directionXY.x(), _directionXY.y(), _range);
+			XMVECTOR lightDir = vec3(_directionXY.x(), _directionXY.y(), _range) * -2000.0f;
 			return XMMatrixLookAtLH(lightDir, lookAt, up);
 		}
 		default:
@@ -190,7 +190,8 @@ XMMATRIX Light::GetProjectionMatrix() const
 		}	
 		case ELightType::DIRECTIONAL:
 		{
-			return XMMatrixOrthographicLH(1024, 1024, 0.5f, 1500.0f);
+			constexpr int sz = 512 * 4;
+			return XMMatrixOrthographicLH(sz, sz, 0.05f, 2500.0f);
 		}
 
 		default:

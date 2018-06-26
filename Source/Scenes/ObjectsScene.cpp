@@ -75,7 +75,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 			pBRDF->roughness = 0.8f;
 			pBRDF->metalness = 0.0f;
-			pBRDF->diffuse = LinearColor::white;
+			pBRDF->diffuse = LinearColor::gray;
 			pBRDF->alpha = 1.0f;
 			pBRDF->tiling = vec2(10, 10);
 			pBRDF->normalMap = floorNormalMap;

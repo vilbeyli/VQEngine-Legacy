@@ -6,13 +6,13 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 
 
-###### PCF Shadows, CPU & GPU profiler, Text Rendering, Environment Lighting
+###### PCF Shadows, CPU & GPU profiler, BRDF, HDR, Environment Lighting, Bloom
 
 ![](Screenshots/objs.PNG)
 
-###### BRDF, HDR, Tonemapping, Bloom, Environment Mapping - Image-based Lighting
+###### Model Loading (.obj), Directional Lights
 
-![](Screenshots/IBL_la.PNG)
+![](Screenshots/models2.PNG)
 
 ###### SSAO w/ Gaussian Blur
 

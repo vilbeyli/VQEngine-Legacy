@@ -148,6 +148,9 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		//---------------------------------------------------------------
 		settings.rendering.bEnableEnvironmentLighting = sBoolTypeReflection.at(GetLowercased(line[1]));
 		settings.rendering.bPreLoadEnvironmentMaps	  = sBoolTypeReflection.at(GetLowercased(line[2]));
+#if _DEBUG
+		settings.rendering.bPreLoadEnvironmentMaps = false;
+#endif
 	}
 	else if (cmd == "HDR")
 	{

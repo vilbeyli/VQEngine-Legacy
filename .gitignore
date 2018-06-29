@@ -87,6 +87,10 @@ Source/3rdParty/assimp/lib/x64/*
 !Source/3rdParty/assimp/lib/x64/Release/
 !Source/3rdParty/assimp/lib/x64/Debug/assimp-vc140-mt.pdb
 
+!Data/Models/*.obj
+!Data/Models/*/*.obj
+!Data/Models/*/*/*.obj
+
 # Chutzpah Test files
 _Chutzpah*
 

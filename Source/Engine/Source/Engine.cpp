@@ -1047,6 +1047,10 @@ void Engine::RenderLights() const
 	for (const Light& light : mpActiveScene->mLights)
 	{
 		//if (!light._bEnabled) continue; // #BreaksRelease
+		
+		if (light._type == Light::ELightType::DIRECTIONAL)
+			continue;	// do not render directional lights
+
 		auto IABuffers = mBuiltinMeshes[light._renderMesh].GetIABuffers();
 
 		mpRenderer->SetVertexBuffer(IABuffers.first);

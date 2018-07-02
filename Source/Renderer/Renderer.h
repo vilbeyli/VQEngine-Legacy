@@ -18,9 +18,9 @@
 #pragma once
 
 #include "RenderCommands.h"
-#include "RenderingEnums.h"
 #include "Texture.h"
 #include "Shader.h"
+#include "RenderingStructs.h"
 
 #include "Engine/Settings.h"
 
@@ -38,88 +38,7 @@
 class BufferObject;
 class Camera;
 class D3DManager;
-
 namespace DirectX  { class ScratchImage; }
-
-// todo struct?
-using Viewport = D3D11_VIEWPORT;
-using RasterizerState   = ID3D11RasterizerState;
-using DepthStencilState = ID3D11DepthStencilState;
-using RenderTargetIDs	= std::vector<RenderTargetID>;
-
-
-//----------------------------------------------------------------------------------------------------------------
-// RENDERING STRUCTS
-//----------------------------------------------------------------------------------------------------------------
-struct BlendState
-{
-	ID3D11BlendState* ptr = nullptr; 
-};
-
-struct RenderTarget
-{
-	ID3D11Resource*	GetTextureResource() const { return texture._tex2D; }
-
-	Texture						texture;
-	ID3D11RenderTargetView*		pRenderTargetView = nullptr;
-};
-
-struct DepthTarget
-{
-	Texture						texture;
-	ID3D11DepthStencilView*		pDepthStencilView;
-};
-
-struct PipelineState
-{
-	bool				bRenderTargetChanged;
-
-	ShaderID			shader;
-	BufferID			vertexBuffer;
-	BufferID			indexBuffer;
-	RasterizerStateID	rasterizerState;
-	DepthStencilStateID	depthStencilState;
-	RenderTargetIDs		renderTargets;
-	DepthTargetID		depthTargets;
-	BlendStateID		blendState;
-	Viewport			viewPort;
-};
-
-struct BufferDesc
-{
-	EBufferType		mType			= EBufferType::BUFFER_TYPE_UNKNOWN;
-	EBufferUsage	mUsage			= EBufferUsage::STATIC_RW;
-	unsigned		mElementCount	= 0;
-	unsigned		mStride			= 0;
-};
-
-struct Buffer
-{
-	BufferDesc		mDesc;
-	bool			mDirty			= true;
-	void*			mpCPUData		= nullptr;
-	ID3D11Buffer*	mpGPUData		= nullptr;
-	
-	bool			bInitialized	= false;
-	std::allocator<char> mAllocator;
-
-	void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
-	void CleanUp();
-	void Update(Renderer* pRenderer, const void* pData);
-
-	Buffer(const BufferDesc& desc);
-};
-
-struct DefaultVertexBufferData
-{
-	vec3 position;
-	vec3 normal;
-	vec3 tangent;
-	vec2 uv;
-};
-
-
-
 
 class Renderer
 {

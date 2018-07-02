@@ -1,7 +1,8 @@
-// Scene File Formatting:
+// Scene File Formatting
 // ---------------------------------------------------------------------------------------------------------------
 // - all lowercase
 // - '//' starts a comment
+// ---------------------------------------------------------------------------------------------------------------
 
 // Object initializations
 // ---------------------------------------------------------------------------------------------------------------
@@ -11,53 +12,21 @@
 // BRDF			:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
-// ao			: AmbientOcclusionFactor
-
-// Scene
 // ---------------------------------------------------------------------------------------------------------------
+
+// Render Settings initializations
+// ---------------------------------------------------------------------------------------------------------------
+// ao			: enabled?, ambient multiplier, ssao range, ssao intensity
+// bloom		: enabled?, brighness threshold
+// skylight		: enabled?
+// ---------------------------------------------------------------------------------------------------------------
+
 camera 0.1 1000 60   0 -20 120  180 0 
-ao false 1.00
+ao true 1.00 19.0 4.10
+bloom false 1.60
 
 // todo: directional light
 // Light: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
-light       s              white      	false       1800         70	           0   120    120	             140  180  	0	 
+// light       s              white      	false       1800         70	           0   120    120	             140  180  	0	 
 skylight true
 
-// objects
-// =======
-
-//object begin
-//mesh quad
-//transform 0 -10 0 90 0 0 100
-//object end
-
-
-//object begin
-//mesh cube
-//transform 10 0 25 45 0 45 5
-//brdf
-//textures openart/185.jpg openart/185_norm.jpg
-//roughness 0.9
-//metalness 0
-//brdf
-//object end
-//
-/object begin
-/mesh cube
-/transform 25 0 50 45 0 45 5
-/brdf
-/textures openart/186.jpg openart/186_norm.jpg
-/roughness 0.1
-/metalness 1
-/brdf
-/object end
-//
-//object begin
-//mesh sphere
-//transform -10 0 50 0 0 45 5
-//object end
-//
-//object begin
-//mesh grid
-//transform -40 0 50 0 0 -45 15
-//object end

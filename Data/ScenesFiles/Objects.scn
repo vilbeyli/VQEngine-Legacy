@@ -1,26 +1,32 @@
-// Scene File Formatting:
+// Scene File Formatting
 // ---------------------------------------------------------------------------------------------------------------
 // - all lowercase
 // - '//' starts a comment
+// ---------------------------------------------------------------------------------------------------------------
 
 // Object initializations
 // ---------------------------------------------------------------------------------------------------------------
 // Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
 // Camera		: near far vfov  pos(3:xyz)  yaw pitch
-// Light		: [p]oint/[s]pot/[d]irectional,  color,   shadowing?, pos(3),  brightness,  range/angle, rot(X>Y>Z)
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
 // BRDF			:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
-
-
-// Scene
 // ---------------------------------------------------------------------------------------------------------------
-camera 0.1 1500 75   -70 25 50  112 11 
-camera 0.1 1500 75   0 50 -190  0 15 
-ao true 0.23
-skylight true
 
-light d sun true 1.5   3   -6   5  
+// Render Settings initializations
+// ---------------------------------------------------------------------------------------------------------------
+// ao			: enabled?, ambient multiplier, ssao range, ssao intensity
+// bloom		: enabled?, brighness threshold
+// skylight		: enabled?
+// ---------------------------------------------------------------------------------------------------------------
+
+
+ao true 0.23 17.0 3.40
+skylight true
+bloom true 1.68
+
+light d sun true 4.5   3   -5   15  100
 //light s cyan true  2500   -80  45 -240  80    120 0 65   0.8	 
 // light d sun true
 // light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 
@@ -28,76 +34,67 @@ light d sun true 1.5   3   -6   5
 //light       p         cyan      	false      2400          84	      60    25    -2 	   0.4
 //light       p         red        	false      1500         60	    -140   100   140       0.5
 
-// objects
-// =======
+
+camera 0.1 1500 75   -70 25 50  112 11 
+camera 0.1 1500 75   0 50 -190  0 15 
 
 object begin
-mesh cube
-brdf begin
-roughness 0.42
-metalness 1.0
-textures openart/155.JPG openart/155_norm.JPG
-brdf end
-//Phong
-transform 85 5 30 30 30 0 11
+	transform 85 5 30 30 30 0 11
+	mesh cube
+	brdf begin
+		roughness 0.42
+		metalness 1.0
+		textures openart/155.JPG openart/155_norm.JPG
+	brdf end
 object end
 
 object begin
-mesh grid
-brdf begin
-roughness 0.14
-metalness 0.0
-brdf end
-//Phong
-transform 85 5 -90 0 0 45 30
-object end
-
-
-object begin
-mesh cylinder
-brdf begin
-roughness 0.9
-metalness 0.18 
-diffuse 0.80 0.54 0.04
-brdf end
-//Phong
-transform 85 5 -60 0 0 0 7
-object end
-
-
-
-
-object begin
-mesh triangle
-brdf begin
-textures "" openart/190_norm.JPG
-diffuse 0.24 0.74 0.74
-roughness 0.4
-metalness 0.9
-brdf end
-//Phong
-transform 85 5 -30 30 120 0 20
+	transform 85 5 -90 0 0 45 30
+	mesh grid
+	brdf begin
+		roughness 0.14
+		metalness 0.0
+	brdf end
 object end
 
 object begin
-mesh sphere
-brdf begin
-diffuse 0.04 0.64 0.04
-roughness 0.9
-metalness 0.0
-brdf end
-//Phong
-transform 85 5 0 0 0 0 5.5
+	transform 85 5 -60 0 0 0 7
+	mesh cylinder
+	brdf begin
+		roughness 0.9
+		metalness 0.18 
+		diffuse 0.80 0.54 0.04
+	brdf end
 object end
 
 object begin
-mesh quad
-brdf begin
-textures "" openart/190_norm.JPG
-diffuse 0.04 0.24 0.74
-roughness 0.8
-metalness 0.0
-brdf end
-//Phong
-transform 85 5 60 30 30 0 20
+	transform 85 5 -30 30 120 0 20
+	mesh triangle
+	brdf begin
+		textures "" openart/190_norm.JPG
+		diffuse 0.24 0.74 0.74
+		roughness 0.4
+		metalness 0.9
+	brdf end
+object end
+
+object begin
+	transform 85 5 0 0 0 0 5.5
+	mesh sphere
+	brdf begin
+		diffuse 0.04 0.64 0.04
+		roughness 0.9
+		metalness 0.0
+	brdf end
+object end
+
+object begin
+	transform 85 5 60 30 30 0 20
+	mesh quad
+	brdf begin
+		textures "" openart/190_norm.JPG
+		diffuse 0.04 0.24 0.74
+		roughness 0.8
+		metalness 0.0
+	brdf end
 object end

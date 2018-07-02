@@ -97,16 +97,6 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		settings.window.fullscreen = stoi(line[3]);
 		settings.window.vsync      = stoi(line[4]);
 	}
-	else if (cmd == "bloom")
-	{
-		// Parameters
-		//---------------------------------------------------------------
-		// | Bloom Threshold BRDF | Bloom Threshold PHONG | BlurPassCount
-		//---------------------------------------------------------------
-		settings.rendering.postProcess.bloom.threshold_brdf  = stof(line[1]);
-		settings.rendering.postProcess.bloom.threshold_phong = stof(line[2]);
-		settings.rendering.postProcess.bloom.blurPassCount   = stoi(line[3]);
-	}
 	else if (cmd == "shadowMap")
 	{
 		// Parameters
@@ -329,9 +319,9 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		// | Light Type	| Color	| Shadowing? |  Brightness | Spot.Angle OR Point.Range | Position3 | Rotation3
 		//--------------------------------------------------------------
 
-		const bool bCommandHasRange = command.size() > 9;
-		const bool bCommandHasRotationEntry = command.size() > 10;
-		const bool bCommandHasScaleEntry = command.size() > 12;
+		const bool bCommandHasRange = command.size() >= 9;
+		const bool bCommandHasRotationEntry = command.size() >= 10;
+		const bool bCommandHasScaleEntry = command.size() >= 12;
 
 		const std::string lightType	 = GetLowercased(command[1]);	// lookups have lowercase keys
 		const std::string colorValue = GetLowercased(command[2]);
@@ -339,6 +329,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const float brightness = stof(command[4]);
 
 		const float range = bCommandHasRange ? stof(command[8]) : 1.0f;
+		const float& spotAngle = range;
 		const float rotX = bCommandHasRotationEntry ? stof(command[9])  : 0.0f;
 		const float rotY = bCommandHasRotationEntry ? stof(command[10]) : 0.0f;
 		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
@@ -356,7 +347,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			sColorLookup.at(colorValue),
 			range,
 			brightness,
-			range,	// = spot angle
+			spotAngle,
 			bCastsShadows
 		);
 		if (Light::ELightType::DIRECTIONAL == l._type)
@@ -364,6 +355,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			vec3 dir = vec3(stof(command[5]), stof(command[6]), stof(command[7])).normalized();
 			l._directionXY = vec2(dir.x(), dir.y());
 			l._range = dir.z();	// serves as the Z channel for the direction.
+
+			// directional lights look at the origin with a given direction vector.
+			// for the view matrix, we need a position so we'll translate the
+			// directional lights 'position' along the light ray.
+			//
+			l._transform.SetPosition(dir * -range);
 		}
 		else
 		{
@@ -665,16 +662,28 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	}
 	else if (cmd == "ao")
 	{
-		scene.settings.bAmbientOcclusionEnabled = sBoolTypeReflection.at(command[1]); 
-		scene.settings.ambientFactor = stof(command[2]);
+		Settings::SSAO& ssao = scene.settings.ssao;
+		ssao.bEnabled		= sBoolTypeReflection.at(command[1]); 
+		ssao.ambientFactor	= stof(command[2]);
+		ssao.radius			= command.size() > 3 ? stof(command[3]) : 7.0f;	// 7 units - arbitrary.
+		ssao.intensity		= command.size() > 4 ? stof(command[4]) : 1.0f;
 	}
 	else if (cmd == "skylight")
 	{
 		scene.settings.bSkylightEnabled= sBoolTypeReflection.at(command[1]);
 	}
+
+	// Parameters
+	//---------------------------------------------------------------
+	// | Bloom Threshold | BlurPassCount
+	//---------------------------------------------------------------
 	else if (cmd == "bloom")
 	{
-		scene.settings.bBloomEnabled = sBoolTypeReflection.at(command[1]);
+		Settings::Bloom& bloom = scene.settings.bloom;
+	
+		bloom.bEnabled = sBoolTypeReflection.at(GetLowercased(command[1]));
+		bloom.brightnessThreshold = command.size() > 2 ? stof(command[2]) : 1.5f;
+		// bloom.blurPassCount = stoi(command[3]);	// in case bloom settings should be more flexible
 	}
 	else
 	{

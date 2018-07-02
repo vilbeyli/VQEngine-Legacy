@@ -164,8 +164,8 @@ XMMATRIX Light::GetViewMatrix() const
 		{
 			XMVECTOR up = vec3::Up;
 			XMVECTOR lookAt = vec3::Zero;
-			XMVECTOR lightDir = vec3(_directionXY.x(), _directionXY.y(), _range) * -2000.0f;
-			return XMMatrixLookAtLH(lightDir, lookAt, up);
+			XMVECTOR lightPos = _transform._position;
+			return XMMatrixLookAtLH(lightPos, lookAt, up);
 		}
 		default:
 			Log::Warning("INVALID LIGHT TYPE for GetViewMatrix()");
@@ -190,8 +190,9 @@ XMMATRIX Light::GetProjectionMatrix() const
 		}	
 		case ELightType::DIRECTIONAL:
 		{
-			constexpr int sz = 512 * 4;
+			constexpr int sz = 512 * 2;
 			return XMMatrixOrthographicLH(sz, sz, 0.05f, 2500.0f);
+			//return XMMatrixOrthographicLH(sz, sz, 0.1f, 1200.0f);
 		}
 
 		default:

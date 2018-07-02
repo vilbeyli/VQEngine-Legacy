@@ -211,6 +211,7 @@ devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2015.sln" /Build "$(Configu
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderCommands.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingEnums.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\TextRenderer.h" />
+    <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingStructs.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

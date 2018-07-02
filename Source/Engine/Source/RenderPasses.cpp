@@ -70,6 +70,7 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
 	dsvDesc.Texture2DArray.MipSlice = 0;
 
+	// SPOT LIGHTS
 	this->_spotShadowDepthTargets.resize(NUM_SPOT_LIGHT_SHADOW);
 	for (int i = 0; i < NUM_SPOT_LIGHT_SHADOW; i++)
 	{
@@ -78,6 +79,7 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 		this->_spotShadowDepthTargets[i] = pRenderer->AddDepthTarget(dsvDesc, spotShadowMaps);
 	}
 
+	// DIRECTIONAL LIGHTS
 	this->_directionalShadowDepthTargets.resize(NUM_DIRECTIONAL_LIGHT_SHADOW);
 	for (int i = 0; i < NUM_DIRECTIONAL_LIGHT_SHADOW; i++)
 	{
@@ -88,7 +90,6 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 
 	// render states for front face culling 
 	this->_shadowRenderState = pRenderer->AddRasterizerState(ERasterizerCullMode::FRONT, ERasterizerFillMode::SOLID, true, false);
-	this->_drawRenderState   = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK , ERasterizerFillMode::SOLID, true, false);
 
 	// shader
 	std::vector<InputLayout> layout = {
@@ -153,7 +154,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 
 
 
-void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings, bool bEnabled)
+void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings)
 {
 	_settings = postProcessSettings;
 	DXGI_SAMPLE_DESC smpDesc;
@@ -205,7 +206,6 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_bloomPass._bloomFilterShader = pRenderer->AddShader("Bloom", BloomShaders, VS_PS, layout);
 	this->_bloomPass._blurShader = pRenderer->AddShader("Blur", BlurShaders, VS_PS, layout);
 	this->_bloomPass._bloomCombineShader = pRenderer->AddShader("BloomCombine", CombineShaders, VS_PS, layout);
-	this->_bloomPass._isEnabled = bEnabled;
 
 	D3D11_SAMPLER_DESC blurSamplerDesc = {};
 	blurSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -222,7 +222,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 }
 
-void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
+void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 {
 	pRenderer->BeginEvent("Post Processing");
 
@@ -232,12 +232,11 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
 	// ======================================================================================
 	// BLOOM  PASS
 	// ======================================================================================
-	if (_bloomPass._isEnabled)
+	const Settings::Bloom& sBloom = _settings.bloom;
+	const bool bBloom = bBloomOn && _settings.bloom.bEnabled;
+	if (bBloom)
 	{
-		const Settings::PostProcess::Bloom& s = _settings.bloom;
 		const ShaderID currentShader = pRenderer->GetActiveShader();
-
-		const float brightnessThreshold = bUseBRDFLighting ? s.threshold_brdf : s.threshold_phong;
 
 		// bright filter
 		pRenderer->BeginEvent("Bloom Bright Filter");
@@ -248,7 +247,7 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
 		pRenderer->SetIndexBuffer(IABuffersQuad.second);
 		pRenderer->Apply();
 		pRenderer->SetTexture("worldRenderTarget", worldTexture);
-		pRenderer->SetConstant1f("BrightnessThreshold", brightnessThreshold);
+		pRenderer->SetConstant1f("BrightnessThreshold", sBloom.brightnessThreshold);
 		pRenderer->Apply();
 		pRenderer->DrawIndexed();
 		pRenderer->EndEvent();
@@ -257,7 +256,7 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
 		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
 		pRenderer->BeginEvent("Bloom Blur Pass");
 		pRenderer->SetShader(_bloomPass._blurShader);
-		for (int i = 0; i < s.blurPassCount; ++i)
+		for (int i = 0; i < 5; ++i)
 		{
 			const int isHorizontal = i % 2;
 			const TextureID pingPong = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[1 - isHorizontal]);
@@ -297,7 +296,7 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bUseBRDFLighting) const
 	// ======================================================================================
 	// TONEMAPPING PASS
 	// ======================================================================================
-	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._isEnabled ? _bloomPass._finalRT : _worldRenderTarget);
+	const TextureID colorTex = pRenderer->GetRenderTargetTexture(bBloom ? _bloomPass._finalRT : _worldRenderTarget);
 	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
 	pRenderer->BeginEvent("Tonemapping");
 	pRenderer->UnbindDepthTarget();
@@ -508,7 +507,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
 	}
 	pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
-	pRenderer->SetConstant1f("ambientFactor", sceneView.sceneRenderSettings.ambientFactor);
+	pRenderer->SetConstant1f("ambientFactor", sceneView.sceneRenderSettings.ssao.ambientFactor);
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
@@ -632,7 +631,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 			RandF(0, 1)	// hemisphere normal direction (up)
 		);
 		sample.normalize();				// bring the sample to the hemisphere surface
-		sample = sample * RandF(0, 1);	// scale to distribute samples within the hemisphere
+		sample = sample * RandF(0.1f, 1);	// scale to distribute samples within the hemisphere
 
 		// scale vectors with a power curve based on i to make samples close to center of the
 		// hemisphere more significant. think of it as i selects where we sample the hemisphere
@@ -707,18 +706,24 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	this->SSAOShader = pRenderer->AddShader("SSAO", AmbientOcclusionShaders, VS_PS, layout);
 	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
 	this->blurRenderTarget		= pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+#if SSAO_DEBUGGING
 	this->radius = 6.5f;
 	this->intensity = 1.0f;
+#endif
 }
-
+//constexpr size_t sz = sizeof(SSAOConstants);
+constexpr size_t VEC_SZ = 4;
 struct SSAOConstants
 {
 	XMFLOAT4X4 matProjection;
+	//-----------------------------
 	XMFLOAT4X4 matProjectionInverse;
+	//-----------------------------
 	vec2 screenSize;
 	float radius;
 	float intensity;
-	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * 3> samples;
+	//-----------------------------
+	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * VEC_SZ> samples;
 };
 void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView)
 {
@@ -731,22 +736,28 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	XMFLOAT4X4 projInv = {};
 	XMStoreFloat4x4(&projInv, sceneView.projectionInverse);
 
-	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * 3> samples;
+	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * VEC_SZ> samples;
 	size_t idx = 0;
 	for (const vec3& v : sampleKernel)
 	{
 		samples[idx + 0] = v.x();
 		samples[idx + 1] = v.y();
 		samples[idx + 2] = v.z();
-		idx += 3;
+		samples[idx + 3] = -1.0f;
+		idx += VEC_SZ;
 	}
 
 	SSAOConstants ssaoConsts = {
 		proj,
 		projInv,
 		pRenderer->GetWindowDimensionsAsFloat2(),
+#if SSAO_DEBUGGING
 		this->radius,
 		this->intensity,
+#else
+		sceneView.sceneRenderSettings.ssao.radius,
+		sceneView.sceneRenderSettings.ssao.intensity,
+#endif
 		samples
 	};
 

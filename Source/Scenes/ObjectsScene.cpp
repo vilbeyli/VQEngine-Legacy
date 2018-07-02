@@ -92,6 +92,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 		const vec2 wallTilingInv = vec2(1.3f, ratio) * 1.7f;
 
 		// RIGHT WALL
+#if 0
 		{
 			// Transform
 			Transform tf;
@@ -116,6 +117,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 			pBRDF->normalMap = mpRenderer->CreateTextureFromFile("openart/190_norm.JPG");
 			m_room.wallR->AddMaterial(pBRDF);
 		}
+#endif
 	}
 
 	//Animation anim;
@@ -151,15 +153,15 @@ void ObjectsScene::Load(SerializedScene& scene)
 
 			// MATERIALS
 			//
-			//const float gradientStep = rowStepInv * rowStepInv;
-			const float gradientStep = 1.0f;
+			const float gradientStep = rowStep * rowStep;
+			//const float gradientStep = 1.0f;
 			auto sRGBtoLinear = [](const vec3& sRGB)
 			{
 				// some sRGB references
 				// ---------------------------------
 				// 128 146 217 - lila
 				// 44 107 171  - 'facebook' blue
-				// 129 197 216 - turuaz/yesil
+				// 129 197 216 - turkuaz/yesil
 				// 41 113 133  - koyu yesil
 				// 177 206 149 - acik yesil
 				// 211 235 82  - lime
@@ -184,12 +186,13 @@ void ObjectsScene::Load(SerializedScene& scene)
 
 			
 			BRDF_Material* pMat0 = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
-			pMat0->diffuse = LinearColor(r, g, b);	
-			pMat0->metalness = 1.0;	// col(-x->+x) -> metalness [0.0f, 1.0f]
+			//pMat0->diffuse = LinearColor(r, g, b);
+			pMat0->diffuse = LinearColor(vec3(LinearColor::red) * gradientStep);
+			pMat0->metalness = 0.9f;	// col(-x->+x) -> metalness [0.0f, 1.0f]
 
 			const float roughnessLowClamp = 0.07f;
 			pMat0->roughness = colStep * 1.2f < roughnessLowClamp ? roughnessLowClamp : colStep * 1.2f;
-			pMat0->roughness = (1.0f + roughnessLowClamp) - pMat0->roughness;	// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
+			//pMat0->roughness = (1.0f + roughnessLowClamp) - pMat0->roughness;	// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
 
 
 			//shared_ptr<BlinnPhong_Material> pMat1 = std::static_pointer_cast<BlinnPhong_Material>(mMaterials.CreateAndGetMaterial(BLINN_PHONG));

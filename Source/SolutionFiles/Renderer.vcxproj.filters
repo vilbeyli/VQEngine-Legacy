@@ -32,7 +32,7 @@
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\TextRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Renderer\Source\Buffer.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -59,6 +59,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="$(SolutionDir)Source\Renderer\TextRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingStructs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

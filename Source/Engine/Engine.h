@@ -81,18 +81,13 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// CORE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
-	bool					Initialize(HWND hwnd);
-	void					Exit();
+	bool Initialize(HWND hwnd);
+	void Exit();
 	
-	bool					Load(VQEngine::ThreadPool* pThreadPool);
-	bool					LoadSceneFromFile();
-	bool					LoadScene(int level);
-	bool					ReloadScene();
+	bool Load(VQEngine::ThreadPool* pThreadPool);
+	bool UpdateAndRender();
 
-	void					SendLightData() const;
-	bool					UpdateAndRender();
-	void					Render();
-
+	void SendLightData() const;
 	inline void Engine::Pause()  { mbIsPaused = true; }
 	inline void Engine::Unpause(){ mbIsPaused = false; }
 	
@@ -112,21 +107,27 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// TOGGLES
 	//----------------------------------------------------------------------------------------------------------------
-	void					ToggleRenderingPath();	// Forward / Deferred
-	void					ToggleAmbientOcclusion();
-	void inline				ToggleProfilerRendering() { mbShowProfiler = !mbShowProfiler; }
-	void inline				ToggleControlsTextRendering() { mbShowControls = !mbShowControls; }
-	void inline				ToggleRenderingStats() { mFrameStats.bShow = !mFrameStats.bShow; }
+	void		ToggleRenderingPath();	// Forward / Deferred
+	void		ToggleAmbientOcclusion();
+	void		ToggleBloom();
+	void inline	ToggleProfilerRendering() { mbShowProfiler = !mbShowProfiler; }
+	void inline	ToggleControlsTextRendering() { mbShowControls = !mbShowControls; }
+	void inline	ToggleRenderingStats() { mFrameStats.bShow = !mFrameStats.bShow; }
+	void inline	TogglePause() { mbIsPaused = !mbIsPaused; }
 
 private:
 	Engine();
-	inline void TogglePause() { mbIsPaused = !mbIsPaused; }
+
+	bool LoadSceneFromFile();
+	bool LoadScene(int level);
+	bool ReloadScene();
 
 	void CalcFrameStats(float dt);
 	bool HandleInput();
 
 	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 	void PreRender();
+	void Render();
 	void RenderLoadingScreen() const;
 	void RenderLights() const;
 
@@ -203,6 +204,7 @@ private:
 
 	bool							mbUseDeferredRendering;	// todo read from sceneview???
 	bool							mbIsAmbientOcclusionOn;	// todo read from sceneview???
+	bool							mbIsBloomOn;
 	bool							mDisplayRenderTargets;	// todo read from sceneview???
 	unsigned long long				mFrameCount;
 };

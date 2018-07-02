@@ -162,8 +162,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 Lv = mul(matView, float4(Lights.directional_lights[j].lightDirection, 0.0f));
 		const float3 Wi = normalize(-Lv);
 		const float3 radiance 
-			= Lights.directional_lights[j].color * Lights.directional_lights[j].brightness 
-			//* SPOTLIGHT_BRIGHTNESS_SCALAR
+			= Lights.directional_lights[j].color 
+			* Lights.directional_lights[j].brightness 
 			;
 		const float NdotL = saturate(dot(s.N, Wi));
 		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
@@ -180,7 +180,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 radiance 
 			= Lights.directional_lights[k].color
 			* Lights.directional_lights[k].brightness
-			//* SPOTLIGHT_BRIGHTNESS_SCALAR
 			;
 		const float  NdotL = saturate(dot(s.N, Wi));
 		const float3 shadowing = ShadowTestPCF(Pw, Pl, texDirectionalShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);

@@ -75,6 +75,7 @@ void GameObject::RenderOpaque(Renderer* pRenderer
 	}
 
 	// SET GEOMETRY & MATERIAL, THEN DRAW
+	//pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 	for_each(mModel.mData.mMeshIDs.begin(), mModel.mData.mMeshIDs.end(), [&](MeshID id) 
 	{
 		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);

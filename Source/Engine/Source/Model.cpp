@@ -305,7 +305,7 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 	{
 		return mLoadedModels.at(fullPath);
 	}
-	
+
 
 	PerfTimer t;
 	t.Start();
@@ -316,13 +316,15 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 	//
 	Importer importer;
 	const aiScene* scene = importer.ReadFile(fullPath
-		, aiProcess_Triangulate 
-		| aiProcess_CalcTangentSpace 
-		| aiProcess_MakeLeftHanded 
-		| aiProcess_FlipUVs 
-		| aiProcess_FlipWindingOrder 
+		, aiProcess_Triangulate
+		| aiProcess_CalcTangentSpace
+		| aiProcess_MakeLeftHanded
+		| aiProcess_FlipUVs
+		//| aiProcess_FlipWindingOrder 
 		//| aiProcess_TransformUVCoords 
 		| aiProcess_FixInfacingNormals
+		| aiProcess_JoinIdenticalVertices
+		| aiProcess_GenSmoothNormals
 	);
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
@@ -380,9 +382,11 @@ Model ModelLoader::LoadModel_Async(const std::string& modelPath, Scene* pScene)
 		| aiProcess_CalcTangentSpace
 		| aiProcess_MakeLeftHanded
 		| aiProcess_FlipUVs
-		| aiProcess_FlipWindingOrder
+		//| aiProcess_FlipWindingOrder
 		//| aiProcess_TransformUVCoords 
 		| aiProcess_FixInfacingNormals
+		| aiProcess_JoinIdenticalVertices
+		| aiProcess_GenSmoothNormals
 	);
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{

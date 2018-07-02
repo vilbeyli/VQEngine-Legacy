@@ -68,7 +68,7 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 		pObj->mpScene = this;
 		if (!pObj->mModel.mbLoaded && !pObj->mModel.mModelName.empty())
 		{
-			pObj->mModel = LoadModel(pObj->mModel.mModelName);
+			LoadModel_Async(pObj, pObj->mModel.mModelName);
 		}
 		mpObjects.push_back(pObj);
 	}

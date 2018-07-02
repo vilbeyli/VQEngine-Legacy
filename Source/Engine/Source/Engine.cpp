@@ -81,6 +81,12 @@ void Engine::ToggleAmbientOcclusion()
 	Log::Info("Toggle Ambient Occlusion: %s", mbIsAmbientOcclusionOn ? "On" : "Off");
 }
 
+void Engine::ToggleBloom()
+{
+	mbIsBloomOn = !mbIsBloomOn;
+	Log::Info("Toggle Bloom: %s", mbIsBloomOn ? "On" : "Off");
+}
+
 float Engine::GetTotalTime() const { return mpTimer->TotalTime(); }
 
 Engine::Engine()
@@ -164,6 +170,7 @@ bool Engine::Initialize(HWND hwnd)
 	// render passes
 	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
 	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
+	mbIsBloomOn = true;	// currently not deserialized
 	mDisplayRenderTargets = true;
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
@@ -238,7 +245,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//renderer->m_Direct3D->ReportLiveObjects();
 		
 		mDeferredRenderingPasses.Initialize(mpRenderer);
-		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess, false);
+		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
 		mDebugPass.Initialize(mpRenderer);
 		mSSAOPass.Initialize(mpRenderer);
 
@@ -369,13 +376,13 @@ bool Engine::HandleInput()
 
 	if (mpInput->IsKeyTriggered("F1")) ToggleRenderingPath();
 	if (mpInput->IsKeyTriggered("F2")) ToggleAmbientOcclusion();
-	if (mpInput->IsKeyTriggered("F3")) mPostProcessPass._bloomPass.ToggleBloomPass();
+	if (mpInput->IsKeyTriggered("F3")) ToggleBloom();
 	if (mpInput->IsKeyTriggered("F4")) mDisplayRenderTargets = !mDisplayRenderTargets;
 
 
 	if (mpInput->IsKeyTriggered(";"))
 	{
-		if (mpInput->IsKeyDown("Shift"))	;
+		if (mpInput->IsKeyDown("Shift"));
 		else								ToggleProfilerRendering();
 	}
 	if (mpInput->IsKeyTriggered("'"))
@@ -387,6 +394,7 @@ bool Engine::HandleInput()
 
 	if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
 
+#if SSAO_DEBUGGING
 	// todo: wire this to some UI text/control
 	if (mbIsAmbientOcclusionOn)
 	{
@@ -403,6 +411,20 @@ bool Engine::HandleInput()
 			if (mpInput->IsScrollDown()) { mSSAOPass.radius -= step; if (mSSAOPass.radius < 0.301) mSSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
 		}
 	}
+#endif
+
+#if BLOOM_DEBUGGING
+	if (mbIsBloomOn)
+	{
+		Settings::Bloom& bloom = mPostProcessPass._settings.bloom;
+		float& threshold = bloom.brightnessThreshold;
+		const float step = 0.05f;
+		const float threshold_hi = 3.0f;
+		const float threshold_lo = 0.05f;
+		if (mpInput->IsScrollUp()) { threshold += step; if (threshold > threshold_hi) threshold = threshold_hi; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+		if (mpInput->IsScrollDown()) { threshold -= step; if (threshold < threshold_lo) threshold = threshold_lo; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+	}
+#endif
 
 	// SCENE -------------------------------------------------------------
 	if (mpInput->IsKeyTriggered("R"))
@@ -498,6 +520,7 @@ bool Engine::LoadSceneFromFile()
 	mpActiveScene->mpThreadPool = mpThreadPool;
 
 	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
+	mPostProcessPass._settings.bloom = mSerializedScene.settings.bloom;
 	return true;
 }
 
@@ -591,6 +614,7 @@ void Engine::Render()
 	mpRenderer->BeginFrame();
 
 	const XMMATRIX& viewProj = mSceneView.viewProj;
+	const bool bSceneSSAO = mSceneView.sceneRenderSettings.ssao.bEnabled;
 
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
@@ -621,7 +645,7 @@ void Engine::Render()
 		const TextureID texDiffuseRoughness = mpRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
 		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
 		const TextureID texDepthTexture = mpRenderer->mDefaultDepthBufferTexture;
-		const TextureID tSSAO = mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled
+		const TextureID tSSAO = mbIsAmbientOcclusionOn && bSceneSSAO
 			? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget)
 			: mSSAOPass.whiteTexture4x4;
 
@@ -638,9 +662,9 @@ void Engine::Render()
 		// AMBIENT OCCLUSION  PASS
 		mpCPUProfiler->BeginEntry("SSAO Pass");
 		mpGPUProfiler->BeginQuery("SSAO");
-		if (mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled)
+		if (mbIsAmbientOcclusionOn && bSceneSSAO)
 		{
-			// TODO: if BeginEntry() is inside, it's never reset to 0 if ambiend occl is turned off
+			// TODO: if BeginEntry() is inside, it's never reset to 0 if ambient occl is turned off
 			mpGPUProfiler->BeginQuery("Occlusion");
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mSceneView);
@@ -735,7 +759,7 @@ void Engine::Render()
 	//==========================================================================
 	else
 	{
-		const bool bZPrePass = mbIsAmbientOcclusionOn && mSceneView.sceneRenderSettings.bAmbientOcclusionEnabled;
+		const bool bZPrePass = mbIsAmbientOcclusionOn && bSceneSSAO;
 		const TextureID tSSAO = bZPrePass ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
 		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler < 0 ? EDefaultSamplerState::POINT_SAMPLER : mSceneView.environmentMap.envMapSampler;
@@ -841,7 +865,7 @@ void Engine::Render()
 				mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
 
-			mpRenderer->SetConstant1f("ambientFactor", mSceneView.sceneRenderSettings.ambientFactor);
+			mpRenderer->SetConstant1f("ambientFactor", mSceneView.sceneRenderSettings.ssao.ambientFactor);
 			mpRenderer->SetConstant3f("cameraPos", mSceneView.cameraPosition);
 			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
 			mpRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
@@ -890,7 +914,7 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	mpCPUProfiler->BeginEntry("Post Process");
 	mpGPUProfiler->BeginQuery("Post Process");
-	mPostProcessPass.Render(mpRenderer, sEngineSettings.rendering.bUseBRDFLighting);
+	mPostProcessPass.Render(mpRenderer, mbIsBloomOn);
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndQuery();
 
@@ -902,15 +926,7 @@ void Engine::Render()
 		const int screenWidth  = sEngineSettings.window.width;
 		const int screenHeight = sEngineSettings.window.height;
 		const float aspectRatio = static_cast<float>(screenWidth) / screenHeight;
-#if 0
-		// TODO: calculate scales and transform each quad into appropriate position in NDC space [0,1]
-		// y coordinate is upside-down, region covering the 70% <-> 90% of screen height 
-		const float topPct = 0.7f;	const float botPct = 0.9f;
-		const int rectTop = 0;// * topPct;
-		const int rectBot = screenHeight;// * botPct;
-		//m_pRenderer->SetRasterizerState(m_debugPass._scissorsRasterizer);
-		//m_pRenderer->SetScissorsRect(0, screenWidth, rectTop, rectBot);
-#endif
+
 		// debug texture strip draw settings
 		const int bottomPaddingPx = 0;	 // offset from bottom of the screen
 		const int heightPx        = 128; // height for every texture
@@ -1009,10 +1025,14 @@ void Engine::Render()
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
 		_drawDesc.text = std::string("F2 - SSAO: ") + (mbIsAmbientOcclusionOn ? "On" : "Off");
+		if(mbIsAmbientOcclusionOn)
+			_drawDesc.text += (mSceneView.sceneRenderSettings.ssao.bEnabled ? " (Scene: On)" : " (Scene: Off)");
 		mpTextRenderer->RenderText(_drawDesc);
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
-		_drawDesc.text = std::string("F3 - Bloom: ") + (mPostProcessPass._bloomPass._isEnabled ? "On" : "Off");
+		_drawDesc.text = std::string("F3 - Bloom: ") + (mbIsBloomOn ? "On" : "Off");
+		if(mbIsBloomOn)
+			_drawDesc.text += (mPostProcessPass._settings.bloom.bEnabled ? " (Scene: On)": " (Scene: Off)");
 		mpTextRenderer->RenderText(_drawDesc);
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);

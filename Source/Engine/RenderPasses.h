@@ -72,7 +72,6 @@ struct ShadowMapPass
 	
 	unsigned				_shadowMapDimension;
 	ShaderID				_shadowShader;
-	RasterizerStateID		_drawRenderState;
 	RasterizerStateID		_shadowRenderState;
 	D3D11_VIEWPORT			_shadowViewport;
 	D3D11_VIEWPORT			_shadowViewportDirectional;
@@ -88,13 +87,11 @@ struct ShadowMapPass
 
 struct BloomPass
 {
-	inline void ToggleBloomPass() { _isEnabled = !_isEnabled; }
 	BloomPass() : 
 		_blurSampler(-1), 
 		_colorRT(-1), 
 		_brightRT(-1), 
-		_blurPingPong({ -1, -1 }), 
-		_isEnabled(true) 
+		_blurPingPong({ -1, -1 })
 	{}
 
 	SamplerID						_blurSampler;
@@ -102,7 +99,6 @@ struct BloomPass
 	RenderTargetID					_brightRT;
 	RenderTargetID					_finalRT;
 	std::array<RenderTargetID, 2>	_blurPingPong;
-	bool							_isEnabled;
 	ShaderID						_blurShader;
 	ShaderID						_bilateralBlurShader;
 	ShaderID						_bloomFilterShader;
@@ -117,12 +113,8 @@ struct TonemappingCombinePass
 
 struct PostProcessPass
 {
-	void Initialize(
-		Renderer*						pRenderer, 
-		const Settings::PostProcess&	postProcessSettings,
-		bool							bEnabled
-	);
-	void Render(Renderer* pRenderer, bool bDeferredRendering) const;
+	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
+	void Render(Renderer* pRenderer, bool bBloomOn) const;
 
 	RenderTargetID				_worldRenderTarget;
 	BloomPass					_bloomPass;
@@ -173,6 +165,22 @@ struct DebugPass
 	RasterizerStateID _scissorsRasterizer;
 };
 
+// Engine will be updating the values in Engine::HandleInput()
+//--------------------------------------------------------------------------------------------
+//
+#define SSAO_DEBUGGING 0
+//
+// wheel up/down		:	radius +/-
+// shift+ wheel up/down	:	intensity +/-
+//
+//
+#define BLOOM_DEBUGGING 0
+//
+// wheel up/down		:	brightness threshold +/-
+//
+
+//--------------------------------------------------------------------------------------------
+
 // learnopengl:			https://learnopengl.com/#!Advanced-Lighting/SSAO
 // Blizzard Dev Paper:	http://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf
 struct AmbientOcclusionPass
@@ -194,6 +202,8 @@ struct AmbientOcclusionPass
 	ShaderID			bilateralBlurShader;
 	ShaderID			blurShader;
 
-	float radius;
-	float intensity;
+#if SSAO_DEBUGGING
+	float radius;		
+	float intensity;	
+#endif
 };

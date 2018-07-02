@@ -1,7 +1,8 @@
-// Scene File Formatting:
+// Scene File Formatting
 // ---------------------------------------------------------------------------------------------------------------
 // - all lowercase
 // - '//' starts a comment
+// ---------------------------------------------------------------------------------------------------------------
 
 // Object initializations
 // ---------------------------------------------------------------------------------------------------------------
@@ -11,25 +12,29 @@
 // BRDF			:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
-
-
-// Scene
 // ---------------------------------------------------------------------------------------------------------------
+
+// Render Settings initializations
+// ---------------------------------------------------------------------------------------------------------------
+// ao			: enabled?, ambient multiplier, ssao range, ssao intensity
+// skylight		: enabled?
+// bloom		: enabled?, 
+// ---------------------------------------------------------------------------------------------------------------
+
+
 camera 0.1 2500 75   -70 25 50  112 11 
-ao true 0.09
-skylight true
+ao true 0.020 28.0 2.70
+skylight false
+bloom true 0.5
 
-light d sun true 1.8   40   -100   15
-//light       s         sun      	true       2500         80	     -100    145     80	   210  0  	65  0.8	 
-//light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 
-//light       p         orange       	false      1800         60	      0     30     0  	   0.3
-//light       p         cyan      	false      2400          84	      60    25    -2 	   0.4
-//light       p         red        	false      1500         60	    -140   100   140       0.5
-
-// objects
-// =======
+light d sun true 6.8   40   -100   15 2000
 
 object begin
-transform 0 0 0 0 0 0 0.5
+transform 0 0 0 0 0 0 0.2
 model sponza/sponza.obj
+object end
+
+object begin
+transform 120 0 0 0 90 0 5
+model nanosuit/nanosuit.obj
 object end

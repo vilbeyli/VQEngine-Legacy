@@ -50,19 +50,20 @@ namespace Settings
 		size_t	dimension;
 	};
 
+	struct Bloom
+	{
+		bool bEnabled;
+		float brightnessThreshold;
+	};
+
 	struct PostProcess 
 	{
-		struct Bloom 
-		{
-			float	threshold_brdf;
-			float	threshold_phong;
-			int     blurPassCount;
-		} bloom;
-
 		struct Tonemapping 
 		{
 			float	exposure;
 		} toneMapping;
+
+		Bloom bloom;
 
 		bool HDREnabled = false;
 	};
@@ -86,11 +87,18 @@ namespace Settings
 		std::vector<std::string> sceneNames;
 	};
 
+	struct SSAO
+	{
+		bool bEnabled;
+		float ambientFactor;
+		float radius;
+		float intensity;
+	};
+
 	struct SceneRender
 	{
-		bool bAmbientOcclusionEnabled;	// screen-space ambient occlusion
-		float ambientFactor;			// ambient lighting scalar
+		SSAO ssao;
 		bool bSkylightEnabled;			// ambient environment map lighting
-		bool bBloomEnabled;				// bloom post effect
+		Bloom bloom;
 	};
 };

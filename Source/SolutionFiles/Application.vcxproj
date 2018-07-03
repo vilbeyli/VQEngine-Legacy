@@ -184,7 +184,6 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Application\BaseSystem.h" />
     <ClInclude Include="$(SolutionDir)Source\Application\Input.h" />
-    <ClInclude Include="$(SolutionDir)Source\Application\resource.h" />
     <ClInclude Include="$(SolutionDir)Source\Application\SystemDefs.h" />
     <ClInclude Include="..\Application\ThreadPool.h" />
     <ClInclude Include="$(SolutionDir)Source\Application\HandleTypedefs.h" />

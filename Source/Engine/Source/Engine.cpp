@@ -520,7 +520,7 @@ bool Engine::LoadSceneFromFile()
 	mpActiveScene->mpThreadPool = mpThreadPool;
 
 	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
-	mPostProcessPass._settings.bloom = mSerializedScene.settings.bloom;
+	sEngineSettings.rendering.postProcess.bloom = mSerializedScene.settings.bloom;
 	return true;
 }
 
@@ -948,7 +948,9 @@ void Engine::Render()
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap; 
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
-			const vec2 screenPosition(0.0f, (float)bottomPaddingPx);
+
+			// first row -----------------------------------------
+			vec2 screenPosition(0.0f, static_cast<float>(bottomPaddingPx + heightPx * 0));
 			std::vector<DrawQuadOnScreenCommand> c
 			{	//		Pixel Dimensions	 Screen Position (offset below)	  Texture			DepthTexture?
 				{ fullscreenTextureScaledDownSize,	screenPosition,			tSceneDepth			, true},
@@ -961,6 +963,45 @@ void Engine::Render()
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
 				c[i].bottomLeftCornerScreenCoordinates.x() = c[i-1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;
+
+			// second row -----------------------------------------
+			screenPosition = vec2(0.0f, static_cast<float>(bottomPaddingPx + heightPx * 1));
+			const size_t shadowMapCount = mSceneLightData._cb.directionalLightCount_shadow + mSceneLightData._cb.pointLightCount_shadow;
+			const size_t row_offset = c.size();
+			size_t currShadowMap = 0;
+
+			// directional lights
+			for(size_t i=0; i<mSceneLightData._cb.directionalLightCount_shadow; ++ i)
+			{
+				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass._directionalShadowDepthTargets[i]);
+				c.push_back({ squareTextureScaledDownSize, screenPosition, tex, false });
+
+				if (currShadowMap > 0)
+				{
+					c[row_offset + i].bottomLeftCornerScreenCoordinates.x() 
+						= c[row_offset + i - 1].bottomLeftCornerScreenCoordinates.x() 
+						+ c[row_offset + i - 1].dimensionsInPixels.x() + paddingPx;
+				}
+				++currShadowMap;
+			}
+
+			// spot lights
+			for (size_t i = 0; i < mSceneLightData._cb.spotLightCount_shadow; ++i)
+			{
+				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass._spotShadowDepthTargets[i]);
+				c.push_back({
+					squareTextureScaledDownSize, screenPosition, tex, false
+					});
+
+				if (currShadowMap > 0)
+				{
+					c[row_offset + i].bottomLeftCornerScreenCoordinates.x() 
+						= c[row_offset + i - 1].bottomLeftCornerScreenCoordinates.x() 
+						+ c[row_offset + i - 1].dimensionsInPixels.x() + paddingPx;
+				}
+				++currShadowMap;
+			}
+
 			return c;
 		}();
 

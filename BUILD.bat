@@ -55,7 +55,7 @@ cls
 if not exist "%APPDATA%\VQEngine\Logs\Build" mkdir "%APPDATA%\VQEngine\Logs\Build
 
 call :CleanUp
-call :Devenv_Build RELEASE, %log_devenv%
+call :MSBuild_Build RELEASE, %log_devenv%
 call :PackageBinaries
 
 REM Error checking
@@ -115,7 +115,7 @@ if exist %2 del %2
 
 set t_msb_begin=%TIME%
 echo              begin %t_msb_begin%
-"%msbuild%" %solution%  /p:Configuration=Release /p:BuildInParallel=%1 > %2
+"%msbuild%" %solution%  /p:Configuration=Release /m
 set t_msb_end=%TIME%
 echo              end   %t_msb_end%
 rem set duration=%t_msb_end%-%t_msb_begin%

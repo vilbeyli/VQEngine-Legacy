@@ -329,7 +329,7 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
 		Log::Error("Assimp error: %s", importer.GetErrorString());
-		assert(false);
+		return Model();
 	}
 	ModelData data = ProcessNode(scene->mRootNode, scene, modelDirectory, mpRenderer, pScene);
 

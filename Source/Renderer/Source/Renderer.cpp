@@ -332,6 +332,13 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		{
 			Log::Error(err + "None\n");
 		}
+
+		rsDesc.FillMode = static_cast<D3D11_FILL_MODE>(ERasterizerFillMode::WIREFRAME);
+		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::WIREFRAME]);
+		if (FAILED(hr))
+		{
+			Log::Error(err + "Wireframe\n");
+		}
 	}
 	m_Direct3D->ReportLiveObjects("Init Default RS ");
 

@@ -28,9 +28,13 @@
 
 enum class ERasterizerCullMode
 {
+	// SOLID
 	FRONT = D3D11_CULL_FRONT,
 	NONE = D3D11_CULL_NONE,
-	BACK = D3D11_CULL_BACK
+	BACK = D3D11_CULL_BACK,
+
+	// WIREFRAME
+	WIREFRAME = D3D11_FILL_WIREFRAME,
 };
 
 enum class ERasterizerFillMode
@@ -51,9 +55,13 @@ enum class EPrimitiveTopology
 // default states
 enum EDefaultRasterizerState
 {
+	// FILL
 	CULL_NONE = 0,
 	CULL_FRONT,
 	CULL_BACK,
+
+	// WIREFRAME
+	WIREFRAME,
 
 	RASTERIZER_STATE_COUNT
 };

@@ -16,6 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#define NOMINMAX
 #include "Scene.h"
 #include "Engine.h"
 #include "Application/Input.h"
@@ -25,6 +26,7 @@
 
 #include "Utilities/Log.h"
 
+#include <numeric>
 #include <set>
 
 Scene::Scene(Renderer * pRenderer, TextRenderer * pTextRenderer)
@@ -78,6 +80,9 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 	// async model loading
 	StartLoadingModels();
 	EndLoadingModels();
+
+	// calculate bounding box
+	CalculateSceneBoundingBox();
 }
 
 void Scene::UnloadScene()
@@ -137,6 +142,23 @@ int Scene::RenderAlpha(const SceneView & sceneView) const
 		++numObj;
 	}
 	return numObj;
+}
+
+int Scene::RenderDebug(const XMMATRIX& viewProj) const
+{
+	const auto IABuffers = mMeshes[EGeometry::CUBE].GetIABuffers();
+	mpRenderer->SetShader(EShaders::UNLIT);
+	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
+	mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
+	mpRenderer->SetRasterizerState(EDefaultRasterizerState::WIREFRAME);
+	mpRenderer->SetVertexBuffer(IABuffers.first);
+	mpRenderer->SetIndexBuffer(IABuffers.second);
+	mBoundingBox.Render(mpRenderer, viewProj);
+	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
+
+	return 1;	// 1 object rendered
 }
 
 
@@ -303,6 +325,96 @@ void Scene::EndLoadingModels()
 	});
 }
 
+void Scene::CalculateSceneBoundingBox()
+{
+	// call PreRender() to create draw lists so that we skip
+	// over the unused game objects in the object pool and have 
+	// a set of gameobject lists to start the scene bounding box 
+	// calculation with;
+	PreRender();	// mDrawLists.opeaue/alphaList is populated.
+	std::vector<const GameObject*> pObjects(
+		mDrawLists.opaqueList.size() + mDrawLists.alphaList.size()
+		, nullptr
+	);
+	std::copy(RANGE(mDrawLists.opaqueList), pObjects.begin());
+	std::copy(RANGE(mDrawLists.alphaList) , pObjects.begin() + mDrawLists.opaqueList.size());
+
+	constexpr float max_f = std::numeric_limits<float>::max();
+	vec3 mins(max_f);
+	vec3 maxs(-(max_f - 1.0f));
+	std::for_each(RANGE(pObjects), [&](const GameObject* pObj)
+	{
+		XMMATRIX worldMatrix = pObj->GetTransform().WorldTransformationMatrix();
+
+		const ModelData& modelData = pObj->GetModelData();
+		std::for_each(RANGE(modelData.mMeshIDs), [&](const MeshID& meshID)
+		{
+			const BufferID VertexBufferID = mMeshes[meshID].GetIABuffers().first;
+			const Buffer& VertexBuffer = mpRenderer->GetVertexBuffer(VertexBufferID);
+			const size_t numVerts = VertexBuffer.mDesc.mElementCount;
+			const size_t stride = VertexBuffer.mDesc.mStride;
+
+			constexpr size_t defaultSz = sizeof(DefaultVertexBufferData);
+			constexpr float DegenerateMeshPositionChannelValueMax = 15000.0f; // make sure no vertex.xyz is > 30,000.0f
+
+			// #SHADER REFACTOR:
+			//
+			// currently all the shader input is using default vertex buffer data.
+			// we just make sure that we can interpret the position data properly here
+			// by ensuring the vertex buffer stride for a given mesh matches
+			// the default vertex buffer.
+			//
+			// TODO:
+			// Type information is not preserved once the vertex/index buffer is created.
+			// need to figure out a way to interpret the position data in a given buffer
+			//
+			if (stride == defaultSz)
+			{
+				const DefaultVertexBufferData* pData = reinterpret_cast<const DefaultVertexBufferData*>(VertexBuffer.mpCPUData);
+				if (pData == nullptr)
+				{
+					Log::Info("Nope: %d", int(stride));
+					return;
+				}
+
+				for (int i = 0; i < numVerts; ++i)
+				{
+					const vec3 worldPos = vec3(XMVector3Transform(pData[i].position, worldMatrix));
+					const float x_mesh = std::min(worldPos.x(), DegenerateMeshPositionChannelValueMax);
+					const float y_mesh = std::min(worldPos.y(), DegenerateMeshPositionChannelValueMax);
+					const float z_mesh = std::min(worldPos.z(), DegenerateMeshPositionChannelValueMax);
+
+					const float x_min = mins.x();
+					const float y_min = mins.y();
+					const float z_min = mins.z();
+
+					mins = vec3(
+						std::min(x_mesh, x_min),
+						std::min(y_mesh, y_min),
+						std::min(z_mesh, z_min)
+					);
+					maxs = vec3(
+						std::max(x_mesh, maxs.x()),
+						std::max(y_mesh, maxs.y()),
+						std::max(z_mesh, maxs.z())
+					);
+				}
+			}
+			else
+			{
+				Log::Warning("Unsupported vertex stride for mesh.");
+			}
+		});
+	});
+
+	Log::Info("SceneBoundingBox:lo=(%.2f, %.2f, %.2f)\thi=(%.2f, %.2f, %.2f)"
+		, mins.x() , mins.y() , mins.z()
+		, maxs.x() , maxs.y() , maxs.z()
+	);
+	mBoundingBox.hi = maxs;
+	mBoundingBox.low = mins;
+}
+
 
 void Scene::UpdateScene(float dt)
 {
@@ -368,3 +480,15 @@ GameObject* SerializedScene::CreateNewGameObject()
 	return &objects.back();
 }
 
+void Scene::SceneBoundingBox::Render(Renderer * pRenderer, const XMMATRIX& viewProj) const
+{
+	Transform tf;
+	const vec3 diag = this->hi - this->low;
+	const vec3 pos = (this->hi + this->low) * 0.5f;
+	tf.SetScale(diag * 0.5f);
+	tf.SetPosition(pos);
+	XMMATRIX wvp = tf.WorldTransformationMatrix() * viewProj;
+	pRenderer->SetConstant4x4f("worldViewProj", wvp);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+}

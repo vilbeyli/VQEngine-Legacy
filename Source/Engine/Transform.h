@@ -39,6 +39,7 @@ public:
 	inline void SetYRotationDeg(float yDeg)            { _rotation = Quaternion::FromAxisAngle(vec3::Up     , yDeg * DEG2RAD); }
 	inline void SetZRotationDeg(float zDeg)            { _rotation = Quaternion::FromAxisAngle(vec3::Forward, zDeg * DEG2RAD); }
 	inline void SetScale(float x, float y, float z)    { _scale	= vec3(x, y, z); }
+	inline void SetScale(const vec3& scl)              { _scale	= scl; }
 	inline void SetUniformScale(float s)		       { _scale	= vec3(s, s, s); }
 	inline void SetPosition(float x, float y, float z) { _position = vec3(x, y, z); }
 	inline void SetPosition(const vec3& pos)		   { _position = pos; }

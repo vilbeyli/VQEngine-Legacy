@@ -49,7 +49,9 @@ public:
 
 	void SetTransform(const Transform& transform) { mTransform = transform; }
 	
+	const Transform& GetTransform() const { return mTransform; }
 	const vec3& GetPosition() const { return mTransform._position; }
+	const ModelData& GetModelData() const { return mModel.mData; }
 	
 	// #TODO: either add all the other transform update functions to game object or expose Transform member.
 	inline void RotateAroundGlobalYAxisDegrees(float angle) { mTransform.RotateAroundGlobalYAxisDegrees(angle); }

@@ -153,6 +153,9 @@ public:
 	//
 	int RenderAlpha(const SceneView& sceneView) const;
 
+	// Renders debugging information such as bounding boxes, wireframe meshes, etc.
+	//
+	int RenderDebug(const XMMATRIX& viewProj) const;
 
 	//	Use these functions to programmatically create material instances which you can add to game objects in the scene. 
 	//
@@ -188,10 +191,19 @@ private:
 
 	DrawLists				mDrawLists;
 
+	struct SceneBoundingBox
+	{
+		vec3 low = vec3::Zero;
+		vec3 hi = vec3::Zero;
+		void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
+	};
+
+	SceneBoundingBox		mBoundingBox;
 
 private:
 	void StartLoadingModels();
 	void EndLoadingModels();
+	void CalculateSceneBoundingBox();
 };
 
 

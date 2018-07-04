@@ -80,7 +80,7 @@ public:
 	const Texture&			GetTextureObject(TextureID) const;
 	const TextureID			GetTexture(const std::string name) const;
 	inline const ShaderID	GetActiveShader() const { return mPipelineState.shader; }
-
+	const Buffer&			GetVertexBuffer(BufferID id) { return mVertexBuffers[id]; }
 
 	//----------------------------------------------------------------------------------------------------------------
 	// RESOURCE INITIALIZATION

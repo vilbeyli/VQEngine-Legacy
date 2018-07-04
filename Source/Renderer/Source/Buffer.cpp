@@ -47,6 +47,13 @@ void Buffer::Initialize(ID3D11Device* device, const void* pData /*=nullptr*/)
 		bufData.SysMemPitch = 0;		// irrelevant for non-texture sub-resources
 		bufData.SysMemSlicePitch = 0;	// irrelevant for non-texture sub-resources
 		pBufData = &bufData;
+
+		mpCPUData = malloc(bufDesc.ByteWidth);
+		memcpy(mpCPUData, pData, bufDesc.ByteWidth);
+	}
+	else
+	{
+		int a = 5;
 	}
 
 	int hr = device->CreateBuffer(&bufDesc, pBufData, &this->mpGPUData);
@@ -74,6 +81,7 @@ void Buffer::CleanUp()
 
 	if (mpCPUData)
 	{
+		free(mpCPUData);
 		//const size_t AllocSize = mDesc.mStride * mDesc.mElementCount;
 		//mAllocator.deallocate(static_cast<char*>(mCPUDataCache), AllocSize);
 	}

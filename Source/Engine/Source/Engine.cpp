@@ -125,12 +125,6 @@ bool Engine::Initialize(HWND hwnd)
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
 	}
-	if (!mpTextRenderer->Initialize(mpRenderer))
-	{
-		Log::Error("Cannot initialize Text Renderer.\n");
-		return false;
-	}
-	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
 
 	// PRIMITIVES
 	//--------------------------------------------------------------------
@@ -164,6 +158,13 @@ bool Engine::Initialize(HWND hwnd)
 			GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
 		};
 	}
+
+	if (!mpTextRenderer->Initialize(mpRenderer))
+	{
+		Log::Error("Cannot initialize Text Renderer.\n");
+		return false;
+	}
+	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
 
 	// INITIALIZE RENDERING
 	//--------------------------------------------------------------
@@ -909,6 +910,7 @@ void Engine::Render()
 		mpRenderer->EndEvent();
 	}
 
+	
 #if 1
 	// POST PROCESS PASS
 	//------------------------------------------------------------------------
@@ -922,6 +924,10 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	if (mDisplayRenderTargets)
 	{
+		// BOUNDING BOXES
+		//
+		mpActiveScene->RenderDebug(viewProj);
+
 		mpCPUProfiler->BeginEntry("Debug Textures");
 		const int screenWidth  = sEngineSettings.window.width;
 		const int screenHeight = sEngineSettings.window.height;

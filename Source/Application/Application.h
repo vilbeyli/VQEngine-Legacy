@@ -47,7 +47,7 @@ public:
 
 private:
 	void InitRawInputDevices();
-	void InitWindow(const Settings::Window& windowSettings);
+	void InitWindow(Settings::Window& windowSettings);
 	void ShutdownWindows();
 	
 	void CaptureMouse(bool bDoCapture);

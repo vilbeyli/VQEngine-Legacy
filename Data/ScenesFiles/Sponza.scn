@@ -23,11 +23,11 @@
 
 
 camera 0.1 2500 75   -70 25 50  112 11 
-ao true 0.020 28.0 2.70
-skylight false
-bloom true 0.5
+ao true 0.220 28.0 2.70
+skylight true
+bloom true 0.0000005
 
-light d sun true 6.8   40   -100   15 2000
+light d sun true 46.8   40   -100   15 2000
 
 object begin
 transform 0 0 0 0 0 0 0.2

@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "../Application/BaseSystem.h"
+#include "../Application/Application.h"
 
 #include <ctime>
 #include <cstdlib>
@@ -25,12 +25,12 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdSh
 {
 	srand(static_cast<unsigned>(time(NULL)));
 	
-	BaseSystem baseSystem;
-	if (baseSystem.Init())
+	Application VQDemo;
+	if (VQDemo.Init())
 	{
-		baseSystem.Run();
+		VQDemo.Run();
 	}
-	baseSystem.Exit();
+	VQDemo.Exit();
 	
 	return 0;
 }

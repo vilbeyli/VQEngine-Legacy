@@ -86,7 +86,7 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 	}
 
 	const std::string& cmd = line[0];
-	if (cmd == "screen")
+	if (cmd == "window")
 	{
 		// Parameters
 		//---------------------------------------------------------------
@@ -96,6 +96,15 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		settings.window.height     = stoi(line[2]);
 		settings.window.fullscreen = stoi(line[3]);
 		settings.window.vsync      = stoi(line[4]);
+	}
+	else if (cmd == "logger" || cmd == "logging" || cmd == "log")
+	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Logger	|  Use Console Window	| Use File in AppData\VQEngine
+		//---------------------------------------------------------------
+		settings.logger.bConsole = sBoolTypeReflection.at(line[1]);
+		settings.logger.bFile    = sBoolTypeReflection.at(line[2]);
 	}
 	else if (cmd == "shadowMap")
 	{

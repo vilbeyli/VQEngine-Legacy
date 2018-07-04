@@ -29,14 +29,14 @@
 
 namespace Settings { struct Window; }
 
-class BaseSystem
+class Application
 {
 public: 
 	static std::string s_WorkspaceDirectory;
 
 public:
-	BaseSystem();
-	~BaseSystem();
+	Application();
+	~Application();
 
 	bool Init();
 	void Run();
@@ -70,4 +70,4 @@ private:
 // the windows system messaging into our MessageHandler function inside the system class.
 
 static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-static BaseSystem* gp_appHandle = 0;
+static Application* gp_appHandle = 0;

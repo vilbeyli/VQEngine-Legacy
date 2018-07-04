@@ -29,7 +29,7 @@ using KeyCode = unsigned int;
 class Input
 {
 	static const std::unordered_map<const char*, KeyCode> sKeyMap;
-	friend class BaseSystem;
+	friend class Application;
 public:
 	Input();
 	Input(const Input&);

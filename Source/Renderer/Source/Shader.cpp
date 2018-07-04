@@ -21,7 +21,7 @@
 #include "Utilities/Log.h"
 #include "Utilities/utils.h"
 #include "Utilities/PerfTimer.h"
-#include "Application/BaseSystem.h"
+#include "Application/Application.h"
 
 #include <fstream>
 #include <sstream>
@@ -115,7 +115,7 @@ bool Shader::IsForwardPassShader(ShaderID shader)
 void Shader::LoadShaders(Renderer* pRenderer)
 {
 	// create the ShaderCache folder if it doesn't exist
-	s_shaderCacheDirectory = BaseSystem::s_WorkspaceDirectory + "\\ShaderCache";
+	s_shaderCacheDirectory = Application::s_WorkspaceDirectory + "\\ShaderCache";
 	if (CreateDirectory(s_shaderCacheDirectory.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{
 		;// directory either successfully created or already exists: NOP

@@ -910,6 +910,9 @@ void Engine::Render()
 		mpRenderer->EndEvent();
 	}
 
+	// BOUNDING BOXES
+	//
+	mpActiveScene->RenderDebug(viewProj);
 	
 #if 1
 	// POST PROCESS PASS
@@ -922,12 +925,8 @@ void Engine::Render()
 
 	// DEBUG PASS
 	//------------------------------------------------------------------------
-	if (mDisplayRenderTargets)
+	if (mDisplayRenderTargets && false)
 	{
-		// BOUNDING BOXES
-		//
-		mpActiveScene->RenderDebug(viewProj);
-
 		mpCPUProfiler->BeginEntry("Debug Textures");
 		const int screenWidth  = sEngineSettings.window.width;
 		const int screenHeight = sEngineSettings.window.height;

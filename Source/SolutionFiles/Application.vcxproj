@@ -178,11 +178,11 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Application\Source\Input.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Application\Source\BaseSystem.cpp" />
+    <ClCompile Include="..\Application\Source\Application.cpp" />
     <ClCompile Include="..\Application\Source\ThreadPool.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(SolutionDir)Source\Application\BaseSystem.h" />
+    <ClInclude Include="..\Application\Application.h" />
     <ClInclude Include="$(SolutionDir)Source\Application\Input.h" />
     <ClInclude Include="$(SolutionDir)Source\Application\SystemDefs.h" />
     <ClInclude Include="..\Application\ThreadPool.h" />

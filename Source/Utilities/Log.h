@@ -20,6 +20,8 @@
 
 #include <string>
 
+namespace Settings { struct Logger; }
+
 #define VARIADIC_LOG_FN(FN_NAME)\
 template<class... Args>\
 void FN_NAME(const char* format, Args&&... args)\
@@ -31,7 +33,7 @@ void FN_NAME(const char* format, Args&&... args)\
 
 namespace Log
 {
-	enum Mode : unsigned
+	enum Mode : unsigned	// unused.
 	{
 		NONE				= 0,	// Visual Studio Output Window
 		CONSOLE				= 1,	// Separate Console Window
@@ -46,7 +48,7 @@ namespace Log
 
 	//---------------------------------------------------------------------------------------------
 
-	void Initialize(Mode mode);
+	void Initialize(const Settings::Logger& settings);
 	void Exit();
 
 	void Info(const std::string& s);

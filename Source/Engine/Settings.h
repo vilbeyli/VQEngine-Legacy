@@ -23,6 +23,12 @@
 
 namespace Settings
 {
+	struct Logger
+	{
+		bool bConsole;
+		bool bFile;
+	};
+
 	struct Window
 	{
 		int		width;
@@ -81,6 +87,7 @@ namespace Settings
 
 	struct Engine 
 	{
+		Logger logger;
 		Window window;
 		Rendering rendering;
 		int levelToLoad;

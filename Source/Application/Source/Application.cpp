@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "BaseSystem.h"
+#include "Application.h"
 #include "Input.h"
 
 
@@ -38,9 +38,9 @@
 
 #define xLOG_WINDOW_EVENTS
 
-std::string BaseSystem::s_WorkspaceDirectory = "";
+std::string Application::s_WorkspaceDirectory = "";
 
-BaseSystem::BaseSystem()
+Application::Application()
 	:
 	m_appName("VQEngine Demo"),
 	m_bMouseCaptured(false),
@@ -50,16 +50,16 @@ BaseSystem::BaseSystem()
 	m_hInstance		= GetModuleHandle(NULL);	// instance of this application
 }
 
-BaseSystem::~BaseSystem(){}
+Application::~Application(){}
 
 
-void BaseSystem::UpdateWindowDimensions(int w, int h)
+void Application::UpdateWindowDimensions(int w, int h)
 {
 	m_windowHeight = h;
 	m_windowWidth = w;
 }
 
-void BaseSystem::InitWindow(const Settings::Window& windowSettings)
+void Application::InitWindow(const Settings::Window& windowSettings)
 {
 	int width, height;
 	int posX, posY;				// window position
@@ -119,26 +119,17 @@ void BaseSystem::InitWindow(const Settings::Window& windowSettings)
 		m_hInstance, NULL
 	);
 
-	if (m_hwnd == nullptr)
+	if (m_hwnd == NULL)
 	{
 		MessageBox(NULL, "CreateWindowEx() failed", "Error", MB_OK);
 		ENGINE->Exit();
 		PostQuitMessage(0);
 		return;
 	}
-
-	// focus window
-	ShowWindow(m_hwnd, SW_SHOW);
-
-	this->CaptureMouse(true);
-
-#ifdef ENABLE_RAW_INPUT
-	InitRawInputDevices();
-#endif
 	return;
 }
 
-void BaseSystem::ShutdownWindows()
+void Application::ShutdownWindows()
 {
 	ShowCursor(true);
 
@@ -162,7 +153,7 @@ void BaseSystem::ShutdownWindows()
 }
 
 
-void BaseSystem::InitRawInputDevices()
+void Application::InitRawInputDevices()
 {
 	// register mouse for raw input
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/ms645565.aspx
@@ -241,7 +232,7 @@ void BaseSystem::InitRawInputDevices()
 }
 
 
-void BaseSystem::CaptureMouse(bool bDoCapture)
+void Application::CaptureMouse(bool bDoCapture)
 {
 #ifdef LOG_WINDOW_EVENTS
 	Log::Info("Capture Mouse: %d", bDoCapture ? 1 : 0);
@@ -279,20 +270,37 @@ void BaseSystem::CaptureMouse(bool bDoCapture)
 	}
 }
 
-void BaseSystem::Exit()
+void Application::Exit()
 {
 	ENGINE->Exit();
 	ShutdownWindows();
 }
 
-bool BaseSystem::Init()
+bool Application::Init()
 {
+	// SETTINGS
+	//
 	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "\\VQEngine";
+	const Settings::Engine& settings = Engine::ReadSettingsFromFile();	// namespace doesn't make sense.
 
-	Log::Initialize(Log::Mode::CONSOLE_AND_FILE);
-	const Settings::Window& windowSettings = Engine::ReadSettingsFromFile().window;
-	InitWindow(windowSettings);
+	// LOG
+	//
+	Log::Initialize(settings.logger);
+	
+	// WINDOW
+	//
+	InitWindow(settings.window);
+	ShowWindow(m_hwnd, SW_SHOW);
+	this->CaptureMouse(true);
 
+	// INPUT
+	//
+#ifdef ENABLE_RAW_INPUT
+	InitRawInputDevices();
+#endif
+
+	// ENGINE
+	//
 	if (!ENGINE->Initialize(m_hwnd))
 	{
 		Log::Error("cannot initialize engine. Exiting..");
@@ -309,7 +317,7 @@ bool BaseSystem::Init()
 	return true;
 }	
 
-void BaseSystem::Run()
+void Application::Run()
 {
 	ENGINE->mpCPUProfiler->BeginProfile();
 	ENGINE->mpTimer->Reset();
@@ -348,7 +356,7 @@ void BaseSystem::Run()
 }
 
 
-LRESULT CALLBACK BaseSystem::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
+LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
 {
 	const Settings::Window& setting = Engine::sEngineSettings.window;
 	switch (umsg)

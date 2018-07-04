@@ -18,7 +18,9 @@
 
 #include "Log.h"
 #include "utils.h"
-#include "Application/BaseSystem.h"
+
+#include "Engine/Settings.h"
+#include "Application/Application.h"
 
 #include <fstream>
 #include <iostream>
@@ -41,11 +43,11 @@ static const WORD MAX_CONSOLE_LINES = 500;
 
 void InitLogFile()
 {
-	const std::string LogFileDir = BaseSystem::s_WorkspaceDirectory + "\\Logs";
+	const std::string LogFileDir = Application::s_WorkspaceDirectory + "\\Logs";
 
 	std::string errMsg = "";
 	
-	if (CreateDirectory(BaseSystem::s_WorkspaceDirectory.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+	if (CreateDirectory(Application::s_WorkspaceDirectory.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{	// AppData/VQEngine might not exist, 
 		if (CreateDirectory(LogFileDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
@@ -69,7 +71,7 @@ void InitLogFile()
 	}
 	else
 	{
-		errMsg = "Failed to create directory " + BaseSystem::s_WorkspaceDirectory;
+		errMsg = "Failed to create directory " + Application::s_WorkspaceDirectory;
 	}
 
 	if (!errMsg.empty())
@@ -122,29 +124,10 @@ void InitConsole()
 	}
 }
 
-void Initialize(Mode mode)
+void Initialize(const Settings::Logger& settings)
 {
-	switch (mode)
-	{
-	case NONE:
-
-		break;
-	case CONSOLE:
-		InitConsole();
-		break;
-
-	case Log::FILE:
-		InitLogFile();
-		break;
-	
-	case CONSOLE_AND_FILE:
-		InitConsole();
-		InitLogFile();
-		break;
-
-	default:
-		break;
-	}
+	if (settings.bConsole) InitConsole();
+	if (settings.bFile)    InitLogFile();
 }
 
 void Exit()

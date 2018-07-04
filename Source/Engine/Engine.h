@@ -61,7 +61,7 @@ class Scene;
 
 ALIGNMENT class Engine
 {
-	friend class BaseSystem;
+	friend class Application;
 	friend class SceneManager;	// read/write ZPassObjects
 
 public:	

@@ -280,16 +280,11 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		depthTexDesc.format = R32;
 		depthTexDesc.usage = ETextureUsage(DEPTH_TARGET | RESOURCE);
 
-		mDefaultDepthBufferTexture = CreateTexture2D(depthTexDesc);
-		Texture& depthTexture = static_cast<Texture>(GetTextureObject(mDefaultDepthBufferTexture));
-
-		// depth stencil view and shader resource view for the shadow map (^ BindFlags)
-		D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-		//dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
-		dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-		dsvDesc.Texture2D.MipSlice = 0;
-		AddDepthTarget(dsvDesc, depthTexture);	// assumes index 0
+		DepthTargetDesc depthDesc;
+		depthDesc.format = EImageFormat::D32F;
+		depthDesc.textureDesc = depthTexDesc;
+		AddDepthTarget(depthDesc)[0];	// assumes index 0
+		mDefaultDepthBufferTexture = GetDepthTargetTexture(0);
 	}
 	m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
 
@@ -1091,21 +1086,49 @@ RenderTargetID Renderer::AddRenderTarget(const Texture& textureObj, D3D11_RENDER
 	return static_cast<int>(mRenderTargets.size() - 1);
 }
 
-DepthTargetID Renderer::AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, Texture& depthTexture)
-{
-	DepthTarget newDepthTarget;
-	newDepthTarget.pDepthStencilView = (ID3D11DepthStencilView*)malloc(sizeof(*newDepthTarget.pDepthStencilView));
-	memset(newDepthTarget.pDepthStencilView, 0, sizeof(*newDepthTarget.pDepthStencilView));
 
-	HRESULT hr = m_device->CreateDepthStencilView(depthTexture._tex2D, &dsvDesc, &newDepthTarget.pDepthStencilView);
-	if (FAILED(hr))
+std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depthTargetDesc)
+{
+	const int numTextures = depthTargetDesc.textureDesc.arraySize;
+
+	// allocate new depth target
+	std::vector<DepthTargetID> newDepthTargetIDs(numTextures, -1);
+	std::vector<DepthTarget> newDepthTargets(numTextures);
+	for (DepthTarget& newDepthTarget : newDepthTargets)
 	{
-		Log::Error("Depth Stencil Target View");
-		return -1;
+		newDepthTarget.pDepthStencilView = (ID3D11DepthStencilView*)malloc(sizeof(*newDepthTarget.pDepthStencilView));
+		memset(newDepthTarget.pDepthStencilView, 0, sizeof(*newDepthTarget.pDepthStencilView));
 	}
-	newDepthTarget.texture = depthTexture;
-	mDepthTargets.push_back(newDepthTarget);
-	return static_cast<int>(mDepthTargets.size() - 1);
+
+	// create depth texture
+	const TextureID texID = CreateTexture2D(depthTargetDesc.textureDesc);
+	Texture& textureObj = const_cast<Texture&>(GetTextureObject(texID));
+
+	// create depth stencil view
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+	dsvDesc.Format = static_cast<DXGI_FORMAT>(depthTargetDesc.format);
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	dsvDesc.Texture2DArray.MipSlice = 0;
+
+	for (int i = 0; i < numTextures; ++i)
+	{
+		DepthTarget& newDepthTarget = newDepthTargets[i];
+		dsvDesc.Texture2DArray.ArraySize = numTextures - i;
+		dsvDesc.Texture2DArray.FirstArraySlice = i;
+		HRESULT hr = m_device->CreateDepthStencilView(textureObj._tex2D, &dsvDesc, &newDepthTarget.pDepthStencilView);
+		if (FAILED(hr))
+		{
+			Log::Error("Depth Stencil Target View");
+			continue;
+		}
+
+		// register
+		newDepthTarget.texture = textureObj;
+		mDepthTargets.push_back(newDepthTarget);
+		newDepthTargetIDs[i] = static_cast<DepthTargetID>(mDepthTargets.size() - 1);
+	}
+
+	return newDepthTargetIDs;
 }
 
 const Texture& Renderer::GetTextureObject(TextureID id) const

@@ -39,9 +39,16 @@ struct RenderTarget
 	ID3D11RenderTargetView*		pRenderTargetView = nullptr;
 };
 
+struct DepthTargetDesc
+{
+	TextureDesc textureDesc;
+	EImageFormat format;
+};
+
 struct DepthTarget
 {
-	ID3D11Resource*	GetTextureResource() const { return texture._tex2D; }
+	inline ID3D11Resource*	GetTextureResource() const { return texture._tex2D; }
+	inline TextureID GetTextureID() const { return texture._id; }
 
 	Texture						texture;
 	ID3D11DepthStencilView*		pDepthStencilView;

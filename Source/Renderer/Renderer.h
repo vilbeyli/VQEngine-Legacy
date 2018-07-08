@@ -118,8 +118,10 @@ public:
 
 	// uses the given texture object, doesn't create a new texture for the render target
 	RenderTargetID			AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
+	
 
-	DepthTargetID			AddDepthTarget(const D3D11_DEPTH_STENCIL_VIEW_DESC& dsvDesc, Texture& surface);
+	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
+
 
 	//----------------------------------------------------------------------------------------------------------------
 	// PIPELINE STATE MANAGEMENT

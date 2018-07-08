@@ -41,58 +41,38 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 
 	// check feature support & error handle:
 	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
-
-	// create shadow map texture for the pixel shader stage
-	const unsigned dimension = static_cast<unsigned>(_shadowMapDimension);
 	const bool bDepthOnly = true;
 	const EImageFormat format = bDepthOnly ? R32 : R24G8;
 
-
-	// CREATE DEPTH TEXTURES
-	//
-	TextureDesc texDesc;
-	texDesc.height = texDesc.width = dimension;
+	DepthTargetDesc depthDesc;
+	depthDesc.format = bDepthOnly ? D32F : D24UNORM_S8U;
+	TextureDesc& texDesc = depthDesc.textureDesc;
 	texDesc.format = format;
 	texDesc.usage = static_cast<ETextureUsage>(DEPTH_TARGET | RESOURCE);
 
-	texDesc.arraySize = NUM_SPOT_LIGHT_SHADOW;
-	this->_spotShadowMaps = pRenderer->CreateTexture2D(texDesc);
-	Texture& spotShadowMaps = const_cast<Texture&>(pRenderer->GetTextureObject(_spotShadowMaps));
-
-	texDesc.arraySize = 1;
-	this->_directionalShadowMaps = pRenderer->CreateTexture2D(texDesc);
-	Texture& directionalShadowMap = const_cast<Texture&>(pRenderer->GetTextureObject(_directionalShadowMaps));
-
-	// CREATE DEPTH TARGETS
+	// CREATE DEPTH TARGETS: SPOT LIGHTS
 	//
-	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-	dsvDesc.Format = static_cast<DXGI_FORMAT>(bDepthOnly ? D32F : D24UNORM_S8U);
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
-	dsvDesc.Texture2DArray.MipSlice = 0;
-
-	// SPOT LIGHTS
+	texDesc.height = texDesc.width = _shadowMapDimension;
+	texDesc.arraySize = NUM_SPOT_LIGHT_SHADOW;
+	auto DepthTargetIDs = pRenderer->AddDepthTarget(depthDesc);
 	this->_spotShadowDepthTargets.resize(NUM_SPOT_LIGHT_SHADOW);
-	for (int i = 0; i < NUM_SPOT_LIGHT_SHADOW; i++)
-	{
-		dsvDesc.Texture2DArray.ArraySize = NUM_SPOT_LIGHT_SHADOW - i;
-		dsvDesc.Texture2DArray.FirstArraySlice = i;
-		this->_spotShadowDepthTargets[i] = pRenderer->AddDepthTarget(dsvDesc, spotShadowMaps);
-	}
+	std::copy(RANGE(DepthTargetIDs), this->_spotShadowDepthTargets.begin());
 
-	// THE DIRECTIONAL LIGHT
-	dsvDesc.Texture2DArray.ArraySize = 1;
-	dsvDesc.Texture2DArray.FirstArraySlice = 0;
-	this->_directionalShadowDepthTarget = pRenderer->AddDepthTarget(dsvDesc, directionalShadowMap);
+	this->_spotShadowMaps = this->_spotShadowDepthTargets.size() > 0
+		? pRenderer->GetDepthTargetTexture(this->_spotShadowDepthTargets[0])
+		: -1;
 
+	// CREATE DEPTH TARGETS: DIRECTIONAL LIGHT
+	//
+	texDesc.height = texDesc.width = 2048;	// TODO: use scene settings
+	texDesc.arraySize = 1;
+	this->_directionalShadowDepthTarget = pRenderer->AddDepthTarget(depthDesc)[0];
+	this->_directionalShadowMaps = pRenderer->GetDepthTargetTexture(this->_directionalShadowDepthTarget);
+
+	// TODO:
+	//
 	// render states for front face culling 
 	this->_shadowRenderState = pRenderer->AddRasterizerState(ERasterizerCullMode::FRONT, ERasterizerFillMode::SOLID, true, false);
-
-	// shader
-	std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 } };
 	this->_shadowShader = EShaders::SHADOWMAP_DEPTH;
 
 	ZeroMemory(&_shadowViewport, sizeof(D3D11_VIEWPORT));
@@ -105,6 +85,7 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	_shadowViewportDirectional.Height = 512.f * 4;
 	_shadowViewportDirectional.MinDepth = 0.f;
 	_shadowViewportDirectional.MaxDepth = 1.f;
+
 }
 
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<const GameObject*> ZPassObjects, const ShadowView& shadowView) const

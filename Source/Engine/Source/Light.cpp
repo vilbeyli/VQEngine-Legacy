@@ -248,7 +248,7 @@ XMMATRIX DirectionalLight::GetViewMatrix() const
 
 XMMATRIX DirectionalLight::GetProjectionMatrix() const
 {
-	const int sz = shadowMapSize.x();
+	const float sz = shadowMapSize.x();
 	return XMMatrixOrthographicLH(sz, sz, 0.5f, shadowMapDistance * 1.5f);
 	//return XMMatrixOrthographicLH(sz, sz, 0.1f, 1200.0f);
 }

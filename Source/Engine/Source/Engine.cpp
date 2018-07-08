@@ -351,6 +351,48 @@ bool Engine::Load(ThreadPool* pThreadPool)
 }
 
 
+bool Engine::LoadSceneFromFile()
+{
+	mCurrentLevel = sEngineSettings.levelToLoad;
+	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sEngineSettings.sceneNames[mCurrentLevel]);
+	if (mSerializedScene.loadSuccess == '0')
+	{
+		Log::Error("Scene[%d] did not load.", mCurrentLevel);
+		return false;
+	}
+
+	assert(mCurrentLevel < mpScenes.size());
+	mpActiveScene = mpScenes[mCurrentLevel];
+	mpActiveScene->mpThreadPool = mpThreadPool;
+
+	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
+
+	// update engine settings and post process settings
+	// todo: multiple data - inconsistent state -> sort out ownership
+	sEngineSettings.rendering.postProcess.bloom = mSerializedScene.settings.bloom;
+	mPostProcessPass._settings = sEngineSettings.rendering.postProcess;
+	//mShadowMapPass._shadowViewportDirectional.Width = mShadowMapPass._shadowViewportDirectional.Height = mpActiveScene->mDirectionalLight.shadowMapSize.x();
+	return true;
+}
+
+bool Engine::LoadScene(int level)
+{
+	mpActiveScene->UnloadScene();
+	mShadowCasters.clear();
+	Engine::sEngineSettings.levelToLoad = level;
+	const bool bSceneLoaded = LoadSceneFromFile();
+	if (bSceneLoaded)
+	{
+		// reinitialize shadow pass
+
+
+
+		return true;
+	}
+	else return false;
+}
+
+
 bool Engine::UpdateAndRender()
 {
 	const float dt = mpTimer->Tick();
@@ -510,39 +552,6 @@ bool Engine::ReloadScene()
 
 	return LoadSceneFromFile();
 }
-
-bool Engine::LoadSceneFromFile()
-{
-	mCurrentLevel = sEngineSettings.levelToLoad;
-	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sEngineSettings.sceneNames[mCurrentLevel]);
-	if (mSerializedScene.loadSuccess == '0')
-	{
-		Log::Error("Scene[%d] did not load.", mCurrentLevel);
-		return false;
-	}
-
-	assert(mCurrentLevel < mpScenes.size());
-	mpActiveScene = mpScenes[mCurrentLevel];
-	mpActiveScene->mpThreadPool = mpThreadPool;
-
-	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
-
-	// update engine settings and post process settings
-	// todo: multiple data - inconsistent state -> sort out ownership
-	sEngineSettings.rendering.postProcess.bloom = mSerializedScene.settings.bloom;
-	mPostProcessPass._settings = sEngineSettings.rendering.postProcess;
-	//mShadowMapPass._shadowViewportDirectional.Width = mShadowMapPass._shadowViewportDirectional.Height = mpActiveScene->mDirectionalLight.shadowMapSize.x();
-	return true;
-}
-
-bool Engine::LoadScene(int level)
-{
-	mpActiveScene->UnloadScene();
-	mShadowCasters.clear();
-	Engine::sEngineSettings.levelToLoad = level;
-	return LoadSceneFromFile();
-}
-
 
 
 void Engine::PreRender()

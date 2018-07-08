@@ -29,7 +29,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
  *v0.4.0 - **Data-Oriented Engine, Multi-threaded Tasking System, Model Loading w/ assimp** - TBA*
  - Refactored Scene, Engine and Renderer classes in favor of [Data-Oriented Design](https://en.wikipedia.org/wiki/Data-oriented_design)
  - Asynchronous Model Loading using [assimp](https://github.com/assimp/assimp)
- - Sponza Scene & More Models
+ - [Sponza](http://www.crytek.com/cryengine/cryengine3/downloads) Scene & More Models
  - Task-based Threading System
  - Rendering: Directional Lights, Alpha Mask Textures
  - Loading Screen
@@ -56,8 +56,9 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 *[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - **Phong Lighting, Shadow Mapping, Texturing and Shader Reflection** July15-2017*
  - Vertex-Geometry-Pixel Shader Pipeline
  - Shader Reflection
- - Phong Lighting & Point/Spot Lights
- - Simple Shadow Maping Algorithm
+ - Phong Lighting
+ - Point/Spot Lights
+ - Simple Shadow Mapping Algorithm for Spot Lights
  - Normal/Diffuse Maps
  - Procedural Geometry: Cube, Sphere, Cylinder, Grid
   

@@ -16,6 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#define NOMINMAX
 #include "Application.h"
 #include "Input.h"
 
@@ -59,7 +60,7 @@ void Application::UpdateWindowDimensions(int w, int h)
 	m_windowWidth = w;
 }
 
-void Application::InitWindow(const Settings::Window& windowSettings)
+void Application::InitWindow(Settings::Window& windowSettings)
 {
 	int width, height;
 	int posX, posY;				// window position
@@ -101,8 +102,19 @@ void Application::InitWindow(const Settings::Window& windowSettings)
 	}
 	else
 	{
-		width = windowSettings.width;
-		height = windowSettings.height;
+		width = std::min(windowSettings.width, width);
+		height = std::min(windowSettings.height, height);
+		
+		if (width != windowSettings.width  || height != windowSettings.height)
+		{
+			Log::Warning("Resolution not supported (%dx%d): Fallback to (%dx%d)"
+				, windowSettings.width, windowSettings.height
+				, width, height
+			);
+
+			windowSettings.width = width;
+			windowSettings.height = height;
+		}
 
 		posX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
 		posY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
@@ -281,7 +293,7 @@ bool Application::Init()
 	// SETTINGS
 	//
 	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "\\VQEngine";
-	const Settings::Engine& settings = Engine::ReadSettingsFromFile();	// namespace doesn't make sense.
+	Settings::Engine& settings = const_cast<Settings::Engine&>(Engine::ReadSettingsFromFile());	// namespace doesn't make sense.
 
 	// LOG
 	//

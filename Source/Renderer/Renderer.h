@@ -122,6 +122,7 @@ public:
 
 	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
 
+	void ResizeDepthTarget();
 
 	//----------------------------------------------------------------------------------------------------------------
 	// PIPELINE STATE MANAGEMENT

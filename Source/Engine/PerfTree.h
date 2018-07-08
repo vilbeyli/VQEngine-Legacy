@@ -1,5 +1,5 @@
 //	vilbeyli/VQEngine
-//	Copyright(C) 2016  - Volkan Ilbeyli
+//	Copyright(C) 2018  - Volkan Ilbeyli
 //
 //	This program is free software : you can redistribute it and / or modify
 //	it under the terms of the GNU General Public License as published by

@@ -105,6 +105,7 @@ protected:
 	std::vector<Light>			mLights;
 	std::vector<GameObject*>	mpObjects;
 
+	DirectionalLight			mDirectionalLight;
 	Skybox						mSkybox;
 	EEnvironmentMapPresets		mActiveSkyboxPreset;
 	int mSelectedCamera;
@@ -218,6 +219,7 @@ struct SerializedScene
 
 	std::vector<Settings::Camera>	cameras;
 	std::vector<Light>				lights;
+	DirectionalLight				directionalLight;
 	MaterialPool					materials;
 	std::vector<GameObject>			objects;
 	Settings::SceneRender			settings;

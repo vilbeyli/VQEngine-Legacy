@@ -290,13 +290,7 @@ static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
 
 void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& command, SerializedScene& scene)
 {
-	if (command.empty())
-	{
-		Log::Error("Empty Command.");
-		assert(!command.empty());
-		return;
-	}
-	
+	if (command.empty()){return;}
 	const std::string& cmd = command[0];	// shorthand
 	if (cmd == "camera")
 	{
@@ -320,7 +314,27 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		camSettings.pitch       = stof(command[8]);
 		scene.cameras.push_back(camSettings);
 	}
-	
+	else if (cmd == "directional")
+	{
+		const std::string colorValue = GetLowercased(command[1]);
+		const float brightness		 = stof(command[2]);
+		const vec3 direction		 = vec3(stof(command[3]), stof(command[4]), stof(command[5])).normalized();
+		const int shadowMapDimension = command.size() > 6 ? stoi(command[6]) : 1024;
+		const float range			 = command.size() > 7 ? stof(command[7]) : 1.0f;
+		const float depthBias		 = command.size() > 8 ? stof(command[8]) : 0.00000001f;
+
+		DirectionalLight l{
+			sColorLookup.at(colorValue),
+			brightness,
+			direction,
+			1,
+			range,
+			depthBias,
+			vec2(shadowMapDimension, shadowMapDimension)
+		};
+
+		scene.directionalLight = l;
+	}
 	else if (cmd == "light")
 	{
 		// #Parameters: 11
@@ -333,6 +347,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const bool bCommandHasScaleEntry = command.size() >= 12;
 
 		const std::string lightType	 = GetLowercased(command[1]);	// lookups have lowercase keys
+		if (lightType != "s" && lightType != "p")
+		{	// check light types
+			Log::Error("light type unknown: %s", command[1]);
+			return;
+		}
+
 		const std::string colorValue = GetLowercased(command[2]);
 		const std::string shadowing	 = GetLowercased(command[3]);
 		const float brightness = stof(command[4]);
@@ -344,12 +364,6 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
 		const float scl  = bCommandHasScaleEntry ? stof(command[12]) : 1.0f;
 		const bool  bCastsShadows = sBoolTypeReflection.at(shadowing);
-
-		if (lightType != "s" && lightType != "p" && lightType != "d")
-		{	// check light types
-			Log::Error("light type unknown: %s", command[1]);
-			return;
-		}
 		
 		Light l(	// let there be light
 			sLightTypeLookup.at(lightType),
@@ -359,23 +373,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			spotAngle,
 			bCastsShadows
 		);
-		if (Light::ELightType::DIRECTIONAL == l._type)
-		{	// direction vector is stored in two variables for directional lights
-			vec3 dir = vec3(stof(command[5]), stof(command[6]), stof(command[7])).normalized();
-			l._directionXY = vec2(dir.x(), dir.y());
-			l._range = dir.z();	// serves as the Z channel for the direction.
-
-			// directional lights look at the origin with a given direction vector.
-			// for the view matrix, we need a position so we'll translate the
-			// directional lights 'position' along the light ray.
-			//
-			l._transform.SetPosition(dir * -range);
-		}
-		else
-		{
-			l._transform.SetPosition(stof(command[5]), stof(command[6]), stof(command[7]));
-		}
-
+		l._transform.SetPosition(stof(command[5]), stof(command[6]), stof(command[7]));
 		l._transform.RotateAroundGlobalXAxisDegrees(rotX);
 		l._transform.RotateAroundGlobalYAxisDegrees(rotY);
 		l._transform.RotateAroundGlobalZAxisDegrees(rotZ);

@@ -37,6 +37,7 @@ class Camera;
 class Renderer;
 class GameObject;
 struct Light;
+struct DirectionalLight;
 struct ID3D11Device;
 
 struct SceneLightingData;
@@ -59,7 +60,14 @@ struct ShadowView
 {	// shadowing Lights
 	std::vector<const Light*> spots;
 	std::vector<const Light*> points;
-	std::vector<const Light*> directionals;
+	const DirectionalLight* pDirectional;
+
+	void Clear()
+	{
+		spots.clear();
+		points.clear();
+		pDirectional = nullptr;
+	}
 };
 
 // todo: shader defines
@@ -73,7 +81,7 @@ struct ShadowMapPass
 	unsigned				_shadowMapDimension;
 	ShaderID				_shadowShader;
 	RasterizerStateID		_shadowRenderState;
-	D3D11_VIEWPORT			_shadowViewport;
+	D3D11_VIEWPORT			_shadowViewport;	// spot light viewport
 	D3D11_VIEWPORT			_shadowViewportDirectional;
 	
 	TextureID				_pointShadowMaps;			// cubemap array
@@ -81,7 +89,7 @@ struct ShadowMapPass
 	TextureID				_directionalShadowMaps;		// tex2D array
 
 	DepthTargetIDArray		_spotShadowDepthTargets;
-	DepthTargetIDArray		_directionalShadowDepthTargets;
+	DepthTargetID			_directionalShadowDepthTarget;
 	DepthTargetID			_pointShadowDepthTargets;
 };
 

@@ -25,7 +25,7 @@
 //
 void SponzaScene::Load(SerializedScene& scene)
 {
-	Scene::SetEnvironmentMap(WALK_OF_FAME);
+	Scene::SetEnvironmentMap(TROPICAL_BEACH);
 }
 
 // Scene-specific unloading logic

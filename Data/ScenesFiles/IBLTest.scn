@@ -1,24 +1,30 @@
-// Scene File Formatting
-// ---------------------------------------------------------------------------------------------------------------
-// - all lowercase
-// - '//' starts a comment
-// ---------------------------------------------------------------------------------------------------------------
-
-// Object initializations
+/ Object initializations
 // ---------------------------------------------------------------------------------------------------------------
 // Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
 // Camera		: near far vfov  pos(3:xyz)  yaw pitch
-// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
-// BRDF			:
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle, pos(vec3), rot(X>Y>Z)
+// BRDF		:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
+// example: 
+//     object begin
+//      transform 85 5 -30 30 120 0 20
+//      mesh triangle
+//      brdf begin
+//     		textures "" openart/190_norm.JPG
+//     		diffuse 0.24 0.74 0.74
+//     		roughness 0.4
+//     		metalness 0.9
+//     	brdf end
+//     object end
 // ---------------------------------------------------------------------------------------------------------------
-
-// Render Settings initializations
+    
+// Scene Render Settings initializations
 // ---------------------------------------------------------------------------------------------------------------
-// ao			: enabled?, ambient multiplier, ssao range, ssao intensity
-// bloom		: enabled?, brighness threshold
-// skylight		: enabled?
+// ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
+// bloom	    : enabled?, brighness threshold
+// skylight	    : enabled?
+// directional  : color preset, castsShadows?, brightness, direction(vec3), range, shadowMapDimension, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
 camera 0.1 1000 60   0 -20 120  180 0 

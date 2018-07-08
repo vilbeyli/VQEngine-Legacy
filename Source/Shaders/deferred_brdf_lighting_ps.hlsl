@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "BRDF.hlsl"
-
+#include "LightingCommon.hlsl"
 
 #define ENABLE_POINT_LIGHTS 1
 #define ENABLE_POINT_LIGHTS_SHADOW 0
@@ -116,7 +116,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 #if ENABLE_POINT_LIGHTS_SHADOW
 	for (int i = 0; i < Lights.numPointCasters; ++i)
 	{
-	// todo shadow caster points
+	// TODO shadow caster points
 	//	const float3 Lv       = mul(matView, float4(Lights.point_lights[i].position, 1));
 	//	const float3 Wi       = normalize(Lv - P);
 	//	const float3 radiance = 
@@ -154,40 +154,24 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 #endif
 
-//-----------------------------------------------------------------------------------------------------------------------------------------
-
+//-- DIRECTIONAL LIGHT --------------------------------------------------------------------------------------------------------------------------
 #if ENABLE_DIRECTIONAL_LIGHTS
-	for (int j = 0; j < Lights.numDirectionals; ++j)
+	if (Lights.directional.shadowFactor > 0.0f)
 	{
-		const float3 Lv = mul(matView, float4(Lights.directional_lights[j].lightDirection, 0.0f));
+		const float4 Pl = mul(Lights.shadowViewDirectional, float4(Pw, 1));
+		const float3 Lv = mul(matView, float4(Lights.directional.lightDirection, 0.0f));
 		const float3 Wi = normalize(-Lv);
-		const float3 radiance 
-			= Lights.directional_lights[j].color 
-			* Lights.directional_lights[j].brightness 
-			;
-		const float NdotL = saturate(dot(s.N, Wi));
-		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
-	}
-#endif
-
-#if ENABLE_DIRECTIONAL_LIGHTS_SHADOW
-	for (int k = 0; k < Lights.numDirectionalCasters; ++k)
-	{
-		const matrix matShadowView = Lights.shadowViews[directionalShadowBaseIndex + k];
-		const float4 Pl = mul(matShadowView, float4(Pw, 1));
-		const float3 Lv = mul(matView, float4(Lights.directional_lights[j].lightDirection, 0.0f));
-		const float3 Wi = normalize(-Lv);
-		const float3 radiance 
-			= Lights.directional_lights[k].color
-			* Lights.directional_lights[k].brightness
-			;
+		const float3 radiance
+			= Lights.directional.color
+			* Lights.directional.brightness;
 		const float  NdotL = saturate(dot(s.N, Wi));
-		const float3 shadowing = ShadowTestPCF(Pw, Pl, texDirectionalShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
+		const float3 shadowing = ShadowTestPCF(Pw, Pl, texDirectionalShadowMaps, 0, sShadowSampler, NdotL, spotShadowMapDimensions);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
 	}
 #endif
 
-//-----------------------------------------------------------------------------------------------------------------------------------------
+
+
 
 	const float3 illumination = IdIs;
 	return float4(illumination, 1);

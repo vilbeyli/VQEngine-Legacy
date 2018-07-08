@@ -1,24 +1,30 @@
-// Scene File Formatting
-// ---------------------------------------------------------------------------------------------------------------
-// - all lowercase
-// - '//' starts a comment
-// ---------------------------------------------------------------------------------------------------------------
-
 // Object initializations
 // ---------------------------------------------------------------------------------------------------------------
 // Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
 // Camera		: near far vfov  pos(3:xyz)  yaw pitch
-// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
-// BRDF			:
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle, pos(vec3), rot(X>Y>Z)
+// BRDF		:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
+// example: 
+//     object begin
+//      transform 85 5 -30 30 120 0 20
+//      mesh triangle
+//      brdf begin
+//     		textures "" openart/190_norm.JPG
+//     		diffuse 0.24 0.74 0.74
+//     		roughness 0.4
+//     		metalness 0.9
+//     	brdf end
+//     object end
 // ---------------------------------------------------------------------------------------------------------------
-
-// Render Settings initializations
+    
+// Scene Render Settings initializations
 // ---------------------------------------------------------------------------------------------------------------
-// ao			: enabled?, ambient multiplier, ssao range, ssao intensity
-// bloom		: enabled?, brighness threshold
-// skylight		: enabled?
+// ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
+// bloom	    : enabled?, brighness threshold
+// skylight	    : enabled?
+// directional  : color preset, castsShadows?, brightness, direction(vec3), range, shadowMapDimension, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
 
@@ -26,7 +32,8 @@ ao true 0.23 17.0 3.40
 skylight true
 bloom true 1.68
 
-light d sun true 4.5   3   -5   15  100
+directional sun 4.5   3   -5   15  256 300 0.00000000001f
+
 //light s cyan true  2500   -80  45 -240  80    120 0 65   0.8	 
 // light d sun true
 // light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 

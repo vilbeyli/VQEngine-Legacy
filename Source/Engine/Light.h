@@ -62,21 +62,18 @@ struct Light
 	XMMATRIX GetProjectionMatrix() const;
 	PointLightGPU		GetPointLightData() const;
 	SpotLightGPU		GetSpotLightData() const;
-	DirectionalLightGPU GetDirectionalLightData() const;
-
 	//---------------------------------------------------------------------------------
 	
 	ELightType		_type;
 	LinearColor		_color;
-	float			_range;			// used by directional light to store Z channel of the direction vector
-	float			_brightness;	// 300.0f is a good default value
+	float			_range;
+	float			_brightness;	// 300.0f is a good default value for points/spots
 	bool			_castsShadow;
 
 	union // each light uses this vec2 for light-specific data
 	{	
-		vec2		_attenuation;	
-		vec2		_spotAngle;		// spot light uses only X channel 
-		vec2		_directionXY;	// directional light stores XY of the direction, Z in _range
+		vec2		_attenuation;	// point light attenuation
+		vec2		_spotAngle;		// spot light angle (_spotAngle.x() and _spotAngle.y() are the same thing)
 	};	
 
 	Transform		_transform;
@@ -85,4 +82,65 @@ struct Light
 };
 
 
+// One Directional light is allowed per scene
+//
+struct DirectionalLight
+{
+	LinearColor color;
+	float brightness;
 
+	vec3 direction;
+	int enabled = 0;
+
+	float shadowMapDistance;	// view matrix position - distance from scene center 
+	float depthBias;
+	vec2 shadowMapSize;
+
+	DirectionalLightGPU GetGPUData() const;
+	XMMATRIX GetLightSpaceMatrix() const;
+	XMMATRIX GetViewMatrix() const;
+	XMMATRIX GetProjectionMatrix() const;
+};
+
+
+
+
+// TODO #Refactoring 
+#if 0
+class Light
+{
+public:
+
+	XMMATRIX GetLightSpaceMatrix() const;
+	XMMATRIX GetViewMatrix() const;
+	XMMATRIX GetProjectionMatrix() const;
+
+private:
+	vec3 mPosition;
+	float mRange;
+	float mBrightness;
+	bool mCastingShadows;
+};
+
+class PointLight : public Light
+{
+
+};
+
+class DirectionalLight : public Light
+{
+
+};
+
+class SpotLight : public Light
+{
+
+};
+
+
+// TODO: v0.6.0 linear lights from GPU Zen
+class AreaLight : public Light
+{
+
+};
+#endif

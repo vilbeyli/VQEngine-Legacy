@@ -159,13 +159,6 @@ XMMATRIX Light::GetViewMatrix() const
 			XMVECTOR pos = _transform._position;
 			XMVECTOR taraget = pos + lookAt;
 			return XMMatrixLookAtLH(pos, taraget, up);
-		}	
-		case ELightType::DIRECTIONAL:
-		{
-			XMVECTOR up = vec3::Up;
-			XMVECTOR lookAt = vec3::Zero;
-			XMVECTOR lightPos = _transform._position;
-			return XMMatrixLookAtLH(lightPos, lookAt, up);
 		}
 		default:
 			Log::Warning("INVALID LIGHT TYPE for GetViewMatrix()");
@@ -187,14 +180,7 @@ XMMATRIX Light::GetProjectionMatrix() const
 		case ELightType::SPOT:
 		{
 			return XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 500.0f);
-		}	
-		case ELightType::DIRECTIONAL:
-		{
-			constexpr int sz = 512 * 2;
-			return XMMatrixOrthographicLH(sz, sz, 0.05f, 2500.0f);
-			//return XMMatrixOrthographicLH(sz, sz, 0.1f, 1200.0f);
 		}
-
 		default:
 			Log::Warning("INVALID LIGHT TYPE for GetProjectionMatrix()");
 			return XMMatrixIdentity();
@@ -234,11 +220,35 @@ SpotLightGPU Light::GetSpotLightData() const
 	return l;
 }
 
-DirectionalLightGPU Light::GetDirectionalLightData() const
+
+DirectionalLightGPU DirectionalLight::GetGPUData() const
 {
 	DirectionalLightGPU l;
-	l.brightness = _brightness;
-	l.color = _color;
-	l.lightDirection = vec3(_directionXY.x(), _directionXY.y(), _range);
+	l.brightness = this->brightness;
+	l.color = this->color;
+	l.lightDirection = this->direction;
+	l.shadowFactor = this->enabled > 0 ? 1.0f : 0.0f;
 	return l;
+}
+
+XMMATRIX DirectionalLight::GetLightSpaceMatrix() const
+{	// remember:
+	//	when we're sending	 world * view * projection
+	//		in shader		 projection * view * world;
+	return GetViewMatrix() * GetProjectionMatrix();
+}
+
+XMMATRIX DirectionalLight::GetViewMatrix() const
+{
+	XMVECTOR up = vec3::Up;
+	XMVECTOR lookAt = vec3::Zero;
+	XMVECTOR lightPos = direction * -shadowMapDistance;	// away from the origin along the direction vector 
+	return XMMatrixLookAtLH(lightPos, lookAt, up);
+}
+
+XMMATRIX DirectionalLight::GetProjectionMatrix() const
+{
+	const int sz = shadowMapSize.x();
+	return XMMatrixOrthographicLH(sz, sz, 0.5f, shadowMapDistance * 1.5f);
+	//return XMMatrixOrthographicLH(sz, sz, 0.1f, 1200.0f);
 }

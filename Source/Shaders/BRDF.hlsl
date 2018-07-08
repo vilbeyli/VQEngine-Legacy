@@ -17,7 +17,6 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "ShadingMath.hlsl"
-#include "LightingCommon.hlsl"
 
 // constants
 #define EPSILON 0.000000000001f
@@ -46,6 +45,15 @@
 // BRDF						: Bi-directional Reflectance Distribution Function
 // The Cook-Torrence BRDF	: f_r = k_d * f_lambert + k_s * f_cook-torrence
 //							f_lambert = albedo / PI;
+//
+struct BRDF_Surface
+{
+	float3 N;
+	float roughness;
+	float3 diffuseColor;
+	float metalness;
+	float3 specularColor;
+};
 
 // Trowbridge-Reitz GGX Distribution
 inline float NormalDistributionGGX(float3 N, float3 H, float roughness)

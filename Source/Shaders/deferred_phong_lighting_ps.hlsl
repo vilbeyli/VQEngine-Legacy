@@ -16,8 +16,8 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "Phong.hlsl"
 #include "LightingCommon.hlsl"
-#include "ShadingMath.hlsl"
 
 #define BLINN_PHONG
 

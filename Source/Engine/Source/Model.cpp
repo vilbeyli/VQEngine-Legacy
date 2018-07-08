@@ -292,6 +292,17 @@ ModelData ProcessNode(
 //----------------------------------------------------------------------------------------------------------------
 // MODEL LOADER
 //----------------------------------------------------------------------------------------------------------------
+constexpr auto ASSIMP_LOAD_FLAGS 
+= aiProcess_Triangulate
+| aiProcess_CalcTangentSpace
+| aiProcess_MakeLeftHanded
+| aiProcess_FlipUVs
+| aiProcess_FlipWindingOrder
+//| aiProcess_TransformUVCoords 
+//| aiProcess_FixInfacingNormals
+| aiProcess_JoinIdenticalVertices
+| aiProcess_GenSmoothNormals;
+
 Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 {
 	assert(mpRenderer);
@@ -315,17 +326,7 @@ Model ModelLoader::LoadModel(const std::string & modelPath, Scene* pScene)
 	// IMPORT SCENE
 	//
 	Importer importer;
-	const aiScene* scene = importer.ReadFile(fullPath
-		, aiProcess_Triangulate
-		| aiProcess_CalcTangentSpace
-		| aiProcess_MakeLeftHanded
-		| aiProcess_FlipUVs
-		//| aiProcess_FlipWindingOrder 
-		//| aiProcess_TransformUVCoords 
-		| aiProcess_FixInfacingNormals
-		| aiProcess_JoinIdenticalVertices
-		| aiProcess_GenSmoothNormals
-	);
+	const aiScene* scene = importer.ReadFile(fullPath, ASSIMP_LOAD_FLAGS);
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
 		Log::Error("Assimp error: %s", importer.GetErrorString());
@@ -377,17 +378,7 @@ Model ModelLoader::LoadModel_Async(const std::string& modelPath, Scene* pScene)
 	// IMPORT SCENE
 	//
 	Importer importer;
-	const aiScene* scene = importer.ReadFile(fullPath
-		, aiProcess_Triangulate
-		| aiProcess_CalcTangentSpace
-		| aiProcess_MakeLeftHanded
-		| aiProcess_FlipUVs
-		//| aiProcess_FlipWindingOrder
-		//| aiProcess_TransformUVCoords 
-		| aiProcess_FixInfacingNormals
-		| aiProcess_JoinIdenticalVertices
-		| aiProcess_GenSmoothNormals
-	);
+	const aiScene* scene = importer.ReadFile(fullPath, ASSIMP_LOAD_FLAGS);
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
 		Log::Error("Assimp error: %s", importer.GetErrorString());

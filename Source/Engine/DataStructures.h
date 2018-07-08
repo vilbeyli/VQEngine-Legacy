@@ -48,7 +48,7 @@ struct DirectionalLightGPU // 28(+4) Bytes | 2 registers
 	vec3 lightDirection;
 	float  brightness;
 	vec3 color;
-	float pad;
+	float shadowFactor;
 };
 
 //struct ShadowView
@@ -66,16 +66,11 @@ struct DirectionalLightGPU // 28(+4) Bytes | 2 registers
 #define NUM_SPOT_LIGHT 20
 #define NUM_SPOT_LIGHT_SHADOW 5
 
-#define NUM_DIRECTIONAL_LIGHT 4
-#define NUM_DIRECTIONAL_LIGHT_SHADOW 4
-
 using PointLightDataArray					= std::array<PointLightGPU, NUM_POINT_LIGHT>;
 using SpotLightDataArray					= std::array<SpotLightGPU, NUM_SPOT_LIGHT>;
-using DirectionalLightDataArray				= std::array<DirectionalLightGPU, NUM_DIRECTIONAL_LIGHT>;
 
 using ShadowingPointLightDataArray			= std::array<PointLightGPU, NUM_POINT_LIGHT_SHADOW>;
 using ShadowingSpotLightDataArray			= std::array<SpotLightGPU, NUM_SPOT_LIGHT_SHADOW>;
-using ShadowingDirectionalLightDataArray	= std::array<DirectionalLightGPU, NUM_DIRECTIONAL_LIGHT_SHADOW>;
 
 using SpotShadowViewArray = std::array<XMMATRIX, NUM_SPOT_LIGHT_SHADOW>;
 
@@ -83,14 +78,13 @@ using SpotShadowViewArray = std::array<XMMATRIX, NUM_SPOT_LIGHT_SHADOW>;
 struct SceneLightingData
 {
 	struct cb{	// shader constant buffer
-		int       pointLightCount;
-		int        spotLightCount;
-		int directionalLightCount;
+		int pointLightCount;
+		int spotLightCount;
+		int pointLightCount_shadow;
+		int spotLightCount_shadow;
 
-		int       pointLightCount_shadow;
-		int        spotLightCount_shadow;
-		int directionalLightCount_shadow;
-		int _pad0, _pad1;
+		DirectionalLightGPU directionalLight;
+		XMMATRIX shadowViewDirectional;
 
 		PointLightDataArray pointLights;
 		ShadowingPointLightDataArray pointLightsShadowing;
@@ -98,16 +92,13 @@ struct SceneLightingData
 		SpotLightDataArray spotLights;
 		ShadowingSpotLightDataArray spotLightsShadowing;
 
-		DirectionalLightDataArray directionalLights;
-		ShadowingDirectionalLightDataArray directionalLightsShadowing;
-
 		SpotShadowViewArray shadowViews;
 	} _cb;
 
 
 	inline void ResetCounts() {
-		_cb.pointLightCount = _cb.spotLightCount = _cb.directionalLightCount =
-		_cb.pointLightCount_shadow = _cb.spotLightCount_shadow = _cb.directionalLightCount_shadow = 0;
+		_cb.pointLightCount = _cb.spotLightCount =
+		_cb.pointLightCount_shadow = _cb.spotLightCount_shadow = 0;
 	}
 };
 //#pragma pack(pop)

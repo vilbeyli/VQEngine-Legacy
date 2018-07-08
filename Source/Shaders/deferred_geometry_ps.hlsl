@@ -55,6 +55,11 @@ SamplerState sNormalSampler;
 
 PSOut PSMain(PSIn In) : SV_TARGET
 {
+	const float2 uv = In.uv * surfaceMaterial.uvScale;
+	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 ? texAlphaMask.Sample(sNormalSampler, uv).r : 1.0f;
+	if (alpha < 0.01f)
+		discard;
+
 	PSOut GBuffer;
 
 	// lighting & surface parameters
@@ -62,35 +67,17 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 N = normalize(In.viewNormal);
 	const float3 T = normalize(In.viewTangent);
 	const float3 V = normalize(-P);
-	float2 uv = In.uv * surfaceMaterial.uvScale;
 
-	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 ? texAlphaMask.Sample(sNormalSampler, uv).r : 1.0f;
-	if (alpha < 0.01f)
-		discard;
+	const float3 sampledDiffuse = texDiffuseMap.Sample(sNormalSampler, uv).xyz;
+	const float3 surfaceDiffuse = surfaceMaterial.diffuse;
+	const float3 finalDiffuse = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 ? sampledDiffuse : surfaceDiffuse;
+	const float3 finalNormal =  HasNormalMap (surfaceMaterial.textureConfig) > 0 ? UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) : N;
+	const float3 finalSpecular =HasSpecularMap(surfaceMaterial.textureConfig)> 0 ? texSpecularMap.Sample(sNormalSampler, uv).xxx : surfaceMaterial.specular;
+	const float roughnessORshininess = surfaceMaterial.roughness * BRDFOrPhong + surfaceMaterial.shininess * (1.0f - BRDFOrPhong);
+	const float metalness = surfaceMaterial.metalness;
 
-    BRDF_Surface s;
-	
-	// there's a weird issue here if garbage texture is bound and isDiffuseMap is 0.0f. 
-	//s.diffuseColor	= surfaceMaterial.diffuse * (sHasDiffuseMap(surfaceMaterial.textureConfig) * texDiffuseMap.Sample(sNormalSampler, uv).xyz + (1.0f - sHasDiffuseMap(surfaceMaterial.textureConfig)) * surfaceMaterial.diffuse);
-	//s.N				= (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
-
-	// workaround -> use if else for selecting rather then blending. for some reason, the vector math fails and (0,0,0) + (1,1,1) ends up being (0,1,1). Not sure why.
-	float3 sampledDiffuse = texDiffuseMap.Sample(sNormalSampler, uv).xyz;
-	float3 surfaceDiffuse = surfaceMaterial.diffuse;
-	float3 finalDiffuse = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 ? sampledDiffuse : surfaceDiffuse;
-	
-	s.diffuseColor = finalDiffuse;
-	
-	s.N = HasNormalMap(surfaceMaterial.textureConfig) > 0 ? UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) : N;
-	
-	s.specularColor = HasSpecularMap(surfaceMaterial.textureConfig) > 0 ? texSpecularMap.Sample(sNormalSampler, uv).xxx : surfaceMaterial.specular;
-    s.roughness = // use s.roughness for either roughness (PBR) or shininess (Phong)
-	surfaceMaterial.roughness * BRDFOrPhong + 
-	surfaceMaterial.shininess * (1.0f - BRDFOrPhong);
-	s.metalness = surfaceMaterial.metalness;
-
-	GBuffer.diffuseRoughness	= float4(s.diffuseColor, s.roughness);
-	GBuffer.specularMetalness	= float4(s.specularColor, s.metalness);
-	GBuffer.normals				= s.N;
+	GBuffer.diffuseRoughness	= float4(finalDiffuse, roughnessORshininess);
+	GBuffer.specularMetalness	= float4(finalSpecular, metalness);
+	GBuffer.normals				= finalNormal;
 	return GBuffer;
 }

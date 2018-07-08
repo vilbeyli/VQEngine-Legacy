@@ -169,7 +169,7 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	// Compiles shader from source file
 	//
-	static ID3D10Blob * CompileFromSource(const std::string& pathToFile, const EShaderType& type);
+	static bool CompileFromSource(const std::string& pathToFile, const EShaderType& type, ID3D10Blob *& ref_pBob, std::string& errMsg);
 	
 	// Reads in cached binary from %APPDATA%/VQEngine/ShaderCache folder into ID3D10Blob 
 	//

@@ -21,8 +21,8 @@
 #define LIGHT_COUNT 100  // don't forget to update CPU define too (SceneManager.cpp)
 #define SPOT_COUNT 10   // ^
 
+#include "Phong.hlsl"
 #include "LightingCommon.hlsl"
-#include "ShadingMath.hlsl"
 
 struct PSIn
 {

@@ -59,9 +59,9 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	this->_spotShadowMaps = pRenderer->CreateTexture2D(texDesc);
 	Texture& spotShadowMaps = const_cast<Texture&>(pRenderer->GetTextureObject(_spotShadowMaps));
 
-	texDesc.arraySize = NUM_DIRECTIONAL_LIGHT_SHADOW;
+	texDesc.arraySize = 1;
 	this->_directionalShadowMaps = pRenderer->CreateTexture2D(texDesc);
-	Texture& directionalShadowMaps = const_cast<Texture&>(pRenderer->GetTextureObject(_directionalShadowMaps));
+	Texture& directionalShadowMap = const_cast<Texture&>(pRenderer->GetTextureObject(_directionalShadowMaps));
 
 	// CREATE DEPTH TARGETS
 	//
@@ -79,14 +79,10 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 		this->_spotShadowDepthTargets[i] = pRenderer->AddDepthTarget(dsvDesc, spotShadowMaps);
 	}
 
-	// DIRECTIONAL LIGHTS
-	this->_directionalShadowDepthTargets.resize(NUM_DIRECTIONAL_LIGHT_SHADOW);
-	for (int i = 0; i < NUM_DIRECTIONAL_LIGHT_SHADOW; i++)
-	{
-		dsvDesc.Texture2DArray.ArraySize = NUM_DIRECTIONAL_LIGHT_SHADOW - i;
-		dsvDesc.Texture2DArray.FirstArraySlice = i;
-		this->_directionalShadowDepthTargets[i] = pRenderer->AddDepthTarget(dsvDesc, directionalShadowMaps);
-	}
+	// THE DIRECTIONAL LIGHT
+	dsvDesc.Texture2DArray.ArraySize = 1;
+	dsvDesc.Texture2DArray.FirstArraySlice = 0;
+	this->_directionalShadowDepthTarget = pRenderer->AddDepthTarget(dsvDesc, directionalShadowMap);
 
 	// render states for front face culling 
 	this->_shadowRenderState = pRenderer->AddRasterizerState(ERasterizerCullMode::FRONT, ERasterizerFillMode::SOLID, true, false);
@@ -105,20 +101,23 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 	_shadowViewport.MinDepth = 0.f;
 	_shadowViewport.MaxDepth = 1.f;
 
-	_shadowViewportDirectional.Width = 2048.f;
-	_shadowViewportDirectional.Height = 2048.f;
+	_shadowViewportDirectional.Width = 512.f * 4;
+	_shadowViewportDirectional.Height = 512.f * 4;
 	_shadowViewportDirectional.MinDepth = 0.f;
 	_shadowViewportDirectional.MaxDepth = 1.f;
 }
 
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<const GameObject*> ZPassObjects, const ShadowView& shadowView) const
 {
-	const bool bNoShadowingLights = shadowView.spots.empty() && shadowView.points.empty() && shadowView.directionals.empty();
+	const bool bNoShadowingLights = shadowView.spots.empty() && shadowView.points.empty() && shadowView.pDirectional == nullptr;
 	if (bNoShadowingLights) return;
 
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
 	pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
 	pRenderer->SetViewport(_shadowViewport);
+
+	// SPOT LIGHT SHADOW MAPS
+	//
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
 		pRenderer->BindDepthTarget(_spotShadowDepthTargets[i]);	// only depth stencil buffer
@@ -134,18 +133,20 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 		pRenderer->EndEvent();
 	}
 
-	pRenderer->SetViewport(_shadowViewportDirectional);
-	for (size_t i = 0; i < shadowView.directionals.size(); i++)
+	// DIRECTIONAL SHADOW MAP
+	//
+	if (shadowView.pDirectional != nullptr)
 	{
-		pRenderer->BindDepthTarget(_directionalShadowDepthTargets[i]);	// only depth stencil buffer
+		pRenderer->SetViewport(_shadowViewportDirectional);
+		pRenderer->BindDepthTarget(_directionalShadowDepthTarget);	// only depth stencil buffer
 		pRenderer->Apply();
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
-		pRenderer->SetConstant4x4f("viewProj", shadowView.directionals[i]->GetLightSpaceMatrix());
-		pRenderer->SetConstant4x4f("view", shadowView.directionals[i]->GetViewMatrix());
-		pRenderer->SetConstant4x4f("proj", shadowView.directionals[i]->GetProjectionMatrix());
+		pRenderer->SetConstant4x4f("viewProj", shadowView.pDirectional->GetLightSpaceMatrix());
+		pRenderer->SetConstant4x4f("view", shadowView.pDirectional->GetViewMatrix());
+		pRenderer->SetConstant4x4f("proj", shadowView.pDirectional->GetProjectionMatrix());
 		pRenderer->Apply();
 
-		pRenderer->BeginEvent("Directional[" + std::to_string(i) + "]: DrawSceneZ()");
+		pRenderer->BeginEvent("Directional: DrawSceneZ()");
 		for (const GameObject* obj : ZPassObjects)
 			obj->RenderZ(pRenderer);
 		pRenderer->EndEvent();

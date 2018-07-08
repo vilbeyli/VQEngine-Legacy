@@ -19,6 +19,7 @@
 #define _DEBUG
 
 #include "BRDF.hlsl"
+#include "LightingCommon.hlsl"
 
 struct PSIn
 {

@@ -204,6 +204,8 @@ void Engine::Exit()
 	}
 }
 
+#define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
+#define OVERRIDE_LEVEL_VALUE 0	// which level to load
 bool Engine::Load(ThreadPool* pThreadPool)
 {
 	mpThreadPool = pThreadPool;
@@ -228,6 +230,9 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpTimer->Start();
 	const size_t numScenes = sEngineSettings.sceneNames.size();
 	assert(sEngineSettings.levelToLoad < numScenes);
+#if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
+	sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
+#endif
 	if (!LoadSceneFromFile())
 	{
 		Log::Error("Engine couldn't load scene.");
@@ -521,7 +526,12 @@ bool Engine::LoadSceneFromFile()
 	mpActiveScene->mpThreadPool = mpThreadPool;
 
 	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
+
+	// update engine settings and post process settings
+	// todo: multiple data - inconsistent state -> sort out ownership
 	sEngineSettings.rendering.postProcess.bloom = mSerializedScene.settings.bloom;
+	mPostProcessPass._settings = sEngineSettings.rendering.postProcess;
+	//mShadowMapPass._shadowViewportDirectional.Width = mShadowMapPass._shadowViewportDirectional.Height = mpActiveScene->mDirectionalLight.shadowMapSize.x();
 	return true;
 }
 
@@ -744,7 +754,9 @@ void Engine::Render()
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		
 		// SKYBOX
+		//
 		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+		mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 		if (mpActiveScene->HasSkybox())
 		{
 			mpActiveScene->RenderSkybox(mSceneView.viewProj);
@@ -925,7 +937,7 @@ void Engine::Render()
 
 	// DEBUG PASS
 	//------------------------------------------------------------------------
-	if (mDisplayRenderTargets && false)
+	if (mDisplayRenderTargets)
 	{
 		mpCPUProfiler->BeginEntry("Debug Textures");
 		const int screenWidth  = sEngineSettings.window.width;
@@ -971,21 +983,20 @@ void Engine::Render()
 
 			// second row -----------------------------------------
 			screenPosition = vec2(0.0f, static_cast<float>(bottomPaddingPx + heightPx * 1));
-			const size_t shadowMapCount = mSceneLightData._cb.directionalLightCount_shadow + mSceneLightData._cb.pointLightCount_shadow;
+			const size_t shadowMapCount = mSceneLightData._cb.pointLightCount_shadow;
 			const size_t row_offset = c.size();
 			size_t currShadowMap = 0;
 
-			// directional lights
-			for(size_t i=0; i<mSceneLightData._cb.directionalLightCount_shadow; ++ i)
+			// the directional light
 			{
-				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass._directionalShadowDepthTargets[i]);
+				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass._directionalShadowDepthTarget);
 				c.push_back({ squareTextureScaledDownSize, screenPosition, tex, false });
 
 				if (currShadowMap > 0)
 				{
-					c[row_offset + i].bottomLeftCornerScreenCoordinates.x() 
-						= c[row_offset + i - 1].bottomLeftCornerScreenCoordinates.x() 
-						+ c[row_offset + i - 1].dimensionsInPixels.x() + paddingPx;
+					c[row_offset].bottomLeftCornerScreenCoordinates.x() 
+						= c[row_offset - 1].bottomLeftCornerScreenCoordinates.x() 
+						+ c[row_offset - 1].dimensionsInPixels.x() + paddingPx;
 				}
 				++currShadowMap;
 			}
@@ -1147,7 +1158,7 @@ void Engine::RenderLoadingScreen() const
 	mpRenderer->SetConstant1f("isDiffuseMap", 1.0f);
 	mpRenderer->SetConstant3f("diffuse", vec3(1.0f, 1, 1));
 	mpRenderer->SetConstant4x4f("worldViewProj", matTransformation);
-	mpRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
+	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 	mpRenderer->Apply();

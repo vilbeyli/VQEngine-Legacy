@@ -41,39 +41,26 @@ const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS;
 #endif
 
 
-
-// HELPER FUNCTIONS & CONSTANTS
-// ============================================================================
-void OutputShaderErrorMessage(ID3D10Blob* errorMessage, const CHAR* shaderFileName)
-{
-	char* compileErrors = (char*)errorMessage->GetBufferPointer();
-	size_t bufferSize = errorMessage->GetBufferSize();
-
-	std::stringstream ss;
-	for (unsigned int i = 0; i < bufferSize; ++i)
-	{
-		ss << compileErrors[i];
-	}
-	OutputDebugString(ss.str().c_str());
-
-	errorMessage->Release();
-	errorMessage = 0;
-	return;
-}
-
-void HandleCompileError(ID3D10Blob* errorMessage, const std::string& shdPath)
+std::string GetCompileError(ID3D10Blob*& errorMessage, const std::string& shdPath)
 {
 	if (errorMessage)
 	{
-		OutputShaderErrorMessage(errorMessage, shdPath.c_str());
+		char* compileErrors = (char*)errorMessage->GetBufferPointer();
+		size_t bufferSize = errorMessage->GetBufferSize();
+
+		std::stringstream ss;
+		for (unsigned int i = 0; i < bufferSize; ++i)
+		{
+			ss << compileErrors[i];
+		}
+		errorMessage->Release();
+		return ss.str();
 	}
 	else
 	{
 		Log::Error(shdPath);
+		return ("Error: " + shdPath);
 	}
-
-	// continue execution, make sure error is known
-	//assert(false);
 }
 
 #ifdef _WIN64
@@ -359,8 +346,18 @@ void Shader::CompileShaders(ID3D11Device* pDevice, const std::vector<std::string
 		}
 		else
 		{
-			blobs.of[type] = CompileFromSource(sourceFilePath, type);
-			CacheShaderBinary(cacheFilePath, blobs.of[type]);
+			std::string errMsg;
+			ID3D10Blob* pBlob;
+			if (CompileFromSource(sourceFilePath, type, pBlob, errMsg))
+			{
+				blobs.of[type] = pBlob;
+				CacheShaderBinary(cacheFilePath, blobs.of[type]);
+			}
+			else
+			{
+				Log::Error(errMsg);
+				continue;
+			}
 		}
 
 		CreateShader(pDevice, type, blobs.of[type]->GetBufferPointer(), blobs.of[type]->GetBufferSize());
@@ -415,35 +412,38 @@ void Shader::CompileShaders(ID3D11Device* pDevice, const std::vector<std::string
 	// https://takinginitiative.wordpress.com/2011/12/11/directx-1011-basic-shader-reflection-automatic-input-layout-creation/
 #endif
 
-	// CBUFFERS & SHADER RESOURCES
+	// CONSTANT BUFFERS & SHADER RESOURCES
 	//---------------------------------------------------------------------------
 	SetConstantBuffers(pDevice);
 	
-	// SET TEXTURES & SAMPLERS
+	// textures & samplers
 	auto sRefl = m_shaderReflections.psRefl;		// vsRefl? gsRefl?
-	D3D11_SHADER_DESC desc = {};
-	sRefl->GetDesc(&desc);
-
-	unsigned texSlot = 0;	unsigned smpSlot = 0;
-	for (unsigned i = 0; i < desc.BoundResources; ++i)
+	if (sRefl)
 	{
-		D3D11_SHADER_INPUT_BIND_DESC shdInpDesc;
-		sRefl->GetResourceBindingDesc(i, &shdInpDesc);
-		if (shdInpDesc.Type == D3D_SIT_SAMPLER)
+		D3D11_SHADER_DESC desc = {};
+		sRefl->GetDesc(&desc);
+
+		unsigned texSlot = 0;	unsigned smpSlot = 0;
+		for (unsigned i = 0; i < desc.BoundResources; ++i)
 		{
-			ShaderSampler smp;
-			smp.name = shdInpDesc.Name;
-			smp.shdType = EShaderType::PS;
-			smp.bufferSlot = smpSlot++;
-			m_samplers.push_back(smp);
-		}
-		else if (shdInpDesc.Type == D3D_SIT_TEXTURE)
-		{
-			ShaderTexture tex;
-			tex.name = shdInpDesc.Name;
-			tex.shdType = EShaderType::PS;
-			tex.bufferSlot = texSlot++;
-			m_textures.push_back(tex);
+			D3D11_SHADER_INPUT_BIND_DESC shdInpDesc;
+			sRefl->GetResourceBindingDesc(i, &shdInpDesc);
+			if (shdInpDesc.Type == D3D_SIT_SAMPLER)
+			{
+				ShaderSampler smp;
+				smp.name = shdInpDesc.Name;
+				smp.shdType = EShaderType::PS;
+				smp.bufferSlot = smpSlot++;
+				m_samplers.push_back(smp);
+			}
+			else if (shdInpDesc.Type == D3D_SIT_TEXTURE)
+			{
+				ShaderTexture tex;
+				tex.name = shdInpDesc.Name;
+				tex.shdType = EShaderType::PS;
+				tex.bufferSlot = texSlot++;
+				m_textures.push_back(tex);
+			}
 		}
 	}
 
@@ -598,12 +598,11 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 	}
 }
 
-ID3D10Blob* Shader::CompileFromSource(const std::string & filePath, const EShaderType & type)
+bool Shader::CompileFromSource(const std::string& pathToFile, const EShaderType& type, ID3D10Blob *& ref_pBob, std::string& errMsg)
 {
-	const StrUtil::UnicodeString Path = filePath;
+	const StrUtil::UnicodeString Path = pathToFile;
 	const WCHAR* PathStr = Path.GetUnicodePtr();
 	ID3D10Blob* errorMessage = nullptr;
-	ID3D10Blob* blob = { nullptr };
 	if (FAILED(D3DCompileFromFile(
 		PathStr,
 		NULL,
@@ -612,13 +611,14 @@ ID3D10Blob* Shader::CompileFromSource(const std::string & filePath, const EShade
 		SHADER_COMPILER_VERSIONS[type],
 		SHADER_COMPILE_FLAGS,
 		0,
-		&blob,
+		&ref_pBob,
 		&errorMessage)))
 	{
-		HandleCompileError(errorMessage, filePath);
-		return nullptr;
+
+		errMsg = GetCompileError(errorMessage, pathToFile);
+		return false;
 	}
-	return blob;
+	return true;
 }
 
 ID3D10Blob * Shader::CompileFromCachedBinary(const std::string & cachedBinaryFilePath)

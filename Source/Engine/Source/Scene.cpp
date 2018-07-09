@@ -149,15 +149,29 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	mpRenderer->SetShader(EShaders::UNLIT);
 	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
 	mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+	mpRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
 	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::WIREFRAME);
 	mpRenderer->SetVertexBuffer(IABuffers.first);
 	mpRenderer->SetIndexBuffer(IABuffers.second);
 	mBoundingBox.Render(mpRenderer, viewProj);
+	
+	// game objects
+	std::vector<const GameObject*> pObjects(
+		mDrawLists.opaqueList.size() + mDrawLists.alphaList.size()
+		, nullptr
+	);
+	std::copy(RANGE(mDrawLists.opaqueList), pObjects.begin());
+	std::copy(RANGE(mDrawLists.alphaList), pObjects.begin() + mDrawLists.opaqueList.size());
+	mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
+	std::for_each(RANGE(pObjects), [&](const GameObject* pObj)
+	{
+		pObj->mBoundingBox.Render(mpRenderer, viewProj);
+	});
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 
-	return 1;	// 1 object rendered
+	return 1 + pObjects.size(); // objects rendered
 }
 
 
@@ -318,24 +332,25 @@ void Scene::EndLoadingModels()
 
 void Scene::CalculateSceneBoundingBox()
 {
-	// call PreRender() to create draw lists so that we skip
-	// over the unused game objects in the object pool and have 
-	// a set of gameobject lists to start the scene bounding box 
-	// calculation with;
-	PreRender();	// mDrawLists.opeaue/alphaList is populated.
-	std::vector<const GameObject*> pObjects(
-		mDrawLists.opaqueList.size() + mDrawLists.alphaList.size()
-		, nullptr
-	);
-	std::copy(RANGE(mDrawLists.opaqueList), pObjects.begin());
-	std::copy(RANGE(mDrawLists.alphaList) , pObjects.begin() + mDrawLists.opaqueList.size());
+	// get the objects for the scene
+	std::vector<GameObject*> pObjects;
+	for (GameObject& obj : mObjectPool.mObjects)
+	{
+		if (obj.mpScene == this && obj.mRenderSettings.bRender)
+		{
+			pObjects.push_back(&obj);
+		}
+	}
 
 	constexpr float max_f = std::numeric_limits<float>::max();
 	vec3 mins(max_f);
 	vec3 maxs(-(max_f - 1.0f));
-	std::for_each(RANGE(pObjects), [&](const GameObject* pObj)
+	std::for_each(RANGE(pObjects), [&](GameObject* pObj)
 	{
 		XMMATRIX worldMatrix = pObj->GetTransform().WorldTransformationMatrix();
+
+		vec3 mins_obj(max_f);
+		vec3 maxs_obj(-(max_f - 1.0f));
 
 		const ModelData& modelData = pObj->GetModelData();
 		std::for_each(RANGE(modelData.mMeshIDs), [&](const MeshID& meshID)
@@ -375,19 +390,28 @@ void Scene::CalculateSceneBoundingBox()
 					const float y_mesh = std::min(worldPos.y(), DegenerateMeshPositionChannelValueMax);
 					const float z_mesh = std::min(worldPos.z(), DegenerateMeshPositionChannelValueMax);
 
-					const float x_min = mins.x();
-					const float y_min = mins.y();
-					const float z_min = mins.z();
-
+					// scene bounding box
 					mins = vec3(
-						std::min(x_mesh, x_min),
-						std::min(y_mesh, y_min),
-						std::min(z_mesh, z_min)
+						std::min(x_mesh, mins.x()),
+						std::min(y_mesh, mins.y()),
+						std::min(z_mesh, mins.z())
 					);
 					maxs = vec3(
 						std::max(x_mesh, maxs.x()),
 						std::max(y_mesh, maxs.y()),
 						std::max(z_mesh, maxs.z())
+					);
+
+					// object bounding box
+					mins_obj = vec3(
+						std::min(x_mesh, mins_obj.x()),
+						std::min(y_mesh, mins_obj.y()),
+						std::min(z_mesh, mins_obj.z())
+					);
+					maxs_obj = vec3(
+						std::max(x_mesh, maxs_obj.x()),
+						std::max(y_mesh, maxs_obj.y()),
+						std::max(z_mesh, maxs_obj.z())
 					);
 				}
 			}
@@ -396,6 +420,9 @@ void Scene::CalculateSceneBoundingBox()
 				Log::Warning("Unsupported vertex stride for mesh.");
 			}
 		});
+
+		pObj->mBoundingBox.hi = maxs_obj;
+		pObj->mBoundingBox.low = mins_obj;
 	});
 
 	Log::Info("SceneBoundingBox:lo=(%.2f, %.2f, %.2f)\thi=(%.2f, %.2f, %.2f)"
@@ -469,17 +496,4 @@ GameObject* SerializedScene::CreateNewGameObject()
 {
 	objects.push_back(GameObject(nullptr));
 	return &objects.back();
-}
-
-void Scene::SceneBoundingBox::Render(Renderer * pRenderer, const XMMATRIX& viewProj) const
-{
-	Transform tf;
-	const vec3 diag = this->hi - this->low;
-	const vec3 pos = (this->hi + this->low) * 0.5f;
-	tf.SetScale(diag * 0.5f);
-	tf.SetPosition(pos);
-	XMMATRIX wvp = tf.WorldTransformationMatrix() * viewProj;
-	pRenderer->SetConstant4x4f("worldViewProj", wvp);
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
 }

@@ -203,7 +203,7 @@ bool Engine::Initialize(HWND hwnd)
 
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
 #define OVERRIDE_LEVEL_VALUE 0	// which level to load
-#define LOAD_ASYNC 1
+#define LOAD_ASYNC 0
 bool Engine::Load(ThreadPool* pThreadPool)
 {
 	mpThreadPool = pThreadPool;
@@ -219,70 +219,77 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	RenderLoadingScreen(true);
 
 	// set up a parallel task to load everything.
+	auto AsyncEngineLoad = [&]() -> bool
+	{
+		// LOAD ENVIRONMENT MAPS
+		//
+		// mpCPUProfiler->BeginProfile();
+		// mpCPUProfiler->BeginEntry("EngineLoad");
+		//Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
+		//mpTimer->Start();
+		Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
+		//mpTimer->Stop();
+		//Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
+		//mpTimer->Reset();
 
-	//  // LOAD ENVIRONMENT MAPS
-	//  //
-	//  mpCPUProfiler->BeginProfile();
-	//  mpCPUProfiler->BeginEntry("EngineLoad");
-	//  Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
-	//  mpTimer->Start();
-	//  Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
-	//  mpTimer->Stop();
-	//  Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
-	//  mpTimer->Reset();
-	//  
-	//  // SCENE INITIALIZATION
-	//  //
-	//  Log::Info("-------------------- LOADING SCENE --------------------- ");
-	//  mpTimer->Start();
-	//  const size_t numScenes = sEngineSettings.sceneNames.size();
-	//  assert(sEngineSettings.levelToLoad < numScenes);
-	//  #if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
-	//  sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
-	//  #endif
-	//  if (!LoadSceneFromFile())
-	//  {
-	//  	Log::Error("Engine couldn't load scene.");
-	//  	return false;
-	//  }
-	//  mpTimer->Stop();
-	//  Log::Info("-------------------- SCENE LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
-	//  mpTimer->Reset();
-	//  
-	//  // RENDER PASS INITIALIZATION
-	//  //
-	//  mpTimer->Start();
-	//  {
-	//  	Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
-	//  	mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
-	//  	//renderer->m_Direct3D->ReportLiveObjects();
-	//  
-	//  	mDeferredRenderingPasses.Initialize(mpRenderer);
-	//  	mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
-	//  	mDebugPass.Initialize(mpRenderer);
-	//  	mSSAOPass.Initialize(mpRenderer);
-	//  
-	//  	// Samplers TODO: remove this from engine code (to render pass?)
-	//  	D3D11_SAMPLER_DESC normalSamplerDesc = {};
-	//  	normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-	//  	normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-	//  	normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-	//  	normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-	//  	normalSamplerDesc.MinLOD = 0.f;
-	//  	normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-	//  	normalSamplerDesc.MipLODBias = 0.f;
-	//  	normalSamplerDesc.MaxAnisotropy = 0;
-	//  	normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-	//  	mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
-	//  }
-	//  mpTimer->Stop();
-	//  Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
-	//  mpCPUProfiler->EndEntry();
-	//  mpCPUProfiler->EndProfile();
+		// SCENE INITIALIZATION
+		//
+		//Log::Info("-------------------- LOADING SCENE --------------------- ");
+		//mpTimer->Start();
+		const size_t numScenes = sEngineSettings.sceneNames.size();
+		assert(sEngineSettings.levelToLoad < numScenes);
+#if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
+		sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
+#endif
+		if (!LoadSceneFromFile())
+		{
+			Log::Error("Engine couldn't load scene.");
+			return false;
+		}
+		//mpTimer->Stop();
+		//Log::Info("-------------------- SCENE LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
+		//mpTimer->Reset();
 
+		// RENDER PASS INITIALIZATION
+		//
+		//mpTimer->Start();
+		{
+			//Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
+			mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
+			//renderer->m_Direct3D->ReportLiveObjects();
+
+			mDeferredRenderingPasses.Initialize(mpRenderer);
+			mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
+			mDebugPass.Initialize(mpRenderer);
+			mSSAOPass.Initialize(mpRenderer);
+
+			// Samplers TODO: remove this from engine code (to render pass?)
+			D3D11_SAMPLER_DESC normalSamplerDesc = {};
+			normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+			normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+			normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+			normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+			normalSamplerDesc.MinLOD = 0.f;
+			normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+			normalSamplerDesc.MipLODBias = 0.f;
+			normalSamplerDesc.MaxAnisotropy = 0;
+			normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+			mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
+		}
+		//mpTimer->Stop();
+		//Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
+		//mpCPUProfiler->EndEntry();
+		//mpCPUProfiler->EndProfile();
+
+		mbLoading = false;
+	};
+
+	mpThreadPool->AddTask(AsyncEngineLoad);
 	return true;
+
 #else
-	RenderLoadingScreen(true);
+
+	RenderLoadingScreen(true); // quickly render one frame of loading screen
 
 	// LOAD ENVIRONMENT MAPS
 	//
@@ -482,14 +489,17 @@ void Engine::UpdateAndRender()
 	mpCPUProfiler->BeginEntry("CPU");
 
 	HandleInput();
+
+	// RENDER LOADING SCREEN
+	//
 	if (mbLoading)
 	{
 		constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
 		CalcFrameStats(dt);
 		mAccumulator += dt;
 
-		// limit frequency to 30Hz | 33ms / frame
-		bool bRender = mAccumulator > 0.033f;
+		const int refreshRate = 30;	// limit frequency to 30Hz
+		bool bRender = mAccumulator > (1.0f / refreshRate);
 		if (bRender)
 		{
 			mAccumulator = 0.0f;
@@ -511,6 +521,9 @@ void Engine::UpdateAndRender()
 			++mFrameCount;
 		}
 	}
+
+	// RENDER SCENE
+	//
 	else
 	{
 		if (!mbIsPaused)
@@ -525,7 +538,9 @@ void Engine::UpdateAndRender()
 			Render();
 		}
 	}
-	mpCPUProfiler->EndEntry();
+
+
+	mpCPUProfiler->EndEntry();	// "CPU"
 	mpCPUProfiler->StateCheck();
 }
 
@@ -1061,6 +1076,13 @@ void Engine::Render()
 
 void Engine::RenderDebug(const XMMATRIX& viewProj)
 {
+	// BOUNDING BOXES
+	//
+	if (mbRenderBoundingBoxes)
+	{
+		mpActiveScene->RenderDebug(viewProj);
+	}
+
 	if (mbDisplayRenderTargets)
 	{
 		mpCPUProfiler->BeginEntry("Debug Textures");
@@ -1154,13 +1176,6 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		}
 		mpRenderer->EndEvent();
 		mpCPUProfiler->EndEntry();
-	}
-
-	// BOUNDING BOXES
-	//
-	if (mbRenderBoundingBoxes)
-	{
-		mpActiveScene->RenderDebug(viewProj);
 	}
 
 	// Render TBN vectors (INACTIVE)

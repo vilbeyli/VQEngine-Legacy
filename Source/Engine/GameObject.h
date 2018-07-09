@@ -35,6 +35,12 @@ struct GameObjectRenderSettings
 	bool bCastShadow = true;
 };
 
+struct BoundingBox
+{
+	vec3 low = vec3::Zero;
+	vec3 hi = vec3::Zero;
+	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
+};
 
 class GameObject
 {
@@ -84,6 +90,7 @@ private:
  private:
 	Transform			mTransform;
 	Model				mModel;
+	BoundingBox			mBoundingBox;
 
 	// After a game object is created, we use the pointer field
 	// as the Scene*. Otherwise, we keep a pointer for the object pool

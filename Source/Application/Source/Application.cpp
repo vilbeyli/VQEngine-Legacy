@@ -359,7 +359,7 @@ void Application::Run()
 		}
 		else
 		{
-			m_bAppWantsExit |= ENGINE->UpdateAndRender();
+			ENGINE->UpdateAndRender();
 		}
 		const_cast<Input*>(ENGINE->INP())->PostUpdate();	// update previous state after frame;
 

@@ -31,6 +31,7 @@
 #include "RenderPasses.h"
 
 #include <memory>
+#include <atomic>
 
 using std::shared_ptr;
 using std::unique_ptr;
@@ -85,7 +86,7 @@ public:
 	void Exit();
 	
 	bool Load(VQEngine::ThreadPool* pThreadPool);
-	bool UpdateAndRender();
+	void UpdateAndRender();
 
 	void SendLightData() const;
 	inline void Engine::Pause()  { mbIsPaused = true; }
@@ -123,14 +124,14 @@ private:
 	bool ReloadScene();
 
 	void CalcFrameStats(float dt);
-	bool HandleInput();
+	void HandleInput();
 
 	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 	void PreRender();
 	void Render();
 	void RenderDebug(const XMMATRIX& viewProj);
 	void RenderUI();
-	void RenderLoadingScreen() const;
+	void RenderLoadingScreen(bool bOneTimeRender) const;
 	void RenderLights() const;
 
 //==============================================================================================================
@@ -175,6 +176,7 @@ private:
 
 	bool							mbUsePaniniProjection;//(UNUSED)
 	std::vector<Mesh>				mBuiltinMeshes;
+	std::vector<TextureID>			mLoadingScreenTextures;
 
 	//----------------------------------------------------------------------------------------------------------------
 	// RENDERING 
@@ -209,6 +211,9 @@ private:
 	bool				mbIsBloomOn;
 	bool				mbDisplayRenderTargets;	// todo read from sceneview???
 	bool				mbRenderBoundingBoxes;
+
+	std::atomic<bool>	mbLoading;
+	float				mAccumulator;
 	unsigned long long	mFrameCount;
 };
 

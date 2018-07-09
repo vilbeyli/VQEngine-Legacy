@@ -45,6 +45,10 @@
 
 using namespace VQEngine;
 
+
+// ====================================================================================
+// HELPERS
+// ====================================================================================
 Settings::Engine Engine::sEngineSettings;
 Engine* Engine::sInstance = nullptr;
 Engine * Engine::GetEngine()
@@ -89,6 +93,11 @@ void Engine::ToggleBloom()
 
 float Engine::GetTotalTime() const { return mpTimer->TotalTime(); }
 
+
+
+// ====================================================================================
+// INTERFACE
+// ====================================================================================
 Engine::Engine()
 	: mpRenderer(new Renderer())
 	, mpTextRenderer(new TextRenderer())
@@ -99,6 +108,7 @@ Engine::Engine()
 	, mbUsePaniniProjection(false)
 	, mbShowControls(true)
 	, mFrameCount(0)
+	, mAccumulator(0.0f)
 {}
 
 Engine::~Engine(){}
@@ -177,7 +187,7 @@ bool Engine::Initialize(HWND hwnd)
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
-
+	// this is bad... every scene needs to be pushed back.
 	mpScenes.push_back(new ObjectsScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new SSAOTestScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new IBLTestScene(mpRenderer, mpTextRenderer));
@@ -186,33 +196,93 @@ bool Engine::Initialize(HWND hwnd)
 
 	mpTimer->Stop();
 	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
+	mbLoading = false;
 	return true;
 }
 
-void Engine::Exit()
-{
-	mpGPUProfiler->Exit();
-	mpTextRenderer->Exit();
-	mpRenderer->Exit();
-	
-	mBuiltinMeshes.clear();
-
-	Log::Exit();
-	if (sInstance)
-	{
-		delete sInstance;
-		sInstance = nullptr;
-	}
-}
 
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
 #define OVERRIDE_LEVEL_VALUE 0	// which level to load
+#define LOAD_ASYNC 1
 bool Engine::Load(ThreadPool* pThreadPool)
 {
 	mpThreadPool = pThreadPool;
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 	
-	RenderLoadingScreen();
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen0.png"));
+
+#if LOAD_ASYNC
+
+	// quickly render one frame of loading screen
+	mbLoading = true;
+	mAccumulator = 1.0f;	// start rendering loading screen on update loop
+	RenderLoadingScreen(true);
+
+	// set up a parallel task to load everything.
+
+	//  // LOAD ENVIRONMENT MAPS
+	//  //
+	//  mpCPUProfiler->BeginProfile();
+	//  mpCPUProfiler->BeginEntry("EngineLoad");
+	//  Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
+	//  mpTimer->Start();
+	//  Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
+	//  mpTimer->Stop();
+	//  Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
+	//  mpTimer->Reset();
+	//  
+	//  // SCENE INITIALIZATION
+	//  //
+	//  Log::Info("-------------------- LOADING SCENE --------------------- ");
+	//  mpTimer->Start();
+	//  const size_t numScenes = sEngineSettings.sceneNames.size();
+	//  assert(sEngineSettings.levelToLoad < numScenes);
+	//  #if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
+	//  sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
+	//  #endif
+	//  if (!LoadSceneFromFile())
+	//  {
+	//  	Log::Error("Engine couldn't load scene.");
+	//  	return false;
+	//  }
+	//  mpTimer->Stop();
+	//  Log::Info("-------------------- SCENE LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
+	//  mpTimer->Reset();
+	//  
+	//  // RENDER PASS INITIALIZATION
+	//  //
+	//  mpTimer->Start();
+	//  {
+	//  	Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
+	//  	mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
+	//  	//renderer->m_Direct3D->ReportLiveObjects();
+	//  
+	//  	mDeferredRenderingPasses.Initialize(mpRenderer);
+	//  	mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
+	//  	mDebugPass.Initialize(mpRenderer);
+	//  	mSSAOPass.Initialize(mpRenderer);
+	//  
+	//  	// Samplers TODO: remove this from engine code (to render pass?)
+	//  	D3D11_SAMPLER_DESC normalSamplerDesc = {};
+	//  	normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	//  	normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	//  	normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	//  	normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+	//  	normalSamplerDesc.MinLOD = 0.f;
+	//  	normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+	//  	normalSamplerDesc.MipLODBias = 0.f;
+	//  	normalSamplerDesc.MaxAnisotropy = 0;
+	//  	normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+	//  	mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
+	//  }
+	//  mpTimer->Stop();
+	//  Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
+	//  mpCPUProfiler->EndEntry();
+	//  mpCPUProfiler->EndProfile();
+
+	return true;
+#else
+	RenderLoadingScreen(true);
 
 	// LOAD ENVIRONMENT MAPS
 	//
@@ -256,7 +326,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		mDebugPass.Initialize(mpRenderer);
 		mSSAOPass.Initialize(mpRenderer);
 
-		// Samplers
+		// Samplers TODO: remove this from engine code (to render pass?)
 		D3D11_SAMPLER_DESC normalSamplerDesc = {};
 		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
 		normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
@@ -349,6 +419,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	// Thread Pool Unit Test ------------------------------------------------
 
 	return true;
+#endif
 }
 
 
@@ -385,33 +456,80 @@ bool Engine::LoadScene(int level)
 	return LoadSceneFromFile();
 }
 
+void Engine::Exit()
+{
+	mpGPUProfiler->Exit();
+	mpTextRenderer->Exit();
+	mpRenderer->Exit();
 
-bool Engine::UpdateAndRender()
+	mBuiltinMeshes.clear();
+
+	Log::Exit();
+	if (sInstance)
+	{
+		delete sInstance;
+		sInstance = nullptr;
+	}
+}
+
+
+// ====================================================================================
+// UPDATE FUNCTIONS
+// ====================================================================================
+void Engine::UpdateAndRender()
 {
 	const float dt = mpTimer->Tick();
 	mpCPUProfiler->BeginEntry("CPU");
 
-	const bool bExitApp = !HandleInput();
-	if (!mbIsPaused)
+	HandleInput();
+	if (mbLoading)
 	{
+		constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
 		CalcFrameStats(dt);
+		mAccumulator += dt;
 
-		mpCPUProfiler->BeginEntry("Update()");
-		mpActiveScene->UpdateScene(dt);
-		mpCPUProfiler->EndEntry();
+		// limit frequency to 30Hz | 33ms / frame
+		bool bRender = mAccumulator > 0.033f;
+		if (bRender)
+		{
+			mAccumulator = 0.0f;
+			mpGPUProfiler->BeginFrame(mFrameCount);
+			mpGPUProfiler->BeginQuery("GPU");
 
-		PreRender();
-		Render();
+			mpRenderer->BeginFrame();
+			RenderLoadingScreen(bOneTimeLoadingScreenRender);
+			RenderUI();
+			{
+				mpGPUProfiler->BeginQuery("Present");
+				mpCPUProfiler->BeginEntry("Present");
+				mpRenderer->EndFrame();
+				mpCPUProfiler->EndEntry();
+				mpGPUProfiler->EndQuery();
+			}
+			mpGPUProfiler->EndQuery();
+			mpGPUProfiler->EndFrame(mFrameCount);
+			++mFrameCount;
+		}
 	}
+	else
+	{
+		if (!mbIsPaused)
+		{
+			CalcFrameStats(dt);
 
+			mpCPUProfiler->BeginEntry("Update()");
+			mpActiveScene->UpdateScene(dt);
+			mpCPUProfiler->EndEntry();
+
+			PreRender();
+			Render();
+		}
+	}
 	mpCPUProfiler->EndEntry();
-
 	mpCPUProfiler->StateCheck();
-	return bExitApp;
 }
 
-
-bool Engine::HandleInput()
+void Engine::HandleInput()
 {
 	if (mpInput->IsKeyTriggered("Backspace"))	TogglePause();
 
@@ -434,68 +552,70 @@ bool Engine::HandleInput()
 		else								ToggleRenderingStats();
 	}
 
-
-	if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
+	// The following input will not be handled if the engine is currently loading a level
+	//
+	if (!mbLoading)
+	{
+		if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
 
 #if SSAO_DEBUGGING
-	// todo: wire this to some UI text/control
-	if (mbIsAmbientOcclusionOn)
-	{
-		if (mpInput->IsKeyDown("Shift"))
+		// todo: wire this to some UI text/control
+		if (mbIsAmbientOcclusionOn)
 		{
-			const float step = 0.1f;
-			if (mpInput->IsScrollUp()) { mSSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
-			if (mpInput->IsScrollDown()) { mSSAOPass.intensity -= step; if (mSSAOPass.intensity < 0.301) mSSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
+			if (mpInput->IsKeyDown("Shift"))
+			{
+				const float step = 0.1f;
+				if (mpInput->IsScrollUp()) { mSSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
+				if (mpInput->IsScrollDown()) { mSSAOPass.intensity -= step; if (mSSAOPass.intensity < 0.301) mSSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
+			}
+			else
+			{
+				const float step = 0.5f;
+				if (mpInput->IsScrollUp()) { mSSAOPass.radius += step; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
+				if (mpInput->IsScrollDown()) { mSSAOPass.radius -= step; if (mSSAOPass.radius < 0.301) mSSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
+			}
 		}
-		else
-		{
-			const float step = 0.5f;
-			if (mpInput->IsScrollUp()) { mSSAOPass.radius += step; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
-			if (mpInput->IsScrollDown()) { mSSAOPass.radius -= step; if (mSSAOPass.radius < 0.301) mSSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
-		}
-	}
 #endif
 
 #if BLOOM_DEBUGGING
-	if (mbIsBloomOn)
-	{
-		Settings::Bloom& bloom = mPostProcessPass._settings.bloom;
-		float& threshold = bloom.brightnessThreshold;
-		const float step = 0.05f;
-		const float threshold_hi = 3.0f;
-		const float threshold_lo = 0.05f;
-		if (mpInput->IsScrollUp()) { threshold += step; if (threshold > threshold_hi) threshold = threshold_hi; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
-		if (mpInput->IsScrollDown()) { threshold -= step; if (threshold < threshold_lo) threshold = threshold_lo; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
-	}
+		if (mbIsBloomOn)
+		{
+			Settings::Bloom& bloom = mPostProcessPass._settings.bloom;
+			float& threshold = bloom.brightnessThreshold;
+			const float step = 0.05f;
+			const float threshold_hi = 3.0f;
+			const float threshold_lo = 0.05f;
+			if (mpInput->IsScrollUp()) { threshold += step; if (threshold > threshold_hi) threshold = threshold_hi; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+			if (mpInput->IsScrollDown()) { threshold -= step; if (threshold < threshold_lo) threshold = threshold_lo; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+		}
 #endif
 
-	// SCENE -------------------------------------------------------------
-	if (mpInput->IsKeyTriggered("R"))
-	{
-		if (mpInput->IsKeyDown("Shift")) ReloadScene();
-		else							 mpActiveScene->ResetActiveCamera();
+		// SCENE -------------------------------------------------------------
+		if (mpInput->IsKeyTriggered("R"))
+		{
+			if (mpInput->IsKeyDown("Shift")) ReloadScene();
+			else							 mpActiveScene->ResetActiveCamera();
+		}
+
+		if (mpInput->IsKeyTriggered("1"))	LoadScene(0);
+		if (mpInput->IsKeyTriggered("2"))	LoadScene(1);
+		if (mpInput->IsKeyTriggered("3"))	LoadScene(2);
+		if (mpInput->IsKeyTriggered("4"))	LoadScene(3);
+		if (mpInput->IsKeyTriggered("5"))	LoadScene(4);
+
+
+		// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
+		const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
+		const EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
+			static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
+			);
+
+		EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
+		if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
+		if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
+		if (ENGINE->INP()->IsKeyTriggered("PageUp") || ENGINE->INP()->IsKeyTriggered("PageDown"))
+			mpActiveScene->SetEnvironmentMap(selectedEnvironmentMap);
 	}
-
-	if (mpInput->IsKeyTriggered("1"))	LoadScene(0);
-	if (mpInput->IsKeyTriggered("2"))	LoadScene(1);
-	if (mpInput->IsKeyTriggered("3"))	LoadScene(2);
-	if (mpInput->IsKeyTriggered("4"))	LoadScene(3);
-	if (mpInput->IsKeyTriggered("5"))	LoadScene(4);
-
-
-	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
-	const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
-	const EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
-		static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
-		);
-
-	EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
-	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
-	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
-	if (ENGINE->INP()->IsKeyTriggered("PageUp") || ENGINE->INP()->IsKeyTriggered("PageDown"))
-		mpActiveScene->SetEnvironmentMap(selectedEnvironmentMap);
-
-	return true;
 }
 
 void Engine::CalcFrameStats(float dt)
@@ -548,9 +668,11 @@ bool Engine::ReloadScene()
 	return LoadSceneFromFile();
 }
 
-
 void Engine::PreRender()
 {
+#if LOAD_ASYNC
+	if (mbLoading) return;
+#endif
 	mpCPUProfiler->BeginEntry("PreRender()");
 	
 	// set scene view
@@ -622,6 +744,10 @@ void Engine::SendLightData() const
 #endif
 }
 
+
+// ====================================================================================
+// RENDER FUNCTIONS
+// ====================================================================================
 void Engine::Render()
 {
 	mpCPUProfiler->BeginEntry("Render()");
@@ -1135,7 +1261,19 @@ void Engine::RenderUI()
 		mpTextRenderer->RenderText(_drawDesc);
 	}
 
-	mpActiveScene->RenderUI();
+	if (!mbLoading)
+	{
+		if (!mpActiveScene)
+		{
+			mpActiveScene->RenderUI();
+		}
+#if DEBUG
+		else
+		{
+			Log::Warning("Engine::mpActiveScene = nullptr when !mbLoading ");
+		}
+#endif
+	}
 
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndQuery();
@@ -1168,14 +1306,22 @@ void Engine::RenderLights() const
 	mpRenderer->EndEvent();
 }
 
-void Engine::RenderLoadingScreen() const
+void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 {
-	const TextureID texLoadingScreen = mpRenderer->CreateTextureFromFile("LoadingScreen0.png");
+	const TextureID texLoadingScreen = mLoadingScreenTextures.back();
 	const XMMATRIX matTransformation = XMMatrixIdentity();
 	const auto IABuffers = mBuiltinMeshes[EGeometry::QUAD].GetIABuffers();
-	mpRenderer->BeginFrame();
-	mpRenderer->BindRenderTarget(0);
+
+	if (bOneTimeRender)
+	{
+		mpRenderer->BeginFrame();
+	}
+	else
+	{
+		mpGPUProfiler->BeginQuery("Loading Screen");
+	}
 	mpRenderer->SetShader(EShaders::UNLIT);
+	mpRenderer->BindRenderTarget(0);
 	mpRenderer->SetVertexBuffer(IABuffers.first);
 	mpRenderer->SetIndexBuffer(IABuffers.second);
 	mpRenderer->SetTexture("texDiffuseMap", texLoadingScreen);
@@ -1187,8 +1333,15 @@ void Engine::RenderLoadingScreen() const
 	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 	mpRenderer->Apply();
 	mpRenderer->DrawIndexed();
-	mpRenderer->EndFrame();
-	mpRenderer->UnbindRenderTargets();
+	if (bOneTimeRender)
+	{
+		mpRenderer->EndFrame();
+		mpRenderer->UnbindRenderTargets();
+	}
+	else
+	{
+		mpGPUProfiler->EndQuery();
+	}
 }
 
 const char* FrameStats::statNames[FrameStats::numStat] =

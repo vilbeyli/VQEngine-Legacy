@@ -604,8 +604,11 @@ void Engine::SendLightData() const
 
 	// LIGHTS ( POINT | SPOT | DIRECTIONAL )
 	//
+	const vec2 directionalShadowMapDimensions 
+		= vec2(mShadowMapPass.mShadowViewPort_Directional.Width, mShadowMapPass.mShadowViewPort_Directional.Height);
 	mpRenderer->SetConstantStruct("Lights", &mSceneLightData._cb);
 	mpRenderer->SetConstant2f("spotShadowMapDimensions", vec2(shadowDimension, shadowDimension));
+	mpRenderer->SetConstant2f("directionalShadowMapDimensions", directionalShadowMapDimensions);
 
 	// SHADOW MAPS
 	//

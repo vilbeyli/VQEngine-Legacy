@@ -25,6 +25,10 @@
 #include "Utilities/Log.h"
 #endif
 
+// quick hacks to override metallic material values
+#define MAKE_IRONMAN_METALLIC 1
+#define MAKE_ZENBALL_METALLIC 1
+
 void Model::AddMaterialToMesh(MeshID meshID, MaterialID materialID, bool bTransparent)
 {
 	MeshToMaterialLookup& mMaterialLookupPerMesh = mData.mMaterialLookupPerMesh;
@@ -194,7 +198,7 @@ ModelData ProcessNode(
 		std::vector<TextureID> heightMaps   = LoadMaterialTextures(material, aiTextureType_HEIGHT   , "texture_height"  , mpRenderer, modelDirectory);
 		std::vector<TextureID> alphaMaps    = LoadMaterialTextures(material, aiTextureType_OPACITY	, "texture_alpha"   , mpRenderer, modelDirectory);
 
-		Material* pBRDF = pScene->CreateNewMaterial(GGX_BRDF);
+		BRDF_Material* pBRDF = static_cast<BRDF_Material*>(pScene->CreateNewMaterial(GGX_BRDF));
 		assert(diffuseMaps.size() <= 1);	assert(normalMaps.size() <= 1);
 		assert(specularMaps.size() <= 1);	assert(heightMaps.size() <= 1);
 		assert(alphaMaps.size() <= 1);
@@ -248,8 +252,23 @@ ModelData ProcessNode(
 			// https://simonstechblog.blogspot.com/2011/12/microfacet-brdf.html
 			// https://computergraphics.stackexchange.com/questions/1515/what-is-the-accepted-method-of-converting-shininess-to-roughness-and-vice-versa
 			//
-			static_cast<BRDF_Material*>(pBRDF)->roughness = sqrtf(2.0f / (2.0f + shininess));
+			pBRDF->roughness = sqrtf(2.0f / (2.0f + shininess));
 		}
+
+#if MAKE_IRONMAN_METALLIC || MAKE_ZENBALL_METALLIC
+
+		// ---
+		// quick hack to assign metallic value to the loaded mesh
+		//
+		std::string fileName(pAiScene->mRootNode->mName.C_Str());
+		std::transform(RANGE(fileName), fileName.begin(), ::tolower);
+		auto tokens = StrUtil::split(fileName, '.');
+		if (!tokens.empty() && (tokens[0] == "ironman" || tokens[0] == "zen_orb"))
+		{
+			pBRDF->metalness = 1.0f;
+		}
+		//---
+#endif
 
 		// other material keys to consider
 		//

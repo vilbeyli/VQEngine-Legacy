@@ -32,15 +32,15 @@ camera 0.1 2000 80   0 30 -100  0 25
 camera 0.1 1500 75   0 30 100  180 25 
 ao true 0.4 8.0 2.90
 skylight true
-bloom true 2.05
+bloom true 1.05
 
 
-directional sun 2.2   40   -100   15  4096 2048 2000 
+directional white 2.2   10   -70   35  4096 2048 2800 
 
 
 object begin
 	mesh cube
-	transform 0 -5 0 0 0 0 700 5 700
+	transform 0 -10 0 0 0 0 1200 5 700
 	brdf
 		diffuse 0.4 0.35 0.4
 		tiling 10

@@ -144,30 +144,31 @@ void StressTestScene::Load(SerializedScene& scene)
 	};
 
 	const Quaternion Q_I = Quaternion::Identity();
+	const Quaternion Q_Sponza = Quaternion::FromAxisAngle(vec3::Up, DEG2RAD * 90.0f);
 	const Quaternion Q_Pillar = Quaternion::FromAxisAngle(vec3::Up, DEG2RAD * 20.0f) * Quaternion::FromAxisAngle(vec3::Forward, DEG2RAD * 90.0f);
 	const Quaternion Q_Platform = Quaternion::FromAxisAngle(vec3::Right, DEG2RAD * -45.0f);
 	const Quaternion Q_Nanosuit = Quaternion::FromAxisAngle(vec3::Up, DEG2RAD * 180.0f);
-	const int X_UNITS = 500;
+	const int X_UNITS = 400;
 	const int Z_UNITS = 250;
 	std::vector<Transform> transforms = 
 	{
-		Transform(vec3(-X_UNITS, 0, 0), Q_I, vec3(0.18f)),					// sponza
-		Transform(vec3(-X_UNITS, 0, Z_UNITS), Q_Nanosuit, vec3(5.0f)),		// nano
+		Transform(vec3(-X_UNITS * 1.4, 30, 0), Q_Sponza, vec3(0.30f)),		// sponza
+		Transform(vec3(+2*X_UNITS, 5, Z_UNITS), Q_Nanosuit, vec3(5.0f)),	// nano
 
 		Transform(vec3(+X_UNITS, 20, 0), Q_Platform, vec3(70.0f)),			// platform
 		Transform(vec3(+X_UNITS, 0 , Z_UNITS), Q_I, vec3(15.0f)),			// nano (big)
 
-		Transform(vec3(-X_UNITS, 0 , -Z_UNITS), Q_I, vec3(7.0f)),			// wanderer
+		Transform(vec3(+X_UNITS*2, 1 , -Z_UNITS), Q_I, vec3(7.0f)),		// wanderer
 		Transform(vec3(+X_UNITS, 25, -Z_UNITS), Q_Pillar, vec3(15.0f)),		// pillar
 
-		Transform(vec3(-X_UNITS, 0 , -Z_UNITS* 2), Q_I, vec3(1.0f)),		// bottle
-		Transform(vec3(+X_UNITS, 20, -Z_UNITS* 2), Q_I, vec3(1.0f)),		// zen ball
+		Transform(vec3(-X_UNITS, 0 , -Z_UNITS* 2.5), Q_I, vec3(2.0f)),		// bottle
+		Transform(vec3(+X_UNITS, 40, -Z_UNITS* 2), Q_I, vec3(3.0f)),		// zen ball
 
 		Transform(vec3(+X_UNITS, 0, +Z_UNITS * 2), Q_I, vec3(1.0f)),		// ironman
 		Transform(vec3(0, 1, -Z_UNITS), Q_I, vec3(1.0f)),					// spider
 		
 #if !_DBEUG
-		Transform(vec3(-X_UNITS, 83, +Z_UNITS * 2), Q_I, vec3(0.7f)),		// room
+		Transform(vec3(+X_UNITS * 2.15, 123, +Z_UNITS), Q_I, vec3(1.0f)),	// room
 #endif
 	};
 
@@ -176,6 +177,7 @@ void StressTestScene::Load(SerializedScene& scene)
 	{
 		GameObject* pObj = Scene::CreateNewGameObject();
 		pObj->SetTransform(transforms[i]);
+
 #if LOAD_MODELS_ASYNC
 		// Debug: 35s | Release: 4.9s
 		Scene::LoadModel_Async(pObj, modelPath);

@@ -45,7 +45,7 @@ cbuffer SceneVariables	// frame constants
 	
 	//float2 pointShadowMapDimensions;
 	float2 spotShadowMapDimensions;
-	float2 pad;	// directionalShadowMapDimensions?
+	float2 directionalShadowMapDimensions;
 	
 	SceneLighting Lights;
 };
@@ -165,7 +165,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 			= Lights.directional.color
 			* Lights.directional.brightness;
 		const float  NdotL = saturate(dot(s.N, Wi));
-		const float3 shadowing = ShadowTestPCF(Pw, Pl, texDirectionalShadowMaps, 0, sShadowSampler, NdotL, spotShadowMapDimensions);
+		const float3 shadowing = ShadowTestPCF(Pw, Pl, texDirectionalShadowMaps, 0, sShadowSampler, NdotL, directionalShadowMapDimensions);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
 	}
 #endif

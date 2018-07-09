@@ -172,7 +172,8 @@ bool Engine::Initialize(HWND hwnd)
 	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
 	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
 	mbIsBloomOn = true;	// currently not deserialized
-	mDisplayRenderTargets = true;
+	mbDisplayRenderTargets = true;
+	mbRenderBoundingBoxes = false;
 	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
@@ -247,7 +248,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpTimer->Start();
 	{	
 		Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
-		mShadowMapPass.Initialize(mpRenderer, mpRenderer->m_device, rendererSettings.shadowMap);
+		mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
 		
 		mDeferredRenderingPasses.Initialize(mpRenderer);
@@ -371,7 +372,8 @@ bool Engine::LoadSceneFromFile()
 	// todo: multiple data - inconsistent state -> sort out ownership
 	sEngineSettings.rendering.postProcess.bloom = mSerializedScene.settings.bloom;
 	mPostProcessPass._settings = sEngineSettings.rendering.postProcess;
-	//mShadowMapPass._shadowViewportDirectional.Width = mShadowMapPass._shadowViewportDirectional.Height = mpActiveScene->mDirectionalLight.shadowMapSize.x();
+	if(mpActiveScene->mDirectionalLight.enabled)
+		mShadowMapPass.InitializeDirectionalLightShadowMap(mpRenderer, mpActiveScene->mDirectionalLight.GetSettings());
 	return true;
 }
 
@@ -380,16 +382,7 @@ bool Engine::LoadScene(int level)
 	mpActiveScene->UnloadScene();
 	mShadowCasters.clear();
 	Engine::sEngineSettings.levelToLoad = level;
-	const bool bSceneLoaded = LoadSceneFromFile();
-	if (bSceneLoaded)
-	{
-		// reinitialize shadow pass
-
-
-
-		return true;
-	}
-	else return false;
+	return LoadSceneFromFile();
 }
 
 
@@ -425,7 +418,9 @@ bool Engine::HandleInput()
 	if (mpInput->IsKeyTriggered("F1")) ToggleRenderingPath();
 	if (mpInput->IsKeyTriggered("F2")) ToggleAmbientOcclusion();
 	if (mpInput->IsKeyTriggered("F3")) ToggleBloom();
-	if (mpInput->IsKeyTriggered("F4")) mDisplayRenderTargets = !mDisplayRenderTargets;
+	if (mpInput->IsKeyTriggered("F4")) mbDisplayRenderTargets = !mbDisplayRenderTargets;
+
+	if (mpInput->IsKeyTriggered("F5")) mbRenderBoundingBoxes = !mbRenderBoundingBoxes;
 
 
 	if (mpInput->IsKeyTriggered(";"))
@@ -605,7 +600,7 @@ void Engine::PreRender()
 
 void Engine::SendLightData() const
 {
-	const float shadowDimension = static_cast<float>(mShadowMapPass._shadowMapDimension);
+	const float shadowDimension = static_cast<float>(mShadowMapPass.mShadowMapDimension_Spot);
 
 	// LIGHTS ( POINT | SPOT | DIRECTIONAL )
 	//
@@ -614,8 +609,8 @@ void Engine::SendLightData() const
 
 	// SHADOW MAPS
 	//
-	mpRenderer->SetTextureArray("texSpotShadowMaps", mShadowMapPass._spotShadowMaps);
-	mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass._directionalShadowMaps);
+	mpRenderer->SetTextureArray("texSpotShadowMaps", mShadowMapPass.mShadowMapTextures_Spot);
+	mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass.mShadowMapTexture_Directional);
 
 #ifdef _DEBUG
 	const SceneLightingData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
@@ -907,71 +902,62 @@ void Engine::Render()
 		RenderLights();
 	}
 
-	// Tangent-Bitangent-Normal drawing
-	//------------------------------------------------------------------------
-	const bool bIsShaderTBN = !mTBNDrawObjects.empty();
-	if (bIsShaderTBN)
-	{
-		constexpr bool bSendMaterial = false;
-
-		mpRenderer->BeginEvent("Draw TBN Vectors");
-		if (mbUseDeferredRendering)
-			mpRenderer->BindDepthTarget(mWorldDepthTarget);
-
-		mpRenderer->SetShader(EShaders::TBN);
-
-		for (const GameObject* obj : mTBNDrawObjects)
-			obj->RenderOpaque(mpRenderer, mSceneView, bSendMaterial, mpActiveScene->mMaterials);
-		
-
-		if (mbUseDeferredRendering)
-			mpRenderer->UnbindDepthTarget();
-
-		mpRenderer->SetShader(mSelectedShader);
-		mpRenderer->EndEvent();
-	}
-
-	// BOUNDING BOXES
-	//
-	mpActiveScene->RenderDebug(viewProj);
-	
-#if 1
-	// POST PROCESS PASS
+	// POST PROCESS PASS | DEBUG PASS | UI PASS
 	//------------------------------------------------------------------------
 	mpCPUProfiler->BeginEntry("Post Process");
 	mpGPUProfiler->BeginQuery("Post Process");
 	mPostProcessPass.Render(mpRenderer, mbIsBloomOn);
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndQuery();
-
-	// DEBUG PASS
 	//------------------------------------------------------------------------
-	if (mDisplayRenderTargets)
+	RenderDebug(viewProj);
+	RenderUI();
+	//------------------------------------------------------------------------
+
+	// PRESENT THE FRAME
+	//
+	mpGPUProfiler->BeginQuery("Present");
+	mpCPUProfiler->BeginEntry("Present");
+	mpRenderer->EndFrame();
+	mpCPUProfiler->EndEntry();
+	mpGPUProfiler->EndQuery();
+
+
+	mpCPUProfiler->EndEntry();	// Render() call
+
+	mpGPUProfiler->EndQuery();
+	mpGPUProfiler->EndFrame(mFrameCount);
+	++mFrameCount;
+}
+
+void Engine::RenderDebug(const XMMATRIX& viewProj)
+{
+	if (mbDisplayRenderTargets)
 	{
 		mpCPUProfiler->BeginEntry("Debug Textures");
-		const int screenWidth  = sEngineSettings.window.width;
+		const int screenWidth = sEngineSettings.window.width;
 		const int screenHeight = sEngineSettings.window.height;
 		const float aspectRatio = static_cast<float>(screenWidth) / screenHeight;
 
 		// debug texture strip draw settings
 		const int bottomPaddingPx = 0;	 // offset from bottom of the screen
-		const int heightPx        = 128; // height for every texture
-		const int paddingPx       = 0;	 // padding between debug textures
+		const int heightPx = 128; // height for every texture
+		const int paddingPx = 0;	 // padding between debug textures
 		const vec2 fullscreenTextureScaledDownSize((float)heightPx * aspectRatio, (float)heightPx);
-		const vec2 squareTextureScaledDownSize    ((float)heightPx              , (float)heightPx);
+		const vec2 squareTextureScaledDownSize((float)heightPx, (float)heightPx);
 
 		// Textures to draw
-		const TextureID white4x4	 = mSSAOPass.whiteTexture4x4;
+		const TextureID white4x4 = mSSAOPass.whiteTexture4x4;
 		//TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._spotShadowDepthTargets);
-		TextureID tBlurredBloom		 = mpRenderer->GetRenderTargetTexture(mPostProcessPass._bloomPass._blurPingPong[0]);
-		TextureID tDiffuseRoughness  = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
+		TextureID tBlurredBloom = mpRenderer->GetRenderTargetTexture(mPostProcessPass._bloomPass._blurPingPong[0]);
+		TextureID tDiffuseRoughness = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
 		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
-		TextureID tSceneDepth		 = mpRenderer->GetDepthTargetTexture(0);
-		TextureID tNormals			 = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
-		TextureID tAO				 = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
-		TextureID tBRDF				 = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
-		TextureID preFilteredEnvMap  = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
-		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap; 
+		TextureID tSceneDepth = mpRenderer->GetDepthTargetTexture(0);
+		TextureID tNormals = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
+		TextureID tAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
+		TextureID tBRDF = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
+		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
+		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap;
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 
@@ -979,16 +965,16 @@ void Engine::Render()
 			vec2 screenPosition(0.0f, static_cast<float>(bottomPaddingPx + heightPx * 0));
 			std::vector<DrawQuadOnScreenCommand> c
 			{	//		Pixel Dimensions	 Screen Position (offset below)	  Texture			DepthTexture?
-				{ fullscreenTextureScaledDownSize,	screenPosition,			tSceneDepth			, true},
-				{ fullscreenTextureScaledDownSize,	screenPosition,			tDiffuseRoughness	, false},
-				{ fullscreenTextureScaledDownSize,	screenPosition,			tNormals			, false},
-				//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
-				{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false},
-				{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false},
-				{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
+				{ fullscreenTextureScaledDownSize,	screenPosition,			tSceneDepth			, true },
+			{ fullscreenTextureScaledDownSize,	screenPosition,			tDiffuseRoughness	, false },
+			{ fullscreenTextureScaledDownSize,	screenPosition,			tNormals			, false },
+			//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
+			{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false },
+			{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false },
+			{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
-				c[i].bottomLeftCornerScreenCoordinates.x() = c[i-1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;
+				c[i].bottomLeftCornerScreenCoordinates.x() = c[i - 1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;
 
 			// second row -----------------------------------------
 			screenPosition = vec2(0.0f, static_cast<float>(bottomPaddingPx + heightPx * 1));
@@ -998,13 +984,13 @@ void Engine::Render()
 
 			// the directional light
 			{
-				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass._directionalShadowDepthTarget);
+				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
 				c.push_back({ squareTextureScaledDownSize, screenPosition, tex, false });
 
 				if (currShadowMap > 0)
 				{
-					c[row_offset].bottomLeftCornerScreenCoordinates.x() 
-						= c[row_offset - 1].bottomLeftCornerScreenCoordinates.x() 
+					c[row_offset].bottomLeftCornerScreenCoordinates.x()
+						= c[row_offset - 1].bottomLeftCornerScreenCoordinates.x()
 						+ c[row_offset - 1].dimensionsInPixels.x() + paddingPx;
 				}
 				++currShadowMap;
@@ -1013,15 +999,15 @@ void Engine::Render()
 			// spot lights
 			for (size_t i = 0; i < mSceneLightData._cb.spotLightCount_shadow; ++i)
 			{
-				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass._spotShadowDepthTargets[i]);
+				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTargets_Spot[i]);
 				c.push_back({
 					squareTextureScaledDownSize, screenPosition, tex, false
 					});
 
 				if (currShadowMap > 0)
 				{
-					c[row_offset + i].bottomLeftCornerScreenCoordinates.x() 
-						= c[row_offset + i - 1].bottomLeftCornerScreenCoordinates.x() 
+					c[row_offset + i].bottomLeftCornerScreenCoordinates.x()
+						= c[row_offset + i - 1].bottomLeftCornerScreenCoordinates.x()
 						+ c[row_offset + i - 1].dimensionsInPixels.x() + paddingPx;
 				}
 				++currShadowMap;
@@ -1041,6 +1027,42 @@ void Engine::Render()
 		mpCPUProfiler->EndEntry();
 	}
 
+	// BOUNDING BOXES
+	//
+	if (mbRenderBoundingBoxes)
+	{
+		mpActiveScene->RenderDebug(viewProj);
+	}
+
+	// Render TBN vectors (INACTIVE)
+	//
+#if 0
+	const bool bIsShaderTBN = !mTBNDrawObjects.empty();
+	if (bIsShaderTBN)
+	{
+		constexpr bool bSendMaterial = false;
+
+		mpRenderer->BeginEvent("Draw TBN Vectors");
+		if (mbUseDeferredRendering)
+			mpRenderer->BindDepthTarget(mWorldDepthTarget);
+
+		mpRenderer->SetShader(EShaders::TBN);
+
+		for (const GameObject* obj : mTBNDrawObjects)
+			obj->RenderOpaque(mpRenderer, mSceneView, bSendMaterial, mpActiveScene->mMaterials);
+
+
+		if (mbUseDeferredRendering)
+			mpRenderer->UnbindDepthTarget();
+
+		mpRenderer->SetShader(mSelectedShader);
+		mpRenderer->EndEvent();
+	}
+#endif
+}
+
+void Engine::RenderUI()
+{
 	// UI TEXT
 	mpGPUProfiler->BeginQuery("UI");
 	mpCPUProfiler->BeginEntry("UI");
@@ -1084,25 +1106,29 @@ void Engine::Render()
 		const float Y_POS = 0.75f * sEngineSettings.window.height;
 		const float LINE_HEIGHT = 25.0f;
 		vec2 screenPosition(X_POS, Y_POS);
-		
+
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
 		_drawDesc.text = std::string("F1 - Render Mode: ") + (!mbUseDeferredRendering ? "Forward" : "Deferred");
 		mpTextRenderer->RenderText(_drawDesc);
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
 		_drawDesc.text = std::string("F2 - SSAO: ") + (mbIsAmbientOcclusionOn ? "On" : "Off");
-		if(mbIsAmbientOcclusionOn)
+		if (mbIsAmbientOcclusionOn)
 			_drawDesc.text += (mSceneView.sceneRenderSettings.ssao.bEnabled ? " (Scene: On)" : " (Scene: Off)");
 		mpTextRenderer->RenderText(_drawDesc);
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
 		_drawDesc.text = std::string("F3 - Bloom: ") + (mbIsBloomOn ? "On" : "Off");
-		if(mbIsBloomOn)
-			_drawDesc.text += (mPostProcessPass._settings.bloom.bEnabled ? " (Scene: On)": " (Scene: Off)");
+		if (mbIsBloomOn)
+			_drawDesc.text += (mPostProcessPass._settings.bloom.bEnabled ? " (Scene: On)" : " (Scene: Off)");
 		mpTextRenderer->RenderText(_drawDesc);
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
-		_drawDesc.text = std::string("F4 - Display Render Targets: ") + (mDisplayRenderTargets ? "On" : "Off");
+		_drawDesc.text = std::string("F4 - Display Render Targets: ") + (mbDisplayRenderTargets ? "On" : "Off");
+		mpTextRenderer->RenderText(_drawDesc);
+
+		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
+		_drawDesc.text = std::string("F5 - Toggle Rendering AABBs: ") + (mbRenderBoundingBoxes ? "On" : "Off");
 		mpTextRenderer->RenderText(_drawDesc);
 	}
 
@@ -1110,20 +1136,6 @@ void Engine::Render()
 
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndQuery();
-
-#endif
-	mpGPUProfiler->BeginQuery("Present");
-	mpCPUProfiler->BeginEntry("Present");
-	mpRenderer->EndFrame();
-	mpCPUProfiler->EndEntry();
-	mpGPUProfiler->EndQuery();
-
-
-	mpCPUProfiler->EndEntry();	// Render() call
-
-	mpGPUProfiler->EndQuery();
-	mpGPUProfiler->EndFrame(mFrameCount);
-	++mFrameCount;
 }
 
 void Engine::RenderLights() const

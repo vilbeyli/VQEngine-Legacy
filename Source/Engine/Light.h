@@ -21,6 +21,7 @@
 
 #include "Transform.h"
 #include "DataStructures.h"
+#include "Settings.h"
 
 #include "Renderer/RenderingEnums.h"
 
@@ -94,12 +95,14 @@ struct DirectionalLight
 
 	float shadowMapDistance;	// view matrix position - distance from scene center 
 	float depthBias;
-	vec2 shadowMapSize;
+	vec2 shadowMapAndViewportSize;
+
 
 	DirectionalLightGPU GetGPUData() const;
 	XMMATRIX GetLightSpaceMatrix() const;
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
+	Settings::ShadowMap GetSettings() const;
 };
 
 

@@ -24,7 +24,7 @@
 // ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
 // bloom	    : enabled?, brighness threshold
 // skylight	    : enabled?
-// directional  : color preset, castsShadows?, brightness, direction(vec3), range, shadowMapDimension, depth bias
+// directional  : colorPreset, Shadows?, brightness, direction(vec3), range, shadowMapDimension, shadowViewPortDimension, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
 ao true 0.1 8.00 2.70

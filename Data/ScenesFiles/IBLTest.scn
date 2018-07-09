@@ -24,15 +24,14 @@
 // ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
 // bloom	    : enabled?, brighness threshold
 // skylight	    : enabled?
-// directional  : color preset, castsShadows?, brightness, direction(vec3), range, shadowMapDimension, depth bias
+// directional  : colorPreset, Shadows?, brightness, direction(vec3), range, shadowMapDimension, shadowViewPortDimension, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
-camera 0.1 1000 60   0 -20 120  180 0 
 ao true 1.00 19.0 4.10
 bloom false 1.60
-
-// todo: directional light
-// Light: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle,      pos(3),            rot(X>Y>Z)
-// light       s              white      	false       1800         70	           0   120    120	             140  180  	0	 
 skylight true
+
+camera 0.1 1000 60   0 -20 120  180 0 
+
+// light       s              white      	false       1800         70	           0   120    120	             140  180  	0	 
 

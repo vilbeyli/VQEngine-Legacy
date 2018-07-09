@@ -320,8 +320,9 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const float brightness		 = stof(command[2]);
 		const vec3 direction		 = vec3(stof(command[3]), stof(command[4]), stof(command[5])).normalized();
 		const int shadowMapDimension = command.size() > 6 ? stoi(command[6]) : 1024;
-		const float range			 = command.size() > 7 ? stof(command[7]) : 1.0f;
-		const float depthBias		 = command.size() > 8 ? stof(command[8]) : 0.00000001f;
+		const int shadowViewportDimension = command.size() > 7 ? stoi(command[7]) : shadowMapDimension;
+		const float range			 = command.size() > 8 ? stof(command[8]) : 1.0f;
+		const float depthBias		 = command.size() > 9 ? stof(command[9]) : 0.00000001f;
 
 		DirectionalLight l{
 			sColorLookup.at(colorValue),
@@ -330,7 +331,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			1,
 			range,
 			depthBias,
-			vec2(shadowMapDimension, shadowMapDimension)
+			vec2(shadowMapDimension, shadowViewportDimension)
 		};
 
 		scene.directionalLight = l;

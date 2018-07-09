@@ -31,9 +31,9 @@
 
 #include <array>
 
-void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings)
+void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings)
 {
-	this->_shadowMapDimension = static_cast<int>(shadowMapSettings.dimension);
+	this->mShadowMapDimension_Spot = static_cast<int>(shadowMapSettings.dimension);
 
 #if _DEBUG
 	pRenderer->m_Direct3D->ReportLiveObjects("--------SHADOW_PASS_INIT");
@@ -52,40 +52,63 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, ID3D11Device* device, const 
 
 	// CREATE DEPTH TARGETS: SPOT LIGHTS
 	//
-	texDesc.height = texDesc.width = _shadowMapDimension;
+	texDesc.height = texDesc.width = mShadowMapDimension_Spot;
 	texDesc.arraySize = NUM_SPOT_LIGHT_SHADOW;
 	auto DepthTargetIDs = pRenderer->AddDepthTarget(depthDesc);
-	this->_spotShadowDepthTargets.resize(NUM_SPOT_LIGHT_SHADOW);
-	std::copy(RANGE(DepthTargetIDs), this->_spotShadowDepthTargets.begin());
+	this->mDepthTargets_Spot.resize(NUM_SPOT_LIGHT_SHADOW);
+	std::copy(RANGE(DepthTargetIDs), this->mDepthTargets_Spot.begin());
 
-	this->_spotShadowMaps = this->_spotShadowDepthTargets.size() > 0
-		? pRenderer->GetDepthTargetTexture(this->_spotShadowDepthTargets[0])
+	this->mShadowMapTextures_Spot = this->mDepthTargets_Spot.size() > 0
+		? pRenderer->GetDepthTargetTexture(this->mDepthTargets_Spot[0])
 		: -1;
 
-	// CREATE DEPTH TARGETS: DIRECTIONAL LIGHT
-	//
-	texDesc.height = texDesc.width = 2048;	// TODO: use scene settings
+	this->mShadowMapShader = EShaders::SHADOWMAP_DEPTH;
+
+	ZeroMemory(&mShadowViewPort_Spot, sizeof(D3D11_VIEWPORT));
+	this->mShadowViewPort_Spot.Height = static_cast<float>(mShadowMapDimension_Spot);
+	this->mShadowViewPort_Spot.Width = static_cast<float>(mShadowMapDimension_Spot);
+	this->mShadowViewPort_Spot.MinDepth = 0.f;
+	this->mShadowViewPort_Spot.MaxDepth = 1.f;
+
+}
+
+void ShadowMapPass::InitializeDirectionalLightShadowMap(Renderer * pRenderer, const Settings::ShadowMap & shadowMapSettings)
+{
+	const int textureDimension = static_cast<int>(shadowMapSettings.dimension);
+	const bool bDepthOnly = true;
+	const EImageFormat format = bDepthOnly ? R32 : R24G8;
+
+	DepthTargetDesc depthDesc;
+	depthDesc.format = bDepthOnly ? D32F : D24UNORM_S8U;
+	TextureDesc& texDesc = depthDesc.textureDesc;
+	texDesc.format = format;
+	texDesc.usage = static_cast<ETextureUsage>(DEPTH_TARGET | RESOURCE);
+
+	texDesc.height = texDesc.width = textureDimension;
 	texDesc.arraySize = 1;
-	this->_directionalShadowDepthTarget = pRenderer->AddDepthTarget(depthDesc)[0];
-	this->_directionalShadowMaps = pRenderer->GetDepthTargetTexture(this->_directionalShadowDepthTarget);
-
-	// TODO:
+	
+#if 0
+	// first time - add target
+	if (this->mDepthTarget_Directional == -1)
+	{
+		this->mDepthTarget_Directional = pRenderer->AddDepthTarget(depthDesc)[0];
+		this->mShadowMapTexture_Directional = pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional);
+	}
+	else // other times - resize target
+	{
+		pRenderer->ResizeDepthTarget(this->mDepthTarget_Directional, depthDesc);
+	}
+#else
+	// always add depth target when loading a new scene
 	//
-	// render states for front face culling 
-	this->_shadowRenderState = pRenderer->AddRasterizerState(ERasterizerCullMode::FRONT, ERasterizerFillMode::SOLID, true, false);
-	this->_shadowShader = EShaders::SHADOWMAP_DEPTH;
+	this->mDepthTarget_Directional = pRenderer->AddDepthTarget(depthDesc)[0];
+	this->mShadowMapTexture_Directional = pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional);
+#endif
 
-	ZeroMemory(&_shadowViewport, sizeof(D3D11_VIEWPORT));
-	_shadowViewport.Height = static_cast<float>(_shadowMapDimension);
-	_shadowViewport.Width = static_cast<float>(_shadowMapDimension);
-	_shadowViewport.MinDepth = 0.f;
-	_shadowViewport.MaxDepth = 1.f;
-
-	_shadowViewportDirectional.Width = 512.f * 4;
-	_shadowViewportDirectional.Height = 512.f * 4;
-	_shadowViewportDirectional.MinDepth = 0.f;
-	_shadowViewportDirectional.MaxDepth = 1.f;
-
+	mShadowViewPort_Directional.Width  = static_cast<FLOAT>(textureDimension);
+	mShadowViewPort_Directional.Height = static_cast<FLOAT>(textureDimension);
+	mShadowViewPort_Directional.MinDepth = 0.f;
+	mShadowViewPort_Directional.MaxDepth = 1.f;
 }
 
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<const GameObject*> ZPassObjects, const ShadowView& shadowView) const
@@ -94,14 +117,14 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 	if (bNoShadowingLights) return;
 
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
-	pRenderer->SetShader(_shadowShader);					// shader for rendering z buffer
-	pRenderer->SetViewport(_shadowViewport);
+	pRenderer->SetShader(mShadowMapShader);					// shader for rendering z buffer
+	pRenderer->SetViewport(mShadowViewPort_Spot);
 
 	// SPOT LIGHT SHADOW MAPS
 	//
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
-		pRenderer->BindDepthTarget(_spotShadowDepthTargets[i]);	// only depth stencil buffer
+		pRenderer->BindDepthTarget(mDepthTargets_Spot[i]);	// only depth stencil buffer
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 		pRenderer->SetConstant4x4f("viewProj", shadowView.spots[i]->GetLightSpaceMatrix());
 		pRenderer->SetConstant4x4f("view"    , shadowView.spots[i]->GetViewMatrix());
@@ -118,8 +141,8 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 	//
 	if (shadowView.pDirectional != nullptr)
 	{
-		pRenderer->SetViewport(_shadowViewportDirectional);
-		pRenderer->BindDepthTarget(_directionalShadowDepthTarget);	// only depth stencil buffer
+		pRenderer->SetViewport(mShadowViewPort_Directional);
+		pRenderer->BindDepthTarget(mDepthTarget_Directional);	// only depth stencil buffer
 		pRenderer->Apply();
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 		pRenderer->SetConstant4x4f("viewProj", shadowView.pDirectional->GetLightSpaceMatrix());

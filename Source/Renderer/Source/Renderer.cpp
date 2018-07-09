@@ -283,8 +283,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		DepthTargetDesc depthDesc;
 		depthDesc.format = EImageFormat::D32F;
 		depthDesc.textureDesc = depthTexDesc;
-		AddDepthTarget(depthDesc)[0];	// assumes index 0
-		mDefaultDepthBufferTexture = GetDepthTargetTexture(0);
+		mDefaultDepthBufferTexture = GetDepthTargetTexture(AddDepthTarget(depthDesc)[0]);
 	}
 	m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
 
@@ -1130,6 +1129,7 @@ std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depth
 
 	return newDepthTargetIDs;
 }
+
 
 const Texture& Renderer::GetTextureObject(TextureID id) const
 {

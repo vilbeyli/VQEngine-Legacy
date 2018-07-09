@@ -128,6 +128,8 @@ private:
 	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 	void PreRender();
 	void Render();
+	void RenderDebug(const XMMATRIX& viewProj);
+	void RenderUI();
 	void RenderLoadingScreen() const;
 	void RenderLights() const;
 
@@ -197,16 +199,17 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	// ENGINE STATE
 	//----------------------------------------------------------------------------------------------------------------
-	FrameStats						mFrameStats;
-	bool							mbIsPaused;
-	bool							mbShowProfiler;
-	bool							mbShowControls;
+	FrameStats			mFrameStats;
+	bool				mbIsPaused;
+	bool				mbShowProfiler;
+	bool				mbShowControls;
 
-	bool							mbUseDeferredRendering;	// todo read from sceneview???
-	bool							mbIsAmbientOcclusionOn;	// todo read from sceneview???
-	bool							mbIsBloomOn;
-	bool							mDisplayRenderTargets;	// todo read from sceneview???
-	unsigned long long				mFrameCount;
+	bool				mbUseDeferredRendering;	// todo read from sceneview???
+	bool				mbIsAmbientOcclusionOn;	// todo read from sceneview???
+	bool				mbIsBloomOn;
+	bool				mbDisplayRenderTargets;	// todo read from sceneview???
+	bool				mbRenderBoundingBoxes;
+	unsigned long long	mFrameCount;
 };
 
 #define ENGINE Engine::GetEngine()

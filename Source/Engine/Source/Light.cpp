@@ -240,6 +240,7 @@ XMMATRIX DirectionalLight::GetLightSpaceMatrix() const
 
 XMMATRIX DirectionalLight::GetViewMatrix() const
 {
+	if (shadowMapAndViewportSize.y() < 1.0f) return XMMatrixIdentity();
 	XMVECTOR up = vec3::Up;
 	XMVECTOR lookAt = vec3::Zero;
 	XMVECTOR lightPos = direction * -shadowMapDistance;	// away from the origin along the direction vector 
@@ -248,7 +249,16 @@ XMMATRIX DirectionalLight::GetViewMatrix() const
 
 XMMATRIX DirectionalLight::GetProjectionMatrix() const
 {
-	const float sz = shadowMapSize.x();
-	return XMMatrixOrthographicLH(sz, sz, 0.5f, shadowMapDistance * 1.5f);
+	const float sz = shadowMapAndViewportSize.y();
+	if (sz < 1.0f) return XMMatrixIdentity();
+	return XMMatrixOrthographicLH(sz, sz, 0.05f, shadowMapDistance * 1.5f);
+	//return XMMatrixOrthographicLH(4096, 4096, 0.5f, shadowMapDistance * 1.5f);
 	//return XMMatrixOrthographicLH(sz, sz, 0.1f, 1200.0f);
+}
+
+Settings::ShadowMap DirectionalLight::GetSettings() const
+{
+	Settings::ShadowMap settings;
+	settings.dimension = static_cast<size_t>(shadowMapAndViewportSize.x());
+	return settings;
 }

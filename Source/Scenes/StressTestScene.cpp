@@ -151,7 +151,7 @@ void StressTestScene::Load(SerializedScene& scene)
 	const int Z_UNITS = 250;
 	std::vector<Transform> transforms = 
 	{
-		Transform(vec3(-X_UNITS, 20, 0), Q_I, vec3(0.08f)),					// sponza
+		Transform(vec3(-X_UNITS, 0, 0), Q_I, vec3(0.18f)),					// sponza
 		Transform(vec3(-X_UNITS, 0, Z_UNITS), Q_Nanosuit, vec3(5.0f)),		// nano
 
 		Transform(vec3(+X_UNITS, 20, 0), Q_Platform, vec3(70.0f)),			// platform
@@ -164,7 +164,7 @@ void StressTestScene::Load(SerializedScene& scene)
 		Transform(vec3(+X_UNITS, 20, -Z_UNITS* 2), Q_I, vec3(1.0f)),		// zen ball
 
 		Transform(vec3(+X_UNITS, 0, +Z_UNITS * 2), Q_I, vec3(1.0f)),		// ironman
-		Transform(vec3(0, 10, -Z_UNITS), Q_I, vec3(1.0f)),					// spider
+		Transform(vec3(0, 1, -Z_UNITS), Q_I, vec3(1.0f)),					// spider
 		
 #if !_DBEUG
 		Transform(vec3(-X_UNITS, 83, +Z_UNITS * 2), Q_I, vec3(0.7f)),		// room
@@ -394,6 +394,7 @@ void StressTestScene::AddObjects()
 
 	// ADD NEW OBJECTS
 	//
+	constexpr bool bCastsShadows = true;
 	std::vector<vec3> initialPositions;
 	for (size_t i = 0; i < NUM_OBJ; ++i)
 	{
@@ -405,7 +406,7 @@ void StressTestScene::AddObjects()
 	}
 	std::for_each(mpTestObjects.begin(), mpTestObjects.end(), [&](GameObject* o)
 	{
-		o->mRenderSettings.bCastShadow = false;
+		o->mRenderSettings.bCastShadow = bCastsShadows;
 	});
 
 	// CENTER OF MASS

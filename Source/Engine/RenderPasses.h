@@ -70,27 +70,28 @@ struct ShadowView
 	}
 };
 
-// todo: shader defines
-// don't forget to update GPU define too (LightingCommon.hlsl)
+
 using DepthTargetIDArray = std::vector<DepthTargetID>;
 struct ShadowMapPass
 {
-	void Initialize(Renderer* pRenderer, ID3D11Device* device, const Settings::ShadowMap& shadowMapSettings);
+	void InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
+	void InitializeDirectionalLightShadowMap(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
 	void RenderShadowMaps(Renderer* pRenderer, const std::vector<const GameObject*> ZPassObjects, const ShadowView& shadowView) const;
 	
-	unsigned				_shadowMapDimension;
-	ShaderID				_shadowShader;
-	RasterizerStateID		_shadowRenderState;
-	D3D11_VIEWPORT			_shadowViewport;	// spot light viewport
-	D3D11_VIEWPORT			_shadowViewportDirectional;
-	
-	TextureID				_pointShadowMaps;			// cubemap array
-	TextureID				_spotShadowMaps;			// tex2D array
-	TextureID				_directionalShadowMaps;		// tex2D array
+	Renderer*			mpRenderer = nullptr;
+	ShaderID			mShadowMapShader = -1;
 
-	DepthTargetIDArray		_spotShadowDepthTargets;
-	DepthTargetID			_directionalShadowDepthTarget;
-	DepthTargetID			_pointShadowDepthTargets;
+	unsigned			mShadowMapDimension_Spot = 0;
+	D3D11_VIEWPORT		mShadowViewPort_Spot;	// spot light viewport
+	D3D11_VIEWPORT		mShadowViewPort_Directional;
+	
+	TextureID			mShadowMapTextures_Spot = -1;			// tex2D array
+	TextureID			mShadowMapTexture_Directional = -1;		// tex2D array
+	TextureID			mShadowMapTextures_Point = -1;			// cubemap array
+
+	DepthTargetIDArray	mDepthTargets_Spot;
+	DepthTargetID		mDepthTarget_Directional = -1;
+	DepthTargetID		mDepthTargets_Point = -1;
 };
 
 struct BloomPass

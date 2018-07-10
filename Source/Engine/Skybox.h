@@ -114,7 +114,7 @@ public:
 	// STATIC INTERFACE
 	//--------------------------------------------------------
 	static void InitializePresets(Renderer* pRenderer, const Settings::Rendering& renderSettings);
-	static void InitializePresets_Async(Renderer* pRenderer, const Settings::Rendering& renderSettings, std::mutex& renderMutex);
+	static void InitializePresets_Async(Renderer* pRenderer, const Settings::Rendering& renderSettings);
 	static std::vector<Skybox> s_Presets;
 	
 	//--------------------------------------------------------

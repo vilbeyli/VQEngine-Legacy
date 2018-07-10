@@ -45,6 +45,7 @@
 
 using namespace VQEngine;
 
+std::mutex Engine::mLoadRenderingMutex;
 
 // ====================================================================================
 // HELPERS
@@ -227,7 +228,14 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		// mpCPUProfiler->BeginEntry("EngineLoad");
 		//Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
 		//mpTimer->Start();
-		Skybox::InitializePresets_Async(mpRenderer, rendererSettings, mLoadRenderingMutex);
+#if 1
+		Skybox::InitializePresets_Async(mpRenderer, rendererSettings);
+#else
+		{
+			std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+			Skybox::InitializePresets(mpRenderer, rendererSettings);
+		}
+#endif
 		//mpTimer->Stop();
 		//Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
 		//mpTimer->Reset();
@@ -242,7 +250,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
 #endif
 		{
-			std::unique_lock<std::mutex>(mLoadRenderingMutex);
+			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 			if (!LoadSceneFromFile())
 			{
 				Log::Error("Engine couldn't load scene.");
@@ -260,24 +268,24 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			//Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
 
 			{
-				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
 			}
 			//renderer->m_Direct3D->ReportLiveObjects();
 			{
-				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mDeferredRenderingPasses.Initialize(mpRenderer);
 			}
 			{
-				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
 			}
 			{
-				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mDebugPass.Initialize(mpRenderer);
 			}
 			{
-				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mSSAOPass.Initialize(mpRenderer);
 			}
 
@@ -293,7 +301,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			normalSamplerDesc.MaxAnisotropy = 0;
 			normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
 			{
-				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
 			}
 		}
@@ -303,6 +311,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//mpCPUProfiler->EndProfile();
 
 		mbLoading = false;
+		return true;
 	};
 
 	mpThreadPool->AddTask(AsyncEngineLoad);
@@ -483,17 +492,18 @@ bool Engine::LoadScene(int level)
 {
 #if LOAD_ASYNC
 	mbLoading = true;
-	auto loadFn = [&]()
+	Log::Info("LoadScene: %d", level);
+	auto loadFn = [&, level]()
 	{
 		{
-			std::unique_lock<std::mutex>(mLoadRenderingMutex);
+			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 			mpActiveScene->UnloadScene();
 		}
 		mShadowCasters.clear();
 		Engine::sEngineSettings.levelToLoad = level;
 		bool bLoadSuccess = false;
 		{
-			std::unique_lock<std::mutex>(mLoadRenderingMutex);
+			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 			bLoadSuccess = LoadSceneFromFile();
 		}
 		mbLoading = false;
@@ -548,6 +558,7 @@ void Engine::UpdateAndRender()
 		bool bRender = mAccumulator > (1.0f / refreshRate);
 		if (bRender)
 		{
+			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 			mAccumulator = 0.0f;
 			mpGPUProfiler->BeginFrame(mFrameCount);
 			mpGPUProfiler->BeginQuery("GPU");
@@ -731,7 +742,7 @@ bool Engine::ReloadScene()
 		mShadowCasters.clear();
 		bool bLoadSuccess = false;
 		{
-			std::unique_lock<std::mutex>(mLoadRenderingMutex);
+			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 			bLoadSuccess = LoadSceneFromFile();
 		}
 		mbLoading = false;

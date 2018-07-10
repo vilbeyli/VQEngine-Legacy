@@ -32,6 +32,7 @@
 
 #include <memory>
 #include <atomic>
+#include <mutex>
 
 using std::shared_ptr;
 using std::unique_ptr;
@@ -219,7 +220,8 @@ private:
 	//---------------------------------------------------------------------------------------------------------------- 
 	std::atomic<bool>	mbLoading;
 	float				mAccumulator;
-	std::mutex			mLoadRenderingMutex;
+	public:
+	static std::mutex			mLoadRenderingMutex;
 };
 
 #define ENGINE Engine::GetEngine()

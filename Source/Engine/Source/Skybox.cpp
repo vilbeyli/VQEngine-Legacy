@@ -16,6 +16,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Skybox.h"
+#include "Engine.h"
 #include "Renderer/Renderer.h"
 #include "Utilities/Log.h"
 
@@ -100,15 +101,15 @@ std::pair < std::string, EnvironmentMapFileNames>  GetsIBLFiles(EEnvironmentMapP
 	return std::make_pair(root, files);
 }
 
-void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Rendering& renderSettings, std::mutex& renderMutex)
+void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Rendering& renderSettings)
 {
 	EnvironmentMap::Initialize(pRenderer);
 	{
-		std::unique_lock<std::mutex>(renderMutex);
+		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
 		EnvironmentMap::LoadShaders();
 	}
 	{
-		std::unique_lock<std::mutex>(renderMutex);
+		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
 		EnvironmentMap::CalculateBRDFIntegralLUT();
 	}
 
@@ -123,7 +124,7 @@ void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Render
 
 		TextureID skydomeTex = -1;
 		{
-			std::unique_lock<std::mutex>(renderMutex);
+			std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
 			skydomeTex = pRenderer->CreateCubemapTexture(filePaths);
 		}
 		s_Presets[ECubeMapPresets::NIGHT_SKY] = Skybox(pRenderer, skydomeTex, bEquirectangular);
@@ -152,7 +153,7 @@ void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Render
 		{
 			const auto rootAndFilesPair = GetsIBLFiles(preset);
 			{
-				std::unique_lock<std::mutex>(renderMutex);
+				std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
 				s_Presets[preset] = Skybox(pRenderer, rootAndFilesPair.second, rootAndFilesPair.first, bEquirectangular);
 			}
 		});

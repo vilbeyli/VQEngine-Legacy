@@ -187,7 +187,7 @@ private:
 	SamplerID						mNormalSampler;
 
 	// #RenderPassRefactoring
-	// keeping passes around this doesn't make sense...
+	// keeping passes around like this doesn't make sense...
 	ShadowMapPass					mShadowMapPass;
 	DeferredRenderingPasses			mDeferredRenderingPasses;
 	AmbientOcclusionPass			mSSAOPass;
@@ -212,9 +212,14 @@ private:
 	bool				mbDisplayRenderTargets;	// todo read from sceneview???
 	bool				mbRenderBoundingBoxes;
 
+	unsigned long long	mFrameCount;
+
+	//----------------------------------------------------------------------------------------------------------------
+	// LOADING
+	//---------------------------------------------------------------------------------------------------------------- 
 	std::atomic<bool>	mbLoading;
 	float				mAccumulator;
-	unsigned long long	mFrameCount;
+	std::mutex			mLoadRenderingMutex;
 };
 
 #define ENGINE Engine::GetEngine()

@@ -92,9 +92,11 @@ void CPUProfiler::BeginEntry(const std::string & entryName)
 		{	// first node
 			mPerfEntryTree.root.pData = pCurrentPerfEntry;
 			mState.pLastEntryNode = &mPerfEntryTree.root;
+			assert(mState.pLastEntryNode);
 		}
 		else
 		{	// rest of the nodes
+			assert(mState.pLastEntryNode);
 			mState.pLastEntryNode = mPerfEntryTree.AddChild(*mState.pLastEntryNode, pCurrentPerfEntry);
 		}
 	}
@@ -120,7 +122,7 @@ void CPUProfiler::EndEntry()
 	entry.UpdateSampleEnd();
 	
 	// update last entry node with the parent of it
-	if(mState.pLastEntryNode) mState.pLastEntryNode = mState.pLastEntryNode->pParent;
+	if(mState.pLastEntryNode && mState.pLastEntryNode->pParent) mState.pLastEntryNode = mState.pLastEntryNode->pParent;
 }
 
 

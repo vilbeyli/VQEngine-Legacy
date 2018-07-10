@@ -46,73 +46,90 @@ const  FilePaths s_filePaths = []{
 }();
 
 std::vector<Skybox> Skybox::s_Presets(ECubeMapPresets::CUBEMAP_PRESET_COUNT + EEnvironmentMapPresets::ENVIRONMENT_MAP_PRESET_COUNT);
-
-void InitializePreset_sIBL(Renderer* pRenderer, EEnvironmentMapPresets preset)
+std::pair < std::string, EnvironmentMapFileNames>  GetsIBLFiles(EEnvironmentMapPresets preset)
 {
 	const std::string sIBLDirectory = Renderer::sHDRTextureRoot + std::string("sIBL/");
-	const bool bEquirectangular = true;
-
-	auto initBarca = [&]()
-	{	// BARCELONA ROOFTOP  
-		EnvironmentMapFileNames files;
-		const std::string root = sIBLDirectory + "Barcelona_Rooftops/";
+	EnvironmentMapFileNames files;
+	std::string root;
+	switch (preset)
+	{
+	case MILKYWAY:
+		root = sIBLDirectory + "Milkyway/";
+		files = {
+			"Milkyway_BG.jpg",
+			"Milkyway_Light.hdr",
+			"Milkyway_small.hdr",
+		};
+		break;
+	case BARCELONA:
+		root = sIBLDirectory + "Barcelona_Rooftops/";
 		files = {
 			"Barce_Rooftop_C_8k.jpg",
 			"Barce_Rooftop_C_Env.hdr",
 			"Barce_Rooftop_C_3k.hdr",
 		};
-		Skybox::s_Presets[EEnvironmentMapPresets::BARCELONA] = Skybox(pRenderer, files, root, bEquirectangular);
-	};
-
-	auto initTropical = [&]()
-	{	// TROPICAL BEACH
-		EnvironmentMapFileNames files;
-		const std::string root = sIBLDirectory + "Tropical_Beach/";
+		break;
+	case TROPICAL_BEACH:
+		root = sIBLDirectory + "Tropical_Beach/";
 		files = {
 			"Tropical_Beach_8k.jpg",
 			"Tropical_Beach_Env.hdr",
 			"Tropical_Beach_3k.hdr",
 		};
-		Skybox::s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = Skybox(pRenderer, files, root, bEquirectangular);
-	};
-
-
-	switch (preset)
-	{
-	case BARCELONA:
-		initBarca();
-		break;
-	case TROPICAL_BEACH:
 		break;
 	case TROPICAL_RUINS:
+		root = sIBLDirectory + "Tropical_Ruins/";
+		files = {
+			"TropicalRuins_8k.jpg",
+			"TropicalRuins_Env.hdr",
+			"TropicalRuins_3k.hdr",
+		};
 		break;
 	case WALK_OF_FAME:
+		root = sIBLDirectory + "Walk_Of_Fame/";
+		files = {
+			"Mans_Outside_8k_TMap.jpg",
+			"Mans_Outside_Env.hdr",
+			"Mans_Outside_2k.hdr",
+		};
 		break;
 	default:
-		Log::Error("Preset %d is not an sIBL preset.", preset);
+		Log::Warning("Unknown Environment Map Preset");
 		break;
 	}
-
+	return std::make_pair(root, files);
 }
 
-void Skybox::InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps, bool bLoadAllMaps)
+void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Rendering& renderSettings, std::mutex& renderMutex)
 {
 	EnvironmentMap::Initialize(pRenderer);
-	EnvironmentMap::LoadShaders();
-	EnvironmentMap::CalculateBRDFIntegralLUT();
+	{
+		std::unique_lock<std::mutex>(renderMutex);
+		EnvironmentMap::LoadShaders();
+	}
+	{
+		std::unique_lock<std::mutex>(renderMutex);
+		EnvironmentMap::CalculateBRDFIntegralLUT();
+	}
 
 	// Cubemap Skyboxes
 	//------------------------------------------------------------------------------------------------------------------------------------
 	{	// NIGHTSKY		
+		// #AsyncLoad: Mutex DEVICE
+
 		const bool bEquirectangular = false;
 		const auto offsetIter = s_filePaths.begin() + ECubeMapPresets::NIGHT_SKY;
 		const FilePaths filePaths = FilePaths(offsetIter, offsetIter + 6);
-		
-		TextureID skydomeTex = pRenderer->CreateCubemapTexture(filePaths);
+
+		TextureID skydomeTex = -1;
+		{
+			std::unique_lock<std::mutex>(renderMutex);
+			skydomeTex = pRenderer->CreateCubemapTexture(filePaths);
+		}
 		s_Presets[ECubeMapPresets::NIGHT_SKY] = Skybox(pRenderer, skydomeTex, bEquirectangular);
 	}
 
-	if (loadEnvironmentMaps)
+	if (renderSettings.bEnableEnvironmentLighting)
 	{
 		// HDR / IBL - Equirectangular Skyboxes
 		//------------------------------------------------------------------------------------------------------------------------------------
@@ -122,63 +139,72 @@ void Skybox::InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps, bo
 
 		EnvironmentMapFileNames files;
 
-		//InitializePreset_sIBL(pRenderer, EEnvironmentMapPresets::BARCELONA);
-		{	// BARCELONA ROOFTOP  
-			const std::string root = sIBLDirectory + "Barcelona_Rooftops/";
-			files = {
-				"Barce_Rooftop_C_8k.jpg",
-				"Barce_Rooftop_C_Env.hdr",
-				"Barce_Rooftop_C_3k.hdr",
-			};
-			s_Presets[EEnvironmentMapPresets::BARCELONA] = Skybox(pRenderer, files, root, bEquirectangular);
-		}
-
-		if (bLoadAllMaps)
+		const std::vector<EEnvironmentMapPresets> presets =
 		{
-			{	// TROPICAL BEACH
-				const std::string root = sIBLDirectory + "Tropical_Beach/";
-				files = {
-					"Tropical_Beach_8k.jpg",
-					"Tropical_Beach_Env.hdr",
-					"Tropical_Beach_3k.hdr",
-				};
-				s_Presets[EEnvironmentMapPresets::TROPICAL_BEACH] = Skybox(pRenderer, files, root, bEquirectangular);
-			}
+			EEnvironmentMapPresets::BARCELONA     ,
+			EEnvironmentMapPresets::TROPICAL_BEACH,
+			EEnvironmentMapPresets::MILKYWAY	  ,
+			EEnvironmentMapPresets::TROPICAL_RUINS,
+			EEnvironmentMapPresets::WALK_OF_FAME
+		};
 
-			{	// MILKYWAY 
-				const std::string root = sIBLDirectory + "Milkyway/";
-				files = {
-					"Milkyway_BG.jpg",
-					"Milkyway_Light.hdr",
-					"Milkyway_small.hdr",
-				};
-				s_Presets[EEnvironmentMapPresets::MILKYWAY] = Skybox(pRenderer, files, root, bEquirectangular);
+		std::for_each(RANGE(presets), [&](auto preset)
+		{
+			const auto rootAndFilesPair = GetsIBLFiles(preset);
+			{
+				std::unique_lock<std::mutex>(renderMutex);
+				s_Presets[preset] = Skybox(pRenderer, rootAndFilesPair.second, rootAndFilesPair.first, bEquirectangular);
 			}
-
-			{	// TROPICAL RUINS
-				const std::string root = sIBLDirectory + "Tropical_Ruins/";
-				files = {
-					"TropicalRuins_8k.jpg",
-					"TropicalRuins_Env.hdr",
-					"TropicalRuins_3k.hdr",
-				};
-				s_Presets[EEnvironmentMapPresets::TROPICAL_RUINS] = Skybox(pRenderer, files, root, bEquirectangular);
-			}
-
-			{	// WALK OF FAME
-				const std::string root = sIBLDirectory + "Walk_Of_Fame/";
-				files = {
-					"Mans_Outside_8k_TMap.jpg",
-					"Mans_Outside_Env.hdr",
-					"Mans_Outside_2k.hdr",
-				};
-				s_Presets[EEnvironmentMapPresets::WALK_OF_FAME] = Skybox(pRenderer, files, root, bEquirectangular);
-			}
-
-			// ...
-		}
+		});
 	}
 }
+
+void Skybox::InitializePresets(Renderer* pRenderer, const Settings::Rendering& renderSettings)
+{
+	EnvironmentMap::Initialize(pRenderer);
+	EnvironmentMap::LoadShaders();
+	EnvironmentMap::CalculateBRDFIntegralLUT();
+
+	// Cubemap Skyboxes
+	//------------------------------------------------------------------------------------------------------------------------------------
+	{	// NIGHTSKY		
+		// #AsyncLoad: Mutex DEVICE
+
+		const bool bEquirectangular = false;
+		const auto offsetIter = s_filePaths.begin() + ECubeMapPresets::NIGHT_SKY;
+		const FilePaths filePaths = FilePaths(offsetIter, offsetIter + 6);
+		
+		TextureID skydomeTex = pRenderer->CreateCubemapTexture(filePaths);
+		//Skybox::SetPreset(ECubeMapPresets::NIGHT_SKY, std::move(Skybox(pRenderer, skydomeTex, bEquirectangular)));
+		s_Presets[ECubeMapPresets::NIGHT_SKY] = Skybox(pRenderer, skydomeTex, bEquirectangular);
+	}
+	
+	if (renderSettings.bEnableEnvironmentLighting)
+	{
+		// HDR / IBL - Equirectangular Skyboxes
+		//------------------------------------------------------------------------------------------------------------------------------------
+		//EnvironmentMap::Initialize(pRenderer);
+		
+		const bool bEquirectangular = true;
+
+		EnvironmentMapFileNames files;
+
+		const std::vector<EEnvironmentMapPresets> presets = 
+		{
+			EEnvironmentMapPresets::BARCELONA     ,
+			EEnvironmentMapPresets::TROPICAL_BEACH,
+			EEnvironmentMapPresets::MILKYWAY	  ,
+			EEnvironmentMapPresets::TROPICAL_RUINS,
+			EEnvironmentMapPresets::WALK_OF_FAME
+		};
+		std::for_each(RANGE(presets), [&](auto preset)
+		{
+			const auto rootAndFilesPair = GetsIBLFiles(preset);
+			s_Presets[preset] = Skybox(pRenderer, rootAndFilesPair.second, rootAndFilesPair.first, bEquirectangular);
+		});
+	}
+}
+
 
 // SKYBOX
 //==========================================================================================================
@@ -262,6 +288,7 @@ void EnvironmentMap::LoadShaders()
 	const std::vector<std::string> IBLConvolution = { "Skybox_vs", "PreFilterConvolution_ps" };		// compute?
 	const std::vector<std::string> RenderIntoCubemap = { "Skybox_vs", "RenderIntoCubemap_ps" };
 
+	// #AsyncLoad: Mutex DEVICE
 	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
 	sPrefilterShader = spRenderer->AddShader("PreFilterConvolution", IBLConvolution, VS_PS, layout);
 	sRenderIntoCubemapShader = spRenderer->AddShader("RenderIntoCubemap", RenderIntoCubemap, VS_PS, layout);
@@ -287,6 +314,8 @@ void EnvironmentMap::CalculateBRDFIntegralLUT()
 	RTVDesc.Format = format;
 	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	RTVDesc.Texture2D.MipSlice = 0;
+
+	// #AsyncLoad: Mutex DEVICE/RENDER
 	sBRDFIntegrationLUTRT = spRenderer->AddRenderTarget(rtDesc, RTVDesc);
 
 	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);

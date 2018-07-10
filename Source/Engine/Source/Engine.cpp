@@ -203,7 +203,7 @@ bool Engine::Initialize(HWND hwnd)
 
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
 #define OVERRIDE_LEVEL_VALUE 0	// which level to load
-#define LOAD_ASYNC 0
+#define LOAD_ASYNC 1
 bool Engine::Load(ThreadPool* pThreadPool)
 {
 	mpThreadPool = pThreadPool;
@@ -227,7 +227,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		// mpCPUProfiler->BeginEntry("EngineLoad");
 		//Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
 		//mpTimer->Start();
-		Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
+		Skybox::InitializePresets_Async(mpRenderer, rendererSettings, mLoadRenderingMutex);
 		//mpTimer->Stop();
 		//Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
 		//mpTimer->Reset();
@@ -241,10 +241,13 @@ bool Engine::Load(ThreadPool* pThreadPool)
 #if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
 		sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
 #endif
-		if (!LoadSceneFromFile())
 		{
-			Log::Error("Engine couldn't load scene.");
-			return false;
+			std::unique_lock<std::mutex>(mLoadRenderingMutex);
+			if (!LoadSceneFromFile())
+			{
+				Log::Error("Engine couldn't load scene.");
+				return false;
+			}
 		}
 		//mpTimer->Stop();
 		//Log::Info("-------------------- SCENE LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
@@ -253,15 +256,30 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		// RENDER PASS INITIALIZATION
 		//
 		//mpTimer->Start();
-		{
+		{	// #AsyncLoad: Mutex DEVICE
 			//Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
-			mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
-			//renderer->m_Direct3D->ReportLiveObjects();
 
-			mDeferredRenderingPasses.Initialize(mpRenderer);
-			mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
-			mDebugPass.Initialize(mpRenderer);
-			mSSAOPass.Initialize(mpRenderer);
+			{
+				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
+			}
+			//renderer->m_Direct3D->ReportLiveObjects();
+			{
+				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				mDeferredRenderingPasses.Initialize(mpRenderer);
+			}
+			{
+				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
+			}
+			{
+				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				mDebugPass.Initialize(mpRenderer);
+			}
+			{
+				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				mSSAOPass.Initialize(mpRenderer);
+			}
 
 			// Samplers TODO: remove this from engine code (to render pass?)
 			D3D11_SAMPLER_DESC normalSamplerDesc = {};
@@ -274,7 +292,10 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			normalSamplerDesc.MipLODBias = 0.f;
 			normalSamplerDesc.MaxAnisotropy = 0;
 			normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-			mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
+			{
+				std::unique_lock<std::mutex>(mLoadRenderingMutex);
+				mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
+			}
 		}
 		//mpTimer->Stop();
 		//Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
@@ -297,7 +318,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpCPUProfiler->BeginEntry("EngineLoad");
 	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
 	mpTimer->Start();
-	Skybox::InitializePresets(mpRenderer, rendererSettings.bEnableEnvironmentLighting, rendererSettings.bPreLoadEnvironmentMaps);
+	Skybox::InitializePresets(mpRenderer, rendererSettings);
 	mpTimer->Stop();
 	Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
 	mpTimer->Reset();
@@ -450,17 +471,42 @@ bool Engine::LoadSceneFromFile()
 	// todo: multiple data - inconsistent state -> sort out ownership
 	sEngineSettings.rendering.postProcess.bloom = mSerializedScene.settings.bloom;
 	mPostProcessPass._settings = sEngineSettings.rendering.postProcess;
-	if(mpActiveScene->mDirectionalLight.enabled)
+	if (mpActiveScene->mDirectionalLight.enabled)
+	{
+		// #AsyncLoad: Mutex DEVICE
 		mShadowMapPass.InitializeDirectionalLightShadowMap(mpRenderer, mpActiveScene->mDirectionalLight.GetSettings());
+	}
 	return true;
 }
 
 bool Engine::LoadScene(int level)
 {
+#if LOAD_ASYNC
+	mbLoading = true;
+	auto loadFn = [&]()
+	{
+		{
+			std::unique_lock<std::mutex>(mLoadRenderingMutex);
+			mpActiveScene->UnloadScene();
+		}
+		mShadowCasters.clear();
+		Engine::sEngineSettings.levelToLoad = level;
+		bool bLoadSuccess = false;
+		{
+			std::unique_lock<std::mutex>(mLoadRenderingMutex);
+			bLoadSuccess = LoadSceneFromFile();
+		}
+		mbLoading = false;
+		return bLoadSuccess;
+	};
+	mpThreadPool->AddTask(loadFn);
+	return true;
+#else
 	mpActiveScene->UnloadScene();
 	mShadowCasters.clear();
 	Engine::sEngineSettings.levelToLoad = level;
 	return LoadSceneFromFile();
+#endif
 }
 
 void Engine::Exit()
@@ -674,13 +720,34 @@ const Settings::Engine& Engine::ReadSettingsFromFile()
 
 bool Engine::ReloadScene()
 {
+#if LOAD_ASYNC
+
+	mbLoading = true;
+	auto loadFn = [&]()
+	{
+		const auto& settings = Engine::GetSettings();
+		Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
+		mpActiveScene->UnloadScene();
+		mShadowCasters.clear();
+		bool bLoadSuccess = false;
+		{
+			std::unique_lock<std::mutex>(mLoadRenderingMutex);
+			bLoadSuccess = LoadSceneFromFile();
+		}
+		mbLoading = false;
+		return bLoadSuccess;
+	};
+	mpThreadPool->AddTask(loadFn);
+	return true;
+#else
 	const auto& settings = Engine::GetSettings();
 	Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
 
 	mpActiveScene->UnloadScene();
 	mShadowCasters.clear();
-
-	return LoadSceneFromFile();
+	bool bLoadSuccess = LoadSceneFromFile();
+	return bLoadSuccess;
+#endif
 }
 
 void Engine::PreRender()

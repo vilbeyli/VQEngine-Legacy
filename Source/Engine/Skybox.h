@@ -21,10 +21,12 @@
 
 #include <vector>
 #include <array>
+#include <mutex>
 
 class Renderer;
 struct Texture;
 namespace DirectX { struct XMMATRIX; }
+namespace Settings { struct Rendering; }
 
 enum ECubeMapPresets : unsigned
 {
@@ -111,7 +113,8 @@ public:
 	//--------------------------------------------------------
 	// STATIC INTERFACE
 	//--------------------------------------------------------
-	static void InitializePresets(Renderer* pRenderer, bool loadEnvironmentMaps, bool bLoadAllMaps);
+	static void InitializePresets(Renderer* pRenderer, const Settings::Rendering& renderSettings);
+	static void InitializePresets_Async(Renderer* pRenderer, const Settings::Rendering& renderSettings, std::mutex& renderMutex);
 	static std::vector<Skybox> s_Presets;
 	
 	//--------------------------------------------------------

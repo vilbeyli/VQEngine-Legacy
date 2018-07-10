@@ -171,7 +171,7 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	});
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 
-	return 1 + pObjects.size(); // objects rendered
+	return 1 + (int)pObjects.size(); // objects rendered
 }
 
 

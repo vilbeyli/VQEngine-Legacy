@@ -76,7 +76,10 @@ Model::Model(const std::string& directoryFullPath, const std::string & modelName
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+#include "Engine.h"
+
 #include <functional>
+
 
 const char* ModelLoader::sRootFolderModels = "Data/Models/";
 
@@ -172,7 +175,13 @@ Mesh ProcessMesh(aiMesh * mesh, const aiScene * scene)
 	}
 
 	// TODO: mesh name
-	return Mesh(Vertices, Indices, "ImportedModelMesh0");	// return a mesh object created from the extracted mesh data
+
+	Mesh newMesh;
+	{
+		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+		newMesh = Mesh(Vertices, Indices, "ImportedModelMesh0");	// return a mesh object created from the extracted mesh data
+	}
+	return newMesh;
 }
 
 ModelData ProcessNode(

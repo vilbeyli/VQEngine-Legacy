@@ -126,7 +126,8 @@ public:
 
 	// initializes a skybox with environment map data (used in image-based lighting)
 	//
-	Skybox(Renderer* renderer, const EnvironmentMapFileNames& environmentMapFiles, const std::string& rootDirectory, bool bEquirectangular);
+	Skybox(Renderer* renderer, bool bEquirectangular);
+	bool Initialize(const EnvironmentMapFileNames& environmentMapFiles, const std::string& rootDirectory);
 	
 	// initializes a skybox with no environment map (no image-based lighting)
 	//

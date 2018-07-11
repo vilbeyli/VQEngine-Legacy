@@ -19,6 +19,12 @@
 // disable it for now.
 #define ENABLE_TRANSPARENCY 0
 
+#define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
+#define OVERRIDE_LEVEL_VALUE 0	// which level to load
+
+#define LOAD_ASYNC 1
+#define RENDER_THREAD (LOAD_ASYNC && 1)		// 0/1 Toggle for async loading screen rendering
+
 #include "Engine.h"
 
 #include "Application/Input.h"
@@ -44,6 +50,23 @@
 #include <DirectXMath.h>
 
 using namespace VQEngine;
+
+void Engine::StartRenderThread()
+{
+#if RENDER_THREAD
+	mbStopRenderThread = false;
+	mRenderThread = std::thread(&Engine::RenderThread, this);
+#endif
+}
+
+void Engine::StopRenderThreadAndWait()
+{
+#if RENDER_THREAD
+	mbStopRenderThread = true;
+	mSignalRender.notify_all();
+	mRenderThread.join();
+#endif
+}
 
 std::mutex Engine::mLoadRenderingMutex;
 
@@ -117,6 +140,7 @@ Engine::~Engine(){}
 
 bool Engine::Initialize(HWND hwnd)
 {
+	StartRenderThread();
 	mpTimer->Start();
 	if (!mpRenderer || !mpInput || !mpTimer)
 	{
@@ -202,9 +226,6 @@ bool Engine::Initialize(HWND hwnd)
 }
 
 
-#define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
-#define OVERRIDE_LEVEL_VALUE 0	// which level to load
-#define LOAD_ASYNC 1
 bool Engine::Load(ThreadPool* pThreadPool)
 {
 	mpThreadPool = pThreadPool;
@@ -226,7 +247,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//
 		// mpCPUProfiler->BeginProfile();
 		// mpCPUProfiler->BeginEntry("EngineLoad");
-		//Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
+		Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
 		//mpTimer->Start();
 #if 1
 		Skybox::InitializePresets_Async(mpRenderer, rendererSettings);
@@ -242,21 +263,20 @@ bool Engine::Load(ThreadPool* pThreadPool)
 
 		// SCENE INITIALIZATION
 		//
-		//Log::Info("-------------------- LOADING SCENE --------------------- ");
+		Log::Info("-------------------- LOADING SCENE --------------------- ");
 		//mpTimer->Start();
 		const size_t numScenes = sEngineSettings.sceneNames.size();
 		assert(sEngineSettings.levelToLoad < numScenes);
 #if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
 		sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
 #endif
+		
+		if (!LoadSceneFromFile())
 		{
-			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-			if (!LoadSceneFromFile())
-			{
-				Log::Error("Engine couldn't load scene.");
-				return false;
-			}
+			Log::Error("Engine couldn't load scene.");
+			return false;
 		}
+		
 		//mpTimer->Stop();
 		//Log::Info("-------------------- SCENE LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
 		//mpTimer->Reset();
@@ -483,6 +503,7 @@ bool Engine::LoadSceneFromFile()
 	if (mpActiveScene->mDirectionalLight.enabled)
 	{
 		// #AsyncLoad: Mutex DEVICE
+		std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 		mShadowMapPass.InitializeDirectionalLightShadowMap(mpRenderer, mpActiveScene->mDirectionalLight.GetSettings());
 	}
 	return true;
@@ -502,10 +523,7 @@ bool Engine::LoadScene(int level)
 		mShadowCasters.clear();
 		Engine::sEngineSettings.levelToLoad = level;
 		bool bLoadSuccess = false;
-		{
-			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-			bLoadSuccess = LoadSceneFromFile();
-		}
+		bLoadSuccess = LoadSceneFromFile();
 		mbLoading = false;
 		return bLoadSuccess;
 	};
@@ -546,11 +564,12 @@ void Engine::UpdateAndRender()
 
 	HandleInput();
 
+
+#if LOAD_ASYNC
 	// RENDER LOADING SCREEN
 	//
 	if (mbLoading)
 	{
-		constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
 		CalcFrameStats(dt);
 		mAccumulator += dt;
 
@@ -558,31 +577,46 @@ void Engine::UpdateAndRender()
 		bool bRender = mAccumulator > (1.0f / refreshRate);
 		if (bRender)
 		{
+#if RENDER_THREAD
+			mSignalRender.notify_all();
+#else
+			constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
+			
 			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 			mAccumulator = 0.0f;
 			mpGPUProfiler->BeginFrame(mFrameCount);
 			mpGPUProfiler->BeginQuery("GPU");
-
+			
 			mpRenderer->BeginFrame();
 			RenderLoadingScreen(bOneTimeLoadingScreenRender);
 			RenderUI();
 			{
 				mpGPUProfiler->BeginQuery("Present");
-				mpCPUProfiler->BeginEntry("Present");
+				//mpCPUProfiler->BeginEntry("Present");
 				mpRenderer->EndFrame();
-				mpCPUProfiler->EndEntry();
+				//mpCPUProfiler->EndEntry();
 				mpGPUProfiler->EndQuery();
 			}
-			mpGPUProfiler->EndQuery();
+			mpGPUProfiler->EndQuery();	// GPU
 			mpGPUProfiler->EndFrame(mFrameCount);
 			++mFrameCount;
+#endif
 		}
 	}
 
 	// RENDER SCENE
 	//
 	else
-	{
+#endif
+	{	
+#if RENDER_THREAD
+		// Transition loading rendering to this thread.
+		if (mRenderThread.joinable())
+		{
+			StopRenderThreadAndWait();
+		}
+#endif
+
 		if (!mbIsPaused)
 		{
 			CalcFrameStats(dt);
@@ -599,6 +633,19 @@ void Engine::UpdateAndRender()
 
 	mpCPUProfiler->EndEntry();	// "CPU"
 	mpCPUProfiler->StateCheck();
+
+	if (!mLevelLoadQueue.empty())
+	{
+		int lvl = mLevelLoadQueue.back();
+		mLevelLoadQueue.pop();
+
+#if LOAD_ASYNC
+		StartRenderThread();
+		mbLoading = true;
+		mSignalRender.notify_all();
+#endif
+		LoadScene(lvl);
+	}
 }
 
 void Engine::HandleInput()
@@ -669,11 +716,11 @@ void Engine::HandleInput()
 			else							 mpActiveScene->ResetActiveCamera();
 		}
 
-		if (mpInput->IsKeyTriggered("1"))	LoadScene(0);
-		if (mpInput->IsKeyTriggered("2"))	LoadScene(1);
-		if (mpInput->IsKeyTriggered("3"))	LoadScene(2);
-		if (mpInput->IsKeyTriggered("4"))	LoadScene(3);
-		if (mpInput->IsKeyTriggered("5"))	LoadScene(4);
+		if (mpInput->IsKeyTriggered("1"))	mLevelLoadQueue.push(0);
+		if (mpInput->IsKeyTriggered("2"))	mLevelLoadQueue.push(1);
+		if (mpInput->IsKeyTriggered("3"))	mLevelLoadQueue.push(2);
+		if (mpInput->IsKeyTriggered("4"))	mLevelLoadQueue.push(3);
+		if (mpInput->IsKeyTriggered("5"))	mLevelLoadQueue.push(4);
 
 
 		// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
@@ -732,23 +779,8 @@ const Settings::Engine& Engine::ReadSettingsFromFile()
 bool Engine::ReloadScene()
 {
 #if LOAD_ASYNC
-
-	mbLoading = true;
-	auto loadFn = [&]()
-	{
-		const auto& settings = Engine::GetSettings();
-		Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
-		mpActiveScene->UnloadScene();
-		mShadowCasters.clear();
-		bool bLoadSuccess = false;
-		{
-			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-			bLoadSuccess = LoadSceneFromFile();
-		}
-		mbLoading = false;
-		return bLoadSuccess;
-	};
-	mpThreadPool->AddTask(loadFn);
+	const auto& settings = Engine::GetSettings();
+	mLevelLoadQueue.push(settings.levelToLoad);
 	return true;
 #else
 	const auto& settings = Engine::GetSettings();
@@ -1287,7 +1319,7 @@ void Engine::RenderUI()
 {
 	// UI TEXT
 	mpGPUProfiler->BeginQuery("UI");
-	mpCPUProfiler->BeginEntry("UI");
+	// mpCPUProfiler->BeginEntry("UI");
 	const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
 
 	std::ostringstream stats;
@@ -1303,7 +1335,7 @@ void Engine::RenderUI()
 		const bool bSortStats = true;
 		float X_POS = sEngineSettings.window.width * 0.005f;
 		float Y_POS = sEngineSettings.window.height * 0.05f;
-		mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
+		// mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 
 		drawDesc.color = LinearColor::cyan;
 		Y_POS = sEngineSettings.window.height * 0.35f;
@@ -1368,7 +1400,7 @@ void Engine::RenderUI()
 #endif
 	}
 
-	mpCPUProfiler->EndEntry();
+	// mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndQuery();
 }
 
@@ -1397,6 +1429,39 @@ void Engine::RenderLights() const
 		mpRenderer->DrawIndexed();
 	}
 	mpRenderer->EndEvent();
+}
+
+// This thread is currently only used during loading.
+void Engine::RenderThread()
+{
+	constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
+	while (!mbStopRenderThread)
+	{
+		std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+		mSignalRender.wait(lck);
+
+		mAccumulator = 0.0f;
+		mpGPUProfiler->BeginFrame(mFrameCount);
+		mpGPUProfiler->BeginQuery("GPU");
+
+		mpRenderer->BeginFrame();
+		RenderLoadingScreen(bOneTimeLoadingScreenRender);
+		RenderUI();
+		{
+			mpGPUProfiler->BeginQuery("Present");
+			//mpCPUProfiler->BeginEntry("Present");
+			mpRenderer->EndFrame();
+			//mpCPUProfiler->EndEntry();
+			mpGPUProfiler->EndQuery();
+		}
+		mpGPUProfiler->EndQuery();
+		mpGPUProfiler->EndFrame(mFrameCount);
+		++mFrameCount;
+	}
+
+	// when loading is finished, we use the same signal variable to signal
+	// the update thread (which woke this thread up in the first place)
+	mSignalRender.notify_all();
 }
 
 void Engine::RenderLoadingScreen(bool bOneTimeRender) const

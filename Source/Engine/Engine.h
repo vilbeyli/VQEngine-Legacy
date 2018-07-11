@@ -18,8 +18,6 @@
 
 #pragma once
 
-#include <windows.h>
-
 #include "Utilities/PerfTimer.h"
 #include "Utilities/Profiler.h"
 
@@ -33,6 +31,7 @@
 #include <memory>
 #include <atomic>
 #include <mutex>
+#include <queue>
 
 using std::shared_ptr;
 using std::unique_ptr;
@@ -216,12 +215,29 @@ private:
 	unsigned long long	mFrameCount;
 
 	//----------------------------------------------------------------------------------------------------------------
-	// LOADING
+	// THREADED LOADING
 	//---------------------------------------------------------------------------------------------------------------- 
 	std::atomic<bool>	mbLoading;
-	float				mAccumulator;
-	public:
-	static std::mutex			mLoadRenderingMutex;
+	float				mAccumulator;	// frame time accumulator
+	std::queue<int>		mLevelLoadQueue;
+
+	// Starts the rendering thread when loading scenes
+	//
+	inline void StartRenderThread();
+
+	// Loading screen + perf numbers rendering on own thread
+	//
+	void RenderThread();
+
+	// Signals render thread to stop and blocks the current thread until the render thread joins
+	//
+	void StopRenderThreadAndWait();	
+
+	bool mbStopRenderThread = false;
+	std::thread mRenderThread;
+	std::condition_variable mSignalRender;
+public:
+	static std::mutex	mLoadRenderingMutex;
 };
 
 #define ENGINE Engine::GetEngine()

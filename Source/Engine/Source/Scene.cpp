@@ -345,6 +345,8 @@ void Scene::CalculateSceneBoundingBox()
 	constexpr float max_f = std::numeric_limits<float>::max();
 	vec3 mins(max_f);
 	vec3 maxs(-(max_f - 1.0f));
+	PerfTimer timer;
+	timer.Start();
 	std::for_each(RANGE(pObjects), [&](GameObject* pObj)
 	{
 		XMMATRIX worldMatrix = pObj->GetTransform().WorldTransformationMatrix();
@@ -425,9 +427,11 @@ void Scene::CalculateSceneBoundingBox()
 		pObj->mBoundingBox.low = mins_obj;
 	});
 
-	Log::Info("SceneBoundingBox:lo=(%.2f, %.2f, %.2f)\thi=(%.2f, %.2f, %.2f)"
+	timer.Stop();
+	Log::Info("SceneBoundingBox:lo=(%.2f, %.2f, %.2f)\thi=(%.2f, %.2f, %.2f) in %.2fs"
 		, mins.x() , mins.y() , mins.z()
 		, maxs.x() , maxs.y() , maxs.z()
+		, timer.DeltaTime()
 	);
 	mBoundingBox.hi = maxs;
 	mBoundingBox.low = mins;

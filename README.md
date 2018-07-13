@@ -6,11 +6,11 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 
 
-###### PCF Shadows, CPU & GPU profiler, BRDF, HDR, Environment Lighting, Bloom
+###### Model Loading (.obj), CPU & GPU profiler, BRDF, Environment Lighting, PCF Shadows
 
-![](Screenshots/objs2.PNG)
+![](Screenshots/Models.PNG)
 
-###### Model Loading (.obj), Directional Lights
+###### Sponza Scene, Directional Lights, SSAO, HDR, Bloom
 
 ![](Screenshots/models2.PNG)
 
@@ -26,25 +26,29 @@ See [Milestones](https://github.com/vilbeyli/VQEngine/milestones) for the planne
 
 The latest changes can be found in the [dev branch](https://github.com/vilbeyli/VQEngine/tree/dev), or another branch named with the feature being implemented. _These branches might be unstable before the release_.
 
- *v0.4.0 - **Data-Oriented Engine, Multi-threaded Tasking System, Model Loading w/ assimp** - TBA*
+**[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - Performance Optimization & Debugging Enchancements** - TBA
+ - TBA
+
+## Released
+
+ **[v0.4.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.4.0) - Data-Oriented Engine, Multi-threaded Tasking System, Model Loading w/ assimp, Loading Screen** - TBA
  - Refactored Scene, Engine and Renderer classes in favor of [Data-Oriented Design](https://en.wikipedia.org/wiki/Data-oriented_design)
  - Asynchronous Model Loading using [assimp](https://github.com/assimp/assimp)
  - [Sponza](http://www.crytek.com/cryengine/cryengine3/downloads) Scene & More Models
  - Task-based Threading System
  - Rendering: Directional Lights, Alpha Mask Textures
- - Loading Screen
+ - Loading Screen & Multi-threaded Scene Loading
+ - App Icon
  - Documentation Template / Bibliography
 
-## Released
-
- *[v0.3.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.3.0) - **Automated Build, Logging, Text Rendering, CPU & GPU Profiler** - May7-2018*
+ **[v0.3.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.3.0) - Automated Build, Logging, Text Rendering, CPU & GPU Profiler** - May7-2018
  - Text Rendering
  - CPU & GPU Profiler
  - Shader Binary Cache
  - Build scripts (Python, Batch) & Automated Build (AppVeyor)
  - Logging: Console and/or Log Files
 
- *[v0.2.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.2.0) - **PBR, Deferred Rendering & Multiple Scenes** - December1-2017*
+ **[v0.2.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.2.0) - PBR, Deferred Rendering & Multiple Scenes** - December1-2017
  - On-the-fly-switchable Forward/Deferred Rendering
  - PBR: GGX-Smith BRDF
  - Environment Mapping (Image-Based Lighting)
@@ -53,7 +57,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
  - SSAO w/ Gaussian Blur
  - Custom Scene Files, Switchable/Reloadable Scenes
 
-*[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - **Phong Lighting, Shadow Mapping, Texturing and Shader Reflection** July15-2017*
+**[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - Phong Lighting, Shadow Mapping, Texturing and Shader Reflection** July15-2017
  - Vertex-Geometry-Pixel Shader Pipeline
  - Shader Reflection
  - Phong Lighting
@@ -68,7 +72,7 @@ The projects are set to build with the following configurations:
 
  - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - 10.0.16299.0
  - Visual Studio 2017 - v141
- 
+  
 - **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 
 # Build
@@ -101,6 +105,7 @@ Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will co
 | **F2** |	Toggle Ambient Occlusion |
 | **F3** |	Toggle Bloom |
 | **F4** |	Toggle Display Render Targets |
+| **F5** |  Toggle Bounding Box Rendering |
 
 # 3rd Party Open Source Libraries
  

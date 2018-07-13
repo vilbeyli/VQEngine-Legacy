@@ -8,7 +8,7 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 ###### Model Loading (.obj), CPU & GPU profiler, BRDF, Environment Lighting, PCF Shadows
 
-![](Screenshots/Models.PNG)
+![](Screenshots/models.PNG)
 
 ###### Sponza Scene, Directional Lights, SSAO, HDR, Bloom
 

@@ -71,6 +71,8 @@ public:
 
 	// returns the last delta time measured between Start() and Stop()
 	float DeltaTime() const;
+	float GetPausedTime() const;
+	float GetStopDuration() const;	// gets (Now - stopTime)
 
 	void Reset();
 	void Start();

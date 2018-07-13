@@ -48,6 +48,10 @@ float PerfTimer::DeltaTime() const
 	return static_cast<float>(m_dt);
 }
 
+// todo: implement
+float PerfTimer::GetPausedTime() const { assert(false); }
+float PerfTimer::GetStopDuration() const {assert(false); }
+
 void PerfTimer::Reset()
 {
 	__int64 currTime;
@@ -216,6 +220,16 @@ float PerfTimer::Tick()
 	dt = dt.count() < 0.0f ? dt.zero() : dt;	// make sure dt >= 0 (is this necessary?)
 
 	return dt.count();
+}
+
+float PerfTimer::GetPausedTime() const
+{
+	return pausedTime.count();
+}
+float PerfTimer::GetStopDuration() const
+{
+	duration_t stopDuration = GetNow() - stopTime;
+	return stopDuration.count();
 }
 
 #endif;

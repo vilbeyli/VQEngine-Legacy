@@ -22,9 +22,16 @@
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
 #define OVERRIDE_LEVEL_VALUE 0	// which level to load
 
-#define LOAD_ASYNC 1
-#define RENDER_THREAD (LOAD_ASYNC && 1)		// 0/1 Toggle for async loading screen rendering
 
+// ASYNC / THREADED LOADING SWITCHES
+// -------------------------------------------------------
+#define LOAD_ASYNC 1
+
+#if LOAD_ASYNC
+	#define RENDER_THREAD 1
+	#define ASYNC_MODEL_LOADING 1	//unused
+#endif
+// -------------------------------------------------------
 #include "Engine.h"
 
 #include "Application/Input.h"
@@ -560,7 +567,6 @@ void Engine::Exit()
 void Engine::UpdateAndRender()
 {
 	const float dt = mpTimer->Tick();
-	mpCPUProfiler->BeginEntry("CPU");
 
 	HandleInput();
 
@@ -575,11 +581,15 @@ void Engine::UpdateAndRender()
 
 		const int refreshRate = 30;	// limit frequency to 30Hz
 		bool bRender = mAccumulator > (1.0f / refreshRate);
+#if !RENDER_THREAD
+		mpCPUProfiler->BeginEntry("CPU");	// RenderThread() has its own CPU entry.
+#endif
 		if (bRender)
 		{
 #if RENDER_THREAD
 			mSignalRender.notify_all();
 #else
+			mpCPUProfiler->BeginEntry("Render<Load>()");
 			constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
 			
 			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
@@ -592,23 +602,28 @@ void Engine::UpdateAndRender()
 			RenderUI();
 			{
 				mpGPUProfiler->BeginQuery("Present");
-				//mpCPUProfiler->BeginEntry("Present");
+				mpCPUProfiler->BeginEntry("Present");
 				mpRenderer->EndFrame();
-				//mpCPUProfiler->EndEntry();
+				mpCPUProfiler->EndEntry();
 				mpGPUProfiler->EndQuery();
 			}
 			mpGPUProfiler->EndQuery();	// GPU
 			mpGPUProfiler->EndFrame(mFrameCount);
+			mpCPUProfiler->EndEntry();	// Rener<Load>()
 			++mFrameCount;
 #endif
 		}
+
+#if !RENDER_THREAD
+		mpCPUProfiler->EndEntry();	// RenderThread() has its own CPU entry.
+#endif
 	}
 
 	// RENDER SCENE
 	//
 	else
 #endif
-	{	
+	{
 #if RENDER_THREAD
 		// Transition loading rendering to this thread.
 		if (mRenderThread.joinable())
@@ -616,6 +631,7 @@ void Engine::UpdateAndRender()
 			StopRenderThreadAndWait();
 		}
 #endif
+		mpCPUProfiler->BeginEntry("CPU");
 
 		if (!mbIsPaused)
 		{
@@ -628,17 +644,21 @@ void Engine::UpdateAndRender()
 			PreRender();
 			Render();
 		}
+
+		mpCPUProfiler->EndEntry();	// "CPU"
+		mpCPUProfiler->StateCheck();
 	}
 
 
-	mpCPUProfiler->EndEntry();	// "CPU"
-	mpCPUProfiler->StateCheck();
 
+	// PROCESS LOAD LEVEL EVENT
+	//
 	if (!mLevelLoadQueue.empty())
 	{
 		int lvl = mLevelLoadQueue.back();
 		mLevelLoadQueue.pop();
-
+		mpCPUProfiler->Clear();
+		mpGPUProfiler->Clear();
 #if LOAD_ASYNC
 		StartRenderThread();
 		mbLoading = true;
@@ -1319,7 +1339,7 @@ void Engine::RenderUI()
 {
 	// UI TEXT
 	mpGPUProfiler->BeginQuery("UI");
-	// mpCPUProfiler->BeginEntry("UI");
+	mpCPUProfiler->BeginEntry("UI");
 	const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
 
 	std::ostringstream stats;
@@ -1335,10 +1355,10 @@ void Engine::RenderUI()
 		const bool bSortStats = true;
 		float X_POS = sEngineSettings.window.width * 0.005f;
 		float Y_POS = sEngineSettings.window.height * 0.05f;
-		// mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
+		const size_t cpu_perf_rows = mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 
 		drawDesc.color = LinearColor::cyan;
-		Y_POS = sEngineSettings.window.height * 0.35f;
+		Y_POS += cpu_perf_rows * PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE + 20;
 		mpGPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 	}
 	if (mFrameStats.bShow)
@@ -1400,7 +1420,7 @@ void Engine::RenderUI()
 #endif
 	}
 
-	// mpCPUProfiler->EndEntry();
+	mpCPUProfiler->EndEntry();	// UI
 	mpGPUProfiler->EndQuery();
 }
 
@@ -1438,29 +1458,42 @@ void Engine::RenderThread()
 	while (!mbStopRenderThread)
 	{
 		std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-		mSignalRender.wait(lck);
+#if 0 // solution attempt. #thread-issue
+		mSignalRender.wait(lck, [=]() { return !mbStopRenderThread; });
+#else
+		// deadlock: render thread waits on signal,
+		//           StopRenderThreadAndWait() waits on join
+		mSignalRender.wait(lck);	
+#endif
 
 		mAccumulator = 0.0f;
 		mpGPUProfiler->BeginFrame(mFrameCount);
 		mpGPUProfiler->BeginQuery("GPU");
 
-		mpRenderer->BeginFrame();
-		RenderLoadingScreen(bOneTimeLoadingScreenRender);
-		RenderUI();
+		mpCPUProfiler->BeginEntry("CPU: RenderThread()");
 		{
-			mpGPUProfiler->BeginQuery("Present");
-			//mpCPUProfiler->BeginEntry("Present");
-			mpRenderer->EndFrame();
-			//mpCPUProfiler->EndEntry();
-			mpGPUProfiler->EndQuery();
+			mpRenderer->BeginFrame();
+			
+			RenderLoadingScreen(bOneTimeLoadingScreenRender);
+			RenderUI();
+
+			mpGPUProfiler->BeginQuery("Present"); mpCPUProfiler->BeginEntry("Present");
+			{
+				mpRenderer->EndFrame();
+			}
+			mpGPUProfiler->EndQuery(); mpCPUProfiler->EndEntry(); // Present
 		}
-		mpGPUProfiler->EndQuery();
+		mpCPUProfiler->EndEntry();	// CPU: RenderThreaD()
+
+		mpGPUProfiler->EndQuery();	// GPU
 		mpGPUProfiler->EndFrame(mFrameCount);
 		++mFrameCount;
 	}
 
 	// when loading is finished, we use the same signal variable to signal
 	// the update thread (which woke this thread up in the first place)
+	mpCPUProfiler->Clear();
+	mpGPUProfiler->Clear();
 	mSignalRender.notify_all();
 }
 

@@ -142,20 +142,30 @@ bool CPUProfiler::StateCheck() const
 
 
 
-void CPUProfiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSort)
+size_t CPUProfiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats)
 {
 	CPU_PROFILER_ENABLE_CHECK
 
 	// TODO:
 	// check for inactive queries
 	// and 0 them out 
-	if (bSort)
+	if (bSortStats)
 	{
 		mPerfEntryTree.Sort();
 	}
 
-	mPerfEntryTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
+	return mPerfEntryTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
 }
+
+void CPUProfiler::Clear()
+{
+	mPerfEntries.clear();
+	mPerfEntryTree.Clear();
+	bool bIsProfiling = mState.bIsProfiling;
+	mState.Clear();
+	mState.bIsProfiling = bIsProfiling;
+}
+
 //---------------------------------------------------------------------------------------------------------------------------
 
 
@@ -167,12 +177,12 @@ void CPUProfiler::PerfEntry::UpdateSampleEnd()
 {
 	timer.Stop();
 	float dt = timer.DeltaTime();
-	timer.Reset();
 
 	samples[currSampleIndex++ % samples.size()] = dt;
 }
 void CPUProfiler::PerfEntry::UpdateSampleBegin()
 {
+	timer.Reset();
 	timer.Start();
 }
 
@@ -207,7 +217,10 @@ bool CPUProfiler::PerfEntry::operator<(const PerfEntry & other) const
 	return GetAvg() > other.GetAvg() + 0.000001f;	// largest time measurement appears first
 }
 
-
+bool CPUProfiler::PerfEntry::IsStale() const
+{
+	return timer.GetStopDuration() > 5.0f;	// 5 second upper limit
+}
 
 #if 0
 // todo: multi-threading this is not a good idea. use the worker thread later on as watcher on shader files for shader hotswap?
@@ -287,14 +300,24 @@ float GPUProfiler::GetEntry(const std::string& tag) const
 	return mQueryDataTree.FindNode(tag)->pData->GetAvg();
 }
 
-void GPUProfiler::RenderPerformanceStats(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription drawDesc, bool bSort)
+size_t GPUProfiler::RenderPerformanceStats(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription drawDesc, bool bSort)
 {
 	GPU_PROFILER_ENABLE_CHECK
 	if (bSort) 
 		mQueryDataTree.Sort();
-	mQueryDataTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
+	return mQueryDataTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
 }
 
+void GPUProfiler::Clear()
+{
+	//mQueryDataTree.Clear(); // nope, don't do this.
+	//------------------------------------------------------------
+	// GPU profiler entries have IsStale() member function, that
+	// helps with skipping stale profiler entries that haven't got
+	// any updates on the previous few frames.
+	//
+	return;
+}
 
 void GPUProfiler::QueryData::Collect(float freq, ID3D11DeviceContext * pContext, size_t bufferIndex)
 {

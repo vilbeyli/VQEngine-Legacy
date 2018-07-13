@@ -26,14 +26,20 @@ template<class T> struct TreeNode
 	bool operator<(const TreeNode<T>& other) { return pData->operator<(*other.pData); }
 };
 
+constexpr int PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE = 22;	// pixels
 template<class T> struct Tree
 {
 	template<class T>
 	using pFnPredicate = bool(*)(const TreeNode<T>&, const TreeNode<T>&);
+	
 
-public:	// INTERFACE
-		// Adds a child node with pData to the given parent
-		//
+public:	
+	//----------------------------------------------------------------------------------------------------------------
+	// INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
+
+	// Adds a child node with pData to the given parent
+	//
 	TreeNode<T>* AddChild(TreeNode<T>& parent, const T* pData);
 
 	// Sorts the tree on each level based on the comparison function
@@ -41,15 +47,22 @@ public:	// INTERFACE
 	void Sort(pFnPredicate<T> fnLessThanComparison);
 	void Sort();
 
-	// Renders the tree.
+	// Renders the tree, returns the number of lines rendered.
 	//
-	void RenderTree(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription& drawDesc);
+	size_t RenderTree(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription& drawDesc);
 
 	// Returns a const pointer to TreeNode with the given tag
 	//
 	const TreeNode<T>* FindNode(const std::string& tag) const;
 
-public:	// DATA
+	// Removes all the nodes from the tree
+	//
+	void Clear();
+
+public:
+	//----------------------------------------------------------------------------------------------------------------
+	// DATA
+	//----------------------------------------------------------------------------------------------------------------
 	TreeNode<T> root = { nullptr, nullptr, std::vector<TreeNode<T>>() };
 
 
@@ -63,7 +76,7 @@ private:
 	TreeNode<T>* SearchSubTree(const TreeNode<T>& node, const T* pSearchEntry) const;
 	const TreeNode<T>* SearchSubTree(const TreeNode<T>& node, const std::string& tag) const;
 
-	bool RenderSubTree(
+	size_t RenderSubTree(
 		const TreeNode<T>&		node,
 		TextRenderer *			pTextRenderer,
 		const vec2 &			screenPosition,
@@ -75,6 +88,13 @@ private:
 	void SortSubTree(TreeNode<T>& node);
 };
 
+template<class T>
+void Tree<T>::Clear()
+{
+	root.children.clear();
+	root.pData = nullptr;
+	root.pParent = nullptr;
+}
 
 // TEMPLATE TREENODE AND TREE IMPLEMENTATION
 // ===============================================================================================================================================
@@ -99,12 +119,15 @@ inline void Tree<T>::Sort()
 }
 
 template<class T>
-inline void Tree<T>::RenderTree(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc)
+inline size_t Tree<T>::RenderTree(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc)
 {
 	std::ostringstream stats;	// set stream properties once, 
 	stats.precision(2);			// and pass it to the recursive 
 	stats << std::fixed;		// function.
-	RenderSubTree(root, pTextRenderer, screenPosition, drawDesc, stats);
+	if(root.pData)
+		return RenderSubTree(root, pTextRenderer, screenPosition, drawDesc, stats);
+
+	return 0;
 }
 
 template<class T>
@@ -161,12 +184,11 @@ inline const TreeNode<T>* Tree<T>::SearchSubTree(const TreeNode<T>& node, const 
 }
 
 template<class T>
-inline bool Tree<T>::RenderSubTree(const TreeNode<T>& node, TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc, std::ostringstream & stats)
+inline size_t Tree<T>::RenderSubTree(const TreeNode<T>& node, TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc, std::ostringstream & stats)
 {
 	const int X_OFFSET = 20;	// todo: DrawSettings struct for the tree?
-	const int Y_OFFSET = 22;
-
-	if (node.pData->IsStale()) return false;
+	
+	if (node.pData->IsStale()) return 0;
 
 	// clear & populate text
 	stats.clear(); stats.str("");
@@ -178,15 +200,30 @@ inline bool Tree<T>::RenderSubTree(const TreeNode<T>& node, TextRenderer * pText
 
 	size_t row_count = 0;
 	size_t last_row = 1;
+	size_t children_rows = 0;
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
-		row_count += i == 0 ? 0 : node.children[i - 1].children.size();
-		if (RenderSubTree(node.children[i], pTextRenderer, { screenPosition.x() + X_OFFSET, screenPosition.y() + Y_OFFSET * (last_row + row_count) }, drawDesc, stats))
+		if (i != 0)
+		{
+			const TreeNode<T>& child = node.children[i - 1];
+			row_count += (child.pData->IsStale())
+				? 0
+				: child.children.size();
+		}
+		
+		const size_t child_rows = RenderSubTree(node.children[i], pTextRenderer,
+			{
+				screenPosition.x() + X_OFFSET,
+				screenPosition.y() + PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE * (last_row + row_count)
+			} , drawDesc, stats);
+
+		children_rows += child_rows;
+		if (child_rows > 0)
 		{
 			last_row += 1;
 		}
 	}
-	return true;
+	return children_rows + 1;
 }
 
 template<class T>

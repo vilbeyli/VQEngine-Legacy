@@ -55,11 +55,13 @@ public:
 
 	// renders performance stats tree, starting at @screenPosition using @drawDesc
 	//
-	void RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats);
+	size_t RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats);
 
 
 	inline bool AreThereAnyOpenEntries() const { return !mState.EntryNameStack.empty(); }
 	inline float GetEntryAvg(const std::string& entryName) const { return mPerfEntries.at(entryName).GetAvg(); }
+
+	void Clear();
 
 private:	// Internal Structs
 	struct PerfEntry
@@ -69,13 +71,13 @@ private:	// Internal Structs
 		std::vector<float>	samples;
 		PerfTimer			timer;
 
-	public:
+		public:
 		void UpdateSampleBegin();
 		void UpdateSampleEnd();
 		void PrintEntryInfo(bool bPrintAllEntries = false);
 		inline float GetAvg() const;
 		bool operator<(const PerfEntry& other) const;
-		bool IsStale() const { return false; } 
+		bool IsStale() const;
 	};
 	using PerfEntryTable = std::unordered_map<std::string, PerfEntry>;
 
@@ -90,6 +92,12 @@ private:
 		bool					bIsProfiling = false;
 		std::stack<std::string> EntryNameStack;
 		TreeNode<PerfEntry>*	pLastEntryNode = nullptr;	// used for setting up the hierarchy
+		inline void Clear()
+		{
+			bIsProfiling = false;
+			pLastEntryNode = nullptr;
+			while (!EntryNameStack.empty()) EntryNameStack.pop();
+		}
 	} mState;
 };
 
@@ -121,7 +129,11 @@ public:
 
 	// renders performance stats tree, starting at @screenPosition using @drawDesc
 	//
-	void RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats);
+	size_t RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats);
+
+	// This function exists for the sake of consistency.
+	//
+	void Clear();
 
 private:	// Internal Structs
 	static const size_t FRAME_HISTORY = 10;

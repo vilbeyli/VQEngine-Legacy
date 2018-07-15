@@ -331,7 +331,6 @@ bool Application::Init()
 
 void Application::Run()
 {
-	ENGINE->mpCPUProfiler->BeginProfile();
 	ENGINE->mpTimer->Reset();
 	ENGINE->mpTimer->Start();
 	MSG msg = { };
@@ -364,7 +363,6 @@ void Application::Run()
 		const_cast<Input*>(ENGINE->INP())->PostUpdate();	// update previous state after frame;
 
 	}
-	ENGINE->mpCPUProfiler->EndProfile();
 }
 
 

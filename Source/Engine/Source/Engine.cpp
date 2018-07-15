@@ -25,12 +25,10 @@
 
 // ASYNC / THREADED LOADING SWITCHES
 // -------------------------------------------------------
+// Uses a thread pool of worker threads to load scene models
+// while utilizing a render thread to render loading screen
+//
 #define LOAD_ASYNC 1
-
-#if LOAD_ASYNC
-	#define RENDER_THREAD 0
-	#define ASYNC_MODEL_LOADING 1	//unused
-#endif
 // -------------------------------------------------------
 #include "Engine.h"
 
@@ -60,19 +58,15 @@ using namespace VQEngine;
 
 void Engine::StartRenderThread()
 {
-#if RENDER_THREAD
 	mbStopRenderThread = false;
 	mRenderThread = std::thread(&Engine::RenderThread, this);
-#endif
 }
 
 void Engine::StopRenderThreadAndWait()
 {
-#if RENDER_THREAD
 	mbStopRenderThread = true;
 	mSignalRender.notify_all();
 	mRenderThread.join();
-#endif
 }
 
 std::mutex Engine::mLoadRenderingMutex;
@@ -235,6 +229,7 @@ bool Engine::Initialize(HWND hwnd)
 
 bool Engine::Load(ThreadPool* pThreadPool)
 {
+	mpCPUProfiler->BeginProfile();
 	mpThreadPool = pThreadPool;
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 	
@@ -338,6 +333,8 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//mpCPUProfiler->EndProfile();
 
 		mbLoading = false;
+		mpCPUProfiler->EndProfile(); 
+		mpCPUProfiler->BeginProfile();
 		return true;
 	};
 
@@ -407,80 +404,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
 	mpCPUProfiler->EndEntry();
 	mpCPUProfiler->EndProfile();
-
-
-	// Thread Pool Unit Test ------------------------------------------------
-	if(false)
-	{
-		constexpr long long sz = 40000000;
-		auto sumRnd = [&]() 
-		{
-			std::vector<long long> nums(sz, 0);
-			for (int i = 0; i < sz; ++i)
-			{
-				nums[i] = RandI(0, 5000);
-			}
-			unsigned long long result = 0;
-			for (int i = 0; i < sz; ++i)
-			{
-				if (nums[i] > 3000)
-					result += nums[i];
-			}
-			return result;
-		};
-		auto sum = [&]()
-		{
-			std::vector<long long> nums(sz, 0);
-			for (int i = 0; i < sz; ++i)
-			{
-				nums[i] = RandI(0, 5000);
-			}
-			unsigned long long result = 0;
-			for (int i = 0; i < sz; ++i)
-			{
-				result += nums[i];
-			}
-			return result;
-		};
-
-		constexpr int threadCount = 16;
-		std::future<unsigned long long> futures[threadCount] =
-		{
-			mpThreadPool->AddTask(sumRnd),
-			mpThreadPool->AddTask(sumRnd),
-			mpThreadPool->AddTask(sumRnd),
-			mpThreadPool->AddTask(sumRnd),
-			mpThreadPool->AddTask(sumRnd),
-			mpThreadPool->AddTask(sumRnd),
-			mpThreadPool->AddTask(sumRnd),
-			mpThreadPool->AddTask(sumRnd),
-
-			mpThreadPool->AddTask(sum),
-			mpThreadPool->AddTask(sum),
-			mpThreadPool->AddTask(sum),
-			mpThreadPool->AddTask(sum),
-			mpThreadPool->AddTask(sum),
-			mpThreadPool->AddTask(sum),
-			mpThreadPool->AddTask(sum),
-			mpThreadPool->AddTask(sum),
-		};
-
-		std::vector<unsigned long long> results;
-		unsigned long long total = 0;
-		std::for_each(std::begin(futures), std::end(futures), [&](decltype(futures[0]) f)
-		{
-			results.push_back(f.get());
-			total += results.back();
-		});
-
-		std::string strResult = "total (" + std::to_string(total) + ") = ";
-		for (int i = 0; i < threadCount; ++i)
-		{
-			strResult += "(" + std::to_string(results[i]) + ") " + (i == threadCount-1 ? "" : " + ");
-		}
-		Log::Info(strResult);
-	}
-	// Thread Pool Unit Test ------------------------------------------------
+	mpCPUProfiler->BeginProfile();
 
 	return true;
 #endif
@@ -529,8 +453,7 @@ bool Engine::LoadScene(int level)
 		}
 		mShadowCasters.clear();
 		Engine::sEngineSettings.levelToLoad = level;
-		bool bLoadSuccess = false;
-		bLoadSuccess = LoadSceneFromFile();
+		bool bLoadSuccess = LoadSceneFromFile();
 		mbLoading = false;
 		return bLoadSuccess;
 	};
@@ -546,6 +469,7 @@ bool Engine::LoadScene(int level)
 
 void Engine::Exit()
 {
+	mpCPUProfiler->EndProfile();
 	mpGPUProfiler->Exit();
 	mpTextRenderer->Exit();
 	mpRenderer->Exit();
@@ -570,88 +494,52 @@ void Engine::UpdateAndRender()
 
 	HandleInput();
 
-
 #if LOAD_ASYNC
-	// RENDER LOADING SCREEN
-	//
 	if (mbLoading)
 	{
 		CalcFrameStats(dt);
-		mAccumulator += dt;
+		//std::atomic_fetch_add(&mAccumulator, dt);	// not supported by ryzen?
+		mAccumulator = mAccumulator.load() + dt;
 
 		const int refreshRate = 30;	// limit frequency to 30Hz
 		bool bRender = mAccumulator > (1.0f / refreshRate);
-#if !RENDER_THREAD
-		mpCPUProfiler->BeginEntry("CPU");	// RenderThread() has its own CPU entry.
-#endif
 		if (bRender)
-		{
-#if RENDER_THREAD
+		{	// Signal rendering loading screen at the refresh rate
 			mSignalRender.notify_all();
-#else
-			mpCPUProfiler->BeginEntry("Render<Load>()");
-			constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
-			
-			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-			mAccumulator = 0.0f;
-			mpGPUProfiler->BeginFrame(mFrameCount);
-			mpGPUProfiler->BeginQuery("GPU");
-			
-			mpRenderer->BeginFrame();
-			RenderLoadingScreen(bOneTimeLoadingScreenRender);
-			RenderUI();
-			{
-				mpGPUProfiler->BeginQuery("Present");
-				mpCPUProfiler->BeginEntry("Present");
-				mpRenderer->EndFrame();
-				mpCPUProfiler->EndEntry();
-				mpGPUProfiler->EndQuery();
-			}
-			mpGPUProfiler->EndQuery();	// GPU
-			mpGPUProfiler->EndFrame(mFrameCount);
-			mpCPUProfiler->EndEntry();	// Rener<Load>()
-			++mFrameCount;
-#endif
 		}
-
-#if !RENDER_THREAD
-		mpCPUProfiler->EndEntry();	// RenderThread() has its own CPU entry.
-#endif
 	}
-
-	// RENDER SCENE
-	//
 	else
-#endif
 	{
-#if RENDER_THREAD
-		// Transition loading rendering to this thread.
 		if (mRenderThread.joinable())
-		{
-			StopRenderThreadAndWait();
+		{	// Transition to single threaded rendering
+			StopRenderThreadAndWait();		// blocks execution
+			mpCPUProfiler->EndProfile();	// reset the cpu profiler entries
+			mpCPUProfiler->BeginProfile();
 		}
 #endif
-		mpCPUProfiler->BeginEntry("CPU");
 
+		mpCPUProfiler->BeginEntry("CPU");
 		if (!mbIsPaused)
 		{
 			CalcFrameStats(dt);
 
 			mpCPUProfiler->BeginEntry("Update()");
 			mpActiveScene->UpdateScene(dt);
-			mpCPUProfiler->EndEntry();
+			mpCPUProfiler->EndEntry();	// Update
 
 			PreRender();
 			Render();
 		}
-
-		mpCPUProfiler->EndEntry();	// "CPU"
+		mpCPUProfiler->EndEntry();	// CPU
 		mpCPUProfiler->StateCheck();
+
+#if LOAD_ASYNC
 	}
+#endif
 
 
 
-	// PROCESS LOAD LEVEL EVENT
+	// PROCESS A LOAD LEVEL EVENT
 	//
 	if (!mLevelLoadQueue.empty())
 	{
@@ -666,6 +554,52 @@ void Engine::UpdateAndRender()
 #endif
 		LoadScene(lvl);
 	}
+}
+
+void Engine::RenderThread()	// This thread is currently only used during loading.
+{
+	constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
+	while (!mbStopRenderThread)
+	{
+		std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+#if 0 // solution attempt. #thread-issue
+		mSignalRender.wait(lck, [=]() { return !mbStopRenderThread; });
+#else
+		// deadlock: render thread waits on signal,
+		//           StopRenderThreadAndWait() waits on join
+		mSignalRender.wait(lck);
+#endif
+
+		mpGPUProfiler->BeginFrame(mFrameCount);
+		mpGPUProfiler->BeginQuery("GPU");
+
+		mpCPUProfiler->BeginEntry("CPU: RenderThread()");
+		{
+			mpRenderer->BeginFrame();
+
+			RenderLoadingScreen(bOneTimeLoadingScreenRender);
+			RenderUI();
+
+			mpGPUProfiler->BeginQuery("Present"); mpCPUProfiler->BeginEntry("Present");
+			{
+				mpRenderer->EndFrame();
+			}
+			mpGPUProfiler->EndQuery(); mpCPUProfiler->EndEntry(); // Present
+		}
+		mpCPUProfiler->EndEntry();	// CPU: RenderThreaD()
+
+		mpGPUProfiler->EndQuery();	// GPU
+		mpGPUProfiler->EndFrame(mFrameCount);
+
+		mAccumulator = 0.0f;
+		++mFrameCount;
+	}
+
+	// when loading is finished, we use the same signal variable to signal
+	// the update thread (which woke this thread up in the first place)
+	mpCPUProfiler->Clear();
+	mpGPUProfiler->Clear();
+	mSignalRender.notify_all();
 }
 
 void Engine::HandleInput()
@@ -1458,52 +1392,6 @@ void Engine::RenderLights() const
 		mpRenderer->DrawIndexed();
 	}
 	mpRenderer->EndEvent();
-}
-
-// This thread is currently only used during loading.
-void Engine::RenderThread()
-{
-	constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
-	while (!mbStopRenderThread)
-	{
-		std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-#if 0 // solution attempt. #thread-issue
-		mSignalRender.wait(lck, [=]() { return !mbStopRenderThread; });
-#else
-		// deadlock: render thread waits on signal,
-		//           StopRenderThreadAndWait() waits on join
-		mSignalRender.wait(lck);	
-#endif
-
-		mAccumulator = 0.0f;
-		mpGPUProfiler->BeginFrame(mFrameCount);
-		mpGPUProfiler->BeginQuery("GPU");
-
-		mpCPUProfiler->BeginEntry("CPU: RenderThread()");
-		{
-			mpRenderer->BeginFrame();
-			
-			RenderLoadingScreen(bOneTimeLoadingScreenRender);
-			RenderUI();
-
-			mpGPUProfiler->BeginQuery("Present"); mpCPUProfiler->BeginEntry("Present");
-			{
-				mpRenderer->EndFrame();
-			}
-			mpGPUProfiler->EndQuery(); mpCPUProfiler->EndEntry(); // Present
-		}
-		mpCPUProfiler->EndEntry();	// CPU: RenderThreaD()
-
-		mpGPUProfiler->EndQuery();	// GPU
-		mpGPUProfiler->EndFrame(mFrameCount);
-		++mFrameCount;
-	}
-
-	// when loading is finished, we use the same signal variable to signal
-	// the update thread (which woke this thread up in the first place)
-	mpCPUProfiler->Clear();
-	mpGPUProfiler->Clear();
-	mSignalRender.notify_all();
 }
 
 void Engine::RenderLoadingScreen(bool bOneTimeRender) const

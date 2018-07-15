@@ -56,7 +56,7 @@ void CPUProfiler::EndProfile()
 
 
 	mState.bIsProfiling = false;
-	mPerfEntryTree = Tree<PerfEntry>();	// ?
+	mPerfEntryTree.Clear();
 }
 
 
@@ -292,6 +292,16 @@ void GPUProfiler::EndFrame(const unsigned long long FRAME_NUMBER)
 	{
 		Log::Warning("[GPUProfiler]: Bad Disjoint Query (Frame: %llu)", PREV_FRAME_NUMBER);
 	}
+
+
+	// Nah, instead of pruning, skipping the rendering of stale data is the way to go for now
+	//
+	//this->mQueryDataTree.Prune([](const TreeNode<QueryData>& n)
+	//{
+	//	return n.pData->IsStale();
+	//});
+
+
 }
 
 float GPUProfiler::GetEntry(const std::string& tag) const
@@ -311,10 +321,10 @@ size_t GPUProfiler::RenderPerformanceStats(TextRenderer * pTextRenderer, const v
 void GPUProfiler::Clear()
 {
 	//mQueryDataTree.Clear(); // nope, don't do this.
-	//------------------------------------------------------------
-	// GPU profiler entries have IsStale() member function, that
-	// helps with skipping stale profiler entries that haven't got
-	// any updates on the previous few frames.
+	//
+	// Query Data is meaningful in a several frame span so we cannot
+	// clear and continue execution. GPUProfiler entries have IsStale() 
+	// member function to determine stales nodes and prune accordingly.
 	//
 	return;
 }

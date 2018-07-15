@@ -24,13 +24,15 @@ template<class T> struct TreeNode
 	std::vector<TreeNode>	children;
 
 	bool operator<(const TreeNode<T>& other) { return pData->operator<(*other.pData); }
+	bool operator==(const TreeNode<T>& other) { return pData == other.pData; }
 };
 
 constexpr int PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE = 22;	// pixels
 template<class T> struct Tree
 {
 	template<class T>
-	using pFnPredicate = bool(*)(const TreeNode<T>&, const TreeNode<T>&);
+	using pFnNodeComparisonPredicate = bool(*)(const TreeNode<T>&, const TreeNode<T>&);
+	using pFnNodePredicate = bool(*)(const TreeNode<T>&);
 	
 
 public:	
@@ -44,7 +46,7 @@ public:
 
 	// Sorts the tree on each level based on the comparison function
 	//
-	void Sort(pFnPredicate<T> fnLessThanComparison);
+	void Sort(pFnNodeComparisonPredicate<T> fnLessThanComparison);
 	void Sort();
 
 	// Renders the tree, returns the number of lines rendered.
@@ -58,6 +60,11 @@ public:
 	// Removes all the nodes from the tree
 	//
 	void Clear();
+
+	// Prunes the tree with the given predicate on nodes.
+	// returns the number of nodes pruned.
+	//
+	size_t Prune(pFnNodePredicate prunePredicate);
 
 public:
 	//----------------------------------------------------------------------------------------------------------------
@@ -84,8 +91,10 @@ private:
 		std::ostringstream&		stats
 	);
 
-	void SortSubTree(TreeNode<T>& node, pFnPredicate<T> fnLessThanComparison);
+	void SortSubTree(TreeNode<T>& node, pFnNodeComparisonPredicate<T> fnLessThanComparison);
 	void SortSubTree(TreeNode<T>& node);
+
+	size_t PruneRecurse(TreeNode<T>& node, pFnNodePredicate prunePredicate);
 };
 
 template<class T>
@@ -107,7 +116,7 @@ inline TreeNode<T> * Tree<T>::AddChild(TreeNode<T>& parent, const T * pData)
 }
 
 template<class T>
-inline void Tree<T>::Sort(pFnPredicate<T> fnLessThanComparison)
+inline void Tree<T>::Sort(pFnNodeComparisonPredicate<T> fnLessThanComparison)
 {
 	SortSubTree(root, fnLessThanComparison);
 }
@@ -184,14 +193,18 @@ inline const TreeNode<T>* Tree<T>::SearchSubTree(const TreeNode<T>& node, const 
 }
 
 template<class T>
-inline size_t Tree<T>::RenderSubTree(const TreeNode<T>& node, TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription & drawDesc, std::ostringstream & stats)
+inline size_t Tree<T>::RenderSubTree(
+	const TreeNode<T>&      node
+	, TextRenderer*         pTextRenderer
+	, const vec2&           screenPosition
+	, TextDrawDescription&  drawDesc
+	, std::ostringstream&   stats
+)
 {
 	const int X_OFFSET = 20;	// todo: DrawSettings struct for the tree?
-	
-	if (node.pData->IsStale()) return 0;
 
-	// clear & populate text
-	stats.clear(); stats.str("");
+	if (node.pData->IsStale()) return 0;
+	stats.clear(); stats.str("");	// clear & populate text
 	stats << node.pData->tag << "  " << node.pData->GetAvg() * 1000 << " ms";
 
 	drawDesc.screenPosition = screenPosition;
@@ -199,7 +212,7 @@ inline size_t Tree<T>::RenderSubTree(const TreeNode<T>& node, TextRenderer * pTe
 	pTextRenderer->RenderText(drawDesc);
 
 	size_t row_count = 0;
-	size_t last_row = 1;
+	size_t last_row = 1;	// for children?
 	size_t children_rows = 0;
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
@@ -212,10 +225,10 @@ inline size_t Tree<T>::RenderSubTree(const TreeNode<T>& node, TextRenderer * pTe
 		}
 		
 		const size_t child_rows = RenderSubTree(node.children[i], pTextRenderer,
-			{
-				screenPosition.x() + X_OFFSET,
-				screenPosition.y() + PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE * (last_row + row_count)
-			} , drawDesc, stats);
+		{
+			screenPosition.x() + X_OFFSET,
+			screenPosition.y() + PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE * (last_row + row_count)
+		} , drawDesc, stats);
 
 		children_rows += child_rows;
 		if (child_rows > 0)
@@ -227,7 +240,7 @@ inline size_t Tree<T>::RenderSubTree(const TreeNode<T>& node, TextRenderer * pTe
 }
 
 template<class T>
-inline void Tree<T>::SortSubTree(TreeNode<T>& node, pFnPredicate<T> fnLessThanComparison)
+inline void Tree<T>::SortSubTree(TreeNode<T>& node, pFnNodeComparisonPredicate<T> fnLessThanComparison)
 {
 	std::sort(node.children.begin(), node.children.end(), fnLessThanComparison);
 	std::for_each(node.children.begin(), node.children.end(), [this, fnLessThanComparison](TreeNode<T>& n) { SortSubTree(n, fnLessThanComparison); });
@@ -240,3 +253,50 @@ inline void Tree<T>::SortSubTree(TreeNode<T>& node)
 	std::sort(node.children.begin(), node.children.end());
 	std::for_each(node.children.begin(), node.children.end(), [this](TreeNode<T>& n) { SortSubTree(n); });
 }
+
+
+template<class T>
+inline size_t Tree<T>::PruneRecurse(TreeNode<T>& node, pFnNodePredicate prunePredicate)
+{
+	if (!node.pData)
+		return 0;
+
+	std::vector<TreeNode<T>> pStaleChildren;
+
+	std::vector<TreeNode<T>>::iterator it = node.children.begin();
+	size_t szRemovedGrandChildren = 0;
+	while (it != node.children.end())
+	{
+		if (it->pData == nullptr || it->pData->IsStale())
+		{
+			pStaleChildren.push_back(*it);
+		}
+		else
+		{	// recursively prune grand children
+			szRemovedGrandChildren += PruneRecurse(*it, prunePredicate);
+		}
+		++it;
+	}
+
+	std::for_each(pStaleChildren.begin(), pStaleChildren.end(), [&](const TreeNode<T>& n) 
+	{
+		node.children.erase(
+			std::remove(node.children.begin(), node.children.end(), n),
+			node.children.end()
+		);
+	});
+
+	// TODO: test correctness
+	// is the pruned children size accurate? 
+	// what if stale children had stale grandchildren?
+	return szRemovedGrandChildren + pStaleChildren.size();
+}
+
+template<class T>
+inline size_t Tree<T>::Prune(pFnNodePredicate prunePredicate)
+{
+	return PruneRecurse(root, prunePredicate); 
+}
+
+// perftree.h(279): warning C4834: 
+// discarding return value of function with 'nodiscard' attribute (compiling source file C:\Users\volkan\Documents\GitHub\VQEngine\Source\Utilities\Source\Profiler.cpp)

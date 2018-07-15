@@ -218,7 +218,7 @@ private:
 	// THREADED LOADING
 	//---------------------------------------------------------------------------------------------------------------- 
 	std::atomic<bool>	mbLoading;
-	float				mAccumulator;	// frame time accumulator
+	std::atomic<float>	mAccumulator;	// frame time accumulator
 	std::queue<int>		mLevelLoadQueue;
 
 	// Starts the rendering thread when loading scenes

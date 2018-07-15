@@ -157,6 +157,20 @@ size_t CPUProfiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const ve
 	return mPerfEntryTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
 }
 
+float CPUProfiler::GetEntryAvg(const std::string & entryName) const
+{
+	if (mPerfEntries.find(entryName) == mPerfEntries.end())
+		return -1.0f;
+	return mPerfEntries.at(entryName).GetAvg();
+}
+
+float CPUProfiler::GetRootEntryAvg() const
+{
+	if (mPerfEntries.empty() || mPerfEntryTree.root.pData == nullptr)
+		return -1.0f;
+	return mPerfEntryTree.root.pData->GetAvg();
+}
+
 void CPUProfiler::Clear()
 {
 	mPerfEntries.clear();
@@ -293,21 +307,34 @@ void GPUProfiler::EndFrame(const unsigned long long FRAME_NUMBER)
 		Log::Warning("[GPUProfiler]: Bad Disjoint Query (Frame: %llu)", PREV_FRAME_NUMBER);
 	}
 
-
-	// Nah, instead of pruning, skipping the rendering of stale data is the way to go for now
-	//
-	//this->mQueryDataTree.Prune([](const TreeNode<QueryData>& n)
-	//{
-	//	return n.pData->IsStale();
-	//});
-
-
+	// Note:  Nah, instead of pruning, skipping the 
+	//		  rendering of stale data is the way to go for now
+	//		  due to GPU data persisting for multiple frames.
+	//		  We cant prune in the same frame - releasing resources
+	//		  is also a problem. More state tracking is needed for
+	//		  proper resource release. 
+	//		  Instead: we'll skip rendering stale data in RenderTree().
+#if 0
+	this->mQueryDataTree.Prune([](const TreeNode<QueryData>& n)
+	{
+		return n.pData->IsStale();
+	});
+#endif
 }
 
 float GPUProfiler::GetEntry(const std::string& tag) const
+{	
+	auto* pNode = mQueryDataTree.FindNode(tag);
+	if (pNode == nullptr)
+		return -1.0f;
+	return pNode->pData->GetAvg();
+}
+
+float GPUProfiler::GetRootEntryAvg() const
 {
-	if (mQueryDataTree.root.pData == nullptr) return 0.0f;
-	return mQueryDataTree.FindNode(tag)->pData->GetAvg();
+	if (mFrameQueries.empty() || mQueryDataTree.root.pData == nullptr)
+		return -1.0f;
+	return mQueryDataTree.root.pData->GetAvg();
 }
 
 size_t GPUProfiler::RenderPerformanceStats(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription drawDesc, bool bSort)

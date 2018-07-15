@@ -60,7 +60,7 @@ struct DirectionalLight
 // defines maximum number of dynamic lights  todo: shader defines
 // don't forget to update CPU define too (RenderPasses.h)
 #define NUM_POINT_LIGHT	100
-#define NUM_SPOT_LIGHT	2
+#define NUM_SPOT_LIGHT	20
 
 #define NUM_POINT_LIGHT_SHADOW	5
 #define NUM_SPOT_LIGHT_SHADOW	5

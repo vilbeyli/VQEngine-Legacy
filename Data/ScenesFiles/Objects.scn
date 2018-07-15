@@ -2,7 +2,7 @@
 // ---------------------------------------------------------------------------------------------------------------
 // Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
 // Camera		: near far vfov  pos(3:xyz)  yaw pitch
-// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle, pos(vec3), rot(X>Y>Z)
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
 // BRDF		:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
@@ -24,7 +24,7 @@
 // ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
 // bloom	    : enabled?, brighness threshold
 // skylight	    : enabled?
-// directional  : colorPreset, Shadows?, brightness, direction(vec3), range, shadowMapDimension, shadowViewPortDimension, depth bias
+// directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
 
@@ -33,14 +33,6 @@ skylight true
 bloom true 1.68
 
 directional sun 4.5   3   -5   15  2048 256 300 0.00000000001f
-
-//light s cyan true  2500   -80  45 -240  80    120 0 65   0.8	 
-// light d sun true
-// light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 
-//light       p         orange       	false      1800         60	      0     30     0  	   0.3
-//light       p         cyan      	false      2400          84	      60    25    -2 	   0.4
-//light       p         red        	false      1500         60	    -140   100   140       0.5
-
 
 camera 0.1 1500 75   -70 25 50  112 11 
 camera 0.1 1500 75   0 50 -190  0 15 

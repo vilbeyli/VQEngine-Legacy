@@ -57,7 +57,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
  - SSAO w/ Gaussian Blur
  - Custom Scene Files, Switchable/Reloadable Scenes
 
-**[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - Phong Lighting, Shadow Mapping, Texturing and Shader Reflection** July15-2017
+**[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - Phong Lighting, Shadow Mapping, Texturing and Shader Reflection** - July15-2017
  - Vertex-Geometry-Pixel Shader Pipeline
  - Shader Reflection
  - Phong Lighting

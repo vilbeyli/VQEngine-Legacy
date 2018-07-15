@@ -116,6 +116,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 	const bool bNoShadowingLights = shadowView.spots.empty() && shadowView.points.empty() && shadowView.pDirectional == nullptr;
 	if (bNoShadowingLights) return;
 
+	//pRenderer->BindRenderTarget(0);
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
 	pRenderer->SetShader(mShadowMapShader);					// shader for rendering z buffer
 	pRenderer->SetViewport(mShadowViewPort_Spot);

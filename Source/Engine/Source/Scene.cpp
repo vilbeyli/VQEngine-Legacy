@@ -206,6 +206,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 		&outLightingData._cb.spotLightCount_shadow
 	};
 
+	unsigned numShdSpot = 0;
 	for (const Light& l : mLights)
 	{
 		//if (!l._bEnabled) continue;	// #BreaksRelease
@@ -216,7 +217,6 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 		// add to the count of the current light type & whether its shadow casting or not
 		pNumArray& refLightCounts = l._castsShadow ? casterCounts : lightCounts;
 
-		unsigned numShdSpot = 0;
 		switch (l._type)
 		{
 		case Light::ELightType::POINT:

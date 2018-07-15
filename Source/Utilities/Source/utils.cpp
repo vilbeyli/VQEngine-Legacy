@@ -100,7 +100,23 @@ namespace StrUtil
 		return result;
 	}
 
-	UnicodeString::UnicodeString(const std::string& strIn) 
+	std::string CommaSeparatedNumber(const std::string& num)
+	{
+		std::string _num = "";
+		int i = 0;
+		for (auto it = num.rbegin(); it != num.rend(); ++it)
+		{
+			if (i % 3 == 0 && i != 0)
+			{
+				_num += ",";
+			}
+			_num += *it;
+			++i;
+		}
+		return std::string(_num.rbegin(), _num.rend());
+	}
+
+	UnicodeString::UnicodeString(const std::string& strIn)
 		: str(strIn)
 	{
 		auto stdWstr = std::wstring(str.begin(), str.end());

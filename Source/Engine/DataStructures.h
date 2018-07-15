@@ -121,11 +121,12 @@ struct RendererStats
 };
 struct FrameStats
 {
-	static const size_t numStat = 5;
+	static const size_t numStat = 6;
 	union 
 	{
 		struct
 		{
+			int fps;
 			int numSceneObjects;
 			int numCulledObjects;
 			int numDrawCalls;
@@ -134,6 +135,7 @@ struct FrameStats
 		};
 		struct
 		{
+			int fps;
 			int numSceneObjects;
 			int numCulledObjects;
 			RendererStats rstats;

@@ -344,8 +344,9 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		//--------------------------------------------------------------
 
 		const bool bCommandHasRange = command.size() >= 9;
-		const bool bCommandHasRotationEntry = command.size() >= 10;
-		const bool bCommandHasScaleEntry = command.size() >= 12;
+		const bool bCommandHasRotationEntry = command.size() > 10;
+		const bool bCommandHasScaleEntry = command.size() >= 12 || (command.size() == 10);
+		const size_t IdxScale = command.size() >= 12 ? 12 : 9;
 
 		const std::string lightType	 = GetLowercased(command[1]);	// lookups have lowercase keys
 		if (lightType != "s" && lightType != "p")
@@ -363,7 +364,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const float rotX = bCommandHasRotationEntry ? stof(command[9])  : 0.0f;
 		const float rotY = bCommandHasRotationEntry ? stof(command[10]) : 0.0f;
 		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
-		const float scl  = bCommandHasScaleEntry ? stof(command[12]) : 1.0f;
+		const float scl  = bCommandHasScaleEntry ? stof(command[IdxScale]) : 1.0f;
 		const bool  bCastsShadows = sBoolTypeReflection.at(shadowing);
 		
 		Light l(	// let there be light

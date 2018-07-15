@@ -153,12 +153,12 @@ void StressTestScene::Load(SerializedScene& scene)
 	std::vector<Transform> transforms = 
 	{
 		Transform(vec3(-X_UNITS * 1.4, 30, 0), Q_Sponza, vec3(0.30f)),		// sponza
-		Transform(vec3(+2*X_UNITS, 5, Z_UNITS), Q_Nanosuit, vec3(5.0f)),	// nano
+		Transform(vec3(+2*X_UNITS, 5, -12),    Q_Nanosuit, vec3(6.0f)),		// nano
 
 		Transform(vec3(+X_UNITS, 20, 0), Q_Platform, vec3(70.0f)),			// platform
 		Transform(vec3(+X_UNITS, 0 , Z_UNITS), Q_I, vec3(15.0f)),			// nano (big)
 
-		Transform(vec3(+X_UNITS*2, 1 , -Z_UNITS), Q_I, vec3(7.0f)),		// wanderer
+		Transform(vec3(+X_UNITS*2, 1 , -Z_UNITS), Q_I, vec3(7.0f)),			// wanderer
 		Transform(vec3(+X_UNITS, 25, -Z_UNITS), Q_Pillar, vec3(15.0f)),		// pillar
 
 		Transform(vec3(-X_UNITS, 0 , -Z_UNITS* 2.5), Q_I, vec3(2.0f)),		// bottle

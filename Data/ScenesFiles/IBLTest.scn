@@ -1,8 +1,8 @@
-/ Object initializations
+// Object initializations
 // ---------------------------------------------------------------------------------------------------------------
 // Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
 // Camera		: near far vfov  pos(3:xyz)  yaw pitch
-// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle, pos(vec3), rot(X>Y>Z)
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
 // BRDF		:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
@@ -24,7 +24,7 @@
 // ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
 // bloom	    : enabled?, brighness threshold
 // skylight	    : enabled?
-// directional  : colorPreset, Shadows?, brightness, direction(vec3), range, shadowMapDimension, shadowViewPortDimension, depth bias
+// directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
 ao true 1.00 19.0 4.10

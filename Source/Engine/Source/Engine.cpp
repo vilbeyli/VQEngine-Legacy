@@ -333,8 +333,6 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//mpCPUProfiler->EndProfile();
 
 		mbLoading = false;
-		mpCPUProfiler->EndProfile(); 
-		mpCPUProfiler->BeginProfile();
 		return true;
 	};
 
@@ -814,7 +812,8 @@ void Engine::SendLightData() const
 	// SHADOW MAPS
 	//
 	mpRenderer->SetTextureArray("texSpotShadowMaps", mShadowMapPass.mShadowMapTextures_Spot);
-	mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass.mShadowMapTexture_Directional);
+	if(mShadowMapPass.mShadowMapTexture_Directional != -1)
+		mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass.mShadowMapTexture_Directional);
 
 #ifdef _DEBUG
 	const SceneLightingData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
@@ -1138,14 +1137,12 @@ void Engine::Render()
 
 void Engine::RenderDebug(const XMMATRIX& viewProj)
 {
-	// BOUNDING BOXES
-	//
-	if (mbRenderBoundingBoxes)
+	if (mbRenderBoundingBoxes)	// BOUNDING BOXES
 	{
 		mpActiveScene->RenderDebug(viewProj);
 	}
 
-	if (mbDisplayRenderTargets)
+	if (mbDisplayRenderTargets)	// RENDER TARGETS
 	{
 		mpCPUProfiler->BeginEntry("Debug Textures");
 		const int screenWidth = sEngineSettings.window.width;
@@ -1171,6 +1168,9 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		TextureID tBRDF = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
 		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap;
+		TextureID tDirectionalShadowMap = mShadowMapPass.mDepthTarget_Directional == -1 
+			? white4x4 
+			: mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() {
 
@@ -1197,8 +1197,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 
 			// the directional light
 			{
-				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
-				c.push_back({ squareTextureScaledDownSize, screenPosition, tex, false });
+				c.push_back({ squareTextureScaledDownSize, screenPosition, tDirectionalShadowMap, false });
 
 				if (currShadowMap > 0)
 				{
@@ -1210,21 +1209,21 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			}
 
 			// spot lights
-			for (size_t i = 0; i < mSceneLightData._cb.spotLightCount_shadow; ++i)
-			{
-				TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTargets_Spot[i]);
-				c.push_back({
-					squareTextureScaledDownSize, screenPosition, tex, false
-					});
-
-				if (currShadowMap > 0)
-				{
-					c[row_offset + i].bottomLeftCornerScreenCoordinates.x()
-						= c[row_offset + i - 1].bottomLeftCornerScreenCoordinates.x()
-						+ c[row_offset + i - 1].dimensionsInPixels.x() + paddingPx;
-				}
-				++currShadowMap;
-			}
+			//for (size_t i = 0; i < mSceneLightData._cb.spotLightCount_shadow; ++i)
+			//{
+			//	TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTargets_Spot[i]);
+			//	c.push_back({
+			//		squareTextureScaledDownSize, screenPosition, tex, false
+			//		});
+			//
+			//	if (currShadowMap > 0)
+			//	{
+			//		c[row_offset + i].bottomLeftCornerScreenCoordinates.x()
+			//			= c[row_offset + i - 1].bottomLeftCornerScreenCoordinates.x()
+			//			+ c[row_offset + i - 1].dimensionsInPixels.x() + paddingPx;
+			//	}
+			//	++currShadowMap;
+			//}
 
 			return c;
 		}();
@@ -1279,7 +1278,7 @@ void Engine::RenderUI()
 
 	TextDrawDescription drawDesc;
 	drawDesc.color = LinearColor::green;
-	drawDesc.scale = 0.35f;
+	drawDesc.scale = 0.32f;
 
 	if (mbShowProfiler)
 	{
@@ -1301,22 +1300,23 @@ void Engine::RenderUI()
 	{
 		drawDesc.color = vec3(0.0f, 0.7f, 1.0f);
 		const float X_POS = sEngineSettings.window.width * 0.70f;
-		const float Y_POS = sEngineSettings.window.height * 0.90f;
+		const float Y_POS = sEngineSettings.window.height * 0.86f;
 		mFrameStats.rstats = mpRenderer->GetRenderStats();
-
+		mFrameStats.fps = static_cast<int>(1.0f / mpGPUProfiler->GetRootEntryAvg());
+		
 		mpRenderer->BeginEvent("Show Frame Stats UI Text");
 		mFrameStats.Render(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc);
 		mpRenderer->EndEvent();
 	}
+
 	if (mbShowControls)
 	{
 		TextDrawDescription _drawDesc(drawDesc);
 		_drawDesc.color = vec3(1, 1, 0.1f) * 0.65f;
-		_drawDesc.scale = 0.35f;
 		int numLine = FrameStats::numStat + 1;
 
 		const float X_POS = sEngineSettings.window.width * 0.81f;
-		const float Y_POS = 0.75f * sEngineSettings.window.height;
+		const float Y_POS = 0.72f * sEngineSettings.window.height;
 		const float LINE_HEIGHT = 25.0f;
 		vec2 screenPosition(X_POS, Y_POS);
 
@@ -1384,7 +1384,7 @@ void Engine::RenderLights() const
 		mpRenderer->SetIndexBuffer(IABuffers.second);
 		const XMMATRIX world = light._transform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world * mSceneView.viewProj;
-		const vec3 color = light._color.Value();
+		const vec3 color = light._color.Value() * 2.5f;
 		mpRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
 		mpRenderer->SetConstant3f("diffuse", color);
 		mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
@@ -1434,6 +1434,7 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 
 const char* FrameStats::statNames[FrameStats::numStat] =
 {
+	"FPS: ",
 	"Objects: ",
 	"Culled Objects: ",
 	"Vertices: ",
@@ -1441,34 +1442,17 @@ const char* FrameStats::statNames[FrameStats::numStat] =
 	"Draw Calls: ",
 };
 
-std::string CommaSeparatedNumber(const std::string& num)
-{
-	std::string _num = "";
-	int i = 0;
-	for (auto it = num.rbegin(); it != num.rend(); ++it)
-	{
-		if (i % 3 == 0 && i != 0)
-		{
-			_num += ",";
-		}
-		_num += *it;
-		++i;
-	}
-	
-	return std::string(_num.rbegin(), _num.rend());
-}
-
 void FrameStats::Render(TextRenderer* pTextRenderer, const vec2& screenPosition, const TextDrawDescription& drawDesc)
 {
 	TextDrawDescription _drawDesc(drawDesc);
 	const float LINE_HEIGHT = 25.0f;
-	constexpr size_t RENDER_ORDER[] = { 4, 2, 3, 0, 1 };
+	constexpr size_t RENDER_ORDER[] = { 0, 5, 3, 4, 1, 2 };
 
 	pTextRenderer->RenderText(_drawDesc);
 	for (size_t i = 0; i < FrameStats::numStat; ++i)
 	{
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + i * LINE_HEIGHT);
-		_drawDesc.text = FrameStats::statNames[RENDER_ORDER[i]] + CommaSeparatedNumber(std::to_string(FrameStats::stats[RENDER_ORDER[i]]));
+		_drawDesc.text = FrameStats::statNames[RENDER_ORDER[i]] + StrUtil::CommaSeparatedNumber(std::to_string(FrameStats::stats[RENDER_ORDER[i]]));
 		pTextRenderer->RenderText(_drawDesc);
 	}
 }

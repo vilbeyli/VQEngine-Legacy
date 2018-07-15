@@ -1,8 +1,8 @@
-/ Object initializations
+// Object initializations
 // ---------------------------------------------------------------------------------------------------------------
 // Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
 // Camera		: near far vfov  pos(3:xyz)  yaw pitch
-// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  range/angle, pos(vec3), rot(X>Y>Z)
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
 // BRDF		:
 // Phong		:
 // Object		: transform, brdf/phong, mesh
@@ -24,7 +24,7 @@
 // ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
 // bloom	    : enabled?, brighness threshold
 // skylight	    : enabled?
-// directional  : colorPreset, Shadows?, brightness, direction(vec3), range, shadowMapDimension, shadowViewPortDimension, depth bias
+// directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
 
@@ -35,12 +35,18 @@ bloom true 0.35
 
 directional sun 7.8   40 -100 15    4096 1024 600
 
+light       p         cyan		false      1800      -239.88  31.97  88.63   60	  0.3
+light       p         green		false      1200      -240.91  31.97  -82.25    60	  0.3
+light       p         orange	false      1800      224.36  31.97  -77.28   60	  0.3
+light       p         purple	false      1800      222.78  31.97  89.55   60	  0.3
+light		s		  white     true       2850      -138.39  150.60  2.75   80    90 -90 50   1
+
 object begin
 	transform 0 0 0 0 0 0 0.2
 	model sponza/sponza.obj
 object end
 
 object begin
-	transform 120 0 0 0 90 0 5
+	transform -189.90  0  8.14 0 -90 0 5
 	model nanosuit/nanosuit.obj
 object end

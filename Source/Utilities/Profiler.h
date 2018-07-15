@@ -59,7 +59,8 @@ public:
 
 
 	inline bool AreThereAnyOpenEntries() const { return !mState.EntryNameStack.empty(); }
-	inline float GetEntryAvg(const std::string& entryName) const { return mPerfEntries.at(entryName).GetAvg(); }
+	float GetEntryAvg(const std::string& entryName) const;
+	float GetRootEntryAvg() const;
 
 	void Clear();
 
@@ -126,6 +127,7 @@ public:
 	// Gets the entry with @tag
 	//
 	float GetEntry(const std::string& tag) const;
+	float GetRootEntryAvg() const;
 
 	// renders performance stats tree, starting at @screenPosition using @drawDesc
 	//

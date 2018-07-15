@@ -36,12 +36,13 @@ namespace StrUtil
 	std::vector<std::string> split(const char* s, char c = ' ');
 	std::vector<std::string> split(const std::string& s, char c = ' ');
 	std::vector<std::string> split(const std::string& s, const std::vector<char>& delimiters);
-
 	template<class... Args> std::vector<std::string> split(const std::string& s, Args&&... args)
 	{
 		const std::vector<char> delimiters = { args... };
 		return split(s, delimiters);
 	}
+
+	std::string CommaSeparatedNumber(const std::string& num);
 
 	struct UnicodeString
 	{

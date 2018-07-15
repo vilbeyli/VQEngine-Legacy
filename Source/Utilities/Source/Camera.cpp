@@ -16,9 +16,12 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "Utilities/Camera.h"
+#include "Camera.h"
+#include "Utilities/Log.h"
 #include "Application/Input.h"
 #include "Engine/Engine.h"
+
+#define CAMERA_DEBUG 1
 
 Camera::Camera()
 	:
@@ -176,7 +179,16 @@ void Camera::Update(float dt)
 	SetProjectionMatrixHFov(gFoVx * DEG2RAD, 1.0f / m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
 	//SetProjectionMatrix(gFoVy * DEG2RAD, m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
 #endif
-	
+
+#if CAMERA_DEBUG
+	if(ENGINE->INP()->IsKeyTriggered("T"))
+	{
+		Log::Info("Camera: ");
+		Log::Info("Position:\t %.2f  %.2f  %.2f", mPosition.x(), mPosition.y(), mPosition.z());
+		//Log::Info("Rotation:\t (%.2f, %.2f, %.2f, %.2f)", );
+	}
+#endif
+
 }
 
 

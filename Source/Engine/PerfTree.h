@@ -148,7 +148,12 @@ inline TreeNode<T>* Tree<T>::FindNode(const T * pData) const
 template<class T>
 inline const TreeNode<T>* Tree<T>::FindNode(const std::string& tag) const
 {
-	if (root.pData->tag == tag) return &root;
+	if (root.pData == nullptr)
+		return nullptr;
+
+	if (root.pData->tag == tag) 
+		return &root;
+
 	return SearchSubTree(root, tag);
 }
 

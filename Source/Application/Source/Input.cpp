@@ -38,7 +38,7 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	m["8"] = 56;		m["9"] = 57;
 
 	m["C"] = 67;		m["c"] = 67;	m["N"] = 78;	m["n"] = 78;
-	m["R"] = 82;		m["r"] = 82;
+	m["R"] = 82;		m["r"] = 82;	m["T"] = 'T';	m["t"] = 'T';
 
 	m["\\"] = 220;		m[";"] = 186;
 	m["'"] = 222;

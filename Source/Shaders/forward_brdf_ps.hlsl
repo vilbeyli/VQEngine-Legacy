@@ -21,6 +21,14 @@
 #include "BRDF.hlsl"
 #include "LightingCommon.hlsl"
 
+#define ENABLE_POINT_LIGHTS 1
+#define ENABLE_POINT_LIGHTS_SHADOW 0
+
+#define ENABLE_SPOT_LIGHTS 1
+#define ENABLE_SPOT_LIGHTS_SHADOW 1
+
+#define ENABLE_DIRECTIONAL_LIGHTS 1
+
 struct PSIn
 {
 	float4 position		 : SV_POSITION;
@@ -39,10 +47,10 @@ cbuffer SceneVariables
 	float2 screenDimensions;
 	float2 spotShadowMapDimensions;
 
-	//float2 pointShadowMapDimensions;
-	//float2 pad;
+	float2 directionalShadowMapDimensions;
+	float2 pad;
 	
-	SceneLighting sceneLightData;
+	SceneLighting Lights;
 
 	float ambientFactor;
 };
@@ -77,7 +85,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	// base indices for indexing shadow views
 	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
 	const int spotShadowsBaseIndex = 0;		
-	const int directionalShadowBaseIndex = spotShadowsBaseIndex + sceneLightData.numSpotCasters;	// currently unused
+	const int directionalShadowBaseIndex = spotShadowsBaseIndex + Lights.numSpotCasters;	// currently unused
 	const float2 uv = In.texCoord * surfaceMaterial.uvScale;
 
 	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 ? texAlphaMask.Sample(sLinearSampler, uv).r : 1.0f;
@@ -121,28 +129,28 @@ float4 PSMain(PSIn In) : SV_TARGET
 	// POINT Lights
 	// brightness default: 300
 	//---------------------------------
-	for (int i = 0; i < sceneLightData.numPointLights; ++i)		
+	for (int i = 0; i < Lights.numPointLights; ++i)		
 	{
-		const float3 Lw       = sceneLightData.point_lights[i].position;
+		const float3 Lw       = Lights.point_lights[i].position;
 		const float3 Wi       = normalize(Lw - P);
 		const float D		  = length(Lw - P);
 		const float NdotL	  = saturate(dot(s.N, Wi));
 		const float3 radiance = 
-			AttenuationBRDF(sceneLightData.point_lights[i].attenuation, D)
-			* sceneLightData.point_lights[i].color 
-			* sceneLightData.point_lights[i].brightness;
+			AttenuationBRDF(Lights.point_lights[i].attenuation, D)
+			* Lights.point_lights[i].color 
+			* Lights.point_lights[i].brightness;
 		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
 
 	// SPOT Lights - Shadowing
 	//---------------------------------
-	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)
+	for (int k = 0; k < Lights.numSpotCasters; ++k)
 	{
-		const matrix matShadowView = sceneLightData.shadowViews[spotShadowsBaseIndex + k];
+		const matrix matShadowView = Lights.shadowViews[spotShadowsBaseIndex + k];
 		const float4 Pl		   = mul(matShadowView, float4(P, 1));
-		const float3 Lw        = sceneLightData.spot_casters[k].position;
+		const float3 Lw        = Lights.spot_casters[k].position;
 		const float3 Wi        = normalize(Lw - P);
-		const float3 radiance  = SpotlightIntensity(sceneLightData.spot_casters[k], P) * sceneLightData.spot_casters[k].color * sceneLightData.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float3 radiance  = SpotlightIntensity(Lights.spot_casters[k], P) * Lights.spot_casters[k].color * Lights.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		const float  NdotL	   = saturate(dot(s.N, Wi));
 		const float3 shadowing = ShadowTestPCF(P, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
@@ -150,14 +158,30 @@ float4 PSMain(PSIn In) : SV_TARGET
 	
 	// SPOT Lights - Non-shadowing
 	//---------------------------------
-	for (int j = 0; j < sceneLightData.numSpots; ++j)
+	for (int j = 0; j < Lights.numSpots; ++j)
 	{
-		const float3 Lw        = sceneLightData.spots[j].position;
+		const float3 Lw        = Lights.spots[j].position;
 		const float3 Wi        = normalize(Lw - P);
-		const float3 radiance  = SpotlightIntensity(sceneLightData.spots[j], P) * sceneLightData.spots[j].color * sceneLightData.spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float3 radiance  = SpotlightIntensity(Lights.spots[j], P) * Lights.spots[j].color * Lights.spots[j].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		const float NdotL	   = saturate(dot(s.N, Wi));
 		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
+
+
+	//-- DIRECTIONAL LIGHT --------------------------------------------------------------------------------------------------------------------------
+#if ENABLE_DIRECTIONAL_LIGHTS
+	if (Lights.directional.shadowFactor > 0.0f)
+	{
+		const float4 Pl = mul(Lights.shadowViewDirectional, float4(P, 1));
+		const float3 Wi = -Lights.directional.lightDirection;
+		const float3 radiance
+			= Lights.directional.color
+			* Lights.directional.brightness;
+		const float  NdotL = saturate(dot(s.N, Wi));
+		const float3 shadowing = ShadowTestPCF(P, Pl, texDirectionalShadowMaps, 0, sShadowSampler, NdotL, directionalShadowMapDimensions);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
+	}
+#endif
 
 	// ENVIRONMENT Map
 	//---------------------------------

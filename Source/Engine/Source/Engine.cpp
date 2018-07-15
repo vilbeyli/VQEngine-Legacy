@@ -28,7 +28,7 @@
 #define LOAD_ASYNC 1
 
 #if LOAD_ASYNC
-	#define RENDER_THREAD 1
+	#define RENDER_THREAD 0
 	#define ASYNC_MODEL_LOADING 1	//unused
 #endif
 // -------------------------------------------------------
@@ -1033,16 +1033,12 @@ void Engine::Render()
 		
 		// SKYBOX
 		//
-		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
-		mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 		if (mpActiveScene->HasSkybox())
 		{
 			mpActiveScene->RenderSkybox(mSceneView.viewProj);
 		}
 
-		RenderLights();
 		mpCPUProfiler->EndEntry();
-		mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 	}
 
 	//==========================================================================
@@ -1173,8 +1169,10 @@ void Engine::Render()
 #endif
 		mpRenderer->EndEvent();
 
-		RenderLights();
 	}
+
+	RenderLights();
+	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 
 	// POST PROCESS PASS | DEBUG PASS | UI PASS
 	//------------------------------------------------------------------------
@@ -1337,9 +1335,9 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 
 void Engine::RenderUI()
 {
-	// UI TEXT
 	mpGPUProfiler->BeginQuery("UI");
 	mpCPUProfiler->BeginEntry("UI");
+	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 	const int fps = static_cast<int>(1.0f / mCurrentFrameTime);
 
 	std::ostringstream stats;
@@ -1349,25 +1347,32 @@ void Engine::RenderUI()
 	drawDesc.color = LinearColor::green;
 	drawDesc.scale = 0.35f;
 
-	// Performance stats
 	if (mbShowProfiler)
 	{
+		mpRenderer->BeginEvent("Show Frame Stats UI Text");
+
 		const bool bSortStats = true;
 		float X_POS = sEngineSettings.window.width * 0.005f;
 		float Y_POS = sEngineSettings.window.height * 0.05f;
-		const size_t cpu_perf_rows = mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
+		const size_t cpu_perf_rows = 
+			mpCPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
 
 		drawDesc.color = LinearColor::cyan;
 		Y_POS += cpu_perf_rows * PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE + 20;
 		mpGPUProfiler->RenderPerformanceStats(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc, bSortStats);
+		mpRenderer->EndEvent();
 	}
+
 	if (mFrameStats.bShow)
 	{
 		drawDesc.color = vec3(0.0f, 0.7f, 1.0f);
 		const float X_POS = sEngineSettings.window.width * 0.70f;
 		const float Y_POS = sEngineSettings.window.height * 0.90f;
 		mFrameStats.rstats = mpRenderer->GetRenderStats();
+
+		mpRenderer->BeginEvent("Show Frame Stats UI Text");
 		mFrameStats.Render(mpTextRenderer, vec2(X_POS, Y_POS), drawDesc);
+		mpRenderer->EndEvent();
 	}
 	if (mbShowControls)
 	{
@@ -1380,6 +1385,8 @@ void Engine::RenderUI()
 		const float Y_POS = 0.75f * sEngineSettings.window.height;
 		const float LINE_HEIGHT = 25.0f;
 		vec2 screenPosition(X_POS, Y_POS);
+
+		mpRenderer->BeginEvent("Render Controls UI Text");
 
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
 		_drawDesc.text = std::string("F1 - Render Mode: ") + (!mbUseDeferredRendering ? "Forward" : "Deferred");
@@ -1404,6 +1411,8 @@ void Engine::RenderUI()
 		_drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
 		_drawDesc.text = std::string("F5 - Toggle Rendering AABBs: ") + (mbRenderBoundingBoxes ? "On" : "Off");
 		mpTextRenderer->RenderText(_drawDesc);
+
+		mpRenderer->EndEvent();
 	}
 
 	if (!mbLoading)

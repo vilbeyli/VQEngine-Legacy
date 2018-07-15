@@ -253,6 +253,8 @@ void Skybox::Render(const XMMATRIX& viewProj) const
 
 	pRenderer->BeginEvent("Skybox Pass");
 	pRenderer->SetShader(skyboxShader);
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 	pRenderer->SetConstant4x4f("worldViewProj", wvp);
 	pRenderer->SetTexture("texSkybox", skyboxTexture);
 	//pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);

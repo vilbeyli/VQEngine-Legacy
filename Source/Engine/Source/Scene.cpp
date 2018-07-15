@@ -169,7 +169,10 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	{
 		pObj->mBoundingBox.Render(mpRenderer, viewProj);
 	});
+
+	mpRenderer->UnbindDepthTarget();
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
+	mpRenderer->Apply();
 
 	return 1 + (int)pObjects.size(); // objects rendered
 }

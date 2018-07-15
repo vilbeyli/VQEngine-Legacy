@@ -35,10 +35,10 @@ bloom true 0.35
 
 directional sun 7.8   40 -100 15    4096 1024 600
 
-light       p         cyan		false      1800      -239.88  31.97  88.63   60	  0.3
-light       p         green		false      1200      -240.91  31.97  -82.25    60	  0.3
-light       p         orange	false      1800      224.36  31.97  -77.28   60	  0.3
-light       p         purple	false      1800      222.78  31.97  89.55   60	  0.3
+light       p         orange	false      1800      -239.88  31.97  88.63   60	  0.3
+light       p         purple	false      1200      -240.91  31.97  -82.25    60	  0.3
+light       p         green		false      1800      224.36  31.97  -77.28   60	  0.3
+light       p         cyan		false      1800      222.78  31.97  89.55   60	  0.3
 light		s		  white     true       2850      -138.39  150.60  2.75   80    90 -90 50   1
 
 object begin

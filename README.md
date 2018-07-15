@@ -6,13 +6,17 @@ A DirectX 11 rendering framework for stuyding and practicing various rendering t
 
 
 
-###### Model Loading (.obj), CPU & GPU profiler, BRDF, Environment Lighting, PCF Shadows
+###### BRDF, Environment Lighting, Directional Lights, PCF Shadows
 
-![](Screenshots/models.PNG)
+![](Screenshots/objs3.PNG)
 
-###### Sponza Scene, Directional Lights, SSAO, HDR, Bloom
+###### Model Loading (.obj), Sponza Scene, SSAO, HDR, Bloom
 
 ![](Screenshots/models2.PNG)
+
+###### Debug Rendering, CPU & GPU profiler, Frame Stats, Bounding Boxes
+
+![](Screenshots/debug.PNG)
 
 ###### SSAO w/ Gaussian Blur
 
@@ -27,11 +31,17 @@ See [Milestones](https://github.com/vilbeyli/VQEngine/milestones) for the planne
 The latest changes can be found in the [dev branch](https://github.com/vilbeyli/VQEngine/tree/dev), or another branch named with the feature being implemented. _These branches might be unstable before the release_.
 
 **[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - Performance Optimization & Debugging Enchancements** - TBA
- - TBA
+ 
+ - Performance Optimizations
+ - ASSAO & Render Quality Settings
+ - Instanced Rendering
+ - Frustum Culling
+ - Cached Environment Maps
+ - Improved Stability
 
 ## Released
 
- **[v0.4.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.4.0) - Data-Oriented Engine, Multi-threaded Tasking System, Model Loading w/ assimp, Loading Screen** - TBA
+ **[v0.4.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.4.0) - Data-Oriented Engine, Multi-threaded Tasking System, Model Loading w/ assimp, Loading Screen** - July15-2018
  - Refactored Scene, Engine and Renderer classes in favor of [Data-Oriented Design](https://en.wikipedia.org/wiki/Data-oriented_design)
  - Asynchronous Model Loading using [assimp](https://github.com/assimp/assimp)
  - [Sponza](http://www.crytek.com/cryengine/cryengine3/downloads) Scene & More Models
@@ -80,7 +90,7 @@ The projects are set to build with the following configurations:
 Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will contain the VQEngine executable built in release mode and the data and shaders needed to run the demo. You need Visual Studio 2017 installed for the build scripts to work.
 
 
-# How To Use
+# Controls
 
 | Scene Controls |  |
 | :---: | :--- |
@@ -89,7 +99,6 @@ Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will co
 | **C** | Cycle Through Scene Cameras |
 | **Shift+R** |	Reload Current Scene From File |
 | **0-5** |	**Switch Scenes**: <br>**1**: Objects Scene <br>**2**: SSAO Test <br>**3**: Environment Map Test <br>**4**: Stress Test <br>**5**: Sponza Scene
-
 
 | Engine Controls |  |
 | :---: | :--- |

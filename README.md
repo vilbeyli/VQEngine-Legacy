@@ -1,8 +1,6 @@
 # VQEngine - A DirectX11 & C++11 Real-Time Renderer
 
-![https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true](https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true)
-
-![](Data/Icons/VQEngine-icon.png)
+![](Data/Icons/VQEngine-icon.png) 
 
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
@@ -88,6 +86,8 @@ The projects are set to build with the following configurations:
 - **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 
 # Build
+
+![https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true](https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true)
 
 Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will contain the VQEngine executable built in release mode and the data and shaders needed to run the demo. You need Visual Studio 2017 installed for the build scripts to work.
 

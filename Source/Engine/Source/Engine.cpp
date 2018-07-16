@@ -713,7 +713,7 @@ void Engine::CalcFrameStats(float dt)
 		std::ostringstream stats;
 		stats.precision(2);
 		stats << std::fixed;
-		stats << "VQEngine Demo | " << "CPU: " << frameTime * 1000.0f << " ms  GPU: " << frameTimeGPU * 1000.f << " ms | FPS: ";
+		stats << "VQEngine | " << "CPU: " << frameTime * 1000.0f << " ms  GPU: " << frameTimeGPU * 1000.f << " ms | FPS: ";
 		stats.precision(4);
 		stats << fps;
 		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
@@ -1209,11 +1209,15 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			}
 
 			// spot lights
+			// TODO: spot light depth texture is stored as a texture array and the
+			//       current debug shader doesn't support texture array -> extend
+			//       the debug shader in v0.5.0
+			//
 			//for (size_t i = 0; i < mSceneLightData._cb.spotLightCount_shadow; ++i)
 			//{
 			//	TextureID tex = mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTargets_Spot[i]);
 			//	c.push_back({
-			//		squareTextureScaledDownSize, screenPosition, tex, false
+			//		squareTextureScaledDownSize, screenPosition, tex, true
 			//		});
 			//
 			//	if (currShadowMap > 0)

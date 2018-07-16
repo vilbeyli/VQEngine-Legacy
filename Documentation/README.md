@@ -6,7 +6,7 @@ This page is Currently to serve as a collection of resources that influenced the
 
 Below is the collection of resources used for building the VQEngine.
 
-## Youtube
+## Conference Talks & YouTube Content
 
 - [CppCon2017: Nicolas Guillemot “Design Patterns for Low-Level Real-Time Rendering”](https://www.youtube.com/watch?v=mdPeXJ0eiGc)
 - [GCAP 2016: Parallel Game Engine Design - Brooke Hodgman](https://www.youtube.com/watch?v=JpmK0zu4Mts)
@@ -31,31 +31,33 @@ Below is the collection of resources used for building the VQEngine.
 - [Trowbridge-Reitz GGX Distribution - How NDF is defined](http://reedbeta.com/blog/hows-the-ndf-really-defined/)
 - [Fresnel-Schliick w/ roughness](https://seblagarde.wordpress.com/2011/08/17/hello-world/)
 
-## Rendering Math
-
-- Linearized Depth Buffer
+## Depth Buffer
   - [NVidia - Depth Precision Visualized](https://developer.nvidia.com/content/depth-precision-visualized)
-  - [Linear Depth](http://dev.theomader.com/linear-depth/)
-  - [LinearZ](https://www.mvps.org/directx/articles/linear_z/linearz.htm)
-  - [link1](http://www.humus.name/index.php?ID=255)
+  - [The Devil In The Details: Linear Depth](http://dev.theomader.com/linear-depth/)
+  - [Robert Dunlop: Linearized Depth using Vertex Shaders](https://www.mvps.org/directx/articles/linear_z/linearz.htm)
+  - [Emil "Humus" Persson: A couple of notes about Z](http://www.humus.name/index.php?ID=255)
+  - [MJP: Reconstructing Position From Depth](https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/)
+  - [David Lenaerts: Reconstruction Positions From the Depth Buffer](http://www.derschmale.com/2014/01/26/reconstructing-positions-from-the-depth-buffer/)
 
-- Reconstructing position from depth
-	- [link1](https://mynameismjp.wordpress.com/2009/03/10/reconstructing-position-from-depth/)
-	- [link2](http://www.derschmale.com/2014/01/26/reconstructing-positions-from-the-depth-buffer/)
+## Rendering Math
+- [gamedev StackExchange QA: Cylindrical Projection UV Coordinates](https://gamedev.stackexchange.com/questions/114412/how-to-get-uv-coordinates-for-sphere-cylindrical-projection)
+- [Paul Bourke: Converting to/from Cube Maps](http://paulbourke.net/miscellaneous/cubemaps/)
 
 - Hammersley Sequence - Quasi-Monte Carlo
-   - [link1](http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html )
-   - [link2](https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/monte-carlo-methods-in-practice/introduction-quas-monte-carlo)
+   - [Holger Dammertz - Hammersley Points on the Hemisphere](http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html )
+   - [Scratchapixel: Introduction to Quasi Monte Carlo](https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/monte-carlo-methods-in-practice/monte-carlo-methods)
 
 
+## VQEngine Architecture
 
-// - Converting to/from cubemaps: http://paulbourke.net/miscellaneous/cubemaps/
-// - Convolution: https://learnopengl.com/#!PBR/IBL/Diffuse-irradiance
-// - Projections: https://gamedev.stackexchange.com/questions/114412/how-to-get-uv-coordinates-for-sphere-cylindrical-projection
 
-## Figures
+VQEngine architecture is more or less based on [Nicolas Guillemot's CppCon2017 Talk:  “Design Patterns for Low-Level Real-Time Rendering”](https://www.youtube.com/watch?v=mdPeXJ0eiGc).
 
 ![](renderer-design.PNG)
+
+## Misc Figures
+
 ![](commands.PNG)
 ![](mem-man-discrete.PNG)
 ![](mem-man-integrated.PNG)
+

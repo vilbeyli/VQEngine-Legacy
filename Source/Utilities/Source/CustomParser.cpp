@@ -465,7 +465,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		pMaterial = scene.materials.CreateAndGetMaterial(GGX_BRDF);
 		pObject->AddMaterial(pMaterial);
 	}
-	else if (cmd == "blinnphong")
+	else if (cmd == "blinnphong" || cmd == "phong")
 	{
 		Log::Info("Todo: blinnphong mat");
 		return;

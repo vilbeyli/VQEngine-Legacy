@@ -2,6 +2,8 @@
 
 ![https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true](https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true)
 
+![](Data/Icons/VQEngine-icon.png)
+
 A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
 
@@ -49,7 +51,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
  - Rendering: Directional Lights, Alpha Mask Textures
  - Loading Screen & Multi-threaded Scene Loading
  - App Icon
- - Documentation Template / Bibliography
+ - Documentation, Resource Collection & Wiki Pages
 
  **[v0.3.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.3.0) - Automated Build, Logging, Text Rendering, CPU & GPU Profiler** - May7-2018
  - Text Rendering

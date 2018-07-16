@@ -81,7 +81,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 The projects are set to build with the following configurations:
 
  - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - 10.0.16299.0
- - Visual Studio 2017 - v141
+ - Visual Studio 2017 - v141, v140
   
 - **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 

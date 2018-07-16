@@ -103,6 +103,7 @@ public:
 	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
 	bool inline				IsRenderingStatsOn() const { return mFrameStats.bShow; }
 	bool inline				IsProfileRenderingOn() const { return mbShowProfiler; }
+	bool inline				IsLoading() const { return mbLoading; }
 	std::pair<BufferID, BufferID> GetGeometryVertexAndIndexBuffers(EGeometry GeomEnum) const { return mBuiltinMeshes[GeomEnum].GetIABuffers(); }
 
 	//----------------------------------------------------------------------------------------------------------------

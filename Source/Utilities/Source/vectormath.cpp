@@ -125,6 +125,7 @@ const vec2 vec2::normalized() const
 
 
 
+vec4::operator XMVECTOR() const { return XMLoadFloat4(&XMFLOAT4(x,y,z,w)); }
 
 //-------------
 

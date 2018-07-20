@@ -247,37 +247,47 @@ XMMATRIX Camera::GetProjectionMatrix() const
 FrustumPlaneset Camera::GetFrustumPlanes(const XMMATRIX& projectionTransformation) const
 {
 	// src: http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf
+#if 0
 	const XMMATRIX m = XMMatrixTranspose(projectionTransformation);	// shorthand
+#else
+	const XMMATRIX& m = projectionTransformation;	// shorthand
+#endif
 	FrustumPlaneset viewPlanes;
-	viewPlanes.planeNormals[FrustumPlaneset::PL_LEFT] = vec3(
+	viewPlanes.planeNormals[FrustumPlaneset::PL_LEFT] = vec4(
 		m.r[0].m128_f32[3] + m.r[0].m128_f32[0],
 		m.r[1].m128_f32[3] + m.r[1].m128_f32[0],
-		m.r[2].m128_f32[3] + m.r[2].m128_f32[0]
+		m.r[2].m128_f32[3] + m.r[2].m128_f32[0],
+		m.r[3].m128_f32[3] + m.r[3].m128_f32[0]
 	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_RIGHT] = vec3(
+	viewPlanes.planeNormals[FrustumPlaneset::PL_RIGHT] = vec4(
 		m.r[0].m128_f32[3] - m.r[0].m128_f32[0],
 		m.r[1].m128_f32[3] - m.r[1].m128_f32[0],
-		m.r[2].m128_f32[3] - m.r[2].m128_f32[0]
+		m.r[2].m128_f32[3] - m.r[2].m128_f32[0],
+		m.r[3].m128_f32[3] - m.r[3].m128_f32[0]
 	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_TOP] = vec3(
+	viewPlanes.planeNormals[FrustumPlaneset::PL_TOP] = vec4(
 		m.r[0].m128_f32[3] - m.r[0].m128_f32[1],
 		m.r[1].m128_f32[3] - m.r[1].m128_f32[1],
-		m.r[2].m128_f32[3] - m.r[2].m128_f32[1]
+		m.r[2].m128_f32[3] - m.r[2].m128_f32[1],
+		m.r[3].m128_f32[3] - m.r[3].m128_f32[0]
 	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_BOTTOM] = vec3(
+	viewPlanes.planeNormals[FrustumPlaneset::PL_BOTTOM] = vec4(
 		m.r[0].m128_f32[3] + m.r[0].m128_f32[1],
 		m.r[1].m128_f32[3] + m.r[1].m128_f32[1],
-		m.r[2].m128_f32[3] + m.r[2].m128_f32[1]
+		m.r[2].m128_f32[3] + m.r[2].m128_f32[1],
+		m.r[3].m128_f32[3] + m.r[3].m128_f32[1]
 	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_NEAR] = vec3(
+	viewPlanes.planeNormals[FrustumPlaneset::PL_NEAR] = vec4(
 		m.r[0].m128_f32[2],
 		m.r[1].m128_f32[2],
-		m.r[2].m128_f32[2]
+		m.r[2].m128_f32[2],
+		m.r[3].m128_f32[2]
 	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_FAR] = vec3(
+	viewPlanes.planeNormals[FrustumPlaneset::PL_FAR] = vec4(
 		m.r[0].m128_f32[3] - m.r[0].m128_f32[2],
 		m.r[1].m128_f32[3] - m.r[1].m128_f32[2],
-		m.r[2].m128_f32[3] - m.r[2].m128_f32[2]
+		m.r[2].m128_f32[3] - m.r[2].m128_f32[2],
+		m.r[3].m128_f32[3] - m.r[3].m128_f32[2]
 	);
 	return viewPlanes;
 }

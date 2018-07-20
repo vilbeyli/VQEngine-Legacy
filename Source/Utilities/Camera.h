@@ -34,7 +34,7 @@ class Renderer;
 struct FrustumPlaneset
 {
 	// plane equations
-	vec3 planeNormals[6];	// r, l, t, b, n, f
+	vec4 planeNormals[6];	// r, l, t, b, n, f
 
 	enum EPlaneset
 	{

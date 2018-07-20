@@ -462,17 +462,17 @@ void Scene::UpdateScene(float dt)
 //
 static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 {
-	vec3 points[] =
+	vec4 points[] =
 	{
-		{ aabb.low.x(), aabb.low.y(), aabb.low.z() },
-	{ aabb.hi.x() , aabb.low.y(), aabb.low.z() },
-	{ aabb.hi.x() , aabb.hi.y() , aabb.low.z() },
-	{ aabb.low.x(), aabb.hi.y() , aabb.low.z() },
+	{ aabb.low.x(), aabb.low.y(), aabb.low.z(), 1.0f },
+	{ aabb.hi.x() , aabb.low.y(), aabb.low.z(), 1.0f },
+	{ aabb.hi.x() , aabb.hi.y() , aabb.low.z(), 1.0f },
+	{ aabb.low.x(), aabb.hi.y() , aabb.low.z(), 1.0f },
 
-	{ aabb.low.x(), aabb.low.y(), aabb.hi.z() },
-	{ aabb.hi.x() , aabb.low.y(), aabb.hi.z() },
-	{ aabb.hi.x() , aabb.hi.y() , aabb.hi.z() },
-	{ aabb.low.x(), aabb.hi.y() , aabb.hi.z() },
+	{ aabb.low.x(), aabb.low.y(), aabb.hi.z() , 1.0f},
+	{ aabb.hi.x() , aabb.low.y(), aabb.hi.z() , 1.0f},
+	{ aabb.hi.x() , aabb.hi.y() , aabb.hi.z() , 1.0f},
+	{ aabb.low.x(), aabb.hi.y() , aabb.hi.z() , 1.0f},
 	};
 
 	for (int i = 0; i < 6; ++i)	// for each plane
@@ -481,7 +481,7 @@ static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 
 		for (int j = 0; j < 8; ++j)	// for each point
 		{
-			if (XMVector3Dot(points[j], XMVector3Normalize(frustum.planeNormals[i])).m128_f32[0] > 0.0f)
+			if (XMVector4Dot(points[j], frustum.planeNormals[i]).m128_f32[0] > 0.002f)
 			{
 				bInside = true;
 				break;

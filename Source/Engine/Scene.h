@@ -195,6 +195,9 @@ private:
 
 	BoundingBox		mBoundingBox;
 
+	// per frame scene data cache
+	XMMATRIX mFrameViewProj;
+
 private:
 	void StartLoadingModels();
 	void EndLoadingModels();

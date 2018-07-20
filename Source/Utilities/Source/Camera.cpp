@@ -247,7 +247,7 @@ XMMATRIX Camera::GetProjectionMatrix() const
 FrustumPlaneset Camera::GetFrustumPlanes(const XMMATRIX& projectionTransformation) const
 {
 	// src: http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf
-	const XMMATRIX& m = projectionTransformation;	// shorthand
+	const XMMATRIX m = XMMatrixTranspose(projectionTransformation);	// shorthand
 	FrustumPlaneset viewPlanes;
 	viewPlanes.planeNormals[FrustumPlaneset::PL_LEFT] = vec3(
 		m.r[0].m128_f32[3] + m.r[0].m128_f32[0],

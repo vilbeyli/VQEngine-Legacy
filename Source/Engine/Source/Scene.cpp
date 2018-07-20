@@ -259,10 +259,12 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 	}
 }
 
+bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
 void Scene::GatherShadowCasters(std::vector<const GameObject*>& casters) const
 {
 	for (const GameObject& obj : mObjectPool.mObjects)
 	{
+		if (!IsVisible(mCameras[mSelectedCamera].GetFrustumPlanes(mFrameViewProj), obj.GetAABB())) continue;
 		if (obj.mpScene == this && obj.mRenderSettings.bCastShadow)
 		{
 			casters.push_back(&obj);
@@ -479,7 +481,7 @@ static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 
 		for (int j = 0; j < 8; ++j)	// for each point
 		{
-			if (XMVector3Dot(points[j], frustum.planeNormals[i]).m128_f32[0] > 0.0f)
+			if (XMVector3Dot(points[j], XMVector3Normalize(frustum.planeNormals[i])).m128_f32[0] > 0.0f)
 			{
 				bInside = true;
 				break;
@@ -519,6 +521,7 @@ static size_t CullGameObjects(
 
 size_t Scene::PreRender(const XMMATRIX& viewProj)
 {
+	mFrameViewProj = viewProj;
 	mDrawLists.opaqueList.clear();
 	mDrawLists.opaqueListCulled.clear();
 	mDrawLists.alphaList.clear();

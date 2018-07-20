@@ -63,6 +63,26 @@ void Camera::ConfigureCamera(const Settings::Camera& cameraSettings, const Setti
 	//{
 	//	mRT_LinearDepthLUT = pRenderer->AddRenderTarget();
 	//}
+
+// PANINI TEST
+//
+//#if 1
+//	SetProjectionMatrix(m_settings.fovV * DEG2RAD, m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
+//#else  // test fov
+//	static float gFoVx = 90.0f;
+//	static float gFoVy = 45.0f;
+//
+//	float dFoV = 0.0f;
+//	//if (ENGINE->INP()->IsScrollDown()) dFoV = -5.0f;
+//	//if (ENGINE->INP()->IsScrollUp()  ) dFoV = +5.0f;
+//	gFoVx += dFoV;
+//	gFoVy += dFoV;
+//
+//	m_settings.fovH = gFoVx;
+//
+//	SetProjectionMatrixHFov(gFoVx * DEG2RAD, 1.0f / m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
+//	//SetProjectionMatrix(gFoVy * DEG2RAD, m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
+//#endif
 }
 
 
@@ -162,23 +182,7 @@ void Camera::Update(float dt)
 	// end debug code 
 	//----------------------------------------------------------------------
 
-#if 1
-	SetProjectionMatrix(m_settings.fovV * DEG2RAD, m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
-#else  // test fov
-	static float gFoVx = 90.0f;
-	static float gFoVy = 45.0f;
 
-	float dFoV = 0.0f;
-	//if (ENGINE->INP()->IsScrollDown()) dFoV = -5.0f;
-	//if (ENGINE->INP()->IsScrollUp()  ) dFoV = +5.0f;
-	gFoVx += dFoV;
-	gFoVy += dFoV;
-
-	m_settings.fovH = gFoVx;
-
-	SetProjectionMatrixHFov(gFoVx * DEG2RAD, 1.0f / m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
-	//SetProjectionMatrix(gFoVy * DEG2RAD, m_settings.aspect, m_settings.nearPlane, m_settings.farPlane);
-#endif
 
 #if CAMERA_DEBUG
 	if(ENGINE->INP()->IsKeyTriggered("T"))
@@ -223,7 +227,7 @@ XMMATRIX Camera::GetViewInverseMatrix() const
 	T.r[3].m128_f32[3] = 1.0;
 	
 	XMMATRIX viewInverse = R * T;	// this is for ViewMatrix
-	//	orienting our model using this, we want the inverse of viewmat
+	//	orienting our model using this, we want the inverse of view mat
 	// XMMATRIX rotMatrix = XMMatrixTranspose(R) * T.inverse();
 
 	XMMATRIX view = XMLoadFloat4x4(&mMatView);
@@ -239,6 +243,45 @@ XMMATRIX Camera::GetProjectionMatrix() const
 }
 
 
+
+FrustumPlaneset Camera::GetFrustumPlanes(const XMMATRIX& projectionTransformation) const
+{
+	// src: http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf
+	const XMMATRIX& m = projectionTransformation;	// shorthand
+	FrustumPlaneset viewPlanes;
+	viewPlanes.planeNormals[FrustumPlaneset::PL_LEFT] = vec3(
+		m.r[0].m128_f32[3] + m.r[0].m128_f32[0],
+		m.r[1].m128_f32[3] + m.r[1].m128_f32[0],
+		m.r[2].m128_f32[3] + m.r[2].m128_f32[0]
+	);
+	viewPlanes.planeNormals[FrustumPlaneset::PL_RIGHT] = vec3(
+		m.r[0].m128_f32[3] - m.r[0].m128_f32[0],
+		m.r[1].m128_f32[3] - m.r[1].m128_f32[0],
+		m.r[2].m128_f32[3] - m.r[2].m128_f32[0]
+	);
+	viewPlanes.planeNormals[FrustumPlaneset::PL_TOP] = vec3(
+		m.r[0].m128_f32[3] - m.r[0].m128_f32[1],
+		m.r[1].m128_f32[3] - m.r[1].m128_f32[1],
+		m.r[2].m128_f32[3] - m.r[2].m128_f32[1]
+	);
+	viewPlanes.planeNormals[FrustumPlaneset::PL_BOTTOM] = vec3(
+		m.r[0].m128_f32[3] + m.r[0].m128_f32[1],
+		m.r[1].m128_f32[3] + m.r[1].m128_f32[1],
+		m.r[2].m128_f32[3] + m.r[2].m128_f32[1]
+	);
+	viewPlanes.planeNormals[FrustumPlaneset::PL_NEAR] = vec3(
+		m.r[0].m128_f32[2],
+		m.r[1].m128_f32[2],
+		m.r[2].m128_f32[2]
+	);
+	viewPlanes.planeNormals[FrustumPlaneset::PL_FAR] = vec3(
+		m.r[0].m128_f32[3] - m.r[0].m128_f32[2],
+		m.r[1].m128_f32[3] - m.r[1].m128_f32[2],
+		m.r[2].m128_f32[3] - m.r[2].m128_f32[2]
+	);
+	return viewPlanes;
+}
+
 XMMATRIX Camera::RotMatrix() const
 {
 	return XMMatrixRotationRollPitchYaw(mPitch, mYaw, 0.0f);
@@ -251,7 +294,7 @@ void Camera::SetPosition(float x, float y, float z)
 
 void Camera::Rotate(float yaw, float pitch, const float dt)
 {
-	mYaw	+= yaw   * dt;
+	mYaw   += yaw   * dt;
 	mPitch += pitch * dt;
 	
 	if (mPitch > +90.0f * DEG2RAD) mPitch = +90.0f * DEG2RAD;

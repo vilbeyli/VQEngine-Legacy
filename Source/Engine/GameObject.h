@@ -72,7 +72,7 @@ public:
 	
 	
 	inline void SetModel(Model model) { mModel = model; } // i don't like this setter...
-
+	inline const BoundingBox& GetAABB() const { return mBoundingBox; }
 public:
 	GameObjectRenderSettings	mRenderSettings;
 

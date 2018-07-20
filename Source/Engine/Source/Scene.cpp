@@ -114,7 +114,7 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 		);
 
 	int numObj = 0;
-	for (const auto* obj : mDrawLists.opaqueList) 
+	for (const auto* obj : mDrawLists.opaqueListCulled) 
 	{
 		obj->RenderOpaque(mpRenderer, sceneView, bSendMaterialData, mMaterials);
 		++numObj;
@@ -452,9 +452,75 @@ void Scene::UpdateScene(float dt)
 	Update(dt);
 }
 
-void Scene::PreRender()
+
+
+// todo:
+// @param1: aabb
+// @param2: transform
+//
+static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
+{
+	vec3 points[] =
+	{
+		{ aabb.low.x(), aabb.low.y(), aabb.low.z() },
+	{ aabb.hi.x() , aabb.low.y(), aabb.low.z() },
+	{ aabb.hi.x() , aabb.hi.y() , aabb.low.z() },
+	{ aabb.low.x(), aabb.hi.y() , aabb.low.z() },
+
+	{ aabb.low.x(), aabb.low.y(), aabb.hi.z() },
+	{ aabb.hi.x() , aabb.low.y(), aabb.hi.z() },
+	{ aabb.hi.x() , aabb.hi.y() , aabb.hi.z() },
+	{ aabb.low.x(), aabb.hi.y() , aabb.hi.z() },
+	};
+
+	for (int i = 0; i < 6; ++i)	// for each plane
+	{
+		bool bInside = false;
+
+		for (int j = 0; j < 8; ++j)	// for each point
+		{
+			if (XMVector3Dot(points[j], frustum.planeNormals[i]).m128_f32[0] > 0.0f)
+			{
+				bInside = true;
+				break;
+			}
+		}
+
+		if (!bInside)
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+
+static size_t CullMeshes(const FrustumPlaneset& frustumPlanes, std::vector<MeshID> todo)
+{
+	return 0;
+}
+
+static size_t CullGameObjects(
+	const FrustumPlaneset& frustumPlanes
+	, const std::vector<const GameObject*>& pObjs
+	, std::vector<const GameObject*>& pCulledObjs)
+{
+	size_t currIdx = 0;
+	std::for_each(RANGE(pObjs), [&](const GameObject* pObj)
+	{
+		if (IsVisible(frustumPlanes, pObj->GetAABB()))
+		{
+			pCulledObjs.push_back(pObj);
+			++currIdx;
+		}
+	});
+	return pObjs.size() - currIdx;
+}
+
+size_t Scene::PreRender(const XMMATRIX& viewProj)
 {
 	mDrawLists.opaqueList.clear();
+	mDrawLists.opaqueListCulled.clear();
 	mDrawLists.alphaList.clear();
 	for (const GameObject& obj : mObjectPool.mObjects)
 	{
@@ -468,6 +534,12 @@ void Scene::PreRender()
 			mDrawLists.opaqueList.push_back(&obj);
 		}
 	}
+
+	return CullGameObjects(
+		mCameras[mSelectedCamera].GetFrustumPlanes(viewProj)
+		, mDrawLists.opaqueList
+		, mDrawLists.opaqueListCulled
+	);
 }
 
 void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)

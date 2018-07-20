@@ -29,6 +29,24 @@ namespace Settings { struct Camera; struct Window; }
 
 class Input;
 class Renderer;
+
+
+struct FrustumPlaneset
+{
+	// plane equations
+	vec3 planeNormals[6];	// r, l, t, b, n, f
+
+	enum EPlaneset
+	{
+		PL_RIGHT = 0,
+		PL_LEFT,
+		PL_TOP,
+		PL_BOTTOM,
+		PL_FAR,
+		PL_NEAR
+	};
+};
+
 class Camera
 {
 public:
@@ -47,6 +65,14 @@ public:
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetViewInverseMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
+
+	// gets the frustum planes based on @projectionTransformation. if:
+	//
+	// - @projectionTransformation is proj			matrix ->  view space plane equations
+	// - @projectionTransformation is viewProj		matrix -> world space plane equations
+	// - @projectionTransformation is worldViewProj matrix -> model space plane equations
+	// 
+	FrustumPlaneset GetFrustumPlanes(const XMMATRIX& projectionTransformation) const;
 
 	void SetPosition(float x, float y, float z);
 	void Rotate(float yaw, float pitch, const float dt);

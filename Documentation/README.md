@@ -24,6 +24,12 @@ Below is the collection of resources used for building the VQEngine.
 
 # Rendering
 
+## View Frustum Culling
+ - [Universitat Bremen CGVR: View Frustum Culling Tutorial OpenGL](http://cgvr.informatik.uni-bremen.de/teaching/cg_literatur/lighthouse3d_view_frustum_culling/index.html)
+ - [Fast Extraction of Viewing Frustum Planes from the WorldView-Projection Matrix](http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf)
+ - [Fabian Giesen: View frustum culling (2010)](https://fgiesen.wordpress.com/2010/10/17/view-frustum-culling/)
+ - [Zeux: View frustum culling optimization](https://zeuxcg.org/2009/03/01/view-frustum-culling-optimization-never-let-me-branch/)
+
 ## BRDF
 
 - [Joe DeVayo: LearnOpenGL - PBR Theory](https://learnopengl.com/#!PBR/Theory)

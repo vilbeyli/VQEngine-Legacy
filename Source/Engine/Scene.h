@@ -141,7 +141,7 @@ public:
 
 	// Prepares the mDrawLists for various processing (culling, render pass object lists etc.)
 	//
-	void PreRender();
+	size_t PreRender(const XMMATRIX& viewProj);
 	void GatherLightData(SceneLightingData& outLightingData, ShadowView& outShadowView) const;
 	void GatherShadowCasters(std::vector<const GameObject*>& casters) const;
 
@@ -187,6 +187,7 @@ private:
 	struct DrawLists
 	{
 		std::vector<const GameObject*>	opaqueList;
+		std::vector<const GameObject*>	opaqueListCulled;
 		std::vector<const GameObject*>	alphaList;
 	};
 

@@ -745,6 +745,8 @@ bool Engine::ReloadScene()
 #endif
 }
 
+
+
 void Engine::PreRender()
 {
 #if LOAD_ASYNC
@@ -777,7 +779,6 @@ void Engine::PreRender()
 
 	// gather scene lights
 	mpActiveScene->GatherLightData(mSceneLightData, mShadowView);
-	
 
 	// TODO: #RenderPass or Scene should manage this.
 	// mTBNDrawObjects.clear();
@@ -792,7 +793,7 @@ void Engine::PreRender()
 	mShadowCasters.clear();
 	mpActiveScene->GatherShadowCasters(mShadowCasters);
 
-	mpActiveScene->PreRender();
+	mFrameStats.numCulledObjects = mpActiveScene->PreRender(mSceneView.viewProj);
 
 	mpCPUProfiler->EndEntry();
 }

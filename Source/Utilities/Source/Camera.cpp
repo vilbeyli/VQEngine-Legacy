@@ -253,41 +253,41 @@ FrustumPlaneset Camera::GetFrustumPlanes(const XMMATRIX& projectionTransformatio
 	const XMMATRIX& m = projectionTransformation;	// shorthand
 #endif
 	FrustumPlaneset viewPlanes;
-	viewPlanes.planeNormals[FrustumPlaneset::PL_LEFT] = vec4(
-		m.r[0].m128_f32[3] + m.r[0].m128_f32[0],
-		m.r[1].m128_f32[3] + m.r[1].m128_f32[0],
-		m.r[2].m128_f32[3] + m.r[2].m128_f32[0],
-		m.r[3].m128_f32[3] + m.r[3].m128_f32[0]
-	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_RIGHT] = vec4(
+	viewPlanes.abcd[FrustumPlaneset::PL_RIGHT] = vec4(
 		m.r[0].m128_f32[3] - m.r[0].m128_f32[0],
 		m.r[1].m128_f32[3] - m.r[1].m128_f32[0],
 		m.r[2].m128_f32[3] - m.r[2].m128_f32[0],
 		m.r[3].m128_f32[3] - m.r[3].m128_f32[0]
 	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_TOP] = vec4(
+	viewPlanes.abcd[FrustumPlaneset::PL_LEFT] = vec4(
+		m.r[0].m128_f32[3] + m.r[0].m128_f32[0],
+		m.r[1].m128_f32[3] + m.r[1].m128_f32[0],
+		m.r[2].m128_f32[3] + m.r[2].m128_f32[0],
+		m.r[3].m128_f32[3] + m.r[3].m128_f32[0]
+	);
+	viewPlanes.abcd[FrustumPlaneset::PL_TOP] = vec4(
 		m.r[0].m128_f32[3] - m.r[0].m128_f32[1],
 		m.r[1].m128_f32[3] - m.r[1].m128_f32[1],
 		m.r[2].m128_f32[3] - m.r[2].m128_f32[1],
-		m.r[3].m128_f32[3] - m.r[3].m128_f32[0]
+		m.r[3].m128_f32[3] - m.r[3].m128_f32[1]
 	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_BOTTOM] = vec4(
+	viewPlanes.abcd[FrustumPlaneset::PL_BOTTOM] = vec4(
 		m.r[0].m128_f32[3] + m.r[0].m128_f32[1],
 		m.r[1].m128_f32[3] + m.r[1].m128_f32[1],
 		m.r[2].m128_f32[3] + m.r[2].m128_f32[1],
 		m.r[3].m128_f32[3] + m.r[3].m128_f32[1]
 	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_NEAR] = vec4(
-		m.r[0].m128_f32[2],
-		m.r[1].m128_f32[2],
-		m.r[2].m128_f32[2],
-		m.r[3].m128_f32[2]
-	);
-	viewPlanes.planeNormals[FrustumPlaneset::PL_FAR] = vec4(
+	viewPlanes.abcd[FrustumPlaneset::PL_FAR] = vec4(
 		m.r[0].m128_f32[3] - m.r[0].m128_f32[2],
 		m.r[1].m128_f32[3] - m.r[1].m128_f32[2],
 		m.r[2].m128_f32[3] - m.r[2].m128_f32[2],
 		m.r[3].m128_f32[3] - m.r[3].m128_f32[2]
+	);
+	viewPlanes.abcd[FrustumPlaneset::PL_NEAR] = vec4(
+		m.r[0].m128_f32[2],
+		m.r[1].m128_f32[2],
+		m.r[2].m128_f32[2],
+		m.r[3].m128_f32[2]
 	);
 	return viewPlanes;
 }

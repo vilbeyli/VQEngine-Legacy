@@ -146,6 +146,8 @@ int Scene::RenderAlpha(const SceneView & sceneView) const
 int Scene::RenderDebug(const XMMATRIX& viewProj) const
 {
 	const auto IABuffers = mMeshes[EGeometry::CUBE].GetIABuffers();
+
+	// set debug render state
 	mpRenderer->SetShader(EShaders::UNLIT);
 	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
 	mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
@@ -155,9 +157,11 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::WIREFRAME);
 	mpRenderer->SetVertexBuffer(IABuffers.first);
 	mpRenderer->SetIndexBuffer(IABuffers.second);
+
+	// scene bounding box
 	mBoundingBox.Render(mpRenderer, viewProj);
 	
-	// game objects
+	// game object bounding boxes
 	std::vector<const GameObject*> pObjects(
 		mDrawLists.opaqueList.size() + mDrawLists.alphaList.size()
 		, nullptr
@@ -169,6 +173,31 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	{
 		pObj->mBoundingBox.Render(mpRenderer, viewProj);
 	});
+
+
+	// camera frustum
+	if (mCameras.size() > 1 && mSelectedCamera != 0 && false)
+	{
+		// render camera[0]'s frustum
+		const XMMATRIX viewProj = mCameras[mSelectedCamera].GetViewMatrix() * mCameras[mSelectedCamera].GetProjectionMatrix();
+		mCameras[0].GetFrustumPlanes(viewProj);	// world space frustum plane equations
+
+		// IA: model space camera frustum 
+		// world matrix from camera[0] view ray
+		// viewProj from camera[selected]
+		mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
+
+		
+		Transform tf;
+		//const vec3 diag = this->hi - this->low;
+		//const vec3 pos = (this->hi + this->low) * 0.5f;
+		//tf.SetScale(diag * 0.5f);
+		//tf.SetPosition(pos);
+		XMMATRIX wvp = tf.WorldTransformationMatrix() * viewProj;
+		//mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+		mpRenderer->Apply();
+		mpRenderer->DrawIndexed();
+	}
 
 	mpRenderer->UnbindDepthTarget();
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
@@ -262,9 +291,17 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
 void Scene::GatherShadowCasters(std::vector<const GameObject*>& casters) const
 {
+	constexpr float s = 1.5f;
+	const XMMATRIX scaleMatrix = XMMATRIX(
+		{ s, 0, 0, 0 },
+		{ 0, s, 0, 0 },
+		{ 0, 0, s, 0 },
+		{ 0, 0, 0, 1 }
+	);
+	const XMMATRIX scaledViewProj = scaleMatrix * mFrameViewProj;
 	for (const GameObject& obj : mObjectPool.mObjects)
 	{
-		if (!IsVisible(mCameras[mSelectedCamera].GetFrustumPlanes(mFrameViewProj), obj.GetAABB())) continue;
+		if (!IsVisible(mCameras[mSelectedCamera].GetFrustumPlanes(scaledViewProj), obj.GetAABB())) continue;
 		if (obj.mpScene == this && obj.mRenderSettings.bCastShadow)
 		{
 			casters.push_back(&obj);
@@ -481,7 +518,7 @@ static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 
 		for (int j = 0; j < 8; ++j)	// for each point
 		{
-			if (XMVector4Dot(points[j], frustum.planeNormals[i]).m128_f32[0] > 0.002f)
+			if (XMVector4Dot(points[j], frustum.abcd[i]).m128_f32[0] > 0.000002f)
 			{
 				bInside = true;
 				break;

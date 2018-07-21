@@ -291,22 +291,15 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
 void Scene::GatherShadowCasters(std::vector<const GameObject*>& casters) const
 {
-	constexpr float s = 1.5f;
-	const XMMATRIX scaleMatrix = XMMATRIX(
-		{ s, 0, 0, 0 },
-		{ 0, s, 0, 0 },
-		{ 0, 0, s, 0 },
-		{ 0, 0, 0, 1 }
-	);
-	const XMMATRIX scaledViewProj = scaleMatrix * mFrameViewProj;
-	for (const GameObject& obj : mObjectPool.mObjects)
+	for (const GameObject* pObj : mDrawLists.opaqueListCulled)
 	{
-		if (!IsVisible(mCameras[mSelectedCamera].GetFrustumPlanes(scaledViewProj), obj.GetAABB())) continue;
-		if (obj.mpScene == this && obj.mRenderSettings.bCastShadow)
+		if (pObj->mRenderSettings.bCastShadow)
 		{
-			casters.push_back(&obj);
+			casters.push_back(pObj);
 		}
 	}
+
+	// do we also want alpha list?
 }
 
 

@@ -58,11 +58,13 @@ struct Light
 	~Light();
 
 	void SetLightRange(float range);
-	XMMATRIX GetLightSpaceMatrix() const;
-	XMMATRIX GetViewMatrix() const;
-	XMMATRIX GetProjectionMatrix() const;
-	PointLightGPU		GetPointLightData() const;
-	SpotLightGPU		GetSpotLightData() const;
+
+	XMMATRIX		GetLightSpaceMatrix() const;
+	XMMATRIX		GetViewMatrix() const;
+	XMMATRIX		GetProjectionMatrix() const;
+	PointLightGPU	GetPointLightData() const;
+	SpotLightGPU	GetSpotLightData() const;
+	FrustumPlaneset GetViewFrustumPlanes() const;
 	//---------------------------------------------------------------------------------
 	
 	ELightType		_type;

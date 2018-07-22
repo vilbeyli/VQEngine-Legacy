@@ -345,7 +345,6 @@ bool Engine::Load(ThreadPool* pThreadPool)
 
 	// LOAD ENVIRONMENT MAPS
 	//
-	mpCPUProfiler->BeginProfile();
 	mpCPUProfiler->BeginEntry("EngineLoad");
 	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
 	mpTimer->Start();
@@ -449,7 +448,6 @@ bool Engine::LoadScene(int level)
 			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 			mpActiveScene->UnloadScene();
 		}
-		mShadowCasters.clear();
 		Engine::sEngineSettings.levelToLoad = level;
 		bool bLoadSuccess = LoadSceneFromFile();
 		mbLoading = false;
@@ -459,7 +457,6 @@ bool Engine::LoadScene(int level)
 	return true;
 #else
 	mpActiveScene->UnloadScene();
-	mShadowCasters.clear();
 	Engine::sEngineSettings.levelToLoad = level;
 	return LoadSceneFromFile();
 #endif
@@ -739,7 +736,6 @@ bool Engine::ReloadScene()
 	Log::Info("Reloading Scene (%d)...", settings.levelToLoad);
 
 	mpActiveScene->UnloadScene();
-	mShadowCasters.clear();
 	bool bLoadSuccess = LoadSceneFromFile();
 	return bLoadSuccess;
 #endif
@@ -790,10 +786,7 @@ void Engine::PreRender()
 	// 		mTBNDrawObjects.push_back(obj);
 	// }
 
-	mShadowCasters.clear();
-	mpActiveScene->GatherShadowCasters(mShadowCasters);
-
-	mFrameStats.numCulledObjects = mpActiveScene->PreRender(mSceneView.viewProj);
+	mFrameStats.numCulledObjects = static_cast<int>(mpActiveScene->PreRender(mSceneView.viewProj, mShadowView));
 
 	mpCPUProfiler->EndEntry();
 }
@@ -846,7 +839,7 @@ void Engine::Render()
 	mpRenderer->BeginEvent("Shadow Pass");
 	
 	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass has their own render targets
-	mShadowMapPass.RenderShadowMaps(mpRenderer, mShadowCasters, mShadowView);
+	mShadowMapPass.RenderShadowMaps(mpRenderer, mShadowView, mpGPUProfiler);
 	
 	mpRenderer->EndEvent();
 	mpCPUProfiler->EndEntry();

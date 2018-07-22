@@ -111,7 +111,7 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(Renderer * pRenderer, co
 	mShadowViewPort_Directional.MaxDepth = 1.f;
 }
 
-void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<const GameObject*> ZPassObjects, const ShadowView& shadowView) const
+void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const
 {
 	const bool bNoShadowingLights = shadowView.spots.empty() && shadowView.points.empty() && shadowView.pDirectional == nullptr;
 	if (bNoShadowingLights) return;
@@ -123,8 +123,17 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 
 	// SPOT LIGHT SHADOW MAPS
 	//
+	pGPUProfiler->BeginQuery("Spots");
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
+#if _DEBUG
+		if (shadowView.shadowMapRenderListLookUp.find(shadowView.spots[i]) == shadowView.shadowMapRenderListLookUp.end())
+		{
+			Log::Error("Spot light not found in shadowmap render list lookup");
+			continue;;
+		}
+#endif
+
 		pRenderer->BindDepthTarget(mDepthTargets_Spot[i]);	// only depth stencil buffer
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 		pRenderer->SetConstant4x4f("viewProj", shadowView.spots[i]->GetLightSpaceMatrix());
@@ -133,15 +142,17 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 		pRenderer->Apply();
 
 		pRenderer->BeginEvent("Spot[" + std::to_string(i)  + "]: DrawSceneZ()");
-		for (const GameObject* obj : ZPassObjects)
+		for (const GameObject* obj : shadowView.shadowMapRenderListLookUp.at(shadowView.spots[i]))
 			obj->RenderZ(pRenderer);
 		pRenderer->EndEvent();
 	}
+	pGPUProfiler->EndQuery();
 
 	// DIRECTIONAL SHADOW MAP
 	//
 	if (shadowView.pDirectional != nullptr)
 	{
+		pGPUProfiler->BeginQuery("Directional");
 		pRenderer->SetViewport(mShadowViewPort_Directional);
 		pRenderer->BindDepthTarget(mDepthTarget_Directional);	// only depth stencil buffer
 		pRenderer->Apply();
@@ -152,9 +163,10 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const std::vector<cons
 		pRenderer->Apply();
 
 		pRenderer->BeginEvent("Directional: DrawSceneZ()");
-		for (const GameObject* obj : ZPassObjects)
+		for (const GameObject* obj : shadowView.casters)
 			obj->RenderZ(pRenderer);
 		pRenderer->EndEvent();
+		pGPUProfiler->EndQuery();
 	}
 }
 

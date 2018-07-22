@@ -42,43 +42,44 @@ namespace VQEngine { class ThreadPool; }
 
 #define DO_NOT_LOAD_SCENES 0
 
-//----------------------------------------------------------------------------------------------------------------
-// https://en.wikipedia.org/wiki/Template_method_pattern
-// https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
-// https://isocpp.org/wiki/faq/strange-inheritance#two-strategies-for-virtuals
-// template method seems like a good idea here.
-// the idea is that base class takes care of the common tasks among all scenes and calls the 
-// customized functions of the derived classes through pure virtual functions
-//----------------------------------------------------------------------------------------------------------------
-
-struct ModelLoadQueue 
+struct ModelLoadQueue
 {
 	std::mutex mutex;
 	std::unordered_map<GameObject*, std::string> objectModelMap;
 	std::unordered_map<std::string, std::future<Model>> asyncModelResults;
 };
 
+
+//----------------------------------------------------------------------------------------------------------------
+// https://en.wikipedia.org/wiki/Template_method_pattern
+// https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
+// https://isocpp.org/wiki/faq/strange-inheritance#two-strategies-for-virtuals
+// template method seems like a good idea here:
+// base class takes care of the common tasks among all scenes and calls the 
+// customized functions of the derived classes through pure virtual functions
+//----------------------------------------------------------------------------------------------------------------
 class Scene
 {
-protected:
 	//----------------------------------------------------------------------------------------------------------------
 	// SCENE INTERFACE FOR DERIVED SCENES
 	//----------------------------------------------------------------------------------------------------------------
+protected:
 
-	// Update() is called each frame
+	// Update() is called each frame before Engine::Render(). Scene-specific update logic goes here.
 	//
 	virtual void Update(float dt) = 0;
 
-	// Scene-specific loading logic
+	// Scene-specific loading logic goes here
 	//
 	virtual void Load(SerializedScene& scene) = 0;
 	
-	// Scene-specific unloading logic
+	// Scene-specific unloading logic goes here
 	//
 	virtual void Unload() = 0;
 
-	// each scene has to implement scene-specific RenderUI() function. RenderUI() is called
-	// after post processing is finished and is the last rendering workload before presenting the frame.
+	// Each scene has to implement scene-specific RenderUI() function. 
+	// RenderUI() is called after post processing is finished and it is 
+	// the last rendering workload before presenting the frame.
 	//
 	virtual void RenderUI() const = 0;
 
@@ -96,33 +97,12 @@ protected:
 	//
 	void LoadModel_Async(GameObject* pObject, const std::string& modelPath);
 
-protected:
-	friend class SceneResourceView; // using attorney method, alternatively can use friend function
-	friend class ModelLoader;
-
-	std::vector<Mesh>			mMeshes;
-	std::vector<Camera>			mCameras;
-	std::vector<Light>			mLights;
-	std::vector<GameObject*>	mpObjects;
-
-	DirectionalLight			mDirectionalLight;
-	Skybox						mSkybox;
-	EEnvironmentMapPresets		mActiveSkyboxPreset;
-	int mSelectedCamera;
-
-	Settings::SceneRender		mSceneRenderSettings;
-	Renderer*					mpRenderer;
-	TextRenderer*				mpTextRenderer;
-	VQEngine::ThreadPool*		mpThreadPool;	// initialized by the Engine
-
-
 
 	//----------------------------------------------------------------------------------------------------------------
 	// ENGINE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
-
-	friend class Engine;
 public:
+	friend class Engine;
 	Scene(Renderer* pRenderer, TextRenderer* pTextRenderer);
 	~Scene() = default;
 
@@ -131,19 +111,18 @@ public:
 	//
 	void LoadScene(SerializedScene& scene, const Settings::Window& windowSettings, const std::vector<Mesh>& builtinMeshes);
 
-	// clears object/light containers and camera settings
+	// Clears object/light containers and camera settings
 	//
 	void UnloadScene();
 
-	// updates selected camera and calls overridden Update from derived scene class
+	// Updates selected camera and calls overridden Update from derived scene class
 	//
 	void UpdateScene(float dt);
 
 	// Prepares the mDrawLists for various processing (culling, render pass object lists etc.)
 	//
-	size_t PreRender(const XMMATRIX& viewProj);
+	size_t PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView);
 	void GatherLightData(SceneLightingData& outLightingData, ShadowView& outShadowView) const;
-	void GatherShadowCasters(std::vector<const GameObject*>& casters) const;
 
 
 	// Renders the meshes in the scene which have materials with alpha=1.0f
@@ -168,35 +147,65 @@ public:
 	inline const Settings::SceneRender& GetSceneRenderSettings() const { return mSceneRenderSettings; }
 	inline bool							HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
 	inline void							RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
+	inline EEnvironmentMapPresets		GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
 
-	EEnvironmentMapPresets GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
 	void SetEnvironmentMap(EEnvironmentMapPresets preset);
 	void ResetActiveCamera();
 
-	
+	// ???
+	//
 	MeshID AddMesh_Async(Mesh m);
 
-private:
-	GameObjectPool			mObjectPool;
-	MaterialPool			mMaterials;
-	ModelLoader				mModelLoader;
-	ModelLoadQueue			mModelLoadQueue;
+	//----------------------------------------------------------------------------------------------------------------
+	// DATA
+	//----------------------------------------------------------------------------------------------------------------
+protected:
+	friend class SceneResourceView; // using attorney method, alternatively can use friend function
+	friend class ModelLoader;
 
-	std::mutex mSceneMeshMutex;
+	std::vector<Mesh>			mMeshes;
+	std::vector<Camera>			mCameras;
+	std::vector<Light>			mLights;
+	std::vector<GameObject*>	mpObjects;
+
+	DirectionalLight			mDirectionalLight;
+	Skybox						mSkybox;
+
+	EEnvironmentMapPresets		mActiveSkyboxPreset;
+	int							mSelectedCamera;
+
+	Settings::SceneRender		mSceneRenderSettings;
+	Renderer*					mpRenderer;
+	TextRenderer*				mpTextRenderer;
+	VQEngine::ThreadPool*		mpThreadPool;	// initialized by the Engine
+
+
+private:
+	GameObjectPool				mObjectPool;
+	MaterialPool				mMaterials;
+	ModelLoader					mModelLoader;
+	ModelLoadQueue				mModelLoadQueue;
+
+	std::mutex					mSceneMeshMutex;
 
 	struct DrawLists
 	{
-		std::vector<const GameObject*>	opaqueList;
-		std::vector<const GameObject*>	opaqueListCulled;
-		std::vector<const GameObject*>	alphaList;
+		using RenderList = std::vector<const GameObject*>;
+		using LightRenderListLookup = std::unordered_map<const Light*, RenderList>;
+
+		// list of objects that has the renderSettings.bRender=true
+		RenderList opaqueList;
+		RenderList alphaList;
+
+		// list of objects that fall within the main camera's view frustum
+		RenderList opaqueListCulled;
 	};
 
-	DrawLists				mDrawLists;
-
-	BoundingBox		mBoundingBox;
+	DrawLists					mDrawLists;
+	BoundingBox					mBoundingBox;
 
 	// per frame scene data cache
-	XMMATRIX mFrameViewProj;
+	XMMATRIX					mFrameViewProj;
 
 private:
 	void StartLoadingModels();

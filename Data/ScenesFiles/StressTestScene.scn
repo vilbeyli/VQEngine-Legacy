@@ -41,7 +41,9 @@ directional sun 2.2   -20   -25   35  4096 2700 2800
 light       p         white		false      5800      814.54  115.85  197.38    900	  0.3
 light       p         white		false      7800      761.51  143.17  256.48    900	  0.3
 light       p         white		false      8800      776.38  128.57  136.94    3200	  0.3
-light		s		  orange     true       4000      794.38  68.06  183.54    80    -90 0 0   1
+light		s		  orange     true       4000      794.38  68.06  183.54    85    -90 0 0   1
+//light		s		  red        true       4000      774.38  68.06  183.54    85    -90 0 0   1
+//light		s		  yellow     true       4000      814.38  68.06  183.54    85    -90 0 0   1
 
 
 // sponza lights

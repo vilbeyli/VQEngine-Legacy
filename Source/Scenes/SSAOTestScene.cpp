@@ -104,7 +104,7 @@ void SSAOTestScene::Load(SerializedScene& scene)
 		GameObject* pModel = Scene::CreateNewGameObject();
 		pModel->SetModel(Scene::LoadModel("nanosuit/nanosuit.obj"));
 		pModel->SetTransform(Transform(position, rotation, scale));
-		pModel->RotateAroundGlobalYAxisDegrees(90.0f * (i % 4));
+		pModel->GetTransform().RotateAroundGlobalYAxisDegrees(90.0f * (i % 4));
 		pModels.push_back(pModel);
 	}
 }
@@ -120,7 +120,7 @@ void SSAOTestScene::Update(float dt)
 	constexpr float ROTATION_SPEED_DEG_PER_SEC = 15.0f;
 	for (GameObject* pModel : pModels)
 	{
-		pModel->RotateAroundGlobalYAxisDegrees(dt * ROTATION_SPEED_DEG_PER_SEC);
+		pModel->GetTransform().RotateAroundGlobalYAxisDegrees(dt * ROTATION_SPEED_DEG_PER_SEC);
 	}
 }
 void SSAOTestScene::RenderUI() const {}

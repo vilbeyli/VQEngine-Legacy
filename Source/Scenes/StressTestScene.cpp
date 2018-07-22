@@ -233,7 +233,8 @@ void StressTestScene::Update(float dt)
 	
 	std::for_each(mpTestObjects.begin(), mpTestObjects.end(), [&](GameObject* o)
 	{
-		o->RotateAroundGlobalYAxisDegrees(dt * 5);
+		o->GetTransform().RotateAroundPointAndAxis(vec3::Up, dt * 10.0f * DEG2RAD, vec3::Zero);
+		o->GetTransform().RotateAroundGlobalYAxisDegrees(dt * 5);
 	});
 }
 

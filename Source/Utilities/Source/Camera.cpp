@@ -242,56 +242,6 @@ XMMATRIX Camera::GetProjectionMatrix() const
 	return  XMLoadFloat4x4(&mMatProj);
 }
 
-
-
-FrustumPlaneset Camera::GetFrustumPlanes(const XMMATRIX& projectionTransformation) const
-{
-	// src: http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf
-#if 0
-	const XMMATRIX m = XMMatrixTranspose(projectionTransformation);	// shorthand
-#else
-	const XMMATRIX& m = projectionTransformation;	// shorthand
-#endif
-	FrustumPlaneset viewPlanes;
-	viewPlanes.abcd[FrustumPlaneset::PL_RIGHT] = vec4(
-		m.r[0].m128_f32[3] - m.r[0].m128_f32[0],
-		m.r[1].m128_f32[3] - m.r[1].m128_f32[0],
-		m.r[2].m128_f32[3] - m.r[2].m128_f32[0],
-		m.r[3].m128_f32[3] - m.r[3].m128_f32[0]
-	);
-	viewPlanes.abcd[FrustumPlaneset::PL_LEFT] = vec4(
-		m.r[0].m128_f32[3] + m.r[0].m128_f32[0],
-		m.r[1].m128_f32[3] + m.r[1].m128_f32[0],
-		m.r[2].m128_f32[3] + m.r[2].m128_f32[0],
-		m.r[3].m128_f32[3] + m.r[3].m128_f32[0]
-	);
-	viewPlanes.abcd[FrustumPlaneset::PL_TOP] = vec4(
-		m.r[0].m128_f32[3] - m.r[0].m128_f32[1],
-		m.r[1].m128_f32[3] - m.r[1].m128_f32[1],
-		m.r[2].m128_f32[3] - m.r[2].m128_f32[1],
-		m.r[3].m128_f32[3] - m.r[3].m128_f32[1]
-	);
-	viewPlanes.abcd[FrustumPlaneset::PL_BOTTOM] = vec4(
-		m.r[0].m128_f32[3] + m.r[0].m128_f32[1],
-		m.r[1].m128_f32[3] + m.r[1].m128_f32[1],
-		m.r[2].m128_f32[3] + m.r[2].m128_f32[1],
-		m.r[3].m128_f32[3] + m.r[3].m128_f32[1]
-	);
-	viewPlanes.abcd[FrustumPlaneset::PL_FAR] = vec4(
-		m.r[0].m128_f32[3] - m.r[0].m128_f32[2],
-		m.r[1].m128_f32[3] - m.r[1].m128_f32[2],
-		m.r[2].m128_f32[3] - m.r[2].m128_f32[2],
-		m.r[3].m128_f32[3] - m.r[3].m128_f32[2]
-	);
-	viewPlanes.abcd[FrustumPlaneset::PL_NEAR] = vec4(
-		m.r[0].m128_f32[2],
-		m.r[1].m128_f32[2],
-		m.r[2].m128_f32[2],
-		m.r[3].m128_f32[2]
-	);
-	return viewPlanes;
-}
-
 XMMATRIX Camera::RotMatrix() const
 {
 	return XMMatrixRotationRollPitchYaw(mPitch, mYaw, 0.0f);

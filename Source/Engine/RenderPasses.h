@@ -30,6 +30,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <unordered_map>
 
 using std::shared_ptr;
 
@@ -39,8 +40,9 @@ class GameObject;
 struct Light;
 struct DirectionalLight;
 struct ID3D11Device;
-
+class GPUProfiler;
 struct SceneLightingData;
+
 struct SceneView
 {
 	XMMATRIX		view;
@@ -57,15 +59,26 @@ struct SceneView
 };
 
 struct ShadowView
-{	// shadowing Lights
+{	
+	using RenderList = std::vector<const GameObject*>;
+	using LightRenderListLookup = std::unordered_map<const Light*, RenderList>;
+	
+	// shadowing Lights
 	std::vector<const Light*> spots;
 	std::vector<const Light*> points;
 	const DirectionalLight* pDirectional;
+
+	// game obj casting shadows (=render list of directional light)
+	std::vector<const GameObject*> casters;
+
+	// culled render lists per shadowing light
+	LightRenderListLookup shadowMapRenderListLookUp;
 
 	void Clear()
 	{
 		spots.clear();
 		points.clear();
+		casters.clear();
 		pDirectional = nullptr;
 	}
 };
@@ -76,7 +89,7 @@ struct ShadowMapPass
 {
 	void InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
 	void InitializeDirectionalLightShadowMap(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
-	void RenderShadowMaps(Renderer* pRenderer, const std::vector<const GameObject*> ZPassObjects, const ShadowView& shadowView) const;
+	void RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const;
 	
 	Renderer*			mpRenderer = nullptr;
 	ShaderID			mShadowMapShader = -1;

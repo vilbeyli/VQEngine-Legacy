@@ -220,6 +220,11 @@ SpotLightGPU Light::GetSpotLightData() const
 	return l;
 }
 
+FrustumPlaneset Light::GetViewFrustumPlanes() const
+{
+	return FrustumPlaneset::ExtractFromMatrix(GetViewMatrix() * GetProjectionMatrix());
+}
+
 
 DirectionalLightGPU DirectionalLight::GetGPUData() const
 {

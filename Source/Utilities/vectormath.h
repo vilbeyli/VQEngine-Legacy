@@ -236,3 +236,67 @@ public:
 	float S;
 };
 
+//===============================================================================================
+
+struct FrustumPlaneset
+{	// plane equations: aX + bY + cZ + d = 0
+	vec4 abcd[6];	// r, l, t, b, n, f
+	enum EPlaneset
+	{
+		PL_RIGHT = 0,
+		PL_LEFT,
+		PL_TOP,
+		PL_BOTTOM,
+		PL_FAR,
+		PL_NEAR
+	};
+
+	// src: http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdfe
+	// gets the frustum planes based on @projectionTransformation. if:
+	//
+	// - @projectionTransformation is proj			matrix ->  view space plane equations
+	// - @projectionTransformation is viewProj		matrix -> world space plane equations
+	// - @projectionTransformation is worldViewProj matrix -> model space plane equations
+	// 
+	inline static FrustumPlaneset ExtractFromMatrix(const XMMATRIX& m)
+	{
+		FrustumPlaneset viewPlanes;
+		viewPlanes.abcd[FrustumPlaneset::PL_RIGHT] = vec4(
+			m.r[0].m128_f32[3] - m.r[0].m128_f32[0],
+			m.r[1].m128_f32[3] - m.r[1].m128_f32[0],
+			m.r[2].m128_f32[3] - m.r[2].m128_f32[0],
+			m.r[3].m128_f32[3] - m.r[3].m128_f32[0]
+		);
+		viewPlanes.abcd[FrustumPlaneset::PL_LEFT] = vec4(
+			m.r[0].m128_f32[3] + m.r[0].m128_f32[0],
+			m.r[1].m128_f32[3] + m.r[1].m128_f32[0],
+			m.r[2].m128_f32[3] + m.r[2].m128_f32[0],
+			m.r[3].m128_f32[3] + m.r[3].m128_f32[0]
+		);
+		viewPlanes.abcd[FrustumPlaneset::PL_TOP] = vec4(
+			m.r[0].m128_f32[3] - m.r[0].m128_f32[1],
+			m.r[1].m128_f32[3] - m.r[1].m128_f32[1],
+			m.r[2].m128_f32[3] - m.r[2].m128_f32[1],
+			m.r[3].m128_f32[3] - m.r[3].m128_f32[1]
+		);
+		viewPlanes.abcd[FrustumPlaneset::PL_BOTTOM] = vec4(
+			m.r[0].m128_f32[3] + m.r[0].m128_f32[1],
+			m.r[1].m128_f32[3] + m.r[1].m128_f32[1],
+			m.r[2].m128_f32[3] + m.r[2].m128_f32[1],
+			m.r[3].m128_f32[3] + m.r[3].m128_f32[1]
+		);
+		viewPlanes.abcd[FrustumPlaneset::PL_FAR] = vec4(
+			m.r[0].m128_f32[3] - m.r[0].m128_f32[2],
+			m.r[1].m128_f32[3] - m.r[1].m128_f32[2],
+			m.r[2].m128_f32[3] - m.r[2].m128_f32[2],
+			m.r[3].m128_f32[3] - m.r[3].m128_f32[2]
+		);
+		viewPlanes.abcd[FrustumPlaneset::PL_NEAR] = vec4(
+			m.r[0].m128_f32[2],
+			m.r[1].m128_f32[2],
+			m.r[2].m128_f32[2],
+			m.r[3].m128_f32[2]
+		);
+		return viewPlanes;
+	}
+};

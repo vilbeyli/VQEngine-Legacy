@@ -60,9 +60,7 @@ public:
 	const ModelData& GetModelData() const { return mModel.mData; }
 	const std::string& GetModelName() const { return mModel.mModelName; }
 	
-	// #TODO: either add all the other transform update functions to game object or expose Transform member.
-	inline void RotateAroundGlobalYAxisDegrees(float angle) { mTransform.RotateAroundGlobalYAxisDegrees(angle); }
-
+	Transform& GetTransform() { return mTransform; }
 
 	void AddMesh(MeshID meshID);
 

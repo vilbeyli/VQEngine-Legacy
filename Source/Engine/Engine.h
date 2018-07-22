@@ -195,7 +195,6 @@ private:
 	PostProcessPass					mPostProcessPass;
 	DebugPass						mDebugPass;
 
-	std::vector<const GameObject*>	mShadowCasters;
 	std::vector<const GameObject*>	mTBNDrawObjects;
 	
 

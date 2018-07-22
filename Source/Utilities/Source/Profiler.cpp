@@ -30,7 +30,7 @@ void CPUProfiler::BeginProfile()
 
 	if (mState.bIsProfiling)
 	{
-		Log::Warning("Already began profiling! Current profiling entry: %s", entryStack.empty() ? "EMPTY" : entryStack.top());
+		Log::Warning("Already began profiling! Current profiling entry: %s", entryStack.empty() ? "EMPTY" : entryStack.top().c_str());
 	}
 
 

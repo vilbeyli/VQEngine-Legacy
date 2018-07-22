@@ -171,17 +171,18 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
 	std::for_each(RANGE(pObjects), [&](const GameObject* pObj)
 	{
-		pObj->mBoundingBox.Render(mpRenderer, viewProj);
+		pObj->mBoundingBox.Render(mpRenderer, pObj->GetTransform().WorldTransformationMatrix() * viewProj);
 	});
 
 
-	// camera frustum
+	// TODO: camera frustum
 	if (mCameras.size() > 1 && mSelectedCamera != 0 && false)
 	{
 		// render camera[0]'s frustum
 		const XMMATRIX viewProj = mCameras[mSelectedCamera].GetViewMatrix() * mCameras[mSelectedCamera].GetProjectionMatrix();
-		mCameras[0].GetFrustumPlanes(viewProj);	// world space frustum plane equations
-
+		
+		auto a = FrustumPlaneset::ExtractFromMatrix(viewProj); // world space frustum plane equations
+		
 		// IA: model space camera frustum 
 		// world matrix from camera[0] view ray
 		// viewProj from camera[selected]
@@ -289,19 +290,6 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 }
 
 bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
-void Scene::GatherShadowCasters(std::vector<const GameObject*>& casters) const
-{
-	for (const GameObject* pObj : mDrawLists.opaqueListCulled)
-	{
-		if (pObj->mRenderSettings.bCastShadow)
-		{
-			casters.push_back(pObj);
-		}
-	}
-
-	// do we also want alpha list?
-}
-
 
 void Scene::ResetActiveCamera()
 {
@@ -422,12 +410,16 @@ void Scene::CalculateSceneBoundingBox()
 
 				for (int i = 0; i < numVerts; ++i)
 				{
-					const vec3 worldPos = vec3(XMVector3Transform(pData[i].position, worldMatrix));
+					const vec3 worldPos = vec3(XMVector4Transform(vec4(pData[i].position, 1.0f), worldMatrix));
 					const float x_mesh = std::min(worldPos.x(), DegenerateMeshPositionChannelValueMax);
 					const float y_mesh = std::min(worldPos.y(), DegenerateMeshPositionChannelValueMax);
 					const float z_mesh = std::min(worldPos.z(), DegenerateMeshPositionChannelValueMax);
 
-					// scene bounding box
+					const float x_mesh_local = pData[i].position.x();
+					const float y_mesh_local = pData[i].position.y();
+					const float z_mesh_local = pData[i].position.z();
+
+					// scene bounding box - world space
 					mins = vec3(
 						std::min(x_mesh, mins.x()),
 						std::min(y_mesh, mins.y()),
@@ -439,16 +431,16 @@ void Scene::CalculateSceneBoundingBox()
 						std::max(z_mesh, maxs.z())
 					);
 
-					// object bounding box
+					// object bounding box - model space
 					mins_obj = vec3(
-						std::min(x_mesh, mins_obj.x()),
-						std::min(y_mesh, mins_obj.y()),
-						std::min(z_mesh, mins_obj.z())
+						std::min(x_mesh_local, mins_obj.x()),
+						std::min(y_mesh_local, mins_obj.y()),
+						std::min(z_mesh_local, mins_obj.z())
 					);
 					maxs_obj = vec3(
-						std::max(x_mesh, maxs_obj.x()),
-						std::max(y_mesh, maxs_obj.y()),
-						std::max(z_mesh, maxs_obj.z())
+						std::max(x_mesh_local, maxs_obj.x()),
+						std::max(y_mesh_local, maxs_obj.y()),
+						std::max(z_mesh_local, maxs_obj.z())
 					);
 				}
 			}
@@ -485,14 +477,9 @@ void Scene::UpdateScene(float dt)
 }
 
 
-
-// todo:
-// @param1: aabb
-// @param2: transform
-//
 static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 {
-	vec4 points[] =
+	const vec4 points[] =
 	{
 	{ aabb.low.x(), aabb.low.y(), aabb.low.z(), 1.0f },
 	{ aabb.hi.x() , aabb.low.y(), aabb.low.z(), 1.0f },
@@ -529,18 +516,36 @@ static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 
 static size_t CullMeshes(const FrustumPlaneset& frustumPlanes, std::vector<MeshID> todo)
 {
+	// We currently cull based on game object bounding boxes, meaning that we
+	// cull meshes in 'gameobject-sized-batches'. Culling can be refined to mesh
+	// level by letting each game object have a culled list of meshes to draw.
+	//
 	return 0;
 }
 
 static size_t CullGameObjects(
-	const FrustumPlaneset& frustumPlanes
+	const FrustumPlaneset&                  frustumPlanes
 	, const std::vector<const GameObject*>& pObjs
-	, std::vector<const GameObject*>& pCulledObjs)
+	, std::vector<const GameObject*>&       pCulledObjs
+)
 {
 	size_t currIdx = 0;
 	std::for_each(RANGE(pObjs), [&](const GameObject* pObj)
 	{
-		if (IsVisible(frustumPlanes, pObj->GetAABB()))
+		// aabb is static and in world space during load time.
+		// this wouldn't work for dynamic objects in this state.
+		const BoundingBox aabb_world = [&]() 
+		{
+			const XMMATRIX world = pObj->GetTransform().WorldTransformationMatrix();
+			const BoundingBox& aabb_local = pObj->GetAABB();
+			return BoundingBox(
+				{ 
+					XMVector4Transform(vec4(aabb_local.low, 1.0f), world), 
+					XMVector4Transform(vec4(aabb_local.hi , 1.0f), world) 
+				});
+		}();
+
+		if (IsVisible(frustumPlanes, aabb_world))
 		{
 			pCulledObjs.push_back(pObj);
 			++currIdx;
@@ -549,30 +554,75 @@ static size_t CullGameObjects(
 	return pObjs.size() - currIdx;
 }
 
-size_t Scene::PreRender(const XMMATRIX& viewProj)
+size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 {
 	mFrameViewProj = viewProj;
+	
+	// CLEAN UP RENDER LISTS
+	//
 	mDrawLists.opaqueList.clear();
 	mDrawLists.opaqueListCulled.clear();
 	mDrawLists.alphaList.clear();
+	
+	outShadowView.casters.clear();
+	outShadowView.shadowMapRenderListLookUp.clear();
+
+	// POPULATE RENDER LISTS WITH SCENE OBJECTS
+	//
+	// gather game objects that are to be rendered in the scene
 	for (const GameObject& obj : mObjectPool.mObjects)
 	{
 		if (obj.mpScene == this && obj.mRenderSettings.bRender)
 		{
+			mDrawLists.opaqueList.push_back(&obj);
+
 			if (!obj.mModel.mData.mTransparentMeshIDs.empty())
 			{
 				mDrawLists.alphaList.push_back(&obj);
 			}
-			
-			mDrawLists.opaqueList.push_back(&obj);
+
+			if (obj.mRenderSettings.bCastShadow)
+			{
+				outShadowView.casters.push_back(&obj);
+			}
 		}
 	}
 
-	return CullGameObjects(
-		mCameras[mSelectedCamera].GetFrustumPlanes(viewProj)
+	// CULL MAIN & SHADOW VIEWS
+	//
+	size_t numFrustumCulledObjs = 0;
+	size_t numShadowFrustumCullObjs = 0;
+	
+	// main view
+	numFrustumCulledObjs = CullGameObjects(
+		FrustumPlaneset::ExtractFromMatrix(viewProj)
 		, mDrawLists.opaqueList
-		, mDrawLists.opaqueListCulled
-	);
+		, mDrawLists.opaqueListCulled);
+
+	// shadow frustums
+	for (const Light& l : mLights)
+	{
+		if (l._castsShadow)
+		{
+			std::vector<const GameObject*> objList;
+			switch (l._type)
+			{
+			case Light::ELightType::SPOT:
+				numShadowFrustumCullObjs += CullGameObjects(
+					l.GetViewFrustumPlanes(),
+					outShadowView.casters,
+					objList
+				);
+			break;
+			case Light::ELightType::POINT:
+				// TODO: cull against 6 frustums
+				break;
+			}
+			outShadowView.shadowMapRenderListLookUp[&l] = objList;
+		}
+	}
+	
+	return numFrustumCulledObjs + numShadowFrustumCullObjs;
 }
 
 void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)

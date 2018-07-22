@@ -495,7 +495,6 @@ static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 	for (int i = 0; i < 6; ++i)	// for each plane
 	{
 		bool bInside = false;
-
 		for (int j = 0; j < 8; ++j)	// for each point
 		{
 			if (XMVector4Dot(points[j], frustum.abcd[i]).m128_f32[0] > 0.000002f)
@@ -538,11 +537,26 @@ static size_t CullGameObjects(
 		{
 			const XMMATRIX world = pObj->GetTransform().WorldTransformationMatrix();
 			const BoundingBox& aabb_local = pObj->GetAABB();
+#if 0	
+			// transform low and high points of the bounding box
 			return BoundingBox(
-				{ 
-					XMVector4Transform(vec4(aabb_local.low, 1.0f), world), 
-					XMVector4Transform(vec4(aabb_local.hi , 1.0f), world) 
-				});
+			{ 
+				XMVector4Transform(vec4(aabb_local.low, 1.0f), world), 
+				XMVector4Transform(vec4(aabb_local.hi , 1.0f), world) 
+			});
+#else
+			// transform center and extent and construct high and low later
+			// we can use XMVector3Transform() for the extent vector to save some instructions
+			const vec3 extent = aabb_local.hi - aabb_local.low;
+			const vec4 center = vec4((aabb_local.hi + aabb_local.low) * 0.5f, 1.0f);
+			const vec3 tfC = XMVector4Transform(center, world);
+			const vec3 tfEx = XMVector3Transform(extent, world);
+			return BoundingBox(
+			{
+				{tfC - tfEx},	// lo
+				{tfC + tfEx}	// hi
+			});
+#endif
 		}();
 
 		if (IsVisible(frustumPlanes, aabb_world))
@@ -621,6 +635,8 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 			outShadowView.shadowMapRenderListLookUp[&l] = objList;
 		}
 	}
+
+	// TODO: consider this for directionals: http://stefan-s.net/?p=92
 	
 	return numFrustumCulledObjs + numShadowFrustumCullObjs;
 }

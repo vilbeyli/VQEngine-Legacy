@@ -29,6 +29,10 @@ Below is the collection of resources used for building the VQEngine.
  - [Fast Extraction of Viewing Frustum Planes from the WorldView-Projection Matrix](http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf)
  - [Fabian Giesen: View frustum culling (2010)](https://fgiesen.wordpress.com/2010/10/17/view-frustum-culling/)
  - [Zeux: View frustum culling optimization](https://zeuxcg.org/2009/03/01/view-frustum-culling-optimization-never-let-me-branch/)
+ 
+ ## Shadow View Culling
+ - [Umbra 2011: Shadow Caster Culling for Efficient Shadow Mapping](http://dcgi.felk.cvut.cz/?media=publications%2F2011%2Fbittner-i3d-scc%2Fpaper.pdf&alias=Bittner2011&action=fetch&presenter=Media)
+ - [Stefan-S: Shadow caster frustum culling](http://stefan-s.net/?p=92)
 
 ## BRDF
 

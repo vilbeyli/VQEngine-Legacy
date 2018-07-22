@@ -87,18 +87,6 @@ vec2::operator XMVECTOR() const { return XMLoadFloat2(&_v); }
 bool vec2::operator==(const vec2 &v) const { return v._v.x == _v.x && v._v.y == _v.y; }
 vec2::operator XMFLOAT2() const { return _v; }
 
-float& vec3::x() { return _v.x; }
-float& vec3::y() { return _v.y; }
-float& vec3::z() { return _v.z; }
-float& vec3::x() const { return const_cast<float&>(_v.x); }
-float& vec3::y() const { return const_cast<float&>(_v.y); }
-float& vec3::z() const { return const_cast<float&>(_v.z); }
-
-float& vec2::x() { return _v.x; }
-float& vec2::y() { return _v.y; }
-float& vec2::x() const { return const_cast<float&>(_v.x); }
-float& vec2::y() const { return const_cast<float&>(_v.y); }
-
 void vec3::normalize()
 {
 	XMVECTOR v = XMLoadFloat3(&_v);

@@ -32,7 +32,6 @@ using VecPair = std::pair<XMVECTOR, XMVECTOR>;
 #define PI		XM_PI
 #define PI_DIV2 XM_PIDIV2
 
-
 struct vec3
 {
 	static vec3 Rand();
@@ -69,13 +68,12 @@ struct vec3
 	inline vec3 operator +(const vec3& v) { return vec3(this->x() + v.x(), this->y() + v.y(), this->z() + v.z()); };
 	inline vec3& operator +=(const vec3& v) { *this = *this + v; return *this; };
 
-	float& x();
-	float& y();
-	float& z();
-
-	float& x() const;
-	float& y() const;
-	float& z() const;
+	inline float& vec3::x() { return _v.x; }
+	inline float& vec3::y() { return _v.y; }
+	inline float& vec3::z() { return _v.z; }
+	inline float& vec3::x() const { return const_cast<float&>(_v.x); }
+	inline float& vec3::y() const { return const_cast<float&>(_v.y); }
+	inline float& vec3::z() const { return const_cast<float&>(_v.z); }
 
 	void normalize();
 	const vec3 normalized() const;
@@ -114,11 +112,10 @@ struct vec2
 	bool operator ==(const vec2&) const;
 	inline vec2& operator +=(const vec2& v) { *this = *this + v; return *this; };
 
-	float& x();
-	float& y();
-
-	float& x() const;
-	float& y() const;
+	inline float& vec2::x() { return _v.x; }
+	inline float& vec2::y() { return _v.y; }
+	inline float& vec2::x() const { return const_cast<float&>(_v.x); }
+	inline float& vec2::y() const { return const_cast<float&>(_v.y); }
 
 	void normalize();
 	const vec2 normalized() const;

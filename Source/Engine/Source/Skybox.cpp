@@ -17,6 +17,7 @@
 
 #include "Skybox.h"
 #include "Engine.h"
+#include "Application/Application.h"
 #include "Renderer/Renderer.h"
 #include "Utilities/Log.h"
 
@@ -110,7 +111,7 @@ void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Render
 	}
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		EnvironmentMap::CalculateBRDFIntegralLUT();
+		EnvironmentMap::CalculateBRDFIntegralLUT("");
 	}
 
 	// Cubemap Skyboxes
@@ -164,7 +165,20 @@ void Skybox::InitializePresets(Renderer* pRenderer, const Settings::Rendering& r
 {
 	EnvironmentMap::Initialize(pRenderer);
 	EnvironmentMap::LoadShaders();
-	EnvironmentMap::CalculateBRDFIntegralLUT();
+	
+	const std::string BRDFLUTTextureFileName = "BRDFIntegrationLUT.png";
+	const std::string BRDFLUTTextureFilePath = EnvironmentMap::sTextureCacheDirectory + BRDFLUTTextureFileName;
+	if(DirectoryUtil::FileExists(BRDFLUTTextureFilePath) && false)
+	{ 
+		EnvironmentMap::sBRDFIntegrationLUTTexture = pRenderer->CreateTextureFromFile(BRDFLUTTextureFileName, EnvironmentMap::sTextureCacheDirectory);
+	}
+	else
+	{
+		EnvironmentMap::sBRDFIntegrationLUTTexture = EnvironmentMap::CalculateBRDFIntegralLUT(BRDFLUTTextureFilePath);
+		pRenderer->SaveTextureToDisk(EnvironmentMap::sBRDFIntegrationLUTTexture, BRDFLUTTextureFilePath);
+		// todo: we can unload shaders / render targets here
+	}
+
 
 	// Cubemap Skyboxes
 	//------------------------------------------------------------------------------------------------------------------------------------
@@ -236,7 +250,7 @@ Skybox::Skybox()
 
 bool Skybox::Initialize(const EnvironmentMapFileNames& environmentMapFiles, const std::string& rootDirectory)
 {
-	environmentMap = EnvironmentMap(pRenderer, environmentMapFiles, rootDirectory);
+	environmentMap.Initialize(pRenderer, environmentMapFiles, rootDirectory);
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
 		skyboxTexture = pRenderer->CreateTextureFromFile(environmentMapFiles.skyboxFileName, rootDirectory);
@@ -273,17 +287,38 @@ void Skybox::Render(const XMMATRIX& viewProj) const
 // Static Variables - BRDF LUT & Pre-filtered Environment Map
 //---------------------------------------------------------------
 RenderTargetID EnvironmentMap::sBRDFIntegrationLUTRT = -1;
+TextureID EnvironmentMap::sBRDFIntegrationLUTTexture = -1;
 ShaderID EnvironmentMap::sBRDFIntegrationLUTShader   = -1;
 ShaderID EnvironmentMap::sPrefilterShader = -1;
 ShaderID EnvironmentMap::sRenderIntoCubemapShader = -1;
 Renderer* EnvironmentMap::spRenderer = nullptr;
+std::string EnvironmentMap::sTextureCacheDirectory = "";
 //---------------------------------------------------------------
 
 EnvironmentMap::EnvironmentMap() : irradianceMap(-1), environmentMap(-1) {}
 
+
+void EnvironmentMap::Initialize(Renderer * pRenderer, const EnvironmentMapFileNames & files, const std::string & rootDirectory)
+{
+	Log::Info("Loading Environment Map: %s", StrUtil::split(rootDirectory, '/').back().c_str());
+	{
+		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+		irradianceMap = pRenderer->CreateHDRTexture(files.irradianceMapFileName, rootDirectory);
+	}
+	{
+		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+		environmentMap = pRenderer->CreateHDRTexture(files.environmentMapFileName, rootDirectory);
+	}
+	InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(environmentMap), pRenderer->GetTextureObject(irradianceMap));
+}
+
 void EnvironmentMap::Initialize(Renderer * pRenderer)
 {
 	spRenderer = pRenderer;
+	// create texture cache if it doesn't already exist
+	EnvironmentMap::sTextureCacheDirectory = Application::s_WorkspaceDirectory + "/TextureCache/";
+	DirectoryUtil::CreateFolderIfItDoesntExist(EnvironmentMap::sTextureCacheDirectory);
+	DirectoryUtil::CreateFolderIfItDoesntExist(EnvironmentMap::sTextureCacheDirectory + "/sIBL/");
 }
 
 void EnvironmentMap::LoadShaders()
@@ -298,9 +333,9 @@ void EnvironmentMap::LoadShaders()
 
 	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
 
-	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };// compute?
 	const std::vector<std::string> IBLConvolution = { "Skybox_vs", "PreFilterConvolution_ps" };		// compute?
 	const std::vector<std::string> RenderIntoCubemap = { "Skybox_vs", "RenderIntoCubemap_ps" };
+	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };// compute?
 
 	// #AsyncLoad: Mutex DEVICE
 	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
@@ -308,32 +343,44 @@ void EnvironmentMap::LoadShaders()
 	sRenderIntoCubemapShader = spRenderer->AddShader("RenderIntoCubemap", RenderIntoCubemap, VS_PS, layout);
 }
 
-void EnvironmentMap::CalculateBRDFIntegralLUT()
+TextureID EnvironmentMap::CalculateBRDFIntegralLUT(const std::string& outCachedTexturePath)
 {
 	DXGI_FORMAT format = false ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT;
+	constexpr int TEXTURE_DIMENSION = 2048;
+	
 
-	D3D11_TEXTURE2D_DESC rtDesc = {};
-	rtDesc.Width = 2048;
-	rtDesc.Height = 2048;
-	rtDesc.MipLevels = 1;
-	rtDesc.ArraySize = 1;
-	rtDesc.Format = format;
-	rtDesc.Usage = D3D11_USAGE_DEFAULT;
-	rtDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	rtDesc.CPUAccessFlags = 0;
-	rtDesc.SampleDesc = { 1, 0 };
-	rtDesc.MiscFlags = 0;
+	// create the render target
+	RenderTargetDesc rtDesc = {};
+	rtDesc.format = RGBA32F;
+	rtDesc.textureDesc.width = TEXTURE_DIMENSION;
+	rtDesc.textureDesc.height = TEXTURE_DIMENSION;
+	rtDesc.textureDesc.mipCount = 1;
+	rtDesc.textureDesc.arraySize = 1;
+	rtDesc.textureDesc.format = RGBA32F;
+	rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+	rtDesc.textureDesc.bGenerateMips = false;
+	rtDesc.textureDesc.cpuAccessMode = ECPUAccess::CPU_R;
+	sBRDFIntegrationLUTRT = spRenderer->AddRenderTarget(rtDesc);
 
-	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
-	RTVDesc.Format = format;
-	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-	RTVDesc.Texture2D.MipSlice = 0;
 
-	// #AsyncLoad: Mutex DEVICE/RENDER
-	sBRDFIntegrationLUTRT = spRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	// TODO: currently, we need to load the shader for not breaking the
+	// hardcoded enum order... after shader refactoring, this shouldn't be 
+	// an issue and we can uncommend the following section below.
+	//
+	// create the LUT calculation shader
+	//const std::vector<InputLayout> layout = {	// todo: layouts from reflection?
+	//	{ "POSITION",	FLOAT32_3 },
+	//	{ "NORMAL",		FLOAT32_3 },
+	//	{ "TANGENT",	FLOAT32_3 },
+	//	{ "TEXCOORD",	FLOAT32_2 },
+	//};
+	//const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
+	//const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };// compute?
+	//sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
 
+
+	// render the lookup table
 	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
-
 	spRenderer->BindRenderTarget(sBRDFIntegrationLUTRT);
 	spRenderer->UnbindDepthTarget();
 	spRenderer->SetShader(sBRDFIntegrationLUTShader);
@@ -342,6 +389,8 @@ void EnvironmentMap::CalculateBRDFIntegralLUT()
 	spRenderer->SetIndexBuffer(IABuffers.second);
 	spRenderer->Apply();
 	spRenderer->DrawIndexed();
+	spRenderer->m_deviceContext->Flush();
+	return spRenderer->GetRenderTargetTexture(sBRDFIntegrationLUTRT);
 }
 
 TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& environmentMap, const Texture& irradienceMap)
@@ -526,18 +575,4 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	// ID3D11ShaderResourceView* pNull[6] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 	// pRenderer->m_deviceContext->PSSetShaderResources(0, 6, &pNull[0]);
 	return prefilteredEnvironmentMap;
-}
-
-EnvironmentMap::EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory)
-{
-	Log::Info("Loading Environment Map: %s", StrUtil::split(rootDirectory, '/').back().c_str());
-	{
-		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		irradianceMap = pRenderer->CreateHDRTexture(files.irradianceMapFileName, rootDirectory);
-	}
-	{
-		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		environmentMap = pRenderer->CreateHDRTexture(files.environmentMapFileName, rootDirectory);
-	}
-	InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(environmentMap), pRenderer->GetTextureObject(irradianceMap));
 }

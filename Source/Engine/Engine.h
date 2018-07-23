@@ -185,7 +185,6 @@ private:
 	ShaderID						mSelectedShader;
 	
 	DepthTargetID					mWorldDepthTarget;
-	SamplerID						mNormalSampler;
 
 	// #RenderPassRefactoring
 	// keeping passes around like this doesn't make sense...

@@ -117,6 +117,14 @@ enum ETextureUsage : unsigned
 	TEXTURE_USAGE_COUNT
 };
 
+enum ECPUAccess : unsigned
+{
+	NONE = 0,
+	CPU_R = D3D11_CPU_ACCESS_READ,
+	CPU_W = D3D11_CPU_ACCESS_WRITE,
+	CPU_RW = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE
+};
+
 enum EImageFormat
 {
 	// RGBA

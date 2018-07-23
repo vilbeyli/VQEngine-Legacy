@@ -17,17 +17,19 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #define NOMINMAX
+
 #include "Scene.h"
 #include "Engine.h"
+
 #include "Application/Input.h"
 #include "Application/ThreadPool.h"
-
 #include "Renderer/GeometryGenerator.h"
-
 #include "Utilities/Log.h"
 
 #include <numeric>
 #include <set>
+
+#define THREADED_FRUSTUM_CULL 0	// uses workers to cull the render lists
 
 Scene::Scene(Renderer * pRenderer, TextRenderer * pTextRenderer)
 	: mpRenderer(pRenderer)
@@ -503,7 +505,6 @@ static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 				break;
 			}
 		}
-
 		if (!bInside)
 		{
 			return false;
@@ -537,14 +538,18 @@ static size_t CullGameObjects(
 		{
 			const XMMATRIX world = pObj->GetTransform().WorldTransformationMatrix();
 			const BoundingBox& aabb_local = pObj->GetAABB();
-#if 0	
-			// transform low and high points of the bounding box
+#if 1	
+			// transform low and high points of the bounding box: model->world
 			return BoundingBox(
 			{ 
 				XMVector4Transform(vec4(aabb_local.low, 1.0f), world), 
 				XMVector4Transform(vec4(aabb_local.hi , 1.0f), world) 
 			});
 #else
+			//----------------------------------------------------------------------------------
+			// TODO: there's an error in the code below. 
+			// bug repro: turn your back to the nanosuit in sponza scene -> suit won't be culled.
+			//----------------------------------------------------------------------------------
 			// transform center and extent and construct high and low later
 			// we can use XMVector3Transform() for the extent vector to save some instructions
 			const vec3 extent = aabb_local.hi - aabb_local.low;
@@ -607,6 +612,10 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 	size_t numFrustumCulledObjs = 0;
 	size_t numShadowFrustumCullObjs = 0;
 	
+#if THREADED_FRUSTUM_CULL
+	// TODO: utilize thread pool for each render list
+
+#else
 	// main view
 	numFrustumCulledObjs = CullGameObjects(
 		FrustumPlaneset::ExtractFromMatrix(viewProj)
@@ -635,7 +644,7 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 			outShadowView.shadowMapRenderListLookUp[&l] = objList;
 		}
 	}
-
+#endif
 	// TODO: consider this for directionals: http://stefan-s.net/?p=92
 	
 	return numFrustumCulledObjs + numShadowFrustumCullObjs;

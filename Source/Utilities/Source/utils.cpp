@@ -199,6 +199,21 @@ namespace DirectoryUtil
 #endif
 	}
 
+	bool CreateFolderIfItDoesntExist(const std::string& directoryPath)
+	{
+		if (CreateDirectory(directoryPath.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+		{
+			;// directory either successfully created or already exists: NOP
+			return true;
+		}
+		else
+		{
+			std::string errMsg = "Failed to create directory " + directoryPath;
+			MessageBox(NULL, errMsg.c_str(), "VQEngine: Error Initializing ShaderCache", MB_OK);
+			return false;
+		}
+	}
+
 	bool IsFileNewer(const std::string & file0, const std::string & file1)
 	{
 #if _MSVC_LANG >= 201703L // CPP17 

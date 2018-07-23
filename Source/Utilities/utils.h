@@ -80,6 +80,10 @@ namespace DirectoryUtil
 	std::string	GetFileNameWithoutExtension(const std::string&);
 	bool		FileExists(const std::string& pathToFile);
 
+	// returns true if folder exists, false otherwise after creating the folder
+	//
+	bool	CreateFolderIfItDoesntExist(const std::string& directoryPath);
+
 	// returns the folder path given a file path
 	// e.g.: @pathToFile="C:\\Folder\\File.text" -> return "C:\\Folder\\"
 	//

@@ -28,7 +28,7 @@
 // Uses a thread pool of worker threads to load scene models
 // while utilizing a render thread to render loading screen
 //
-#define LOAD_ASYNC 1
+#define LOAD_ASYNC 0
 // -------------------------------------------------------
 #include "Engine.h"
 
@@ -166,22 +166,17 @@ bool Engine::Initialize(HWND hwnd)
 	//--------------------------------------------------------------------
 	{
 		// cylinder parameters
-		const float	 cylHeight = 3.1415f;
-		const float	 cylTopRadius = 1.0f;
-		const float	 cylBottomRadius = 1.0f;
-		const unsigned cylSliceCount = 120;
+		const float	 cylHeight = 3.1415f;		const float	 cylTopRadius = 1.0f;
+		const float	 cylBottomRadius = 1.0f;	const unsigned cylSliceCount = 120;
 		const unsigned cylStackCount = 100;
 
 		// grid parameters
-		const float gridWidth = 1.0f;
-		const float gridDepth = 1.0f;
-		const unsigned gridFinenessH = 100;
-		const unsigned gridFinenessV = 100;
+		const float gridWidth = 1.0f;		const float gridDepth = 1.0f;
+		const unsigned gridFinenessH = 100;	const unsigned gridFinenessV = 100;
 
 		// sphere parameters
 		const float sphRadius = 2.0f;
-		const unsigned sphRingCount = 25;
-		const unsigned sphSliceCount = 25;
+		const unsigned sphRingCount = 25;	const unsigned sphSliceCount = 25;
 
 		mBuiltinMeshes =	// this should match enum declaration order
 		{
@@ -345,13 +340,11 @@ bool Engine::Load(ThreadPool* pThreadPool)
 
 	// LOAD ENVIRONMENT MAPS
 	//
+	mpTimer->Start();
 	mpCPUProfiler->BeginEntry("EngineLoad");
 	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
-	mpTimer->Start();
 	Skybox::InitializePresets(mpRenderer, rendererSettings);
-	mpTimer->Stop();
-	Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
-	mpTimer->Reset();
+	Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->StopGetDeltaTimeAndReset());
 
 	// SCENE INITIALIZATION
 	//
@@ -367,9 +360,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		Log::Error("Engine couldn't load scene.");
 		return false;
 	}
-	mpTimer->Stop();
-	Log::Info("-------------------- SCENE LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
-	mpTimer->Reset();
+	Log::Info("-------------------- SCENE LOADED IN %.2fs. --------------------", mpTimer->StopGetDeltaTimeAndReset());
 
 	// RENDER PASS INITIALIZATION
 	//
@@ -383,22 +374,8 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
 		mDebugPass.Initialize(mpRenderer);
 		mSSAOPass.Initialize(mpRenderer);
-
-		// Samplers TODO: remove this from engine code (to render pass?)
-		D3D11_SAMPLER_DESC normalSamplerDesc = {};
-		normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-		normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-		normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-		normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-		normalSamplerDesc.MinLOD = 0.f;
-		normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-		normalSamplerDesc.MipLODBias = 0.f;
-		normalSamplerDesc.MaxAnisotropy = 0;
-		normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-		mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
 	}
-	mpTimer->Stop();
-	Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
+	Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->StopGetDeltaTimeAndReset());
 	mpCPUProfiler->EndEntry();
 	mpCPUProfiler->EndProfile();
 	mpCPUProfiler->BeginProfile();
@@ -978,7 +955,7 @@ void Engine::Render()
 		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
 		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler < 0 ? EDefaultSamplerState::POINT_SAMPLER : mSceneView.environmentMap.envMapSampler;
 		const TextureID prefilteredEnvMap = mSceneView.environmentMap.prefilteredEnvironmentMap;
-		const TextureID tBRDFLUT = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
+		const TextureID tBRDFLUT = EnvironmentMap::sBRDFIntegrationLUTTexture;
 
 		// AMBIENT OCCLUSION - Z-PREPASS
 		if (bZPrePass)
@@ -1159,7 +1136,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		TextureID tSceneDepth = mpRenderer->GetDepthTargetTexture(0);
 		TextureID tNormals = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
 		TextureID tAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
-		TextureID tBRDF = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
+		TextureID tBRDF = EnvironmentMap::sBRDFIntegrationLUTTexture;
 		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap;
 		TextureID tDirectionalShadowMap = mShadowMapPass.mDepthTarget_Directional == -1 

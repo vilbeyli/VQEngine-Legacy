@@ -46,6 +46,7 @@ struct TextureDesc
 	int arraySize;
 	bool bIsCubeMap;
 	bool bGenerateMips;
+	ECPUAccess cpuAccessMode;
 
 	TextureDesc() :
 		width(1),
@@ -58,7 +59,8 @@ struct TextureDesc
 		mipCount(1),
 		arraySize(1),
 		bIsCubeMap(false),
-		bGenerateMips(false)
+		bGenerateMips(false),
+		cpuAccessMode(ECPUAccess::NONE)
 	{}
 
 	D3D11_TEXTURE2D_DESC dxDesc;

@@ -65,8 +65,8 @@ public:
 
 	// returns the time duration between Start() and Now, minus the paused duration.
 	float TotalTime() const;
-	
-	
+
+
 	//double CurrentTime();
 
 	// returns the last delta time measured between Start() and Stop()
@@ -77,6 +77,7 @@ public:
 	void Reset();
 	void Start();
 	void Stop();
+	inline float StopGetDeltaTimeAndReset() { Stop(); float dt = DeltaTime(); Reset(); return dt; }
 
 	// since everything is single threaded, once a timer is started, it has to be updated
 	// by calling tick. Tick() will return the time duration since the last time Tick() is called.

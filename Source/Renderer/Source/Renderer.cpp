@@ -35,6 +35,8 @@
 #include "3rdParty/stb/stb_image.h"
 #include "3rdParty/DirectXTex/DirectXTex/DirectXTex.h"
 
+#include <wincodec.h>	// needed for GUID_ContainerFormatPng
+
 #include <mutex>
 #include <cassert>
 #include <fstream>
@@ -168,6 +170,48 @@ void OnShaderChange(LPTSTR dir)
 const char*			Renderer::sShaderRoot		= "Source/Shaders/";
 const char*			Renderer::sTextureRoot		= "Data/Textures/";
 const char*			Renderer::sHDRTextureRoot	= "Data/Textures/EnvironmentMaps/";
+
+bool Renderer::SaveTextureToDisk(TextureID texID, const std::string& filePath) const
+{
+	// get th texture object
+	const Texture& tex = GetTextureObject(texID);
+
+	// capture texture in an image
+	std::unique_ptr<DirectX::ScratchImage> imgOut = std::make_unique<DirectX::ScratchImage>();
+	DirectX::CaptureTexture(m_device, m_deviceContext, tex._tex2D, *imgOut);
+
+	// convert the source image into srgb to store on disk
+	std::unique_ptr<DirectX::ScratchImage> imgOutSRGB = std::make_unique<DirectX::ScratchImage>();
+	D3D11_TEXTURE2D_DESC texDesc = {};
+	tex._tex2D->GetDesc(&texDesc);
+	if (!SUCCEEDED(DirectX::Convert(
+		*imgOut->GetImage(0, 0, 0)
+		, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+		, 0
+		, 0.0f
+		, *imgOutSRGB
+	)))
+	{
+		assert(false);
+	}
+
+	// save image to file
+	if (!SUCCEEDED(SaveToWICFile(
+		*imgOutSRGB->GetImage(0, 0, 0)
+		, DirectX::WIC_FLAGS_NONE
+		, GUID_ContainerFormatPng
+		, std::wstring(RANGE(filePath)).c_str()
+		)
+	))
+	{
+		Log::Error("Cannot save texture to disk: %s", filePath.c_str());
+		MessageBox(m_Direct3D->WindowHandle(), ("Cannot save texture to disk: " + filePath).c_str(), "Error", MB_OK);
+		return false;
+	}
+	Log::Info("Saved texture to file: %s", filePath.c_str());
+	return true;
+}
+
 bool				Renderer::sEnableBlend = true;
 
 Renderer::Renderer()
@@ -714,7 +758,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	UINT miscFlags = 0;
 	miscFlags |= texDesc.bIsCubeMap ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;
 	miscFlags |= texDesc.bGenerateMips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
-
+	
 	UINT arrSize = texDesc.arraySize;
 	const bool bIsTextureArray = texDesc.arraySize > 1;
 	arrSize = texDesc.bIsCubeMap ? 6 : arrSize;
@@ -728,7 +772,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	desc.SampleDesc = { 1, 0 };
 	desc.BindFlags = texDesc.usage;
 	desc.Usage = D3D11_USAGE_DEFAULT;
-	desc.CPUAccessFlags = 0;
+	desc.CPUAccessFlags = static_cast<D3D11_CPU_ACCESS_FLAG>(texDesc.cpuAccessMode);
 	desc.MiscFlags = miscFlags;
 
 	D3D11_SUBRESOURCE_DATA dataDesc = {};	
@@ -1055,6 +1099,7 @@ BlendStateID Renderer::AddBlendState()
 	return static_cast<BlendStateID>(mBlendStates.size() - 1);
 }
 
+#if 0
 RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
 {
 	RenderTarget newRenderTarget;
@@ -1069,6 +1114,7 @@ RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D
 	mRenderTargets.push_back(newRenderTarget);
 	return static_cast<int>(mRenderTargets.size() - 1);
 }
+#endif
 
 RenderTargetID Renderer::AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
 {
@@ -1085,6 +1131,32 @@ RenderTargetID Renderer::AddRenderTarget(const Texture& textureObj, D3D11_RENDER
 	return static_cast<int>(mRenderTargets.size() - 1);
 }
 
+
+RenderTargetID Renderer::AddRenderTarget(const RenderTargetDesc& renderTargetDesc)
+{
+	RenderTarget newRenderTarget;
+
+	// create the texture of the render target
+	const TextureID texID = CreateTexture2D(renderTargetDesc.textureDesc);
+	Texture& textureObj = const_cast<Texture&>(GetTextureObject(texID));
+	newRenderTarget.texture = textureObj;
+	
+	// create the render target view
+	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	rtvDesc.Format = static_cast<DXGI_FORMAT>(renderTargetDesc.format);
+	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+	rtvDesc.Texture2D.MipSlice = 0;
+	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget.texture._tex2D, &rtvDesc, &newRenderTarget.pRenderTargetView);
+	if (!SUCCEEDED(hr))
+	{
+		Log::Error("Cannot create Render Target View");
+		return -1;
+	}
+
+	// register & return
+	mRenderTargets.push_back(newRenderTarget);
+	return static_cast<int>(mRenderTargets.size() - 1);
+}
 
 std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depthTargetDesc)
 {

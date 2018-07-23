@@ -196,31 +196,24 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	const std::vector<std::string> TonemapShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
 
 
-	EImageFormat format = _settings.HDREnabled ? HDR_Format : LDR_Format;
+	const EImageFormat imageFormat = _settings.HDREnabled ? HDR_Format : LDR_Format;
 
-	D3D11_TEXTURE2D_DESC rtDesc = {};
-	rtDesc.Width = pRenderer->WindowWidth();
-	rtDesc.Height = pRenderer->WindowHeight();
-	rtDesc.MipLevels = 1;
-	rtDesc.ArraySize = 1;
-	rtDesc.Format = (DXGI_FORMAT)format;
-	rtDesc.Usage = D3D11_USAGE_DEFAULT;
-	rtDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	rtDesc.CPUAccessFlags = 0;
-	rtDesc.SampleDesc = smpDesc;
-	rtDesc.MiscFlags = 0;
-
-	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
-	RTVDesc.Format = (DXGI_FORMAT)format;
-	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-	RTVDesc.Texture2D.MipSlice = 0;
+	RenderTargetDesc rtDesc = {};
+	rtDesc.textureDesc.width = pRenderer->WindowWidth();
+	rtDesc.textureDesc.height = pRenderer->WindowHeight();
+	rtDesc.textureDesc.mipCount = 1;
+	rtDesc.textureDesc.arraySize = 1;
+	rtDesc.textureDesc.format = imageFormat;
+	rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+	rtDesc.format = imageFormat;
 
 	// Bloom effect
-	this->_bloomPass._colorRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
-	this->_bloomPass._brightRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
-	this->_bloomPass._finalRT = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
-	this->_bloomPass._blurPingPong[0] = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
-	this->_bloomPass._blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->_bloomPass._colorRT = pRenderer->AddRenderTarget(rtDesc);
+	this->_bloomPass._brightRT = pRenderer->AddRenderTarget(rtDesc);
+	this->_bloomPass._finalRT = pRenderer->AddRenderTarget(rtDesc);
+	this->_bloomPass._blurPingPong[0] = pRenderer->AddRenderTarget(rtDesc);
+	this->_bloomPass._blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc);
+
 	this->_bloomPass._bloomFilterShader = pRenderer->AddShader("Bloom", BloomShaders, VS_PS, layout);
 	this->_bloomPass._blurShader = pRenderer->AddShader("Blur", BlurShaders, VS_PS, layout);
 	this->_bloomPass._bloomCombineShader = pRenderer->AddShader("BloomCombine", CombineShaders, VS_PS, layout);
@@ -237,7 +230,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_tonemappingPass._toneMappingShader = pRenderer->AddShader("Tonemapping", TonemapShaders, VS_PS, layout);
 
 	// World Render Target
-	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc);
 }
 
 void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
@@ -368,46 +361,31 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 }
 
 void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
-{
-	DXGI_SAMPLE_DESC smpDesc;
-	smpDesc.Count = 1;
-	smpDesc.Quality = 0;
-
-	D3D11_TEXTURE2D_DESC RTDescriptor[2] = { {}, {} };
-	constexpr const DXGI_FORMAT Format[2] = { /*DXGI_FORMAT_R11G11B10_FLOAT*/ DXGI_FORMAT_R32G32B32A32_FLOAT , DXGI_FORMAT_R16G16B16A16_FLOAT };
-
+{	
+	EImageFormat imageFormats[2] = { RGBA32F, RGBA16F };
+	RenderTargetDesc rtDesc[2] = { {}, {} };
 	for (int i = 0; i < 2; ++i)
 	{
-		RTDescriptor[i].Width = pRenderer->WindowWidth();
-		RTDescriptor[i].Height = pRenderer->WindowHeight();
-		RTDescriptor[i].MipLevels = 1;
-		RTDescriptor[i].ArraySize = 1;
-		RTDescriptor[i].Format = Format[i];
-		RTDescriptor[i].Usage = D3D11_USAGE_DEFAULT;
-		RTDescriptor[i].BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-		RTDescriptor[i].CPUAccessFlags = 0;
-		RTDescriptor[i].SampleDesc = smpDesc;
-		RTDescriptor[i].MiscFlags = 0;
+		rtDesc[i].textureDesc.width = pRenderer->WindowWidth();
+		rtDesc[i].textureDesc.height = pRenderer->WindowHeight();
+		rtDesc[i].textureDesc.mipCount = 1;
+		rtDesc[i].textureDesc.arraySize = 1;
+		rtDesc[i].textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+		rtDesc[i].textureDesc.format = imageFormats[i];
+		rtDesc[i].format = imageFormats[i];
 	}
 
-	D3D11_RENDER_TARGET_VIEW_DESC RTVDescriptor[2] = { {},{} };
-	for (int i = 0; i < 2; ++i)
-	{
-		RTVDescriptor[i].Format = Format[i];
-		RTVDescriptor[i].ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-		RTVDescriptor[i].Texture2D.MipSlice = 0;
-	}
-	
 	constexpr size_t Float3TypeIndex = 0;		constexpr size_t Float4TypeIndex = 1;
-	this->_GBuffer._normalRT		   = pRenderer->AddRenderTarget(RTDescriptor[Float3TypeIndex], RTVDescriptor[Float3TypeIndex]);
-	this->_GBuffer._diffuseRoughnessRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
-	this->_GBuffer._specularMetallicRT = pRenderer->AddRenderTarget(RTDescriptor[Float4TypeIndex], RTVDescriptor[Float4TypeIndex]);
+	this->_GBuffer._normalRT		   = pRenderer->AddRenderTarget(rtDesc[Float3TypeIndex]);
+	this->_GBuffer._diffuseRoughnessRT = pRenderer->AddRenderTarget(rtDesc[Float4TypeIndex]);
+	this->_GBuffer._specularMetallicRT = pRenderer->AddRenderTarget(rtDesc[Float4TypeIndex]);
 	this->_GBuffer.bInitialized = true;
+
 	// http://download.nvidia.com/developer/presentations/2004/6800_Leagues/6800_Leagues_Deferred_Shading.pdf
 	// Option: trade storage for computation
 	//  - Store pos.z     and compute xy from z + window.xy		(implemented)
 	//	- Store normal.xy and compute z = sqrt(1 - x^2 - y^2)
-
+	//
 	{	// Geometry depth stencil state descriptor
 		D3D11_DEPTH_STENCILOP_DESC dsOpDesc = {};
 		dsOpDesc.StencilFailOp = D3D11_STENCIL_OP_KEEP;
@@ -486,7 +464,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	const TextureID texIrradianceMap = sceneView.environmentMap.irradianceMap;
 	const SamplerID smpEnvMap = sceneView.environmentMap.envMapSampler;
 	const TextureID texSpecularMap = sceneView.environmentMap.prefilteredEnvironmentMap;
-	const TextureID tBRDFLUT = pRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
+	const TextureID tBRDFLUT = EnvironmentMap::sBRDFIntegrationLUTTexture;
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 
 	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
@@ -702,28 +680,19 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 
 	// RENDER TARGET
 	//--------------------------------------------------------------------
-	const DXGI_FORMAT format = DXGI_FORMAT_R32_FLOAT;
-
-	D3D11_TEXTURE2D_DESC rtDesc = {};
-	rtDesc.Width = pRenderer->WindowWidth();
-	rtDesc.Height = pRenderer->WindowHeight();
-	rtDesc.MipLevels = 1;
-	rtDesc.ArraySize = 1;
-	rtDesc.Format = format;	
-	rtDesc.Usage = D3D11_USAGE_DEFAULT;
-	rtDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	rtDesc.CPUAccessFlags = 0;
-	rtDesc.SampleDesc = { 1, 0 };
-	rtDesc.MiscFlags = 0;
-
-	D3D11_RENDER_TARGET_VIEW_DESC RTVDesc = {};
-	RTVDesc.Format = format;
-	RTVDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-	RTVDesc.Texture2D.MipSlice = 0;
+	const EImageFormat imageFormat = R32F;
+	RenderTargetDesc rtDesc = {};
+	rtDesc.textureDesc.width = pRenderer->WindowWidth();
+	rtDesc.textureDesc.height = pRenderer->WindowHeight();
+	rtDesc.textureDesc.mipCount = 1;
+	rtDesc.textureDesc.arraySize = 1;
+	rtDesc.textureDesc.format = imageFormat;
+	rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+	rtDesc.format = imageFormat;
 
 	this->SSAOShader = pRenderer->AddShader("SSAO", AmbientOcclusionShaders, VS_PS, layout);
-	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc, RTVDesc);
-	this->blurRenderTarget		= pRenderer->AddRenderTarget(rtDesc, RTVDesc);
+	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc);
+	this->blurRenderTarget		= pRenderer->AddRenderTarget(rtDesc);
 #if SSAO_DEBUGGING
 	this->radius = 6.5f;
 	this->intensity = 1.0f;

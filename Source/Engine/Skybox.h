@@ -19,6 +19,8 @@
 
 #include "Application/HandleTypedefs.h"
 
+#include <string>
+
 #include <vector>
 #include <array>
 #include <mutex>
@@ -71,18 +73,20 @@ public:
 	// STATIC INTERFACE
 	//--------------------------------------------------------
 	static Renderer* spRenderer;
+	static std::string sTextureCacheDirectory;
 
 	// learnopengl:	https://learnopengl.com/#!PBR/IBL/Specular-IBL
 	// stores the lookup table for BRDF's response given an input 
 	// roughness and an input angle between normal and view (N dot V)
-	static RenderTargetID		sBRDFIntegrationLUTRT;
-	static ShaderID				sBRDFIntegrationLUTShader;
-	static void CalculateBRDFIntegralLUT();
+	static RenderTargetID	sBRDFIntegrationLUTRT;
+	static ShaderID			sBRDFIntegrationLUTShader;
+	static TextureID		sBRDFIntegrationLUTTexture;
+	static TextureID CalculateBRDFIntegralLUT(const std::string& outCachedTexturePath);
 
 	// renders pre-filtered environment map texture into mip levels 
 	// with the convolution being based on the roughness
-	static ShaderID				sPrefilterShader;
-	static ShaderID				sRenderIntoCubemapShader;
+	static ShaderID	sPrefilterShader;
+	static ShaderID	sRenderIntoCubemapShader;
 	
 	static void Initialize(Renderer* pRenderer);
 	static void LoadShaders();
@@ -90,9 +94,9 @@ public:
 	//--------------------------------------------------------
 	// MEMBER INTERFACE
 	//--------------------------------------------------------
-	EnvironmentMap(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory);
 	EnvironmentMap();
 	TextureID InitializePrefilteredEnvironmentMap(const Texture& specularMap, const Texture& irradienceMap);
+	void Initialize(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory);
 
 	//--------------------------------------------------------
 	// DATA

@@ -31,6 +31,12 @@ struct BlendState
 	ID3D11BlendState* ptr = nullptr;
 };
 
+struct RenderTargetDesc
+{
+	TextureDesc textureDesc;
+	EImageFormat format;
+};
+
 struct RenderTarget
 {
 	ID3D11Resource*	GetTextureResource() const { return texture._tex2D; }

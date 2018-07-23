@@ -24,6 +24,9 @@ Below is the collection of resources used for building the VQEngine.
 
 # Rendering
 
+[Docs MS: Common Techniques to Improve Shadow Depth Maps](https://docs.microsoft.com/en-us/windows/desktop/dxtecharts/common-techniques-to-improve-shadow-depth-maps)
+
+
 ## View Frustum Culling
  - [Universitat Bremen CGVR: View Frustum Culling Tutorial OpenGL](http://cgvr.informatik.uni-bremen.de/teaching/cg_literatur/lighthouse3d_view_frustum_culling/index.html)
  - [Fast Extraction of Viewing Frustum Planes from the WorldView-Projection Matrix](http://gamedevs.org/uploads/fast-extraction-viewing-frustum-planes-from-world-view-projection-matrix.pdf)
@@ -33,6 +36,10 @@ Below is the collection of resources used for building the VQEngine.
  ## Shadow View Culling
  - [Umbra 2011: Shadow Caster Culling for Efficient Shadow Mapping](http://dcgi.felk.cvut.cz/?media=publications%2F2011%2Fbittner-i3d-scc%2Fpaper.pdf&alias=Bittner2011&action=fetch&presenter=Media)
  - [Stefan-S: Shadow caster frustum culling](http://stefan-s.net/?p=92)
+
+## Occlusion Culling
+- [GPU Gems - Chaper 29: Efficient Occlusion Culling](http://developer.download.nvidia.com/books/HTML/gpugems/gpugems_ch29.html)
+- [Gamasutra: Occlusion Culling Algorithms](https://www.gamasutra.com/view/feature/131801/occlusion_culling_algorithms.php?page=1)
 
 ## BRDF
 

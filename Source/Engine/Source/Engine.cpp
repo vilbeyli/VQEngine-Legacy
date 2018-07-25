@@ -283,7 +283,6 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//mpTimer->Start();
 		{	// #AsyncLoad: Mutex DEVICE
 			//Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
-
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
@@ -304,22 +303,6 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mSSAOPass.Initialize(mpRenderer);
-			}
-
-			// Samplers TODO: remove this from engine code (to render pass?)
-			D3D11_SAMPLER_DESC normalSamplerDesc = {};
-			normalSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-			normalSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-			normalSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-			normalSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
-			normalSamplerDesc.MinLOD = 0.f;
-			normalSamplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
-			normalSamplerDesc.MipLODBias = 0.f;
-			normalSamplerDesc.MaxAnisotropy = 0;
-			normalSamplerDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-			{
-				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-				mNormalSampler = mpRenderer->CreateSamplerState(normalSamplerDesc);
 			}
 		}
 		//mpTimer->Stop();

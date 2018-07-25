@@ -98,7 +98,7 @@ public:
 	TextureID				CreateTexture2D(const TextureDesc& texDesc);
 	TextureID				CreateTexture2D(D3D11_TEXTURE2D_DESC&	textureDesc, bool initializeSRV);	// used by AddRenderTarget() | todo: remove this?
 	TextureID				CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot = sHDRTextureRoot);
-	TextureID				CreateCubemapTexture(const std::vector<std::string>& textureFiles);
+	TextureID CreateCubemapFrom6Textures(const std::vector<std::string>& textureFiles, bool bGenerateMips);
 
 	// --- BUFFER
 	BufferID				CreateBuffer(const BufferDesc& bufferDesc, const void* pData = nullptr);

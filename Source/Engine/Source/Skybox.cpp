@@ -35,12 +35,13 @@ const  FilePaths s_filePaths = []{
 	FilePaths paths(ECubeMapPresets::CUBEMAP_PRESET_COUNT * 6);	// use as an array to access using enum
 	
 	// night sky by: Hazel Whorley
-	paths[ECubeMapPresets::NIGHT_SKY + 0] = "EnvironmentMaps/night_sky/nightsky_rt.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 1] = "EnvironmentMaps/night_sky/nightsky_lf.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 2] = "EnvironmentMaps/night_sky/nightsky_up.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 3] = "EnvironmentMaps/night_sky/nightsky_dn.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 4] = "EnvironmentMaps/night_sky/nightsky_ft.png";
-	paths[ECubeMapPresets::NIGHT_SKY + 5] = "EnvironmentMaps/night_sky/nightsky_bk.png";
+	const std::string root = Renderer::sTextureRoot;
+	paths[ECubeMapPresets::NIGHT_SKY + 0] = root + "EnvironmentMaps/night_sky/nightsky_rt.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 1] = root + "EnvironmentMaps/night_sky/nightsky_lf.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 2] = root + "EnvironmentMaps/night_sky/nightsky_up.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 3] = root + "EnvironmentMaps/night_sky/nightsky_dn.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 4] = root + "EnvironmentMaps/night_sky/nightsky_ft.png";
+	paths[ECubeMapPresets::NIGHT_SKY + 5] = root + "EnvironmentMaps/night_sky/nightsky_bk.png";
 
 	// other cubemap presets
 	// ...
@@ -127,7 +128,7 @@ void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Render
 		TextureID skydomeTex = -1;
 		{
 			std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-			skydomeTex = pRenderer->CreateCubemapTexture(filePaths);
+			skydomeTex = pRenderer->CreateCubemapFrom6Textures(filePaths, false);
 		}
 		s_Presets[ECubeMapPresets::NIGHT_SKY] = Skybox(pRenderer, skydomeTex, bEquirectangular);
 	}
@@ -175,17 +176,18 @@ void Skybox::InitializePresets(Renderer* pRenderer, const Settings::Rendering& r
 
 	if(bUseCache)
 	{ 
-		EnvironmentMap::sBRDFIntegrationLUTTexture = pRenderer->CreateHDRTexture(BRDFLUTTextureFileName, EnvironmentMap::sTextureCacheDirectory);
+		EnvironmentMap::sBRDFIntegrationLUTTexture = pRenderer->CreateHDRTexture(BRDFLUTTextureFileName + extension, EnvironmentMap::sTextureCacheDirectory);
 	}
 	else
 	{
 		Texture LUTTexture = EnvironmentMap::CreateBRDFIntegralLUTTexture();
 		EnvironmentMap::sBRDFIntegrationLUTTexture = LUTTexture._id;
 
-		if (Engine::GetSettings().bCacheEnvironmentMapsOnDisk || true)
+		if (Engine::GetSettings().bCacheEnvironmentMapsOnDisk)
 		{
 			pRenderer->SaveTextureToDisk(EnvironmentMap::sBRDFIntegrationLUTTexture, BRDFLUTTextureFilePath, false);
 		}
+
 		// todo: we can unload shaders / render targets here
 	}
 
@@ -199,7 +201,7 @@ void Skybox::InitializePresets(Renderer* pRenderer, const Settings::Rendering& r
 		const auto offsetIter = s_filePaths.begin() + ECubeMapPresets::NIGHT_SKY;
 		const FilePaths filePaths = FilePaths(offsetIter, offsetIter + 6);
 		
-		TextureID skydomeTex = pRenderer->CreateCubemapTexture(filePaths);
+		TextureID skydomeTex = pRenderer->CreateCubemapFrom6Textures(filePaths, false);
 		//Skybox::SetPreset(ECubeMapPresets::NIGHT_SKY, std::move(Skybox(pRenderer, skydomeTex, bEquirectangular)));
 		s_Presets[ECubeMapPresets::NIGHT_SKY] = Skybox(pRenderer, skydomeTex, bEquirectangular);
 	}
@@ -320,7 +322,7 @@ void EnvironmentMap::Initialize(Renderer * pRenderer, const EnvironmentMapFileNa
 	const std::string irradianceTextureFilePath = rootDirectory + files.irradianceMapFileName;
 	const std::string skyboxTextureFilePath = rootDirectory + files.environmentMapFileName;
 
-	// cached mipped-cubemap version of the textures
+	// cached mipped-cubemap version of the textures (pick one of them at random -> 0th element 0th mip for example)
 	const std::string cachedSkyboxTexture0FilePath = cacheFolderPath + DirectoryUtil::GetFileNameWithoutExtension(files.environmentMapFileName) + "_cubemap_mip0_0" + extensionEnvMap;
 	const std::string cachedIrradianceTexture0FilePath = cacheFolderPath + DirectoryUtil::GetFileNameWithoutExtension(files.irradianceMapFileName) + "_preFiltered_mip0_0" + extensionIrrMap;
 
@@ -328,18 +330,55 @@ void EnvironmentMap::Initialize(Renderer * pRenderer, const EnvironmentMapFileNa
 
 	// get the latest date of the environment map and irradiance map input textures
 	// compare them with the corresponding cached textures
-	const bool bCacheExists = Engine::GetSettings().bCacheEnvironmentMapsOnDisk
-		&& DirectoryUtil::FileExists(cachedSkyboxTexture0FilePath) 
-		&& DirectoryUtil::FileExists(cachedIrradianceTexture0FilePath);
+	const bool bCacheEnabled = Engine::GetSettings().bCacheEnvironmentMapsOnDisk;
 
-	const bool bUseCache = bCacheExists
-		&& (DirectoryUtil::IsFileNewer(cachedSkyboxTexture0FilePath, skyboxTextureFilePath)
-		&& DirectoryUtil::IsFileNewer(cachedIrradianceTexture0FilePath, irradianceTextureFilePath));
+	const bool bCacheExists  = bCacheEnabled
+		                       && DirectoryUtil::FileExists(cachedSkyboxTexture0FilePath) 
+	                           && DirectoryUtil::FileExists(cachedIrradianceTexture0FilePath);
 
-	if (bUseCache && false)
+	const bool bUseCache     = bCacheExists
+	                           && (DirectoryUtil::IsFileNewer(cachedSkyboxTexture0FilePath, skyboxTextureFilePath)
+	                           && DirectoryUtil::IsFileNewer(cachedIrradianceTexture0FilePath, irradianceTextureFilePath));
+	if (bUseCache)
 	{
-		// TODO: load from cache
+		// skybox texture
+		std::vector<std::string> cubemapTexturePaths;
+		for (int i = 0; i < 6; ++i)
+		{
+			std::string cubeMapFaceTexturePath = cacheFolderPath
+				+ DirectoryUtil::GetFileNameWithoutExtension(files.environmentMapFileName)
+				+ "_cubemap_mip0_" + std::to_string(i)
+				+ extensionEnvMap;;
+			cubemapTexturePaths.push_back(cubeMapFaceTexturePath);
+		}
+		{
+			std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+			environmentMap = pRenderer->CreateCubemapFrom6Textures(cubemapTexturePaths, true);
+			irradianceMap = environmentMap;	// ?
 
+			const Texture& mippedEnvironmentCubemapTex = pRenderer->GetTextureObject(environmentMap);
+			pRenderer->m_deviceContext->GenerateMips(mippedEnvironmentCubemapTex._srv);
+		}
+
+
+
+		// prefiltered irradiance map
+		cubemapTexturePaths.clear();
+		for (int i = 0; i < 6; ++i)
+		{
+			std::string cubeMapFaceTexturePath = cacheFolderPath
+				+ DirectoryUtil::GetFileNameWithoutExtension(files.irradianceMapFileName)
+				+ "_preFiltered_mip0_" + std::to_string(i)
+				+ extensionIrrMap;;
+			cubemapTexturePaths.push_back(cubeMapFaceTexturePath);
+		}
+		{
+			std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+			prefilteredEnvironmentMap = pRenderer->CreateCubemapFrom6Textures(cubemapTexturePaths, true);
+
+			const Texture& t = pRenderer->GetTextureObject(prefilteredEnvironmentMap);
+			pRenderer->m_deviceContext->GenerateMips(t._srv);
+		}
 	}
 	else
 	{
@@ -354,6 +393,22 @@ void EnvironmentMap::Initialize(Renderer * pRenderer, const EnvironmentMapFileNa
 
 		InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(environmentMap), pRenderer->GetTextureObject(irradianceMap), cacheFolderPath);
 	}
+
+
+	D3D11_SAMPLER_DESC envMapSamplerDesc = {};
+	envMapSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+	envMapSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+	envMapSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+	envMapSamplerDesc.MipLODBias = 0;
+	envMapSamplerDesc.MinLOD = 0;
+	envMapSamplerDesc.MaxLOD = PREFILTER_MIP_LEVEL_COUNT - 1;
+	envMapSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	envMapSamplerDesc.MaxAnisotropy = 1;
+	{
+		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+		this->envMapSampler = spRenderer->CreateSamplerState(envMapSamplerDesc);
+	}
+
 }
 
 void EnvironmentMap::Initialize(Renderer * pRenderer)
@@ -446,7 +501,6 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 	// create environment map cubemap texture
 	const unsigned cubemapDimension = specularMap._height / 2;
 	const unsigned textureSize[2] = { cubemapDimension, cubemapDimension };
-	const std::string textureName = DirectoryUtil::GetFileNameWithoutExtension(specularMap._name);
 	const std::string textureFileExtension = StrUtil::split(specularMap._name).back();
 
 
@@ -460,15 +514,15 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 	texDesc.bIsCubeMap = true;
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		texDesc.texFileName = textureName + "_preFiltered";
-		prefilteredEnvironmentMap = pRenderer->CreateTexture2D(texDesc);
+		texDesc.texFileName = DirectoryUtil::GetFileNameWithoutExtension(irradienceMap._name) + "_preFiltered";
+		this->prefilteredEnvironmentMap = pRenderer->CreateTexture2D(texDesc);
 	}
 
 	texDesc.bGenerateMips = true;
 	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		texDesc.texFileName = textureName + "_cubemap";
+		texDesc.texFileName = DirectoryUtil::GetFileNameWithoutExtension(specularMap._name) + "_cubemap";
 		mippedEnvironmentCubemap = pRenderer->CreateTexture2D(texDesc);
 	}
 
@@ -538,9 +592,10 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
 		pRenderer->m_deviceContext->GenerateMips(mippedEnvironmentCubemapTex._srv);
 
+		// cache the resulting texture to disk if enabled
 		if (Engine::GetSettings().bCacheEnvironmentMapsOnDisk)
 		{
-			const std::string filePath = cacheFolderPath + mippedEnvironmentCubemapTex._name + ".png";
+			const std::string filePath = cacheFolderPath + mippedEnvironmentCubemapTex._name + ".hdr";
 			pRenderer->SaveTextureToDisk(mippedEnvironmentCubemapTex._id, filePath, false);
 		}
 	}
@@ -589,25 +644,12 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 		}
 		pRenderer->m_deviceContext->Flush();
 
+		// cache the resulting texture to disk if enabled
 		if (Engine::GetSettings().bCacheEnvironmentMapsOnDisk)
 		{
-			const std::string filePath = cacheFolderPath + prefilteredEnvMapTex._name + ".png";
+			const std::string filePath = cacheFolderPath + prefilteredEnvMapTex._name + ".hdr";
 			pRenderer->SaveTextureToDisk(prefilteredEnvMapTex._id, filePath, false);
 		}
-	}
-
-	D3D11_SAMPLER_DESC envMapSamplerDesc = {};
-	envMapSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-	envMapSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-	envMapSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	envMapSamplerDesc.MipLODBias = 0;
-	envMapSamplerDesc.MinLOD = 0;
-	envMapSamplerDesc.MaxLOD = PREFILTER_MIP_LEVEL_COUNT - 1;
-	envMapSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-	envMapSamplerDesc.MaxAnisotropy = 1;
-	{
-		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		this->envMapSampler = spRenderer->CreateSamplerState(envMapSamplerDesc);
 	}
 
 	// RENDER IRRADIANCE CUBEMAP PASS

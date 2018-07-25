@@ -297,6 +297,12 @@ bool Quaternion::operator==(const Quaternion& q) const
 }
 
 // other operations
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
 float Quaternion::Dot(const Quaternion & q) const
 {
 	XMVECTOR V1 = XMVectorSet(V.x(), V.y(), V.z(), 0);

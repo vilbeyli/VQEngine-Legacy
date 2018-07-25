@@ -211,8 +211,7 @@ enum EShaders : unsigned	// built-in shaders
 
 
 enum EBufferUsage
-{
-	// https://msdn.microsoft.com/en-us/library/windows/desktop/ff476259(v=vs.85).aspx
+{	// https://msdn.microsoft.com/en-us/library/windows/desktop/ff476259(v=vs.85).aspx
 	STATIC_R = D3D11_USAGE_IMMUTABLE,	// GPU_R
 	STATIC_RW = D3D11_USAGE_DEFAULT,	// GPU_RW
 	DYNAMIC = D3D11_USAGE_DYNAMIC,		// GPU_R / CPU_W

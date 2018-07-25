@@ -226,18 +226,24 @@ bool Renderer::SaveTextureToDisk(TextureID texID, const std::string& filePath, b
 			}
 
 			outFilePath += extension;	// finish setting output path
-			if (!SUCCEEDED(SaveToWICFile(
-				bConverToSRGB ? *imgOutSRGB->GetImage(mip, index, 0) : *imgOut->GetImage(mip, index, 0)
-				, DirectX::WIC_FLAGS_NONE
-				, extension == ".hdr" ? GUID_WICPixelFormat128bppRGBAFloat : GUID_ContainerFormatPng
-				, std::wstring(RANGE(outFilePath)).c_str()
-			)
-			))
+
+			// gather the parameters for saving to disk
+			const DirectX::Image& image = bConverToSRGB ? *imgOutSRGB->GetImage(mip, index, 0) : *imgOut->GetImage(mip, index, 0);
+			const std::wstring outFilePathW = std::wstring(RANGE(outFilePath));
+			const bool bSaveHDR = extension == ".hdr" || extension == ".HDR";
+
+			// save to disk
+			const bool bSaveSuccess = bSaveHDR 
+				? SUCCEEDED(SaveToHDRFile(image, outFilePathW.c_str())) 
+				: SUCCEEDED(SaveToWICFile(image, DirectX::WIC_FLAGS_NONE, GUID_ContainerFormatPng, outFilePathW.c_str()));
+
+			if(!bSaveSuccess)
 			{
 				Log::Error("Cannot save texture to disk: %s", outFilePath.c_str());
 				MessageBox(m_Direct3D->WindowHandle(), ("Cannot save texture to disk: " + outFilePath).c_str(), "Error", MB_OK);
 				return false;
 			}
+
 			Log::Info("Saved texture to file: %s", outFilePath.c_str());
 
 			// reset output path
@@ -939,7 +945,7 @@ TextureID Renderer::CreateHDRTexture(const std::string& texFileName, const std::
 	return newTex;
 }
 
-TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& textureFileNames)
+TextureID Renderer::CreateCubemapFrom6Textures(const std::vector<std::string>& textureFiles, bool bGenerateMips)
 {
 	constexpr size_t FACE_COUNT = 6;
 
@@ -948,20 +954,33 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	std::array<DirectX::ScratchImage, FACE_COUNT> faceImages;
 	for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < FACE_COUNT; cubeMapFaceIndex++)
 	{
-		const std::string path = sTextureRoot + textureFileNames[cubeMapFaceIndex];
+		const std::string path = textureFiles[cubeMapFaceIndex];
 		const std::wstring wpath(path.begin(), path.end());
+		
+		const std::string extension = DirectoryUtil::GetFileExtension(path);
+		const bool bHDRTexture = extension == "hdr" || extension == "HDR";
 
 		DirectX::ScratchImage* img = &faceImages[cubeMapFaceIndex];
-		if (!SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
+
+		bool bLoadSuccess = bHDRTexture 
+			? SUCCEEDED(LoadFromHDRFile(wpath.c_str(), nullptr, *img))
+			: SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img));
+		
+		if (!bLoadSuccess)
 		{
-			Log::Error(textureFileNames[cubeMapFaceIndex]);
+			Log::Error(textureFiles[cubeMapFaceIndex]);
 			continue;
 		}
+		
 
 		pData[cubeMapFaceIndex].pSysMem          = img->GetPixels();								// Pointer to the pixel data
 		pData[cubeMapFaceIndex].SysMemPitch      = static_cast<UINT>(img->GetImages()->rowPitch);	// Line width in bytes
 		pData[cubeMapFaceIndex].SysMemSlicePitch = static_cast<UINT>(img->GetImages()->slicePitch);	// This is only used for 3d textures
 	}
+
+#if _DEBUG
+	Log::Info("Loading Cubemap Texture\t\t%s", textureFiles.back().c_str());
+#endif
 
 	// initialize texture array of 6 textures for cubemap
 	TexMetadata meta = faceImages[0].GetMetadata();
@@ -978,13 +997,19 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 	texDesc.CPUAccessFlags = 0;
 	texDesc.MiscFlags = D3D11_RESOURCE_MISC_TEXTURECUBE;
+
+	if (bGenerateMips)
+	{
+		texDesc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+		texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+	}
 	
 	// init cubemap texture from 6 textures
 	ID3D11Texture2D* cubemapTexture;
 	HRESULT hr = m_device->CreateTexture2D(&texDesc, &pData[0], &cubemapTexture);
 	if (hr != S_OK)
 	{
-		Log::Error(std::string("Cannot create cubemap texture: ") + StrUtil::split(textureFileNames.front(), '_').front());
+		Log::Error(std::string("Cannot create cubemap texture: ") + StrUtil::split(textureFiles.front(), '_').front());
 		return -1;
 	}
 
@@ -998,7 +1023,7 @@ TextureID Renderer::CreateCubemapTexture(const std::vector<std::string>& texture
 	hr = m_device->CreateShaderResourceView(cubemapTexture, &cubemapDesc, &cubeMapSRV);
 	if (hr != S_OK)
 	{
-		Log::Error(std::string("Cannot create Shader Resource View for ") + StrUtil::split(textureFileNames.front(), '_').front());
+		Log::Error(std::string("Cannot create Shader Resource View for ") + StrUtil::split(textureFiles.front(), '_').front());
 		return -1;
 	}
 
@@ -1525,6 +1550,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 
 void Renderer::SetTexture(const char * texName, TextureID tex)
 {
+	assert(tex >= 0);
 	Shader* shader = mShaders[mPipelineState.shader];
 	bool found = false;
 

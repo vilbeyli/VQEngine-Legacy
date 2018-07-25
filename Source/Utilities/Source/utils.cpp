@@ -189,6 +189,12 @@ namespace DirectoryUtil
 	}
 
 
+	std::string GetFileExtension(const std::string& filePath)
+	{
+		auto v = StrUtil::split(filePath, '.');
+		return v.empty() ? "" : v.back();
+	}
+
 	bool FileExists(const std::string & pathToFile)
 	{	// src: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
 #if _MSVC_LANG >= 201703L	// CPP17
@@ -277,4 +283,23 @@ size_t RandU(size_t l, size_t h)
 #endif
 	int offset = rand() % (h - l);
 	return l + static_cast<size_t>(offset);
+}
+
+std::string ImageFormatToFileExtension(const EImageFormat format)
+{
+	std::string ext = "";
+	switch (format)
+	{
+	case EImageFormat::D32F:
+	case EImageFormat::RGBA16F:
+	case EImageFormat::RGBA32F:
+	case EImageFormat::RGB32F:
+	case EImageFormat::R32F:
+		ext = ".hdr";
+		break;
+	default:
+		ext = ".png";
+		break;
+	}
+	return ext;
 }

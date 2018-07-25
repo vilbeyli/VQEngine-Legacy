@@ -81,7 +81,7 @@ public:
 	static RenderTargetID	sBRDFIntegrationLUTRT;
 	static ShaderID			sBRDFIntegrationLUTShader;
 	static TextureID		sBRDFIntegrationLUTTexture;
-	static TextureID CalculateBRDFIntegralLUT(const std::string& outCachedTexturePath);
+	static Texture CreateBRDFIntegralLUTTexture();
 
 	// renders pre-filtered environment map texture into mip levels 
 	// with the convolution being based on the roughness
@@ -95,7 +95,7 @@ public:
 	// MEMBER INTERFACE
 	//--------------------------------------------------------
 	EnvironmentMap();
-	TextureID InitializePrefilteredEnvironmentMap(const Texture& specularMap, const Texture& irradienceMap);
+	TextureID InitializePrefilteredEnvironmentMap(const Texture& specularMap, const Texture& irradienceMap, const std::string& cacheFolderPath);
 	void Initialize(Renderer* pRenderer, const EnvironmentMapFileNames& files, const std::string& rootDirectory);
 
 	//--------------------------------------------------------

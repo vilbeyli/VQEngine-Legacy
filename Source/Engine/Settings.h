@@ -92,6 +92,8 @@ namespace Settings
 		Rendering rendering;
 		int levelToLoad;
 		std::vector<std::string> sceneNames;
+
+		bool bCacheEnvironmentMapsOnDisk = true;
 	};
 
 	struct SSAO

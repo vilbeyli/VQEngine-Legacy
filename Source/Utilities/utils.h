@@ -78,6 +78,7 @@ namespace DirectoryUtil
 
 	std::string	GetSpecialFolderPath(ESpecialFolder folder);
 	std::string	GetFileNameWithoutExtension(const std::string&);
+	std::string GetFileExtension(const std::string& filePath);
 	bool		FileExists(const std::string& pathToFile);
 
 	// returns true if folder exists, false otherwise after creating the folder
@@ -106,8 +107,14 @@ std::string GetCurrentTimeAsStringWithBrackets();
 
 float inline lerp(float low, float high, float t) { return low + (high - low) * t; }
 
+
 /// RANDOM
 //===============================================================================================
 float	RandF(float l, float h);
 int		RandI(int l, int h);
 size_t	RandU(size_t l, size_t h);
+
+#include "Renderer/RenderingEnums.h"
+std::string ImageFormatToFileExtension(const EImageFormat format);
+
+

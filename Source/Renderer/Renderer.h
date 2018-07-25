@@ -188,7 +188,7 @@ public:
 	static const char*				sTextureRoot;
 	static const char*				sHDRTextureRoot;
 
-	bool SaveTextureToDisk(TextureID texID, const std::string& filePath) const;
+	bool SaveTextureToDisk(TextureID texID, const std::string& filePath, bool bConverToSRGB) const;
 
 	//----------------------------------------------------------------------------------------------------------------
 	// DATA

@@ -163,7 +163,7 @@ Material* Create(T*& pNext)
 
 MaterialID MaterialPool::CreateMaterial(EMaterialType type)
 {
-	std::unique_lock<std::mutex>(mBufferMutex);
+	std::unique_lock<std::mutex> lock(mBufferMutex);
 	MaterialID returnID = { -1 };
 	switch (type)
 	{
@@ -184,7 +184,7 @@ MaterialID MaterialPool::CreateMaterial(EMaterialType type)
 }
 MaterialID MaterialPool::CreateRandomMaterial(EMaterialType type)
 {
-	std::unique_lock<std::mutex>(mBufferMutex);
+	std::unique_lock<std::mutex> lock(mBufferMutex);
 	Material* pNewRandomMaterial = nullptr;
 	switch (type)
 	{

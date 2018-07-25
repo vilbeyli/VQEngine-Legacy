@@ -88,3 +88,9 @@ void Texture::Release()
 	}
 
 }
+
+EImageFormat Texture::GetImageFormat() const
+{
+	assert(false);	// TODO: implement
+	return EImageFormat::D24UNORM_S8U;
+}

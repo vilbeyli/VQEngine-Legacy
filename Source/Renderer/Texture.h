@@ -76,6 +76,8 @@ public:
 	bool InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Renderer* pRenderer, bool initializeSRV);
 	void Release();
 
+	EImageFormat GetImageFormat() const;
+
 	// shader resource view does 2 things
 	// - tell d3d how the resource will be used: at what stage if the pipeline it will be bound etc.
 	// - tell if the resource format was specified as typeless at creation time, then we must specify

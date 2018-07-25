@@ -111,7 +111,8 @@ void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Render
 	}
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		EnvironmentMap::CalculateBRDFIntegralLUT("");
+		Texture LUTTexture = EnvironmentMap::CreateBRDFIntegralLUTTexture();
+		EnvironmentMap::sBRDFIntegrationLUTTexture = LUTTexture._id;
 	}
 
 	// Cubemap Skyboxes
@@ -166,16 +167,25 @@ void Skybox::InitializePresets(Renderer* pRenderer, const Settings::Rendering& r
 	EnvironmentMap::Initialize(pRenderer);
 	EnvironmentMap::LoadShaders();
 	
-	const std::string BRDFLUTTextureFileName = "BRDFIntegrationLUT.png";
-	const std::string BRDFLUTTextureFilePath = EnvironmentMap::sTextureCacheDirectory + BRDFLUTTextureFileName;
-	if(DirectoryUtil::FileExists(BRDFLUTTextureFilePath) && false)
+	const std::string extension = ".hdr";
+	const std::string BRDFLUTTextureFileName = "BRDFIntegrationLUT";
+	const std::string BRDFLUTTextureFilePath = EnvironmentMap::sTextureCacheDirectory + BRDFLUTTextureFileName + extension;
+	
+	const bool bUseCache = Engine::GetSettings().bCacheEnvironmentMapsOnDisk && DirectoryUtil::FileExists(BRDFLUTTextureFilePath);
+
+	if(bUseCache)
 	{ 
-		EnvironmentMap::sBRDFIntegrationLUTTexture = pRenderer->CreateTextureFromFile(BRDFLUTTextureFileName, EnvironmentMap::sTextureCacheDirectory);
+		EnvironmentMap::sBRDFIntegrationLUTTexture = pRenderer->CreateHDRTexture(BRDFLUTTextureFileName, EnvironmentMap::sTextureCacheDirectory);
 	}
 	else
 	{
-		EnvironmentMap::sBRDFIntegrationLUTTexture = EnvironmentMap::CalculateBRDFIntegralLUT(BRDFLUTTextureFilePath);
-		pRenderer->SaveTextureToDisk(EnvironmentMap::sBRDFIntegrationLUTTexture, BRDFLUTTextureFilePath);
+		Texture LUTTexture = EnvironmentMap::CreateBRDFIntegralLUTTexture();
+		EnvironmentMap::sBRDFIntegrationLUTTexture = LUTTexture._id;
+
+		if (Engine::GetSettings().bCacheEnvironmentMapsOnDisk || true)
+		{
+			pRenderer->SaveTextureToDisk(EnvironmentMap::sBRDFIntegrationLUTTexture, BRDFLUTTextureFilePath, false);
+		}
 		// todo: we can unload shaders / render targets here
 	}
 
@@ -300,22 +310,57 @@ EnvironmentMap::EnvironmentMap() : irradianceMap(-1), environmentMap(-1) {}
 
 void EnvironmentMap::Initialize(Renderer * pRenderer, const EnvironmentMapFileNames & files, const std::string & rootDirectory)
 {
-	Log::Info("Loading Environment Map: %s", StrUtil::split(rootDirectory, '/').back().c_str());
+	const std::string envMapName = StrUtil::split(rootDirectory, '/').back();
+	const std::string cacheFolderPath = sTextureCacheDirectory + "sIBL/" + envMapName + "/";
+	const std::string extensionEnvMap = "." + DirectoryUtil::GetFileExtension(files.environmentMapFileName);
+	const std::string extensionIrrMap = "." + DirectoryUtil::GetFileExtension(files.irradianceMapFileName);
+
+
+	// input textures for pre-filtered environment map calculation
+	const std::string irradianceTextureFilePath = rootDirectory + files.irradianceMapFileName;
+	const std::string skyboxTextureFilePath = rootDirectory + files.environmentMapFileName;
+
+	// cached mipped-cubemap version of the textures
+	const std::string cachedSkyboxTexture0FilePath = cacheFolderPath + DirectoryUtil::GetFileNameWithoutExtension(files.environmentMapFileName) + "_cubemap_mip0_0" + extensionEnvMap;
+	const std::string cachedIrradianceTexture0FilePath = cacheFolderPath + DirectoryUtil::GetFileNameWithoutExtension(files.irradianceMapFileName) + "_preFiltered_mip0_0" + extensionIrrMap;
+
+	Log::Info("Loading Environment Map: %s", envMapName.c_str());
+
+	// get the latest date of the environment map and irradiance map input textures
+	// compare them with the corresponding cached textures
+	const bool bCacheExists = Engine::GetSettings().bCacheEnvironmentMapsOnDisk
+		&& DirectoryUtil::FileExists(cachedSkyboxTexture0FilePath) 
+		&& DirectoryUtil::FileExists(cachedIrradianceTexture0FilePath);
+
+	const bool bUseCache = bCacheExists
+		&& (DirectoryUtil::IsFileNewer(cachedSkyboxTexture0FilePath, skyboxTextureFilePath)
+		&& DirectoryUtil::IsFileNewer(cachedIrradianceTexture0FilePath, irradianceTextureFilePath));
+
+	if (bUseCache && false)
 	{
-		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		irradianceMap = pRenderer->CreateHDRTexture(files.irradianceMapFileName, rootDirectory);
+		// TODO: load from cache
+
 	}
+	else
 	{
-		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		environmentMap = pRenderer->CreateHDRTexture(files.environmentMapFileName, rootDirectory);
+		{
+			std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+			irradianceMap = pRenderer->CreateHDRTexture(files.irradianceMapFileName, rootDirectory);
+		}
+		{
+			std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+			environmentMap = pRenderer->CreateHDRTexture(files.environmentMapFileName, rootDirectory);
+		}
+
+		InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(environmentMap), pRenderer->GetTextureObject(irradianceMap), cacheFolderPath);
 	}
-	InitializePrefilteredEnvironmentMap(pRenderer->GetTextureObject(environmentMap), pRenderer->GetTextureObject(irradianceMap));
 }
 
 void EnvironmentMap::Initialize(Renderer * pRenderer)
 {
 	spRenderer = pRenderer;
-	// create texture cache if it doesn't already exist
+
+	// create texture cache folders if they don't already exist
 	EnvironmentMap::sTextureCacheDirectory = Application::s_WorkspaceDirectory + "/TextureCache/";
 	DirectoryUtil::CreateFolderIfItDoesntExist(EnvironmentMap::sTextureCacheDirectory);
 	DirectoryUtil::CreateFolderIfItDoesntExist(EnvironmentMap::sTextureCacheDirectory + "/sIBL/");
@@ -343,12 +388,10 @@ void EnvironmentMap::LoadShaders()
 	sRenderIntoCubemapShader = spRenderer->AddShader("RenderIntoCubemap", RenderIntoCubemap, VS_PS, layout);
 }
 
-TextureID EnvironmentMap::CalculateBRDFIntegralLUT(const std::string& outCachedTexturePath)
+Texture EnvironmentMap::CreateBRDFIntegralLUTTexture()
 {
-	DXGI_FORMAT format = false ? DXGI_FORMAT_R16G16B16A16_FLOAT : DXGI_FORMAT_R32G32B32A32_FLOAT;
 	constexpr int TEXTURE_DIMENSION = 2048;
 	
-
 	// create the render target
 	RenderTargetDesc rtDesc = {};
 	rtDesc.format = RGBA32F;
@@ -359,44 +402,27 @@ TextureID EnvironmentMap::CalculateBRDFIntegralLUT(const std::string& outCachedT
 	rtDesc.textureDesc.format = RGBA32F;
 	rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
 	rtDesc.textureDesc.bGenerateMips = false;
-	rtDesc.textureDesc.cpuAccessMode = ECPUAccess::CPU_R;
+	rtDesc.textureDesc.cpuAccessMode = ECPUAccess::NONE;
 	sBRDFIntegrationLUTRT = spRenderer->AddRenderTarget(rtDesc);
-
-
-	// TODO: currently, we need to load the shader for not breaking the
-	// hardcoded enum order... after shader refactoring, this shouldn't be 
-	// an issue and we can uncommend the following section below.
-	//
-	// create the LUT calculation shader
-	//const std::vector<InputLayout> layout = {	// todo: layouts from reflection?
-	//	{ "POSITION",	FLOAT32_3 },
-	//	{ "NORMAL",		FLOAT32_3 },
-	//	{ "TANGENT",	FLOAT32_3 },
-	//	{ "TEXCOORD",	FLOAT32_2 },
-	//};
-	//const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
-	//const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };// compute?
-	//sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
-
 
 	// render the lookup table
 	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
 	spRenderer->BindRenderTarget(sBRDFIntegrationLUTRT);
 	spRenderer->UnbindDepthTarget();
 	spRenderer->SetShader(sBRDFIntegrationLUTShader);
-	spRenderer->SetViewport(2048, 2048);
+	spRenderer->SetViewport(TEXTURE_DIMENSION, TEXTURE_DIMENSION);
 	spRenderer->SetVertexBuffer(IABuffers.first);
 	spRenderer->SetIndexBuffer(IABuffers.second);
 	spRenderer->Apply();
 	spRenderer->DrawIndexed();
 	spRenderer->m_deviceContext->Flush();
-	return spRenderer->GetRenderTargetTexture(sBRDFIntegrationLUTRT);
+	return spRenderer->GetTextureObject(spRenderer->GetRenderTargetTexture(sBRDFIntegrationLUTRT));
 }
 
-TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& environmentMap, const Texture& irradienceMap)
+TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& specularMap, const Texture& irradienceMap, const std::string& cacheFolderPath)
 {
 	Renderer*& pRenderer = spRenderer;
-	const TextureID envMap = environmentMap._id;
+	const TextureID envMap = specularMap._id;
 
 	const float screenAspect = 1;
 	const float screenNear = 0.01f;
@@ -418,19 +444,23 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	};
 
 	// create environment map cubemap texture
-	const unsigned cubemapDimension = environmentMap._height / 2;
+	const unsigned cubemapDimension = specularMap._height / 2;
 	const unsigned textureSize[2] = { cubemapDimension, cubemapDimension };
+	const std::string textureName = DirectoryUtil::GetFileNameWithoutExtension(specularMap._name);
+	const std::string textureFileExtension = StrUtil::split(specularMap._name).back();
+
+
 	TextureDesc texDesc = {};
 	texDesc.width = cubemapDimension;
 	texDesc.height = cubemapDimension;
 	texDesc.format = EImageFormat::RGBA32F;
-	texDesc.texFileName = environmentMap._name + "_preFiltered";
 	texDesc.pData = nullptr; // no CPU data
 	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
 	texDesc.usage = RENDER_TARGET_RW;
 	texDesc.bIsCubeMap = true;
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+		texDesc.texFileName = textureName + "_preFiltered";
 		prefilteredEnvironmentMap = pRenderer->CreateTexture2D(texDesc);
 	}
 
@@ -438,6 +468,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	texDesc.mipCount = PREFILTER_MIP_LEVEL_COUNT;
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
+		texDesc.texFileName = textureName + "_cubemap";
 		mippedEnvironmentCubemap = pRenderer->CreateTexture2D(texDesc);
 	}
 
@@ -506,6 +537,12 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
 		pRenderer->m_deviceContext->GenerateMips(mippedEnvironmentCubemapTex._srv);
+
+		if (Engine::GetSettings().bCacheEnvironmentMapsOnDisk)
+		{
+			const std::string filePath = cacheFolderPath + mippedEnvironmentCubemapTex._name + ".png";
+			pRenderer->SaveTextureToDisk(mippedEnvironmentCubemapTex._id, filePath, false);
+		}
 	}
 
 	// PREFILTER PASS
@@ -551,6 +588,12 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& env
 			}
 		}
 		pRenderer->m_deviceContext->Flush();
+
+		if (Engine::GetSettings().bCacheEnvironmentMapsOnDisk)
+		{
+			const std::string filePath = cacheFolderPath + prefilteredEnvMapTex._name + ".png";
+			pRenderer->SaveTextureToDisk(prefilteredEnvMapTex._id, filePath, false);
+		}
 	}
 
 	D3D11_SAMPLER_DESC envMapSamplerDesc = {};

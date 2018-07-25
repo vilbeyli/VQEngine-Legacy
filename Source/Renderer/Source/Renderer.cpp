@@ -171,44 +171,79 @@ const char*			Renderer::sShaderRoot		= "Source/Shaders/";
 const char*			Renderer::sTextureRoot		= "Data/Textures/";
 const char*			Renderer::sHDRTextureRoot	= "Data/Textures/EnvironmentMaps/";
 
-bool Renderer::SaveTextureToDisk(TextureID texID, const std::string& filePath) const
+bool Renderer::SaveTextureToDisk(TextureID texID, const std::string& filePath, bool bConverToSRGB) const
 {
-	// get th texture object
+	const std::string folderPath = DirectoryUtil::GetFolderPath(filePath);
+
+	// create directory if it doesn't exist
+	DirectoryUtil::CreateFolderIfItDoesntExist(folderPath);
+
+	// get the texture object
 	const Texture& tex = GetTextureObject(texID);
+	D3D11_TEXTURE2D_DESC texDesc = {};
+	tex._tex2D->GetDesc(&texDesc);
 
 	// capture texture in an image
 	std::unique_ptr<DirectX::ScratchImage> imgOut = std::make_unique<DirectX::ScratchImage>();
+	std::unique_ptr<DirectX::ScratchImage> imgOutSRGB = std::make_unique<DirectX::ScratchImage>();
 	DirectX::CaptureTexture(m_device, m_deviceContext, tex._tex2D, *imgOut);
 
-	// convert the source image into srgb to store on disk
-	std::unique_ptr<DirectX::ScratchImage> imgOutSRGB = std::make_unique<DirectX::ScratchImage>();
-	D3D11_TEXTURE2D_DESC texDesc = {};
-	tex._tex2D->GetDesc(&texDesc);
-	if (!SUCCEEDED(DirectX::Convert(
-		*imgOut->GetImage(0, 0, 0)
-		, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
-		, 0
-		, 0.0f
-		, *imgOutSRGB
-	)))
+	if (bConverToSRGB)
 	{
-		assert(false);
+		// convert the source image into srgb to store on disk
+		D3D11_TEXTURE2D_DESC texDesc = {};
+		tex._tex2D->GetDesc(&texDesc);
+		if (!SUCCEEDED(DirectX::Convert(
+			*imgOut->GetImage(0, 0, 0)
+			, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+			, 0
+			, 0.0f
+			, *imgOutSRGB
+		)))
+		{
+			assert(false);
+		}
 	}
 
 	// save image to file
-	if (!SUCCEEDED(SaveToWICFile(
-		*imgOutSRGB->GetImage(0, 0, 0)
-		, DirectX::WIC_FLAGS_NONE
-		, GUID_ContainerFormatPng
-		, std::wstring(RANGE(filePath)).c_str()
-		)
-	))
+	const std::string fileName = DirectoryUtil::GetFileNameWithoutExtension(filePath);
+	const std::string extension = "." + DirectoryUtil::GetFileExtension(filePath);
+	const bool bArray = texDesc.ArraySize > 1;
+	const bool bHasMips = texDesc.MipLevels > 1;
+
+	for (UINT mip = 0; mip < texDesc.MipLevels; ++mip)
 	{
-		Log::Error("Cannot save texture to disk: %s", filePath.c_str());
-		MessageBox(m_Direct3D->WindowHandle(), ("Cannot save texture to disk: " + filePath).c_str(), "Error", MB_OK);
-		return false;
+		std::string outFilePath = folderPath + fileName; // start setting output path
+		if (bHasMips)	// mip extension
+		{
+			outFilePath += "_mip" + std::to_string(mip);
+		}
+		for (UINT index = 0; index < texDesc.ArraySize; ++index)
+		{
+			if (bArray)	// array extension
+			{
+				outFilePath += "_" + std::to_string(index);
+			}
+
+			outFilePath += extension;	// finish setting output path
+			if (!SUCCEEDED(SaveToWICFile(
+				bConverToSRGB ? *imgOutSRGB->GetImage(mip, index, 0) : *imgOut->GetImage(mip, index, 0)
+				, DirectX::WIC_FLAGS_NONE
+				, extension == ".hdr" ? GUID_WICPixelFormat128bppRGBAFloat : GUID_ContainerFormatPng
+				, std::wstring(RANGE(outFilePath)).c_str()
+			)
+			))
+			{
+				Log::Error("Cannot save texture to disk: %s", outFilePath.c_str());
+				MessageBox(m_Direct3D->WindowHandle(), ("Cannot save texture to disk: " + outFilePath).c_str(), "Error", MB_OK);
+				return false;
+			}
+			Log::Info("Saved texture to file: %s", outFilePath.c_str());
+
+			// reset output path
+			outFilePath = folderPath + fileName + (bHasMips ? "_mip" + std::to_string(mip) : "");
+		}
 	}
-	Log::Info("Saved texture to file: %s", filePath.c_str());
 	return true;
 }
 

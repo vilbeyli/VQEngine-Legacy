@@ -28,7 +28,7 @@
 // Uses a thread pool of worker threads to load scene models
 // while utilizing a render thread to render loading screen
 //
-#define LOAD_ASYNC 0
+#define LOAD_ASYNC 1
 // -------------------------------------------------------
 #include "Engine.h"
 

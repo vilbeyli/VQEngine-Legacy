@@ -170,89 +170,6 @@ void OnShaderChange(LPTSTR dir)
 const char*			Renderer::sShaderRoot		= "Source/Shaders/";
 const char*			Renderer::sTextureRoot		= "Data/Textures/";
 const char*			Renderer::sHDRTextureRoot	= "Data/Textures/EnvironmentMaps/";
-
-bool Renderer::SaveTextureToDisk(TextureID texID, const std::string& filePath, bool bConverToSRGB) const
-{
-	const std::string folderPath = DirectoryUtil::GetFolderPath(filePath);
-
-	// create directory if it doesn't exist
-	DirectoryUtil::CreateFolderIfItDoesntExist(folderPath);
-
-	// get the texture object
-	const Texture& tex = GetTextureObject(texID);
-	D3D11_TEXTURE2D_DESC texDesc = {};
-	tex._tex2D->GetDesc(&texDesc);
-
-	// capture texture in an image
-	std::unique_ptr<DirectX::ScratchImage> imgOut = std::make_unique<DirectX::ScratchImage>();
-	std::unique_ptr<DirectX::ScratchImage> imgOutSRGB = std::make_unique<DirectX::ScratchImage>();
-	DirectX::CaptureTexture(m_device, m_deviceContext, tex._tex2D, *imgOut);
-
-	if (bConverToSRGB)
-	{
-		// convert the source image into srgb to store on disk
-		D3D11_TEXTURE2D_DESC texDesc = {};
-		tex._tex2D->GetDesc(&texDesc);
-		if (!SUCCEEDED(DirectX::Convert(
-			*imgOut->GetImage(0, 0, 0)
-			, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
-			, 0
-			, 0.0f
-			, *imgOutSRGB
-		)))
-		{
-			assert(false);
-		}
-	}
-
-	// save image to file
-	const std::string fileName = DirectoryUtil::GetFileNameWithoutExtension(filePath);
-	const std::string extension = "." + DirectoryUtil::GetFileExtension(filePath);
-	const bool bArray = texDesc.ArraySize > 1;
-	const bool bHasMips = texDesc.MipLevels > 1;
-
-	for (UINT mip = 0; mip < texDesc.MipLevels; ++mip)
-	{
-		std::string outFilePath = folderPath + fileName; // start setting output path
-		if (bHasMips)	// mip extension
-		{
-			outFilePath += "_mip" + std::to_string(mip);
-		}
-		for (UINT index = 0; index < texDesc.ArraySize; ++index)
-		{
-			if (bArray)	// array extension
-			{
-				outFilePath += "_" + std::to_string(index);
-			}
-
-			outFilePath += extension;	// finish setting output path
-
-			// gather the parameters for saving to disk
-			const DirectX::Image& image = bConverToSRGB ? *imgOutSRGB->GetImage(mip, index, 0) : *imgOut->GetImage(mip, index, 0);
-			const std::wstring outFilePathW = std::wstring(RANGE(outFilePath));
-			const bool bSaveHDR = extension == ".hdr" || extension == ".HDR";
-
-			// save to disk
-			const bool bSaveSuccess = bSaveHDR 
-				? SUCCEEDED(SaveToHDRFile(image, outFilePathW.c_str())) 
-				: SUCCEEDED(SaveToWICFile(image, DirectX::WIC_FLAGS_NONE, GUID_ContainerFormatPng, outFilePathW.c_str()));
-
-			if(!bSaveSuccess)
-			{
-				Log::Error("Cannot save texture to disk: %s", outFilePath.c_str());
-				MessageBox(m_Direct3D->WindowHandle(), ("Cannot save texture to disk: " + outFilePath).c_str(), "Error", MB_OK);
-				return false;
-			}
-
-			Log::Info("Saved texture to file: %s", outFilePath.c_str());
-
-			// reset output path
-			outFilePath = folderPath + fileName + (bHasMips ? "_mip" + std::to_string(mip) : "");
-		}
-	}
-	return true;
-}
-
 bool				Renderer::sEnableBlend = true;
 
 Renderer::Renderer()
@@ -945,49 +862,170 @@ TextureID Renderer::CreateHDRTexture(const std::string& texFileName, const std::
 	return newTex;
 }
 
-TextureID Renderer::CreateCubemapFrom6Textures(const std::vector<std::string>& textureFiles, bool bGenerateMips)
+bool Renderer::SaveTextureToDisk(TextureID texID, const std::string& filePath, bool bConverToSRGB) const
+{
+	const std::string folderPath = DirectoryUtil::GetFolderPath(filePath);
+
+	// create directory if it doesn't exist
+	DirectoryUtil::CreateFolderIfItDoesntExist(folderPath);
+
+	// get the texture object
+	const Texture& tex = GetTextureObject(texID);
+	D3D11_TEXTURE2D_DESC texDesc = {};
+	tex._tex2D->GetDesc(&texDesc);
+
+	// capture texture in an image
+	std::unique_ptr<DirectX::ScratchImage> imgOut = std::make_unique<DirectX::ScratchImage>();
+	std::unique_ptr<DirectX::ScratchImage> imgOutSRGB = std::make_unique<DirectX::ScratchImage>();
+	DirectX::CaptureTexture(m_device, m_deviceContext, tex._tex2D, *imgOut);
+
+	if (bConverToSRGB)
+	{
+		// convert the source image into srgb to store on disk
+		D3D11_TEXTURE2D_DESC texDesc = {};
+		tex._tex2D->GetDesc(&texDesc);
+		if (!SUCCEEDED(DirectX::Convert(
+			*imgOut->GetImage(0, 0, 0)
+			, DXGI_FORMAT_R8G8B8A8_UNORM_SRGB
+			, 0
+			, 0.0f
+			, *imgOutSRGB
+		)))
+		{
+			assert(false);
+		}
+	}
+
+	// save image to file
+	const std::string fileName = DirectoryUtil::GetFileNameWithoutExtension(filePath);
+	const std::string extension = "." + DirectoryUtil::GetFileExtension(filePath);
+#if 1
+	const bool bArray = texDesc.ArraySize > 1;
+	const bool bHasMips = texDesc.MipLevels > 1;
+
+	for (UINT mip = 0; mip < texDesc.MipLevels; ++mip)
+	{
+		std::string outFilePath = folderPath + fileName; // start setting output path
+		if (bHasMips)	// mip extension
+		{
+			outFilePath += "_mip" + std::to_string(mip);
+		}
+		for (UINT index = 0; index < texDesc.ArraySize; ++index)
+		{
+			if (bArray)	// array extension
+			{
+				outFilePath += "_" + std::to_string(index);
+			}
+
+			outFilePath += extension;	// finish setting output path
+
+										// gather the parameters for saving to disk
+			const DirectX::Image& image = bConverToSRGB ? *imgOutSRGB->GetImage(mip, index, 0) : *imgOut->GetImage(mip, index, 0);
+			const std::wstring outFilePathW = std::wstring(RANGE(outFilePath));
+			const bool bSaveHDR = extension == ".hdr" || extension == ".HDR";
+
+			// save to disk
+			const bool bSaveSuccess = bSaveHDR
+				? SUCCEEDED(SaveToHDRFile(image, outFilePathW.c_str()))
+				: SUCCEEDED(SaveToWICFile(image, DirectX::WIC_FLAGS_NONE, GUID_ContainerFormatPng, outFilePathW.c_str()));
+
+			if (!bSaveSuccess)
+			{
+				Log::Error("Cannot save texture to disk: %s", outFilePath.c_str());
+				MessageBox(m_Direct3D->WindowHandle(), ("Cannot save texture to disk: " + outFilePath).c_str(), "Error", MB_OK);
+				return false;
+			}
+
+			Log::Info("Saved texture to file: %s", outFilePath.c_str());
+
+			// reset output path
+			outFilePath = folderPath + fileName + (bHasMips ? "_mip" + std::to_string(mip) : "");
+		}
+	}
+#else
+
+	std::string outFilePath = folderPath + fileName; // start setting output path
+	outFilePath += extension;	// finish setting output path
+
+	// gather the parameters for saving to disk
+	const DirectX::Image& image = bConverToSRGB ? *imgOutSRGB->GetImages() : *imgOut->GetImages();
+	const std::wstring outFilePathW = std::wstring(RANGE(outFilePath));
+	const bool bSaveHDR = extension == ".hdr" || extension == ".HDR";
+
+	// save to disk
+	const bool bSaveSuccess = bSaveHDR
+		? SUCCEEDED(SaveToHDRFile(image, outFilePathW.c_str()))
+		: SUCCEEDED(SaveToWICFile(image, DirectX::WIC_FLAGS_NONE, GUID_ContainerFormatPng, outFilePathW.c_str()));
+
+	if (!bSaveSuccess)
+	{
+		Log::Error("Cannot save texture to disk: %s", outFilePath.c_str());
+		MessageBox(m_Direct3D->WindowHandle(), ("Cannot save texture to disk: " + outFilePath).c_str(), "Error", MB_OK);
+		return false;
+	}
+
+	Log::Info("Saved texture to file: %s", outFilePath.c_str());
+
+	// reset output path
+	outFilePath = folderPath + fileName;
+		
+#endif
+	return true;
+}
+
+TextureID Renderer::CreateCubemapFromFaceTextures(const std::vector<std::string>& textureFiles, bool bGenerateMips, unsigned mipLevels)
 {
 	constexpr size_t FACE_COUNT = 6;
 
+	TexMetadata meta = {};
+
 	// get subresource data for each texture to initialize the cubemap
-	D3D11_SUBRESOURCE_DATA pData[FACE_COUNT];
-	std::array<DirectX::ScratchImage, FACE_COUNT> faceImages;
-	for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < FACE_COUNT; cubeMapFaceIndex++)
+	std::vector<D3D11_SUBRESOURCE_DATA> pSubresourceData( FACE_COUNT * mipLevels );
+	std::vector<std::array<DirectX::ScratchImage, FACE_COUNT>> faceImageArray(mipLevels);
+	for (unsigned mip = 0; mip < mipLevels; ++mip)
 	{
-		const std::string path = textureFiles[cubeMapFaceIndex];
-		const std::wstring wpath(path.begin(), path.end());
-		
-		const std::string extension = DirectoryUtil::GetFileExtension(path);
-		const bool bHDRTexture = extension == "hdr" || extension == "HDR";
-
-		DirectX::ScratchImage* img = &faceImages[cubeMapFaceIndex];
-
-		bool bLoadSuccess = bHDRTexture 
-			? SUCCEEDED(LoadFromHDRFile(wpath.c_str(), nullptr, *img))
-			: SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img));
-		
-		if (!bLoadSuccess)
+		std::array<DirectX::ScratchImage, FACE_COUNT>& faceImages = faceImageArray[mip];
+		for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < FACE_COUNT; cubeMapFaceIndex++)
 		{
-			Log::Error(textureFiles[cubeMapFaceIndex]);
-			continue;
-		}
-		
+			const size_t index = mip * FACE_COUNT + cubeMapFaceIndex;
+			const std::string path = textureFiles[index];
+			const std::wstring wpath(path.begin(), path.end());
 
-		pData[cubeMapFaceIndex].pSysMem          = img->GetPixels();								// Pointer to the pixel data
-		pData[cubeMapFaceIndex].SysMemPitch      = static_cast<UINT>(img->GetImages()->rowPitch);	// Line width in bytes
-		pData[cubeMapFaceIndex].SysMemSlicePitch = static_cast<UINT>(img->GetImages()->slicePitch);	// This is only used for 3d textures
+			const std::string extension = DirectoryUtil::GetFileExtension(path);
+			const bool bHDRTexture = extension == "hdr" || extension == "HDR";
+
+			DirectX::ScratchImage* img = &faceImages[cubeMapFaceIndex];
+
+			const bool bLoadSuccess = bHDRTexture
+				? SUCCEEDED(LoadFromHDRFile(wpath.c_str(), nullptr, *img))
+				: SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img));
+
+			if (!bLoadSuccess)
+			{
+				Log::Error(textureFiles[index]);
+				continue;
+			}
+
+			pSubresourceData[index].pSysMem = img->GetPixels(); // Pointer to the pixel data
+			pSubresourceData[index].SysMemPitch = static_cast<UINT>(img->GetImage(0,0,0)->rowPitch); // Line width in bytes
+			pSubresourceData[index].SysMemSlicePitch = static_cast<UINT>(img->GetImages()->slicePitch); // This is only used for 3d textures
+
+			if (cubeMapFaceIndex == 0 && mip == 0)
+			{
+				meta = faceImages[0].GetMetadata();
+			}
+		}
 	}
 
 #if _DEBUG
 	Log::Info("Loading Cubemap Texture\t\t%s", textureFiles.back().c_str());
 #endif
 
-	// initialize texture array of 6 textures for cubemap
-	TexMetadata meta = faceImages[0].GetMetadata();
+	// initialize the destination texture desc
 	D3D11_TEXTURE2D_DESC texDesc;
 	texDesc.Width     = static_cast<UINT>(meta.width);
 	texDesc.Height    = static_cast<UINT>(meta.height);
-	texDesc.MipLevels = static_cast<UINT>(meta.mipLevels);
+	texDesc.MipLevels = bGenerateMips ? mipLevels : static_cast<UINT>(meta.mipLevels);
 	texDesc.ArraySize = FACE_COUNT;
 	texDesc.Format    = meta.format;
 	texDesc.CPUAccessFlags = 0;
@@ -1004,9 +1042,11 @@ TextureID Renderer::CreateCubemapFrom6Textures(const std::vector<std::string>& t
 		texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	}
 	
-	// init cubemap texture from 6 textures
-	ID3D11Texture2D* cubemapTexture;
-	HRESULT hr = m_device->CreateTexture2D(&texDesc, &pData[0], &cubemapTexture);
+
+	// create the resource
+	ID3D11Texture2D* finalCubemapTexture;
+	const D3D11_SUBRESOURCE_DATA* pData = bGenerateMips ? nullptr : pSubresourceData.data();
+	HRESULT hr = m_device->CreateTexture2D(&texDesc, pData, &finalCubemapTexture);
 	if (hr != S_OK)
 	{
 		Log::Error(std::string("Cannot create cubemap texture: ") + StrUtil::split(textureFiles.front(), '_').front());
@@ -1020,23 +1060,43 @@ TextureID Renderer::CreateCubemapFrom6Textures(const std::vector<std::string>& t
 	cubemapDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
 	cubemapDesc.TextureCube.MipLevels = texDesc.MipLevels;
 	cubemapDesc.TextureCube.MostDetailedMip = 0;
-	hr = m_device->CreateShaderResourceView(cubemapTexture, &cubemapDesc, &cubeMapSRV);
+	hr = m_device->CreateShaderResourceView(finalCubemapTexture, &cubemapDesc, &cubeMapSRV);
 	if (hr != S_OK)
 	{
 		Log::Error(std::string("Cannot create Shader Resource View for ") + StrUtil::split(textureFiles.front(), '_').front());
 		return -1;
 	}
 
+	// copy the mip levels into the final resource
+	if (bGenerateMips)
+	{
+		//https://www.gamedev.net/forums/topic/599837-dx11-createtexture2d-automatic-mips-initial-data/
+		m_deviceContext->GenerateMips(cubeMapSRV);
+		for (unsigned mip = 0; mip < mipLevels; ++mip)
+		{
+			for (int cubeMapFaceIndex = 0; cubeMapFaceIndex < FACE_COUNT; cubeMapFaceIndex++)
+			{
+				const size_t index = mip * FACE_COUNT + cubeMapFaceIndex;
+				m_deviceContext->UpdateSubresource(
+					finalCubemapTexture, D3D11CalcSubresource(mip, cubeMapFaceIndex, mipLevels)
+					, nullptr //&box
+					, pSubresourceData[index].pSysMem			// data
+					, pSubresourceData[index].SysMemPitch		// row pitch
+					, pSubresourceData[index].SysMemSlicePitch	// depth pitch
+				);
+			}
+		}
+	}
+
 	// return param
 	Texture cubemapOut;
 	cubemapOut._srv = cubeMapSRV;
 	cubemapOut._name = "todo:Skybox file name";
-	cubemapOut._tex2D = cubemapTexture;
-	cubemapOut._height = static_cast<unsigned>(faceImages[0].GetMetadata().height);
-	cubemapOut._width  = static_cast<unsigned>(faceImages[0].GetMetadata().width);
+	cubemapOut._tex2D = finalCubemapTexture;
+	cubemapOut._height = texDesc.Height;
+	cubemapOut._width = texDesc.Width;
 	cubemapOut._id = static_cast<int>(mTextures.size());
 	mTextures.push_back(cubemapOut);
-
 	return cubemapOut._id;
 }
 

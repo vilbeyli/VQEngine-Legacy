@@ -93,7 +93,7 @@ namespace Settings
 		int levelToLoad;
 		std::vector<std::string> sceneNames;
 
-		bool bCacheEnvironmentMapsOnDisk = true;
+		bool bCacheEnvironmentMapsOnDisk = false;
 	};
 
 	struct SSAO

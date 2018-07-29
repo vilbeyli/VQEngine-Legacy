@@ -459,7 +459,6 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	Shader::LoadShaders(this);
 	m_Direct3D->ReportLiveObjects("Shader loaded");
 
-	mPipelineState.bRenderTargetChanged = true;
 	return true;
 }
 
@@ -1413,9 +1412,15 @@ void Renderer::SetShader(ShaderID id)
 			}
 #endif
 
+#if 1
 			ID3D11RenderTargetView* nullRTV[6] = { nullptr };
 			ID3D11DepthStencilView* nullDSV = { nullptr };
 			m_deviceContext->OMSetRenderTargets(6, nullRTV, nullDSV);
+#else
+			UnbindRenderTargets();
+			UnbindDepthTarget();
+			Apply();
+#endif
 
 			const float blendFactor[4] = { 1,1,1,1 };
 			m_deviceContext->OMSetBlendState(nullptr, blendFactor, 0xffffffff);
@@ -1434,18 +1439,11 @@ void Renderer::SetVertexBuffer(BufferID bufferID)
 {
 	mPipelineState.vertexBuffer = bufferID;
 	UINT offset = 0;
-
-	// temporary
-	Buffer& b = mVertexBuffers[bufferID];
-	m_deviceContext->IASetVertexBuffers(0, 1, &(b.mpGPUData), &b.mDesc.mStride, &offset);
 }
 
 void Renderer::SetIndexBuffer(BufferID bufferID)
 {
 	mPipelineState.indexBuffer = bufferID;
-
-	
-	m_deviceContext->IASetIndexBuffer(mIndexBuffers[mPipelineState.indexBuffer].mpGPUData, DXGI_FORMAT_R32_UINT, 0);
 }
 
 void Renderer::ResetPipelineState()
@@ -1723,7 +1721,6 @@ void Renderer::BindRenderTarget(RenderTargetID rtvID)
 	assert(rtvID > -1 && static_cast<size_t>(rtvID) < mRenderTargets.size());
 	//for(RenderTargetID& hRT : m_state._boundRenderTargets) 
 	mPipelineState.renderTargets = { rtvID };
-	mPipelineState.bRenderTargetChanged = true;
 }
 
 void Renderer::BindDepthTarget(DepthTargetID dsvID)
@@ -1735,7 +1732,6 @@ void Renderer::BindDepthTarget(DepthTargetID dsvID)
 void Renderer::UnbindRenderTargets()
 {
 	mPipelineState.renderTargets = { -1, -1, -1, -1, -1, -1 };
-	mPipelineState.bRenderTargetChanged = true;
 }
 
 void Renderer::UnbindDepthTarget()
@@ -1833,7 +1829,6 @@ void Renderer::BeginFrame()
 void Renderer::EndFrame()
 {
 	m_Direct3D->EndFrame();
-	mPrevPipelineState = mPipelineState;
 }
 
 
@@ -1845,111 +1840,164 @@ void Renderer::UpdateBuffer(BufferID buffer, const void * pData)
 
 void Renderer::Apply()
 {	// Here, we make all the API calls
+
+#if 1
+	const bool bShaderChanged			 = mPipelineState.shader != mPrevPipelineState.shader;
+	const bool bVertexBufferChanged		 = mPipelineState.vertexBuffer != mPrevPipelineState.vertexBuffer;
+	const bool bIndexBufferChanged		 = mPipelineState.indexBuffer != mPrevPipelineState.indexBuffer;
+	const bool bRasterizerStateChanged	 = mPipelineState.rasterizerState != mPrevPipelineState.rasterizerState;
+	const bool bViewPortChanged			 = mPipelineState.viewPort != mPrevPipelineState.viewPort;
+	const bool bDepthStencilStateChanged = mPipelineState.depthStencilState != mPrevPipelineState.depthStencilState;
+	const bool bBlendStateChanged		 = mPipelineState.blendState != mPrevPipelineState.blendState;
+	const bool bDepthTargetChanged		 = mPipelineState.depthTargets != mPrevPipelineState.depthTargets;
+	const bool bRenderTargetChanged		 = [&]() 
+	{
+		const auto& RTVs_curr = mPipelineState.renderTargets;
+		const auto& RTVs_prev = mPrevPipelineState.renderTargets;
+		if (RTVs_curr.size() != RTVs_prev.size())
+			return true;
+		return !std::equal(RANGE(RTVs_curr), RTVs_prev.begin());
+	}();
+#else
+#if 0
+	const bool bShaderChanged			 = true;
+	const bool bVertexBufferChanged		 = mPipelineState.vertexBuffer != mPrevPipelineState.vertexBuffer;
+	const bool bIndexBufferChanged		 = mPipelineState.indexBuffer != mPrevPipelineState.indexBuffer;
+	const bool bRasterizerStateChanged	 = mPipelineState.rasterizerState != mPrevPipelineState.rasterizerState;
+	const bool bDepthStencilStateChanged = mPipelineState.depthStencilState != mPrevPipelineState.depthStencilState;
+	const bool bBlendStateChanged		 = mPipelineState.blendState != mPrevPipelineState.blendState;
+	const bool bRenderTargetChanged		 = true;
+	const bool bDepthTargetChanged		 = mPipelineState.depthTargets != mPrevPipelineState.depthTargets;
+#else
+	const bool bShaderChanged			 = true;
+	const bool bVertexBufferChanged		 = true;
+	const bool bIndexBufferChanged		 = true;
+	const bool bRasterizerStateChanged	 = true;
+	const bool bDepthStencilStateChanged = true;
+	const bool bViewPortChanged			 = true;
+	const bool bBlendStateChanged		 = true;
+	const bool bRenderTargetChanged		 = true;
+	const bool bDepthTargetChanged		 = true;
+#endif
+#endif
+
 	Shader* shader = mPipelineState.shader >= 0 ? mShaders[mPipelineState.shader] : nullptr;
+	if (!shader)
+	{
+		Log::Error("Renderer::Apply() : Shader null...\n");
+		mPrevPipelineState = mPipelineState;
+		return;
+	}
 
 	// INPUT ASSEMBLY
 	// ----------------------------------------
 	const Buffer& VertexBuffer = mVertexBuffers[mPipelineState.vertexBuffer];
 	const Buffer& IndexBuffer = mIndexBuffers[mPipelineState.indexBuffer];
+	const bool bVBufferValid = mPipelineState.vertexBuffer != -1;
+	const bool bIBufferValid = mPipelineState.indexBuffer != -1;
 
 	unsigned stride = VertexBuffer.mDesc.mStride;
 	unsigned offset = 0;
 
-	if (mPipelineState.vertexBuffer != -1)
-	{
-		m_deviceContext->IASetVertexBuffers(0, 1, &(VertexBuffer.mpGPUData), &stride, &offset);
-	}
-	if (mPipelineState.indexBuffer != -1)
-	{
-		m_deviceContext->IASetIndexBuffer(IndexBuffer.mpGPUData, DXGI_FORMAT_R32_UINT, 0);
-	}
-	if (shader)
+	if (bVBufferValid && bVertexBufferChanged)	{ m_deviceContext->IASetVertexBuffers(0, 1, &(VertexBuffer.mpGPUData), &stride, &offset); }
+	if (bIBufferValid && bIndexBufferChanged)	{ m_deviceContext->IASetIndexBuffer(IndexBuffer.mpGPUData, DXGI_FORMAT_R32_UINT, 0); }
+	
+	
+	// SHADER STAGES
+	// ----------------------------------------
+	if (bShaderChanged)
 	{
 		m_deviceContext->IASetInputLayout(shader->m_layout);
-	}
-
-	if (shader)
-	{	// SHADER STAGES
-		// ----------------------------------------
-		m_deviceContext->VSSetShader(shader->m_vertexShader  , nullptr, 0);
-		m_deviceContext->PSSetShader(shader->m_pixelShader   , nullptr, 0);
+		m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
+		m_deviceContext->PSSetShader(shader->m_pixelShader, nullptr, 0);
 		m_deviceContext->GSSetShader(shader->m_geometryShader, nullptr, 0);
-		m_deviceContext->HSSetShader(shader->m_hullShader    , nullptr, 0);
-		m_deviceContext->DSSetShader(shader->m_domainShader  , nullptr, 0);
-		m_deviceContext->CSSetShader(shader->m_computeShader , nullptr, 0);
-
-		// CONSTANT BUFFERS 
-		// ----------------------------------------
-		shader->UpdateConstants(m_deviceContext);
-
-		// SHADER RESOURCES
-		// ----------------------------------------
-		while (mSetSamplerCmds.size() > 0)
-		{
-			SetSamplerCommand& cmd = mSetSamplerCmds.front();
-			cmd.SetResource(this);
-			mSetSamplerCmds.pop();
-		}
-
-		while (mSetTextureCmds.size() > 0)
-		{
-			SetTextureCommand& cmd = mSetTextureCmds.front();
-			cmd.SetResource(this);
-			mSetTextureCmds.pop();
-		}
-
-		// RASTERIZER
-		// ----------------------------------------
-		m_deviceContext->RSSetViewports(1, &mPipelineState.viewPort);
-		m_deviceContext->RSSetState(mRasterizerStates[mPipelineState.rasterizerState]);
-
-		// OUTPUT MERGER
-		// ----------------------------------------
-		if (sEnableBlend)
-		{
-			const float blendFactor[4] = { 1,1,1,1 };
-			m_deviceContext->OMSetBlendState(mBlendStates[mPipelineState.blendState].ptr, nullptr, 0xffffffff);
-		}
-
-		const auto indexDSState = mPipelineState.depthStencilState;
-		const auto indexRTV = mPipelineState.renderTargets[0];
-		
-		// get the bound render target addresses
-#if 1
-		// todo: perf: this takes as much time as set constants in debug mode
-		std::vector<ID3D11RenderTargetView*> RTVs = [&]() {				
-			std::vector<ID3D11RenderTargetView*> v(mPipelineState.renderTargets.size(), nullptr);
-			size_t i = 0;
-			for (RenderTargetID hRT : mPipelineState.renderTargets) 
-				if(hRT >= 0) 
-					v[i++] = mRenderTargets[hRT].pRenderTargetView;
-			return std::move(v);
-		}();
-#else
-		// this is slower ~2ms in debug
-		std::vector<ID3D11RenderTargetView*> RTVs;
-		for (RenderTargetID hRT : mPipelineState.renderTargets)
-			if (hRT >= 0)
-				RTVs.push_back(mRenderTargets[hRT].pRenderTargetView);
-#endif
-		const auto indexDSV     = mPipelineState.depthTargets;
-		//ID3D11RenderTargetView** RTV = indexRTV == -1 ? nullptr : &RTVs[0];
-		ID3D11RenderTargetView** RTV = RTVs.empty()   ? nullptr : &RTVs[0];
-		ID3D11DepthStencilView*  DSV = indexDSV == -1 ? nullptr : mDepthTargets[indexDSV].pDepthStencilView;
-
-		if (mPipelineState.bRenderTargetChanged || true)
-		{
-			m_deviceContext->OMSetRenderTargets(RTV ? (unsigned)RTVs.size() : 0, RTV, DSV);
-			mPipelineState.bRenderTargetChanged = false;
-		}
-
-		auto*  DSSTATE = mDepthStencilStates[indexDSState];
-		m_deviceContext->OMSetDepthStencilState(DSSTATE, 0);
+		m_deviceContext->HSSetShader(shader->m_hullShader, nullptr, 0);
+		m_deviceContext->DSSetShader(shader->m_domainShader, nullptr, 0);
+		m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
 	}
-	else
+
+
+	// CONSTANT BUFFERS & SHADER RESOURCES
+	// ----------------------------------------
+	shader->UpdateConstants(m_deviceContext);
+
+	while (mSetSamplerCmds.size() > 0)
 	{
-		Log::Error("Renderer::Apply() : Shader null...\n");
+		SetSamplerCommand& cmd = mSetSamplerCmds.front();
+		cmd.SetResource(this);
+		mSetSamplerCmds.pop();
 	}
+
+	while (mSetTextureCmds.size() > 0)
+	{
+		SetTextureCommand& cmd = mSetTextureCmds.front();
+		cmd.SetResource(this);
+		mSetTextureCmds.pop();
+	}
+
+
+	// RASTERIZER
+	// ----------------------------------------
+	if (bViewPortChanged) { m_deviceContext->RSSetViewports(1, &mPipelineState.viewPort); }
+	if (bRasterizerStateChanged) { m_deviceContext->RSSetState(mRasterizerStates[mPipelineState.rasterizerState]); }
+
+
+
+	// OUTPUT MERGER
+	// ----------------------------------------
+	//const float blendFactor[4] = { 1,1,1,1 };
+	if (sEnableBlend && bBlendStateChanged){ m_deviceContext->OMSetBlendState(mBlendStates[mPipelineState.blendState].ptr, nullptr, 0xffffffff); }
+	if (bDepthStencilStateChanged){	  m_deviceContext->OMSetDepthStencilState(mDepthStencilStates[mPipelineState.depthStencilState], 0); }
+
+	// get the bound render target addresses
+	const auto indexRTV = mPipelineState.renderTargets[0];
+#if 1
+	// todo: perf: this takes as much time as set constants in debug mode
+	std::vector<ID3D11RenderTargetView*> RTVs;
+	const bool bAllNullptr = [&]() {
+		std::vector<ID3D11RenderTargetView*> v(mPipelineState.renderTargets.size(), nullptr);
+		size_t i = 0;
+		bool bAllNull = true;
+		for (RenderTargetID hRT : mPipelineState.renderTargets)
+		{
+			if (hRT >= 0)
+			{
+				v[i++] = mRenderTargets[hRT].pRenderTargetView;
+				bAllNull = false;
+			}
+		}
+
+		RTVs = std::move(v);
+		return bAllNull;
+	}();
+#else
+	// this is slower ~2ms in debug
+	std::vector<ID3D11RenderTargetView*> RTVs;
+	for (RenderTargetID hRT : mPipelineState.renderTargets)
+		if (hRT >= 0)
+			RTVs.push_back(mRenderTargets[hRT].pRenderTargetView);
+#endif
+
+
+	ID3D11RenderTargetView** RTV = (RTVs.empty() || bAllNullptr)
+		? nullptr 
+		: &RTVs[0];
+
+	const UINT numRTV = RTV ? static_cast<UINT>(RTVs.size()) : 0;
+
+	ID3D11DepthStencilView*  DSV = mPipelineState.depthTargets == -1
+		? nullptr 
+		: mDepthTargets[mPipelineState.depthTargets].pDepthStencilView;
+
+	//if(bRenderTargetChanged || bDepthStencilStateChanged) //#TODO: 
+	// currently need bRenderTargetChanged for unbindRenderTargets + apply
+
+	if (RTV || bRenderTargetChanged || (DSV && bDepthTargetChanged))
+	{
+		m_deviceContext->OMSetRenderTargets(numRTV, RTV, DSV);
+	}
+
+	mPrevPipelineState = mPipelineState;
 }
 
 void Renderer::BeginEvent(const std::string & marker)
@@ -1975,7 +2023,12 @@ void Renderer::DrawIndexed(EPrimitiveTopology topology)
 	const unsigned numIndices = IndexBuffer.mDesc.mElementCount;
 	const unsigned numVertices = VertexBuffer.mDesc.mElementCount;
 
-	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
+	mPipelineState.topology = topology;
+	if (mPipelineState.topology != mPrevPipelineState.topology) 
+	{ 
+		m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology)); 
+	}
+
 	m_deviceContext->DrawIndexed(numIndices, 0, 0);
 	
 	++mRenderStats.numDrawCalls;

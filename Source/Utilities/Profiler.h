@@ -64,21 +64,22 @@ public:
 
 	void Clear();
 
-private:	// Internal Structs
-	struct PerfEntry
-	{
-		std::string			tag;
-		size_t				currSampleIndex; // [0, samples.size())
-		std::vector<float>	samples;
-		PerfTimer			timer;
+	//void Capture()
 
-		public:
-		void UpdateSampleBegin();
-		void UpdateSampleEnd();
-		void PrintEntryInfo(bool bPrintAllEntries = false);
-		inline float GetAvg() const;
-		bool operator<(const PerfEntry& other) const;
-		bool IsStale() const;
+private:	// Internal Structs
+	struct PerfEntry;
+	struct State
+	{
+		bool					bIsProfiling = false;
+		bool					bCaptureInProgress = false;
+		std::stack<std::string> EntryNameStack;
+		TreeNode<PerfEntry>*	pLastEntryNode = nullptr;	// used for setting up the hierarchy
+		inline void Clear()
+		{
+			bIsProfiling = false;
+			pLastEntryNode = nullptr;
+			while (!EntryNameStack.empty()) EntryNameStack.pop();
+		}
 	};
 	using PerfEntryTable = std::unordered_map<std::string, PerfEntry>;
 
@@ -88,18 +89,24 @@ private:
 	Tree<PerfEntry>		mPerfEntryTree;
 	
 	ProfilerSettings	mSettings;
-	struct State
+	State				mState;
+
+	//------------------------------------------------------
+
+	struct PerfEntry
 	{
-		bool					bIsProfiling = false;
-		std::stack<std::string> EntryNameStack;
-		TreeNode<PerfEntry>*	pLastEntryNode = nullptr;	// used for setting up the hierarchy
-		inline void Clear()
-		{
-			bIsProfiling = false;
-			pLastEntryNode = nullptr;
-			while (!EntryNameStack.empty()) EntryNameStack.pop();
-		}
-	} mState;
+		std::string			tag;
+		size_t				currSampleIndex; // [0, samples.size())
+		std::vector<float>	samples;
+		PerfTimer			timer;
+
+		void UpdateSampleBegin();
+		void UpdateSampleEnd();
+		void PrintEntryInfo(bool bPrintAllEntries = false);
+		inline float GetAvg() const;
+		bool operator<(const PerfEntry& other) const;
+		bool IsStale() const;
+	};
 };
 
 
@@ -110,6 +117,7 @@ class GPUProfiler
 	// "At this point, you should have all the information you'll need to go and write a GPU profiler of your own!"
 	//
 	// Me: Alright, here I go.
+	//
 public:
 	void Init(ID3D11DeviceContext* pContext, ID3D11Device* pDevice);
 	void Exit();
@@ -137,8 +145,30 @@ public:
 	//
 	void Clear();
 
-private:	// Internal Structs
+private:
+	struct QueryData;
+	struct State
+	{
+		bool					bIsProfiling = false;
+		std::stack<std::string> EntryNameStack;
+		TreeNode<QueryData>*	pLastEntryNode = nullptr;	// used for setting up the hierarchy
+	};
+
 	static const size_t FRAME_HISTORY = 10;
+	using FrameQueryTable = std::unordered_map<std::string, QueryData>;
+
+	ID3D11DeviceContext *	mpContext = nullptr;
+	ID3D11Device*			mpDevice = nullptr;
+	
+	ID3D11Query*			pDisjointQuery[FRAME_HISTORY];
+
+	FrameQueryTable			mFrameQueries;
+
+	Tree<QueryData>			mQueryDataTree;
+	State					mState;
+
+	//------------------------------------------------------
+
 
 	struct QueryData
 	{
@@ -152,27 +182,11 @@ private:	// Internal Structs
 
 		float GetAvg() const;
 		void Collect(float freq, ID3D11DeviceContext* pContext, size_t bufferIndex);
-		bool operator<(const QueryData& other) const; 
+		bool operator<(const QueryData& other) const;
 		bool IsStale() const { return GPUProfiler::sCurrFrameNumber - lastQueryFrameNumber > FRAME_HISTORY; }
 	};
+
 	bool GetQueryResultsOfFrame(const unsigned long long frameNumber, ID3D11DeviceContext* pContext, D3D10_QUERY_DATA_TIMESTAMP_DISJOINT & tsDj);
 
-	using FrameQueryTable = std::unordered_map<std::string, QueryData>;
-
 	static unsigned long long		sCurrFrameNumber;
-private:
-	ID3D11DeviceContext *	mpContext = nullptr;
-	ID3D11Device*			mpDevice = nullptr;
-	
-	ID3D11Query*			pDisjointQuery[FRAME_HISTORY];
-
-	FrameQueryTable			mFrameQueries;
-
-	Tree<QueryData>			mQueryDataTree;
-	struct State
-	{
-		bool					bIsProfiling = false;
-		std::stack<std::string> EntryNameStack;
-		TreeNode<QueryData>*	pLastEntryNode = nullptr;	// used for setting up the hierarchy
-	} mState;
 };

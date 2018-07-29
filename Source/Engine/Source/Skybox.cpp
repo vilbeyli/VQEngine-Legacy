@@ -152,14 +152,26 @@ void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Render
 			EEnvironmentMapPresets::WALK_OF_FAME
 		};
 
-		std::for_each(RANGE(presets), [&](auto preset)
+		if (renderSettings.bPreLoadEnvironmentMaps)
 		{
+			std::for_each(RANGE(presets), [&](auto preset)
+			{
+				const auto rootAndFilesPair = GetsIBLFiles(preset);
+				{
+					s_Presets[preset] = Skybox(pRenderer, bEquirectangular);
+					s_Presets[preset].Initialize(rootAndFilesPair.second, rootAndFilesPair.first);
+				}
+			});
+		}
+		else
+		{
+			auto& preset = presets.back();
 			const auto rootAndFilesPair = GetsIBLFiles(preset);
 			{
 				s_Presets[preset] = Skybox(pRenderer, bEquirectangular);
 				s_Presets[preset].Initialize(rootAndFilesPair.second, rootAndFilesPair.first);
 			}
-		});
+		}
 	}
 }
 
@@ -527,6 +539,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 		pRenderer->SetVertexBuffer(IABuffers.first);
 		pRenderer->SetIndexBuffer(IABuffers.second);
 		pRenderer->SetTexture("tEnvironmentMap", envMap);
+		pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 		pRenderer->SetSamplerState("sLinear", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 
 		viewPort.Width = static_cast<float>(textureSize[0]);

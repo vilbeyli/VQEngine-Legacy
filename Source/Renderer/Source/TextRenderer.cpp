@@ -179,8 +179,8 @@ void TextRenderer::RenderText(const TextDrawDescription& drawDesc)
 
 		pRenderer->SetTexture("textMap", ch.tex);
 		
-		pRenderer->Apply();
 		pRenderer->SetVertexBuffer(mQuadVertexBuffer);
+		pRenderer->Apply();
 		pRenderer->Draw(6, EPrimitiveTopology::TRIANGLE_LIST);
 		x += (ch.advance >> 6) * drawDesc.scale; // Bitshift by 6 to get value in pixels (2^6 = 64 (divide amount of 1/64th pixels by 64 to get amount of pixels))
 	}

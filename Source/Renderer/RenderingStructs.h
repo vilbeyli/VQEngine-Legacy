@@ -62,11 +62,10 @@ struct DepthTarget
 
 struct PipelineState
 {
-	bool				bRenderTargetChanged;
-
 	ShaderID			shader;
 	BufferID			vertexBuffer;
 	BufferID			indexBuffer;
+	EPrimitiveTopology	topology;
 	Viewport			viewPort;
 	RasterizerStateID	rasterizerState;
 	DepthStencilStateID	depthStencilState;

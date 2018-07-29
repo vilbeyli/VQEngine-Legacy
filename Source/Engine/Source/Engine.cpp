@@ -1329,6 +1329,7 @@ void Engine::RenderLights() const
 {
 	mpRenderer->BeginEvent("Render Lights Pass");
 	mpRenderer->SetShader(EShaders::UNLIT);
+	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 	for (const Light& light : mpActiveScene->mLights)
 	{
 		//if (!light._bEnabled) continue; // #BreaksRelease
@@ -1374,7 +1375,7 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 	mpRenderer->SetConstant1f("isDiffuseMap", 1.0f);
 	mpRenderer->SetConstant3f("diffuse", vec3(1.0f, 1, 1));
 	mpRenderer->SetConstant4x4f("worldViewProj", matTransformation);
-	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
+	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 	mpRenderer->Apply();

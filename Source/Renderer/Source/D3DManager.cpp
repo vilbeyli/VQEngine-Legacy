@@ -209,13 +209,6 @@ void D3DManager::EndFrame()
 {
 	if (m_vsync_enabled)		m_swapChain->Present(0, 0);
 	else						m_swapChain->Present(0, 0);
-	m_deviceContext->IASetInputLayout(NULL);
-	m_deviceContext->VSSetShader(NULL, NULL, 0);
-	m_deviceContext->GSSetShader(NULL, NULL, 0);
-	m_deviceContext->HSSetShader(NULL, NULL, 0);
-	m_deviceContext->DSSetShader(NULL, NULL, 0);
-	m_deviceContext->PSSetShader(NULL, NULL, 0);
-	m_deviceContext->CSSetShader(NULL, NULL, 0);
 }
 
 void D3DManager::GetVideoCardInfo(char* cardName, int& memory)

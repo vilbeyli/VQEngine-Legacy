@@ -138,7 +138,7 @@ public:
 	void					SetScissorsRect(int left, int right, int top, int bottom);
 
 	template <typename... Args> 	
-	inline void				BindRenderTargets(Args const&... renderTargetIDs) { mPipelineState.renderTargets = { renderTargetIDs... }; mPipelineState.bRenderTargetChanged = true;}
+	inline void				BindRenderTargets(Args const&... renderTargetIDs) { mPipelineState.renderTargets = { renderTargetIDs... }; }
 	void					BindRenderTarget(RenderTargetID rtvID);
 	void					BindDepthTarget(DepthTargetID dsvID);
 
@@ -206,7 +206,7 @@ private:
 	// PIPELINE STATE
 	//
 	PipelineState					mPipelineState;
-	PipelineState					mPrevPipelineState;	//todo: make states an array, index through frameCount % size
+	PipelineState					mPrevPipelineState;
 	
 	std::vector<RasterizerState*>	mRasterizerStates;
 	std::vector<DepthStencilState*> mDepthStencilStates;

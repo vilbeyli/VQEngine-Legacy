@@ -54,7 +54,6 @@ REM call :MSBuild_Build %MSBuild_MultiThreaded% %log_msbuild_s%
 cls
 if not exist "%APPDATA%\VQEngine\Logs\Build" mkdir "%APPDATA%\VQEngine\Logs\Build
 
-call :CleanUp
 call :MSBuild_Build RELEASE, %log_devenv%
 call :PackageBinaries
 
@@ -68,20 +67,10 @@ if %ERRORLEVEL% GEQ 1 (
 echo Build Finished.
 @echo:
 echo ./Build/_artifacts contains the release version of the project executable.
-
+pause
 endlocal
 EXIT /B 0
 
-
-REM Cleanup before build for a clean build
-:CleanUp
-echo Cleaning up the project folders...
-if not exist Build mkdir Build
-cd Build
-if not exist Empty mkdir Empty
-robocopy ./Empty ./ /purge /MT:8 > nul
-cd ..
-EXIT /B 0
 
 
 :PackageBinaries

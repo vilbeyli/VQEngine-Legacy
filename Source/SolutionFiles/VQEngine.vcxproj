@@ -178,6 +178,10 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
       <Command>xcopy "$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\freetype271.dll" "$(TargetDir)" /Y
 xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\assimp-vc140-mt.dll" "$(TargetDir)" /Y</Command>
     </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="Application.vcxproj">

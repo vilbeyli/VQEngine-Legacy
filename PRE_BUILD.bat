@@ -17,7 +17,7 @@ REM 	along with this program.If not, see <http://www.gnu.org/licenses/>.
 REM 
 REM 	Contact: volkanilbeyli@gmail.com
 
-
+setlocal
 set FREETYPE="Source\3rdParty\freetype-windows-binaries"
 set DIRECTXTEX="Source\3rdParty\DirectXTex"
 
@@ -30,30 +30,11 @@ call :IsEmpty %DIRECTXTEX%
 set /A ALL_SUBMODULES_INITIALIZED=%ALL_SUBMODULES_INITIALIZED% + %errorlevel%
 
 if %ALL_SUBMODULES_INITIALIZED% NEQ 0 (
-  start /w git submodule update --init --recursive
+  git submodule update --init --recursive
 )
 
 exit /b 0
 
-
-
-:InitSubmodule
-if not "%1" == "" (
-    call :IsEmpty %1 
-    if %errorlevel%==0 (
-        echo %1 empty
-        pushd %1
-        ::call git submodule update --init --recursive
-        start /w git submodule update --init --recursive
-        popd
-    )
-    else (
-        echo %1 non-empty
-    )
-) else (
-  echo InitSubmodule: error - no parameter
-)
-exit /b 0
 
 
 :IsEmpty
@@ -65,7 +46,7 @@ if not "%1" == "" (
       exit /b 1
     )
   ) else (
-    echo %1 missing
+    exit /b 1
   )
 ) else (
   echo IsEmpty: error - no parameter

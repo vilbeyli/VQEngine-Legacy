@@ -155,7 +155,8 @@ devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2017.sln" /Build "$(Configu
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
+      <Command>call "$(SolutionDir)PRE_BUILD.bat"
+SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
 IF EXIST $(ProjectDir)..\Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
 echo DirectXTex.lib already built. ) ELSE (
 echo Building dependency library: DirectXTex... 
@@ -182,16 +183,16 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>call $(SolutionDir)PRE_BUILD.bat /w
+      <Command>call "$(SolutionDir)PRE_BUILD.bat"
 SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
-IF EXIST "$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib" (
+IF EXIST "$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2017\$(Platform)\$(Configuration)\DirectXTex.lib" (
 echo DirectXTex.lib already built. ) ELSE (
 echo Building dependency library: DirectXTex... 
 devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2017.sln" /Build "$(Configuration)|$(Platform)")</Command>
     </PreBuildEvent>
     <Lib>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>freetype271.lib</AdditionalDependencies>
+      <AdditionalDependencies>freetype.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>

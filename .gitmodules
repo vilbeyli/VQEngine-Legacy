@@ -1,6 +1,6 @@
 [submodule "Source/3rdParty/DirectXTex"]
 	path = Source/3rdParty/DirectXTex
 	url = https://github.com/Microsoft/DirectXTex.git
-[submodule "Source\\3rdParty\\freetype-windows-binaries"]
-	path = Source\\3rdParty\\freetype-windows-binaries
+[submodule "Source/3rdParty/freetype-windows-binaries"]
+	path = Source/3rdParty/freetype-windows-binaries
 	url = https://github.com/ubawurinna/freetype-windows-binaries.git

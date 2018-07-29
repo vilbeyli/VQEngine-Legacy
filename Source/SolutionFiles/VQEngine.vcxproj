@@ -128,7 +128,7 @@
       </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\freetype271.dll" "$(TargetDir)" /Y
+      <Command>xcopy "$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\freetype.dll" "$(TargetDir)" /Y
 xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\assimp-vc140-mt.dll" "$(TargetDir)" /Y</Command>
     </PostBuildEvent>
     <ResourceCompile>
@@ -175,7 +175,7 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
       <Profile>true</Profile>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy "$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\freetype271.dll" "$(TargetDir)" /Y
+      <Command>xcopy "$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\freetype.dll" "$(TargetDir)" /Y
 xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\assimp-vc140-mt.dll" "$(TargetDir)" /Y</Command>
     </PostBuildEvent>
     <PreBuildEvent>

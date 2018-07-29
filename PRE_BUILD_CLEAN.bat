@@ -1,8 +1,6 @@
 @echo off
-REM Turn echo off - no spamming
-
 REM 	DX11Renderer - VDemo | DirectX11 Renderer
-REM 	Copyright(C) 2016  - Volkan Ilbeyli
+REM 	Copyright(C) 2018  - Volkan Ilbeyli
 REM 
 REM 	This program is free software : you can redistribute it and / or modify
 REM 	it under the terms of the GNU General Public License as published by
@@ -19,11 +17,21 @@ REM 	along with this program.If not, see <http://www.gnu.org/licenses/>.
 REM 
 REM 	Contact: volkanilbeyli@gmail.com
 
+set FREETYPE="Source\3rdParty\freetype-windows-binaries"
+set DIRECTXTEX="Source\3rdParty\DirectXTex"
 
-REM DEPENDENCY BUILDING IS HANDLED BY VISUAL STUDIO AS PRE-BUILD EVENT WITH THE FOLLOWING SCRIPT
-SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
-IF EXIST $(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib (
-echo DirectXTex.lib already built. ) ELSE (
-echo Building dependency library: DirectXTex... 
-devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configuration)|$(Platform)")
-REM DEPENDENCY BUILDING IS HANDLED BY VISUAL STUDIO AS PRE-BUILD EVENT WITH THE ABOVE SCRIPT
+echo Cleaning up submodule folders...
+
+call :Clean %FREETYPE%
+call :Clean %DIRECTXTEX%
+
+exit /b 0
+
+
+
+:Clean
+if not exist %1 mkdir %1
+pushd %1
+if not exist Empty mkdir Empty
+robocopy ./Empty ./ /purge /MT:8 > nul
+popd

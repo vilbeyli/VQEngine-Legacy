@@ -182,9 +182,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>pushd $(ProjectDir)
-call $(SolutionDir)PRE_BUILD.bat /w
-popd
+      <Command>call $(SolutionDir)PRE_BUILD.bat /w
 SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
 IF EXIST "$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2015\$(Platform)\$(Configuration)\DirectXTex.lib" (
 echo DirectXTex.lib already built. ) ELSE (

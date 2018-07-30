@@ -113,7 +113,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     </PreBuildEvent>
     <Lib>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win32\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>freetype271.lib</AdditionalDependencies>
+      <AdditionalDependencies>freetype.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -129,7 +129,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)PRE_BUILD.bat
+      <Command>call "$(SolutionDir)PRE_BUILD.bat"
 SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
 IF EXIST "$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2017\$(Platform)\$(Configuration)\DirectXTex.lib" (
 echo DirectXTex.lib already built. ) ELSE (
@@ -138,7 +138,7 @@ devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2017.sln" /Build "$(Configu
     </PreBuildEvent>
     <Lib>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win64\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>freetype271.lib</AdditionalDependencies>
+      <AdditionalDependencies>freetype.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -164,7 +164,7 @@ devenv %DXTexture_proj_location%\DirectXTex_Desktop_2015.sln /Build "$(Configura
     </PreBuildEvent>
     <Lib>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\3rdParty\freetype-windows-binaries\win32\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>freetype271.lib</AdditionalDependencies>
+      <AdditionalDependencies>freetype.lib</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

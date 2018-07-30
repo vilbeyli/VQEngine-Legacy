@@ -467,13 +467,53 @@ void Scene::CalculateSceneBoundingBox()
 }
 
 
+#if _DEBUG
+static bool bReportedList = true;
+#endif
+
 void Scene::UpdateScene(float dt)
 {
+	// CYCLE THROUGH CAMERAS
+	//
 	if (ENGINE->INP()->IsKeyTriggered("C"))
 	{
 		mSelectedCamera = (mSelectedCamera + 1) % mCameras.size();
 	}
 
+
+	// OPTIMIZATION SETTINGS TOGGLES
+	//
+	if (ENGINE->INP()->IsKeyTriggered("F6"))
+	{
+		bool& toggle = ENGINE->INP()->IsKeyDown("Shift")
+			? mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights
+			: mSceneRenderSettings.optimization.bViewFrustumCull_MainView;
+		
+		toggle = !toggle;
+	}
+	if (ENGINE->INP()->IsKeyTriggered("F7"))
+	{
+		mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights= !mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights;
+	}
+	if (ENGINE->INP()->IsKeyTriggered("F8"))
+	{
+
+#if _DEBUG
+		if (ENGINE->INP()->IsKeyDown("Shift"))
+		{
+			bReportedList = false;
+		}
+		else
+#endif
+		{
+			mSceneRenderSettings.optimization.bSortRenderLists = !mSceneRenderSettings.optimization.bSortRenderLists;
+		}
+	}
+
+
+
+	// UPDATE CAMERA & WORLD
+	//
 	mCameras[mSelectedCamera].Update(dt);
 	Update(dt);
 }
@@ -564,6 +604,15 @@ static size_t CullGameObjects(
 #endif
 		}();
 
+		//assert(!pObj->GetModelData().mMeshIDs.empty());
+		if (pObj->GetModelData().mMeshIDs.empty())
+		{
+#if _DEBUG
+			Log::Warning("CullGameObject(): GameObject with empty mesh list.");
+#endif
+			return;
+		}
+
 		if (IsVisible(frustumPlanes, aabb_world))
 		{
 			pCulledObjs.push_back(pObj);
@@ -583,32 +632,95 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 	mDrawLists.opaqueListCulled.clear();
 	mDrawLists.alphaList.clear();
 	
-	outShadowView.casters.clear();
+	std::vector<const GameObject*>& casterList = outShadowView.casters;
+	casterList.clear();
 	outShadowView.shadowMapRenderListLookUp.clear();
 
 	// POPULATE RENDER LISTS WITH SCENE OBJECTS
 	//
 	// gather game objects that are to be rendered in the scene
-	for (const GameObject& obj : mObjectPool.mObjects)
+	for (GameObject& obj : mObjectPool.mObjects)
 	{
 		if (obj.mpScene == this && obj.mRenderSettings.bRender)
 		{
-			mDrawLists.opaqueList.push_back(&obj);
+			const bool bMeshListEmpty = obj.mModel.mData.mMeshIDs.empty();
+			const bool bTransparentMeshListEmpty = obj.mModel.mData.mTransparentMeshIDs.empty();
 
-			if (!obj.mModel.mData.mTransparentMeshIDs.empty())
+			if (!bMeshListEmpty)
+			{
+				mDrawLists.opaqueList.push_back(&obj);
+			}
+
+			if (!bTransparentMeshListEmpty)
 			{
 				mDrawLists.alphaList.push_back(&obj);
 			}
 
-			if (obj.mRenderSettings.bCastShadow)
+			if (obj.mRenderSettings.bCastShadow && !bMeshListEmpty)
 			{
-				outShadowView.casters.push_back(&obj);
+				casterList.push_back(&obj);
 			}
+
+#if _DEBUG
+			if (bMeshListEmpty && bTransparentMeshListEmpty)
+			{
+				Log::Warning("GameObject with no Mesh Data, turning bRender off");
+				obj.mRenderSettings.bRender = false;
+			}
+#endif
 		}
 	}
 
+
 	// CULL MAIN & SHADOW VIEWS
 	//
+	const bool& bSortRenderLists = mSceneRenderSettings.optimization.bSortRenderLists;
+	const bool& bCullMainView = mSceneRenderSettings.optimization.bViewFrustumCull_MainView;
+	const bool& bCullLightView = mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights;
+	const bool& bShadowViewCull = mSceneRenderSettings.optimization.bShadowViewCull;
+
+	// Meshes are sorted according to BUILT_IN_TYPE < CUSTOM, 
+	// and BUILT_IN_TYPEs are sorted in themselves
+	auto SortByMeshType = [&](const GameObject* pObj0, const GameObject* pObj1)
+	{
+		const ModelData& model0 = pObj0->GetModelData();
+		const ModelData& model1 = pObj1->GetModelData();
+
+		const MeshID mID0 = model0.mMeshIDs.empty() ? -1 : model0.mMeshIDs.back();
+		const MeshID mID1 = model1.mMeshIDs.empty() ? -1 : model1.mMeshIDs.back();
+		
+		assert(mID0 != -1 && mID1 != -1);
+
+		// case: one of the objects have a custom mesh
+		if (mID0 >= EGeometry::MESH_TYPE_COUNT || mID1 >= EGeometry::MESH_TYPE_COUNT)
+		{
+			if (mID0 < EGeometry::MESH_TYPE_COUNT)
+				return true;
+				
+			if (mID1 < EGeometry::MESH_TYPE_COUNT)
+				return false;
+
+			return false;
+		}
+
+		// case: both objects are builtin types
+		else
+		{
+			return mID0 < mID1;
+		}
+	};
+	auto SortByMaterialID = [](const GameObject* pObj0, const GameObject* pObj1)
+	{
+		// TODO:
+		return true;
+	};
+	auto SortByViewSpaceDepth = [](const GameObject* pObj0, const GameObject* pObj1)
+	{
+		// TODO:
+		return true;
+	};
+
+
 	size_t numFrustumCulledObjs = 0;
 	size_t numShadowFrustumCullObjs = 0;
 	
@@ -617,36 +729,110 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 
 #else
 	// main view
-	numFrustumCulledObjs = CullGameObjects(
-		FrustumPlaneset::ExtractFromMatrix(viewProj)
-		, mDrawLists.opaqueList
-		, mDrawLists.opaqueListCulled);
+	if (bCullMainView)
+	{
+		numFrustumCulledObjs = CullGameObjects(
+			FrustumPlaneset::ExtractFromMatrix(viewProj)
+			, mDrawLists.opaqueList
+			, mDrawLists.opaqueListCulled);
+	}
+	else
+	{
+		mDrawLists.opaqueListCulled.resize(mDrawLists.opaqueList.size());
+		std::copy(RANGE(mDrawLists.opaqueList), mDrawLists.opaqueListCulled.begin());
+		numFrustumCulledObjs = 0;
+	}
+
 
 	// shadow frustums
 	for (const Light& l : mLights)
 	{
 		if (l._castsShadow)
 		{
+			// Cull
+			//
 			std::vector<const GameObject*> objList;
 			switch (l._type)
 			{
 			case Light::ELightType::SPOT:
-				numShadowFrustumCullObjs += CullGameObjects(
-					l.GetViewFrustumPlanes(),
-					outShadowView.casters,
-					objList
-				);
+			{
+				if (bCullLightView)
+				{
+					numShadowFrustumCullObjs += CullGameObjects(
+						l.GetViewFrustumPlanes(),
+						casterList,
+						objList);
+				}
+				else
+				{
+					objList.resize(casterList.size());
+					std::copy(RANGE(casterList), objList.begin());
+					numShadowFrustumCullObjs += 0;
+				}
+			}
 			break;
 			case Light::ELightType::POINT:
 				// TODO: cull against 6 frustums
+				if (bCullLightView)
+				{
+					
+				}
+				else
+				{
+					
+				}
 				break;
 			}
+
+
+			// Sort Objects Per Mesh Type, etc...
+			//
+			// Note: sorting by mesh types currently doesn't affect any performance metrics.
+			if (bSortRenderLists) 
+			{ 
+				std::sort(RANGE(objList), SortByMeshType); 
+			}
+
 			outShadowView.shadowMapRenderListLookUp[&l] = objList;
 		}
 	}
 #endif
-	// TODO: consider this for directionals: http://stefan-s.net/?p=92
 	
+	// CULL DIRECTIONAL SHADOW VIEW 
+	//
+	if (bShadowViewCull)
+	{
+		// TODO: consider this for directionals: http://stefan-s.net/?p=92
+		//       or umbra paper
+	}
+	
+
+
+	// SORT OBJECTS PER MESH TYPE, ETC...
+	//
+	// Note: sorting by mesh types currently doesn't affect any performance metrics.
+	if (bSortRenderLists) { std::sort(RANGE(mDrawLists.opaqueListCulled), SortByMeshType); }
+	
+#if _DEBUG
+	if (!bReportedList)
+	{
+		Log::Info("Mesh Render List (%s): ", bSortRenderLists ? "Sorted" : "Unsorted");
+		int num = 0;
+		std::for_each(RANGE(mDrawLists.opaqueListCulled), [&](const GameObject* pObj)
+		{
+			Log::Info("\tObj[%d]: ", num);
+
+			int numMesh = 0;
+			std::for_each(RANGE(pObj->GetModelData().mMeshIDs), [&](const MeshID& id)
+			{
+				Log::Info("\t\tMesh[%d]: %d", numMesh, id);
+			});
+			++num;
+		});
+		bReportedList = true;
+	}
+#endif
+
 	return numFrustumCulledObjs + numShadowFrustumCullObjs;
 }
 

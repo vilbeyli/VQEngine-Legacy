@@ -231,7 +231,3 @@ struct SerializedScene
 	Settings::SceneRender			settings;
 	char loadSuccess = '0';
 };
-
-constexpr size_t SIZE_BRDF = sizeof(BRDF_Material);			// 72 Bytes
-constexpr size_t SIZE_PHNG = sizeof(BlinnPhong_Material);	// 72 Bytes
-// if we use 64 bits for the MaterialID, we can use 32-bit to index each array

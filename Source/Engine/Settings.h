@@ -104,10 +104,20 @@ namespace Settings
 		float intensity;
 	};
 
+	struct Optimization
+	{
+		bool bViewFrustumCull_MainView = true;
+		bool bViewFrustumCull_LocalLights = true;
+		bool bShadowViewCull = false;	// not implemented yet
+		bool bSortRenderLists = true;
+	};
+
 	struct SceneRender
 	{
 		SSAO ssao;
 		bool bSkylightEnabled;			// ambient environment map lighting
 		Bloom bloom;
+
+		Optimization optimization;
 	};
 };

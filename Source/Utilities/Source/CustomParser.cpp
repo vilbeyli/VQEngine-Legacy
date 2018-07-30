@@ -52,7 +52,7 @@ Parser::~Parser(){}
 
 Settings::Engine Parser::ReadSettings(const std::string& settingsFileName)
 {
-	const std::string filePath = file_root + settingsFileName;
+	const std::string filePath = settingsFileName;
 	Settings::Engine setting;
 
 	std::ifstream settingsFile(filePath.c_str());
@@ -68,6 +68,7 @@ Settings::Engine Parser::ReadSettings(const std::string& settingsFileName)
 			std::vector<std::string> command = StrUtil::split(line, ' ');	// ignore whitespace
 			ParseSetting(command, setting);							// process command
 		}
+		Log::Error("Initialized engine settings.");
 	}
 	else
 	{

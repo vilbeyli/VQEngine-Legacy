@@ -1,38 +1,38 @@
 @echo off
-REM 	DX11Renderer - VDemo | DirectX11 Renderer
-REM 	Copyright(C) 2018  - Volkan Ilbeyli
-REM 
-REM 	This program is free software : you can redistribute it and / or modify
-REM 	it under the terms of the GNU General Public License as published by
-REM 	the Free Software Foundation, either version 3 of the License, or
-REM 	(at your option) any later version.
-REM 
-REM 	This program is distributed in the hope that it will be useful,
-REM 	but WITHOUT ANY WARRANTY; without even the implied warranty of
-REM 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
-REM 	GNU General Public License for more details.
-REM 
-REM 	You should have received a copy of the GNU General Public License
-REM 	along with this program.If not, see <http://www.gnu.org/licenses/>.
-REM 
-REM 	Contact: volkanilbeyli@gmail.com
+:: 	DX11Renderer - VDemo | DirectX11 Renderer
+:: 	Copyright(C) 2018  - Volkan Ilbeyli
+:: 
+:: 	This program is free software : you can redistribute it and / or modify
+:: 	it under the terms of the GNU General Public License as published by
+:: 	the Free Software Foundation, either version 3 of the License, or
+:: 	(at your option) any later version.
+:: 
+:: 	This program is distributed in the hope that it will be useful,
+:: 	but WITHOUT ANY WARRANTY; without even the implied warranty of
+:: 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+:: 	GNU General Public License for more details.
+:: 
+:: 	You should have received a copy of the GNU General Public License
+:: 	along with this program.If not, see <http://www.gnu.org/licenses/>.
+:: 
+:: 	Contact: volkanilbeyli@gmail.com
 
-REM --------------------------------------------------------------------------------------
-REM Notes:
-REM  - define variables with set, reference them by enclosing variables between %
-REM  - read arguments with %1, %2, %3...
-REM  - setting numeric variables with /A flag: SET /A a=5
-REM  - check process return code with %ERRORLEVEL%
-REM 
-REM --------------------------------------------------------------------------------------
+:: --------------------------------------------------------------------------------------
+:: Notes:
+::  - define variables with set, reference them by enclosing variables between %
+::  - read arguments with %1, %2, %3...
+::  - setting numeric variables with /A flag: SET /A a=5
+::  - check process return code with %ERRORLEVEL%
+:: 
+:: --------------------------------------------------------------------------------------
 
-REM setlocal so that the variables defined here doesn't live through the lifetime
-REM of this script file. the calling cmd.exe would still see them if we don't define
-REM the variables in a setlocal-endlocal scope
+:: setlocal so that the variables defined here doesn't live through the lifetime
+:: of this script file. the calling cmd.exe would still see them if we don't define
+:: the variables in a setlocal-endlocal scope
 setlocal
 
-rem TODO: define a function - read registry - return devenv path
-rem https://developercommunity.visualstudio.com/content/problem/2813/cant-find-registry-entries-for-visual-studio-2017.html
+:: TODO: define a function - read registry - return devenv path
+:: https://developercommunity.visualstudio.com/content/problem/2813/cant-find-registry-entries-for-visual-studio-2017.html
 set devenv=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\Common7\IDE\devenv.exe
 set msbuild=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\MSBuild\15.0\Bin\MSBuild.exe
 
@@ -42,14 +42,14 @@ set log_devenv=%APPDATA%\VQEngine\Logs\Build\devenv_out.log
 set log_msbuild_s=%APPDATA%\VQEngine\Logs\Build\msbuild_out_st.log
 set log_msbuild_m=%APPDATA%\VQEngine\Logs\Build\msbuild_out_mt.log
 
-REM TODO: figure out multi-threaded msbuild or faster. this takes 42s while devenv takes ~20s
-REM set MSBuild_MultiThreaded=True
-REM call :CleanUp
-REM call :MSBuild_Build %MSBuild_MultiThreaded% %log_msbuild_m%
+:: TODO: figure out multi-threaded msbuild or faster. this takes 42s while devenv takes ~20s
+:: set MSBuild_MultiThreaded=True
+:: call :CleanUp
+:: call :MSBuild_Build %MSBuild_MultiThreaded% %log_msbuild_m%
 
-REM set MSBuild_MultiThreaded=False
-REM call :CleanUp
-REM call :MSBuild_Build %MSBuild_MultiThreaded% %log_msbuild_s%
+:: set MSBuild_MultiThreaded=False
+:: call :CleanUp
+:: call :MSBuild_Build %MSBuild_MultiThreaded% %log_msbuild_s%
 
 cls
 if not exist "%APPDATA%\VQEngine\Logs\Build" mkdir "%APPDATA%\VQEngine\Logs\Build
@@ -57,7 +57,7 @@ if not exist "%APPDATA%\VQEngine\Logs\Build" mkdir "%APPDATA%\VQEngine\Logs\Buil
 call :MSBuild_Build RELEASE, %log_devenv%
 call :PackageBinaries
 
-REM Error checking
+:: Error checking
 if %ERRORLEVEL% GEQ 1 (
     echo Error building solution file: %solution%
     pause
@@ -83,23 +83,36 @@ set artifacts_dir=%proj_dir%\_artifacts
 rmdir Empty
 cd ..
 set root_dir=%cd%
-REM get all .dll and .exe files from build
+:: get all .dll and .exe files from build
 for /r "%proj_dir%" %%f in (*.exe *.dll) do (
-    REM skip _artifacts folder itself
+    :: skip _artifacts folder itself
     if not "%%~df%%~pf" == "%artifacts_dir%\" ( 
         xcopy "%%f" "%artifacts_dir%" /Y > nul
     )
 ) 
-REM copy data and shaders
+:: copy data and shaders
 robocopy ./Data "%artifacts_dir%/Data" /E /MT:8 > nul
 robocopy ./Source/Shaders "%artifacts_dir%/Source/Shaders" /E /MT:8 > nul
+
+:: EngineSettings.ini ends up in repo root after Build.
+if exist EngineSettings.ini (
+    xcopy "EngineSettings.ini" "./Build/_artifacts/"\ /Y /Q /F /MOV
+) else (
+    xcopy "./Data/EngineSettings.ini" "./Build/_artifacts/"\ /Y /Q /F
+)
+
+if %errorlevel% NEQ 0 (
+    xcopy "./Data/EngineSettings.ini" "./Build/_artifacts/"\ /Y /Q /F
+)
+
+
 EXIT /B 0
 
 
 :MSBuild_Build
 if %1==True (Building the project [MSBuild Multi-thread]...) else (echo Building the project [MSBuild Single-thread]...)
 
-REM cleanup log file if it exists
+:: cleanup log file if it exists
 if exist %2 del %2 
 
 set t_msb_begin=%TIME%
@@ -107,13 +120,13 @@ echo              begin %t_msb_begin%
 "%msbuild%" %solution%  /p:Configuration=Release /m
 set t_msb_end=%TIME%
 echo              end   %t_msb_end%
-rem set duration=%t_msb_end%-%t_msb_begin%
+:: set duration=%t_msb_end%-%t_msb_begin%
 echo ------------------------------------------
 EXIT /B 0
 
 :Devenv_Build
 
-REM cleanup log file if it exists
+:: cleanup log file if it exists
 if exist %2 del %2 
 
 echo Building the project [devenv]...
@@ -121,8 +134,8 @@ echo              begin %TIME%
 "%devenv%" %solution% /build %1 /out %2
 echo              end   %TIME%
 echo ------------------------------------------
-REM TODO: read file line by line, cat crashes with stackdump...
-REM cat %logFile%
+:: TODO: read file line by line, cat crashes with stackdump...
+:: cat %logFile%
 EXIT /B 0
 
 

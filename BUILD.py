@@ -172,6 +172,9 @@ def PackageBinaries(bPrintOutput):
         print("Error copying ./Source/Shaders folder")
         return False
 
+    # copy EngineSettings.ini (NOT TESTED)
+    RunSubprocess("xcopy \"./Data/EngineSettings.ini\" \"./Build/_artifacts/\"\\ /Y /Q /F", True)
+
     return True
 
 

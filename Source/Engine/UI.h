@@ -16,33 +16,33 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-struct PSIn
+#pragma once
+
+#include "Engine/Mesh.h"
+
+
+class Renderer;
+class TextRenderer;
+
+struct vec3;
+
+namespace VQEngine
 {
-	float4 position : SV_POSITION;
-	float2 texCoord : TEXCOORD0;
+class UI
+{
+public:
+	UI(const std::vector<Mesh>& BuiltInMeshes) : mBuiltInMeshes(BuiltInMeshes) {}
+
+	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer);
+	void Exit();
+
+	void RenderBackground(const vec3& color, const vec2& size, const vec2& screenPosition) const;
+
+
+private:
+	const std::vector<Mesh>& mBuiltInMeshes;
+
+	Renderer*		mpRenderer;
+	TextRenderer*	mpTextRenderer;
 };
-
-cbuffer perObject
-{
-	float3 diffuse;
-	float alpha;
-    float isDiffuseMap;
-};
-
-Texture2D texDiffuseMap;
-
-SamplerState samAnisotropic
-{
-    Filter = ANISOTROPIC;
-    MaxAnisotropy = 4;
-    AddressU = WRAP;
-    AddressV = WRAP;
-};
-
-float4 PSMain(PSIn In) : SV_TARGET
-{
-	float2 uv = In.texCoord;
-    float4 outColor = isDiffuseMap          * texDiffuseMap.Sample(samAnisotropic, uv) * float4(diffuse, alpha)
-                    + (1.0f - isDiffuseMap) * float4(diffuse, alpha);
-	return outColor;
 }

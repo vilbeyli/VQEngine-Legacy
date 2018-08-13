@@ -17,7 +17,10 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
-template<class T> struct TreeNode
+#include <functional>
+
+template<class T> 
+struct TreeNode
 {
 	const T*				pData;
 	TreeNode*				pParent;
@@ -27,8 +30,13 @@ template<class T> struct TreeNode
 	bool operator==(const TreeNode<T>& other) { return pData == other.pData; }
 };
 
-constexpr int PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE = 22;	// pixels
-template<class T> struct Tree
+constexpr int PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE = 14;	// pixels
+
+template<class T>
+using vecConstpNodes = std::vector<const TreeNode<T>*>;
+
+template<class T> 
+struct Tree
 {
 	template<class T>
 	using pFnNodeComparisonPredicate = bool(*)(const TreeNode<T>&, const TreeNode<T>&);
@@ -66,6 +74,15 @@ public:
 	//
 	size_t Prune(pFnNodePredicate prunePredicate);
 
+	// Returns a vector of addresses of nodes in the tree
+	// 
+	// std::vector<const TreeNode<T>*> Flatten() const; <-- same
+	vecConstpNodes<T> Flatten() const;
+
+	// Returns non-stale nodes in the same fashion as Flatten()
+	//
+	vecConstpNodes<T> GetNonStaleNodes() const;
+
 public:
 	//----------------------------------------------------------------------------------------------------------------
 	// DATA
@@ -95,7 +112,28 @@ private:
 	void SortSubTree(TreeNode<T>& node);
 
 	size_t PruneRecurse(TreeNode<T>& node, pFnNodePredicate prunePredicate);
+	void FlattenRecurse(const TreeNode<T>& node, vecConstpNodes<T>& nodes) const;
+	void FlattenPredicateRecurse(const TreeNode<T>& node, vecConstpNodes<T>& nodes, std::function<bool(const TreeNode<T>*)>) const;
 };
+
+template<class T>
+void Tree<T>::FlattenPredicateRecurse(const TreeNode<T>& node, vecConstpNodes<T>& nodes, std::function<bool(const TreeNode<T>*)> fnPredicate) const
+{
+	if (!node.pData)
+	{
+		return;
+	}
+
+	if (fnPredicate(&node))
+	{
+		nodes.push_back(&node);
+	}
+
+	std::for_each(std::begin(node.children), std::end(node.children), [&](const TreeNode<T>& child)
+	{
+		FlattenPredicateRecurse(child, nodes, fnPredicate);
+	});
+}
 
 template<class T>
 void Tree<T>::Clear()
@@ -107,6 +145,40 @@ void Tree<T>::Clear()
 
 // TEMPLATE TREENODE AND TREE IMPLEMENTATION
 // ===============================================================================================================================================
+
+template<class T>
+void Tree<T>::FlattenRecurse(const TreeNode<T>& node, vecConstpNodes<T>& nodes) const
+{
+	if (!node.pData)
+	{
+		return;
+	}
+
+	nodes.push_back(&node);
+	std::for_each(std::begin(node.children), std::end(node.children), [&](const TreeNode<T>& child)
+	{
+		FlattenRecurse(child, nodes);
+	});
+}
+
+template<class T>
+vecConstpNodes<T> Tree<T>::Flatten() const
+{
+	vecConstpNodes<T> nodes;
+	FlattenRecurse(root, nodes);
+	return nodes;
+}
+
+
+template<class T>
+inline vecConstpNodes<T> Tree<T>::GetNonStaleNodes() const
+{
+	vecConstpNodes<T> nodes;
+	FlattenPredicateRecurse(root, nodes, [](const TreeNode<T>* node) { return !node->pData->IsStale(); });
+	return nodes;
+}
+
+
 template<class T>
 inline TreeNode<T> * Tree<T>::AddChild(TreeNode<T>& parent, const T * pData)
 {
@@ -199,11 +271,11 @@ inline const TreeNode<T>* Tree<T>::SearchSubTree(const TreeNode<T>& node, const 
 
 template<class T>
 inline size_t Tree<T>::RenderSubTree(
-	const TreeNode<T>&      node
-	, TextRenderer*         pTextRenderer
-	, const vec2&           screenPosition
-	, TextDrawDescription&  drawDesc
-	, std::ostringstream&   stats
+	const TreeNode<T>&     node
+	, TextRenderer*        pTextRenderer
+	, const vec2&          screenPosition
+	, TextDrawDescription& drawDesc
+	, std::ostringstream&  stats
 )
 {
 	const int X_OFFSET = 20;	// todo: DrawSettings struct for the tree?
@@ -217,7 +289,7 @@ inline size_t Tree<T>::RenderSubTree(
 	pTextRenderer->RenderText(drawDesc);
 
 	size_t row_count = 0;
-	size_t last_row = 1;	// for children?
+	size_t last_row = 1;	// we already rendered one line
 	size_t children_rows = 0;
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
@@ -241,7 +313,7 @@ inline size_t Tree<T>::RenderSubTree(
 			last_row += 1;
 		}
 	}
-	return children_rows + 1;
+	return children_rows + 1; // :+1 for self
 }
 
 template<class T>

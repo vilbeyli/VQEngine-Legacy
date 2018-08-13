@@ -186,6 +186,7 @@
     <ClInclude Include="..\Engine\Model.h" />
     <ClInclude Include="..\Engine\PerfTree.h" />
     <ClInclude Include="..\Engine\SceneResources.h" />
+    <ClInclude Include="..\Engine\UI.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Transform.cpp" />
@@ -199,6 +200,7 @@
     <ClCompile Include="..\Engine\Source\Material.cpp" />
     <ClCompile Include="..\Engine\Source\Mesh.cpp" />
     <ClCompile Include="..\Engine\Source\Model.cpp" />
+    <ClCompile Include="..\Engine\Source\UI.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -121,6 +121,7 @@ struct RendererStats
 };
 struct FrameStats
 {
+	static const float LINE_HEIGHT_IN_PX;
 	static const size_t numStat = 6;
 	union 
 	{

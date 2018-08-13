@@ -166,7 +166,8 @@ void TextRenderer::RenderText(const TextDrawDescription& drawDesc)
 		const float w = ch.size.x() * drawDesc.scale;
 		const float h = ch.size.y() * drawDesc.scale;
 
-		float vertices[6][4] = {
+		float vertices[6][4] = 
+		{
 			{ xpos,     ypos + h,   0.0, 0.0 },
 			{ xpos,     ypos,       0.0, 1.0 },
 			{ xpos + w, ypos,       1.0, 1.0 },

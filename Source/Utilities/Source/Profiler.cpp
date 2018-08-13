@@ -23,7 +23,7 @@
 //---------------------------------------------------------------------------------------------------------------------------
 // CPU PROFILER
 //---------------------------------------------------------------------------------------------------------------------------
-void CPUProfiler::BeginProfile()
+void CPUProfiler::BeginProfile(const unsigned long long FRAME_NUMBER)
 {
 	CPU_PROFILER_ENABLE_CHECK
 	auto& entryStack = mState.EntryNameStack;
@@ -38,7 +38,7 @@ void CPUProfiler::BeginProfile()
 	mPerfEntries.clear();
 }
 
-void CPUProfiler::EndProfile()
+void CPUProfiler::EndProfile(const unsigned long long FRAME_NUMBER)
 {
 	CPU_PROFILER_ENABLE_CHECK
 	auto& entryStack = mState.EntryNameStack;
@@ -130,7 +130,6 @@ void CPUProfiler::EndEntry()
 bool CPUProfiler::StateCheck() const
 {
 	// ensures entry name stack is empty
-
 	bool bState = !AreThereAnyOpenEntries();
 	if (!bState)
 	{
@@ -140,22 +139,6 @@ bool CPUProfiler::StateCheck() const
 	return bState;
 }
 
-
-
-size_t CPUProfiler::RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats)
-{
-	CPU_PROFILER_ENABLE_CHECK
-
-	// TODO:
-	// check for inactive queries
-	// and 0 them out 
-	if (bSortStats)
-	{
-		mPerfEntryTree.Sort();
-	}
-
-	return mPerfEntryTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
-}
 
 float CPUProfiler::GetEntryAvg(const std::string & entryName) const
 {
@@ -179,6 +162,7 @@ void CPUProfiler::Clear()
 	mState.Clear();
 	mState.bIsProfiling = bIsProfiling;
 }
+
 
 //---------------------------------------------------------------------------------------------------------------------------
 
@@ -285,14 +269,14 @@ void GPUProfiler::Exit()
 		pDisjointQuery[bufferIndex]->Release();
 }
 
-void GPUProfiler::BeginFrame(const unsigned long long FRAME_NUMBER)
+void GPUProfiler::BeginProfile(const unsigned long long FRAME_NUMBER)
 {
 	GPU_PROFILER_ENABLE_CHECK
 	sCurrFrameNumber = FRAME_NUMBER;
 	mpContext->Begin(pDisjointQuery[FRAME_NUMBER % FRAME_HISTORY]);
 }
 
-void GPUProfiler::EndFrame(const unsigned long long FRAME_NUMBER)
+void GPUProfiler::EndProfile(const unsigned long long FRAME_NUMBER)
 {
 	GPU_PROFILER_ENABLE_CHECK
 	const unsigned long long PREV_FRAME_NUMBER = (FRAME_NUMBER - (FRAME_HISTORY-1));
@@ -307,7 +291,7 @@ void GPUProfiler::EndFrame(const unsigned long long FRAME_NUMBER)
 		Log::Warning("[GPUProfiler]: Bad Disjoint Query (Frame: %llu)", PREV_FRAME_NUMBER);
 	}
 
-	// Note:  Nah, instead of pruning, skipping the 
+	// Note:  Instead of pruning, skipping the 
 	//		  rendering of stale data is the way to go for now
 	//		  due to GPU data persisting for multiple frames.
 	//		  We cant prune in the same frame - releasing resources
@@ -322,7 +306,7 @@ void GPUProfiler::EndFrame(const unsigned long long FRAME_NUMBER)
 #endif
 }
 
-float GPUProfiler::GetEntry(const std::string& tag) const
+float GPUProfiler::GetEntryAvg(const std::string& tag) const
 {	
 	auto* pNode = mQueryDataTree.FindNode(tag);
 	if (pNode == nullptr)
@@ -337,14 +321,6 @@ float GPUProfiler::GetRootEntryAvg() const
 	return mQueryDataTree.root.pData->GetAvg();
 }
 
-size_t GPUProfiler::RenderPerformanceStats(TextRenderer * pTextRenderer, const vec2 & screenPosition, TextDrawDescription drawDesc, bool bSort)
-{
-	GPU_PROFILER_ENABLE_CHECK
-	if (bSort) 
-		mQueryDataTree.Sort();
-	return mQueryDataTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
-}
-
 void GPUProfiler::Clear()
 {
 	//mQueryDataTree.Clear(); // nope, don't do this.
@@ -355,6 +331,7 @@ void GPUProfiler::Clear()
 	//
 	return;
 }
+
 
 void GPUProfiler::QueryData::Collect(float freq, ID3D11DeviceContext * pContext, size_t bufferIndex)
 {
@@ -384,7 +361,7 @@ bool GPUProfiler::GetQueryResultsOfFrame(const unsigned long long frameNumber, I
 	return true;
 }
 
-void GPUProfiler::BeginQuery(const std::string & tag)
+void GPUProfiler::BeginEntry(const std::string & tag)
 {
 	GPU_PROFILER_ENABLE_CHECK
 	const size_t frameQueryIndex = sCurrFrameNumber % FRAME_HISTORY;
@@ -429,7 +406,7 @@ void GPUProfiler::BeginQuery(const std::string & tag)
 	entry.lastQueryFrameNumber = sCurrFrameNumber;
 }
 
-void GPUProfiler::EndQuery()
+void GPUProfiler::EndEntry()
 {
 	GPU_PROFILER_ENABLE_CHECK
 	const size_t bufferIndex = sCurrFrameNumber % FRAME_HISTORY;
@@ -461,4 +438,85 @@ float GPUProfiler::QueryData::GetAvg() const
 bool GPUProfiler::QueryData::operator<(const QueryData & other) const
 {
 	return GetAvg() > other.GetAvg() + 0.000001f; // largest time measurement appears first
+}
+
+
+// --------------------------------------------------------------------------------------------------------------
+// RENDERING
+// --------------------------------------------------------------------------------------------------------------
+
+size_t GPUProfiler::RenderPerformanceStats(
+	  TextRenderer* pTextRenderer
+	, const vec2 & screenPosition
+	, TextDrawDescription drawDesc
+	, bool bSort)
+{
+	GPU_PROFILER_ENABLE_CHECK
+		if (bSort)
+			mQueryDataTree.Sort();
+	return mQueryDataTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
+}
+
+size_t CPUProfiler::RenderPerformanceStats(
+	  TextRenderer* pTextRenderer
+	, const vec2& screenPosition
+	, TextDrawDescription drawDesc
+	, bool bSortStats)
+{
+	CPU_PROFILER_ENABLE_CHECK
+
+		// TODO: check for inactive queries and 0 them out 
+		if (bSortStats)
+		{
+			mPerfEntryTree.Sort();
+		}
+
+	return mPerfEntryTree.RenderTree(pTextRenderer, screenPosition, drawDesc);
+}
+
+#include "Utilities/utils.h"
+
+
+// todo: rename/remove the magic numbers.
+//
+// X axis:
+//  - one way would be calculating how long a row would be 
+//    while or before/after rendering the row/text
+//    instead of using the 0.01f scale.
+// 
+// Y axis is covered and scales with the number of rows reasonably well.
+//
+constexpr float HARD_CODED_X_SCALE = 0.008f;	// this is supposed to be temporary.
+
+template<class PerfEntry_t>
+float GetLongestEntryLength(const std::vector<const TreeNode<PerfEntry_t>*>& nodes)
+{
+	size_t longest = 0;
+	std::for_each(RANGE(nodes), [&](const TreeNode<PerfEntry_t>* const  pNode)
+	{
+		longest = std::max(longest, pNode->pData->tag.size());
+	});
+	return static_cast<float>(longest);
+}
+
+vec2 GPUProfiler::GetEntryAreaBounds(const vec2& screenSizeInPixels) const
+{
+	const auto nodes = mQueryDataTree.GetNonStaleNodes();
+	const float rowCount = static_cast<float>(nodes.size());
+	const float longestEntry = GetLongestEntryLength(nodes);
+
+	// todo: rename/remove the magic numbers.
+	const vec2 scale = vec2(HARD_CODED_X_SCALE, PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE / screenSizeInPixels.y());
+	return vec2(longestEntry, rowCount + 2) * scale;
+}
+
+vec2 CPUProfiler::GetEntryAreaBounds(const vec2& screenSizeInPixels) const
+{
+	const auto nodes = mPerfEntryTree.GetNonStaleNodes();
+	const float rowCount = static_cast<float>(nodes.size());
+	const float longestEntry = GetLongestEntryLength(nodes);
+
+	// todo: rename/remove the magic numbers.
+	const vec2 scale = vec2(HARD_CODED_X_SCALE, PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE / screenSizeInPixels.y());
+	return vec2(longestEntry, rowCount + 2) * scale;
 }

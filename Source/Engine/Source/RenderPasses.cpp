@@ -123,7 +123,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 
 	// SPOT LIGHT SHADOW MAPS
 	//
-	pGPUProfiler->BeginQuery("Spots");
+	pGPUProfiler->BeginEntry("Spots");
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
 #if _DEBUG
@@ -146,13 +146,13 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			obj->RenderZ(pRenderer);
 		pRenderer->EndEvent();
 	}
-	pGPUProfiler->EndQuery();
+	pGPUProfiler->EndEntry();
 
 	// DIRECTIONAL SHADOW MAP
 	//
 	if (shadowView.pDirectional != nullptr)
 	{
-		pGPUProfiler->BeginQuery("Directional");
+		pGPUProfiler->BeginEntry("Directional");
 		pRenderer->SetViewport(mShadowViewPort_Directional);
 		pRenderer->BindDepthTarget(mDepthTarget_Directional);	// only depth stencil buffer
 		pRenderer->Apply();
@@ -166,7 +166,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		for (const GameObject* obj : shadowView.casters)
 			obj->RenderZ(pRenderer);
 		pRenderer->EndEvent();
-		pGPUProfiler->EndQuery();
+		pGPUProfiler->EndEntry();
 	}
 }
 

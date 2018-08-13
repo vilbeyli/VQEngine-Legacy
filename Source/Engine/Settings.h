@@ -31,24 +31,24 @@ namespace Settings
 
 	struct Window
 	{
-		int		width;
-		int		height;
-		int		fullscreen;
-		int		vsync;
+		int width;
+		int height;
+		int fullscreen;
+		int vsync;
 	};
 
 	struct Camera 
 	{
 		union
 		{
-			float		fovH;
-			float		fovV;
+			float fovH;
+			float fovV;
 		};
-		float		nearPlane;
-		float		farPlane;
-		float		aspect;
-		float		x, y, z;
-		float		yaw, pitch;
+		float nearPlane;
+		float farPlane;
+		float aspect;
+		float x, y, z;
+		float yaw, pitch;
 	};
 
 	struct ShadowMap 
@@ -93,7 +93,7 @@ namespace Settings
 		int levelToLoad;
 		std::vector<std::string> sceneNames;
 
-		bool bCacheEnvironmentMapsOnDisk = false;
+		bool bCacheEnvironmentMapsOnDisk = false;	// caching is slower... keep this false.
 	};
 
 	struct SSAO

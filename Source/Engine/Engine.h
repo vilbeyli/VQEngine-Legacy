@@ -27,6 +27,7 @@
 #include "Skybox.h"
 #include "Settings.h"
 #include "RenderPasses.h"
+#include "UI.h"
 
 #include <memory>
 #include <atomic>
@@ -196,6 +197,7 @@ private:
 
 	std::vector<const GameObject*>	mTBNDrawObjects;
 	
+	VQEngine::UI					mUI;
 
 	//----------------------------------------------------------------------------------------------------------------
 	// ENGINE STATE

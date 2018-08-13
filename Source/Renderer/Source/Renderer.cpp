@@ -345,9 +345,9 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
 		rtBlendDesc.BlendEnable = true;
 		rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
-		rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
 		rtBlendDesc.SrcBlend = D3D11_BLEND_ONE;
 		rtBlendDesc.DestBlend = D3D11_BLEND_ONE;
+		rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
 		rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_SRC_ALPHA;
 		rtBlendDesc.DestBlendAlpha = D3D11_BLEND_DEST_ALPHA;
 		rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
@@ -356,6 +356,15 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		desc.RenderTarget[0] = rtBlendDesc;
 
 		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::ADDITIVE_COLOR].ptr));
+
+		rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
+		rtBlendDesc.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		rtBlendDesc.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+		rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
+		rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ZERO;
+		rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		desc.RenderTarget[0] = rtBlendDesc;
 		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::ALPHA_BLEND].ptr));
 
 		rtBlendDesc.BlendEnable = false;
@@ -1201,11 +1210,11 @@ BlendStateID Renderer::AddBlendState()
 	D3D11_RENDER_TARGET_BLEND_DESC rtBlendDesc = {};
 	rtBlendDesc.BlendEnable = true;
 	rtBlendDesc.BlendOp = D3D11_BLEND_OP_ADD;
-	rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
-	rtBlendDesc.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
 	rtBlendDesc.SrcBlend = D3D11_BLEND_SRC_ALPHA;
+	rtBlendDesc.DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+	rtBlendDesc.BlendOpAlpha = D3D11_BLEND_OP_MIN;
+	rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ZERO;
 	rtBlendDesc.DestBlendAlpha = D3D11_BLEND_ONE;
-	rtBlendDesc.SrcBlendAlpha = D3D11_BLEND_ONE;
 	rtBlendDesc.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 	
 	D3D11_BLEND_DESC desc = {};

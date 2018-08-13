@@ -27,23 +27,72 @@ struct ProfilerSettings
 	int refreshRate = 5;
 };
 
-class CPUProfiler
+
+class Profiler
+{
+public:
+	// Defines the scope of a CPU/GPU profiling - should be called once per frame
+	//
+	virtual void BeginProfile(const unsigned long long FRAME_NUMBER = 0) = 0;
+	virtual void EndProfile(const unsigned long long FRAME_NUMBER = 0) = 0;
+
+	// Defines the scope of a CPU/GPU profiling entry
+	//
+	virtual void BeginEntry(const std::string& tag) = 0;
+	virtual void EndEntry() = 0;
+
+	// Gets the averaged value of the root node's perf entry data
+	//
+	virtual float GetRootEntryAvg() const = 0;
+
+	// Gets the averaged value of the node with @tag
+	//
+	virtual float GetEntryAvg(const std::string& tag) const = 0;
+
+	// renders performance stats tree, starting at @screenPosition using @drawDesc
+	//
+	virtual size_t RenderPerformanceStats(
+		  TextRenderer*			pTextRenderer
+		, const vec2&			screenPosition
+		, TextDrawDescription	drawDesc
+		, bool					bSortStats
+	) = 0;
+
+	// clears the perf entry data
+	//
+	virtual void Clear() = 0;
+
+	virtual vec2 GetEntryAreaBounds(const vec2& screenSizeInPixels) const = 0;
+};
+
+class CPUProfiler : public Profiler
 {
 
 public:
 	CPUProfiler(ProfilerSettings settings = ProfilerSettings()) : 	mSettings(settings) {}
 
-	// Resets PerfEntryTable. BeginEntry()/EndEntry() must be called between BeginProfile() and EndProfile()
+	// Resets the mPerfEntryTable - must be called at the beginning and end of each frame. 
 	//
-	void BeginProfile();
-	void EndProfile();
+	void BeginProfile(const unsigned long long FRAME_NUMBER = 0) override;
+	void EndProfile(const unsigned long long FRAME_NUMBER = 0) override;
 
 	// Adds PerfEntry to the PerfEntryTable if it doesn't already exist AND Starts the time sampling for the PerfEntry.
 	// BeginEntry()/EndEntry() must be called between BeginProfile() and EndProfile()
 	// *Assumes PerfEntry has a unique name. There won't be duplicate entries.*
 	//
-	void BeginEntry(const std::string& entryName);
-	void EndEntry();
+	void BeginEntry(const std::string& entryName) override;
+	void EndEntry() override;
+
+	float GetEntryAvg(const std::string& tag) const override;
+	float GetRootEntryAvg() const override;
+
+	size_t RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats) override;
+	void Clear() override;
+	vec2 GetEntryAreaBounds(const vec2& screenSizeInPixels) const override;
+
+	// DERIVED INTERFACE -------------------------------------------
+
+	inline bool AreThereAnyOpenEntries() const { return !mState.EntryNameStack.empty(); }
 
 	// performs checks for state consistency (are there any open entries? etc.)
 	//
@@ -53,16 +102,6 @@ public:
 	//
 	void PrintStats() const;	// todo: impl
 
-	// renders performance stats tree, starting at @screenPosition using @drawDesc
-	//
-	size_t RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats);
-
-
-	inline bool AreThereAnyOpenEntries() const { return !mState.EntryNameStack.empty(); }
-	float GetEntryAvg(const std::string& entryName) const;
-	float GetRootEntryAvg() const;
-
-	void Clear();
 
 	//void Capture()
 
@@ -110,40 +149,36 @@ private:
 };
 
 
-//===============================================================================================================================================
 
-class GPUProfiler
-{	// src: http://reedbeta.com/blog/gpu-profiling-101/
+
+
+class GPUProfiler : public Profiler
+{	
+	// src: http://reedbeta.com/blog/gpu-profiling-101/
 	// "At this point, you should have all the information you'll need to go and write a GPU profiler of your own!"
 	//
-	// Me: Alright, here I go.
-	//
 public:
-	void Init(ID3D11DeviceContext* pContext, ID3D11Device* pDevice);
-	void Exit();
-
 	// Begins/Ends the disjoint query. This function pair has to be called for each frame.
 	//
-	void BeginFrame(const unsigned long long FRAME_NUMBER);
-	void EndFrame(const unsigned long long FRAME_NUMBER);
+	void BeginProfile(const unsigned long long FRAME_NUMBER) override;
+	void EndProfile(const unsigned long long FRAME_NUMBER) override;
 
 	// Marks the Beginning/Ending of a GPU query with a tag.
 	//
-	void BeginQuery(const std::string& tag);
-	void EndQuery();
+	void BeginEntry(const std::string& tag) override;
+	void EndEntry() override;
 
-	// Gets the entry with @tag
-	//
-	float GetEntry(const std::string& tag) const;
-	float GetRootEntryAvg() const;
+	float GetEntryAvg(const std::string& tag) const override;
+	float GetRootEntryAvg() const override;
 
-	// renders performance stats tree, starting at @screenPosition using @drawDesc
-	//
-	size_t RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats);
+	size_t RenderPerformanceStats(TextRenderer* pTextRenderer, const vec2& screenPosition, TextDrawDescription drawDesc, bool bSortStats) override;
+	void Clear() override;
+	vec2 GetEntryAreaBounds(const vec2& screenSizeInPixels) const override;
 
-	// This function exists for the sake of consistency.
-	//
-	void Clear();
+	// DERIVED INTERFACE -------------------------------------------
+
+	void Init(ID3D11DeviceContext* pContext, ID3D11Device* pDevice);
+	void Exit();
 
 private:
 	struct QueryData;

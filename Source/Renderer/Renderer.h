@@ -130,7 +130,7 @@ public:
 	void					SetIndexBuffer(BufferID bufferID);
 	void					SetTexture(const char* texName, TextureID tex);
 	//void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
-	void					SetTextureArray(const char* texName, TextureID texArray);
+	void inline				SetTextureArray(const char* texName, TextureID texArray) { SetTexture(texName, texArray); }
 	void					SetSamplerState(const char* samplerName, SamplerID sampler);
 	void					SetRasterizerState(RasterizerStateID rsStateID);
 	void					SetBlendState(BlendStateID blendStateID);

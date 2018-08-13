@@ -1618,50 +1618,25 @@ void Renderer::SetConstant(const char * cName, const void * data)
 void Renderer::SetTexture(const char * texName, TextureID tex)
 {
 	assert(tex >= 0);
-	Shader* shader = mShaders[mPipelineState.shader];
-	bool found = false;
+	
+	const Shader* shader = mShaders[mPipelineState.shader];
+	const std::string textureName = std::string(texName);
 
-	// linear name lookup
-	for (size_t i = 0; i < shader->m_textures.size(); ++i)
-	{
-		if (strcmp(texName, shader->m_textures[i].name.c_str()) == 0)
-		{
-			found = true;
-			SetTextureCommand cmd;
-			cmd.textureID = tex;
-			cmd.shaderTexture = shader->m_textures[i];
-			mSetTextureCmds.push(cmd);
-		}
-	}
-
-#ifdef _DEBUG
-	if (!found)
-	{
-		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, mPipelineState.shader, shader->Name().c_str());
-	}
+#if _DEBUG
+	const bool bFound = shader->HasTextureBinding(textureName);
+#else
+	const bool bFound = true;
 #endif
-}
 
-void Renderer::SetTextureArray(const char * texName, TextureID texArray)
-{
-	Shader* shader = mShaders[mPipelineState.shader];
-	bool found = false;
-
-	// linear name lookup
-	for (size_t i = 0; i < shader->m_textures.size(); ++i)
+	if (bFound)
 	{
-		if (strcmp(texName, shader->m_textures[i].name.c_str()) == 0)
-		{
-			found = true;
-			SetTextureCommand cmd;
-			cmd.textureID = texArray;
-			cmd.shaderTexture = shader->m_textures[i];
-			mSetTextureCmds.push(cmd);
-		}
+		SetTextureCommand cmd(tex, shader->GetTextureBinding(textureName));
+		mSetTextureCmds.push(cmd);
 	}
 
+
 #ifdef _DEBUG
-	if (!found)
+	if (!bFound)
 	{
 		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, mPipelineState.shader, shader->Name().c_str());
 	}
@@ -1670,22 +1645,20 @@ void Renderer::SetTextureArray(const char * texName, TextureID texArray)
 
 void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 {
-	Shader* shader = mShaders[mPipelineState.shader];
-	bool found = false;
+	const Shader* shader = mShaders[mPipelineState.shader];
 
-	// linear name lookup
-	for (size_t i = 0; i < shader->m_samplers.size(); ++i)
+#if _DEBUG
+	const bool bFound = shader->HasSamplerBinding(samplerName);
+#else
+	const bool bFound = true;
+#endif
+
+	if (bFound)
 	{
-		const ShaderSampler& sampler = shader->m_samplers[i];
-		if (strcmp(samplerName, sampler.name.c_str()) == 0)
-		{
-			found = true;
-			SetSamplerCommand cmd;
-			cmd.samplerID = samplerID;
-			cmd.shaderSampler = sampler;
-			mSetSamplerCmds.push(cmd);
-		}
+		SetSamplerCommand cmd(samplerID, shader->GetSamplerBinding(samplerName));
+		mSetSamplerCmds.push(cmd);
 	}
+
 
 #ifdef _DEBUG
 	if (!found)
@@ -1954,7 +1927,6 @@ void Renderer::Apply()
 
 	// OUTPUT MERGER
 	// ----------------------------------------
-	//const float blendFactor[4] = { 1,1,1,1 };
 	if (sEnableBlend && bBlendStateChanged){ m_deviceContext->OMSetBlendState(mBlendStates[mPipelineState.blendState].ptr, nullptr, 0xffffffff); }
 	if (bDepthStencilStateChanged){	  m_deviceContext->OMSetDepthStencilState(mDepthStencilStates[mPipelineState.depthStencilState], 0); }
 

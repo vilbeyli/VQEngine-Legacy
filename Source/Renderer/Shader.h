@@ -27,6 +27,7 @@
 #include <tuple>
 #include <vector>
 #include <stack>
+#include <unordered_map>
 
 constexpr size_t MAX_CONSTANT_BUFFERS = 512;
 
@@ -70,7 +71,6 @@ struct ConstantBuffer
 };
 struct ShaderTexture
 {
-	std::string name;
 	unsigned bufferSlot;
 	EShaderType shdType;
 };
@@ -162,6 +162,11 @@ public:
 	ShaderID									ID() const;
 	const std::vector<ConstantBufferLayout>&	GetConstantBufferLayouts() const;
 	const std::vector<ConstantBuffer>&			GetConstantBuffers() const;
+	
+	const ShaderTexture&						GetTextureBinding(const std::string& textureName) const;
+	const ShaderSampler&						GetSamplerBinding(const std::string& samplerName) const;
+	bool HasTextureBinding(const std::string& textureName) const;
+	bool HasSamplerBinding(const std::string& samplerName) const;
 
 private:
 	//----------------------------------------------------------------------------------------------------------------
@@ -224,4 +229,8 @@ private:
 	std::vector<ShaderTexture>			m_textures;
 	std::vector<ShaderSampler>			m_samplers;
 	
+	using ShaderTextureLookup = std::unordered_map<std::string, int>;
+	using ShaderSamplerLookup = std::unordered_map<std::string, int>;
+	ShaderTextureLookup					mShaderTextureLookup;
+	ShaderSamplerLookup					mShaderSamplerLookup;
 };

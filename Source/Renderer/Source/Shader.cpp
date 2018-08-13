@@ -422,18 +422,18 @@ void Shader::CompileShaders(ID3D11Device* pDevice, const std::vector<std::string
 			if (shdInpDesc.Type == D3D_SIT_SAMPLER)
 			{
 				ShaderSampler smp;
-				smp.name = shdInpDesc.Name;
 				smp.shdType = EShaderType::PS;
 				smp.bufferSlot = smpSlot++;
 				m_samplers.push_back(smp);
+				mShaderSamplerLookup[shdInpDesc.Name] = static_cast<int>(m_samplers.size() - 1);
 			}
 			else if (shdInpDesc.Type == D3D_SIT_TEXTURE)
 			{
 				ShaderTexture tex;
-				tex.name = shdInpDesc.Name;
 				tex.shdType = EShaderType::PS;
 				tex.bufferSlot = texSlot++;
 				m_textures.push_back(tex);
+				mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(m_textures.size() - 1);
 			}
 		}
 	}
@@ -721,9 +721,14 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 			char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
 			for (const ConstantBufferMapping& indexIDPair : m_constantsUnsorted)
 			{
-				if (indexIDPair.first != i) continue;
+				if (indexIDPair.first != i)
+				{
+					continue;
+				}
+
 				const int slotIndex = indexIDPair.first;
 				const CPUConstantID c_id = indexIDPair.second;
+
 				CPUConstant& c = CPUConstant::Get(c_id);
 				memcpy(bufferPos, c._data, c._size);
 				bufferPos += c._size;
@@ -757,6 +762,26 @@ const std::vector<Shader::ConstantBufferLayout>& Shader::GetConstantBufferLayout
 const std::vector<ConstantBuffer>& Shader::GetConstantBuffers() const
 {
 	return m_cBuffers;
+}
+
+const ShaderTexture& Shader::GetTextureBinding(const std::string& textureName) const
+{
+	return m_textures[mShaderTextureLookup.at(textureName)];
+}
+
+const ShaderSampler& Shader::GetSamplerBinding(const std::string& samplerName) const
+{
+	return m_samplers[mShaderSamplerLookup.at(samplerName)];
+}
+
+bool Shader::HasTextureBinding(const std::string& textureName) const
+{
+	return mShaderTextureLookup.find(textureName) != mShaderTextureLookup.end();
+}
+
+bool Shader::HasSamplerBinding(const std::string& samplerName) const
+{
+	return mShaderSamplerLookup.find(samplerName) != mShaderSamplerLookup.end();
 }
 
 std::tuple<CPUConstant&, CPUConstantID> CPUConstant::GetNextAvailable()

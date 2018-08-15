@@ -102,7 +102,6 @@ public:
 	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
 	inline bool				GetSettingShowControls() const { return mbShowControls; }
 	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
-	bool inline				IsRenderingStatsOn() const { return mFrameStats.bShow; }
 	bool inline				IsProfileRenderingOn() const { return mbShowProfiler; }
 	bool inline				IsLoading() const { return mbLoading; }
 	std::pair<BufferID, BufferID> GetGeometryVertexAndIndexBuffers(EGeometry GeomEnum) const { return mBuiltinMeshes[GeomEnum].GetIABuffers(); }
@@ -115,7 +114,6 @@ public:
 	void		ToggleBloom();
 	void inline	ToggleProfilerRendering() { mbShowProfiler = !mbShowProfiler; }
 	void inline	ToggleControlsTextRendering() { mbShowControls = !mbShowControls; }
-	void inline	ToggleRenderingStats() { mFrameStats.bShow = !mFrameStats.bShow; }
 	void inline	TogglePause() { mbIsPaused = !mbIsPaused; }
 
 private:
@@ -132,7 +130,7 @@ private:
 	void PreRender();
 	void Render();
 	void RenderDebug(const XMMATRIX& viewProj);
-	void RenderUI();
+	void RenderUI() const;
 	void RenderLoadingScreen(bool bOneTimeRender) const;
 	void RenderLights() const;
 

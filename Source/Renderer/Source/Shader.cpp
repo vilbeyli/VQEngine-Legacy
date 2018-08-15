@@ -109,38 +109,30 @@ void Shader::LoadShaders(Renderer* pRenderer)
 	timer.Start();
 
 	Log::Info("------------------------ COMPILING SHADERS ------------------------");
-	
-	// todo: layouts from reflection?
-	const std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 },
-	};
 	const std::vector<EShaderType> VS_PS  = { EShaderType::VS, EShaderType::PS };
 	const std::vector<std::string> TextureCoordinates = { "MVPTransformationWithUVs_vs", "TextureCoordinates_ps" };
-	const std::vector<std::string> BilateralBlurShaders	= { "FullscreenQuad_vs", "BilateralBlur_ps" };	// compute?
+	const std::vector<std::string> BilateralBlurShaders	= { "FullscreenQuad_vs", "BilateralBlur_ps" };		// compute?
 	const std::vector<std::string> GaussianBlur4x4Shaders= { "FullscreenQuad_vs", "GaussianBlur4x4_ps" };	// compute?
 	const std::vector<std::string> ZPrePassShaders	= { "Deferred_Geometry_vs", "ViewSpaceNormalsAndPositions_ps" };
 	const std::vector<std::string> EQSkybox = {"Skybox_vs", "SkyboxEquirectangular_ps"};
 
 	// todo: limit enumerations? probably better to store just some ids...
-	s_shaders[EShaders::FORWARD_PHONG			]	= pRenderer->AddShader("Forward_Phong"			, layout);
-	s_shaders[EShaders::UNLIT					]	= pRenderer->AddShader("UnlitTextureColor"		, layout);
-	s_shaders[EShaders::TEXTURE_COORDINATES		]	= pRenderer->AddShader("TextureCoordinates"		, TextureCoordinates, VS_PS, layout);
-	s_shaders[EShaders::NORMAL					]	= pRenderer->AddShader("Normal"					, layout);
-	s_shaders[EShaders::TANGENT					]	= pRenderer->AddShader("Tangent"				, layout);
-	s_shaders[EShaders::BINORMAL				]	= pRenderer->AddShader("Binormal"				, layout);
-	s_shaders[EShaders::LINE					]	= pRenderer->AddShader("Line"					, layout);
-	s_shaders[EShaders::TBN						]	= pRenderer->AddShader("TNB"					, layout);
-	s_shaders[EShaders::DEBUG					]	= pRenderer->AddShader("Debug"					, layout);
-	s_shaders[EShaders::SKYBOX					]	= pRenderer->AddShader("Skybox"					, layout);
-	s_shaders[EShaders::SKYBOX_EQUIRECTANGULAR	]	= pRenderer->AddShader("SkyboxEquirectangular"	, EQSkybox, VS_PS, layout);
-	s_shaders[EShaders::FORWARD_BRDF			]	= pRenderer->AddShader("Forward_BRDF"			, layout);
-	s_shaders[EShaders::SHADOWMAP_DEPTH			]	= pRenderer->AddShader("DepthShader"			, layout);
-	s_shaders[EShaders::BILATERAL_BLUR			]	= pRenderer->AddShader("BilateralBlur"			, BilateralBlurShaders		, VS_PS, layout);
-	s_shaders[EShaders::GAUSSIAN_BLUR_4x4		]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders	, VS_PS, layout);
-	s_shaders[EShaders::Z_PREPRASS				]	= pRenderer->AddShader("ZPrePass"				, ZPrePassShaders			, VS_PS, layout);
+	s_shaders[EShaders::FORWARD_PHONG			]	= pRenderer->AddShader("Forward_Phong"			);
+	s_shaders[EShaders::UNLIT					]	= pRenderer->AddShader("UnlitTextureColor"		);
+	s_shaders[EShaders::TEXTURE_COORDINATES		]	= pRenderer->AddShader("TextureCoordinates"		, TextureCoordinates, VS_PS);
+	s_shaders[EShaders::NORMAL					]	= pRenderer->AddShader("Normal"					);
+	s_shaders[EShaders::TANGENT					]	= pRenderer->AddShader("Tangent"				);
+	s_shaders[EShaders::BINORMAL				]	= pRenderer->AddShader("Binormal"				);
+	s_shaders[EShaders::LINE					]	= pRenderer->AddShader("Line"					);
+	s_shaders[EShaders::TBN						]	= pRenderer->AddShader("TNB"					);
+	s_shaders[EShaders::DEBUG					]	= pRenderer->AddShader("Debug"					);
+	s_shaders[EShaders::SKYBOX					]	= pRenderer->AddShader("Skybox"					);
+	s_shaders[EShaders::SKYBOX_EQUIRECTANGULAR	]	= pRenderer->AddShader("SkyboxEquirectangular"	, EQSkybox, VS_PS);
+	s_shaders[EShaders::FORWARD_BRDF			]	= pRenderer->AddShader("Forward_BRDF"			);
+	s_shaders[EShaders::SHADOWMAP_DEPTH			]	= pRenderer->AddShader("DepthShader"			);
+	s_shaders[EShaders::BILATERAL_BLUR			]	= pRenderer->AddShader("BilateralBlur"			, BilateralBlurShaders		, VS_PS);
+	s_shaders[EShaders::GAUSSIAN_BLUR_4x4		]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders	, VS_PS);
+	s_shaders[EShaders::Z_PREPRASS				]	= pRenderer->AddShader("ZPrePass"				, ZPrePassShaders			, VS_PS);
 
 	timer.Stop();
 	Log::Info("---------------------- COMPILING SHADERS DONE IN %.2fs ---------------------", timer.DeltaTime());
@@ -310,7 +302,7 @@ bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
 	return DirectoryUtil::IsFileNewer(sourcePath, cachePath) || AreIncludesDirty(sourcePath);
 }
 
-void Shader::CompileShaders(ID3D11Device* pDevice, const std::vector<std::string>& filePaths, const std::vector<InputLayout>& layouts)
+void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths)
 {
 	HRESULT result;
 	ShaderBlobs blobs;
@@ -351,7 +343,7 @@ void Shader::CompileShaders(ID3D11Device* pDevice, const std::vector<std::string
 			}
 		}
 
-		CreateShader(pDevice, type, blobs.of[type]->GetBufferPointer(), blobs.of[type]->GetBufferSize());
+		CreateShader(device, type, blobs.of[type]->GetBufferPointer(), blobs.of[type]->GetBufferSize());
 		if (!bPrinted)
 		{
 			const char* pMsgLoad = bUseCachedShaders ? "Loading cached shader binaries" : "Compiling shader from source";
@@ -367,47 +359,85 @@ void Shader::CompileShaders(ID3D11Device* pDevice, const std::vector<std::string
 
 	// INPUT LAYOUT
 	//---------------------------------------------------------------------------
-#if 1
-
-	//setup the layout of the data that goes into the shader
-	std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(layouts.size());
+	// https://stackoverflow.com/questions/42388979/directx-11-vertex-shader-reflection
+	// setup the layout of the data that goes into the shader
+	//
 	D3D11_SHADER_DESC shaderDesc = {};
 	m_shaderReflections.vsRefl->GetDesc(&shaderDesc);
-	shaderDesc.InputParameters;
+	std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(shaderDesc.InputParameters);
+
 	D3D_PRIMITIVE primitiveDesc = shaderDesc.InputPrimitive;
 
-	UINT sz = static_cast<UINT>(layouts.size());
-	for (unsigned i = 0; i < layouts.size(); ++i)
+	for (unsigned i = 0; i < shaderDesc.InputParameters; ++i)
 	{
-		inputLayout[i].SemanticName			= layouts[i].semanticName.c_str();
-		inputLayout[i].SemanticIndex		= 0;	// TODO: process string for semantic index
-		inputLayout[i].Format				= static_cast<DXGI_FORMAT>(layouts[i].format);
-		inputLayout[i].InputSlot			= 0;
-		//inputLayout[i].AlignedByteOffset	= i == layouts.size() - 1 ? 8 : 12;
-		inputLayout[i].AlignedByteOffset	= i == 0 ? 0 : D3D11_APPEND_ALIGNED_ELEMENT;
-		inputLayout[i].InputSlotClass		= D3D11_INPUT_PER_VERTEX_DATA;
-		inputLayout[i].InstanceDataStepRate	= 0;
-	}
-	result = pDevice->CreateInputLayout(	inputLayout.data(), 
-										sz, 
-										blobs.vs->GetBufferPointer(),
-										blobs.vs->GetBufferSize(), 
-										&m_layout);
-	if (FAILED(result))
-	{
-		OutputDebugString("Error creating input layout");
-		assert(false);
-	}
-#else
-	// todo: get layout from reflection and handle cpu input layouts
-	// https://takinginitiative.wordpress.com/2011/12/11/directx-1011-basic-shader-reflection-automatic-input-layout-creation/
-#endif
+		D3D11_SIGNATURE_PARAMETER_DESC paramDesc;
+		m_shaderReflections.vsRefl->GetInputParameterDesc(i, &paramDesc);
+		
+		// fill out input element desc
+		D3D11_INPUT_ELEMENT_DESC elementDesc;
+		elementDesc.SemanticName = paramDesc.SemanticName;
+		elementDesc.SemanticIndex = paramDesc.SemanticIndex;
+		elementDesc.InputSlot = 0;
+		elementDesc.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+		elementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+		elementDesc.InstanceDataStepRate = 0;
 
-	// CONSTANT BUFFERS & SHADER RESOURCES
+		// determine DXGI format
+		if (paramDesc.Mask == 1)
+		{
+			if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32_UINT;
+			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32_SINT;
+			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		}
+		else if (paramDesc.Mask <= 3)
+		{
+			if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32_UINT;
+			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32_SINT;
+			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+		}
+		else if (paramDesc.Mask <= 7)
+		{
+			if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32_UINT;
+			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32_SINT;
+			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+		}
+		else if (paramDesc.Mask <= 15)
+		{
+			if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32A32_UINT;
+			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32A32_SINT;
+			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+		}
+
+		//save element desc
+		inputLayout[i] = elementDesc;
+	}
+
+	// Try to create Input Layout
+	const auto* pData = inputLayout.data();
+	if (pData)
+	{
+		result = device->CreateInputLayout(
+			pData,
+			shaderDesc.InputParameters,
+			blobs.vs->GetBufferPointer(),
+			blobs.vs->GetBufferSize(),
+			&m_layout);
+
+		if (FAILED(result))
+		{
+			OutputDebugString("Error creating input layout");
+			assert(false);
+		}
+	}
+
+
+	// CONSTANT BUFFERS 
 	//---------------------------------------------------------------------------
-	SetConstantBuffers(pDevice);
+	SetConstantBuffers(device);
 	
-	// textures & samplers
+
+	// TEXTURES & SAMPLERS
+	//---------------------------------------------------------------------------
 	auto sRefl = m_shaderReflections.psRefl;		// vsRefl? gsRefl?
 	if (sRefl)
 	{

@@ -67,6 +67,11 @@ if %ERRORLEVEL% GEQ 1 (
 echo Build Finished.
 @echo:
 echo ./Build/_artifacts contains the release version of the project executable.
+
+:: open final directory w/ explorer
+::~dp0 is the directory this batch file is in
+start explorer "%~dp0Build\_artifacts"
+
 pause
 endlocal
 EXIT /B 0

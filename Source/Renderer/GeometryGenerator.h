@@ -26,6 +26,7 @@ namespace GeometryGenerator
 {
 	Mesh Triangle(float scale);
 	Mesh Quad(float scale);
+	Mesh FullScreenQuad();
 	Mesh Cube();
 	Mesh Sphere(float radius, unsigned ringCount, unsigned sliceCount);
 	Mesh Grid(float width, float depth, unsigned m, unsigned n);

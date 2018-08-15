@@ -23,12 +23,15 @@
 
 #include <winuser.rh>
 
+// #define LOG to see each keycode when you press on output window
 #define xLOG
-const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
-	// keyboard mapping for windows keycodes. 
-	// #define LOG to see each keycode when you press on output window
-	// to be used for this->IsKeyDown("F4")
-	std::unordered_map<const char*, KeyCode> m;
+
+
+// keyboard mapping for windows keycodes.
+// use case: this->IsKeyDown("F4")
+const Input::KeyMapping Input::sKeyMap = []() 
+{	
+	KeyMapping m;
 	m["F1"] = 112;	m["F2"] = 113;	m["F3"] = 114;	m["F4"] = 115;
 	m["F5"] = 116;	m["F6"] = 117;	m["F7"] = 118;	m["F8"] = 119;
 	m["F9"] = 120;	m["F10"] = 121;	m["F11"] = 122;	m["F12"] = 123;
@@ -36,9 +39,11 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	m["0"] = 48;		m["1"] = 49;	m["2"] = 50;	m["3"] = 51;
 	m["4"] = 52;		m["5"] = 53;	m["6"] = 54;	m["7"] = 55;
 	m["8"] = 56;		m["9"] = 57;
-
+	
 	m["C"] = 67;		m["c"] = 67;	m["N"] = 78;	m["n"] = 78;
 	m["R"] = 82;		m["r"] = 82;	m["T"] = 'T';	m["t"] = 'T';
+	m["F"] = 'F';		m["f"] = 'F';
+	
 
 	m["\\"] = 220;		m[";"] = 186;
 	m["'"] = 222;
@@ -48,12 +53,17 @@ const std::unordered_map<const char*, KeyCode> Input::sKeyMap = []() {
 	m["Escape"] = 0x1B; m["escape"] = 0x1B; m["ESC"] = 0x1B; m["esc"] = 0x1B;
 	m["PageUp"] = 33;	m["PageDown"] = 34;
 
+	m["ctrl"] = VK_CONTROL;  m["Ctrl"] = VK_CONTROL;
+	m["rctrl"] = VK_RCONTROL; m["RCtrl"] = VK_RCONTROL; m["rCtrl"] = VK_RCONTROL;
+	m["alt"] = VK_MENU;	m["Alt"] = VK_MENU;
+
+
 	m["Numpad7"] = 103;		m["Numpad8"] = 104;			m["Numpad9"] = 105;
 	m["Numpad4"] = 100;		m["Numpad5"] = 101;			m["Numpad6"] = 102;
 	m["Numpad1"] = 97 ;		m["Numpad2"] = 98 ;			m["Numpad3"] = 99;
 	m["Numpad+"] = VK_ADD;	m["Numpad-"] = VK_SUBTRACT;	
 	m["+"]		 = VK_ADD;	m["-"]		 = VK_SUBTRACT;	
-	return m;
+	return std::move(m);
 }();
 
 

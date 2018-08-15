@@ -25,24 +25,45 @@ class Renderer;
 class TextRenderer;
 
 struct vec3;
+class CPUProfiler;
+class GPUProfiler;
+struct FrameStats;
 
 namespace VQEngine
 {
 class UI
 {
 public:
+	struct ProfilerStack
+	{
+		CPUProfiler* pCPU = nullptr;
+		GPUProfiler* pGPU = nullptr;
+	};
+	struct EngineControlsUIData
+	{
+		bool bForwardOrDeferred;
+		bool bSSAO;
+		bool bBloom;
+		bool bRenderTargets;
+		bool bBoundingBoxes;
+	};
+
+public:
 	UI(const std::vector<Mesh>& BuiltInMeshes) : mBuiltInMeshes(BuiltInMeshes) {}
 
-	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer);
+	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer, ProfilerStack& profilers);
 	void Exit();
 
 	void RenderBackground(const vec3& color, const vec2& size, const vec2& screenPosition) const;
 
+	void RenderPerfStats(const FrameStats& stats) const;
+	void RenderEngineControls(EngineControlsUIData&& controls) const;
 
 private:
 	const std::vector<Mesh>& mBuiltInMeshes;
 
 	Renderer*		mpRenderer;
 	TextRenderer*	mpTextRenderer;
+	ProfilerStack	mProfilerStack;
 };
 }

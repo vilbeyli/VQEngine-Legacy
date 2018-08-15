@@ -28,7 +28,9 @@ using KeyCode = unsigned int;
 
 class Input
 {
-	static const std::unordered_map<const char*, KeyCode> sKeyMap;
+	using KeyMapping = std::unordered_map<const char*, KeyCode>;
+
+	static const KeyMapping sKeyMap;
 	friend class Application;
 public:
 	Input();
@@ -48,6 +50,7 @@ public:
 	bool IsKeyDown(KeyCode) const;
 	bool IsKeyDown(const char*) const;
 	bool IsKeyDown(const std::string&) const;
+
 	bool IsKeyUp(const char*) const;
 	bool IsMouseDown(KeyCode) const;
 	//bool IsMouseDown(const char*) const;
@@ -63,6 +66,7 @@ public:
 	void PostUpdate();
 	const long* GetDelta() const;
 
+
 private:
 	// state
 	bool m_bIgnoreInput;
@@ -76,5 +80,39 @@ private:
 	long m_mouseDelta[2];
 	long m_mousePos[2];
 	short m_mouseScroll;
+
+
+// SOME TEMPLATE FUN HERE --------------------------------------------------------------------
+public:
+	template<class Args> inline bool are_all_true(int argc, Args...)
+	{
+		bool bAreAllDown = true;
+		va_list args;	// use this unpack function variadic parameters
+		va_start(args, argc);
+		for (int i = 0; i < argc; ++i)
+		{
+			bAreAllDown &= va_arg(args, bool);
+		}
+		va_end(args);
+		return bAreAllDown;
+	}
+	template<class... Args> bool AreKeysDown(int keyCount, Args&&... args)
+	{ 	//-------------------------------------------------------------------------------------
+		// Note:
+		//
+		// We want to feed each argument to IsKeyDown() which is not a tmeplate function.
+		//
+		// IsKeyDown(args)...; -> we can't do this to expand and feed the args to the function. 
+		//
+		// but if we enclose it in a template function like this: 
+		//     f(argc, IsKeyDown(args)...)
+		//
+		// we can expand the arguments one by one into the IsKeyDown() function.
+		// now if the function f is a template function, all its arguments will be bools
+		// as the return type of IsKeyDown() is bool. We can simply chain them together to
+		// get the final result. f() in this case is 'are_all_true()'.
+		//-------------------------------------------------------------------------------------
+		return are_all_true(keyCount, IsKeyDown(args)...);
+	}
 };
 

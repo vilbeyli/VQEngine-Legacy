@@ -587,22 +587,22 @@ const PipelineState& Renderer::GetState() const
 	return mPipelineState;
 }
 
-ShaderID Renderer::AddShader(const std::string&	shaderFileName,	const std::vector<InputLayout>& layouts)
+ShaderID Renderer::AddShader(const std::string&	shaderFileName)
 {
 	const std::vector<std::string> paths = GetShaderPaths(shaderFileName);
 
 	Shader* shader = new Shader(shaderFileName);
-	shader->CompileShaders(m_device, paths, layouts);
+	shader->CompileShaders(m_device, paths);
 	mShaders.push_back(shader);
+
 	shader->m_id = (static_cast<int>(mShaders.size()) - 1);
 	return shader->ID();
 }
 
 ShaderID Renderer::AddShader(
-	const std::string&				shaderName,
-	const std::vector<std::string>& shaderFileNames, 
-	const std::vector<EShaderType>& shaderTypes, 
-	const std::vector<InputLayout>& layouts
+	  const std::string&			  shaderName
+	, const std::vector<std::string>& shaderFileNames
+	, const std::vector<EShaderType>& shaderTypes
 )
 {
 	std::vector<std::string> paths;
@@ -612,7 +612,7 @@ ShaderID Renderer::AddShader(
 	}
 
 	Shader* shader = new Shader(shaderName);
-	shader->CompileShaders(m_device, paths, layouts);
+	shader->CompileShaders(m_device, paths);
 	mShaders.push_back(shader);
 	shader->m_id = (static_cast<int>(mShaders.size()) - 1);
 	return shader->ID();
@@ -1661,7 +1661,7 @@ void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 
 
 #ifdef _DEBUG
-	if (!found)
+	if (!bFound)
 	{
 		Log::Error("Sampler not found: \"%s\" in Shader(Id=%d) \"%s\"\n", samplerName, mPipelineState.shader, shader->Name().c_str());
 	}
@@ -1761,7 +1761,7 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 	const XMVECTOR translation = vec3(posCenter.x(), posCenter.y(), 0);
 	const XMMATRIX transformation = XMMatrixAffineTransformation(scale, vec3::Zero, XMQuaternionIdentity(), translation);
 	
-	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 
 	SetConstant4x4f("screenSpaceTransformation", transformation);
 	SetConstant1f("isDepthTexture", cmd.bIsDepthTexture ? 1.0f : 0.0f);

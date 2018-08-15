@@ -175,6 +175,7 @@ enum EGeometry
 {
 	TRIANGLE = 0,
 	QUAD,
+	FULLSCREENQUAD,
 	CUBE,
 	CYLINDER,
 	SPHERE,

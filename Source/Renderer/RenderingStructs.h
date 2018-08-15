@@ -99,6 +99,12 @@ struct Buffer
 	Buffer(const BufferDesc& desc);
 };
 
+struct FullScreenVertexBufferData
+{
+	vec3 position;
+	vec2 uv;
+};
+
 struct DefaultVertexBufferData
 {
 	vec3 position;

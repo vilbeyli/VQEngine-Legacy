@@ -192,7 +192,7 @@ private:
 	// HELPER FUNCTIONS
 	//----------------------------------------------------------------------------------------------------------------
 	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, EShaderType type);
-	void CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths, const std::vector<InputLayout>& layouts);
+	void CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths);
 	void SetReflections(const ShaderBlobs& blobs);
 	void CreateShader(ID3D11Device* pDevice, EShaderType type, void* pBuffer, const size_t szShaderBinary);
 	void SetConstantBuffers(ID3D11Device* device);

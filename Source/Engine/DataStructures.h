@@ -121,7 +121,6 @@ struct RendererStats
 };
 struct FrameStats
 {
-	static const float LINE_HEIGHT_IN_PX;
 	static const size_t numStat = 6;
 	union 
 	{
@@ -143,10 +142,8 @@ struct FrameStats
 		};
 		int stats[numStat];
 	};
-
-	bool bShow;
-	void Render(TextRenderer* pTextRenderer, const vec2& screenPosition, const TextDrawDescription& drawDesc);	// implementation in Engine.cpp
-	static const char* statNames[numStat];
+	int operator[](const size_t i) const { assert(i < numStat); return stats[i]; }
+	static const char* statNames[numStat];	// defined in UI.cpp
 };
 
 #include "PerfTree.h"

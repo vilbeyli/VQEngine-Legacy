@@ -203,6 +203,7 @@ LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 		break;
 
 	// keyboard
+	case WM_SYSKEYDOWN:
 	case WM_KEYDOWN:
 	{
 #ifdef LOG_WINDOW_EVENTS

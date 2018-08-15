@@ -24,8 +24,6 @@ cbuffer perModel
 struct VSIn
 {
 	float3 position : POSITION;
-	float3 normal	: NORMAL;
-	float3 tangent  : TANGENT0;
 	float2 texCoord : TEXCOORD0;
 };
 

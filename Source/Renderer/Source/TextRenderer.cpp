@@ -45,9 +45,7 @@ static std::map<char, Character> sCharacters;
 bool TextRenderer::Initialize(Renderer* pRenderer)
 {
 	TextRenderer::pRenderer = pRenderer;	// set static pRenderer
-
-	const std::vector<InputLayout> layouts = { { "POSITION",	FLOAT32_4 } };
-	TextRenderer::shaderText = pRenderer->AddShader("Text", layouts);
+	TextRenderer::shaderText = pRenderer->AddShader("Text");
 
 	FT_Error err; 
 

@@ -191,7 +191,6 @@ void StressTestScene::Load(SerializedScene& scene)
 
 #endif	// LOAD_MODELS
 
-	if(!ENGINE->IsRenderingStatsOn()) ENGINE->ToggleRenderingStats();
 	if (!ENGINE->IsProfileRenderingOn()) ENGINE->ToggleProfilerRendering();
 }
 

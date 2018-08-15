@@ -337,7 +337,7 @@ void EnvironmentMap::Initialize(Renderer * pRenderer, const EnvironmentMapFileNa
 	// cached mipped-cubemap version of the textures (pick one of them at random -> 0th element 0th mip for example)
 	const std::string cachedPrefilteredEnvMap = cacheFolderPath + DirectoryUtil::GetFileNameWithoutExtension(files.irradianceMapFileName) + "_preFiltered_mip0_0" + extensionIrrMap;
 
-	Log::Info("Loading Environment Map: %s", envMapName.c_str());
+	Log::Info("\tLoading Environment Map: %s", envMapName.c_str());
 
 	// get the latest date of the environment map and irradiance map input textures
 	// compare them with the corresponding cached textures
@@ -430,9 +430,9 @@ void EnvironmentMap::LoadShaders()
 	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };// compute?
 
 	// #AsyncLoad: Mutex DEVICE
-	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS, layout);
-	sPrefilterShader = spRenderer->AddShader("PreFilterConvolution", IBLConvolution, VS_PS, layout);
-	sRenderIntoCubemapShader = spRenderer->AddShader("RenderIntoCubemap", RenderIntoCubemap, VS_PS, layout);
+	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS);
+	sPrefilterShader = spRenderer->AddShader("PreFilterConvolution", IBLConvolution, VS_PS);
+	sRenderIntoCubemapShader = spRenderer->AddShader("RenderIntoCubemap", RenderIntoCubemap, VS_PS);
 }
 
 Texture EnvironmentMap::CreateBRDFIntegralLUTTexture()
@@ -453,7 +453,7 @@ Texture EnvironmentMap::CreateBRDFIntegralLUTTexture()
 	sBRDFIntegrationLUTRT = spRenderer->AddRenderTarget(rtDesc);
 
 	// render the lookup table
-	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 	spRenderer->BindRenderTarget(sBRDFIntegrationLUTRT);
 	spRenderer->UnbindDepthTarget();
 	spRenderer->SetShader(sBRDFIntegrationLUTShader);

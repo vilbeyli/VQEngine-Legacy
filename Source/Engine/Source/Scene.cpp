@@ -388,7 +388,7 @@ void Scene::CalculateSceneBoundingBox()
 			const size_t stride = VertexBuffer.mDesc.mStride;
 
 			constexpr size_t defaultSz = sizeof(DefaultVertexBufferData);
-			constexpr float DegenerateMeshPositionChannelValueMax = 15000.0f; // make sure no vertex.xyz is > 30,000.0f
+			constexpr float DegenerateMeshPositionChannelValueMax = 15000.0f; // make sure no vertex.xyz is > 15,000.0f
 
 			// #SHADER REFACTOR:
 			//
@@ -577,8 +577,9 @@ static size_t CullGameObjects(
 		const BoundingBox aabb_world = [&]() 
 		{
 			const XMMATRIX world = pObj->GetTransform().WorldTransformationMatrix();
+			const XMMATRIX worldRotation = pObj->GetTransform().RotationMatrix();
 			const BoundingBox& aabb_local = pObj->GetAABB();
-#if 1	
+#if 1
 			// transform low and high points of the bounding box: model->world
 			return BoundingBox(
 			{ 
@@ -595,7 +596,7 @@ static size_t CullGameObjects(
 			const vec3 extent = aabb_local.hi - aabb_local.low;
 			const vec4 center = vec4((aabb_local.hi + aabb_local.low) * 0.5f, 1.0f);
 			const vec3 tfC = XMVector4Transform(center, world);
-			const vec3 tfEx = XMVector3Transform(extent, world);
+			const vec3 tfEx = XMVector3Transform(extent, worldRotation) * 0.5f;
 			return BoundingBox(
 			{
 				{tfC - tfEx},	// lo

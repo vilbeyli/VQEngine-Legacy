@@ -214,9 +214,9 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_bloomPass._blurPingPong[0] = pRenderer->AddRenderTarget(rtDesc);
 	this->_bloomPass._blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc);
 
-	this->_bloomPass._bloomFilterShader = pRenderer->AddShader("Bloom", BloomShaders, VS_PS, layout);
-	this->_bloomPass._blurShader = pRenderer->AddShader("Blur", BlurShaders, VS_PS, layout);
-	this->_bloomPass._bloomCombineShader = pRenderer->AddShader("BloomCombine", CombineShaders, VS_PS, layout);
+	this->_bloomPass._bloomFilterShader = pRenderer->AddShader("Bloom", BloomShaders, VS_PS);
+	this->_bloomPass._blurShader = pRenderer->AddShader("Blur", BlurShaders, VS_PS);
+	this->_bloomPass._bloomCombineShader = pRenderer->AddShader("BloomCombine", CombineShaders, VS_PS);
 
 	D3D11_SAMPLER_DESC blurSamplerDesc = {};
 	blurSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -227,7 +227,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	
 	// Tonemapping
 	this->_tonemappingPass._finalRenderTarget = pRenderer->GetDefaultRenderTarget();
-	this->_tonemappingPass._toneMappingShader = pRenderer->AddShader("Tonemapping", TonemapShaders, VS_PS, layout);
+	this->_tonemappingPass._toneMappingShader = pRenderer->AddShader("Tonemapping", TonemapShaders, VS_PS);
 
 	// World Render Target
 	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc);
@@ -238,7 +238,7 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 	pRenderer->BeginEvent("Post Processing");
 
 	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 
 	// ======================================================================================
 	// BLOOM  PASS
@@ -330,13 +330,6 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 
 void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 {
-	const std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 },
-	};
-
 	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
 
 	const std::vector<std::string> Deferred_AmbientLight		= { "deferred_rendering_vs", "deferred_brdf_ambient_ps" };
@@ -348,13 +341,13 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 	const std::vector<std::string> DeferredBRDF_SpotLight		= { "MVPTransformationWithUVs_vs", "deferred_brdf_spotLight_ps" };	// render cone?
 
 	InitializeGBuffer(pRenderer);
-	_geometryShader		 = pRenderer->AddShader("Deferred_Geometry", layout);
-	_ambientShader		 = pRenderer->AddShader("Deferred_Ambient", Deferred_AmbientLight, VS_PS, layout);
-	_ambientIBLShader	 = pRenderer->AddShader("Deferred_AmbientIBL", Deferred_AmbientIBL, VS_PS, layout);
-	_BRDFLightingShader  = pRenderer->AddShader("Deferred_BRDF_Lighting", DeferredBRDF_LightingFSQ, VS_PS, layout);
-	_phongLightingShader = pRenderer->AddShader("Deferred_Phong_Lighting", DeferredPhong_LightingFSQ, VS_PS, layout);
-	_spotLightShader	 = pRenderer->AddShader("Deferred_BRDF_Point", DeferredBRDF_PointLight, VS_PS, layout);
-	_pointLightShader	 = pRenderer->AddShader("Deferred_BRDF_Spot", DeferredBRDF_SpotLight, VS_PS, layout);
+	_geometryShader		 = pRenderer->AddShader("Deferred_Geometry");
+	_ambientShader		 = pRenderer->AddShader("Deferred_Ambient", Deferred_AmbientLight, VS_PS);
+	_ambientIBLShader	 = pRenderer->AddShader("Deferred_AmbientIBL", Deferred_AmbientIBL, VS_PS);
+	_BRDFLightingShader  = pRenderer->AddShader("Deferred_BRDF_Lighting", DeferredBRDF_LightingFSQ, VS_PS);
+	_phongLightingShader = pRenderer->AddShader("Deferred_Phong_Lighting", DeferredPhong_LightingFSQ, VS_PS);
+	_spotLightShader	 = pRenderer->AddShader("Deferred_BRDF_Point", DeferredBRDF_PointLight, VS_PS);
+	_pointLightShader	 = pRenderer->AddShader("Deferred_BRDF_Spot", DeferredBRDF_SpotLight, VS_PS);
 
 	// deferred geometry is accessed from elsewhere, needs to be globally defined
 	assert(EShaders::DEFERRED_GEOMETRY == _geometryShader);	// this assumption may break, make sure it doesn't...
@@ -467,7 +460,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	const TextureID tBRDFLUT = EnvironmentMap::sBRDFIntegrationLUTTexture;
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 
 	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
@@ -601,14 +594,7 @@ constexpr size_t SSAO_SAMPLE_KERNEL_SIZE = 64;
 TextureID AmbientOcclusionPass::whiteTexture4x4 = -1;
 void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 {
-	const std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 },
-	};
 	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
-
 	const std::vector<std::string> AmbientOcclusionShaders = { "FullscreenQuad_vs", "SSAO_ps" };
 
 	// CREATE SAMPLE KERNEL
@@ -690,7 +676,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
 	rtDesc.format = imageFormat;
 
-	this->SSAOShader = pRenderer->AddShader("SSAO", AmbientOcclusionShaders, VS_PS, layout);
+	this->SSAOShader = pRenderer->AddShader("SSAO", AmbientOcclusionShaders, VS_PS);
 	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc);
 	this->blurRenderTarget		= pRenderer->AddRenderTarget(rtDesc);
 #if SSAO_DEBUGGING
@@ -715,7 +701,7 @@ struct SSAOConstants
 void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView)
 {
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 	
 	XMFLOAT4X4 proj = {};
 	XMStoreFloat4x4(&proj, sceneView.projection);
@@ -778,7 +764,7 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer)
 	
 	//pRenderer->BindRenderTarget(this->renderTarget);
 
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
@@ -791,7 +777,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 {
 	const TextureID texOcclusion = pRenderer->GetRenderTargetTexture(this->occlusionRenderTarget);
 	const vec2 texDimensions = pRenderer->GetWindowDimensionsAsFloat2();
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::QUAD);
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 
 	pRenderer->BeginEvent("Blur Pass");
 

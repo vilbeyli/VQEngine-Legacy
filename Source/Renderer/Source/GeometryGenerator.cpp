@@ -162,6 +162,38 @@ Mesh GeometryGenerator::Quad(float scale)
 	return Mesh(vertices, indices, "Builtin_Quad");
 }
 
+Mesh GeometryGenerator::FullScreenQuad()
+{
+	const float& size = 1.0f;
+
+	//	  1	+-----+ 2	0, 1, 2
+	//		|	  |		2, 3, 0
+	//		|	  |		
+	//	  0 +-----+ 3	
+	const vector<unsigned> indices =
+	{
+		0, 1, 2,
+		2, 3, 0
+	};
+
+	vector<FullScreenVertexBufferData> vertices(4);
+
+	// vertices - CW
+	vertices[0].position = vec3(-size, -size, 0.0f);
+	vertices[0].uv = vec2(0.0f, 1.0f);
+
+	vertices[1].position = vec3(-size, +size, 0.0f);
+	vertices[1].uv = vec2(0.0f, 0.0f);
+
+	vertices[2].position = vec3(+size, +size, 0.0f);
+	vertices[2].uv = vec2(1.0f, 0.0f);
+
+	vertices[3].position = vec3(+size, -size, 0.0f);
+	vertices[3].uv = vec2(1.0f, 1.0f);
+
+	return Mesh(vertices, indices, "Builtin_Quad");
+}
+
 Mesh GeometryGenerator::Cube()
 {
 	vector<DefaultVertexBufferData> vertices(24);

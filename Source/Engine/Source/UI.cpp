@@ -30,12 +30,8 @@ using namespace VQEngine;
 
 
 
-// Background constants
-const float X_MARGIN_PX = 10.0f;    // leave 3px margin on the X-axis to cover
-const float Y_OFFSET_PX = 24.0f;    // we offset Y equal to height of a letter to fit the background on text
-static const LinearColor sBackgroundColor = LinearColor::black;
 
-void UI::RenderBackground(const vec3& color, const vec2& size, const vec2& screenPosition) const
+void UI::RenderBackground(const vec3& color, float alpha, const vec2& size, const vec2& screenPosition) const
 {
 	assert(mpRenderer);
 	const vec2 windowSizeXY = mpRenderer->GetWindowDimensionsAsFloat2();
@@ -57,7 +53,7 @@ void UI::RenderBackground(const vec3& color, const vec2& size, const vec2& scree
 	mpRenderer->SetIndexBuffer(IABuffers.second);
 	mpRenderer->SetConstant3f("diffuse", color);
 	mpRenderer->SetConstant3f("isDiffuseMap", 0.0f);
-	mpRenderer->SetConstant1f("alpha", 0.6f);
+	mpRenderer->SetConstant1f("alpha", alpha);
 	mpRenderer->SetConstant4x4f("worldViewProj", matTransformation);
 	mpRenderer->SetBlendState(EDefaultBlendState::ALPHA_BLEND);
 	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
@@ -67,6 +63,11 @@ void UI::RenderBackground(const vec3& color, const vec2& size, const vec2& scree
 }
 
 
+
+VQEngine::UI::UI(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig)
+	: mBuiltInMeshes(BuiltInMeshes)
+	, mEngineControls(engineConfig)
+{}
 
 void VQEngine::UI::Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer, ProfilerStack& profilers)
 {
@@ -81,7 +82,11 @@ void VQEngine::UI::Exit()
 }
 
 
-
+// todo: more stats
+// - meshes
+// - main view cull count
+// - shadow view cull count per light type
+//
 const char* FrameStats::statNames[FrameStats::numStat] =
 {
 	"FPS: ",
@@ -91,6 +96,40 @@ const char* FrameStats::statNames[FrameStats::numStat] =
 	"Indices: ",
 	"Draw Calls: ",
 };
+constexpr size_t RENDER_ORDER_FRAME_STATS_ROW_1[] = { 0, 5, 3, 4, 1, 2 };
+
+auto GetFPSColor = [](int FPS) -> LinearColor
+{
+	if (FPS > 90)			return LinearColor::cyan;
+	else if (FPS > 60)		return LinearColor::green;
+	else if (FPS > 33)		return LinearColor::yellow;
+	else if (FPS > 20)		return LinearColor::orange;
+	else					return LinearColor::red;
+};
+
+// Background constants
+constexpr float X_MARGIN_PX = 10.0f;    // leave 3px margin on the X-axis to cover
+constexpr float Y_OFFSET_PX = 24.0f;    // we offset Y equal to height of a letter to fit the background on text
+constexpr float BACKGROUND_NORMALIZED_LENGTH_X = 0.212f;
+constexpr float BACKGROUND_ALPHA = 0.6f;
+static const LinearColor sBackgroundColor = LinearColor::black;
+
+constexpr float X_NORMALIZED_POSITION_CONTROLS = 0.005f;
+constexpr float Y_NORMALIZED_POSITION_CONTROLS = 0.009f;
+
+
+constexpr float X_NORMALIZED_POSITION_FRAME_STATS = 0.780f;
+constexpr float Y_NORMALIZED_POSITION_FRAME_STATS = 0.550f;
+
+constexpr float X_NORMALIZED_POSITION_PROFILER_CPU = X_NORMALIZED_POSITION_FRAME_STATS;
+constexpr float Y_NORMALIZED_POSITION_PROFILER_CPU = 0.665f;
+
+constexpr float X_NORMALIZED_POSITION_PROFILER_GPU = X_NORMALIZED_POSITION_FRAME_STATS + 0.110f;
+constexpr float Y_NORMALIZED_POSITION_PROFILER_GPU = Y_NORMALIZED_POSITION_PROFILER_CPU;
+
+constexpr float PX_CPU_GPU_PROFILER_DISTANCE = 9.0f;
+
+constexpr float LINE_HEIGHT_IN_PX = 17.0f;
 
 void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 {
@@ -101,92 +140,62 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 	const vec2 screenSizeInPixels = mpRenderer->GetWindowDimensionsAsFloat2();
 
 	// these are all pixel positions, starting from top left corner.
-	float X_PX_POS_PROFILER = screenSizeInPixels.x() * 0.790f;
-	float Y_PX_POS_PROFILER = screenSizeInPixels.y() * 0.700f;
-	const  vec2 PX_POS_PROFILER = vec2(X_PX_POS_PROFILER, Y_PX_POS_PROFILER);
+	const float X_PX_POS_PROFILER_CPU = screenSizeInPixels.x() * X_NORMALIZED_POSITION_PROFILER_CPU;
+	const float Y_PX_POS_PROFILER_CPU = screenSizeInPixels.y() * Y_NORMALIZED_POSITION_PROFILER_CPU;
+	const vec2  PX_POS_PROFILER_CPU   = vec2(X_PX_POS_PROFILER_CPU, Y_PX_POS_PROFILER_CPU);
 
+	const float X_PX_POS_PROFILER_GPU = screenSizeInPixels.x() * X_NORMALIZED_POSITION_PROFILER_GPU;
+	const float Y_PX_POS_PROFILER_GPU = screenSizeInPixels.y() * Y_NORMALIZED_POSITION_PROFILER_GPU;
+	const vec2  PX_POS_PROFILER_GPU   = vec2(X_PX_POS_PROFILER_GPU, Y_PX_POS_PROFILER_GPU);
 
-	const float X_PX_POS_FRAMESTATS = screenSizeInPixels.x()  * 0.812f;
-	      float Y_PX_POS_FRAMESTATS = screenSizeInPixels.y() * 0.915f;
-	const  vec2 PX_POS_FRAMESTATS = vec2(X_PX_POS_FRAMESTATS, Y_PX_POS_FRAMESTATS);
+	const float X_PX_POS_FRAMESTATS = screenSizeInPixels.x() * X_NORMALIZED_POSITION_FRAME_STATS;
+	      float Y_PX_POS_FRAMESTATS = screenSizeInPixels.y() * Y_NORMALIZED_POSITION_FRAME_STATS;
+	const vec2  PX_POS_FRAMESTATS   = vec2(X_PX_POS_FRAMESTATS, Y_PX_POS_FRAMESTATS);
 
 	const bool bSortStats = true;
 
 	mpRenderer->BeginEvent("Perf Stats UI Text");
 
-	// CPU STATS
-	vec2 sz = mProfilerStack.pCPU->GetEntryAreaBounds(screenSizeInPixels);
-	vec2 pos = PX_POS_PROFILER - vec2(X_MARGIN_PX, Y_OFFSET_PX);
+	// BACKGROUND
+	//
+	const vec2 CPUProfilerAreaBounds = mProfilerStack.pCPU->GetEntryAreaBounds(screenSizeInPixels);
+	const vec2 GPUProfilerAreaBounds = mProfilerStack.pGPU->GetEntryAreaBounds(screenSizeInPixels);
+	const vec2 ProfilerAreaBounds(BACKGROUND_NORMALIZED_LENGTH_X, std::max(CPUProfilerAreaBounds.y(), GPUProfilerAreaBounds.y()) );
 
-	RenderBackground(sBackgroundColor, sz, pos);
-	const size_t cpu_perf_rows = mProfilerStack.pCPU->RenderPerformanceStats(mpTextRenderer, PX_POS_PROFILER, drawDesc, bSortStats);
+	vec2 sz = ProfilerAreaBounds + vec2(0.0f, (8 * LINE_HEIGHT_IN_PX) / screenSizeInPixels.y());
+	vec2 pos = PX_POS_FRAMESTATS - vec2(X_MARGIN_PX, Y_OFFSET_PX);
+	RenderBackground(sBackgroundColor, BACKGROUND_ALPHA, sz, pos);
+	
 
-#if 0
-	// advance Y position for GPU stats
-	// +30 px down the CPU results, start rendering GPU results
-	Y_PX_POS_PROFILER += cpu_perf_rows * PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE + 30;
-#else
-	X_PX_POS_PROFILER += sz.x() * screenSizeInPixels.x() * 0.9f;
-#endif
-
-
-	// GPU STATS
-	sz = mProfilerStack.pGPU->GetEntryAreaBounds(screenSizeInPixels);
-	pos = vec2(X_PX_POS_PROFILER, Y_PX_POS_PROFILER) - vec2(X_MARGIN_PX, Y_OFFSET_PX);
-
-	RenderBackground(sBackgroundColor, sz, pos);
-	mProfilerStack.pGPU->RenderPerformanceStats(mpTextRenderer, vec2(X_PX_POS_PROFILER, Y_PX_POS_PROFILER), drawDesc, bSortStats);
-
-	mpRenderer->EndEvent();
-
-	// todo: rename/remove the magic numbers.
-	constexpr float LINE_HEIGHT_IN_PX = 17.0f;
-	const float rowcount = FrameStats::numStat;
-	const float backGroundLineSpan = static_cast<float>(rowcount + 2);	// back ground a little bigger - 2 lines bigger.
-	const float avgLetterWidthInPixels = 7.0f;		// hardcoded... determines background width
-	const float longestStringLength = static_cast<float>(std::string("Culled Objects: 10000").size());
-
-	sz = vec2(avgLetterWidthInPixels * longestStringLength, backGroundLineSpan * LINE_HEIGHT_IN_PX) / screenSizeInPixels;
-	pos = vec2(PX_POS_FRAMESTATS.x(), PX_POS_FRAMESTATS.y()) - vec2(X_MARGIN_PX, Y_OFFSET_PX);
-	RenderBackground(sBackgroundColor, sz, pos);
-
+	// PROFILER STATS
+	//
+	const size_t cpu_perf_rows = mProfilerStack.pCPU->RenderPerformanceStats(mpTextRenderer, PX_POS_PROFILER_CPU, drawDesc, bSortStats);
+	mProfilerStack.pGPU->RenderPerformanceStats(mpTextRenderer, PX_POS_PROFILER_GPU, drawDesc, bSortStats);
 
 
 	// FRAME STATS
 	//
-	mpRenderer->BeginEvent("Frame Stats UI Text");
-	constexpr size_t RENDER_ORDER[] = { 0, 5, 3, 4, 1, 2 };
-
-	auto GetFPSColor = [](int FPS) -> LinearColor
-	{
-		if (FPS > 90)			return LinearColor::cyan;
-		else if (FPS > 60)		return LinearColor::green;
-		else if (FPS > 33)		return LinearColor::yellow;
-		else if (FPS > 20)		return LinearColor::orange;
-		else					return LinearColor::red;
-	};
-	
 	mpTextRenderer->RenderText(drawDesc);
 	for (size_t i = 0; i < FrameStats::numStat; ++i)
 	{
 		drawDesc.screenPosition = vec2(PX_POS_FRAMESTATS.x(), PX_POS_FRAMESTATS.y() + i * LINE_HEIGHT_IN_PX);
-		drawDesc.color = RENDER_ORDER[i] == 0	// if we're drawing the FPS
-			? GetFPSColor(stats[RENDER_ORDER[i]])
+		drawDesc.color = RENDER_ORDER_FRAME_STATS_ROW_1[i] == 0	// if we're drawing the FPS
+			? GetFPSColor(stats[RENDER_ORDER_FRAME_STATS_ROW_1[i]])
 			: LinearColor::white;
-		drawDesc.text = FrameStats::statNames[RENDER_ORDER[i]] + StrUtil::CommaSeparatedNumber(std::to_string(stats[RENDER_ORDER[i]]));
+		drawDesc.text = FrameStats::statNames[RENDER_ORDER_FRAME_STATS_ROW_1[i]] + StrUtil::CommaSeparatedNumber(std::to_string(stats[RENDER_ORDER_FRAME_STATS_ROW_1[i]]));
 		mpTextRenderer->RenderText(drawDesc);
 	}
 	mpRenderer->EndEvent();
 }
 
 
-void VQEngine::UI::RenderEngineControls(EngineControlsUIData&& controls) const
+void VQEngine::UI::RenderEngineControls() const
 {
 	const vec2 screenSizeInPixels = mpRenderer->GetWindowDimensionsAsFloat2();
 
-	const float X_PX_POS_CONTROLS = screenSizeInPixels.x()  * 0.89f;
-	float Y_PX_POS_CONTROLS = screenSizeInPixels.y() * 0.80f;
-	vec2 PX_POS_CONTROLS = vec2(X_PX_POS_CONTROLS, Y_PX_POS_CONTROLS);
+	const float X_PX_POS_CONTROLS = screenSizeInPixels.x()  * X_NORMALIZED_POSITION_CONTROLS;
+	const float Y_PX_POS_CONTROLS = screenSizeInPixels.y() * Y_NORMALIZED_POSITION_CONTROLS;
+	const vec2 PX_POS_CONTROLS = vec2(X_PX_POS_CONTROLS, Y_PX_POS_CONTROLS);
 
 
 	TextDrawDescription drawDesc;
@@ -201,28 +210,26 @@ void VQEngine::UI::RenderEngineControls(EngineControlsUIData&& controls) const
 	mpRenderer->BeginEvent("Render Controls UI Text");
 
 	// todo: rename/remove the magic numbers.
-	const float rowcount = 5.0f;					// controls end in F5 -> 5 rows...
-	const float backGroundLineSpan = static_cast<float>(rowcount + 2);	// back ground a little bigger - 2 lines bigger.
+	auto ToogleToString = [](const bool b) { return b ? "On" : "Off"; };
+	const std::vector<std::string> ControlEntries =
+	{	// this might use some optimization. maybe. profile this.
+		std::string("F1 - Render Mode: ") + (!mEngineControls.bDeferredOrForward ? "Forward" : "Deferred"),
+		std::string("F2 - SSAO: ") + ToogleToString(mEngineControls.bSSAO),
+		std::string("F3 - Bloom: ") + ToogleToString(mEngineControls.bBloom),
+		std::string("F4 - Display Render Targets: ") + ToogleToString(mEngineControls.bRenderTargets),
+		std::string("F5 - Toggle Rendering AABBs: ") + ToogleToString(mEngineControls.bBoundingBoxes)
+	};
+	const float backGroundLineSpan = static_cast<float>(ControlEntries.size() + 2);	// back ground a little bigger - 2 lines bigger.
 	const float avgLetterWidthInPixels = 7.0f;		// hardcoded... determines background width
 
-	vec2 sz = vec2(avgLetterWidthInPixels * longestStringLength / screenSizeInPixels.x(), backGroundLineSpan * LINE_HEIGHT_PX / screenSizeInPixels.y());
-	vec2 pos = vec2(PX_POS_CONTROLS.x(), PX_POS_CONTROLS.y() + numLine * LINE_HEIGHT_PX) - vec2(X_MARGIN_PX, Y_OFFSET_PX);
+	vec2 sz = vec2(avgLetterWidthInPixels * longestStringLength / screenSizeInPixels.x(), LINE_HEIGHT_PX * backGroundLineSpan / screenSizeInPixels.y());
+	RenderBackground(sBackgroundColor, BACKGROUND_ALPHA, sz, PX_POS_CONTROLS - vec2(X_MARGIN_PX, X_MARGIN_PX));
 
-	RenderBackground(sBackgroundColor, sz, pos);
 
-	auto ToogleToString = [](const bool b) { return b ? "On" : "Off"; };
-	const std::vector<std::string> ControlEntries = 
-	{	// this might use some optimization. maybe. profile this.
-		std::string("F1 - Render Mode: ") + (controls.bForwardOrDeferred ? "Forward" : "Deferred"),
-		std::string("F2 - SSAO: ") + ToogleToString(controls.bSSAO),
-		std::string("F3 - Bloom: ") + ToogleToString(controls.bBloom),
-		std::string("F4 - Display Render Targets: ") + ToogleToString(controls.bRenderTargets),
-		std::string("F5 - Toggle Rendering AABBs: ") + ToogleToString(controls.bBoundingBoxes)
-	};
-
+	int line = 1;
 	std::for_each(RANGE(ControlEntries), [&](const std::string& Entry)
 	{
-		drawDesc.screenPosition = vec2(PX_POS_CONTROLS.x(), PX_POS_CONTROLS.y() + numLine++ * LINE_HEIGHT_PX);
+		drawDesc.screenPosition = vec2(PX_POS_CONTROLS.x(), PX_POS_CONTROLS.y() + line++ * LINE_HEIGHT_PX);
 		drawDesc.text = Entry;
 		mpTextRenderer->RenderText(drawDesc);
 	});

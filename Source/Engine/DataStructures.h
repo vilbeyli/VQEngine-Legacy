@@ -146,4 +146,17 @@ struct FrameStats
 	static const char* statNames[numStat];	// defined in UI.cpp
 };
 
+// todo: rename members with more meaningful names
+struct EngineConfig
+{	// can use a bit field for all this.
+	bool bDeferredOrForward;
+	bool bSSAO;
+	bool bBloom;
+	bool bRenderTargets;
+	bool bBoundingBoxes;
+
+	bool mbShowProfiler;
+	bool mbShowControls = true;
+};
+
 #include "PerfTree.h"

@@ -269,6 +269,7 @@ inline const TreeNode<T>* Tree<T>::SearchSubTree(const TreeNode<T>& node, const 
 	return pSearchResult;
 }
 
+
 template<class T>
 inline size_t Tree<T>::RenderSubTree(
 	const TreeNode<T>&     node
@@ -278,15 +279,36 @@ inline size_t Tree<T>::RenderSubTree(
 	, std::ostringstream&  stats
 )
 {
+
+	auto GetFrameTimeColor = [](float ms) -> LinearColor
+	{
+		if (ms < 1000.0f / 90.0f)		return LinearColor::cyan;
+		else if (ms < 1000.0f / 60.0f)	return LinearColor::green;
+		else if (ms < 1000.0f / 33.0f)	return LinearColor::yellow;
+		else if (ms < 1000.0f / 20.0f)	return LinearColor::orange;
+		else						return LinearColor::red;
+	};
+
 	const int X_OFFSET = 20;	// todo: DrawSettings struct for the tree?
 
 	if (node.pData->IsStale()) return 0;
 	stats.clear(); stats.str("");	// clear & populate text
-	stats << node.pData->tag << "  " << node.pData->GetAvg() * 1000 << " ms";
+	const float ms = node.pData->GetAvg() * 1000.0f;
+	stats << node.pData->tag << "  " << ms << " ms";
 
 	drawDesc.screenPosition = screenPosition;
 	drawDesc.text = stats.str();
-	pTextRenderer->RenderText(drawDesc);
+
+	if (node.pData == this->root.pData)
+	{
+		TextDrawDescription _drawDesc(drawDesc);
+		_drawDesc.color = GetFrameTimeColor(ms);
+		pTextRenderer->RenderText(_drawDesc);
+	}
+	else
+	{
+		pTextRenderer->RenderText(drawDesc);
+	}
 
 	size_t row_count = 0;
 	size_t last_row = 1;	// we already rendered one line

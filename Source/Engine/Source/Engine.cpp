@@ -83,18 +83,18 @@ Engine * Engine::GetEngine()
 }
 void Engine::ToggleRenderingPath()
 {
-	mbUseDeferredRendering = !mbUseDeferredRendering;
+	mEngineConfig.bDeferredOrForward = !mEngineConfig.bDeferredOrForward;
 
 	// initialize GBuffer if its not initialized, i.e., 
 	// Renderer started in forward mode and we're toggling deferred for the first time
-	if (!mDeferredRenderingPasses._GBuffer.bInitialized && mbUseDeferredRendering)
+	if (!mDeferredRenderingPasses._GBuffer.bInitialized && mEngineConfig.bDeferredOrForward)
 	{
 		mDeferredRenderingPasses.InitializeGBuffer(mpRenderer);
 	}
-	Log::Info("Toggle Rendering Path: %s Rendering enabled", mbUseDeferredRendering ? "Deferred" : "Forward");
+	Log::Info("Toggle Rendering Path: %s Rendering enabled", mEngineConfig.bDeferredOrForward ? "Deferred" : "Forward");
 
-	// if we just turned deferred rendering off, clear the gbuffer textures
-	if (!mbUseDeferredRendering)
+	// if we just turned deferred rendering off, clear the GBuffer textures
+	if (!mEngineConfig.bDeferredOrForward)
 	{
 		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
 		mSelectedShader = sEngineSettings.rendering.bUseBRDFLighting ? EShaders::FORWARD_BRDF : EShaders::FORWARD_PHONG;
@@ -102,18 +102,18 @@ void Engine::ToggleRenderingPath()
 }
 void Engine::ToggleAmbientOcclusion()
 {
-	mbIsAmbientOcclusionOn = !mbIsAmbientOcclusionOn;
-	if (!mbIsAmbientOcclusionOn)
+	mEngineConfig.bSSAO = !mEngineConfig.bSSAO;
+	if (!mEngineConfig.bSSAO)
 	{
 		mDeferredRenderingPasses.ClearGBuffer(mpRenderer);
 	}
-	Log::Info("Toggle Ambient Occlusion: %s", mbIsAmbientOcclusionOn ? "On" : "Off");
+	Log::Info("Toggle Ambient Occlusion: %s", mEngineConfig.bSSAO ? "On" : "Off");
 }
 
 void Engine::ToggleBloom()
 {
-	mbIsBloomOn = !mbIsBloomOn;
-	Log::Info("Toggle Bloom: %s", mbIsBloomOn ? "On" : "Off");
+	mEngineConfig.bBloom = !mEngineConfig.bBloom;
+	Log::Info("Toggle Bloom: %s", mEngineConfig.bBloom ? "On" : "Off");
 }
 
 float Engine::GetTotalTime() const { return mpTimer->TotalTime(); }
@@ -131,10 +131,9 @@ Engine::Engine()
 	, mpCPUProfiler(new CPUProfiler())
 	, mpGPUProfiler(new GPUProfiler())
 	, mbUsePaniniProjection(false)
-	, mbShowControls(true)
 	, mFrameCount(0)
 	, mAccumulator(0.0f)
-	, mUI(mBuiltinMeshes)
+	, mUI(mBuiltinMeshes, mEngineConfig)
 {}
 
 Engine::~Engine(){}
@@ -203,12 +202,13 @@ bool Engine::Initialize(HWND hwnd)
 	// INITIALIZE RENDERING
 	//--------------------------------------------------------------
 	// render passes
-	mbUseDeferredRendering = rendererSettings.bUseDeferredRendering;
-	mbIsAmbientOcclusionOn = rendererSettings.bAmbientOcclusion;
-	mbIsBloomOn = true;	// currently not deserialized
-	mbDisplayRenderTargets = true;
-	mbRenderBoundingBoxes = false;
-	mSelectedShader = mbUseDeferredRendering ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
+
+	mEngineConfig.bDeferredOrForward = rendererSettings.bUseDeferredRendering;
+	mEngineConfig.bSSAO = rendererSettings.bAmbientOcclusion;
+	mEngineConfig.bBloom = true;	// currently not deserialized
+	mEngineConfig.bRenderTargets = true;
+	mEngineConfig.bBoundingBoxes = false;
+	mSelectedShader = mEngineConfig.bDeferredOrForward ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
 	// this is bad... every scene needs to be pushed back.
@@ -568,8 +568,8 @@ void Engine::HandleInput()
 	if (mpInput->IsKeyTriggered("F1")) ToggleRenderingPath();
 	if (mpInput->IsKeyTriggered("F2")) ToggleAmbientOcclusion();
 	if (mpInput->IsKeyTriggered("F3")) ToggleBloom();
-	if (mpInput->IsKeyTriggered("F4")) mbDisplayRenderTargets = !mbDisplayRenderTargets;
-	if (mpInput->IsKeyTriggered("F5")) mbRenderBoundingBoxes = !mbRenderBoundingBoxes;
+	if (mpInput->IsKeyTriggered("F4")) mEngineConfig.bRenderTargets = !mEngineConfig.bRenderTargets;
+	if (mpInput->IsKeyTriggered("F5")) mEngineConfig.bBoundingBoxes = !mEngineConfig.bBoundingBoxes;
 
 	if (mpInput->IsKeyTriggered("'")) ToggleControlsTextRendering();
 	if (mpInput->IsKeyTriggered("F") && mpInput->AreKeysDown(2, "ctrl", "alt"))
@@ -585,7 +585,7 @@ void Engine::HandleInput()
 
 #if SSAO_DEBUGGING
 		// todo: wire this to some UI text/control
-		if (mbIsAmbientOcclusionOn)
+		if (mEngineConfig.bSSAO)
 		{
 			if (mpInput->IsKeyDown("Shift"))
 			{
@@ -603,7 +603,7 @@ void Engine::HandleInput()
 #endif
 
 #if BLOOM_DEBUGGING
-		if (mbIsBloomOn)
+		if (mEngineConfig.bBloom)
 		{
 			Settings::Bloom& bloom = mPostProcessPass._settings.bloom;
 			float& threshold = bloom.brightnessThreshold;
@@ -725,7 +725,7 @@ void Engine::PreRender()
 
 	mSceneView.sceneRenderSettings = mpActiveScene->GetSceneRenderSettings();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
-	mSceneView.bIsDeferredRendering = mbUseDeferredRendering;
+	mSceneView.bIsDeferredRendering = mEngineConfig.bDeferredOrForward;
 	mSceneView.bIsIBLEnabled = mpActiveScene->mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
 
 	mSceneView.environmentMap = mpActiveScene->GetEnvironmentMap();
@@ -813,14 +813,14 @@ void Engine::Render()
 	//==========================================================================
 	// DEFERRED RENDERER
 	//==========================================================================
-	if (mbUseDeferredRendering)
+	if (mEngineConfig.bDeferredOrForward)
 	{
 		const GBuffer& gBuffer = mDeferredRenderingPasses._GBuffer;
 		const TextureID texNormal = mpRenderer->GetRenderTargetTexture(gBuffer._normalRT);
 		const TextureID texDiffuseRoughness = mpRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
 		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
 		const TextureID texDepthTexture = mpRenderer->mDefaultDepthBufferTexture;
-		const TextureID tSSAO = mbIsAmbientOcclusionOn && bSceneSSAO
+		const TextureID tSSAO = mEngineConfig.bSSAO && bSceneSSAO
 			? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget)
 			: mSSAOPass.whiteTexture4x4;
 
@@ -837,7 +837,7 @@ void Engine::Render()
 		// AMBIENT OCCLUSION  PASS
 		mpCPUProfiler->BeginEntry("SSAO Pass");
 		mpGPUProfiler->BeginEntry("SSAO");
-		if (mbIsAmbientOcclusionOn && bSceneSSAO)
+		if (mEngineConfig.bSSAO && bSceneSSAO)
 		{
 			// TODO: if BeginEntry() is inside, it's never reset to 0 if ambient occl is turned off
 			mpGPUProfiler->BeginEntry("Occlusion");
@@ -932,7 +932,7 @@ void Engine::Render()
 	//==========================================================================
 	else
 	{
-		const bool bZPrePass = mbIsAmbientOcclusionOn && bSceneSSAO;
+		const bool bZPrePass = mEngineConfig.bSSAO && bSceneSSAO;
 		const TextureID tSSAO = bZPrePass ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
 		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler < 0 ? EDefaultSamplerState::POINT_SAMPLER : mSceneView.environmentMap.envMapSampler;
@@ -1063,8 +1063,8 @@ void Engine::Render()
 	// POST PROCESS PASS | DEBUG PASS | UI PASS
 	//------------------------------------------------------------------------
 	mpCPUProfiler->BeginEntry("Post Process");
-	mpGPUProfiler->BeginEntry("Post Process");
-	mPostProcessPass.Render(mpRenderer, mbIsBloomOn);
+	mpGPUProfiler->BeginEntry("Post Process"); 
+	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom);
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndEntry();
 	//------------------------------------------------------------------------
@@ -1090,12 +1090,12 @@ void Engine::Render()
 
 void Engine::RenderDebug(const XMMATRIX& viewProj)
 {
-	if (mbRenderBoundingBoxes)	// BOUNDING BOXES
+	if (mEngineConfig.bBoundingBoxes)	// BOUNDING BOXES
 	{
 		mpActiveScene->RenderDebug(viewProj);
 	}
 
-	if (mbDisplayRenderTargets)	// RENDER TARGETS
+	if (mEngineConfig.bRenderTargets)	// RENDER TARGETS
 	{
 		mpCPUProfiler->BeginEntry("Debug Textures");
 		const int screenWidth = sEngineSettings.window.width;
@@ -1117,7 +1117,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
 		TextureID tSceneDepth = mpRenderer->GetDepthTargetTexture(0);
 		TextureID tNormals = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
-		TextureID tAO = mbIsAmbientOcclusionOn ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
+		TextureID tAO = mEngineConfig.bSSAO ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
 		TextureID tBRDF = EnvironmentMap::sBRDFIntegrationLUTTexture;
 		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap;
@@ -1205,7 +1205,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		constexpr bool bSendMaterial = false;
 
 		mpRenderer->BeginEvent("Draw TBN Vectors");
-		if (mbUseDeferredRendering)
+		if (mEngineConfig.bForwardOrDeferred)
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 
 		mpRenderer->SetShader(EShaders::TBN);
@@ -1214,7 +1214,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			obj->RenderOpaque(mpRenderer, mSceneView, bSendMaterial, mpActiveScene->mMaterials);
 
 
-		if (mbUseDeferredRendering)
+		if (mEngineConfig.bForwardOrDeferred)
 			mpRenderer->UnbindDepthTarget();
 
 		mpRenderer->SetShader(mSelectedShader);
@@ -1226,18 +1226,11 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 
 void Engine::RenderUI() const
 {
-	UI::EngineControlsUIData engineControls;
-	engineControls.bForwardOrDeferred = !mbUseDeferredRendering;
-	engineControls.bBloom = mbIsBloomOn;
-	engineControls.bSSAO = mbIsAmbientOcclusionOn;
-	engineControls.bRenderTargets = mbDisplayRenderTargets;
-	engineControls.bBoundingBoxes = mbRenderBoundingBoxes;
-
 	mpGPUProfiler->BeginEntry("UI");
 	mpCPUProfiler->BeginEntry("UI");
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);	
-	if (mbShowProfiler) { mUI.RenderPerfStats(mFrameStats); }
-	if (mbShowControls) { mUI.RenderEngineControls(std::move(engineControls)); }
+	if (mEngineConfig.mbShowProfiler) { mUI.RenderPerfStats(mFrameStats); }
+	if (mEngineConfig.mbShowControls) { mUI.RenderEngineControls(); }
 	if (!mbLoading)
 	{
 		if (!mpActiveScene)

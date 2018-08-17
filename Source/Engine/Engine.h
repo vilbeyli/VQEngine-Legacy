@@ -100,20 +100,20 @@ public:
 	float					GetTotalTime() const;
 	inline ShaderID			GetSelectedShader() const { return mSelectedShader; }
 	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
-	inline bool				GetSettingShowControls() const { return mbShowControls; }
+	inline bool				GetSettingShowControls() const { return mEngineConfig.mbShowControls; }
 	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
-	bool inline				IsProfileRenderingOn() const { return mbShowProfiler; }
+	bool inline				IsProfileRenderingOn() const { return mEngineConfig.mbShowProfiler; }
 	bool inline				IsLoading() const { return mbLoading; }
 	std::pair<BufferID, BufferID> GetGeometryVertexAndIndexBuffers(EGeometry GeomEnum) const { return mBuiltinMeshes[GeomEnum].GetIABuffers(); }
-
+	
 	//----------------------------------------------------------------------------------------------------------------
 	// TOGGLES
 	//----------------------------------------------------------------------------------------------------------------
 	void		ToggleRenderingPath();	// Forward / Deferred
 	void		ToggleAmbientOcclusion();
-	void		ToggleBloom();
-	void inline	ToggleProfilerRendering() { mbShowProfiler = !mbShowProfiler; }
-	void inline	ToggleControlsTextRendering() { mbShowControls = !mbShowControls; }
+	void		ToggleBloom(); 
+	void inline	ToggleProfilerRendering() { mEngineConfig.mbShowProfiler = !mEngineConfig.mbShowProfiler; }
+	void inline	ToggleControlsTextRendering() { mEngineConfig.mbShowControls = !mEngineConfig.mbShowControls; }
 	void inline	TogglePause() { mbIsPaused = !mbIsPaused; }
 
 private:
@@ -202,14 +202,8 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	FrameStats			mFrameStats;
 	bool				mbIsPaused;
-	bool				mbShowProfiler;
-	bool				mbShowControls;
 
-	bool				mbUseDeferredRendering;	// todo read from sceneview???
-	bool				mbIsAmbientOcclusionOn;	// todo read from sceneview???
-	bool				mbIsBloomOn;
-	bool				mbDisplayRenderTargets;	// todo read from sceneview???
-	bool				mbRenderBoundingBoxes;
+	EngineConfig		mEngineConfig;
 
 	unsigned long long	mFrameCount;
 

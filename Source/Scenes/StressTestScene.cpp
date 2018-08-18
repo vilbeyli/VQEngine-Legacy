@@ -369,7 +369,7 @@ GameObject* StressTestScene::CreateRandomGameObject()
 
 	// GAME OBJECT
 	//
-	pObj->AddMesh(meshType);
+	pObj->AddMesh(meshType == EGeometry::FULLSCREENQUAD ? EGeometry::QUAD : meshType);
 	pObj->SetTransform(tf);
 	pObj->AddMaterial(pMat);
 	return pObj;

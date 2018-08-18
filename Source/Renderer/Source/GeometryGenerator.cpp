@@ -438,7 +438,7 @@ Mesh GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceC
 			//XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
 			//XMStoreFloat3(&vertex.normal, N);
 			XMVECTOR N = XMVectorSet(0, 1, 0, 1);
-			XMVECTOR ROT = XMQuaternionRotationRollPitchYaw(0.0f, XM_PI-theta, XM_PIDIV2-phi);
+			XMVECTOR ROT = XMQuaternionRotationRollPitchYaw(0.0f, -XM_PI-theta, XM_PIDIV2-phi);
 			N = XMVector3Rotate(N, ROT);
 
 			vertex.normal = N;

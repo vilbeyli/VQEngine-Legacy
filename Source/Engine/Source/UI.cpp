@@ -107,6 +107,7 @@ auto GetFPSColor = [](int FPS) -> LinearColor
 	else					return LinearColor::red;
 };
 
+// TODO: data drive these and call it a day.
 // Background constants
 constexpr float X_MARGIN_PX = 10.0f;    // leave 3px margin on the X-axis to cover
 constexpr float Y_OFFSET_PX = 24.0f;    // we offset Y equal to height of a letter to fit the background on text
@@ -149,7 +150,7 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 	const vec2  PX_POS_PROFILER_GPU   = vec2(X_PX_POS_PROFILER_GPU, Y_PX_POS_PROFILER_GPU);
 
 	const float X_PX_POS_FRAMESTATS = screenSizeInPixels.x() * X_NORMALIZED_POSITION_FRAME_STATS;
-	      float Y_PX_POS_FRAMESTATS = screenSizeInPixels.y() * Y_NORMALIZED_POSITION_FRAME_STATS;
+	const float Y_PX_POS_FRAMESTATS = screenSizeInPixels.y() * Y_NORMALIZED_POSITION_FRAME_STATS;
 	const vec2  PX_POS_FRAMESTATS   = vec2(X_PX_POS_FRAMESTATS, Y_PX_POS_FRAMESTATS);
 
 	const bool bSortStats = true;

@@ -34,7 +34,7 @@ bloom true 1.68
 
 directional sun 4.5   3   -5   15  2048 256 300 0.00000000001f
 
-camera 0.1 1500 75   -70 25 50  112 11 
+camera 0.1 1500 60   -70 25 50  112 11 
 camera 0.1 1500 75   0 50 -190  0 15 
 
 object begin

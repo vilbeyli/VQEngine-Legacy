@@ -422,24 +422,28 @@ void Scene::CalculateSceneBoundingBox()
 					const float z_mesh_local = pData[i].position.z();
 
 					// scene bounding box - world space
-					mins = vec3(
+					mins = vec3
+					(
 						std::min(x_mesh, mins.x()),
 						std::min(y_mesh, mins.y()),
 						std::min(z_mesh, mins.z())
 					);
-					maxs = vec3(
+					maxs = vec3
+					(
 						std::max(x_mesh, maxs.x()),
 						std::max(y_mesh, maxs.y()),
 						std::max(z_mesh, maxs.z())
 					);
 
 					// object bounding box - model space
-					mins_obj = vec3(
+					mins_obj = vec3
+					(
 						std::min(x_mesh_local, mins_obj.x()),
 						std::min(y_mesh_local, mins_obj.y()),
 						std::min(z_mesh_local, mins_obj.z())
 					);
-					maxs_obj = vec3(
+					maxs_obj = vec3
+					(
 						std::max(x_mesh_local, maxs_obj.x()),
 						std::max(y_mesh_local, maxs_obj.y()),
 						std::max(z_mesh_local, maxs_obj.z())

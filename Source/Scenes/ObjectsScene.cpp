@@ -69,7 +69,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 			m_room.floor->SetTransform(tf);
 
 			// Mesh
-			m_room.floor->AddMesh(EGeometry::CUBE);
+			m_room.floor->AddMesh(EGeometry::CYLINDER);
 
 			// Materials
 			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
@@ -167,7 +167,8 @@ void ObjectsScene::Load(SerializedScene& scene)
 				// 211 235 82  - lime
 				// 247 198 51  - turuncu/sari
 				// ---------------------------------
-				return vec3(
+				return vec3
+				(
 					std::pow(sRGB.x(), 2.2f),
 					std::pow(sRGB.y(), 2.2f),
 					std::pow(sRGB.z(), 2.2f)
@@ -191,7 +192,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 			pMat0->metalness = 0.9f;	// col(-x->+x) -> metalness [0.0f, 1.0f]
 
 			const float roughnessLowClamp = 0.07f;
-			pMat0->roughness = colStep * 1.2f < roughnessLowClamp ? roughnessLowClamp : colStep * 1.2f;
+			pMat0->roughness = colStep * 0.930f < roughnessLowClamp ? roughnessLowClamp : colStep * 0.930f;
 			//pMat0->roughness = (1.0f + roughnessLowClamp) - pMat0->roughness;	// row(-z->+z) -> roughness [roughnessLowClamp, 1.0f]
 
 

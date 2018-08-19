@@ -132,7 +132,7 @@ void Application::Run()
 			m_bAppWantsExit = true;
 		}
 		
-		ENGINE->UpdateAndRender();
+		ENGINE->SimulateAndRenderFrame();
 		const_cast<Input*>(ENGINE->INP())->PostUpdate();	// update previous state after frame;
 	}
 }

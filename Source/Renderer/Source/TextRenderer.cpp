@@ -45,7 +45,10 @@ static std::map<char, Character> sCharacters;
 bool TextRenderer::Initialize(Renderer* pRenderer)
 {
 	TextRenderer::pRenderer = pRenderer;	// set static pRenderer
-	TextRenderer::shaderText = pRenderer->AddShader("Text");
+	TextRenderer::shaderText = pRenderer->CreateShader(ShaderDesc
+	{
+		"Text", ShaderDesc::CreateStageDescsFromShaderName("Text", SHADER_STAGE_VS | SHADER_STAGE_PS)
+	});
 
 	FT_Error err; 
 

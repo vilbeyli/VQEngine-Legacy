@@ -189,6 +189,11 @@ namespace DirectoryUtil
 	}
 
 
+	std::string GetFileNameFromPath(const std::string& filePath)
+	{
+		return StrUtil::split(filePath.c_str(), '/').back();
+	}
+
 	std::string GetFileExtension(const std::string& filePath)
 	{
 		auto v = StrUtil::split(filePath, '.');

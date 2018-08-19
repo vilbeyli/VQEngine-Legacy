@@ -36,7 +36,7 @@ using GPU_ConstantBufferSlotIndex = int;
 using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
 
 //----------------------------------------------------------------------------------------------------------------
-// PRIMITIVE STRUCTS
+// SHADER DATA/RESOURCE INTERFACE STRUCTS
 //----------------------------------------------------------------------------------------------------------------
 struct CPUConstant
 {
@@ -64,7 +64,7 @@ private:
 };
 struct ConstantBuffer
 {	// GPU side constant buffer
-	EShaderType shdType;
+	EShaderStage shdType;
 	unsigned	bufferSlot;
 	ID3D11Buffer* data;
 	bool dirty;
@@ -72,13 +72,13 @@ struct ConstantBuffer
 struct ShaderTexture
 {
 	unsigned bufferSlot;
-	EShaderType shdType;
+	EShaderStage shdType;
 };
 struct ShaderSampler
 {
 	std::string name;
 	unsigned bufferSlot;
-	EShaderType shdType;
+	EShaderStage shdType;
 };
 struct InputLayout
 {
@@ -86,6 +86,46 @@ struct InputLayout
 	ELayoutFormat	format;
 };
 
+
+//----------------------------------------------------------------------
+// Note:
+//
+// If a ShaderMacro is added to the shader compilation after the shader 
+// is cached and the engine is configured to use the shader cache, the
+// engine will use the cached shader which will result in shaders not
+// being compiled with the given macro values/definitions.
+// 
+// To avoid this, do one of the following:
+//
+// - turn shader caching off from EngineSettings.ini
+// - delete the %AppData%\VQEngine\ShaderCache folder
+//----------------------------------------------------------------------
+struct ShaderMacro
+{
+	std::string name;
+	std::string value;
+};
+
+struct ShaderStageDesc
+{
+	std::string fileName;
+	std::vector<ShaderMacro> macros;
+};
+
+struct ShaderDesc
+{
+	using ShaderStageArr = std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT>;
+	static ShaderStageArr CreateStageDescsFromShaderName(const char* shaderName, unsigned flagStages);
+
+	std::string shaderName;
+	std::array<ShaderStageDesc, EShaderStage::COUNT> stages;
+};
+
+
+
+//----------------------------------------------------------------------------------------------------------------
+// SHADER CLASS
+//----------------------------------------------------------------------------------------------------------------
 class Shader
 {
 	friend class Renderer;
@@ -108,10 +148,10 @@ public:
 			ID3D10Blob* gs;
 			ID3D10Blob* ds;
 			ID3D10Blob* hs;
-			ID3D10Blob* cs;
 			ID3D10Blob* ps;
+			ID3D10Blob* cs;
 		};
-		ID3D10Blob* of[EShaderType::COUNT] = { nullptr };
+		ID3D10Blob* of[EShaderStage::COUNT] = { nullptr };
 	};
 	union ShaderReflections
 	{
@@ -121,10 +161,10 @@ public:
 			ID3D11ShaderReflection* gsRefl;
 			ID3D11ShaderReflection* dsRefl;
 			ID3D11ShaderReflection* hsRefl;
-			ID3D11ShaderReflection* csRefl;
 			ID3D11ShaderReflection* psRefl;
+			ID3D11ShaderReflection* csRefl;
 		};
-		ID3D11ShaderReflection* of[EShaderType::COUNT] = { nullptr };
+		ID3D11ShaderReflection* of[EShaderStage::COUNT] = { nullptr };
 	};
 	struct ConstantBufferLayout
 	{	// information used to create GPU/CPU constant buffers
@@ -132,7 +172,7 @@ public:
 		std::vector<D3D11_SHADER_VARIABLE_DESC>		variables;
 		std::vector<D3D11_SHADER_TYPE_DESC>			types;
 		unsigned									buffSize;
-		EShaderType									shdType;
+		EShaderStage								stage;
 		unsigned									bufSlot;
 	};
 
@@ -149,6 +189,8 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// MEMBER INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
+	Shader(const ShaderDesc& desc);
+
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
@@ -172,9 +214,14 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	// STATIC PRIVATE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
-	// Compiles shader from source file
+	// Compiles shader from source file with the given shader macros
 	//
-	static bool CompileFromSource(const std::string& pathToFile, const EShaderType& type, ID3D10Blob *& ref_pBob, std::string& errMsg);
+	static bool CompileFromSource(
+		const std::string& pathToFile
+		, const EShaderStage& type
+		, ID3D10Blob *& ref_pBob
+		, std::string& outErrMsg
+		, const std::vector<ShaderMacro>& macros);
 	
 	// Reads in cached binary from %APPDATA%/VQEngine/ShaderCache folder into ID3D10Blob 
 	//
@@ -186,15 +233,15 @@ private:
 
 	// example filePath: "rootPath/filename_vs.hlsl"
 	//                                      ^^----- shaderTypeString
-	static EShaderType	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
+	static EShaderStage	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
 
 	//----------------------------------------------------------------------------------------------------------------
 	// HELPER FUNCTIONS
 	//----------------------------------------------------------------------------------------------------------------
-	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, EShaderType type);
-	void CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths);
+	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, EShaderStage type);
+	void CompileShaders(ID3D11Device* device, const ShaderDesc& desc);
 	void SetReflections(const ShaderBlobs& blobs);
-	void CreateShader(ID3D11Device* pDevice, EShaderType type, void* pBuffer, const size_t szShaderBinary);
+	void CreateShader(ID3D11Device* pDevice, EShaderStage type, void* pBuffer, const size_t szShaderBinary);
 	void SetConstantBuffers(ID3D11Device* device);
 	void CheckSignatures();
 	
@@ -212,15 +259,15 @@ private:
 	std::vector<ConstantBuffer>			m_cBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx
 	ShaderID							m_id;
 
-	ID3D11VertexShader*					m_vertexShader;
-	ID3D11PixelShader*					m_pixelShader;
-	ID3D11GeometryShader*				m_geometryShader;
-	ID3D11HullShader*					m_hullShader;
-	ID3D11DomainShader*					m_domainShader;
-	ID3D11ComputeShader*				m_computeShader;
+	ID3D11VertexShader*					m_vertexShader   = nullptr;
+	ID3D11PixelShader*					m_pixelShader    = nullptr;
+	ID3D11GeometryShader*				m_geometryShader = nullptr;
+	ID3D11HullShader*					m_hullShader     = nullptr;
+	ID3D11DomainShader*					m_domainShader   = nullptr;
+	ID3D11ComputeShader*				m_computeShader  = nullptr;
 	ShaderReflections					m_shaderReflections;	// shader reflections, temporary?
 
-	ID3D11InputLayout*					m_layout;
+	ID3D11InputLayout*					m_layout = nullptr;
 
 	std::vector<ConstantBufferLayout>	m_CBLayouts;
 	std::vector<ConstantBufferMapping>	m_constants;

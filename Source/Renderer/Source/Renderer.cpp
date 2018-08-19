@@ -47,17 +47,18 @@
 std::vector<std::string> GetShaderPaths(const std::string& shaderFileName)
 {	// try to open each file
 	const std::string path = Renderer::sShaderRoot + shaderFileName;
-	const std::string paths[] = {
+	const std::string paths[] = 
+	{
 		path + "_vs.hlsl",
 		path + "_gs.hlsl",
 		path + "_ds.hlsl",
 		path + "_hs.hlsl",
-		path + "_cs.hlsl",
 		path + "_ps.hlsl",
+		path + "_cs.hlsl",
 	};
 
 	std::vector<std::string> existingPaths;
-	for (size_t i = 0; i < EShaderType::COUNT; i++)
+	for (size_t i = 0; i < EShaderStage::COUNT; i++)
 	{
 		std::ifstream file(paths[i]);
 		if (file.is_open())
@@ -587,36 +588,14 @@ const PipelineState& Renderer::GetState() const
 	return mPipelineState;
 }
 
-ShaderID Renderer::AddShader(const std::string&	shaderFileName)
+ShaderID Renderer::CreateShader(const ShaderDesc& shaderDesc)
 {
-	const std::vector<std::string> paths = GetShaderPaths(shaderFileName);
+	Shader* shader = new Shader(shaderDesc.shaderName);
+	shader->CompileShaders(m_device, shaderDesc);
 
-	Shader* shader = new Shader(shaderFileName);
-	shader->CompileShaders(m_device, paths);
-	mShaders.push_back(shader);
-
-	shader->m_id = (static_cast<int>(mShaders.size()) - 1);
-	return shader->ID();
-}
-
-ShaderID Renderer::AddShader(
-	  const std::string&			  shaderName
-	, const std::vector<std::string>& shaderFileNames
-	, const std::vector<EShaderType>& shaderTypes
-)
-{
-	std::vector<std::string> paths;
-	for (const auto& shaderFileName : shaderFileNames)
-	{
-		paths.push_back(std::string(sShaderRoot + shaderFileName + ".hlsl"));
-	}
-
-	Shader* shader = new Shader(shaderName);
-	shader->CompileShaders(m_device, paths);
 	mShaders.push_back(shader);
 	shader->m_id = (static_cast<int>(mShaders.size()) - 1);
 	return shader->ID();
-	return ShaderID();
 }
 
 RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors)
@@ -1366,22 +1345,22 @@ void Renderer::SetShader(ShaderID id)
 				//(m_deviceContext->*SetShaderResources[tex.shdType])(tex.bufferSlot, 1, nullSRV);
 				switch (tex.shdType)
 				{
-				case EShaderType::VS:
+				case EShaderStage::VS:
 					m_deviceContext->VSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case EShaderType::GS:
+				case EShaderStage::GS:
 					m_deviceContext->GSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case EShaderType::HS:
+				case EShaderStage::HS:
 					m_deviceContext->HSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case EShaderType::DS:
+				case EShaderStage::DS:
 					m_deviceContext->DSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case EShaderType::PS:
+				case EShaderStage::PS:
 					m_deviceContext->PSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
-				case EShaderType::CS:
+				case EShaderStage::CS:
 					m_deviceContext->CSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 					break;
 				default:

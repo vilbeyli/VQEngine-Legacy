@@ -86,11 +86,8 @@ public:
 	// RESOURCE INITIALIZATION
 	//----------------------------------------------------------------------------------------------------------------
 	// --- SHADER
-	ShaderID				AddShader(const std::string& shaderFileName);
-	ShaderID				AddShader(	const std::string&				shaderName, 
-										const std::vector<std::string>&	shaderFileNames, 
-										const std::vector<EShaderType>&	shaderTypes
-							);
+	ShaderID				CreateShader(const ShaderDesc& shaderDesc);
+
 	// --- TEXTURE
 	//						example params:			"bricks_d.png", "Data/Textures/"
 	TextureID				CreateTextureFromFile(	const std::string&	texFileName, const std::string&	fileRoot = sTextureRoot);

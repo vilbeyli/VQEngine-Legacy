@@ -27,11 +27,28 @@
 #include <sstream>
 #include <unordered_map>
 
-
 // CONSTANTS
 // ============================================================================
-constexpr const char* SHADER_COMPILER_VERSIONS[]	= { "vs_5_0", "gs_5_0", "", "", "", "ps_5_0" };
-constexpr const char* SHADER_ENTRY_POINTS[]			= { "VSMain", "GSMain", "DSMain", "HSMain", "CSMain", "PSMain" };
+
+static const std::unordered_map<EShaderStage, const char*> SHADER_COMPILER_VERSION_LOOKUP = 
+{
+	{ EShaderStage::VS, "vs_5_0" },
+	{ EShaderStage::GS, "gs_5_0" },
+	{ EShaderStage::DS, "ds_5_0" },
+	{ EShaderStage::HS, "hs_5_0" },
+	{ EShaderStage::PS, "ps_5_0" },
+	{ EShaderStage::CS, "cs_5_0" },
+};
+static const std::unordered_map<EShaderStage, const char*> SHADER_ENTRY_POINT_LOOKUP =
+{
+	{ EShaderStage::VS, "VSMain" },
+	{ EShaderStage::GS, "GSMain" },
+	{ EShaderStage::DS, "DSMain" },
+	{ EShaderStage::HS, "HSMain" },
+	{ EShaderStage::PS, "PSMain" },
+	{ EShaderStage::CS, "CSMain" },
+};
+
 ID3DInclude* const SHADER_INCLUDE_HANDLER = D3D_COMPILE_STANDARD_FILE_INCLUDE;		// use default include handler for using #include in shader files
 
 #if defined( _DEBUG ) || defined ( FORCE_DEBUG )
@@ -69,22 +86,25 @@ std::string GetCompileError(ID3D10Blob*& errorMessage, const std::string& shdPat
 #define CALLING_CONVENTION __stdcall
 #endif
 
-static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderConstants[EShaderType::COUNT])
-(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = {
+static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderConstants[EShaderStage::COUNT])
+(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = 
+{
 	&ID3D11DeviceContext::VSSetConstantBuffers,
 	&ID3D11DeviceContext::GSSetConstantBuffers,
 	&ID3D11DeviceContext::DSSetConstantBuffers,
 	&ID3D11DeviceContext::HSSetConstantBuffers,
+	&ID3D11DeviceContext::PSSetConstantBuffers, 
 	&ID3D11DeviceContext::CSSetConstantBuffers,
-	&ID3D11DeviceContext::PSSetConstantBuffers };
+};
 
-static std::unordered_map <std::string, EShaderType > s_ShaderTypeStrLookup = {
-	{"vs", EShaderType::VS},
-	{"gs", EShaderType::GS},
-	{"ds", EShaderType::DS},
-	{"hs", EShaderType::HS},
-	{"cs", EShaderType::CS},
-	{"ps", EShaderType::PS}
+static std::unordered_map <std::string, EShaderStage > s_ShaderTypeStrLookup = 
+{
+	{"vs", EShaderStage::VS},
+	{"gs", EShaderStage::GS},
+	{"ds", EShaderStage::DS},
+	{"hs", EShaderStage::HS},
+	{"cs", EShaderStage::CS},
+	{"ps", EShaderStage::PS}
 };
 // ============================================================================
 
@@ -109,30 +129,78 @@ void Shader::LoadShaders(Renderer* pRenderer)
 	timer.Start();
 
 	Log::Info("------------------------ COMPILING SHADERS ------------------------");
-	const std::vector<EShaderType> VS_PS  = { EShaderType::VS, EShaderType::PS };
-	const std::vector<std::string> TextureCoordinates = { "MVPTransformationWithUVs_vs", "TextureCoordinates_ps" };
-	const std::vector<std::string> BilateralBlurShaders	= { "FullscreenQuad_vs", "BilateralBlur_ps" };		// compute?
-	const std::vector<std::string> GaussianBlur4x4Shaders= { "FullscreenQuad_vs", "GaussianBlur4x4_ps" };	// compute?
-	const std::vector<std::string> ZPrePassShaders	= { "Deferred_Geometry_vs", "ViewSpaceNormalsAndPositions_ps" };
-	const std::vector<std::string> EQSkybox = {"Skybox_vs", "SkyboxEquirectangular_ps"};
+	const std::vector<EShaders> shaderEnumsInOrder = 
+	{
+		EShaders::FORWARD_PHONG				,
+		EShaders::UNLIT						,
+		EShaders::TEXTURE_COORDINATES		,
+		EShaders::NORMAL					,
+		EShaders::TANGENT					,
+		EShaders::BINORMAL					,
+		EShaders::LINE						,
+		EShaders::TBN						,
+		EShaders::DEBUG						,
+		EShaders::SKYBOX					,
+		EShaders::SKYBOX_EQUIRECTANGULAR	,
+		EShaders::FORWARD_BRDF				,
+		EShaders::SHADOWMAP_DEPTH			,
+		EShaders::BILATERAL_BLUR			,
+		EShaders::GAUSSIAN_BLUR_4x4			,
+		EShaders::Z_PREPRASS				
+	};
 
-	// todo: limit enumerations? probably better to store just some ids...
-	s_shaders[EShaders::FORWARD_PHONG			]	= pRenderer->AddShader("Forward_Phong"			);
-	s_shaders[EShaders::UNLIT					]	= pRenderer->AddShader("UnlitTextureColor"		);
-	s_shaders[EShaders::TEXTURE_COORDINATES		]	= pRenderer->AddShader("TextureCoordinates"		, TextureCoordinates, VS_PS);
-	s_shaders[EShaders::NORMAL					]	= pRenderer->AddShader("Normal"					);
-	s_shaders[EShaders::TANGENT					]	= pRenderer->AddShader("Tangent"				);
-	s_shaders[EShaders::BINORMAL				]	= pRenderer->AddShader("Binormal"				);
-	s_shaders[EShaders::LINE					]	= pRenderer->AddShader("Line"					);
-	s_shaders[EShaders::TBN						]	= pRenderer->AddShader("TNB"					);
-	s_shaders[EShaders::DEBUG					]	= pRenderer->AddShader("Debug"					);
-	s_shaders[EShaders::SKYBOX					]	= pRenderer->AddShader("Skybox"					);
-	s_shaders[EShaders::SKYBOX_EQUIRECTANGULAR	]	= pRenderer->AddShader("SkyboxEquirectangular"	, EQSkybox, VS_PS);
-	s_shaders[EShaders::FORWARD_BRDF			]	= pRenderer->AddShader("Forward_BRDF"			);
-	s_shaders[EShaders::SHADOWMAP_DEPTH			]	= pRenderer->AddShader("DepthShader"			);
-	s_shaders[EShaders::BILATERAL_BLUR			]	= pRenderer->AddShader("BilateralBlur"			, BilateralBlurShaders		, VS_PS);
-	s_shaders[EShaders::GAUSSIAN_BLUR_4x4		]	= pRenderer->AddShader("GaussianBlur4x4"		, GaussianBlur4x4Shaders	, VS_PS);
-	s_shaders[EShaders::Z_PREPRASS				]	= pRenderer->AddShader("ZPrePass"				, ZPrePassShaders			, VS_PS);
+	constexpr unsigned VS_PS = SHADER_STAGE_VS | SHADER_STAGE_PS;
+	const std::vector<ShaderDesc> shaderDescs =
+	{
+		ShaderDesc{ "PhongLighting<forward>",
+		{
+			ShaderStageDesc{ "Forward_Phong_vs.hlsl", {} },
+			ShaderStageDesc{ "Forward_Phong_ps.hlsl", {} }
+		}},
+		ShaderDesc{ "UnlitTextureColor" , ShaderDesc::CreateStageDescsFromShaderName("UnlitTextureColor", VS_PS) },
+		ShaderDesc{ "TextureCoordinates", 
+		{
+			ShaderStageDesc{"MVPTransformationWithUVs_vs.hlsl", {} },
+			ShaderStageDesc{"TextureCoordinates_ps.hlsl"      , {} }
+		}},
+		ShaderDesc{ "Normal"            , ShaderDesc::CreateStageDescsFromShaderName("Normal", VS_PS)},
+		ShaderDesc{ "Tangent"           , ShaderDesc::CreateStageDescsFromShaderName("Tangent", VS_PS)},
+		ShaderDesc{ "Binormal"          , ShaderDesc::CreateStageDescsFromShaderName("Binormal", VS_PS)},
+		ShaderDesc{ "Line"              , ShaderDesc::CreateStageDescsFromShaderName("Line", VS_PS)},
+		ShaderDesc{ "TNB"               , ShaderDesc::CreateStageDescsFromShaderName("TNB", VS_PS)},
+		ShaderDesc{ "Debug"             , ShaderDesc::CreateStageDescsFromShaderName("Debug", VS_PS)},
+		ShaderDesc{ "Skybox"            , ShaderDesc::CreateStageDescsFromShaderName("Skybox", VS_PS)},
+		ShaderDesc{ "SkyboxEquirectangular",
+		{
+			ShaderStageDesc{"Skybox_vs.hlsl"               , {} },
+			ShaderStageDesc{"SkyboxEquirectangular_ps.hlsl", {} }
+		}},
+		ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Skybox", VS_PS)},
+		ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
+		ShaderDesc{ "BilateralBlur",
+		{
+			ShaderStageDesc{"FullscreenQuad_vs.hlsl", {} },
+			ShaderStageDesc{"BilateralBlur_ps.hlsl" , {} }
+		}},
+		ShaderDesc{ "GaussianBlur4x4",
+		{
+			ShaderStageDesc{"FullscreenQuad_vs.hlsl" , {} },
+			ShaderStageDesc{"GaussianBlur4x4_ps.hlsl", {} }
+		}},
+		ShaderDesc{ "ZPrePass",
+		{
+			ShaderStageDesc{"Deferred_Geometry_vs.hlsl"            , {} },
+			ShaderStageDesc{"ViewSpaceNormalsAndPositions_ps.hlsl" , {} }
+		}},
+	};
+
+	assert(shaderEnumsInOrder.size() == shaderDescs.size());
+	
+	// todo: do not depend on array index, use a lookup, remove s_shaders[]
+	for (int i = 0; i < shaderEnumsInOrder.size(); ++i)
+	{
+		s_shaders[shaderEnumsInOrder[i]] = pRenderer->CreateShader(shaderDescs[i]);
+	}
 
 	timer.Stop();
 	Log::Info("---------------------- COMPILING SHADERS DONE IN %.2fs ---------------------", timer.DeltaTime());
@@ -153,15 +221,15 @@ std::stack<std::string> Shader::UnloadShaders(Renderer* pRenderer)
 }
 
 Shader::Shader(const std::string& shaderFileName)
-	:
-	m_vertexShader(nullptr),
-	m_pixelShader(nullptr),
-	m_geometryShader(nullptr),
-	m_layout(nullptr),
-	m_name(shaderFileName),
-	m_id(-1)
+	: m_name(shaderFileName)
+	, m_id(-1)
 {}
 
+
+Shader::Shader(const ShaderDesc& desc)
+	: m_name(desc.shaderName)
+	, m_id(-1)
+{}
 
 Shader::~Shader(void)
 {
@@ -205,7 +273,7 @@ Shader::~Shader(void)
 		m_geometryShader = nullptr;
 	}
 
-	for (unsigned type = EShaderType::VS; type < EShaderType::COUNT; ++type)
+	for (unsigned type = EShaderStage::VS; type < EShaderStage::COUNT; ++type)
 	{
 		if (m_shaderReflections.of[type])
 		{
@@ -215,25 +283,25 @@ Shader::~Shader(void)
 	}
 }
 
-void Shader::CreateShader(ID3D11Device* pDevice, EShaderType type, void* pBuffer, const size_t szShaderBinary)
+void Shader::CreateShader(ID3D11Device* pDevice, EShaderStage type, void* pBuffer, const size_t szShaderBinary)
 {
 	HRESULT result = {};
 	const char* msg = "";
 	switch (type)
 	{
-	case EShaderType::VS:
+	case EShaderStage::VS:
 		if (FAILED(pDevice->CreateVertexShader(pBuffer, szShaderBinary, NULL, &m_vertexShader)))
 		{
 			msg = "Error creating vertex shader program";
 		}
 		break;
-	case EShaderType::PS:
+	case EShaderStage::PS:
 		if (FAILED(pDevice->CreatePixelShader(pBuffer, szShaderBinary, NULL, &m_pixelShader)))
 		{
 			msg = "Error creating pixel shader program";
 		}
 		break;
-	case EShaderType::GS:
+	case EShaderStage::GS:
 		if (FAILED(pDevice->CreateGeometryShader(pBuffer, szShaderBinary, NULL, &m_geometryShader)))
 		{
 			msg = "Error creating pixel geometry program";
@@ -302,7 +370,8 @@ bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
 	return DirectoryUtil::IsFileNewer(sourcePath, cachePath) || AreIncludesDirty(sourcePath);
 }
 
-void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>& filePaths)
+
+void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 {
 	HRESULT result;
 	ShaderBlobs blobs;
@@ -310,18 +379,35 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 
 	PerfTimer timer;
 	timer.Start();
+
 	
+
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
-	for (const auto& sourceFilePath : filePaths)
-	{	
-		const EShaderType type = GetShaderTypeFromSourceFilePath(sourceFilePath);
+	for (const ShaderStageDesc& stage : desc.stages)
+	{
+		if (stage.fileName.empty())
+			continue;
+
+		// stage.macros
+		const std::string sourceFilePath = std::string(Renderer::sShaderRoot + stage.fileName);
 		
+		const EShaderStage type = GetShaderTypeFromSourceFilePath(sourceFilePath);
+
 		// USE SHADER CACHE
 		//
-		const std::string cacheFileName = DirectoryUtil::GetFileNameWithoutExtension(sourceFilePath) + ".hlsl.bin";
+		const std::string cacheFileName = DirectoryUtil::GetFileNameFromPath(sourceFilePath) + ".bin";
 		const std::string cacheFilePath = s_shaderCacheDirectory + "\\" + cacheFileName;
-		const bool bUseCachedShaders = DirectoryUtil::FileExists(cacheFilePath) && !IsCacheDirty(sourceFilePath, cacheFilePath);
+		const bool bUseCachedShaders = 
+			DirectoryUtil::FileExists(cacheFilePath) 
+			&& !IsCacheDirty(sourceFilePath, cacheFilePath)
+			&& stage.macros.empty();
+		//  ^^^^^^^^^^^^^^^^^^^^^^^
+		// Currently there's no way to tell if macro value has changed since the caching.
+		// Hence, we exclude the cached shader usage for shaders with preprocessor defines.
+		//
+		// TODO: maybe hash the shaders based on file name + hashes preprocessor defines 
+		//---------------------------------------------------------------------------------
 
 		if (bUseCachedShaders)
 		{
@@ -331,14 +417,20 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 		{
 			std::string errMsg;
 			ID3D10Blob* pBlob;
-			if (CompileFromSource(sourceFilePath, type, pBlob, errMsg))
+			if (CompileFromSource(sourceFilePath, type, pBlob, errMsg, stage.macros))
 			{
 				blobs.of[type] = pBlob;
-				CacheShaderBinary(cacheFilePath, blobs.of[type]);
+
+				// We also create cached binaries only for shaders with no preprocessor defines.
+				if (stage.macros.empty())
+				{
+					CacheShaderBinary(cacheFilePath, blobs.of[type]);
+				}
 			}
 			else
 			{
 				Log::Error(errMsg);
+				assert(false);
 				continue;
 			}
 		}
@@ -372,7 +464,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 	{
 		D3D11_SIGNATURE_PARAMETER_DESC paramDesc;
 		m_shaderReflections.vsRefl->GetInputParameterDesc(i, &paramDesc);
-		
+
 		// fill out input element desc
 		D3D11_INPUT_ELEMENT_DESC elementDesc;
 		elementDesc.SemanticName = paramDesc.SemanticName;
@@ -408,6 +500,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
 		}
 
+
 		//save element desc
 		inputLayout[i] = elementDesc;
 	}
@@ -434,7 +527,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 	// CONSTANT BUFFERS 
 	//---------------------------------------------------------------------------
 	SetConstantBuffers(device);
-	
+
 
 	// TEXTURES & SAMPLERS
 	//---------------------------------------------------------------------------
@@ -452,7 +545,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 			if (shdInpDesc.Type == D3D_SIT_SAMPLER)
 			{
 				ShaderSampler smp;
-				smp.shdType = EShaderType::PS;
+				smp.shdType = EShaderStage::PS;
 				smp.bufferSlot = smpSlot++;
 				m_samplers.push_back(smp);
 				mShaderSamplerLookup[shdInpDesc.Name] = static_cast<int>(m_samplers.size() - 1);
@@ -460,7 +553,7 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 			else if (shdInpDesc.Type == D3D_SIT_TEXTURE)
 			{
 				ShaderTexture tex;
-				tex.shdType = EShaderType::PS;
+				tex.shdType = EShaderStage::PS;
 				tex.bufferSlot = texSlot++;
 				m_textures.push_back(tex);
 				mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(m_textures.size() - 1);
@@ -469,16 +562,16 @@ void Shader::CompileShaders(ID3D11Device* device, const std::vector<std::string>
 	}
 
 	// release blobs
-	for (unsigned type = EShaderType::VS; type < EShaderType::COUNT; ++type)
+	for (unsigned type = EShaderStage::VS; type < EShaderStage::COUNT; ++type)
 	{
-		if (blobs.of[type]) 
+		if (blobs.of[type])
 			blobs.of[type]->Release();
 	}
 }
 
 void Shader::SetReflections(const ShaderBlobs& blobs)
 {
-	for(unsigned type = EShaderType::VS; type < EShaderType::COUNT; ++type)
+	for(unsigned type = EShaderStage::VS; type < EShaderStage::COUNT; ++type)
 	{
 		if (blobs.of[type])
 		{
@@ -555,7 +648,7 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 
 	// OBTAIN CBUFFER LAYOUT INFORMATION
 	//---------------------------------------------------------------------------------------
-	for (EShaderType type = EShaderType::VS; type < EShaderType::COUNT; type = (EShaderType)(type + 1))
+	for (EShaderStage type = EShaderStage::VS; type < EShaderStage::COUNT; type = (EShaderStage)(type + 1))
 	{
 		if (m_shaderReflections.of[type])
 		{
@@ -613,23 +706,32 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 			assert(false);
 		}
 		cBuffer.dirty = true;
-		cBuffer.shdType = cbLayout.shdType;
+		cBuffer.shdType = cbLayout.stage;
 		cBuffer.bufferSlot = cbLayout.bufSlot;
 		m_cBuffers.push_back(cBuffer);
 	}
 }
 
-bool Shader::CompileFromSource(const std::string& pathToFile, const EShaderType& type, ID3D10Blob *& ref_pBob, std::string& errMsg)
+bool Shader::CompileFromSource(const std::string& pathToFile, const EShaderStage& type, ID3D10Blob *& ref_pBob, std::string& errMsg, const std::vector<ShaderMacro>& macros)
 {
 	const StrUtil::UnicodeString Path = pathToFile;
 	const WCHAR* PathStr = Path.GetUnicodePtr();
 	ID3D10Blob* errorMessage = nullptr;
+
+	int i = 0;
+	std::vector<D3D10_SHADER_MACRO> d3dMacros(macros.size() + 1);
+	std::for_each(RANGE(macros), [&](const ShaderMacro& macro)
+	{
+		d3dMacros[i++] = D3D10_SHADER_MACRO({ macro.name.c_str(), macro.value.c_str() });
+	});
+	d3dMacros[i] = { NULL, NULL };
+
 	if (FAILED(D3DCompileFromFile(
 		PathStr,
-		NULL,
+		d3dMacros.data(),
 		SHADER_INCLUDE_HANDLER,
-		SHADER_ENTRY_POINTS[type],
-		SHADER_COMPILER_VERSIONS[type],
+		SHADER_ENTRY_POINT_LOOKUP.at(type),
+		SHADER_COMPILER_VERSION_LOOKUP.at(type),
 		SHADER_COMPILE_FLAGS,
 		0,
 		&ref_pBob,
@@ -669,7 +771,7 @@ void Shader::CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blo
 	cache.close();
 }
 
-EShaderType Shader::GetShaderTypeFromSourceFilePath(const std::string & shaderFilePath)
+EShaderStage Shader::GetShaderTypeFromSourceFilePath(const std::string & shaderFilePath)
 {
 	const std::string sourceFileName = DirectoryUtil::GetFileNameWithoutExtension(shaderFilePath);
 	const std::string shaderTypeStr = { *(sourceFileName.rbegin() + 1), *sourceFileName.rbegin() };
@@ -691,7 +793,7 @@ void Shader::LogConstantBufferLayouts() const
 	Log::Info(std::string(inputTable));
 }
 
-void Shader::RegisterConstantBufferLayout(ID3D11ShaderReflection* sRefl, EShaderType type)
+void Shader::RegisterConstantBufferLayout(ID3D11ShaderReflection* sRefl, EShaderStage type)
 {
 	D3D11_SHADER_DESC desc;
 	sRefl->GetDesc(&desc);
@@ -721,7 +823,7 @@ void Shader::RegisterConstantBufferLayout(ID3D11ShaderReflection* sRefl, EShader
 			// accumulate buffer size
 			bufferLayout.buffSize += varDesc.Size;
 		}
-		bufferLayout.shdType = type;
+		bufferLayout.stage = type;
 		bufferLayout.bufSlot = bufSlot;
 		++bufSlot;
 		m_CBLayouts.push_back(bufferLayout);
@@ -830,4 +932,36 @@ void CPUConstant::CleanUp()
 			s_constants[i]._data = nullptr;
 		}
 	}
+}
+
+std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT> ShaderDesc::CreateStageDescsFromShaderName(const char* pShaderName, unsigned flagStages)
+{
+	const std::string shaderName = pShaderName;
+	std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT> descs;
+	int idx = 0;
+	if (flagStages & SHADER_STAGE_VS)
+	{
+		descs[idx++] = ShaderStageDesc{ shaderName + "_vs.hlsl", {} };
+	}
+	if (flagStages & SHADER_STAGE_GS)
+	{
+		descs[idx++] = ShaderStageDesc{ shaderName + "_gs.hlsl", {} };
+	}
+	if (flagStages & SHADER_STAGE_DS)
+	{
+		descs[idx++] = ShaderStageDesc{ shaderName + "_ds.hlsl", {} };
+	}
+	if (flagStages & SHADER_STAGE_HS)
+	{
+		descs[idx++] = ShaderStageDesc{ shaderName + "_hs.hlsl", {} };
+	}
+	if (flagStages & SHADER_STAGE_PS)
+	{
+		descs[idx++] = ShaderStageDesc{ shaderName + "_ps.hlsl", {} };
+	}
+	if (flagStages & SHADER_STAGE_CS)
+	{
+		descs[idx++] = ShaderStageDesc{ shaderName + "_cs.hlsl", {} };
+	}
+	return descs;
 }

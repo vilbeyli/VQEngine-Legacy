@@ -78,6 +78,7 @@ namespace DirectoryUtil
 
 	std::string	GetSpecialFolderPath(ESpecialFolder folder);
 	std::string	GetFileNameWithoutExtension(const std::string&);
+	std::string	GetFileNameFromPath(const std::string& filePath);
 	std::string GetFileExtension(const std::string& filePath);
 	bool		FileExists(const std::string& pathToFile);
 

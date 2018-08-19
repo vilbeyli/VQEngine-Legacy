@@ -182,20 +182,6 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	constexpr const EImageFormat HDR_Format = RGBA16F;
 	constexpr const EImageFormat LDR_Format = RGBA8UN;
 
-	const std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 },
-	};
-	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
-
-	const std::vector<std::string> BlurShaders = { "FullscreenQuad_vs", "Blur_ps" };	// compute?
-	const std::vector<std::string> BloomShaders = { "FullscreenQuad_vs", "Bloom_ps" };
-	const std::vector<std::string> CombineShaders = { "FullscreenQuad_vs", "BloomCombine_ps" };
-	const std::vector<std::string> TonemapShaders = { "FullscreenQuad_vs", "Tonemapping_ps" };
-
-
 	const EImageFormat imageFormat = _settings.HDREnabled ? HDR_Format : LDR_Format;
 
 	RenderTargetDesc rtDesc = {};
@@ -214,9 +200,25 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_bloomPass._blurPingPong[0] = pRenderer->AddRenderTarget(rtDesc);
 	this->_bloomPass._blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc);
 
-	this->_bloomPass._bloomFilterShader = pRenderer->AddShader("Bloom", BloomShaders, VS_PS);
-	this->_bloomPass._blurShader = pRenderer->AddShader("Blur", BlurShaders, VS_PS);
-	this->_bloomPass._bloomCombineShader = pRenderer->AddShader("BloomCombine", CombineShaders, VS_PS);
+	const char* pFSQ_VS = "FullScreenquad_vs.hlsl";
+	const ShaderDesc bloomPipelineShaders[] = 
+	{
+		ShaderDesc{"Bloom", 
+			ShaderStageDesc{pFSQ_VS   , {} },
+			ShaderStageDesc{"Bloom_ps.hlsl", {} },
+		},
+		ShaderDesc{"Blur",
+			ShaderStageDesc{pFSQ_VS  , {} },
+			ShaderStageDesc{"Blur_ps.hlsl", {} },
+		},
+		ShaderDesc{"BloomCombine",
+			ShaderStageDesc{pFSQ_VS          , {} },
+			ShaderStageDesc{"BloomCombine_ps.hlsl", {} },
+		},
+	};
+	this->_bloomPass._bloomFilterShader  = pRenderer->CreateShader(bloomPipelineShaders[0]);
+	this->_bloomPass._blurShader		 = pRenderer->CreateShader(bloomPipelineShaders[1]);
+	this->_bloomPass._bloomCombineShader = pRenderer->CreateShader(bloomPipelineShaders[2]);
 
 	D3D11_SAMPLER_DESC blurSamplerDesc = {};
 	blurSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -227,7 +229,12 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	
 	// Tonemapping
 	this->_tonemappingPass._finalRenderTarget = pRenderer->GetDefaultRenderTarget();
-	this->_tonemappingPass._toneMappingShader = pRenderer->AddShader("Tonemapping", TonemapShaders, VS_PS);
+
+	const ShaderDesc tonemappingShaderDesc = ShaderDesc{"Tonemapping",
+		ShaderStageDesc{ pFSQ_VS         , {} },
+		ShaderStageDesc{ "Tonemapping_ps.hlsl", {} }
+	};
+	this->_tonemappingPass._toneMappingShader = pRenderer->CreateShader(tonemappingShaderDesc);
 
 	// World Render Target
 	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc);
@@ -330,24 +337,56 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 
 void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 {
-	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
+	//const ShaderMacro testMacro = { "TEST_DEFINE", "1" };
 
-	const std::vector<std::string> Deferred_AmbientLight		= { "deferred_rendering_vs", "deferred_brdf_ambient_ps" };
-	const std::vector<std::string> Deferred_AmbientIBL			= { "deferred_rendering_vs", "deferred_brdf_ambientIBL_ps" };
-	const std::vector<std::string> DeferredBRDF_LightingFSQ		= { "deferred_rendering_vs", "deferred_brdf_lighting_ps" };
-	const std::vector<std::string> DeferredPhong_LightingFSQ	= { "deferred_rendering_vs", "deferred_phong_lighting_ps" };
-
-	const std::vector<std::string> DeferredBRDF_PointLight		= { "MVPTransformationWithUVs_vs", "deferred_brdf_pointLight_ps" };
-	const std::vector<std::string> DeferredBRDF_SpotLight		= { "MVPTransformationWithUVs_vs", "deferred_brdf_spotLight_ps" };	// render cone?
+	// TODO: reduce the code redundancy
+	const char* pFSQ_VS = "FullScreenQuad_vs.hlsl";
+	const char* pLight_VS = "MVPTransformationWithUVs_vs.hlsl";
+	const ShaderDesc geomShaderDesc = { "GBufferPass", 
+	{
+		ShaderStageDesc{ "Deferred_Geometry_vs.hlsl", {} },
+		ShaderStageDesc{ "Deferred_Geometry_ps.hlsl", {} }
+	}};
+	const ShaderDesc ambientShaderDesc = { "Deferred_Ambient",
+	{
+		ShaderStageDesc{ pFSQ_VS, {} },
+		ShaderStageDesc{ "Deferred_Geometry_ps.hlsl", {} }
+	}};
+	const ShaderDesc ambientIBLShaderDesc = { "Deferred_AmbientIBL",
+	{
+		ShaderStageDesc{ pFSQ_VS, {} },
+		ShaderStageDesc{ "deferred_brdf_ambientIBL_ps.hlsl", {} }
+	}};
+	const ShaderDesc BRDFLightingShaderDesc = { "Deferred_BRDF_Lighting",
+	{
+		ShaderStageDesc{ pFSQ_VS, {} },
+		ShaderStageDesc{ "deferred_brdf_lighting_ps.hlsl", {} }
+	}};
+	const ShaderDesc phongLighintShaderDesc = { "Deferred_Phong_Lighting",
+	{
+		ShaderStageDesc{ pFSQ_VS, {} },
+		ShaderStageDesc{ "deferred_phong_lighting_ps.hlsl", {} }
+	}};
+	const ShaderDesc BRDF_PointLightShaderDesc = { "Deferred_BRDF_Point",
+	{
+		ShaderStageDesc{ pLight_VS, {} },
+		ShaderStageDesc{ "deferred_brdf_pointLight_ps.hlsl", {} }
+	}};
+	const ShaderDesc BRDF_SpotLightShaderDesc = { "Deferred_BRDF_Spot",
+	{
+		ShaderStageDesc{ pLight_VS, {} },
+		ShaderStageDesc{ "deferred_brdf_spotLight_ps.hlsl", {} }
+	}};
 
 	InitializeGBuffer(pRenderer);
-	_geometryShader		 = pRenderer->AddShader("Deferred_Geometry");
-	_ambientShader		 = pRenderer->AddShader("Deferred_Ambient", Deferred_AmbientLight, VS_PS);
-	_ambientIBLShader	 = pRenderer->AddShader("Deferred_AmbientIBL", Deferred_AmbientIBL, VS_PS);
-	_BRDFLightingShader  = pRenderer->AddShader("Deferred_BRDF_Lighting", DeferredBRDF_LightingFSQ, VS_PS);
-	_phongLightingShader = pRenderer->AddShader("Deferred_Phong_Lighting", DeferredPhong_LightingFSQ, VS_PS);
-	_spotLightShader	 = pRenderer->AddShader("Deferred_BRDF_Point", DeferredBRDF_PointLight, VS_PS);
-	_pointLightShader	 = pRenderer->AddShader("Deferred_BRDF_Spot", DeferredBRDF_SpotLight, VS_PS);
+
+	_geometryShader		 = pRenderer->CreateShader(geomShaderDesc);
+	_ambientShader		 = pRenderer->CreateShader(ambientShaderDesc);
+	_ambientIBLShader	 = pRenderer->CreateShader(ambientIBLShaderDesc);
+	_BRDFLightingShader  = pRenderer->CreateShader(BRDFLightingShaderDesc);
+	_phongLightingShader = pRenderer->CreateShader(phongLighintShaderDesc);
+	_spotLightShader	 = pRenderer->CreateShader(BRDF_PointLightShaderDesc);
+	_pointLightShader	 = pRenderer->CreateShader(BRDF_SpotLightShaderDesc);
 
 	// deferred geometry is accessed from elsewhere, needs to be globally defined
 	assert(EShaders::DEFERRED_GEOMETRY == _geometryShader);	// this assumption may break, make sure it doesn't...
@@ -594,9 +633,6 @@ constexpr size_t SSAO_SAMPLE_KERNEL_SIZE = 64;
 TextureID AmbientOcclusionPass::whiteTexture4x4 = -1;
 void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 {
-	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
-	const std::vector<std::string> AmbientOcclusionShaders = { "FullscreenQuad_vs", "SSAO_ps" };
-
 	// CREATE SAMPLE KERNEL
 	//--------------------------------------------------------------------
 	constexpr size_t NOISE_KERNEL_SIZE = 4;
@@ -607,7 +643,8 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 		// get a random direction in tangent space, Z-up.
 		// As the sample kernel will be oriented along the surface normal, 
 		// the resulting sample vectors will all end up in the hemisphere.
-		vec3 sample(
+		vec3 sample
+		(
 			RandF(-1, 1),
 			RandF(-1, 1),
 			RandF(0, 1)	// hemisphere normal direction (up)
@@ -630,7 +667,8 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	//--------------------------------------------------------------------
 	for (size_t i = 0; i < NOISE_KERNEL_SIZE * NOISE_KERNEL_SIZE; i++)
 	{	// create a square noise texture using random directions
-		vec3 noise(
+		vec3 noise
+		(
 			RandF(-1, 1),
 			RandF(-1, 1),
 			0 // noise rotates the kernel around z-axis
@@ -676,9 +714,17 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
 	rtDesc.format = imageFormat;
 
-	this->SSAOShader = pRenderer->AddShader("SSAO", AmbientOcclusionShaders, VS_PS);
 	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc);
 	this->blurRenderTarget		= pRenderer->AddRenderTarget(rtDesc);
+
+	// SHADER
+	//--------------------------------------------------------------------
+	const ShaderDesc ssaoShaderDesc = 
+	{	"SSAO_Shader",
+		ShaderStageDesc{ "FullscreenQuad_vs.hlsl", {} },
+		ShaderStageDesc{ "SSAO_ps.hlsl", {} },
+	};
+	this->SSAOShader = pRenderer->CreateShader(ssaoShaderDesc);
 #if SSAO_DEBUGGING
 	this->radius = 6.5f;
 	this->intensity = 1.0f;

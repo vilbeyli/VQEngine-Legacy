@@ -87,7 +87,7 @@ public:
 	void Exit();
 	
 	bool Load(VQEngine::ThreadPool* pThreadPool);
-	void UpdateAndRender();
+	void SimulateAndRenderFrame();
 
 	void SendLightData() const;
 	inline void Engine::Pause()  { mbIsPaused = true; }

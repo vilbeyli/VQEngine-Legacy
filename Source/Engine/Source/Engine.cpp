@@ -446,7 +446,7 @@ void Engine::Exit()
 // ====================================================================================
 // UPDATE FUNCTIONS
 // ====================================================================================
-void Engine::UpdateAndRender()
+void Engine::SimulateAndRenderFrame()
 {
 	const float dt = mpTimer->Tick();
 
@@ -490,6 +490,19 @@ void Engine::UpdateAndRender()
 		}
 		mpCPUProfiler->EndEntry();	// CPU
 		mpCPUProfiler->StateCheck();
+
+
+		// PRESENT THE FRAME
+		//
+		mpCPUProfiler->BeginEntry("Present");
+		mpRenderer->EndFrame();
+		mpCPUProfiler->EndEntry();
+
+
+
+		mpGPUProfiler->EndEntry();
+		mpGPUProfiler->EndProfile(mFrameCount);
+		++mFrameCount;
 
 #if LOAD_ASYNC
 	}
@@ -1071,21 +1084,8 @@ void Engine::Render()
 	RenderDebug(viewProj);
 	RenderUI();
 	//------------------------------------------------------------------------
-
-	// PRESENT THE FRAME
-	//
-	mpGPUProfiler->BeginEntry("Present");
-	mpCPUProfiler->BeginEntry("Present");
-	mpRenderer->EndFrame();
-	mpCPUProfiler->EndEntry();
-	mpGPUProfiler->EndEntry();
-
-
 	mpCPUProfiler->EndEntry();	// Render() call
 
-	mpGPUProfiler->EndEntry();
-	mpGPUProfiler->EndProfile(mFrameCount);
-	++mFrameCount;
 }
 
 void Engine::RenderDebug(const XMMATRIX& viewProj)

@@ -29,8 +29,8 @@
 //	&ID3D11DeviceContext::GSSetConstantBuffers,
 //	&ID3D11DeviceContext::DSSetConstantBuffers,
 //	&ID3D11DeviceContext::HSSetConstantBuffers,
+//	&ID3D11DeviceContext::PSSetConstantBuffers,
 //	&ID3D11DeviceContext::CSSetConstantBuffers,
-//	&ID3D11DeviceContext::PSSetConstantBuffers
 //};
 
 #ifdef _WIN64
@@ -38,15 +38,15 @@
 #else	// _WIN32
 #define CALLING_CONVENTION __stdcall
 #endif
-static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[6])
+static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[EShaderStage::COUNT])
 (UINT StartSlot, UINT NumViews, ID3D11ShaderResourceView *const *ppShaderResourceViews) =
 {
 	&ID3D11DeviceContext::VSSetShaderResources,
 	&ID3D11DeviceContext::GSSetShaderResources,
 	&ID3D11DeviceContext::DSSetShaderResources,
 	&ID3D11DeviceContext::HSSetShaderResources,
+	&ID3D11DeviceContext::PSSetShaderResources,
 	&ID3D11DeviceContext::CSSetShaderResources,
-	&ID3D11DeviceContext::PSSetShaderResources
 };
 
 void SetTextureCommand::SetResource(Renderer * pRenderer)
@@ -55,15 +55,15 @@ void SetTextureCommand::SetResource(Renderer * pRenderer)
 	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._srv);
 }
 
-static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[6])
+static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[EShaderStage::COUNT])
 (UINT StartSlot, UINT NumViews, ID3D11SamplerState* const *ppShaderResourceViews) =
 {
 	&ID3D11DeviceContext::VSSetSamplers,
 	&ID3D11DeviceContext::GSSetSamplers,
 	&ID3D11DeviceContext::DSSetSamplers,
 	&ID3D11DeviceContext::HSSetSamplers,
+	&ID3D11DeviceContext::PSSetSamplers,
 	&ID3D11DeviceContext::CSSetSamplers,
-	&ID3D11DeviceContext::PSSetSamplers
 };
 
 void SetSamplerCommand::SetResource(Renderer * pRenderer)

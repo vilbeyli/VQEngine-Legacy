@@ -68,7 +68,7 @@ Settings::Engine Parser::ReadSettings(const std::string& settingsFileName)
 			std::vector<std::string> command = StrUtil::split(line, ' ');	// ignore whitespace
 			ParseSetting(command, setting);							// process command
 		}
-		Log::Error("Initialized engine settings.");
+		Log::Info("Initialized engine settings.");
 	}
 	else
 	{

@@ -415,24 +415,25 @@ void EnvironmentMap::Initialize(Renderer * pRenderer)
 
 void EnvironmentMap::LoadShaders()
 {
-	// todo: layouts from reflection?
-	const std::vector<InputLayout> layout = {
-		{ "POSITION",	FLOAT32_3 },
-		{ "NORMAL",		FLOAT32_3 },
-		{ "TANGENT",	FLOAT32_3 },
-		{ "TEXCOORD",	FLOAT32_2 },
+	const char* pSkyboxVS = "Skybox_vs.hlsl";
+
+	const ShaderDesc BRDFIntegratorShaderDesc = { "BRDFIntegrator", 
+		ShaderStageDesc{"FullscreenQuad_vs.hlsl", {}},
+		ShaderStageDesc{"IntegrateBRDF_IBL_ps.hlsl", {}},
+	};
+	const ShaderDesc brdfIntegrationShaderDesc = { "PreFilterConvolution",
+		ShaderStageDesc{pSkyboxVS, {}},
+		ShaderStageDesc{"PreFilterConvolution_ps.hlsl", {}},
+	};
+	const ShaderDesc cubemapShaderDesc = { "RenderIntoCubemap",
+		ShaderStageDesc{pSkyboxVS, {}},
+		ShaderStageDesc{"RenderIntoCubemap_ps.hlsl", {}},
 	};
 
-	const std::vector<EShaderType> VS_PS = { EShaderType::VS, EShaderType::PS };
-
-	const std::vector<std::string> IBLConvolution = { "Skybox_vs", "PreFilterConvolution_ps" };		// compute?
-	const std::vector<std::string> RenderIntoCubemap = { "Skybox_vs", "RenderIntoCubemap_ps" };
-	const std::vector<std::string> BRDFIntegrator = { "FullscreenQuad_vs", "IntegrateBRDF_IBL_ps" };// compute?
-
 	// #AsyncLoad: Mutex DEVICE
-	sBRDFIntegrationLUTShader = spRenderer->AddShader("BRDFIntegrator", BRDFIntegrator, VS_PS);
-	sPrefilterShader = spRenderer->AddShader("PreFilterConvolution", IBLConvolution, VS_PS);
-	sRenderIntoCubemapShader = spRenderer->AddShader("RenderIntoCubemap", RenderIntoCubemap, VS_PS);
+	sPrefilterShader          = spRenderer->CreateShader(brdfIntegrationShaderDesc);
+	sBRDFIntegrationLUTShader = spRenderer->CreateShader(BRDFIntegratorShaderDesc);
+	sRenderIntoCubemapShader  = spRenderer->CreateShader(cubemapShaderDesc);
 }
 
 Texture EnvironmentMap::CreateBRDFIntegralLUTTexture()

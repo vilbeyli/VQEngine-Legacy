@@ -488,9 +488,9 @@ void Engine::SimulateAndRenderFrame()
 			PreRender();
 			Render();
 		}
-		mpCPUProfiler->EndEntry();	// CPU
-		mpCPUProfiler->StateCheck();
-
+		
+		mpGPUProfiler->EndEntry();
+		mpGPUProfiler->EndProfile(mFrameCount);
 
 		// PRESENT THE FRAME
 		//
@@ -499,9 +499,10 @@ void Engine::SimulateAndRenderFrame()
 		mpCPUProfiler->EndEntry();
 
 
+		mpCPUProfiler->EndEntry();	// CPU
+		mpCPUProfiler->StateCheck();
 
-		mpGPUProfiler->EndEntry();
-		mpGPUProfiler->EndProfile(mFrameCount);
+
 		++mFrameCount;
 
 #if LOAD_ASYNC
@@ -540,29 +541,26 @@ void Engine::RenderThread()	// This thread is currently only used during loading
 		//           StopRenderThreadAndWait() waits on join
 		mSignalRender.wait(lck);
 #endif
+		mpCPUProfiler->BeginEntry("CPU");
 
 		mpGPUProfiler->BeginProfile(mFrameCount);
 		mpGPUProfiler->BeginEntry("GPU");
 
-		mpCPUProfiler->BeginEntry("CPU: RenderThread()");
-		{
-			mpRenderer->BeginFrame();
-
-			RenderLoadingScreen(bOneTimeLoadingScreenRender);
-			RenderUI();
-
-			mpGPUProfiler->BeginEntry("Present"); mpCPUProfiler->BeginEntry("Present");
-			{
-				mpRenderer->EndFrame();
-			}
-			mpGPUProfiler->EndEntry(); mpCPUProfiler->EndEntry(); // Present
-		}
-		mpCPUProfiler->EndEntry();	// CPU: RenderThreaD()
-
+		mpRenderer->BeginFrame();
+		RenderLoadingScreen(bOneTimeLoadingScreenRender);
+		RenderUI();	
+		
 		mpGPUProfiler->EndEntry();	// GPU
 		mpGPUProfiler->EndProfile(mFrameCount);
-		mpCPUProfiler->StateCheck();
 
+
+		mpCPUProfiler->BeginEntry("Present");
+		mpRenderer->EndFrame();
+		mpCPUProfiler->EndEntry(); // Present
+
+
+		mpCPUProfiler->EndEntry();	// CPU
+		mpCPUProfiler->StateCheck();
 		mAccumulator = 0.0f;
 		++mFrameCount;
 	}

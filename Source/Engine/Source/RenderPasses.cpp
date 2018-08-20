@@ -350,7 +350,7 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 	const ShaderDesc ambientShaderDesc = { "Deferred_Ambient",
 	{
 		ShaderStageDesc{ pFSQ_VS, {} },
-		ShaderStageDesc{ "Deferred_Geometry_ps.hlsl", {} }
+		ShaderStageDesc{ "deferred_brdf_ambient_ps.hlsl", {} }
 	}};
 	const ShaderDesc ambientIBLShaderDesc = { "Deferred_AmbientIBL",
 	{

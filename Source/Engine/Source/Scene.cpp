@@ -633,16 +633,22 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 	
 	// CLEAN UP RENDER LISTS
 	//
+	// scene view
 	mDrawLists.opaqueList.clear();
 	mDrawLists.opaqueListCulled.clear();
 	mDrawLists.alphaList.clear();
 	
-	std::vector<const GameObject*>& casterList = outShadowView.casters;
-	casterList.clear();
+	// shadow views
+	outShadowView.instancedCasters.RenderListsPerMeshType.clear();
+	outShadowView.casters.clear();
 	outShadowView.shadowMapRenderListLookUp.clear();
+	outShadowView.shadowMapInstancedRenderListLookUp.clear();
+
 
 	// POPULATE RENDER LISTS WITH SCENE OBJECTS
 	//
+	std::vector<const GameObject*>& casterList = outShadowView.casters;
+	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = outShadowView.instancedCasters.RenderListsPerMeshType;
 	// gather game objects that are to be rendered in the scene
 	for (GameObject& obj : mObjectPool.mObjects)
 	{
@@ -708,7 +714,7 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 			return false;
 		}
 
-		// case: both objects are builtin types
+		// case: both objects are built-in types
 		else
 		{
 			return mID0 < mID1;
@@ -763,10 +769,7 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 			{
 				if (bCullLightView)
 				{
-					numShadowFrustumCullObjs += CullGameObjects(
-						l.GetViewFrustumPlanes(),
-						casterList,
-						objList);
+					numShadowFrustumCullObjs += CullGameObjects(l.GetViewFrustumPlanes(), casterList, objList);
 				}
 				else
 				{
@@ -792,7 +795,6 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 
 			// Sort Objects Per Mesh Type, etc...
 			//
-			// Note: sorting by mesh types currently doesn't affect any performance metrics.
 			if (bSortRenderLists) 
 			{ 
 				std::sort(RANGE(objList), SortByMeshType); 
@@ -807,16 +809,33 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 	//
 	if (bShadowViewCull)
 	{
-		// TODO: consider this for directionals: http://stefan-s.net/?p=92
-		//       or umbra paper
+		// TODO: consider this for directionals: http://stefan-s.net/?p=92 or umbra paper
 	}
 	
 
 
 	// SORT OBJECTS PER MESH TYPE, ETC...
 	//
-	// Note: sorting by mesh types currently doesn't affect any performance metrics.
-	if (bSortRenderLists) { std::sort(RANGE(mDrawLists.opaqueListCulled), SortByMeshType); }
+	if (bSortRenderLists) 
+	{ 
+		std::sort(RANGE(mDrawLists.opaqueListCulled), SortByMeshType);
+		std::sort(RANGE(casterList), SortByMeshType);
+	}
+
+	std::for_each(RANGE(casterList), [&](const GameObject* pCaster)
+	{
+		const ModelData& model = pCaster->GetModelData();
+		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
+		if (meshID >= EGeometry::MESH_TYPE_COUNT)
+			return;
+
+		if (instancedCasterLists.find(meshID) == instancedCasterLists.end())
+		{
+			instancedCasterLists[meshID] = std::vector<const GameObject*>();
+		}
+		std::vector<const GameObject*>& renderList = instancedCasterLists.at(meshID);
+		renderList.push_back(pCaster);
+	});
 	
 #if _DEBUG
 	if (!bReportedList)

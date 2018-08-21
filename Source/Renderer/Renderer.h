@@ -164,6 +164,7 @@ public:
 	// DRAW FUNCTIONS
 	//----------------------------------------------------------------------------------------------------------------
 	void					DrawIndexed(EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
+	void					DrawIndexedInstanced(int instanceCount, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
 	void					Draw(int vertCount, EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
 	
 	void					DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd); // BottomLeft<x,y> = (0,0)

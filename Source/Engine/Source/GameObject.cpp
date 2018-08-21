@@ -47,6 +47,19 @@ void GameObject::RenderOpaque(Renderer* pRenderer
 	const XMMATRIX world = mTransform.WorldTransformationMatrix();
 	const XMMATRIX wvp = world * sceneView.viewProj;
 
+	struct ObjectMatrices_ViewSpace
+	{
+		XMMATRIX wv;
+		XMMATRIX nv;
+		XMMATRIX wvp;
+	};
+	struct ObjectMatrices_WorldSpace
+	{
+		XMMATRIX wvp;
+		XMMATRIX w;
+		XMMATRIX n;
+	};
+
 	// SET MATRICES
 	switch (shader)
 	{
@@ -57,10 +70,16 @@ void GameObject::RenderOpaque(Renderer* pRenderer
 		break;
 	case EShaders::Z_PREPRASS:
 	case EShaders::DEFERRED_GEOMETRY:
-		pRenderer->SetConstant4x4f("worldView", world * sceneView.view);
-		pRenderer->SetConstant4x4f("normalViewMatrix", mTransform.NormalMatrix(world) * sceneView.view);
-		pRenderer->SetConstant4x4f("worldViewProj", wvp);
+	{
+		const ObjectMatrices_ViewSpace mats =
+		{
+			world * sceneView.view,
+			mTransform.NormalMatrix(world) * sceneView.view,
+			wvp,
+		};
+		pRenderer->SetConstantStruct("ObjMatrices", &mats);
 		break;
+	}
 	case EShaders::NORMAL:
 		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 	case EShaders::UNLIT:
@@ -68,10 +87,16 @@ void GameObject::RenderOpaque(Renderer* pRenderer
 		pRenderer->SetConstant4x4f("worldViewProj", wvp);
 		break;
 	default:	// lighting shaders
-		pRenderer->SetConstant4x4f("world", world);
-		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
-		pRenderer->SetConstant4x4f("worldViewProj", wvp);
+	{
+		const ObjectMatrices_WorldSpace mats =
+		{
+			wvp,
+			world,
+			mTransform.NormalMatrix(world)
+		};
+		pRenderer->SetConstantStruct("ObjMatrices", &mats);
 		break;
+	}
 	}
 
 	// SET GEOMETRY & MATERIAL, THEN DRAW
@@ -107,11 +132,24 @@ void GameObject::RenderOpaque(Renderer* pRenderer
 	});
 }
 
+
 void GameObject::RenderZ(Renderer * pRenderer) const
 {
-	const XMMATRIX world = mTransform.WorldTransformationMatrix();
-	pRenderer->SetConstant4x4f("world", world);
-	pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
+	struct PerObjectMatrices
+	{
+		XMMATRIX world;
+		XMMATRIX normal;
+	};
+
+
+	const auto mWorld = mTransform.WorldTransformationMatrix();
+	const PerObjectMatrices objMatrices =
+	{
+		mWorld,
+		mTransform.NormalMatrix(mWorld)
+	};
+	pRenderer->SetConstantStruct("ObjMats", &objMatrices);
+
 	for_each(mModel.mData.mMeshIDs.begin(), mModel.mData.mMeshIDs.end(), [&](MeshID id)
 	{
 		// TODO: #Optimization

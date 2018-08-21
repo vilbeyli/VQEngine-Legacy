@@ -24,7 +24,6 @@
 
 #include <vector>
 
-using MeshID = int;
 class Mesh
 {
 	friend class Renderer;

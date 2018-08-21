@@ -18,6 +18,7 @@
 
 #pragma once
 
+using MeshID = int;
 using ShaderID = int;
 using BufferID = int;
 using TextureID = int;

@@ -1996,6 +1996,27 @@ void Renderer::DrawIndexed(EPrimitiveTopology topology)
 	mRenderStats.numVertices += numVertices;
 }
 
+void Renderer::DrawIndexedInstanced(int instanceCount, EPrimitiveTopology topology /*= EPrimitiveTopology::POINT_LIST*/)
+{
+	const Buffer& VertexBuffer = mVertexBuffers[mPipelineState.vertexBuffer];
+	const Buffer& IndexBuffer = mIndexBuffers[mPipelineState.indexBuffer];
+
+	const unsigned numIndices = IndexBuffer.mDesc.mElementCount;
+	const unsigned numVertices = VertexBuffer.mDesc.mElementCount;
+
+	mPipelineState.topology = topology;
+	if (mPipelineState.topology != mPrevPipelineState.topology)
+	{
+		m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));
+	}
+
+	m_deviceContext->DrawIndexedInstanced(numIndices, instanceCount, 0, 0, 0);
+
+	++mRenderStats.numDrawCalls;
+	mRenderStats.numIndices += numIndices;
+	mRenderStats.numVertices += numVertices;
+}
+
 void Renderer::Draw(int vertCount, EPrimitiveTopology topology /*= EPrimitiveTopology::POINT_LIST*/)
 {
 	m_deviceContext->IASetPrimitiveTopology(static_cast<D3D_PRIMITIVE_TOPOLOGY>(topology));

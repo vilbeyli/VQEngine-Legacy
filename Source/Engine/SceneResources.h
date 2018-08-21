@@ -33,4 +33,5 @@ private:
 	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(Scene* pScene, MeshID meshID);
 
 	friend class GameObject;
+	friend struct ShadowMapPass;
 };

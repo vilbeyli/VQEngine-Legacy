@@ -63,6 +63,7 @@ class Scene;
 
 ALIGNMENT class Engine
 {
+	friend struct ShadowMapPass;	//temporary
 	friend class Application;
 	friend class SceneManager;	// read/write ZPassObjects
 

@@ -726,19 +726,19 @@ void Engine::PreRender()
 	XMVECTOR det = XMMatrixDeterminant(proj);
 	const XMMATRIX projInv = XMMatrixInverse(&det, proj);
 
+	// scene veiw matrices
 	mSceneView.viewProj = view * proj;
 	mSceneView.view = view;
 	mSceneView.viewInverse = viewInverse;
 	mSceneView.projection = proj;
 	mSceneView.projectionInverse = projInv;
 
-	mSceneView.cameraPosition = viewCamera.GetPositionF();
-
+	// render/scene settings
 	mSceneView.sceneRenderSettings = mpActiveScene->GetSceneRenderSettings();
+	mSceneView.cameraPosition = viewCamera.GetPositionF();
 	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mSceneView.bIsDeferredRendering = mEngineConfig.bDeferredOrForward;
 	mSceneView.bIsIBLEnabled = mpActiveScene->mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
-
 	mSceneView.environmentMap = mpActiveScene->GetEnvironmentMap();
 
 	// gather scene lights
@@ -754,6 +754,7 @@ void Engine::PreRender()
 	// 		mTBNDrawObjects.push_back(obj);
 	// }
 
+	// TODO: culled objects per view
 	mFrameStats.numCulledObjects = static_cast<int>(mpActiveScene->PreRender(mSceneView.viewProj, mShadowView));
 	mFrameStats.rstats = mpRenderer->GetRenderStats();
 	mFrameStats.fps = static_cast<int>(1.0f / mpGPUProfiler->GetRootEntryAvg());

@@ -34,11 +34,16 @@ struct PSIn
 	float2 uv				: TEXCOORD1;
 };
 
-cbuffer perModel
+struct ObjectMatrices
 {
 	matrix worldView;
 	matrix normalViewMatrix;
 	matrix worldViewProj;
+};
+
+cbuffer perModel
+{
+	ObjectMatrices ObjMatrices;
 };
 
 PSIn VSMain(VSIn In)
@@ -46,10 +51,10 @@ PSIn VSMain(VSIn In)
 	const float4 pos = float4(In.position, 1);
 
 	PSIn Out;
-	Out.position		= mul(worldViewProj, pos);
-	Out.viewPosition	= mul(worldView, pos).xyz;
-	Out.viewNormal		= normalize(mul(normalViewMatrix, In.normal));
-	Out.viewTangent		= normalize(mul(normalViewMatrix, In.tangent));
+	Out.position		= mul(ObjMatrices.worldViewProj, pos);
+	Out.viewPosition	= mul(ObjMatrices.worldView, pos).xyz;
+	Out.viewNormal		= normalize(mul(ObjMatrices.normalViewMatrix, In.normal));
+	Out.viewTangent		= normalize(mul(ObjMatrices.normalViewMatrix, In.tangent));
 	Out.uv				= In.uv;
 	return Out;
 }

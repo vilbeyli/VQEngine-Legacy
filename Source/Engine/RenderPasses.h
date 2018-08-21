@@ -58,10 +58,17 @@ struct SceneView
 	EnvironmentMap	environmentMap;
 };
 
+struct InstancedRenderLists
+{
+	using RenderListLookupType = std::pair<MeshID, std::vector<const GameObject*>>;
+	std::unordered_map<MeshID, std::vector<const GameObject*>> RenderListsPerMeshType;
+};
+
 struct ShadowView
 {	
 	using RenderList = std::vector<const GameObject*>;
 	using LightRenderListLookup = std::unordered_map<const Light*, RenderList>;
+	using LightInstancedRenderListLookup = std::unordered_map<const Light*, InstancedRenderLists>;
 	
 	// shadowing Lights
 	std::vector<const Light*> spots;
@@ -70,9 +77,11 @@ struct ShadowView
 
 	// game obj casting shadows (=render list of directional light)
 	std::vector<const GameObject*> casters;
+	InstancedRenderLists instancedCasters;
 
 	// culled render lists per shadowing light
 	LightRenderListLookup shadowMapRenderListLookUp;
+	LightInstancedRenderListLookup shadowMapInstancedRenderListLookUp;
 
 	void Clear()
 	{
@@ -93,6 +102,7 @@ struct ShadowMapPass
 	
 	Renderer*			mpRenderer = nullptr;
 	ShaderID			mShadowMapShader = -1;
+	ShaderID			mShadowMapShaderInstanced = -1;
 
 	unsigned			mShadowMapDimension_Spot = 0;
 	D3D11_VIEWPORT		mShadowViewPort_Spot;	// spot light viewport

@@ -50,7 +50,7 @@ class GameObject
 public:
 	void RenderOpaque(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
 	void RenderTransparent(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
-	void RenderZ(Renderer* pRenderer) const;
+	void RenderZ(Renderer* pRenderer, const XMMATRIX& viewProj) const;
 	void Clear();
 
 	void SetTransform(const Transform& transform) { mTransform = transform; }

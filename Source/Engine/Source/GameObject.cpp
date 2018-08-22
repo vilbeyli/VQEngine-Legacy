@@ -133,20 +133,18 @@ void GameObject::RenderOpaque(Renderer* pRenderer
 }
 
 
-void GameObject::RenderZ(Renderer * pRenderer) const
+void GameObject::RenderZ(Renderer* pRenderer, const XMMATRIX& viewProj) const
 {
 	struct PerObjectMatrices
 	{
-		XMMATRIX world;
-		XMMATRIX normal;
+		XMMATRIX wvp;
 	};
 
 
 	const auto mWorld = mTransform.WorldTransformationMatrix();
 	const PerObjectMatrices objMatrices =
 	{
-		mWorld,
-		mTransform.NormalMatrix(mWorld)
+		mWorld * viewProj,
 	};
 	pRenderer->SetConstantStruct("ObjMats", &objMatrices);
 

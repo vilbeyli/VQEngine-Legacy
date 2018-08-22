@@ -16,26 +16,10 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-//todo: worldViewProj
-
-struct FrameMatrices
-{
-	matrix viewProj;
-	matrix view;
-	matrix proj;
-};
 struct ObjectMatrices
 {
-	matrix world;
-	matrix normalMatrix;
+	matrix wvp;
 };
-
-cbuffer perFrame
-{
-	FrameMatrices FrameMats;
-}
-
-#define INSTANCE_COUNT 64
 
 cbuffer perModel
 {
@@ -49,10 +33,6 @@ cbuffer perModel
 struct VSIn
 {
 	float3 position : POSITION;
-	float3 normal	: NORMAL;
-	float3 tangent	: TANGENT0;
-	float2 texCoord : TEXCOORD0;    
-
 	uint instanceID : SV_InstanceID;
 };
 
@@ -67,12 +47,12 @@ PSIn VSMain(VSIn In)
 PSIn VSMain(VSIn In)
 #endif
 {
-#ifdef INSTANCED
-	matrix wvp = mul(FrameMats.proj, mul(FrameMats.view, ObjMats[In.instanceID].world));
-#else
-	matrix wvp = mul(FrameMats.proj, mul(FrameMats.view, ObjMats.world));
-#endif
 	PSIn Out;
-	Out.position = mul(wvp  , float4(In.position, 1));
+#ifdef INSTANCED
+	Out.position = mul(ObjMats[In.instanceID].wvp, float4(In.position, 1));
+#else
+	Out.position = mul(ObjMats.wvp  , float4(In.position, 1));
+#endif
+
 	return Out;
 }

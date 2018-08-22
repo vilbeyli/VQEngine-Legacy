@@ -647,7 +647,7 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 
 	// POPULATE RENDER LISTS WITH SCENE OBJECTS
 	//
-	std::vector<const GameObject*>& casterList = outShadowView.casters;
+	std::vector<const GameObject*> casterList = outShadowView.casters;
 	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = outShadowView.instancedCasters.RenderListsPerMeshType;
 	// gather game objects that are to be rendered in the scene
 	for (GameObject& obj : mObjectPool.mObjects)
@@ -822,20 +822,24 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 		std::sort(RANGE(casterList), SortByMeshType);
 	}
 
-	std::for_each(RANGE(casterList), [&](const GameObject* pCaster)
+	for(int i=0; i<casterList.size(); ++i)
 	{
+		const GameObject* pCaster = casterList[i];
 		const ModelData& model = pCaster->GetModelData();
 		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
 		if (meshID >= EGeometry::MESH_TYPE_COUNT)
-			return;
+		{
+			outShadowView.casters.push_back(std::move(casterList[i]));
+			continue;
+		}
 
 		if (instancedCasterLists.find(meshID) == instancedCasterLists.end())
 		{
 			instancedCasterLists[meshID] = std::vector<const GameObject*>();
 		}
 		std::vector<const GameObject*>& renderList = instancedCasterLists.at(meshID);
-		renderList.push_back(pCaster);
-	});
+		renderList.push_back(std::move(casterList[i]));
+	}
 	
 #if _DEBUG
 	if (!bReportedList)

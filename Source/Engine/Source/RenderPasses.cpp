@@ -32,6 +32,8 @@
 
 #include <array>
 
+constexpr int BATCH_INSTANCED_COUNT = 256;
+
 void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings)
 {
 	this->mShadowMapDimension_Spot = static_cast<int>(shadowMapSettings.dimension);
@@ -67,7 +69,7 @@ void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Set
 
 
 	ShaderDesc instancedShaderDesc = { "DepthShader",
-		ShaderStageDesc{"DepthShader_vs.hlsl", { ShaderMacro{ "INSTANCED", "1"} } },
+		ShaderStageDesc{"DepthShader_vs.hlsl", { ShaderMacro{ "INSTANCED", "1"}, ShaderMacro{"INSTANCE_COUNT", std::to_string(BATCH_INSTANCED_COUNT) } } },
 		ShaderStageDesc{"DepthShader_ps.hlsl" , {} }
 	};
 	this->mShadowMapShaderInstanced = pRenderer->CreateShader(instancedShaderDesc);
@@ -138,13 +140,14 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	//pRenderer->BindRenderTarget(0);
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
 	pRenderer->SetShader(mShadowMapShader);					// shader for rendering z buffer
-	pRenderer->SetViewport(mShadowViewPort_Spot);
 
 	// SPOT LIGHT SHADOW MAPS
 	//
 	pGPUProfiler->BeginEntry("Spots");
+	pRenderer->SetViewport(mShadowViewPort_Spot);
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
+		const XMMATRIX viewProj = shadowView.spots[i]->GetLightSpaceMatrix();
 #if _DEBUG
 		if (shadowView.shadowMapRenderListLookUp.find(shadowView.spots[i]) == shadowView.shadowMapRenderListLookUp.end())
 		{
@@ -152,108 +155,88 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			continue;;
 		}
 #endif
-
 		pRenderer->BindDepthTarget(mDepthTargets_Spot[i]);	// only depth stencil buffer
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
-
-		const PerFrameMatrices perFrameMatrices
-		{
-			shadowView.spots[i]->GetLightSpaceMatrix(),
-			shadowView.spots[i]->GetViewMatrix(),
-			shadowView.spots[i]->GetProjectionMatrix()
-		};
-		pRenderer->SetConstantStruct("FrameMats", &perFrameMatrices);
 		pRenderer->Apply();
 
 		pRenderer->BeginEvent("Spot[" + std::to_string(i)  + "]: DrawSceneZ()");
 		for (const GameObject* obj : shadowView.shadowMapRenderListLookUp.at(shadowView.spots[i]))
-			obj->RenderZ(pRenderer);
+			obj->RenderZ(pRenderer, viewProj);
 		pRenderer->EndEvent();
 	}
-	pGPUProfiler->EndEntry();
+	pGPUProfiler->EndEntry();	// spots
 
 	// DIRECTIONAL SHADOW MAP
 	//
 	if (shadowView.pDirectional != nullptr)
 	{
+		const XMMATRIX viewProj = shadowView.pDirectional->GetLightSpaceMatrix();
+
 		pGPUProfiler->BeginEntry("Directional");
-#if INSTANCED_DRAW
-		pRenderer->SetShader(mShadowMapShaderInstanced); 
-#endif
+		pRenderer->BeginEvent("Directional: DrawSceneZ()");
+
+		// RENDER NON-INSTANCED SCENE OBJECTS
+		//
 		pRenderer->SetViewport(mShadowViewPort_Directional);
 		pRenderer->BindDepthTarget(mDepthTarget_Directional);	// only depth stencil buffer
 		pRenderer->Apply();
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
-
-		const PerFrameMatrices perFrameMatrices =
-		{
-			shadowView.pDirectional->GetLightSpaceMatrix(),
-			shadowView.pDirectional->GetViewMatrix(),
-			shadowView.pDirectional->GetProjectionMatrix()
-		};
-		pRenderer->SetConstantStruct("FrameMats", &perFrameMatrices);
-
 		pRenderer->Apply(); // ?
-
-		pRenderer->BeginEvent("Directional: DrawSceneZ()");
-
-#if !INSTANCED_DRAW
 		for (const GameObject* obj : shadowView.casters)
 		{
-			obj->RenderZ(pRenderer);
+			obj->RenderZ(pRenderer, viewProj);
 		}
-#else
+		
+
+		// RENDER INSTANCED SCENE OBJECTS
+		//
+		pRenderer->SetShader(mShadowMapShaderInstanced);
+		//------- temp hack: set shader nullifies, apply misses the state change... -----
+		pRenderer->BindDepthTarget(0);
+		pRenderer->Apply();
+		//------- temp hack: set shader nullifies, apply misses the state change... -----
+		pRenderer->BindDepthTarget(mDepthTarget_Directional);
 		std::for_each(RANGE(shadowView.instancedCasters.RenderListsPerMeshType), [&](const InstancedRenderLists::RenderListLookupType& MeshID_RenderList)
 		{
 			const MeshID& mesh = MeshID_RenderList.first;
 			const std::vector<const GameObject*>& renderList = MeshID_RenderList.second;
-
-			struct ObjectMatrices         { XMMATRIX world; XMMATRIX normal; };
-			struct InstancedObjectCBuffer { ObjectMatrices objMatrices[64];  };
-
+		
+			struct ObjectMatrices { XMMATRIX wvp; };
+			struct InstancedObjectCBuffer { ObjectMatrices objMatrices[BATCH_INSTANCED_COUNT];  };
+		
+			const bool bIs2DGeometry =
+				mesh == EGeometry::TRIANGLE ||
+				mesh == EGeometry::QUAD ||
+				mesh == EGeometry::GRID;
+			const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, mesh);
+		
+			pRenderer->SetRasterizerState(rasterizerState);
+			pRenderer->SetVertexBuffer(IABuffer.first);
+			pRenderer->SetIndexBuffer(IABuffer.second);
+		
 			InstancedObjectCBuffer cbuffer;
-
-			
-			//std::for_each(RANGE(renderList), [&](const GameObject* pObj)
-
-			constexpr int BATCH_INSTANCED_COUNT = 64;
 			int batchCount = 0;
 			do
 			{
-				for (int instanceID = 0; instanceID < BATCH_INSTANCED_COUNT; ++instanceID)
+				int instanceID = 0;
+				for (; instanceID < BATCH_INSTANCED_COUNT; ++instanceID)
 				{
 					const int renderListIndex = BATCH_INSTANCED_COUNT * batchCount + instanceID;
 					if (renderListIndex == renderList.size())
 						break;
-
-					const auto* pObj = renderList[renderListIndex];
-					const Transform& tf = pObj->GetTransform();
-					const XMMATRIX world = tf.WorldTransformationMatrix();
+		
 					cbuffer.objMatrices[instanceID] =
 					{
-						world,
-						tf.NormalMatrix(world)
+						renderList[renderListIndex]->GetTransform().WorldTransformationMatrix() * viewProj
 					};
 				}
-
+		
 				pRenderer->SetConstantStruct("ObjMats", &cbuffer);
-
-				const bool bIs2DGeometry =
-					mesh == EGeometry::TRIANGLE ||
-					mesh == EGeometry::QUAD ||
-					mesh == EGeometry::GRID;
-				const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-				pRenderer->SetRasterizerState(rasterizerState);
-
-				const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, mesh);
-				pRenderer->SetVertexBuffer(IABuffer.first);
-				pRenderer->SetIndexBuffer(IABuffer.second);
 				pRenderer->Apply();
-				pRenderer->DrawIndexedInstanced(BATCH_INSTANCED_COUNT);
+				pRenderer->DrawIndexedInstanced(instanceID);
 			} while (batchCount++ < renderList.size() / BATCH_INSTANCED_COUNT);
 		});
-#endif
-
 
 		pRenderer->EndEvent();
 		pGPUProfiler->EndEntry();

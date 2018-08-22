@@ -1487,12 +1487,9 @@ void Renderer::SetConstant(const char * cName, const void * data)
 		if (strcmp(cName, c._name.c_str()) == 0)		// if name matches
 		{
 			found = true;
-			if (memcmp(c._data, data, c._size) != 0)	// copy data if its not the same
-			{
-				memcpy(c._data, data, c._size);
-				shader->m_cBuffers[GPUcBufferSlot].dirty = true;
-				break;	// ensures write on first occurrence
-			}
+			memcpy(c._data, data, c._size);
+			shader->m_cBuffers[GPUcBufferSlot].dirty = true;
+			break;	// ensures write on first occurrence
 		}
 	}
 	if (!found)
@@ -1767,7 +1764,8 @@ void Renderer::BeginRender(const ClearCommand & clearCmd)
 	if (bClearDepthStencil)
 	{
 		const DepthTargetID dsv = mPipelineState.depthTargets;
-		UINT clearFlag = [&]() -> UINT	{
+		const UINT clearFlag = [&]() -> UINT	
+		{
 			if (clearCmd.bDoClearDepth && clearCmd.bDoClearStencil)
 				return D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL;
 
@@ -1911,39 +1909,27 @@ void Renderer::Apply()
 
 	// get the bound render target addresses
 	const auto indexRTV = mPipelineState.renderTargets[0];
-#if 1
-	// todo: perf: this takes as much time as set constants in debug mode
-	std::vector<ID3D11RenderTargetView*> RTVs;
-	const bool bAllNullptr = [&]() {
-		std::vector<ID3D11RenderTargetView*> v(mPipelineState.renderTargets.size(), nullptr);
-		size_t i = 0;
+
+	static std::array<ID3D11RenderTargetView*, 7> RTVs;
+	UINT numRTV = 0;
+	const bool bAllNullptr = [&]() 
+	{
 		bool bAllNull = true;
 		for (RenderTargetID hRT : mPipelineState.renderTargets)
 		{
 			if (hRT >= 0)
 			{
-				v[i++] = mRenderTargets[hRT].pRenderTargetView;
+				RTVs[numRTV++] = mRenderTargets[hRT].pRenderTargetView;
 				bAllNull = false;
 			}
 		}
-
-		RTVs = std::move(v);
 		return bAllNull;
 	}();
-#else
-	// this is slower ~2ms in debug
-	std::vector<ID3D11RenderTargetView*> RTVs;
-	for (RenderTargetID hRT : mPipelineState.renderTargets)
-		if (hRT >= 0)
-			RTVs.push_back(mRenderTargets[hRT].pRenderTargetView);
-#endif
 
 
-	ID3D11RenderTargetView** RTV = (RTVs.empty() || bAllNullptr)
+	ID3D11RenderTargetView** RTV = bAllNullptr
 		? nullptr 
 		: &RTVs[0];
-
-	const UINT numRTV = RTV ? static_cast<UINT>(RTVs.size()) : 0;
 
 	ID3D11DepthStencilView*  DSV = mPipelineState.depthTargets == -1
 		? nullptr 

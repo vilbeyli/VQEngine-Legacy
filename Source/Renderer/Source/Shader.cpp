@@ -175,7 +175,7 @@ void Shader::LoadShaders(Renderer* pRenderer)
 			ShaderStageDesc{"Skybox_vs.hlsl"               , {} },
 			ShaderStageDesc{"SkyboxEquirectangular_ps.hlsl", {} }
 		}},
-		ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Skybox", VS_PS)},
+		ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Forward_BRDF", VS_PS)},
 		ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
 		ShaderDesc{ "BilateralBlur",
 		{

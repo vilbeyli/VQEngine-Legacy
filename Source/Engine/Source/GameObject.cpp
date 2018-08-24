@@ -132,41 +132,6 @@ void GameObject::RenderOpaque(Renderer* pRenderer
 	});
 }
 
-
-void GameObject::RenderZ(Renderer* pRenderer, const XMMATRIX& viewProj) const
-{
-	struct PerObjectMatrices
-	{
-		XMMATRIX wvp;
-	};
-
-
-	const auto mWorld = mTransform.WorldTransformationMatrix();
-	const PerObjectMatrices objMatrices =
-	{
-		mWorld * viewProj,
-	};
-	pRenderer->SetConstantStruct("ObjMats", &objMatrices);
-
-	for_each(mModel.mData.mMeshIDs.begin(), mModel.mData.mMeshIDs.end(), [&](MeshID id)
-	{
-		// TODO: #Optimization
-		// changing state for each mesh is not a good idea -> sort and render | render list.
-		const bool bIs2DGeometry =
-			id == EGeometry::TRIANGLE ||
-			id == EGeometry::QUAD ||
-			id == EGeometry::GRID;
-		const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-		pRenderer->SetRasterizerState(rasterizerState);
-
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
-		pRenderer->SetVertexBuffer(IABuffer.first);
-		pRenderer->SetIndexBuffer(IABuffer.second);
-		pRenderer->Apply();
-		pRenderer->DrawIndexed();
-	});
-}
-
 void GameObject::RenderTransparent(
 	  Renderer * pRenderer
 	, const SceneView& sceneView

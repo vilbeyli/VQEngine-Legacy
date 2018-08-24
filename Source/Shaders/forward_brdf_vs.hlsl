@@ -16,12 +16,21 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+struct ObjectMatrices
+{
+	matrix worldViewProj;
+	matrix world;
+	matrix normal;
+};
+
 cbuffer perModel
 {
-    matrix world;
-	matrix normalMatrix;
-	matrix worldViewProj;
-}
+#ifdef INSTANCED
+	ObjectMatrices ObjMatrices[INSTANCE_COUNT];
+#else
+	ObjectMatrices ObjMatrices;
+#endif
+};
 
 cbuffer frame
 {
@@ -37,6 +46,9 @@ struct VSIn
 	float3 normal	: NORMAL;
 	float3 tangent	: TANGENT0;
 	float2 texCoord : TEXCOORD0;    
+#ifdef INSTANCED
+	uint instanceID : SV_InstanceID;
+#endif
 };
 
 struct PSIn 
@@ -56,8 +68,9 @@ PSIn VSMain(VSIn In)
 {
 	const float4 pos = float4(In.position, 1);
 
+
 	PSIn Out;
-	Out.position		= mul(worldViewProj, pos);
+	Out.position = mul(ObjMatrices.worldViewProj, pos);
 #if 0	// experimenting with panini projection, using unreal's implementation
 	// src: https://docs.unrealengine.com/latest/INT/Engine/Rendering/PostProcessEffects/PaniniProjection/
 	// panini projection
@@ -73,10 +86,17 @@ PSIn VSMain(VSIn In)
 	                 + float4(screenPos            * w, z, w) * (1.0f - panini);
 #endif
 
-	Out.worldPos		= mul(world        , pos).xyz;
-    Out.normal			= normalize(mul(normalMatrix, In.normal));
-	Out.lightSpacePos	= mul(lightSpaceMat, float4(Out.worldPos, 1));
-    Out.tangent			= normalize(mul(normalMatrix, In.tangent));
+#ifdef INSTANCED
+	Out.worldPos		= mul(ObjMatrices[In.instanceID].world , pos).xyz;
+    Out.normal			= normalize(mul(ObjMatrices[In.instanceID].normal, In.normal));
+    Out.tangent			= normalize(mul(ObjMatrices[In.instanceID].normal, In.tangent));
 	Out.texCoord		= In.texCoord;
+#else
+	Out.worldPos		= mul(ObjMatrices.world , pos).xyz;
+    Out.normal			= normalize(mul(ObjMatrices.normal, In.normal));
+    Out.tangent			= normalize(mul(ObjMatrices.normal, In.tangent));
+	Out.texCoord		= In.texCoord;
+#endif
+	Out.lightSpacePos	= mul(lightSpaceMat, float4(Out.worldPos, 1));
 	return Out;
 }

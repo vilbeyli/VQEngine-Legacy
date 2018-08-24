@@ -1025,6 +1025,7 @@ void Engine::Render()
 		// LIGHTING
 		mpRenderer->BeginEvent("Lighting Pass");
 		mpRenderer->SetShader(mSelectedShader);
+		mpRenderer->Apply();
 		if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
 		{
 			mpRenderer->SetTexture("texAmbientOcclusion", tSSAO);

@@ -180,6 +180,7 @@ struct DeferredRenderingPasses
 	GBuffer _GBuffer;
 	DepthStencilStateID _geometryStencilState;
 	ShaderID			_geometryShader;
+	ShaderID			_geometryInstancedShader;
 	ShaderID			_ambientShader;
 	ShaderID			_ambientIBLShader;
 	//ShaderID			_environmentMapSpecularShader;

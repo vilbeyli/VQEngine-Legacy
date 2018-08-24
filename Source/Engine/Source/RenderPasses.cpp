@@ -32,7 +32,8 @@
 
 #include <array>
 
-constexpr int BATCH_INSTANCED_COUNT = 256;
+constexpr int DRAW_INSTANCED_COUNT_DEPTH_PASS = 256;
+constexpr int DRAW_INSTANCED_COUNT_GBUFFER_PASS = 32;
 
 void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings)
 {
@@ -69,7 +70,7 @@ void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Set
 
 
 	ShaderDesc instancedShaderDesc = { "DepthShader",
-		ShaderStageDesc{"DepthShader_vs.hlsl", { ShaderMacro{ "INSTANCED", "1"}, ShaderMacro{"INSTANCE_COUNT", std::to_string(BATCH_INSTANCED_COUNT) } } },
+		ShaderStageDesc{"DepthShader_vs.hlsl", { ShaderMacro{ "INSTANCED", "1"}, ShaderMacro{"INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) } } },
 		ShaderStageDesc{"DepthShader_ps.hlsl" , {} }
 	};
 	this->mShadowMapShaderInstanced = pRenderer->CreateShader(instancedShaderDesc);
@@ -111,7 +112,6 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(Renderer * pRenderer, co
 	}
 #else
 	// always add depth target when loading a new scene
-	//
 	this->mDepthTarget_Directional = pRenderer->AddDepthTarget(depthDesc)[0];
 	this->mShadowMapTexture_Directional = pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional);
 #endif
@@ -123,21 +123,40 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(Renderer * pRenderer, co
 }
 
 
-struct PerFrameMatrices
-{
-	XMMATRIX viewProj;
-	XMMATRIX view;
-	XMMATRIX proj;
-};
-
-
 #define INSTANCED_DRAW 1
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const
 {
+	//-----------------------------------------------------------------------------------------------
+	struct PerObjectMatrices { XMMATRIX wvp; };
+	struct InstancedObjectCBuffer { PerObjectMatrices objMatrices[DRAW_INSTANCED_COUNT_DEPTH_PASS]; };
+	auto Is2DGeometry = [](MeshID mesh)
+	{
+		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
+	};
+	auto RenderDepth = [&](const GameObject* pObj, const XMMATRIX& viewProj)
+	{
+		const ModelData& model = pObj->GetModelData();
+		const PerObjectMatrices objMats = PerObjectMatrices({ pObj->GetTransform().WorldTransformationMatrix() * viewProj });
+
+		pRenderer->SetConstantStruct("ObjMats", &objMats);
+		std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
+		{
+			const RasterizerStateID rasterizerState = Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, id);
+
+			pRenderer->SetRasterizerState(rasterizerState);
+			pRenderer->SetVertexBuffer(IABuffer.first);
+			pRenderer->SetIndexBuffer(IABuffer.second);
+			pRenderer->Apply();
+			pRenderer->DrawIndexed();
+		});
+	};
+	//-----------------------------------------------------------------------------------------------
+
+
 	const bool bNoShadowingLights = shadowView.spots.empty() && shadowView.points.empty() && shadowView.pDirectional == nullptr;
 	if (bNoShadowingLights) return;
 
-	//pRenderer->BindRenderTarget(0);
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
 	pRenderer->SetShader(mShadowMapShader);					// shader for rendering z buffer
 
@@ -148,6 +167,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
 		const XMMATRIX viewProj = shadowView.spots[i]->GetLightSpaceMatrix();
+		pRenderer->BeginEvent("Spot[" + std::to_string(i)  + "]: DrawSceneZ()");
 #if _DEBUG
 		if (shadowView.shadowMapRenderListLookUp.find(shadowView.spots[i]) == shadowView.shadowMapRenderListLookUp.end())
 		{
@@ -159,9 +179,10 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 		pRenderer->Apply();
 
-		pRenderer->BeginEvent("Spot[" + std::to_string(i)  + "]: DrawSceneZ()");
-		for (const GameObject* obj : shadowView.shadowMapRenderListLookUp.at(shadowView.spots[i]))
-			obj->RenderZ(pRenderer, viewProj);
+		for (const GameObject* pObj : shadowView.shadowMapRenderListLookUp.at(shadowView.spots[i]))
+		{
+			RenderDepth(pObj, viewProj);
+		}
 		pRenderer->EndEvent();
 	}
 	pGPUProfiler->EndEntry();	// spots
@@ -178,51 +199,44 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		// RENDER NON-INSTANCED SCENE OBJECTS
 		//
 		pRenderer->SetViewport(mShadowViewPort_Directional);
-		pRenderer->BindDepthTarget(mDepthTarget_Directional);	// only depth stencil buffer
+		pRenderer->BindDepthTarget(mDepthTarget_Directional);
 		pRenderer->Apply();
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
-		pRenderer->Apply(); // ?
-		for (const GameObject* obj : shadowView.casters)
+		for (const GameObject* pObj : shadowView.casters)
 		{
-			obj->RenderZ(pRenderer, viewProj);
+			RenderDepth(pObj, viewProj);
 		}
 		
 
 		// RENDER INSTANCED SCENE OBJECTS
 		//
 		pRenderer->SetShader(mShadowMapShaderInstanced);
-		//------- temp hack: set shader nullifies, apply misses the state change... -----
+		//------- temp hack: set shader nullifies render and depth targets, apply misses the state change... -----
 		pRenderer->BindDepthTarget(0);
 		pRenderer->Apply();
-		//------- temp hack: set shader nullifies, apply misses the state change... -----
+		//------- temp hack: set shader nullifies render and depth targets, apply misses the state change... -----
 		pRenderer->BindDepthTarget(mDepthTarget_Directional);
-		std::for_each(RANGE(shadowView.instancedCasters.RenderListsPerMeshType), [&](const InstancedRenderLists::RenderListLookupType& MeshID_RenderList)
+
+		InstancedObjectCBuffer cbuffer;
+		for(const InstancedRenderLists::RenderListLookupType& MeshID_RenderList : shadowView.instancedCasters.RenderListsPerMeshType)
 		{
 			const MeshID& mesh = MeshID_RenderList.first;
 			const std::vector<const GameObject*>& renderList = MeshID_RenderList.second;
 		
-			struct ObjectMatrices { XMMATRIX wvp; };
-			struct InstancedObjectCBuffer { ObjectMatrices objMatrices[BATCH_INSTANCED_COUNT];  };
-		
-			const bool bIs2DGeometry =
-				mesh == EGeometry::TRIANGLE ||
-				mesh == EGeometry::QUAD ||
-				mesh == EGeometry::GRID;
-			const RasterizerStateID rasterizerState = bIs2DGeometry ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+			const RasterizerStateID rasterizerState = Is2DGeometry(mesh) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, mesh);
 		
 			pRenderer->SetRasterizerState(rasterizerState);
 			pRenderer->SetVertexBuffer(IABuffer.first);
 			pRenderer->SetIndexBuffer(IABuffer.second);
 		
-			InstancedObjectCBuffer cbuffer;
 			int batchCount = 0;
 			do
 			{
 				int instanceID = 0;
-				for (; instanceID < BATCH_INSTANCED_COUNT; ++instanceID)
+				for (; instanceID < DRAW_INSTANCED_COUNT_DEPTH_PASS; ++instanceID)
 				{
-					const int renderListIndex = BATCH_INSTANCED_COUNT * batchCount + instanceID;
+					const int renderListIndex = DRAW_INSTANCED_COUNT_DEPTH_PASS * batchCount + instanceID;
 					if (renderListIndex == renderList.size())
 						break;
 		
@@ -235,8 +249,8 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 				pRenderer->SetConstantStruct("ObjMats", &cbuffer);
 				pRenderer->Apply();
 				pRenderer->DrawIndexedInstanced(instanceID);
-			} while (batchCount++ < renderList.size() / BATCH_INSTANCED_COUNT);
-		});
+			} while (batchCount++ < renderList.size() / DRAW_INSTANCED_COUNT_DEPTH_PASS);
+		};
 
 		pRenderer->EndEvent();
 		pGPUProfiler->EndEntry();
@@ -420,6 +434,13 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 		ShaderStageDesc{ "Deferred_Geometry_vs.hlsl", {} },
 		ShaderStageDesc{ "Deferred_Geometry_ps.hlsl", {} }
 	}};
+	const ShaderDesc geomShaderInstancedDesc = { "InstancedGBufferPass", 
+	{
+		ShaderStageDesc{ "Deferred_Geometry_vs.hlsl",
+		{ ShaderMacro{ "INSTANCED", "1"}, ShaderMacro{"INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_GBUFFER_PASS) } }
+	},
+		ShaderStageDesc{ "Deferred_Geometry_ps.hlsl", {} }
+	}};
 	const ShaderDesc ambientShaderDesc = { "Deferred_Ambient",
 	{
 		ShaderStageDesc{ pFSQ_VS, {} },
@@ -453,13 +474,14 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 
 	InitializeGBuffer(pRenderer);
 
-	_geometryShader		 = pRenderer->CreateShader(geomShaderDesc);
-	_ambientShader		 = pRenderer->CreateShader(ambientShaderDesc);
-	_ambientIBLShader	 = pRenderer->CreateShader(ambientIBLShaderDesc);
-	_BRDFLightingShader  = pRenderer->CreateShader(BRDFLightingShaderDesc);
-	_phongLightingShader = pRenderer->CreateShader(phongLighintShaderDesc);
-	_spotLightShader	 = pRenderer->CreateShader(BRDF_PointLightShaderDesc);
-	_pointLightShader	 = pRenderer->CreateShader(BRDF_SpotLightShaderDesc);
+	_geometryShader				= pRenderer->CreateShader(geomShaderDesc);
+	_geometryInstancedShader	= pRenderer->CreateShader(geomShaderInstancedDesc);
+	_ambientShader				= pRenderer->CreateShader(ambientShaderDesc);
+	_ambientIBLShader			= pRenderer->CreateShader(ambientIBLShaderDesc);
+	_BRDFLightingShader			= pRenderer->CreateShader(BRDFLightingShaderDesc);
+	_phongLightingShader		= pRenderer->CreateShader(phongLighintShaderDesc);
+	_spotLightShader			= pRenderer->CreateShader(BRDF_PointLightShaderDesc);
+	_pointLightShader			= pRenderer->CreateShader(BRDF_SpotLightShaderDesc);
 
 	// deferred geometry is accessed from elsewhere, needs to be globally defined
 	assert(EShaders::DEFERRED_GEOMETRY == _geometryShader);	// this assumption may break, make sure it doesn't...

@@ -33,7 +33,10 @@ cbuffer perModel
 struct VSIn
 {
 	float3 position : POSITION;
+
+#ifdef INSTANCED
 	uint instanceID : SV_InstanceID;
+#endif
 };
 
 struct PSIn
@@ -41,11 +44,7 @@ struct PSIn
 	float4 position : SV_POSITION;
 };
 
-#ifdef INSTANCED
 PSIn VSMain(VSIn In)
-#else
-PSIn VSMain(VSIn In)
-#endif
 {
 	PSIn Out;
 #ifdef INSTANCED

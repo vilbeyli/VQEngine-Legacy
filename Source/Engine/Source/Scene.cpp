@@ -723,7 +723,7 @@ static size_t CullGameObjects(
 	return pObjs.size() - currIdx;
 }
 
-size_t Scene::PreRender()
+void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 {
 	// set scene view
 	const Camera& viewCamera = GetActiveCamera();
@@ -746,10 +746,10 @@ size_t Scene::PreRender()
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
 	mSceneView.bIsIBLEnabled = mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
 
-
 	
 	// CLEAN UP RENDER LISTS
 	//
+	pCPUProfiler->BeginEntry("CleanUp");
 	// scene view
 	mSceneView.opaqueList.clear();
 	mSceneView.culledOpaqueList.clear();
@@ -761,7 +761,7 @@ size_t Scene::PreRender()
 	mShadowView.casters.clear();
 	mShadowView.shadowMapRenderListLookUp.clear();
 	mShadowView.shadowMapInstancedRenderListLookUp.clear();
-
+	pCPUProfiler->EndEntry();
 
 	// POPULATE RENDER LISTS WITH SCENE OBJECTS
 	//
@@ -770,6 +770,8 @@ size_t Scene::PreRender()
 
 	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = mShadowView.RenderListsPerMeshType;
 	// gather game objects that are to be rendered in the scene
+	pCPUProfiler->BeginEntry("Non-Instanced Lists");
+	int numObjects = 0;
 	for (GameObject& obj : mObjectPool.mObjects)
 	{
 		if (obj.mpScene == this && obj.mRenderSettings.bRender)
@@ -789,9 +791,12 @@ size_t Scene::PreRender()
 				obj.mRenderSettings.bRender = false;
 			}
 #endif
+			++numObjects;
 		}
 	}
 
+	stats.scene.numObjects = numObjects;
+	pCPUProfiler->EndEntry();
 
 	// CULL MAIN & SHADOW VIEWS
 	//
@@ -842,17 +847,23 @@ size_t Scene::PreRender()
 	};
 
 
-	size_t numFrustumCulledObjs = 0;
-	size_t numShadowFrustumCullObjs = 0;
+	// start counting these
+	stats.scene.numSpots = 0;
+	stats.scene.numPoints = 0;
+	stats.scene.numDirectionalCulledObjects = 0;
+	stats.scene.numPointsCulledObjects = 0;
+	stats.scene.numSpotsCulledObjects = 0;
 	
 #if THREADED_FRUSTUM_CULL
 	// TODO: utilize thread pool for each render list
 
 #else
 	// main view
+	pCPUProfiler->BeginEntry("Cull Views");
+	//pCPUProfiler->BeginEntry("Main View");
 	if (bCullMainView)
 	{
-		numFrustumCulledObjs = CullGameObjects(
+		stats.scene.numMainViewCulledObjects = CullGameObjects(
 			FrustumPlaneset::ExtractFromMatrix(mSceneView.viewProj)
 			, mSceneView.opaqueList
 			, mainViewRenderList);
@@ -861,80 +872,83 @@ size_t Scene::PreRender()
 	{
 		mainViewRenderList.resize(mSceneView.opaqueList.size());
 		std::copy(RANGE(mSceneView.opaqueList), mainViewRenderList.begin());
-		numFrustumCulledObjs = 0;
+		stats.scene.numMainViewCulledObjects = 0;
 	}
-
+	//pCPUProfiler->EndEntry();
 
 	// shadow frusta
+	//pCPUProfiler->BeginEntry("Spots");
 	for (const Light& l : mLights)
 	{
-		if (l._castsShadow)
+		if (!l._castsShadow) continue;
+
+		std::vector<const GameObject*> objList;
+		switch (l._type)
 		{
-			// Cull
-			//
-			std::vector<const GameObject*> objList;
-			switch (l._type)
+		case Light::ELightType::SPOT:
+		{
+			++stats.scene.numSpots;
+			if (bCullLightView)
 			{
-			case Light::ELightType::SPOT:
+				stats.scene.numSpotsCulledObjects += CullGameObjects(l.GetViewFrustumPlanes(), casterList, objList);
+			}
+			else
 			{
-				if (bCullLightView)
-				{
-					numShadowFrustumCullObjs += CullGameObjects(l.GetViewFrustumPlanes(), casterList, objList);
-				}
-				else
-				{
-					objList.resize(casterList.size());
-					std::copy(RANGE(casterList), objList.begin());
-					numShadowFrustumCullObjs += 0;
-				}
+				objList.resize(casterList.size());
+				std::copy(RANGE(casterList), objList.begin());
+				stats.scene.numSpotsCulledObjects += 0;
 			}
-			break;
-			case Light::ELightType::POINT:
-				// TODO: cull against 6 frustums
-				if (bCullLightView)
-				{
-					
-				}
-				else
-				{
-					
-				}
-				break;
-			}
-
-
-			// Sort Objects Per Mesh Type, etc...
-			//
-			if (bSortRenderLists) 
-			{ 
-				std::sort(RANGE(objList), SortByMeshType); 
-			}
-
-			mShadowView.shadowMapRenderListLookUp[&l] = objList;
 		}
+		break;
+		case Light::ELightType::POINT:
+			++stats.scene.numPoints;
+			// TODO: cull against 6 frustums
+			if (bCullLightView) { }
+			else { }
+			break;
+		}
+
+		mShadowView.shadowMapRenderListLookUp[&l] = objList;
 	}
+	//pCPUProfiler->EndEntry();
 #endif
 	
 	// CULL DIRECTIONAL SHADOW VIEW 
 	//
 	if (bShadowViewCull)
 	{
+		//pCPUProfiler->BeginEntry("Directional");
 		// TODO: consider this for directionals: http://stefan-s.net/?p=92 or umbra paper
+		//pCPUProfiler->EndEntry();
 	}
-	
+	pCPUProfiler->EndEntry(); // Cull Views
 
 
 	// SORT OBJECTS PER MESH TYPE, ETC...
 	//
+	pCPUProfiler->BeginEntry("Sort");
 	if (bSortRenderLists) 
 	{ 
 		std::sort(RANGE(mSceneView.culledOpaqueList), SortByMeshType);
 		std::sort(RANGE(casterList), SortByMeshType);
+		for (const Light& l : mLights)
+		{
+			if (!l._castsShadow) continue;
+			RenderList& lightRenderList = mShadowView.shadowMapRenderListLookUp.at(&l);
+
+			std::sort(RANGE(lightRenderList), SortByMeshType);
+		}
 	}
+	pCPUProfiler->EndEntry();
+
 
 	// PREPARE INSTANCED DRAW BATCHES
 	//
 	// Shadow Caster Render Lists
+
+	
+	//pCPUProfiler->BeginEntry("Lists");
+	pCPUProfiler->BeginEntry("[Instanced] Directional");
 	for(int i=0; i<casterList.size(); ++i)
 	{
 		const GameObject* pCaster = casterList[i];
@@ -953,8 +967,10 @@ size_t Scene::PreRender()
 		std::vector<const GameObject*>& renderList = instancedCasterLists.at(meshID);
 		renderList.push_back(std::move(casterList[i]));
 	}
+	pCPUProfiler->EndEntry();
 
 	// Main View Render Lists
+	pCPUProfiler->BeginEntry("[Instanced] Main View");
 	for (int i = 0; i < mainViewRenderList.size(); ++i)
 	{
 		const GameObject* pObj = mainViewRenderList[i];
@@ -969,9 +985,7 @@ size_t Scene::PreRender()
 			const Material* pMat = mMaterials.GetMaterial_const(materialID);
 			bHasTextures = pMat->HasTexture();
 		}
-		
-
-		bool bShouldBeDrawnNonInstanced = meshID >= EGeometry::MESH_TYPE_COUNT || bHasTextures;
+		const bool bShouldBeDrawnNonInstanced = meshID >= EGeometry::MESH_TYPE_COUNT || bHasTextures;
 		if (bShouldBeDrawnNonInstanced)
 		{
 			mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
@@ -987,6 +1001,8 @@ size_t Scene::PreRender()
 		std::vector<const GameObject*>& renderList = instancedRenderLists.at(meshID);
 		renderList.push_back(std::move(mainViewRenderList[i]));
 	}
+	pCPUProfiler->EndEntry();
+	//pCPUProfiler->EndEntry();	// Prepare Instanced
 	
 #if _DEBUG
 	if (!bReportedList)
@@ -1008,7 +1024,7 @@ size_t Scene::PreRender()
 	}
 #endif
 
-	return numFrustumCulledObjs + numShadowFrustumCullObjs;
+	//return numFrustumCulledObjs + numShadowFrustumCullObjs;
 }
 
 void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)

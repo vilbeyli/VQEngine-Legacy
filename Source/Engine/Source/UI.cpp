@@ -89,14 +89,24 @@ void VQEngine::UI::Exit()
 //
 const char* FrameStats::statNames[FrameStats::numStat] =
 {
-	"FPS: ",
-	"Objects: ",
-	"Culled Objects: ",
-	"Vertices: ",
-	"Indices: ",
-	"Draw Calls: ",
+	"FPS : ",
+
+	"Vertices : ",
+	"Indices : ",
+	"Draw Calls : ",
+	"Triangles : ",
+
+	"# Objects        : ",
+	"# Spot Lights  : ",
+	"# Point Lights : ",
+
+	"[Cull] MainView  : ",
+	"[Cull] SpotViews : ",
+	"[Cull] PointViews: ",
+	"[Cull] DirectionalView : ",
 };
-constexpr size_t RENDER_ORDER_FRAME_STATS_ROW_1[] = { 0, 5, 3, 4, 1, 2 };
+constexpr size_t RENDER_ORDER_FRAME_STATS_ROW_1[] = { 0, 3, 4, 1, 2};
+constexpr size_t RENDER_ORDER_FRAME_STATS_ROW_2[] = { 5, 6, 7, 8, 9, /*10, 11*/ };
 
 auto GetFPSColor = [](int FPS) -> LinearColor
 {
@@ -125,7 +135,8 @@ constexpr float Y_NORMALIZED_POSITION_FRAME_STATS = 0.550f;
 constexpr float X_NORMALIZED_POSITION_PROFILER_CPU = X_NORMALIZED_POSITION_FRAME_STATS;
 constexpr float Y_NORMALIZED_POSITION_PROFILER_CPU = 0.665f;
 
-constexpr float X_NORMALIZED_POSITION_PROFILER_GPU = X_NORMALIZED_POSITION_FRAME_STATS + 0.110f;
+constexpr float CPU_GPU_GAP = 0.110f;
+constexpr float X_NORMALIZED_POSITION_PROFILER_GPU = X_NORMALIZED_POSITION_FRAME_STATS + CPU_GPU_GAP;
 constexpr float Y_NORMALIZED_POSITION_PROFILER_GPU = Y_NORMALIZED_POSITION_PROFILER_CPU;
 
 constexpr float PX_CPU_GPU_PROFILER_DISTANCE = 9.0f;
@@ -177,13 +188,21 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 	// FRAME STATS
 	//
 	mpTextRenderer->RenderText(drawDesc);
-	for (size_t i = 0; i < FrameStats::numStat; ++i)
+	for (size_t i = 0; i < sizeof(RENDER_ORDER_FRAME_STATS_ROW_1) / sizeof(size_t); ++i)
 	{
 		drawDesc.screenPosition = vec2(PX_POS_FRAMESTATS.x(), PX_POS_FRAMESTATS.y() + i * LINE_HEIGHT_IN_PX);
 		drawDesc.color = RENDER_ORDER_FRAME_STATS_ROW_1[i] == 0	// if we're drawing the FPS
 			? GetFPSColor(stats[RENDER_ORDER_FRAME_STATS_ROW_1[i]])
 			: LinearColor::white;
 		drawDesc.text = FrameStats::statNames[RENDER_ORDER_FRAME_STATS_ROW_1[i]] + StrUtil::CommaSeparatedNumber(std::to_string(stats[RENDER_ORDER_FRAME_STATS_ROW_1[i]]));
+		mpTextRenderer->RenderText(drawDesc);
+	}
+	const float offset = CPU_GPU_GAP * screenSizeInPixels.x();
+	for (size_t i = 0; i < sizeof(RENDER_ORDER_FRAME_STATS_ROW_2) / sizeof(size_t); ++i)
+	{
+		drawDesc.screenPosition = vec2(PX_POS_FRAMESTATS.x() + offset, PX_POS_FRAMESTATS.y() + i * LINE_HEIGHT_IN_PX);
+		drawDesc.color = LinearColor::white;
+		drawDesc.text = FrameStats::statNames[RENDER_ORDER_FRAME_STATS_ROW_2[i]] + StrUtil::CommaSeparatedNumber(std::to_string(stats[RENDER_ORDER_FRAME_STATS_ROW_2[i]]));
 		mpTextRenderer->RenderText(drawDesc);
 	}
 	mpRenderer->EndEvent();

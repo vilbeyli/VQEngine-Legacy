@@ -48,7 +48,6 @@ void Model::AddMaterialToMesh(MeshID meshID, MaterialID materialID, bool bTransp
 		{
 			mData.mTransparentMeshIDs.push_back(meshID);
 		}
-
 	}
 }
 

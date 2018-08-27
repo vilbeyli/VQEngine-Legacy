@@ -57,11 +57,6 @@ void GameObject::RenderTransparent(
 		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 		break;
 	case EShaders::Z_PREPRASS:
-	case EShaders::DEFERRED_GEOMETRY:
-		pRenderer->SetConstant4x4f("worldView", world * sceneView.view);
-		pRenderer->SetConstant4x4f("normalViewMatrix", mTransform.NormalMatrix(world) * sceneView.view);
-		pRenderer->SetConstant4x4f("worldViewProj", wvp);
-		break;
 	case EShaders::NORMAL:
 		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
 	case EShaders::UNLIT:

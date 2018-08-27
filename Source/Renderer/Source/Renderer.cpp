@@ -1980,6 +1980,7 @@ void Renderer::DrawIndexed(EPrimitiveTopology topology)
 	++mRenderStats.numDrawCalls;
 	mRenderStats.numIndices += numIndices;
 	mRenderStats.numVertices += numVertices;
+	mRenderStats.numTriangles += numIndices / 3;
 }
 
 void Renderer::DrawIndexedInstanced(int instanceCount, EPrimitiveTopology topology /*= EPrimitiveTopology::POINT_LIST*/)
@@ -2001,6 +2002,7 @@ void Renderer::DrawIndexedInstanced(int instanceCount, EPrimitiveTopology topolo
 	++mRenderStats.numDrawCalls;
 	mRenderStats.numIndices += numIndices;
 	mRenderStats.numVertices += numVertices;
+	mRenderStats.numTriangles += numIndices / 3;
 }
 
 void Renderer::Draw(int vertCount, EPrimitiveTopology topology /*= EPrimitiveTopology::POINT_LIST*/)
@@ -2010,4 +2012,5 @@ void Renderer::Draw(int vertCount, EPrimitiveTopology topology /*= EPrimitiveTop
 	
 	++mRenderStats.numDrawCalls;
 	mRenderStats.numVertices += vertCount;
+	//mRenderStats.numTriangles += vertCount / 3;
 }

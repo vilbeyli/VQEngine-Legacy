@@ -36,13 +36,15 @@
 
 
 struct SerializedScene;
+struct SceneView;
+struct ShadowView;
+struct DrawLists;
+
 class SceneManager;
 class Renderer;
 class TextRenderer;
-struct SceneView;
-struct ShadowView;
 class MaterialPool;
-struct DrawLists;
+class CPUProfiler;
 
 namespace VQEngine { class ThreadPool; }
 
@@ -124,9 +126,9 @@ public:
 	//
 	void UpdateScene(float dt);
 
-	// Prepares the mDrawLists for various processing (culling, render pass object lists etc.)
+	// Prepares the scene and shadow views for culling, sorting, instanced draw lists etc.
 	//
-	size_t PreRender();
+	void PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats);
 	void GatherLightData(SceneLightingData& outLightingData);
 
 

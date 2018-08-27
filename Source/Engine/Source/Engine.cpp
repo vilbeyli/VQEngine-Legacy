@@ -734,11 +734,8 @@ void Engine::PreRender()
 	// 		mTBNDrawObjects.push_back(obj);
 	// }
 
-	// TODO: culled objects per view
-	mFrameStats.numCulledObjects = static_cast<int>(mpActiveScene->PreRender());
 
-
-
+	mpActiveScene->PreRender(mpCPUProfiler, mFrameStats);
 	mFrameStats.rstats = mpRenderer->GetRenderStats();
 	mFrameStats.fps = static_cast<int>(1.0f / mpGPUProfiler->GetRootEntryAvg());
 

@@ -106,39 +106,51 @@ struct SceneLightingData
 class TextRenderer;
 struct TextDrawDescription;
 
+#define DENDER_STATS_STRUCT_ELEM_COUNT 4
+#define DEFINE_RENDER_STATS_STRUCT_MEMBERS\
+		int numVertices;                  \
+		int numIndices;	                  \
+		int numDrawCalls;                 \
+		int numTriangles;                 \
+
 struct RendererStats
 {
 	union
 	{
-		struct  
+		struct
 		{
-			int numVertices;
-			int numIndices;
-			int numDrawCalls;
+			DEFINE_RENDER_STATS_STRUCT_MEMBERS
 		};
-		int arr[3];
+		int arr[DENDER_STATS_STRUCT_ELEM_COUNT];
 	};
+};
+struct SceneStats
+{
+	int numObjects;
+	int numSpots;
+	int numPoints;
+
+	int numMainViewCulledObjects;
+	int numSpotsCulledObjects;
+	int numPointsCulledObjects;
+	int numDirectionalCulledObjects;
 };
 struct FrameStats
 {
-	static const size_t numStat = 6;
+	static const size_t numStat = (sizeof(int) + sizeof(RendererStats) + sizeof(SceneStats)) / sizeof(int);
 	union 
 	{
 		struct
 		{
 			int fps;
-			int numSceneObjects;
-			int numCulledObjects;
-			int numDrawCalls;
-			int numVertices;
-			int numIndices;
+			DEFINE_RENDER_STATS_STRUCT_MEMBERS;
+			SceneStats scene;
 		};
 		struct
 		{
 			int fps;
-			int numSceneObjects;
-			int numCulledObjects;
 			RendererStats rstats;
+			SceneStats scene;
 		};
 		int stats[numStat];
 	};

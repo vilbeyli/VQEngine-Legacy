@@ -69,10 +69,21 @@ public:
 	
 	inline void SetModel(Model model) { mModel = model; } // i don't like this setter...
 	inline const BoundingBox& GetAABB() const { return mBoundingBox; }
-public:
-	GameObjectRenderSettings	mRenderSettings;
+
 
 //---------------------------------------------------------------------------------------------------
+
+public:
+	GameObjectRenderSettings	mRenderSettings;
+	// After a game object is created, we use the pointer field
+	// as the Scene*. Otherwise, we keep a pointer for the object pool
+	// to the next available object - a free list of GameObject pointers
+	union
+	{
+		GameObject*		pNextFreeObject;
+		Scene*			mpScene;
+	};
+
 private:
 	// friend std::shared_ptr<GameObject> Scene::CreateNewGameObject();					// #TODO: clean up: use either friend functions or ...
 	// friend std::shared_ptr<GameObject> SerializedScene::CreateNewGameObject();
@@ -88,13 +99,6 @@ private:
 	Model				mModel;
 	BoundingBox			mBoundingBox;
 
-	// After a game object is created, we use the pointer field
-	// as the Scene*. Otherwise, we keep a pointer for the object pool
-	// to the next available object - a free list of GameObject pointers
-	union
-	{
-		GameObject*		pNextFreeObject;
-		Scene*			mpScene;
-	};
+
 };
 

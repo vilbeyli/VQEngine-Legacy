@@ -48,18 +48,17 @@ class GameObject
 // the members are references to data either in Scene or Renderer.
 //
 public:
-	void RenderOpaque(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
 	void RenderTransparent(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
 	void Clear();
 
-	void SetTransform(const Transform& transform) { mTransform = transform; }
+	inline void SetTransform(const Transform& transform) { mTransform = transform; }
 	
-	const Transform& GetTransform() const { return mTransform; }
-	const vec3& GetPosition() const { return mTransform._position; }
-	const ModelData& GetModelData() const { return mModel.mData; }
-	const std::string& GetModelName() const { return mModel.mModelName; }
+	inline const Transform& GetTransform() const { return mTransform; }
+	inline const vec3& GetPosition() const { return mTransform._position; }
+	inline const ModelData& GetModelData() const { return mModel.mData; }
+	inline const std::string& GetModelName() const { return mModel.mModelName; }
 	
-	Transform& GetTransform() { return mTransform; }
+	inline Transform& GetTransform() { return mTransform; }
 
 	void AddMesh(MeshID meshID);
 

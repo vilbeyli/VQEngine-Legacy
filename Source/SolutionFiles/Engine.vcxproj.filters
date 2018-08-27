@@ -39,31 +39,37 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\Settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\DataStructures.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\DataStructures.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\PerfTree.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\GameObjectPool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\SceneResources.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Light.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\Material.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Mesh.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\Mesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Model.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\Material.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\PerfTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\GameObjectPool.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\SceneResources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Engine\UI.h">
+    <ClInclude Include="$(SolutionDir)Source\Engine\UI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(SolutionDir)Source\Engine\Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\SceneView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -86,22 +92,25 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Skybox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Source\Light.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\GameObjectPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Source\Mesh.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Light.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Source\Model.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Material.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Source\Material.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Source\GameObjectPool.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Model.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Engine\Source\UI.cpp">
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\UI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

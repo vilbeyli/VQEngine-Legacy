@@ -19,8 +19,8 @@
 #include "GameObject.h"
 #include "Renderer/Renderer.h"
 #include "RenderPasses.h"
-
 #include "SceneResources.h"
+#include "SceneView.h"
 
 #include "Engine.h"
 
@@ -37,100 +37,6 @@ void GameObject::AddMaterial(Material * pMat)
 	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), pMat->ID, pMat->IsTransparent());
 }
 
-
-void GameObject::RenderOpaque(Renderer* pRenderer
-	, const SceneView& sceneView
-	, bool UploadMaterialDataToGPU
-	, const MaterialPool& materialBuffer) const
-{
-	const EShaders shader = static_cast<EShaders>(pRenderer->GetActiveShader());
-	const XMMATRIX world = mTransform.WorldTransformationMatrix();
-	const XMMATRIX wvp = world * sceneView.viewProj;
-
-	struct ObjectMatrices_ViewSpace
-	{
-		XMMATRIX wv;
-		XMMATRIX nv;
-		XMMATRIX wvp;
-	};
-	struct ObjectMatrices_WorldSpace
-	{
-		XMMATRIX wvp;
-		XMMATRIX w;
-		XMMATRIX n;
-	};
-
-	// SET MATRICES
-	switch (shader)
-	{
-	case EShaders::TBN:
-		pRenderer->SetConstant4x4f("world", world);
-		pRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
-		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
-		break;
-	case EShaders::Z_PREPRASS:
-	case EShaders::DEFERRED_GEOMETRY:
-	{
-		const ObjectMatrices_ViewSpace mats =
-		{
-			world * sceneView.view,
-			mTransform.NormalMatrix(world) * sceneView.view,
-			wvp,
-		};
-		pRenderer->SetConstantStruct("ObjMatrices", &mats);
-		break;
-	}
-	case EShaders::NORMAL:
-		pRenderer->SetConstant4x4f("normalMatrix", mTransform.NormalMatrix(world));
-	case EShaders::UNLIT:
-	case EShaders::TEXTURE_COORDINATES:
-		pRenderer->SetConstant4x4f("worldViewProj", wvp);
-		break;
-	default:	// lighting shaders
-	{
-		const ObjectMatrices_WorldSpace mats =
-		{
-			wvp,
-			world,
-			mTransform.NormalMatrix(world)
-		};
-		pRenderer->SetConstantStruct("ObjMatrices", &mats);
-		break;
-	}
-	}
-
-	// SET GEOMETRY & MATERIAL, THEN DRAW
-	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
-	for_each(mModel.mData.mMeshIDs.begin(), mModel.mData.mMeshIDs.end(), [&](MeshID id) 
-	{
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
-
-		// SET MATERIAL CONSTANTS
-		if (UploadMaterialDataToGPU)
-		{
-			const bool bMeshHasMaterial = mModel.mData.mMaterialLookupPerMesh.find(id) != mModel.mData.mMaterialLookupPerMesh.end();
-
-			if (bMeshHasMaterial)
-			{
-				const MaterialID materialID = mModel.mData.mMaterialLookupPerMesh.at(id);
-				const Material* pMat = materialBuffer.GetMaterial_const(materialID);
-				// #TODO: uncomment below when transparency is implemented.
-				//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
-				//	return;
-				pMat->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
-			}
-			else
-			{
-				materialBuffer.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, shader, sceneView.bIsDeferredRendering);
-			}
-		}
-
-		pRenderer->SetVertexBuffer(IABuffer.first);
-		pRenderer->SetIndexBuffer(IABuffer.second);
-		pRenderer->Apply();
-		pRenderer->DrawIndexed();
-	});
-}
 
 void GameObject::RenderTransparent(
 	  Renderer * pRenderer
@@ -170,7 +76,7 @@ void GameObject::RenderTransparent(
 	}
 
 	// SET GEOMETRY & MATERIAL, THEN DRAW
-	for_each(mModel.mData.mTransparentMeshIDs.begin(), mModel.mData.mTransparentMeshIDs.end(), [&](MeshID id)
+	for(MeshID id : mModel.mData.mTransparentMeshIDs)
 	{
 		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
 
@@ -195,7 +101,7 @@ void GameObject::RenderTransparent(
 		pRenderer->SetIndexBuffer(IABuffer.second);
 		pRenderer->Apply();
 		pRenderer->DrawIndexed();
-	});
+	};
 }
 
 void GameObject::Clear()

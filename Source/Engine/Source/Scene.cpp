@@ -29,7 +29,7 @@
 #include <numeric>
 #include <set>
 
-#define THREADED_FRUSTUM_CULL 0	// uses workers to cull the render lists
+#define THREADED_FRUSTUM_CULL 0	// uses workers to cull the render lists (not implemented yet)
 
 Scene::Scene(Renderer * pRenderer, TextRenderer * pTextRenderer)
 	: mpRenderer(pRenderer)
@@ -105,22 +105,118 @@ void Scene::UnloadScene()
 
 int Scene::RenderOpaque(const SceneView& sceneView) const
 {
-	const ShaderID selectedShader = ENGINE->GetSelectedShader();
-	const bool bSendMaterialData = (
-		selectedShader == EShaders::FORWARD_PHONG
-		|| selectedShader == EShaders::UNLIT
-		|| selectedShader == EShaders::NORMAL
-		|| selectedShader == EShaders::FORWARD_BRDF
-		|| selectedShader == EShaders::DEFERRED_GEOMETRY
-		|| selectedShader == EShaders::Z_PREPRASS
-		);
+	//-----------------------------------------------------------------------------------------------
 
-	int numObj = 0;
-	for (const auto* obj : mDrawLists.opaqueListCulled) 
+	struct ObjectMatrices_WorldSpace
 	{
-		obj->RenderOpaque(mpRenderer, sceneView, bSendMaterialData, mMaterials);
+		XMMATRIX wvp;
+		XMMATRIX w;
+		XMMATRIX n;
+	};
+	auto Is2DGeometry = [](MeshID mesh)
+	{
+		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
+	};
+	auto ShouldSendMaterial = [](EShaders shader)
+	{
+		return (shader == EShaders::FORWARD_PHONG
+			 || shader == EShaders::UNLIT
+			 || shader == EShaders::NORMAL
+			 || shader == EShaders::FORWARD_BRDF
+			 || shader == EShaders::DEFERRED_GEOMETRY
+			 || shader == EShaders::Z_PREPRASS);
+	};
+	auto RenderObject = [&](const GameObject* pObj)
+	{
+		const Transform& tf = pObj->GetTransform();
+		const ModelData& model = pObj->GetModelData();
+
+		const EShaders shader = static_cast<EShaders>(mpRenderer->GetActiveShader());
+		const XMMATRIX world = tf.WorldTransformationMatrix();
+		const XMMATRIX wvp = world * sceneView.viewProj;
+
+		switch (shader)
+		{
+		case EShaders::TBN:
+			mpRenderer->SetConstant4x4f("world", world);
+			mpRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
+			mpRenderer->SetConstant4x4f("normalMatrix", tf.NormalMatrix(world));
+			break;
+		case EShaders::Z_PREPRASS:
+		case EShaders::DEFERRED_GEOMETRY:
+		{
+			const ObjectMatrices_ViewSpace mats =
+			{
+				world * sceneView.view,
+				tf.NormalMatrix(world) * sceneView.view,
+				wvp,
+			};
+			mpRenderer->SetConstantStruct("ObjMatrices", &mats);
+			break;
+		}
+		case EShaders::NORMAL:
+			mpRenderer->SetConstant4x4f("normalMatrix", tf.NormalMatrix(world));
+		case EShaders::UNLIT:
+		case EShaders::TEXTURE_COORDINATES:
+			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+			break;
+		default:	// lighting shaders
+		{
+			const ObjectMatrices_WorldSpace mats =
+			{
+				wvp,
+				world,
+				tf.NormalMatrix(world)
+			};
+			mpRenderer->SetConstantStruct("ObjMatrices", &mats);
+			break;
+		}
+		}
+
+		// SET GEOMETRY & MATERIAL, THEN DRAW
+		mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+		for(MeshID id : model.mMeshIDs)
+		{
+			const auto IABuffer = mMeshes[id].GetIABuffers();
+
+			// SET MATERIAL CONSTANTS
+			if (ShouldSendMaterial(shader))
+			{
+				const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(id) != model.mMaterialLookupPerMesh.end();
+				if (bMeshHasMaterial)
+				{
+					const MaterialID materialID = model.mMaterialLookupPerMesh.at(id);
+					const Material* pMat = mMaterials.GetMaterial_const(materialID);
+					// #TODO: uncomment below when transparency is implemented.
+					//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
+					//	return;
+					pMat->SetMaterialConstants(mpRenderer, shader, sceneView.bIsDeferredRendering);
+				}
+				else
+				{
+					mMaterials.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(mpRenderer, shader, sceneView.bIsDeferredRendering);
+				}
+			}
+
+			mpRenderer->SetVertexBuffer(IABuffer.first);
+			mpRenderer->SetIndexBuffer(IABuffer.second);
+			mpRenderer->Apply();
+			mpRenderer->DrawIndexed();
+		};
+	};
+	//-----------------------------------------------------------------------------------------------
+
+	// RENDER NON-INSTANCED SCENE OBJECTS
+	//
+	int numObj = 0;
+	for (const auto* obj : mSceneView.culledOpaqueList)
+	{
+		RenderObject(obj);
 		++numObj;
 	}
+
+	
+
 	return numObj;
 }
 
@@ -137,7 +233,7 @@ int Scene::RenderAlpha(const SceneView & sceneView) const
 		);
 
 	int numObj = 0;
-	for (const auto* obj : mDrawLists.alphaList)
+	for (const auto* obj : mSceneView.alphaList)
 	{
 		obj->RenderTransparent(mpRenderer, sceneView, bSendMaterialData, mMaterials);
 		++numObj;
@@ -165,16 +261,16 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	
 	// game object bounding boxes
 	std::vector<const GameObject*> pObjects(
-		mDrawLists.opaqueList.size() + mDrawLists.alphaList.size()
+		mSceneView.opaqueList.size() + mSceneView.alphaList.size()
 		, nullptr
 	);
-	std::copy(RANGE(mDrawLists.opaqueList), pObjects.begin());
-	std::copy(RANGE(mDrawLists.alphaList), pObjects.begin() + mDrawLists.opaqueList.size());
+	std::copy(RANGE(mSceneView.opaqueList), pObjects.begin());
+	std::copy(RANGE(mSceneView.alphaList), pObjects.begin() + mSceneView.opaqueList.size());
 	mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
-	std::for_each(RANGE(pObjects), [&](const GameObject* pObj)
+	for(const GameObject* pObj : pObjects)
 	{
 		pObj->mBoundingBox.Render(mpRenderer, pObj->GetTransform().WorldTransformationMatrix() * viewProj);
-	});
+	};
 
 
 	// TODO: camera frustum
@@ -220,12 +316,12 @@ using pSpotLightDataArray = std::array<SpotLightDataArray*, 2>;
 
 // stores the number of lights per light type (2 types : point and spot)
 using pNumArray = std::array<int*, 2>;
-void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& outShadowView) const
+void Scene::GatherLightData(SceneLightingData & outLightingData)
 {
 	SceneLightingData::cb& cbuffer = outLightingData._cb;
 
 	outLightingData.ResetCounts();
-	outShadowView.Clear();
+	mShadowView.Clear();
 
 	cbuffer.directionalLight.shadowFactor = 0.0f;
 	cbuffer.directionalLight.brightness = 0.0f;
@@ -261,7 +357,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 			//outLightingData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
 			if (l._castsShadow)
 			{
-				outShadowView.points.push_back(&l);
+				mShadowView.points.push_back(&l);
 			}
 		}
 		break;
@@ -273,7 +369,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 			if (l._castsShadow)
 			{
 				cbuffer.shadowViews[numShdSpot++] = l.GetLightSpaceMatrix();
-				outShadowView.spots.push_back(&l);
+				mShadowView.spots.push_back(&l);
 			}
 		}
 		break;
@@ -287,7 +383,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, ShadowView& out
 	cbuffer.shadowViewDirectional = mDirectionalLight.GetLightSpaceMatrix();
 	if (mDirectionalLight.enabled)
 	{
-		outShadowView.pDirectional = &mDirectionalLight;
+		mShadowView.pDirectional = &mDirectionalLight;
 	}
 }
 
@@ -627,28 +723,52 @@ static size_t CullGameObjects(
 	return pObjs.size() - currIdx;
 }
 
-size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
+size_t Scene::PreRender()
 {
-	mFrameViewProj = viewProj;
+	// set scene view
+	const Camera& viewCamera = GetActiveCamera();
+	const XMMATRIX view = viewCamera.GetViewMatrix();
+	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
+	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
+	XMVECTOR det = XMMatrixDeterminant(proj);
+	const XMMATRIX projInv = XMMatrixInverse(&det, proj);
+
+	// scene veiw matrices
+	mSceneView.viewProj = view * proj;
+	mSceneView.view = view;
+	mSceneView.viewInverse = viewInverse;
+	mSceneView.proj = proj;
+	mSceneView.projInverse = projInv;
+
+	// render/scene settings
+	mSceneView.sceneRenderSettings = GetSceneRenderSettings();
+	mSceneView.environmentMap = GetEnvironmentMap();
+	mSceneView.cameraPosition = viewCamera.GetPositionF();
+	mSceneView.bIsIBLEnabled = mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
+
+
 	
 	// CLEAN UP RENDER LISTS
 	//
 	// scene view
-	mDrawLists.opaqueList.clear();
-	mDrawLists.opaqueListCulled.clear();
-	mDrawLists.alphaList.clear();
+	mSceneView.opaqueList.clear();
+	mSceneView.culledOpaqueList.clear();
+	mSceneView.culluedOpaqueInstancedRenderListLookup.clear();
+	mSceneView.alphaList.clear();
 	
 	// shadow views
-	outShadowView.instancedCasters.RenderListsPerMeshType.clear();
-	outShadowView.casters.clear();
-	outShadowView.shadowMapRenderListLookUp.clear();
-	outShadowView.shadowMapInstancedRenderListLookUp.clear();
+	mShadowView.RenderListsPerMeshType.clear();
+	mShadowView.casters.clear();
+	mShadowView.shadowMapRenderListLookUp.clear();
+	mShadowView.shadowMapInstancedRenderListLookUp.clear();
 
 
 	// POPULATE RENDER LISTS WITH SCENE OBJECTS
 	//
-	std::vector<const GameObject*> casterList = outShadowView.casters;
-	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = outShadowView.instancedCasters.RenderListsPerMeshType;
+	std::vector<const GameObject*> casterList;
+	std::vector<const GameObject*> mainViewRenderList;
+
+	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = mShadowView.RenderListsPerMeshType;
 	// gather game objects that are to be rendered in the scene
 	for (GameObject& obj : mObjectPool.mObjects)
 	{
@@ -656,21 +776,11 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 		{
 			const bool bMeshListEmpty = obj.mModel.mData.mMeshIDs.empty();
 			const bool bTransparentMeshListEmpty = obj.mModel.mData.mTransparentMeshIDs.empty();
+			const bool bCastingShadows = obj.mRenderSettings.bCastShadow && !bMeshListEmpty;
 
-			if (!bMeshListEmpty)
-			{
-				mDrawLists.opaqueList.push_back(&obj);
-			}
-
-			if (!bTransparentMeshListEmpty)
-			{
-				mDrawLists.alphaList.push_back(&obj);
-			}
-
-			if (obj.mRenderSettings.bCastShadow && !bMeshListEmpty)
-			{
-				casterList.push_back(&obj);
-			}
+			if (!bMeshListEmpty)            { mSceneView.opaqueList.push_back(&obj); }
+			if (!bTransparentMeshListEmpty) { mSceneView.alphaList.push_back(&obj); }
+			if (bCastingShadows)            { casterList.push_back(&obj); }
 
 #if _DEBUG
 			if (bMeshListEmpty && bTransparentMeshListEmpty)
@@ -743,19 +853,19 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 	if (bCullMainView)
 	{
 		numFrustumCulledObjs = CullGameObjects(
-			FrustumPlaneset::ExtractFromMatrix(viewProj)
-			, mDrawLists.opaqueList
-			, mDrawLists.opaqueListCulled);
+			FrustumPlaneset::ExtractFromMatrix(mSceneView.viewProj)
+			, mSceneView.opaqueList
+			, mainViewRenderList);
 	}
 	else
 	{
-		mDrawLists.opaqueListCulled.resize(mDrawLists.opaqueList.size());
-		std::copy(RANGE(mDrawLists.opaqueList), mDrawLists.opaqueListCulled.begin());
+		mainViewRenderList.resize(mSceneView.opaqueList.size());
+		std::copy(RANGE(mSceneView.opaqueList), mainViewRenderList.begin());
 		numFrustumCulledObjs = 0;
 	}
 
 
-	// shadow frustums
+	// shadow frusta
 	for (const Light& l : mLights)
 	{
 		if (l._castsShadow)
@@ -800,7 +910,7 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 				std::sort(RANGE(objList), SortByMeshType); 
 			}
 
-			outShadowView.shadowMapRenderListLookUp[&l] = objList;
+			mShadowView.shadowMapRenderListLookUp[&l] = objList;
 		}
 	}
 #endif
@@ -818,10 +928,13 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 	//
 	if (bSortRenderLists) 
 	{ 
-		std::sort(RANGE(mDrawLists.opaqueListCulled), SortByMeshType);
+		std::sort(RANGE(mSceneView.culledOpaqueList), SortByMeshType);
 		std::sort(RANGE(casterList), SortByMeshType);
 	}
 
+	// PREPARE INSTANCED DRAW BATCHES
+	//
+	// Shadow Caster Render Lists
 	for(int i=0; i<casterList.size(); ++i)
 	{
 		const GameObject* pCaster = casterList[i];
@@ -829,7 +942,7 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
 		if (meshID >= EGeometry::MESH_TYPE_COUNT)
 		{
-			outShadowView.casters.push_back(std::move(casterList[i]));
+			mShadowView.casters.push_back(std::move(casterList[i]));
 			continue;
 		}
 
@@ -840,13 +953,47 @@ size_t Scene::PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView)
 		std::vector<const GameObject*>& renderList = instancedCasterLists.at(meshID);
 		renderList.push_back(std::move(casterList[i]));
 	}
+
+	// Main View Render Lists
+	for (int i = 0; i < mainViewRenderList.size(); ++i)
+	{
+		const GameObject* pObj = mainViewRenderList[i];
+		const ModelData& model = pObj->GetModelData();
+		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
+
+		bool bHasTextures = false;
+		const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(meshID) != model.mMaterialLookupPerMesh.end();
+		if (bMeshHasMaterial)
+		{
+			const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
+			const Material* pMat = mMaterials.GetMaterial_const(materialID);
+			bHasTextures = pMat->HasTexture();
+		}
+		
+
+		bool bShouldBeDrawnNonInstanced = meshID >= EGeometry::MESH_TYPE_COUNT || bHasTextures;
+		if (bShouldBeDrawnNonInstanced)
+		{
+			mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
+			continue;
+		}
+
+		RenderListLookup& instancedRenderLists = mSceneView.culluedOpaqueInstancedRenderListLookup;
+		if (instancedRenderLists.find(meshID) == instancedRenderLists.end())
+		{
+			instancedRenderLists[meshID] = std::vector<const GameObject*>();
+		}
+
+		std::vector<const GameObject*>& renderList = instancedRenderLists.at(meshID);
+		renderList.push_back(std::move(mainViewRenderList[i]));
+	}
 	
 #if _DEBUG
 	if (!bReportedList)
 	{
 		Log::Info("Mesh Render List (%s): ", bSortRenderLists ? "Sorted" : "Unsorted");
 		int num = 0;
-		std::for_each(RANGE(mDrawLists.opaqueListCulled), [&](const GameObject* pObj)
+		std::for_each(RANGE(mSceneView.culledOpaqueList), [&](const GameObject* pObj)
 		{
 			Log::Info("\tObj[%d]: ", num);
 
@@ -888,9 +1035,14 @@ void Scene::LoadModel_Async(GameObject* pObject, const std::string& modelPath)
 // SceneResourceView ------------------------------------------
 
 #include "SceneResources.h"
-std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBuffersOfMesh(Scene* pScene, MeshID meshID)
+std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID)
 {
 	return pScene->mMeshes[meshID].GetIABuffers();
+}
+
+const Material* SceneResourceView::GetMaterial(const Scene* pScene, MaterialID materialID)
+{
+	return pScene->mMaterials.GetMaterial_const(materialID);
 }
 
 GameObject* SerializedScene::CreateNewGameObject()

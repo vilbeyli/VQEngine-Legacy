@@ -106,12 +106,12 @@ struct SurfaceMaterial
     float3 specular;
     float roughness;
 
-	int textureConfig;
-	int pad;
-
     float metalness;
     float shininess;
 	float2 uvScale;
+
+	int textureConfig;
+	int pad0, pad1, pad2;
 };
 
 //----------------------------------------------------------

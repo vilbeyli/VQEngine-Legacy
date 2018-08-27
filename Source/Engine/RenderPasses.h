@@ -37,60 +37,15 @@ using std::shared_ptr;
 class Camera;
 class Renderer;
 class GameObject;
+class Scene;
 struct Light;
 struct DirectionalLight;
 struct ID3D11Device;
 class GPUProfiler;
 struct SceneLightingData;
+struct ShadowView;
+struct SceneView;
 
-struct SceneView
-{
-	XMMATRIX		view;
-	XMMATRIX		viewProj;
-	XMMATRIX		viewInverse;
-	XMMATRIX		projection;
-	XMMATRIX		projectionInverse;
-	vec3			cameraPosition;
-	bool			bIsPBRLightingUsed;
-	bool			bIsDeferredRendering;
-	bool			bIsIBLEnabled;
-	Settings::SceneRender sceneRenderSettings;
-	EnvironmentMap	environmentMap;
-};
-
-struct InstancedRenderLists
-{
-	using RenderListLookupType = std::pair<MeshID, std::vector<const GameObject*>>;
-	std::unordered_map<MeshID, std::vector<const GameObject*>> RenderListsPerMeshType;
-};
-
-struct ShadowView
-{	
-	using RenderList = std::vector<const GameObject*>;
-	using LightRenderListLookup = std::unordered_map<const Light*, RenderList>;
-	using LightInstancedRenderListLookup = std::unordered_map<const Light*, InstancedRenderLists>;
-	
-	// shadowing Lights
-	std::vector<const Light*> spots;
-	std::vector<const Light*> points;
-	const DirectionalLight* pDirectional;
-
-	// game obj casting shadows (=render list of directional light)
-	std::vector<const GameObject*> casters;
-	InstancedRenderLists instancedCasters;
-
-	// culled render lists per shadowing light
-	LightRenderListLookup shadowMapRenderListLookUp;
-	LightInstancedRenderListLookup shadowMapInstancedRenderListLookUp;
-
-	void Clear()
-	{
-		spots.clear();
-		points.clear();
-		casters.clear();
-		pDirectional = nullptr;
-	}
-};
 
 
 using DepthTargetIDArray = std::vector<DepthTargetID>;
@@ -161,13 +116,20 @@ struct GBuffer
 	RenderTargetID	_specularMetallicRT;
 	RenderTargetID	_normalRT;
 };
-
+struct ObjectMatrices_ViewSpace
+{
+	XMMATRIX wv;
+	XMMATRIX nv;
+	XMMATRIX wvp;
+};
 struct DeferredRenderingPasses
 {
 	void Initialize(Renderer* pRenderer);
 	void InitializeGBuffer(Renderer* pRenderer);
+
 	void ClearGBuffer(Renderer* pRenderer);
-	void SetGeometryRenderingStates(Renderer* pRenderer) const;
+	void RenderGBuffer(Renderer* pRenderer, const Scene* pScene, const SceneView& sceneView) const;
+	
 	void RenderLightingPass(
 		Renderer* pRenderer, 
 		const RenderTargetID target, 

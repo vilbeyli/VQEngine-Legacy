@@ -31,6 +31,9 @@ struct PSIn
 	float3 viewNormal		: NORMAL;
 	float3 viewTangent		: TANGENT;
 	float2 uv				: TEXCOORD1;
+#ifdef INSTANCED
+	uint instanceID			: SV_InstanceID;
+#endif
 };
 
 struct PSOut	// G-BUFFER
@@ -40,9 +43,14 @@ struct PSOut	// G-BUFFER
 	float3 normals			 : SV_TARGET2;
 };
 
+
 cbuffer cbSurfaceMaterial
 {
-    SurfaceMaterial surfaceMaterial;
+#ifdef INSTANCED
+    SurfaceMaterial surfaceMaterial[INSTANCE_COUNT];
+#else
+	SurfaceMaterial surfaceMaterial;
+#endif
     float BRDFOrPhong;
 };
 
@@ -55,10 +63,12 @@ SamplerState sNormalSampler;
 
 PSOut PSMain(PSIn In) : SV_TARGET
 {
+#ifndef INSTANCED
 	const float2 uv = In.uv * surfaceMaterial.uvScale;
 	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 ? texAlphaMask.Sample(sNormalSampler, uv).r : 1.0f;
 	if (alpha < 0.01f)
 		discard;
+#endif
 
 	PSOut GBuffer;
 
@@ -68,13 +78,29 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 T = normalize(In.viewTangent);
 	const float3 V = normalize(-P);
 
+#ifdef INSTANCED
+	const float  metalness            = surfaceMaterial[In.instanceID].metalness;
+	const float3 finalDiffuse         = surfaceMaterial[In.instanceID].diffuse;
+	const float3 finalSpecular        = surfaceMaterial[In.instanceID].specular;
+	const float  roughnessORshininess = surfaceMaterial[In.instanceID].roughness * BRDFOrPhong 
+	                                  + surfaceMaterial[In.instanceID].shininess * (1.0f - BRDFOrPhong);
+	const float3 finalNormal = N;
+#else
 	const float3 sampledDiffuse = texDiffuseMap.Sample(sNormalSampler, uv).xyz;
 	const float3 surfaceDiffuse = surfaceMaterial.diffuse;
-	const float3 finalDiffuse = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 ? sampledDiffuse : surfaceDiffuse;
-	const float3 finalNormal =  HasNormalMap (surfaceMaterial.textureConfig) > 0 ? UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) : N;
-	const float3 finalSpecular =HasSpecularMap(surfaceMaterial.textureConfig)> 0 ? texSpecularMap.Sample(sNormalSampler, uv).xxx : surfaceMaterial.specular;
+	const float3 finalDiffuse   = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 
+		? sampledDiffuse 
+		: surfaceDiffuse;
+	const float3 finalNormal    = HasNormalMap (surfaceMaterial.textureConfig) > 0 
+		? UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) 
+		: N;
+	const float3 finalSpecular  = HasSpecularMap(surfaceMaterial.textureConfig)> 0 
+		? texSpecularMap.Sample(sNormalSampler, uv).xxx 
+		: surfaceMaterial.specular;
+
 	const float roughnessORshininess = surfaceMaterial.roughness * BRDFOrPhong + surfaceMaterial.shininess * (1.0f - BRDFOrPhong);
-	const float metalness = surfaceMaterial.metalness;
+	const float metalness            = surfaceMaterial.metalness;
+#endif
 
 	GBuffer.diffuseRoughness	= float4(finalDiffuse, roughnessORshininess);
 	GBuffer.specularMetalness	= float4(finalSpecular, metalness);

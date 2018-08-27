@@ -23,6 +23,9 @@ struct VSIn
 	float3 normal	: NORMAL;
 	float3 tangent	: TANGENT0;
 	float2 uv		: TEXCOORD0;
+#ifdef INSTANCED
+	uint instanceID : SV_InstanceID;
+#endif
 };
 
 struct PSIn
@@ -32,6 +35,9 @@ struct PSIn
 	float3 viewNormal		: NORMAL;
 	float3 viewTangent		: TANGENT;
 	float2 uv				: TEXCOORD1;
+#ifdef INSTANCED
+	uint instanceID			: SV_InstanceID;
+#endif
 };
 
 struct ObjectMatrices
@@ -43,7 +49,11 @@ struct ObjectMatrices
 
 cbuffer perModel
 {
+#ifdef INSTANCED
+	ObjectMatrices ObjMatrices[INSTANCE_COUNT];
+#else
 	ObjectMatrices ObjMatrices;
+#endif
 };
 
 PSIn VSMain(VSIn In)
@@ -51,10 +61,18 @@ PSIn VSMain(VSIn In)
 	const float4 pos = float4(In.position, 1);
 
 	PSIn Out;
+#ifdef INSTANCED
+	Out.position		= mul(ObjMatrices[In.instanceID].worldViewProj, pos);
+	Out.viewPosition	= mul(ObjMatrices[In.instanceID].worldView, pos).xyz;
+	Out.viewNormal		= normalize(mul(ObjMatrices[In.instanceID].normalViewMatrix, In.normal));
+	Out.viewTangent		= normalize(mul(ObjMatrices[In.instanceID].normalViewMatrix, In.tangent));
+	Out.instanceID		= In.instanceID;
+#else
 	Out.position		= mul(ObjMatrices.worldViewProj, pos);
 	Out.viewPosition	= mul(ObjMatrices.worldView, pos).xyz;
 	Out.viewNormal		= normalize(mul(ObjMatrices.normalViewMatrix, In.normal));
 	Out.viewTangent		= normalize(mul(ObjMatrices.normalViewMatrix, In.tangent));
+#endif
 	Out.uv				= In.uv;
 	return Out;
 }

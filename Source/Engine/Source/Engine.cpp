@@ -39,7 +39,7 @@
 #include "Utilities/PerfTimer.h"
 #include "Utilities/CustomParser.h"
 #include "Utilities/Profiler.h"
-#include "Utilities/Camera.h"
+#include "Camera.h"
 
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
@@ -717,32 +717,12 @@ void Engine::PreRender()
 	if (mbLoading) return;
 #endif
 	mpCPUProfiler->BeginEntry("PreRender()");
-	
-	// set scene view
-	const Camera& viewCamera = mpActiveScene->GetActiveCamera();
-	const XMMATRIX view = viewCamera.GetViewMatrix();
-	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
-	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
-	XMVECTOR det = XMMatrixDeterminant(proj);
-	const XMMATRIX projInv = XMMatrixInverse(&det, proj);
 
-	// scene veiw matrices
-	mSceneView.viewProj = view * proj;
-	mSceneView.view = view;
-	mSceneView.viewInverse = viewInverse;
-	mSceneView.projection = proj;
-	mSceneView.projectionInverse = projInv;
-
-	// render/scene settings
-	mSceneView.sceneRenderSettings = mpActiveScene->GetSceneRenderSettings();
-	mSceneView.cameraPosition = viewCamera.GetPositionF();
-	mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
-	mSceneView.bIsDeferredRendering = mEngineConfig.bDeferredOrForward;
-	mSceneView.bIsIBLEnabled = mpActiveScene->mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
-	mSceneView.environmentMap = mpActiveScene->GetEnvironmentMap();
+	mpActiveScene->mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
+	mpActiveScene->mSceneView.bIsDeferredRendering = mEngineConfig.bDeferredOrForward;
 
 	// gather scene lights
-	mpActiveScene->GatherLightData(mSceneLightData, mShadowView);
+	mpActiveScene->GatherLightData(mSceneLightData);
 
 	// TODO: #RenderPass or Scene should manage this.
 	// mTBNDrawObjects.clear();
@@ -755,7 +735,10 @@ void Engine::PreRender()
 	// }
 
 	// TODO: culled objects per view
-	mFrameStats.numCulledObjects = static_cast<int>(mpActiveScene->PreRender(mSceneView.viewProj, mShadowView));
+	mFrameStats.numCulledObjects = static_cast<int>(mpActiveScene->PreRender());
+
+
+
 	mFrameStats.rstats = mpRenderer->GetRenderStats();
 	mFrameStats.fps = static_cast<int>(1.0f / mpGPUProfiler->GetRootEntryAvg());
 
@@ -800,8 +783,8 @@ void Engine::Render()
 
 	mpRenderer->BeginFrame();
 
-	const XMMATRIX& viewProj = mSceneView.viewProj;
-	const bool bSceneSSAO = mSceneView.sceneRenderSettings.ssao.bEnabled;
+	const XMMATRIX& viewProj = mpActiveScene->mSceneView.viewProj;
+	const bool bSceneSSAO = mpActiveScene->mSceneView.sceneRenderSettings.ssao.bEnabled;
 
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
@@ -810,7 +793,7 @@ void Engine::Render()
 	mpRenderer->BeginEvent("Shadow Pass");
 	
 	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass has their own render targets
-	mShadowMapPass.RenderShadowMaps(mpRenderer, mShadowView, mpGPUProfiler);
+	mShadowMapPass.RenderShadowMaps(mpRenderer, mpActiveScene->mShadowView, mpGPUProfiler);
 	
 	mpRenderer->EndEvent();
 	mpCPUProfiler->EndEntry();
@@ -840,8 +823,7 @@ void Engine::Render()
 		mpGPUProfiler->BeginEntry("Geometry Pass");
 		mpCPUProfiler->BeginEntry("Geometry Pass");
 		mpRenderer->BeginEvent("Geometry Pass");
-		mDeferredRenderingPasses.SetGeometryRenderingStates(mpRenderer);
-		mFrameStats.numSceneObjects = mpActiveScene->RenderOpaque(mSceneView);
+		mDeferredRenderingPasses.RenderGBuffer(mpRenderer, mpActiveScene, mpActiveScene->mSceneView);
 		mpRenderer->EndEvent();	
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndEntry();
@@ -854,7 +836,7 @@ void Engine::Render()
 			// TODO: if BeginEntry() is inside, it's never reset to 0 if ambient occl is turned off
 			mpGPUProfiler->BeginEntry("Occlusion");
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
-			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mSceneView);
+			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
 			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
 			mpGPUProfiler->EndEntry();
 
@@ -875,7 +857,7 @@ void Engine::Render()
 		mpCPUProfiler->BeginEntry("Opaque Pass (ScreenSpace)");
 #endif
 		{
-			mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
+			mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mpActiveScene->mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
 		}
 #if ENABLE_TRANSPARENCY
 		mpCPUProfiler->EndEntry();
@@ -933,7 +915,7 @@ void Engine::Render()
 		//
 		if (mpActiveScene->HasSkybox())
 		{
-			mpActiveScene->RenderSkybox(mSceneView.viewProj);
+			mpActiveScene->RenderSkybox(mpActiveScene->mSceneView.viewProj);
 		}
 
 		mpCPUProfiler->EndEntry();
@@ -945,10 +927,14 @@ void Engine::Render()
 	else
 	{
 		const bool bZPrePass = mEngineConfig.bSSAO && bSceneSSAO;
-		const TextureID tSSAO = bZPrePass ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
-		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
-		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler < 0 ? EDefaultSamplerState::POINT_SAMPLER : mSceneView.environmentMap.envMapSampler;
-		const TextureID prefilteredEnvMap = mSceneView.environmentMap.prefilteredEnvironmentMap;
+		const TextureID tSSAO = bZPrePass 
+			? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) 
+			: mSSAOPass.whiteTexture4x4;
+		const TextureID texIrradianceMap = mpActiveScene->mSceneView.environmentMap.irradianceMap;
+		const SamplerID smpEnvMap = mpActiveScene->mSceneView.environmentMap.envMapSampler < 0 
+			? EDefaultSamplerState::POINT_SAMPLER 
+			: mpActiveScene->mSceneView.environmentMap.envMapSampler;
+		const TextureID prefilteredEnvMap = mpActiveScene->mSceneView.environmentMap.prefilteredEnvironmentMap;
 		const TextureID tBRDFLUT = EnvironmentMap::sBRDFIntegrationLUTTexture;
 
 		// AMBIENT OCCLUSION - Z-PREPASS
@@ -974,7 +960,7 @@ void Engine::Render()
 			mpRenderer->BindDepthTarget(mWorldDepthTarget);
 			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 			mpRenderer->BeginRender(clearCmd);
-			mpActiveScene->RenderOpaque(mSceneView);
+			mpActiveScene->RenderOpaque(mpActiveScene->mSceneView);
 			mpRenderer->EndEvent();
 			mpGPUProfiler->EndEntry();
 
@@ -985,7 +971,7 @@ void Engine::Render()
 			mpRenderer->Apply();
 
 			mpGPUProfiler->BeginEntry("Occlusion");
-			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mSceneView);
+			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
 			mpGPUProfiler->EndEntry();
 
 			mpGPUProfiler->BeginEntry("Blur");
@@ -1013,7 +999,7 @@ void Engine::Render()
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
-		if (mpActiveScene->HasSkybox())	mpActiveScene->RenderSkybox(mSceneView.viewProj);
+		if (mpActiveScene->HasSkybox())	mpActiveScene->RenderSkybox(mpActiveScene->mSceneView.viewProj);
 		else
 		{
 			// todo: this might be costly, profile this
@@ -1031,7 +1017,7 @@ void Engine::Render()
 			mpRenderer->SetTexture("texAmbientOcclusion", tSSAO);
 
 			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
-			const bool bSkylight = mSceneView.bIsIBLEnabled && texIrradianceMap != -1;
+			const bool bSkylight = mpActiveScene->mSceneView.bIsIBLEnabled && texIrradianceMap != -1;
 			//mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 			if (bSkylight)
 			{
@@ -1051,15 +1037,15 @@ void Engine::Render()
 				mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
 
-			mpRenderer->SetConstant1f("ambientFactor", mSceneView.sceneRenderSettings.ssao.ambientFactor);
-			mpRenderer->SetConstant3f("cameraPos", mSceneView.cameraPosition);
+			mpRenderer->SetConstant1f("ambientFactor", mpActiveScene->mSceneView.sceneRenderSettings.ssao.ambientFactor);
+			mpRenderer->SetConstant3f("cameraPos", mpActiveScene->mSceneView.cameraPosition);
 			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
 			mpRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 
 			SendLightData();
 		}
 
-		mpActiveScene->RenderOpaque(mSceneView);
+		mpActiveScene->RenderOpaque(mpActiveScene->mSceneView);
 
 #if ENABLE_TRANSPARENCY
 		mpRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
@@ -1261,13 +1247,13 @@ void Engine::RenderLights() const
 		if (light._type == Light::ELightType::DIRECTIONAL)
 			continue;	// do not render directional lights
 
-		auto IABuffers = mBuiltinMeshes[light._renderMesh].GetIABuffers();
+		const auto IABuffers = mBuiltinMeshes[light._renderMesh].GetIABuffers();
+		const XMMATRIX world = light._transform.WorldTransformationMatrix();
+		const XMMATRIX worldViewProj = world * mpActiveScene->mSceneView.viewProj;
+		const vec3 color = light._color.Value() * 2.5f;
 
 		mpRenderer->SetVertexBuffer(IABuffers.first);
 		mpRenderer->SetIndexBuffer(IABuffers.second);
-		const XMMATRIX world = light._transform.WorldTransformationMatrix();
-		const XMMATRIX worldViewProj = world * mSceneView.viewProj;
-		const vec3 color = light._color.Value() * 2.5f;
 		mpRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
 		mpRenderer->SetConstant3f("diffuse", color);
 		mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);

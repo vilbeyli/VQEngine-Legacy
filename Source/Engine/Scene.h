@@ -24,11 +24,16 @@
 #include "GameObject.h"
 #include "GameObjectPool.h"
 
-#include "Utilities/Camera.h"
+#include "Camera.h"
+#include "SceneView.h"
 
 #include <memory>
 #include <mutex>
 #include <future>
+
+
+
+
 
 struct SerializedScene;
 class SceneManager;
@@ -37,6 +42,7 @@ class TextRenderer;
 struct SceneView;
 struct ShadowView;
 class MaterialPool;
+struct DrawLists;
 
 namespace VQEngine { class ThreadPool; }
 
@@ -55,15 +61,15 @@ struct ModelLoadQueue
 // https://stackoverflow.com/questions/9724371/force-calling-base-class-virtual-function
 // https://isocpp.org/wiki/faq/strange-inheritance#two-strategies-for-virtuals
 // template method seems like a good idea here:
-// base class takes care of the common tasks among all scenes and calls the 
-// customized functions of the derived classes through pure virtual functions
+//   base class takes care of the common tasks among all scenes and calls the 
+//   customized functions of the derived classes through pure virtual functions
 //----------------------------------------------------------------------------------------------------------------
 class Scene
 {
+protected:
 	//----------------------------------------------------------------------------------------------------------------
 	// SCENE INTERFACE FOR DERIVED SCENES
 	//----------------------------------------------------------------------------------------------------------------
-protected:
 
 	// Update() is called each frame before Engine::Render(). Scene-specific update logic goes here.
 	//
@@ -98,11 +104,10 @@ protected:
 	void LoadModel_Async(GameObject* pObject, const std::string& modelPath);
 
 
+public:
 	//----------------------------------------------------------------------------------------------------------------
 	// ENGINE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
-public:
-	friend class Engine;
 	Scene(Renderer* pRenderer, TextRenderer* pTextRenderer);
 	~Scene() = default;
 
@@ -121,8 +126,8 @@ public:
 
 	// Prepares the mDrawLists for various processing (culling, render pass object lists etc.)
 	//
-	size_t PreRender(const XMMATRIX& viewProj, ShadowView& outShadowView);
-	void GatherLightData(SceneLightingData& outLightingData, ShadowView& outShadowView) const;
+	size_t PreRender();
+	void GatherLightData(SceneLightingData& outLightingData);
 
 
 	// Renders the meshes in the scene which have materials with alpha=1.0f
@@ -156,10 +161,10 @@ public:
 	//
 	MeshID AddMesh_Async(Mesh m);
 
+protected:
 	//----------------------------------------------------------------------------------------------------------------
 	// DATA
 	//----------------------------------------------------------------------------------------------------------------
-protected:
 	friend class SceneResourceView; // using attorney method, alternatively can use friend function
 	friend class ModelLoader;
 
@@ -181,31 +186,21 @@ protected:
 
 
 private:
-	GameObjectPool				mObjectPool;
-	MaterialPool				mMaterials;
-	ModelLoader					mModelLoader;
-	ModelLoadQueue				mModelLoadQueue;
+	friend class Engine;
 
-	std::mutex					mSceneMeshMutex;
+	GameObjectPool	mObjectPool;
+	MaterialPool	mMaterials;
+	ModelLoader		mModelLoader;
+	ModelLoadQueue	mModelLoadQueue;
 
-	struct DrawLists
-	{
-		using RenderList = std::vector<const GameObject*>;
-		using LightRenderListLookup = std::unordered_map<const Light*, RenderList>;
+	std::mutex		mSceneMeshMutex;
 
-		// list of objects that has the renderSettings.bRender=true
-		RenderList opaqueList;
-		RenderList alphaList;
 
-		// list of objects that fall within the main camera's view frustum
-		RenderList opaqueListCulled;
-	};
+	BoundingBox	mBoundingBox;
 
-	DrawLists					mDrawLists;
-	BoundingBox					mBoundingBox;
 
-	// per frame scene data cache
-	XMMATRIX					mFrameViewProj;
+	SceneView	mSceneView;
+	ShadowView	mShadowView;
 
 private:
 	void StartLoadingModels();

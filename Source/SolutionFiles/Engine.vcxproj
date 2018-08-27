@@ -178,15 +178,17 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\Scene.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Settings.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Skybox.h" />
-    <ClInclude Include="..\Engine\DataStructures.h" />
-    <ClInclude Include="..\Engine\GameObjectPool.h" />
-    <ClInclude Include="..\Engine\Light.h" />
-    <ClInclude Include="..\Engine\Material.h" />
-    <ClInclude Include="..\Engine\Mesh.h" />
-    <ClInclude Include="..\Engine\Model.h" />
-    <ClInclude Include="..\Engine\PerfTree.h" />
-    <ClInclude Include="..\Engine\SceneResources.h" />
-    <ClInclude Include="..\Engine\UI.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\DataStructures.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\GameObjectPool.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Light.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Material.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Mesh.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Model.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\PerfTree.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\SceneResources.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\UI.h" />
+    <ClInclude Include="$(SolutionDir)Source\Engine\Camera.h" />
+    <ClInclude Include="..\Engine\SceneView.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Transform.cpp" />
@@ -195,12 +197,13 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\RenderPasses.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Scene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Skybox.cpp" />
-    <ClCompile Include="..\Engine\Source\GameObjectPool.cpp" />
-    <ClCompile Include="..\Engine\Source\Light.cpp" />
-    <ClCompile Include="..\Engine\Source\Material.cpp" />
-    <ClCompile Include="..\Engine\Source\Mesh.cpp" />
-    <ClCompile Include="..\Engine\Source\Model.cpp" />
-    <ClCompile Include="..\Engine\Source\UI.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\GameObjectPool.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Light.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Material.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Mesh.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Model.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\UI.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Engine\Source\Camera.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

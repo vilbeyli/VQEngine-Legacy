@@ -26,9 +26,6 @@
     <ClInclude Include="$(SolutionDir)Source\Utilities\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Utilities\Camera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="$(SolutionDir)Source\Utilities\Profiler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -47,9 +44,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\CustomParser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Profiler.cpp">

@@ -41,6 +41,7 @@ struct ModelData
 	std::vector<MeshID>		mMeshIDs;
 	std::vector<MeshID>		mTransparentMeshIDs;
 	MeshToMaterialLookup	mMaterialLookupPerMesh;
+	inline bool HasMaterial() const { return !mMaterialLookupPerMesh.empty(); }
 };
 
 struct Model

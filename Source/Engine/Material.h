@@ -34,6 +34,29 @@ struct MaterialID
 struct BlinnPhong_Material;
 struct BRDF_Material;
 
+// GPU - constant buffer struct for materials
+struct SurfaceMaterial
+{
+	vec3  diffuse;
+	float alpha;
+
+	vec3  specular;
+	float roughness;
+
+	float metalness;
+	float shininess;
+	vec2 tiling;
+
+
+	// bit 0: hasDiffuseMap
+	// bit 1: hasNormalMap
+	// bit 2: hasSpecularMap
+	// bit 3: hasAlphaMask
+	int textureConfig;
+	int pad0, pad1, pad2;
+
+};
+
 
 struct Material				// 56 Bytes
 {
@@ -60,10 +83,14 @@ struct Material				// 56 Bytes
 
 	Material(MaterialID _ID);
 	~Material();
+
 	void SetMaterialConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const;
-	virtual void SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const = 0;
-	virtual void Clear() = 0;
 	bool IsTransparent() const;
+	int GetTextureConfig() const;
+	inline bool HasTexture() const { return GetTextureConfig() != 0; }
+
+	virtual SurfaceMaterial GetShaderFriendlyStruct() const = 0;
+	virtual void Clear() = 0;
 };
 
 struct BRDF_Material : public Material	
@@ -72,7 +99,8 @@ struct BRDF_Material : public Material
 	float		roughness;
 	
 	BRDF_Material() : Material({ -1 }), metalness(0.0f), roughness(0.0f) {}
-	void SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const override;
+
+	SurfaceMaterial GetShaderFriendlyStruct() const override;
 	void Clear() override;
 
 private:
@@ -85,7 +113,8 @@ struct BlinnPhong_Material : public Material
 	float		shininess;
 
 	BlinnPhong_Material() : Material(MaterialID{ -1 }), shininess(0) {}
-	void SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const override;
+
+	SurfaceMaterial GetShaderFriendlyStruct() const override;
 	void Clear() override;
 
 	static const BlinnPhong_Material jade, ruby, bronze, gold;	// todo: handle preset materials in scene

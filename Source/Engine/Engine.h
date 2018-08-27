@@ -162,8 +162,7 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	std::vector<Scene*>				mpScenes;
 	Scene*							mpActiveScene;
-	SceneView						mSceneView;
-	ShadowView						mShadowView;
+
 	SceneLightingData				mSceneLightData;	// more memory than required?
 
 	// #SceneRefactoring

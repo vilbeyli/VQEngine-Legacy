@@ -107,6 +107,10 @@ void StressTestScene::Update(float dt) {}
 void StressTestScene::RenderUI() const {}
 #else
 
+
+
+
+
 void StressTestScene::Load(SerializedScene& scene)
 {
 	pRenderer = mpRenderer;
@@ -300,6 +304,10 @@ void StressTestScene::RenderUI() const
 }
 #pragma endregion
 //----------------------------------------------------------------------------------------------
+
+
+
+
 
 //----------------------------------------------------------------------------------------------
 #pragma region HELPER_FUNCTIONS

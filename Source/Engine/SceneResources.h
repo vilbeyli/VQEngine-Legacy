@@ -30,8 +30,11 @@ class Scene;
 class SceneResourceView
 {
 private:
-	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(Scene* pScene, MeshID meshID);
+	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID);
+	static const Material* GetMaterial(const Scene* pScene, MaterialID materialID);
 
 	friend class GameObject;
 	friend struct ShadowMapPass;
+	friend struct DeferredRenderingPasses;
 };
+

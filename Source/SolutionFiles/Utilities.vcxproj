@@ -143,7 +143,6 @@
     <ClInclude Include="$(SolutionDir)Source\Utilities\PerfTimer.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\CustomParser.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\utils.h" />
-    <ClInclude Include="$(SolutionDir)Source\Utilities\Camera.h" />
     <ClInclude Include="$(SolutionDir)Source\Utilities\Profiler.h" />
     <ClInclude Include="..\Utilities\vectormath.h" />
   </ItemGroup>
@@ -152,7 +151,6 @@
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Log.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\PerfTimer.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\CustomParser.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Camera.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Utilities\Source\Profiler.cpp" />
     <ClCompile Include="..\Utilities\Source\utils.cpp" />
     <ClCompile Include="..\Utilities\Source\vectormath.cpp" />

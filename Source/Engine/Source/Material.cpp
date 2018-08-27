@@ -272,6 +272,7 @@ BlinnPhong_Material::BlinnPhong_Material(MaterialID _ID, const vec3 & diffuse_in
 	shininess = shininess_in;
 }
 
+
 Material::Material(MaterialID _ID)
 	:
 	diffuse(LinearColor::white),
@@ -290,29 +291,9 @@ Material::Material(MaterialID _ID)
 Material::~Material() {}
 
 
-struct SurfaceMaterial
-{
-	vec3  diffuse;
-	float alpha;
-
-	vec3  specular;
-	float roughness;
-
-	
-	// bit 0: hasDiffuseMap
-	// bit 1: hasNormalMap
-	// bit 2: hasSpecularMap
-	// bit 3: hasAlphaMask
-	int textureConfig;
-	int pad;
-
-	float metalness;
-	float shininess;
-	vec2 tiling;
-};
-
 void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool bIsDeferredRendering) const
 {
+	// todo: this function and material design needs to be redone.
 	switch (shader)
 	{
 	case EShaders::NORMAL:
@@ -336,12 +317,46 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 		break;
 	}
 
-	SetMaterialSpecificConstants(renderer, shader, bIsDeferredRendering);
+
+	switch (shader)
+	{
+	case EShaders::NORMAL:
+	case EShaders::Z_PREPRASS:
+		renderer->SetConstant2f("uvScale", tiling);
+		renderer->SetConstant1i("textureConfig", GetTextureConfig());
+		break;
+	case EShaders::UNLIT:
+		break;
+	default:
+		const SurfaceMaterial mat = GetShaderFriendlyStruct();
+		
+		renderer->SetConstantStruct("surfaceMaterial", &mat);
+		if (bIsDeferredRendering)
+		{
+			renderer->SetConstant1f("BRDFOrPhong", 1.0f);	// assume brdf for now
+			//renderer->SetConstant1f("BRDFOrPhong", 0.0f);
+		}
+		else
+		{
+
+		}
+		break;
+	}
 }
 
 bool Material::IsTransparent() const
 {
 	return alpha != 1.0f;
+}
+
+int Material::GetTextureConfig() const
+{
+	int textureConfig = 0;
+	textureConfig |= diffuseMap == -1	? 0 : (1 << 0);
+	textureConfig |= normalMap == -1	? 0 : (1 << 1);
+	textureConfig |= specularMap == -1	? 0 : (1 << 2);
+	textureConfig |= mask == -1			? 0 : (1 << 3);
+	return textureConfig;
 }
 
 void BRDF_Material::Clear() 
@@ -371,93 +386,42 @@ void BlinnPhong_Material::Clear()
 	alpha = 1.0f;
 }
 
-void BRDF_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const
-{
-	
-	int textureConfig = 0;
-	textureConfig |= diffuseMap == -1	? 0 : (1 << 0);
-	textureConfig |= normalMap == -1	? 0 : (1 << 1);
-	textureConfig |= specularMap == -1	? 0 : (1 << 2);
-	textureConfig |= mask == -1			? 0 : (1 << 3);
-
-	switch (shader)
+SurfaceMaterial BRDF_Material::GetShaderFriendlyStruct() const
+{	
+	return SurfaceMaterial
 	{
-	case EShaders::NORMAL:
-	case EShaders::Z_PREPRASS:
-		renderer->SetConstant2f("uvScale", tiling);
-		renderer->SetConstant1i("textureConfig", textureConfig);
-		break;
-	case EShaders::UNLIT:
-		break;
-	default:
-		SurfaceMaterial mat{
 			diffuse.Value(),
 			alpha,
 
 			specular,
 			roughness,
-
-			textureConfig,
-			0,
-
+			
 			metalness,
 			0.0f,
-			tiling
-		};
-		renderer->SetConstantStruct("surfaceMaterial", &mat);
+			tiling,
 
-		if (bIsDeferredRendering)
-		{
-			renderer->SetConstant1f("BRDFOrPhong", 1.0f);
-		}
-		else
-		{
-
-		}
-
-		break;
-	}
+			GetTextureConfig(),
+			(int)0xDEADBEEF,(int)0xDEADBEEF,(int)0xDEADBEEF,
+	};
 }
 
-
-
-void BlinnPhong_Material::SetMaterialSpecificConstants(Renderer* renderer, EShaders shader, bool bIsDeferredRendering) const
+SurfaceMaterial BlinnPhong_Material::GetShaderFriendlyStruct() const
 {
-	switch (shader)
+
+	return SurfaceMaterial
 	{
-	case EShaders::NORMAL:
-	case EShaders::Z_PREPRASS:
-	case EShaders::UNLIT:
-		break;
+		diffuse.Value(),
+		alpha,
 
-	default:
-		int textureConfig = 0;
-		textureConfig |= diffuseMap == -1 ? 0 : 1 << 0;
-		textureConfig |= normalMap == -1 ? 0 : 1 << 1;
-		textureConfig |= specularMap == -1 ? 0 : 1 << 2;
-		SurfaceMaterial mat{
-			diffuse.Value(),
-			alpha,
+		specular,
+		0.0f,	// brdf roughness
 
-			specular,
-			0.0f,	// brdf roughness
+		0.0f,	// brdf metalness
+		shininess,
+		tiling,
 
-			textureConfig,
-			0,
+		GetTextureConfig(),
+		(int)0xDEADBEEF,(int)0xDEADBEEF,(int)0xDEADBEEF,
 
-			0.0f,	// brdf metalness
-			shininess,
-			tiling
-		};
-		renderer->SetConstantStruct("surfaceMaterial", &mat);
-		if (bIsDeferredRendering)
-		{
-			renderer->SetConstant1f("BRDFOrPhong", 0.0f);
-		}
-		else
-		{
-
-		}
-		break;
-	}
+	};
 }

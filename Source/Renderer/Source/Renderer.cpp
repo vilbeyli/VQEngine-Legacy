@@ -1328,7 +1328,7 @@ const TextureID Renderer::GetTexture(const std::string name) const
 }
 
 
-void Renderer::SetShader(ShaderID id)
+void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTextures)
 {
 	assert(id >= 0 && static_cast<unsigned>(id) < mShaders.size());
 	if (mPipelineState.shader != -1)		// if valid shader
@@ -1338,41 +1338,43 @@ void Renderer::SetShader(ShaderID id)
 			Shader* shader = mShaders[mPipelineState.shader];
 
 			// nullify texture units 
-			for (ShaderTexture& tex : shader->m_textures)
+			if (bUnbindTextures)
 			{
-				constexpr UINT NumNullSRV = 12;
-				ID3D11ShaderResourceView* nullSRV[NumNullSRV ] = { nullptr };
-				//(m_deviceContext->*SetShaderResources[tex.shdType])(tex.bufferSlot, 1, nullSRV);
-				switch (tex.shdType)
+				for (ShaderTexture& tex : shader->m_textures)
 				{
-				case EShaderStage::VS:
-					m_deviceContext->VSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
-					break;
-				case EShaderStage::GS:
-					m_deviceContext->GSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
-					break;
-				case EShaderStage::HS:
-					m_deviceContext->HSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
-					break;
-				case EShaderStage::DS:
-					m_deviceContext->DSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
-					break;
-				case EShaderStage::PS:
-					m_deviceContext->PSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
-					break;
-				case EShaderStage::CS:
-					m_deviceContext->CSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
-					break;
-				default:
-					break;
+					constexpr UINT NumNullSRV = 12;
+					ID3D11ShaderResourceView* nullSRV[NumNullSRV] = { nullptr };
+					//(m_deviceContext->*SetShaderResources[tex.shdType])(tex.bufferSlot, 1, nullSRV);
+					switch (tex.shdType)
+					{
+					case EShaderStage::VS:
+						m_deviceContext->VSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						break;
+					case EShaderStage::GS:
+						m_deviceContext->GSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						break;
+					case EShaderStage::HS:
+						m_deviceContext->HSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						break;
+					case EShaderStage::DS:
+						m_deviceContext->DSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						break;
+					case EShaderStage::PS:
+						m_deviceContext->PSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						break;
+					case EShaderStage::CS:
+						m_deviceContext->CSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						break;
+					default:
+						break;
+					}
 				}
 			}
-
 #if 0
 			const size_t numSamplers = shader->m_samplers.size();
 			std::vector<ID3D11SamplerState*> nullSSvec(numSamplers, nullptr);
 			ID3D11SamplerState** nullSS = nullSSvec.data();
-			for(ShaderSampler& smp : shader->m_samplers)
+			for (ShaderSampler& smp : shader->m_samplers)
 			{
 				switch (smp.shdType)
 				{
@@ -1401,9 +1403,13 @@ void Renderer::SetShader(ShaderID id)
 #endif
 
 #if 1
-			ID3D11RenderTargetView* nullRTV[6] = { nullptr };
-			ID3D11DepthStencilView* nullDSV = { nullptr };
-			m_deviceContext->OMSetRenderTargets(6, nullRTV, nullDSV);
+			if (bUnbindRenderTargets)
+			{
+				ID3D11RenderTargetView* nullRTV[6] = { nullptr };
+				ID3D11DepthStencilView* nullDSV = { nullptr };
+				m_deviceContext->OMSetRenderTargets(6, nullRTV, nullDSV);
+				UnbindRenderTargets();	// update the state to reflect the current OM
+			}
 #else
 			UnbindRenderTargets();
 			UnbindDepthTarget();
@@ -1866,13 +1872,14 @@ void Renderer::Apply()
 	// ----------------------------------------
 	if (bShaderChanged)
 	{
+		ID3D11ClassInstance *const * pClassInstance = nullptr;
 		m_deviceContext->IASetInputLayout(shader->m_layout);
-		m_deviceContext->VSSetShader(shader->m_vertexShader, nullptr, 0);
-		m_deviceContext->PSSetShader(shader->m_pixelShader, nullptr, 0);
-		m_deviceContext->GSSetShader(shader->m_geometryShader, nullptr, 0);
-		m_deviceContext->HSSetShader(shader->m_hullShader, nullptr, 0);
-		m_deviceContext->DSSetShader(shader->m_domainShader, nullptr, 0);
-		m_deviceContext->CSSetShader(shader->m_computeShader, nullptr, 0);
+		m_deviceContext->VSSetShader(shader->m_vertexShader   , pClassInstance, 0);
+		m_deviceContext->PSSetShader(shader->m_pixelShader    , pClassInstance, 0);
+		m_deviceContext->GSSetShader(shader->m_geometryShader , pClassInstance, 0);
+		m_deviceContext->HSSetShader(shader->m_hullShader     , pClassInstance, 0);
+		m_deviceContext->DSSetShader(shader->m_domainShader   , pClassInstance, 0);
+		m_deviceContext->CSSetShader(shader->m_computeShader  , pClassInstance, 0);
 	}
 
 

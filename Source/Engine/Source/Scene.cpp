@@ -863,10 +863,10 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	//pCPUProfiler->BeginEntry("Main View");
 	if (bCullMainView)
 	{
-		stats.scene.numMainViewCulledObjects = CullGameObjects(
+		stats.scene.numMainViewCulledObjects = static_cast<int>(CullGameObjects(
 			FrustumPlaneset::ExtractFromMatrix(mSceneView.viewProj)
 			, mSceneView.opaqueList
-			, mainViewRenderList);
+			, mainViewRenderList));
 	}
 	else
 	{
@@ -890,7 +890,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 			++stats.scene.numSpots;
 			if (bCullLightView)
 			{
-				stats.scene.numSpotsCulledObjects += CullGameObjects(l.GetViewFrustumPlanes(), casterList, objList);
+				stats.scene.numSpotsCulledObjects += static_cast<int>(CullGameObjects(l.GetViewFrustumPlanes(), casterList, objList));
 			}
 			else
 			{

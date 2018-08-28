@@ -213,10 +213,6 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		// RENDER INSTANCED SCENE OBJECTS
 		//
 		pRenderer->SetShader(mShadowMapShaderInstanced);
-		//------- temp hack: set shader nullifies render and depth targets, apply misses the state change... -----
-		pRenderer->BindDepthTarget(0);
-		pRenderer->Apply();
-		//------- temp hack: set shader nullifies render and depth targets, apply misses the state change... -----
 		pRenderer->BindDepthTarget(mDepthTarget_Directional);
 
 		InstancedObjectCBuffer cbuffer;
@@ -347,7 +343,7 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 
 		// bright filter
 		pRenderer->BeginEvent("Bloom Bright Filter");
-		pRenderer->SetShader(_bloomPass._bloomFilterShader);
+		pRenderer->SetShader(_bloomPass._bloomFilterShader, true);
 		pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
 		pRenderer->UnbindDepthTarget();
 		pRenderer->SetVertexBuffer(IABuffersQuad.first);
@@ -362,7 +358,7 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 		// blur
 		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
 		pRenderer->BeginEvent("Bloom Blur Pass");
-		pRenderer->SetShader(_bloomPass._blurShader);
+		pRenderer->SetShader(_bloomPass._blurShader, true);
 		for (int i = 0; i < 5; ++i)
 		{
 			const int isHorizontal = i % 2;
@@ -387,9 +383,8 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 		const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._colorRT);
 		const TextureID bloomTex = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[0]);
 		pRenderer->BeginEvent("Bloom Combine");
-		pRenderer->SetShader(_bloomPass._bloomCombineShader);
+		pRenderer->SetShader(_bloomPass._bloomCombineShader, true);
 		pRenderer->BindRenderTarget(_bloomPass._finalRT);
-		pRenderer->Apply();
 		pRenderer->SetTexture("ColorTexture", colorTex);
 		pRenderer->SetTexture("BloomTexture", bloomTex);
 		pRenderer->SetSamplerState("BlurSampler", _bloomPass._blurSampler);
@@ -407,7 +402,7 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
 	pRenderer->BeginEvent("Tonemapping");
 	pRenderer->UnbindDepthTarget();
-	pRenderer->SetShader(_tonemappingPass._toneMappingShader);
+	pRenderer->SetShader(_tonemappingPass._toneMappingShader, true);
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
@@ -652,11 +647,6 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 	// RENDER INSTANCED SCENE OBJECTS
 	//
 	pRenderer->SetShader(_geometryInstancedShader);
-	//------- temp hack: set shader nullifies render and depth targets, apply misses the state change... -----
-	pRenderer->UnbindRenderTargets();
-	pRenderer->UnbindDepthTarget();
-	pRenderer->Apply();
-	//------- temp hack: set shader nullifies render and depth targets, apply misses the state change... -----
 	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT);
 	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
 	pRenderer->Apply();
@@ -741,8 +731,8 @@ void DeferredRenderingPasses::RenderLightingPass(
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 
 	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	constexpr bool bUnbindRenderTargets = false; // we're switching between lighting shaders w/ same render targets
 
-	// pRenderer->UnbindRendertargets();	// ignore this for now
 	pRenderer->UnbindDepthTarget();
 	pRenderer->BindRenderTarget(target);
 	pRenderer->BeginRender(cmd);
@@ -754,7 +744,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	if(bSkylight)
 	{
 		pRenderer->BeginEvent("Environment Map Lighting Pass");
-		pRenderer->SetShader(_ambientIBLShader);
+		pRenderer->SetShader(_ambientIBLShader, bUnbindRenderTargets, false);
 		pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
 		pRenderer->SetTexture("tSpecularMetalnessMap", texSpecularMetallic);
 		pRenderer->SetTexture("tNormalMap", texNormal);
@@ -771,7 +761,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 	else
 	{
 		pRenderer->BeginEvent("Ambient Pass");
-		pRenderer->SetShader(_ambientShader);
+		pRenderer->SetShader(_ambientShader, bUnbindRenderTargets);
 		pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
 		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
 	}
@@ -843,7 +833,7 @@ void DeferredRenderingPasses::RenderLightingPass(
 #endif
 
 #else
-	pRenderer->SetShader(lightingShader);
+	pRenderer->SetShader(lightingShader, bUnbindRenderTargets);
 	ENGINE->SendLightData();
 
 	pRenderer->SetConstant4x4f("matView", sceneView.view);
@@ -1023,7 +1013,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 
 	pRenderer->BeginEvent("Occlusion Pass");
 
-	pRenderer->SetShader(SSAOShader);
+	pRenderer->SetShader(SSAOShader, true);
 	pRenderer->BindRenderTarget(this->occlusionRenderTarget);
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
@@ -1068,7 +1058,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 
 	pRenderer->BeginEvent("Blur Pass");
 
-	pRenderer->SetShader(EShaders::GAUSSIAN_BLUR_4x4);
+	pRenderer->SetShader(EShaders::GAUSSIAN_BLUR_4x4, true);
 	pRenderer->BindRenderTarget(this->blurRenderTarget);
 	pRenderer->SetTexture("tOcclusion", texOcclusion);
 	pRenderer->SetSamplerState("BlurSampler", EDefaultSamplerState::POINT_SAMPLER);

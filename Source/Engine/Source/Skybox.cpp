@@ -592,7 +592,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 	// TODO: Compute shader in single pass.
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		pRenderer->SetShader(sPrefilterShader);
+		pRenderer->SetShader(sPrefilterShader, true);
 		pRenderer->SetTexture("tEnvironmentMap", mippedEnvironmentCubemap);
 		for (unsigned mipLevel = 0; mipLevel < PREFILTER_MIP_LEVEL_COUNT; ++mipLevel)
 		{

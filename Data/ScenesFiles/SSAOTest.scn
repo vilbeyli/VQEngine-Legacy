@@ -35,6 +35,9 @@ camera 0.1 1500 75   0 30 -100  0 25
 
 object begin
 	mesh quad
+	brdf
+		diffuse 0.7 0.8 0.95
+	brdf
 	transform 0 0 0 90 0 0 100
 object end
 

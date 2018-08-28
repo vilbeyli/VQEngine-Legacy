@@ -121,7 +121,7 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	void					SetViewport(const unsigned width, const unsigned height);
 	void					SetViewport(const D3D11_VIEWPORT& viewport);
-	void					SetShader(ShaderID);
+	void					SetShader(ShaderID shaderID, bool bUnbindRenderTargets = false, bool bUnbindTextures = true);
 	void					SetVertexBuffer(BufferID bufferID);
 	void					SetIndexBuffer(BufferID bufferID);
 	void					SetTexture(const char* texName, TextureID tex);

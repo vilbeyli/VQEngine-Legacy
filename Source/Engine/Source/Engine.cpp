@@ -583,9 +583,10 @@ void Engine::HandleInput()
 	if (mpInput->IsKeyTriggered("F5")) mEngineConfig.bBoundingBoxes = !mEngineConfig.bBoundingBoxes;
 
 	if (mpInput->IsKeyTriggered("'")) ToggleControlsTextRendering();
-	if (mpInput->IsKeyTriggered("F") && mpInput->AreKeysDown(2, "ctrl", "alt"))
+	if (mpInput->IsKeyTriggered("F"))// && mpInput->AreKeysDown(2, "ctrl", "shift"))
 	{
-		ToggleProfilerRendering();
+		if(mpInput->IsKeyDown("ctrl") && mpInput->IsKeyDown("shift"))
+			ToggleProfilerRendering();
 	}
 
 	// The following input will not be handled if the engine is currently loading a level
@@ -722,7 +723,9 @@ void Engine::PreRender()
 	mpActiveScene->mSceneView.bIsDeferredRendering = mEngineConfig.bDeferredOrForward;
 
 	// gather scene lights
+	mpCPUProfiler->BeginEntry("Gather Lights");
 	mpActiveScene->GatherLightData(mSceneLightData);
+	mpCPUProfiler->EndEntry();
 
 	// TODO: #RenderPass or Scene should manage this.
 	// mTBNDrawObjects.clear();

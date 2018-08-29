@@ -112,6 +112,7 @@ public:
 		// as the return type of IsKeyDown() is bool. We can simply chain them together to
 		// get the final result. f() in this case is 'are_all_true()'.
 		//-------------------------------------------------------------------------------------
+		assert(false);	// there's a bug. doesn't work in release mode. don't use this for now.
 		return are_all_true(keyCount, IsKeyDown(args)...);
 	}
 };

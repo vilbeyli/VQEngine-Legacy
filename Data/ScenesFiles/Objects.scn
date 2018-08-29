@@ -34,62 +34,24 @@ bloom true 1.68
 
 directional sun 4.5   3   -5   15  2048 256 300 0.00000000001f
 
-camera 0.1 1500 60   -70 25 50  112 11 
+camera 0.1 1500 60   -186.23 32.21 5.10  90 -5 
 camera 0.1 1500 75   0 50 -190  0 15 
 
-object begin
-	transform 85 5 30 30 30 0 11
-	mesh cube
-	brdf begin
-		roughness 0.42
-		metalness 1.0
-		textures openart/155.JPG openart/155_norm.JPG
-	brdf end
-object end
+
 
 object begin
-	transform 85 5 -90 0 0 45 30
-	mesh grid
-	brdf begin
-		roughness 0.14
-		metalness 0.0
-	brdf end
-object end
-
-object begin
-	transform 85 5 -60 0 0 0 7
+	transform 90 12 -80  90 65 0   15 18 15
 	mesh cylinder
 	brdf begin
-		roughness 0.9
-		metalness 0.18 
+		roughness 0.09
+		metalness 0.0 
 		diffuse 0.80 0.54 0.04
 	brdf end
 object end
 
 object begin
-	transform 85 5 -30 30 120 0 20
-	mesh triangle
-	brdf begin
-		textures "" openart/190_norm.JPG
-		diffuse 0.24 0.74 0.74
-		roughness 0.4
-		metalness 0.9
-	brdf end
-object end
-
-object begin
-	transform 85 5 0 0 0 0 5.5
-	mesh sphere
-	brdf begin
-		diffuse 0.04 0.64 0.04
-		roughness 0.9
-		metalness 0.0
-	brdf end
-object end
-
-object begin
-	transform 85 5 60 30 30 0 20
-	mesh quad
+	transform 95 12 -36 30 20 0 20 20 0.15
+	mesh cube
 	brdf begin
 		textures "" openart/190_norm.JPG
 		diffuse 0.04 0.24 0.74
@@ -97,3 +59,25 @@ object begin
 		metalness 0.0
 	brdf end
 object end
+
+object begin
+	transform 95 10 0 0 0 0 15
+	mesh sphere
+	brdf begin
+		diffuse 0.04 0.64 0.04
+		roughness 0.09
+		metalness 0.0
+	brdf end
+object end
+
+
+object begin
+	transform 115 5 55 30 30 0 25
+	mesh cube
+	brdf begin
+		roughness 0.72
+		metalness 1.0
+		textures openart/155.JPG openart/155_norm.JPG
+	brdf end
+object end
+

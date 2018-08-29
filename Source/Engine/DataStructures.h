@@ -48,7 +48,7 @@ struct DirectionalLightGPU // 28(+4) Bytes | 2 registers
 	vec3 lightDirection;
 	float  brightness;
 	vec3 color;
-	float shadowFactor;
+	float shadowFactor;	// todo: use as depthBias
 };
 
 //struct ShadowView

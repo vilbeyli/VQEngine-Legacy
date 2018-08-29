@@ -127,13 +127,13 @@ void ObjectsScene::Load(SerializedScene& scene)
 	//---------------------------------------------------------------
 	// SPHERES
 	//---------------------------------------------------------------
-	const float sphHeight[2] = { 10.0f, 19.0f };
+	const float sphHeight[2] = { 10.0f, 40.0f };
 	{	// sphere grid
-		constexpr float r = 11.0f;
-		constexpr size_t gridDimension = 7;
+		constexpr float r = 25.0f;
+		constexpr size_t gridDimension = 6;
 		constexpr size_t numSph = gridDimension * gridDimension;
 
-		const vec3 origin = vec3::Zero;
+		const vec3 origin = vec3(-30, 7, 0);
 
 		for (size_t i = 0; i < numSph; i++)
 		{
@@ -148,7 +148,8 @@ void ObjectsScene::Load(SerializedScene& scene)
 			const float offsetDim = -static_cast<float>(gridDimension) * r / 2 + r / 2.0f;	// offset to center the grid
 			const vec3 offset = vec3(col * r, -1.0f, row * r) + vec3(offsetDim, 0.75f, offsetDim);
 			const vec3 pos = origin + offset;
-			Transform transformObj(pos, Quaternion::Identity(), 2.5f);
+			const float scale = 6.25f;
+			Transform transformObj(pos, Quaternion::Identity(), scale);
 
 
 			// MATERIALS

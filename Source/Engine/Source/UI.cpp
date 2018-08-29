@@ -90,11 +90,11 @@ void VQEngine::UI::Exit()
 const char* FrameStats::statNames[FrameStats::numStat] =
 {
 	"FPS : ",
-
-	"Vertices : ",
-	"Indices : ",
+	// spaces are there to align the final result with the current font.
+	"Vertices      : ",
+	"Indices        : ",
 	"Draw Calls : ",
-	"Triangles : ",
+	"Triangles    : ",
 
 	"# Objects        : ",
 	"# Spot Lights  : ",

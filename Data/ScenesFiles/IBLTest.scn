@@ -35,3 +35,11 @@ camera 0.1 1000 60   0 -20 120  180 0
 
 // light       s              white      	false       1800         70	           0   120    120	             140  180  	0	 
 
+object begin
+	transform 0 -150 0 0 0 0 400
+	mesh grid
+	brdf begin
+		roughness 0.07
+		metalness 0.92
+	brdf end
+object end

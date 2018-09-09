@@ -123,8 +123,7 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 			 || shader == EShaders::UNLIT
 			 || shader == EShaders::NORMAL
 			 || shader == EShaders::FORWARD_BRDF
-			 || shader == EShaders::DEFERRED_GEOMETRY
-			 || shader == EShaders::Z_PREPRASS);
+			 || shader == EShaders::DEFERRED_GEOMETRY);
 	};
 	auto RenderObject = [&](const GameObject* pObj)
 	{
@@ -142,10 +141,9 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 			mpRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
 			mpRenderer->SetConstant4x4f("normalMatrix", tf.NormalMatrix(world));
 			break;
-		case EShaders::Z_PREPRASS:
 		case EShaders::DEFERRED_GEOMETRY:
 		{
-			const ObjectMatrices_ViewSpace mats =
+			const ObjectMatrices mats =
 			{
 				world * sceneView.view,
 				tf.NormalMatrix(world) * sceneView.view,
@@ -229,8 +227,7 @@ int Scene::RenderAlpha(const SceneView & sceneView) const
 		|| selectedShader == EShaders::NORMAL
 		|| selectedShader == EShaders::FORWARD_BRDF
 		|| selectedShader == EShaders::DEFERRED_GEOMETRY
-		|| selectedShader == EShaders::Z_PREPRASS
-		);
+	);
 
 	int numObj = 0;
 	for (const auto* obj : mSceneView.alphaList)
@@ -767,6 +764,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	//
 	std::vector<const GameObject*> casterList;
 	std::vector<const GameObject*> mainViewRenderList;
+	static std::vector<const GameObject*> mainViewRenderListNonTextured;
 
 	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = mShadowView.RenderListsPerMeshType;
 	// gather game objects that are to be rendered in the scene
@@ -969,6 +967,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	}
 	pCPUProfiler->EndEntry();
 
+
 	// Main View Render Lists
 	pCPUProfiler->BeginEntry("[Instanced] Main View");
 	for (int i = 0; i < mainViewRenderList.size(); ++i)
@@ -977,19 +976,23 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		const ModelData& model = pObj->GetModelData();
 		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
 
-		bool bHasTextures = false;
+		// instanced is only for built-in meshes (for now)
+		if (meshID >= EGeometry::MESH_TYPE_COUNT)
+		{
+			mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
+			continue;
+		}
+
 		const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(meshID) != model.mMaterialLookupPerMesh.end();
 		if (bMeshHasMaterial)
 		{
 			const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
 			const Material* pMat = mMaterials.GetMaterial_const(materialID);
-			bHasTextures = pMat->HasTexture();
-		}
-		const bool bShouldBeDrawnNonInstanced = meshID >= EGeometry::MESH_TYPE_COUNT || bHasTextures;
-		if (bShouldBeDrawnNonInstanced)
-		{
-			mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
-			continue;
+			if (pMat->HasTexture())
+			{
+				mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
+				continue;
+			}
 		}
 
 		RenderListLookup& instancedRenderLists = mSceneView.culluedOpaqueInstancedRenderListLookup;
@@ -1002,8 +1005,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		renderList.push_back(std::move(mainViewRenderList[i]));
 	}
 	pCPUProfiler->EndEntry();
-	//pCPUProfiler->EndEntry();	// Prepare Instanced
-	
+
 #if _DEBUG
 	if (!bReportedList)
 	{

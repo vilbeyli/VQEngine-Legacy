@@ -146,20 +146,17 @@ void Shader::LoadShaders(Renderer* pRenderer)
 		EShaders::SHADOWMAP_DEPTH			,
 		EShaders::BILATERAL_BLUR			,
 		EShaders::GAUSSIAN_BLUR_4x4			,
-		EShaders::Z_PREPRASS				
 	};
 
 	constexpr unsigned VS_PS = SHADER_STAGE_VS | SHADER_STAGE_PS;
 	const std::vector<ShaderDesc> shaderDescs =
 	{
-		ShaderDesc{ "PhongLighting<forward>",
-		{
+		ShaderDesc{ "PhongLighting<forward>",{
 			ShaderStageDesc{ "Forward_Phong_vs.hlsl", {} },
 			ShaderStageDesc{ "Forward_Phong_ps.hlsl", {} }
 		}},
 		ShaderDesc{ "UnlitTextureColor" , ShaderDesc::CreateStageDescsFromShaderName("UnlitTextureColor", VS_PS) },
-		ShaderDesc{ "TextureCoordinates", 
-		{
+		ShaderDesc{ "TextureCoordinates", {
 			ShaderStageDesc{"MVPTransformationWithUVs_vs.hlsl", {} },
 			ShaderStageDesc{"TextureCoordinates_ps.hlsl"      , {} }
 		}},
@@ -170,27 +167,19 @@ void Shader::LoadShaders(Renderer* pRenderer)
 		ShaderDesc{ "TNB"               , ShaderDesc::CreateStageDescsFromShaderName("TNB", VS_PS)},
 		ShaderDesc{ "Debug"             , ShaderDesc::CreateStageDescsFromShaderName("Debug", VS_PS)},
 		ShaderDesc{ "Skybox"            , ShaderDesc::CreateStageDescsFromShaderName("Skybox", VS_PS)},
-		ShaderDesc{ "SkyboxEquirectangular",
-		{
+		ShaderDesc{ "SkyboxEquirectangular", {
 			ShaderStageDesc{"Skybox_vs.hlsl"               , {} },
 			ShaderStageDesc{"SkyboxEquirectangular_ps.hlsl", {} }
 		}},
 		ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Forward_BRDF", VS_PS)},
 		ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
-		ShaderDesc{ "BilateralBlur",
-		{
+		ShaderDesc{ "BilateralBlur", {
 			ShaderStageDesc{"FullscreenQuad_vs.hlsl", {} },
 			ShaderStageDesc{"BilateralBlur_ps.hlsl" , {} }
 		}},
-		ShaderDesc{ "GaussianBlur4x4",
-		{
+		ShaderDesc{ "GaussianBlur4x4", {
 			ShaderStageDesc{"FullscreenQuad_vs.hlsl" , {} },
 			ShaderStageDesc{"GaussianBlur4x4_ps.hlsl", {} }
-		}},
-		ShaderDesc{ "ZPrePass",
-		{
-			ShaderStageDesc{"Deferred_Geometry_vs.hlsl"            , {} },
-			ShaderStageDesc{"ViewSpaceNormalsAndPositions_ps.hlsl" , {} }
 		}},
 	};
 
@@ -934,7 +923,7 @@ void CPUConstant::CleanUp()
 	}
 }
 
-std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT> ShaderDesc::CreateStageDescsFromShaderName(const char* pShaderName, unsigned flagStages)
+std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT> ShaderDesc:: CreateStageDescsFromShaderName(const char* pShaderName, unsigned flagStages)
 {
 	const std::string shaderName = pShaderName;
 	std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT> descs;

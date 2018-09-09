@@ -37,6 +37,9 @@ struct PSIn
 	float3 normal		 : NORMAL;
 	float3 tangent		 : TANGENT;
 	float2 texCoord		 : TEXCOORD4;
+#ifdef INSTANCED
+	uint instanceID	     : SV_InstanceID;
+#endif
 };
 
 cbuffer SceneVariables
@@ -47,7 +50,8 @@ cbuffer SceneVariables
 	float2 screenDimensions;
 	float2 spotShadowMapDimensions;
 
-	float2 directionalShadowMapDimensions;
+	float directionalShadowMapDimension;
+	float directionalDepthBias;
 	float2 pad;
 	
 	SceneLighting Lights;
@@ -60,7 +64,11 @@ Texture2DArray   texDirectionalShadowMaps;
 
 cbuffer cbSurfaceMaterial
 {
-    SurfaceMaterial surfaceMaterial;
+#ifdef INSTANCED
+	SurfaceMaterial surfaceMaterial[INSTANCE_COUNT];
+#else
+	SurfaceMaterial surfaceMaterial;
+#endif
 };
 
 Texture2D texDiffuseMap;
@@ -82,41 +90,59 @@ SamplerState sWrapSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
+	// TODO: instanced alpha discard
+#ifndef INSTANCED
+	const float2 uv = In.texCoord * surfaceMaterial.uvScale;
+	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 ? texAlphaMask.Sample(sLinearSampler, uv).r : 1.0f;
+	if (alpha < 0.01f)
+		discard;
+#endif
+
+	ShadowTestPCFData pcfTest;
+
 	// base indices for indexing shadow views
 	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
 	const int spotShadowsBaseIndex = 0;		
 	const int directionalShadowBaseIndex = spotShadowsBaseIndex + Lights.numSpotCasters;	// currently unused
-	const float2 uv = In.texCoord * surfaceMaterial.uvScale;
 
-	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 ? texAlphaMask.Sample(sLinearSampler, uv).r : 1.0f;
-	if (alpha < 0.01f)
-		discard;
 
 	// lighting & surface parameters (World Space)
 	const float3 P = In.worldPos;
 	const float3 N = normalize(In.normal);
 	const float3 T = normalize(In.tangent);
-    const float3 V = normalize(cameraPos - P);
-    const float2 screenSpaceUV = In.position.xy / screenDimensions;
+	const float3 V = normalize(cameraPos - P);
+	const float2 screenSpaceUV = In.position.xy / screenDimensions;
 
 	BRDF_Surface s;
-    //s.N = (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sLinearSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
-	s.N = HasNormalMap(surfaceMaterial.textureConfig) > 0 ? UnpackNormals(texNormalMap, sLinearSampler, uv, N, T) : N;
-    const float3 R = reflect(-V, s.N);
-
-	// there's a weird issue here if garbage texture is bound and isDiffuseMap is 0.0f. 
-	//s.diffuseColor	= surfaceMaterial.diffuse * (HasDiffuseMap(surfaceMaterial.textureConfig) * texDiffuseMap.Sample(sNormalSampler, uv).xyz + (1.0f - sHasDiffuseMap(surfaceMaterial.textureConfig)) * surfaceMaterial.diffuse);
-	//s.N				= (surfaceMaterial.isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) + (1.0f - surfaceMaterial.isNormalMap) * N;
-
-	// workaround -> use if else for selecting rather then blending. for some reason, the vector math fails and (0,0,0) + (1,1,1) ends up being (0,1,1). Not sure why.
-	float3 sampledDiffuse = HasDiffuseMap(surfaceMaterial.textureConfig) * texDiffuseMap.Sample(sLinearSampler, uv).xyz;
-	float3 surfaceDiffuse = surfaceMaterial.diffuse;
-	float3 finalDiffuse = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 ? sampledDiffuse : surfaceDiffuse;
-	s.diffuseColor = finalDiffuse;
-
-    s.specularColor = HasSpecularMap(surfaceMaterial.textureConfig) > 0 ? texSpecularMap.Sample(sLinearSampler, uv) : surfaceMaterial.specular;
-    s.roughness = surfaceMaterial.roughness;
-    s.metalness = surfaceMaterial.metalness;
+#ifdef INSTANCED
+	s.N = N;
+		// HasNormalMap(surfaceMaterial.textureConfig) > 0
+		// ? UnpackNormals(texNormalMap, sLinearSampler, uv, N, T)
+		// : N;
+	s.diffuseColor = surfaceMaterial[In.instanceID].diffuse;
+		// HasDiffuseMap(surfaceMaterial.textureConfig) > 0
+		// ? texDiffuseMap.Sample(sLinearSampler, uv).xyz
+		// : surfaceMaterial.diffuse;
+	s.specularColor = surfaceMaterial[In.instanceID].specular;
+		// HasSpecularMap(surfaceMaterial.textureConfig) > 0
+		// ? texSpecularMap.Sample(sLinearSampler, uv)
+		// : surfaceMaterial.specular;
+	s.roughness = surfaceMaterial[In.instanceID].roughness;
+	s.metalness = surfaceMaterial[In.instanceID].metalness;
+#else
+	s.N = HasNormalMap(surfaceMaterial.textureConfig) > 0
+		? UnpackNormals(texNormalMap, sLinearSampler, uv, N, T)
+		: N;
+	s.diffuseColor = HasDiffuseMap(surfaceMaterial.textureConfig) > 0
+		? texDiffuseMap.Sample(sLinearSampler, uv).xyz
+		: surfaceMaterial.diffuse;
+	s.specularColor = HasSpecularMap(surfaceMaterial.textureConfig) > 0 
+		? texSpecularMap.Sample(sLinearSampler, uv) 
+		: surfaceMaterial.specular;
+	s.roughness = surfaceMaterial.roughness;
+	s.metalness = surfaceMaterial.metalness;
+#endif
+	const float3 R = reflect(-V, s.N);
 
 	const float texAO = texAmbientOcclusion.Sample(sNearestSampler, screenSpaceUV).x;
 	const float ao = texAO * ambientFactor;
@@ -144,16 +170,17 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	// SPOT Lights - Shadowing
 	//---------------------------------
+	pcfTest.depthBias = 0.0000005f;
 	for (int k = 0; k < Lights.numSpotCasters; ++k)
 	{
 		const matrix matShadowView = Lights.shadowViews[spotShadowsBaseIndex + k];
-		const float4 Pl		   = mul(matShadowView, float4(P, 1));
+		pcfTest.lightSpacePos  = mul(matShadowView, float4(P, 1));
 		const float3 Lw        = Lights.spot_casters[k].position;
 		const float3 Wi        = normalize(Lw - P);
 		const float3 radiance  = SpotlightIntensity(Lights.spot_casters[k], P) * Lights.spot_casters[k].color * Lights.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
-		const float  NdotL	   = saturate(dot(s.N, Wi));
-		const float3 shadowing = ShadowTestPCF(P, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
-		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
+		pcfTest.NdotL	       = saturate(dot(s.N, Wi));
+		const float3 shadowing = ShadowTestPCF(pcfTest, texSpotShadowMaps, sShadowSampler, spotShadowMapDimensions, k);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
 	
 	// SPOT Lights - Non-shadowing
@@ -172,14 +199,20 @@ float4 PSMain(PSIn In) : SV_TARGET
 #if ENABLE_DIRECTIONAL_LIGHTS
 	if (Lights.directional.shadowFactor > 0.0f)
 	{
-		const float4 Pl = mul(Lights.shadowViewDirectional, float4(P, 1));
+		pcfTest.lightSpacePos = mul(Lights.shadowViewDirectional, float4(P, 1));
 		const float3 Wi = -Lights.directional.lightDirection;
 		const float3 radiance
 			= Lights.directional.color
 			* Lights.directional.brightness;
-		const float  NdotL = saturate(dot(s.N, Wi));
-		const float3 shadowing = ShadowTestPCF(P, Pl, texDirectionalShadowMaps, 0, sShadowSampler, NdotL, directionalShadowMapDimensions);
-		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
+		pcfTest.NdotL = saturate(dot(s.N, Wi));
+		pcfTest.depthBias = directionalDepthBias;
+		const float3 shadowing = ShadowTestPCF(
+			  pcfTest
+			, texDirectionalShadowMaps
+			, sShadowSampler
+			, float2(directionalShadowMapDimension, directionalShadowMapDimension)
+			, 0);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
 #endif
 

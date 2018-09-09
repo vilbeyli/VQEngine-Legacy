@@ -47,9 +47,14 @@ struct ShadowView;
 struct SceneView;
 
 
+struct RenderPass
+{
+	// TODO:
+};
+
 
 using DepthTargetIDArray = std::vector<DepthTargetID>;
-struct ShadowMapPass
+struct ShadowMapPass : public RenderPass
 {
 	void InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
 	void InitializeDirectionalLightShadowMap(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
@@ -72,7 +77,7 @@ struct ShadowMapPass
 	DepthTargetID		mDepthTargets_Point = -1;
 };
 
-struct BloomPass
+struct BloomPass : public RenderPass
 {
 	BloomPass() : 
 		_blurSampler(-1), 
@@ -92,13 +97,13 @@ struct BloomPass
 	ShaderID						_bloomCombineShader;
 };
 
-struct TonemappingCombinePass
+struct TonemappingCombinePass : public RenderPass
 {
 	RenderTargetID	_finalRenderTarget;
 	ShaderID		_toneMappingShader;
 };
 
-struct PostProcessPass
+struct PostProcessPass : public RenderPass
 {
 	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
 	void Render(Renderer* pRenderer, bool bBloomOn) const;
@@ -116,28 +121,47 @@ struct GBuffer
 	RenderTargetID	_specularMetallicRT;
 	RenderTargetID	_normalRT;
 };
-struct ObjectMatrices_ViewSpace
+struct ObjectMatrices
 {
-	XMMATRIX wv;
-	XMMATRIX nv;
-	XMMATRIX wvp;
+	XMMATRIX world;
+	XMMATRIX normal;
+	XMMATRIX worldViewProj;
 };
-struct DeferredRenderingPasses
+
+
+// struct GBufferPass : public RenderPass
+// {
+// 
+// };
+// 
+// struct LightingPass : public RenderPass
+// {
+// 	// virtual void RenderObject(const GameObject* pObj) = 0;
+// };
+// 
+// struct DeferredLightingPass : public LightingPass
+// {
+// 
+// };
+
+struct DeferredRenderingPasses : public RenderPass
 {
+	struct RenderParams
+	{
+		Renderer* pRenderer;
+		const RenderTargetID target;
+		const SceneView& sceneView;
+		const SceneLightingData& lights;
+		const TextureID tSSAO;
+		bool bUseBRDFLighting;
+	};
 	void Initialize(Renderer* pRenderer);
 	void InitializeGBuffer(Renderer* pRenderer);
 
 	void ClearGBuffer(Renderer* pRenderer);
 	void RenderGBuffer(Renderer* pRenderer, const Scene* pScene, const SceneView& sceneView) const;
 	
-	void RenderLightingPass(
-		Renderer* pRenderer, 
-		const RenderTargetID target, 
-		const SceneView& sceneView, 
-		const SceneLightingData& lights, 
-		const TextureID tSSAO, 
-		bool bUseBRDFLighting
-	) const;
+	void RenderLightingPass(const RenderParams& args) const;
 
 	GBuffer _GBuffer;
 	DepthStencilStateID _geometryStencilState;
@@ -154,7 +178,28 @@ struct DeferredRenderingPasses
 	ShaderID			_pointLightShader;
 };
 
-struct DebugPass
+struct ForwardLightingPass : public RenderPass
+{
+	struct RenderParams
+	{
+		Renderer* pRenderer;
+		const Scene* pScene;
+		const SceneView& sceneView;
+		const SceneLightingData& lights;
+		const TextureID tSSAO;
+		const RenderTargetID targetRT;
+	};
+
+	void Initialize(Renderer* pRenderer);
+	void RenderLightingPass(const RenderParams& args) const;
+
+
+	ShaderID fwdPhong;
+	ShaderID fwdBRDF;
+	ShaderID fwdBRDFInstanced;
+};
+
+struct DebugPass : public RenderPass
 {
 	void Initialize(Renderer* pRenderer);
 	RasterizerStateID _scissorsRasterizer;
@@ -178,7 +223,7 @@ struct DebugPass
 
 // learnopengl:			https://learnopengl.com/#!Advanced-Lighting/SSAO
 // Blizzard Dev Paper:	http://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf
-struct AmbientOcclusionPass
+struct AmbientOcclusionPass : public RenderPass
 {
 	static TextureID whiteTexture4x4;
 	
@@ -201,4 +246,23 @@ struct AmbientOcclusionPass
 	float radius;		
 	float intensity;	
 #endif
+};
+
+
+struct ZPrePass : public RenderPass
+{
+	struct RenderParams
+	{
+		Renderer* pRenderer;
+		const Scene* pScene; 
+		const SceneView& sceneView;
+		const RenderTargetID normalRT;
+	};
+
+	void Initialize(Renderer* pRenderer);
+	void RenderDepth(const RenderParams& args) const;
+
+	SamplerID normalMapSampler;
+	ShaderID objShader;
+	ShaderID objShaderInstanced;
 };

@@ -307,6 +307,14 @@ bool Engine::Load(ThreadPool* pThreadPool)
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mSSAOPass.Initialize(mpRenderer);
 			}
+			{
+				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+				mZPrePass.Initialize(mpRenderer);
+			}
+			{
+				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+				mForwardLightingPass.Initialize(mpRenderer);
+			}
 		}
 		//mpTimer->Stop();
 		//Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->DeltaTime());
@@ -710,7 +718,32 @@ bool Engine::ReloadScene()
 #endif
 }
 
+void Engine::SendLightData() const
+{
+	const float shadowDimension = static_cast<float>(mShadowMapPass.mShadowMapDimension_Spot);
 
+	// LIGHTS ( POINT | SPOT | DIRECTIONAL )
+	//
+	const vec2 directionalShadowMapDimensions
+		= vec2(mShadowMapPass.mShadowViewPort_Directional.Width, mShadowMapPass.mShadowViewPort_Directional.Height);
+	mpRenderer->SetConstantStruct("Lights", &mSceneLightData._cb);
+	mpRenderer->SetConstant2f("spotShadowMapDimensions", vec2(shadowDimension, shadowDimension));
+	//mpRenderer->SetConstant2f("directionalShadowMapDimensions", directionalShadowMapDimensions);
+	mpRenderer->SetConstant1f("directionalShadowMapDimension", directionalShadowMapDimensions.x());
+	mpRenderer->SetConstant1f("directionalDepthBias", mpActiveScene->mDirectionalLight.depthBias);
+
+	// SHADOW MAPS
+	//
+	mpRenderer->SetTextureArray("texSpotShadowMaps", mShadowMapPass.mShadowMapTextures_Spot);
+	if (mShadowMapPass.mShadowMapTexture_Directional != -1)
+		mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass.mShadowMapTexture_Directional);
+
+#ifdef _DEBUG
+	const SceneLightingData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
+	if (cb.pointLightCount > cb.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
+	if (cb.spotLightCount > cb.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
+#endif
+}
 
 void Engine::PreRender()
 {
@@ -744,32 +777,6 @@ void Engine::PreRender()
 
 	mpCPUProfiler->EndEntry();
 }
-
-void Engine::SendLightData() const
-{
-	const float shadowDimension = static_cast<float>(mShadowMapPass.mShadowMapDimension_Spot);
-
-	// LIGHTS ( POINT | SPOT | DIRECTIONAL )
-	//
-	const vec2 directionalShadowMapDimensions 
-		= vec2(mShadowMapPass.mShadowViewPort_Directional.Width, mShadowMapPass.mShadowViewPort_Directional.Height);
-	mpRenderer->SetConstantStruct("Lights", &mSceneLightData._cb);
-	mpRenderer->SetConstant2f("spotShadowMapDimensions", vec2(shadowDimension, shadowDimension));
-	mpRenderer->SetConstant2f("directionalShadowMapDimensions", directionalShadowMapDimensions);
-
-	// SHADOW MAPS
-	//
-	mpRenderer->SetTextureArray("texSpotShadowMaps", mShadowMapPass.mShadowMapTextures_Spot);
-	if(mShadowMapPass.mShadowMapTexture_Directional != -1)
-		mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass.mShadowMapTexture_Directional);
-
-#ifdef _DEBUG
-	const SceneLightingData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
-	if (cb.pointLightCount > cb.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
-	if (cb.spotLightCount  > cb.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
-#endif
-}
-
 
 // ====================================================================================
 // RENDER FUNCTIONS
@@ -818,6 +825,15 @@ void Engine::Render()
 		const TextureID tSSAO = mEngineConfig.bSSAO && bSceneSSAO
 			? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget)
 			: mSSAOPass.whiteTexture4x4;
+		const DeferredRenderingPasses::RenderParams deferredLightingParams = 
+		{
+			mpRenderer
+			, mPostProcessPass._worldRenderTarget
+			, mpActiveScene->mSceneView
+			, mSceneLightData
+			, tSSAO
+			, sEngineSettings.rendering.bUseBRDFLighting
+		};
 
 		// GEOMETRY - DEPTH PASS
 		mpGPUProfiler->BeginEntry("Geometry Pass");
@@ -857,7 +873,7 @@ void Engine::Render()
 		mpCPUProfiler->BeginEntry("Opaque Pass (ScreenSpace)");
 #endif
 		{
-			mDeferredRenderingPasses.RenderLightingPass(mpRenderer, mPostProcessPass._worldRenderTarget, mpActiveScene->mSceneView, mSceneLightData, tSSAO, sEngineSettings.rendering.bUseBRDFLighting);
+			mDeferredRenderingPasses.RenderLightingPass(deferredLightingParams);
 		}
 #if ENABLE_TRANSPARENCY
 		mpCPUProfiler->EndEntry();
@@ -936,50 +952,40 @@ void Engine::Render()
 			: mpActiveScene->mSceneView.environmentMap.envMapSampler;
 		const TextureID prefilteredEnvMap = mpActiveScene->mSceneView.environmentMap.prefilteredEnvironmentMap;
 		const TextureID tBRDFLUT = EnvironmentMap::sBRDFIntegrationLUTTexture;
+		const RenderTargetID renderTarget = mPostProcessPass._worldRenderTarget;
 
 		// AMBIENT OCCLUSION - Z-PREPASS
 		if (bZPrePass)
 		{
-			const RenderTargetID normals	= mDeferredRenderingPasses._GBuffer._normalRT;
-			const TextureID texNormal		= mpRenderer->GetRenderTargetTexture(normals);
-			
-			const bool bDoClearColor = true;
-			const bool bDoClearDepth = true;
-			const bool bDoClearStencil = false;
-			ClearCommand clearCmd(
-				bDoClearColor, bDoClearDepth, bDoClearStencil,
-				{ 0, 0, 0, 0 }, 1, 0
-			);
-
+			const RenderTargetID normals = mDeferredRenderingPasses._GBuffer._normalRT;
+			const TextureID texNormal = mpRenderer->GetRenderTargetTexture(normals);
+			const ZPrePass::RenderParams zPrePassParams =
+			{
+				mpRenderer,
+				mpActiveScene,
+				mpActiveScene->mSceneView,
+				normals
+			};
 
 			mpGPUProfiler->BeginEntry("Z-PrePass");
-			mpRenderer->BeginEvent("Z-PrePass");
-			mpRenderer->SetShader(EShaders::Z_PREPRASS);
-			mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-			mpRenderer->BindRenderTarget(normals);
-			mpRenderer->BindDepthTarget(mWorldDepthTarget);
-			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
-			mpRenderer->BeginRender(clearCmd);
-			mpActiveScene->RenderOpaque(mpActiveScene->mSceneView);
-			mpRenderer->EndEvent();
+			mZPrePass.RenderDepth(zPrePassParams);
 			mpGPUProfiler->EndEntry();
 
-			mpGPUProfiler->BeginEntry("SSAO");
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
-			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
-			mpRenderer->UnbindRenderTargets();
-			mpRenderer->Apply();
+			{
+				mpGPUProfiler->BeginEntry("SSAO");
 
-			mpGPUProfiler->BeginEntry("Occlusion");
-			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
-			mpGPUProfiler->EndEntry();
+				mpGPUProfiler->BeginEntry("Occlusion");
+				mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
+				mpGPUProfiler->EndEntry();	// Occlusion
 
-			mpGPUProfiler->BeginEntry("Blur");
-			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
-			mSSAOPass.GaussianBlurPass(mpRenderer);
-			mpGPUProfiler->EndEntry();
-			mpGPUProfiler->EndEntry();	// SSAO
-			mpRenderer->EndEvent();
+				mpGPUProfiler->BeginEntry("Blur");
+				//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
+				mSSAOPass.GaussianBlurPass(mpRenderer);
+				mpGPUProfiler->EndEntry(); // Blur
+				mpGPUProfiler->EndEntry(); // SSAO
+			}
+			mpRenderer->EndEvent(); // Ambient Occlusion Pass
 		}
 
 		const bool bDoClearColor = true;
@@ -990,7 +996,7 @@ void Engine::Render()
 			{ 0, 0, 0, 0 }, 1, 0
 		);
 
-		mpRenderer->BindRenderTarget(mPostProcessPass._worldRenderTarget);
+		mpRenderer->BindRenderTarget(renderTarget);
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
 		mpRenderer->BeginRender(clearCmd);
@@ -1007,53 +1013,17 @@ void Engine::Render()
 			mpRenderer->Apply();					// apply to bind depth stencil
 		}
 
-
 		// LIGHTING
-		mpRenderer->BeginEvent("Lighting Pass");
-		mpRenderer->SetShader(mSelectedShader);
-		mpRenderer->Apply();
-		if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
+		const ForwardLightingPass::RenderParams forwardLightingParams = 
 		{
-			mpRenderer->SetTexture("texAmbientOcclusion", tSSAO);
-
-			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
-			const bool bSkylight = mpActiveScene->mSceneView.bIsIBLEnabled && texIrradianceMap != -1;
-			//mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
-			if (bSkylight)
-			{
-				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
-				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", prefilteredEnvMap);
-				mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
-				mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
-			}
-			
-			if (mSelectedShader == EShaders::FORWARD_BRDF)
-			{
-				mpRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
-				mpRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
-				mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
-			}
-			else
-				mpRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-			// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
-
-			mpRenderer->SetConstant1f("ambientFactor", mpActiveScene->mSceneView.sceneRenderSettings.ssao.ambientFactor);
-			mpRenderer->SetConstant3f("cameraPos", mpActiveScene->mSceneView.cameraPosition);
-			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
-			mpRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-
-			SendLightData();
-		}
-
-		mpActiveScene->RenderOpaque(mpActiveScene->mSceneView);
-
-#if ENABLE_TRANSPARENCY
-		mpRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
-		mpActiveScene->RenderAlpha(mSceneView);
-		mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
-#endif
-		mpRenderer->EndEvent();
-
+			mpRenderer
+			, mpActiveScene
+			, mpActiveScene->mSceneView
+			, mSceneLightData
+			, tSSAO
+			, renderTarget
+		};
+		mForwardLightingPass.RenderLightingPass(forwardLightingParams);
 	}
 
 	RenderLights();
@@ -1275,7 +1245,7 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 	}
 	else
 	{	
-		mpGPUProfiler->BeginEntry("Loading Screen");	// this looks rather random or hardcoded...
+		mpGPUProfiler->BeginEntry("Loading Screen");
 	}
 
 	mpRenderer->SetShader(EShaders::UNLIT);

@@ -133,7 +133,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 		constexpr size_t gridDimension = 6;
 		constexpr size_t numSph = gridDimension * gridDimension;
 
-		const vec3 origin = vec3(-30, 7, 0);
+		const vec3 origin = vec3(-30, 8, 0);
 
 		for (size_t i = 0; i < numSph; i++)
 		{

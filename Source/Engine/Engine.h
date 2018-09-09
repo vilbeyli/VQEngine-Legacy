@@ -192,6 +192,8 @@ private:
 	AmbientOcclusionPass			mSSAOPass;
 	PostProcessPass					mPostProcessPass;
 	DebugPass						mDebugPass;
+	ZPrePass						mZPrePass;
+	ForwardLightingPass				mForwardLightingPass;
 
 	std::vector<const GameObject*>	mTBNDrawObjects;
 	

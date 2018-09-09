@@ -34,7 +34,10 @@ private:
 	static const Material* GetMaterial(const Scene* pScene, MaterialID materialID);
 
 	friend class GameObject;
+
 	friend struct ShadowMapPass;
 	friend struct DeferredRenderingPasses;
+	friend struct ForwardLightingPass;
+	friend struct ZPrePass;
 };
 

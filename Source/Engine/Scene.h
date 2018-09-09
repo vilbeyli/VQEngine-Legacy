@@ -91,13 +91,15 @@ protected:
 	//
 	virtual void RenderUI() const = 0;
 
+	//------------------------------------------------------------------------
+
 	//	Use this function to programmatically create new objects in the scene.
 	//
-	GameObject*		CreateNewGameObject();
+	GameObject* CreateNewGameObject();
 	
 	//	Loads an assimp model - blocks the thread until the model loads
 	//
-	Model			LoadModel(const std::string& modelPath);
+	Model LoadModel(const std::string& modelPath);
 
 	// Queues a task for loading an assimp model for the GameObject* pObject
 	// - ModelData will be assigned when the models finish loading which is sometime 

@@ -297,7 +297,6 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 	switch (shader)
 	{
 	case EShaders::NORMAL:
-	case EShaders::Z_PREPRASS:
 		renderer->SetConstant2f("uvScale", tiling);
 		renderer->SetConstant1f("isNormalMap", normalMap == -1 ? 0.0f : 1.0f);
 		if (normalMap != -1) renderer->SetTexture("texNormalMap", normalMap);
@@ -321,7 +320,6 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 	switch (shader)
 	{
 	case EShaders::NORMAL:
-	case EShaders::Z_PREPRASS:
 		renderer->SetConstant2f("uvScale", tiling);
 		renderer->SetConstant1i("textureConfig", GetTextureConfig());
 		break;

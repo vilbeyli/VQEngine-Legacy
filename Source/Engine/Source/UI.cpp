@@ -237,7 +237,9 @@ void VQEngine::UI::RenderEngineControls() const
 		std::string("F2 - SSAO: ") + ToogleToString(mEngineControls.bSSAO),
 		std::string("F3 - Bloom: ") + ToogleToString(mEngineControls.bBloom),
 		std::string("F4 - Display Render Targets: ") + ToogleToString(mEngineControls.bRenderTargets),
-		std::string("F5 - Toggle Rendering AABBs: ") + ToogleToString(mEngineControls.bBoundingBoxes)
+		std::string("F5 - Toggle Rendering AABBs: ") + ToogleToString(mEngineControls.bBoundingBoxes),
+
+		// std::string("F6 - Toggle Frustum Culling: ") + ToogleToString(mEngineControls.bBoundingBoxes),
 	};
 	const float backGroundLineSpan = static_cast<float>(ControlEntries.size() + 2);	// back ground a little bigger - 2 lines bigger.
 	const float avgLetterWidthInPixels = 7.0f;		// hardcoded... determines background width

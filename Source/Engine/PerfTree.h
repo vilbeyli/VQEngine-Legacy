@@ -28,6 +28,13 @@ struct TreeNode
 
 	bool operator<(const TreeNode<T>& other) { return pData->operator<(*other.pData); }
 	bool operator==(const TreeNode<T>& other) { return pData == other.pData; }
+	size_t GetNonStaleChildrenCount() const
+	{
+		size_t nonStaleChildCount = 0;
+		for (const TreeNode<T>& node : children)
+			nonStaleChildCount += node.pData->IsStale() ? 0 : 1;
+		return nonStaleChildCount;
+	}
 };
 
 constexpr int PERF_TREE_ENTRY_DRAW_Y_OFFSET_PER_LINE = 14;	// pixels
@@ -320,7 +327,7 @@ inline size_t Tree<T>::RenderSubTree(
 			const TreeNode<T>& child = node.children[i - 1];
 			row_count += (child.pData->IsStale())
 				? 0
-				: child.children.size();
+				: child.GetNonStaleChildrenCount();
 		}
 		
 		const size_t child_rows = RenderSubTree(node.children[i], pTextRenderer,

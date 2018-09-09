@@ -221,7 +221,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			const MeshID& mesh = MeshID_RenderList.first;
 			const std::vector<const GameObject*>& renderList = MeshID_RenderList.second;
 		
-			const RasterizerStateID rasterizerState = Is2DGeometry(mesh) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+			const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_NONE;// Is2DGeometry(mesh) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, mesh);
 		
 			pRenderer->SetRasterizerState(rasterizerState);
@@ -426,8 +426,7 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 	// TODO: reduce the code redundancy
 	const char* pFSQ_VS = "FullScreenQuad_vs.hlsl";
 	const char* pLight_VS = "MVPTransformationWithUVs_vs.hlsl";
-	const ShaderDesc geomShaderDesc = { "GBufferPass", 
-	{
+	const ShaderDesc geomShaderDesc = { "GBufferPass", {
 		ShaderStageDesc{ "Deferred_Geometry_vs.hlsl", {} },
 		ShaderStageDesc{ "Deferred_Geometry_ps.hlsl", {} }
 	}};
@@ -474,14 +473,14 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 
 	InitializeGBuffer(pRenderer);
 
-	_geometryShader				= pRenderer->CreateShader(geomShaderDesc);
-	_geometryInstancedShader	= pRenderer->CreateShader(geomShaderInstancedDesc);
-	_ambientShader				= pRenderer->CreateShader(ambientShaderDesc);
-	_ambientIBLShader			= pRenderer->CreateShader(ambientIBLShaderDesc);
-	_BRDFLightingShader			= pRenderer->CreateShader(BRDFLightingShaderDesc);
-	_phongLightingShader		= pRenderer->CreateShader(phongLighintShaderDesc);
-	_spotLightShader			= pRenderer->CreateShader(BRDF_PointLightShaderDesc);
-	_pointLightShader			= pRenderer->CreateShader(BRDF_SpotLightShaderDesc);
+	_geometryShader = pRenderer->CreateShader(geomShaderDesc);
+	_geometryInstancedShader = pRenderer->CreateShader(geomShaderInstancedDesc);
+	_ambientShader = pRenderer->CreateShader(ambientShaderDesc);
+	_ambientIBLShader = pRenderer->CreateShader(ambientIBLShaderDesc);
+	_BRDFLightingShader = pRenderer->CreateShader(BRDFLightingShaderDesc);
+	_phongLightingShader = pRenderer->CreateShader(phongLighintShaderDesc);
+	_spotLightShader = pRenderer->CreateShader(BRDF_PointLightShaderDesc);
+	_pointLightShader = pRenderer->CreateShader(BRDF_SpotLightShaderDesc);
 
 	// deferred geometry is accessed from elsewhere, needs to be globally defined
 	assert(EShaders::DEFERRED_GEOMETRY == _geometryShader);	// this assumption may break, make sure it doesn't...
@@ -552,10 +551,11 @@ void DeferredRenderingPasses::ClearGBuffer(Renderer* pRenderer)
 	pRenderer->BeginRender(clearCmd);
 }
 
+
+struct InstancedGbufferObjectMatrices { ObjectMatrices objMatrices[DRAW_INSTANCED_COUNT_GBUFFER_PASS]; };
 void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pScene, const SceneView& sceneView) const
 {
 	//--------------------------------------------------------------------------------------------------------------------
-	struct InstancedGbufferObjectMatrices  { ObjectMatrices_ViewSpace objMatrices[DRAW_INSTANCED_COUNT_GBUFFER_PASS]; };
 	struct InstancedGbufferObjectMaterials { SurfaceMaterial objMaterials[DRAW_INSTANCED_COUNT_GBUFFER_PASS]; };
 	auto Is2DGeometry = [](MeshID mesh)
 	{
@@ -567,7 +567,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 		const ModelData& model = pObj->GetModelData();
 
 		const XMMATRIX world = tf.WorldTransformationMatrix();
-		const ObjectMatrices_ViewSpace mats =
+		const ObjectMatrices mats =
 		{
 			world * sceneView.view,
 			tf.NormalMatrix(world) * sceneView.view,
@@ -707,26 +707,21 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 	}
 }
 
-void DeferredRenderingPasses::RenderLightingPass(
-	Renderer* pRenderer, 
-	const RenderTargetID target, 
-	const SceneView& sceneView, 
-	const SceneLightingData& lights, 
-	const TextureID tSSAO, 
-	bool bUseBRDFLighting) const
+void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 {
 	ClearCommand cmd = ClearCommand::Color({ 0, 0, 0, 0 });
 
-	const bool bAmbientOcclusionOn = tSSAO == -1;
+	const bool bAmbientOcclusionOn = args.tSSAO == -1;
+	Renderer* pRenderer = args.pRenderer;
 
 	const vec2 screenSize = pRenderer->GetWindowDimensionsAsFloat2();
 	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
 	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer._diffuseRoughnessRT);
 	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer._specularMetallicRT);
-	const ShaderID lightingShader = bUseBRDFLighting ? _BRDFLightingShader : _phongLightingShader;
-	const TextureID texIrradianceMap = sceneView.environmentMap.irradianceMap;
-	const SamplerID smpEnvMap = sceneView.environmentMap.envMapSampler;
-	const TextureID texSpecularMap = sceneView.environmentMap.prefilteredEnvironmentMap;
+	const ShaderID lightingShader = args.bUseBRDFLighting ? _BRDFLightingShader : _phongLightingShader;
+	const TextureID texIrradianceMap = args.sceneView.environmentMap.irradianceMap;
+	const SamplerID smpEnvMap = args.sceneView.environmentMap.envMapSampler;
+	const TextureID texSpecularMap = args.sceneView.environmentMap.prefilteredEnvironmentMap;
 	const TextureID tBRDFLUT = EnvironmentMap::sBRDFIntegrationLUTTexture;
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 
@@ -734,13 +729,13 @@ void DeferredRenderingPasses::RenderLightingPass(
 	constexpr bool bUnbindRenderTargets = false; // we're switching between lighting shaders w/ same render targets
 
 	pRenderer->UnbindDepthTarget();
-	pRenderer->BindRenderTarget(target);
+	pRenderer->BindRenderTarget(args.target);
 	pRenderer->BeginRender(cmd);
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
 	//-----------------------------------------------------------------------------------------
-	const bool bSkylight = sceneView.bIsIBLEnabled && texIrradianceMap != -1;
+	const bool bSkylight = args.sceneView.bIsIBLEnabled && texIrradianceMap != -1;
 	if(bSkylight)
 	{
 		pRenderer->BeginEvent("Environment Map Lighting Pass");
@@ -749,24 +744,24 @@ void DeferredRenderingPasses::RenderLightingPass(
 		pRenderer->SetTexture("tSpecularMetalnessMap", texSpecularMetallic);
 		pRenderer->SetTexture("tNormalMap", texNormal);
 		pRenderer->SetTexture("tDepthMap", depthTexture);
-		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
+		pRenderer->SetTexture("tAmbientOcclusion", args.tSSAO);
 		pRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
 		pRenderer->SetTexture("tPreFilteredEnvironmentMap", texSpecularMap);
 		pRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
 		pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 		pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
-		pRenderer->SetConstant4x4f("matViewInverse", sceneView.viewInverse);
-		pRenderer->SetConstant4x4f("matProjInverse", sceneView.projInverse);
+		pRenderer->SetConstant4x4f("matViewInverse", args.sceneView.viewInverse);
+		pRenderer->SetConstant4x4f("matProjInverse", args.sceneView.projInverse);
 	}
 	else
 	{
 		pRenderer->BeginEvent("Ambient Pass");
 		pRenderer->SetShader(_ambientShader, bUnbindRenderTargets);
 		pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
-		pRenderer->SetTexture("tAmbientOcclusion", tSSAO);
+		pRenderer->SetTexture("tAmbientOcclusion", args.tSSAO);
 	}
 	pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
-	pRenderer->SetConstant1f("ambientFactor", sceneView.sceneRenderSettings.ssao.ambientFactor);
+	pRenderer->SetConstant1f("ambientFactor", args.sceneView.sceneRenderSettings.ssao.ambientFactor);
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
@@ -836,9 +831,9 @@ void DeferredRenderingPasses::RenderLightingPass(
 	pRenderer->SetShader(lightingShader, bUnbindRenderTargets);
 	ENGINE->SendLightData();
 
-	pRenderer->SetConstant4x4f("matView", sceneView.view);
-	pRenderer->SetConstant4x4f("matViewToWorld", sceneView.viewInverse);
-	pRenderer->SetConstant4x4f("matPorjInverse", sceneView.projInverse);
+	pRenderer->SetConstant4x4f("matView", args.sceneView.view);
+	pRenderer->SetConstant4x4f("matViewToWorld", args.sceneView.viewInverse);
+	pRenderer->SetConstant4x4f("matPorjInverse", args.sceneView.projInverse);
 	//pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
 	pRenderer->SetSamplerState("sShadowSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
@@ -1069,4 +1064,395 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	pRenderer->DrawIndexed();
 
 	pRenderer->EndEvent();
+}
+
+void ZPrePass::Initialize(Renderer* pRenderer)
+{
+	const std::vector<ShaderMacro> instancedGeomShaderMacros =
+	{
+		ShaderMacro{ "INSTANCED", "1" },
+		ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_GBUFFER_PASS)}
+	};
+	const ShaderDesc shaders[2] =
+	{
+		ShaderDesc {"ZPrePass", {
+			ShaderStageDesc{"Deferred_Geometry_vs.hlsl"            , {} },
+			ShaderStageDesc{"ViewSpaceNormalsAndPositions_ps.hlsl" , {} }
+		}},
+		ShaderDesc {"ZPrePass-Instanced", {
+			ShaderStageDesc{"Deferred_Geometry_vs.hlsl"            , {instancedGeomShaderMacros} },
+			ShaderStageDesc{"ViewSpaceNormalsAndPositions_ps.hlsl" , {} }
+		}},
+	};
+
+	objShader = pRenderer->CreateShader(shaders[0]);
+	objShaderInstanced = pRenderer->CreateShader(shaders[1]);
+}
+
+void ZPrePass::RenderDepth(const RenderParams& args) const
+{
+	//--------------------------------------------------------------------------------------------------------------------
+	auto RenderObject = [&](const GameObject* pObj)
+	{
+		const Transform& tf = pObj->GetTransform();
+		const ModelData& model = pObj->GetModelData();
+
+		const XMMATRIX world = tf.WorldTransformationMatrix();
+		const ObjectMatrices mats =
+		{
+			world * args.sceneView.view,
+			tf.NormalMatrix(world) * args.sceneView.view,
+			world * args.sceneView.viewProj,
+		};
+
+		args.pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+
+		SurfaceMaterial material;
+		args.pRenderer->SetConstant1i("textureConfig", 0);
+		for (MeshID id : model.mMeshIDs)
+		{
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(args.pScene, id);
+
+			// SET MATERIAL CONSTANT BUFFER & TEXTURES
+			//
+			const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(id) != model.mMaterialLookupPerMesh.end();
+			if (bMeshHasMaterial)
+			{
+				const MaterialID materialID = model.mMaterialLookupPerMesh.at(id);
+				const Material* pMat = SceneResourceView::GetMaterial(args.pScene, materialID);
+
+				// #TODO: uncomment below when transparency is implemented.
+				//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
+				//	return;
+
+				if (pMat->normalMap >= 0)	args.pRenderer->SetTexture("texNormalMap"  , pMat->normalMap);
+				if (pMat->mask >= 0)		args.pRenderer->SetTexture("texAlphaMask", pMat->mask);
+				args.pRenderer->SetConstant1i("textureConfig", pMat->GetTextureConfig());
+				args.pRenderer->SetConstant2f("uvScale", pMat->tiling);
+				args.pRenderer->SetConstantStruct("ObjMatrices", &mats);
+			}
+#if _DEBUG
+			else
+			{
+				assert(false);// mMaterials.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, EShaders::DEFERRED_GEOMETRY, sceneView.bIsDeferredRendering);
+			}
+#endif
+
+			args.pRenderer->SetVertexBuffer(IABuffer.first);
+			args.pRenderer->SetIndexBuffer(IABuffer.second);
+			args.pRenderer->Apply();
+			args.pRenderer->DrawIndexed();
+		};
+	};
+	//--------------------------------------------------------------------------------------------------------------------
+
+	const RenderTargetID normals = args.normalRT;
+	const TextureID texNormal = args.pRenderer->GetRenderTargetTexture(normals);
+
+	const bool bDoClearColor = true;
+	const bool bDoClearDepth = true;
+	const bool bDoClearStencil = false;
+	ClearCommand clearCmd(
+		bDoClearColor, bDoClearDepth, bDoClearStencil,
+		{ 0, 0, 0, 0 }, 1, 0
+	);
+
+	args.pRenderer->BeginEvent("Z-PrePass");
+	args.pRenderer->SetShader(objShader);
+	args.pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+	args.pRenderer->BindRenderTarget(normals);
+	args.pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
+	args.pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+	args.pRenderer->BeginRender(clearCmd);
+
+
+	// RENDER NON-INSTANCED SCENE OBJECTS
+	//
+	int numObj = 0;
+	for (const GameObject* pObj : args.sceneView.culledOpaqueList)
+	{
+		RenderObject(pObj);
+		++numObj;
+	}
+
+
+	// RENDER INSTANCED SCENE OBJECTS
+	//
+	args.pRenderer->SetShader(objShaderInstanced);
+	args.pRenderer->BindRenderTarget(normals);
+	args.pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
+
+	InstancedGbufferObjectMatrices cbufferMatrices;
+	for (const RenderListLookupEntry& MeshID_RenderList : args.sceneView.culluedOpaqueInstancedRenderListLookup)
+	{
+		const MeshID& meshID = MeshID_RenderList.first;
+		const RenderList& renderList = MeshID_RenderList.second;
+		const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(args.pScene, meshID);
+
+		args.pRenderer->SetRasterizerState(rasterizerState);
+		args.pRenderer->SetVertexBuffer(IABuffer.first);
+		args.pRenderer->SetIndexBuffer(IABuffer.second);
+
+		int batchCount = 0;
+		do
+		{
+			int instanceID = 0;
+			for (; instanceID < DRAW_INSTANCED_COUNT_GBUFFER_PASS; ++instanceID)
+			{
+				const int renderListIndex = DRAW_INSTANCED_COUNT_GBUFFER_PASS * batchCount + instanceID;
+				if (renderListIndex == renderList.size())
+					break;
+
+				const GameObject* pObj = renderList[renderListIndex];
+				const Transform& tf = pObj->GetTransform();
+				const ModelData& model = pObj->GetModelData();
+
+				const XMMATRIX world = tf.WorldTransformationMatrix();
+				cbufferMatrices.objMatrices[instanceID] =
+				{
+					world * args.sceneView.view,
+					tf.NormalMatrix(world) * args.sceneView.view,
+					world * args.sceneView.viewProj,
+				};
+
+				const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(meshID) != model.mMaterialLookupPerMesh.end();
+				if (bMeshHasMaterial)
+				{
+					const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
+					const Material* pMat = SceneResourceView::GetMaterial(args.pScene, materialID);
+					//cbufferMaterials.objMaterials[instanceID] = pMat->GetShaderFriendlyStruct();
+				}
+			}
+
+			args.pRenderer->SetConstantStruct("ObjMatrices", &cbufferMatrices);
+			args.pRenderer->Apply();
+			args.pRenderer->DrawIndexedInstanced(instanceID);
+		} while (batchCount++ < renderList.size() / DRAW_INSTANCED_COUNT_GBUFFER_PASS);
+	}
+
+	args.pRenderer->EndEvent(); // Z-PrePass
+}
+
+#include "Scene.h"
+
+void ForwardLightingPass::Initialize(Renderer* pRenderer)
+{
+	fwdBRDF = EShaders::FORWARD_BRDF;
+
+	const std::vector<ShaderMacro> instancedShaderMacros =
+	{
+		ShaderMacro{ "INSTANCED", "1" },
+		ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_GBUFFER_PASS)}
+	};
+	const ShaderDesc instancedBRDFDesc = { "Forward_BRDF-Instanced", {
+			ShaderStageDesc{"Forward_BRDF_vs.hlsl", { instancedShaderMacros } },
+			ShaderStageDesc{"Forward_BRDF_ps.hlsl", { instancedShaderMacros } }
+		}
+	};
+	fwdBRDFInstanced = pRenderer->CreateShader(instancedBRDFDesc);
+}
+
+void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
+{
+	// shorthands
+	Renderer* const& pRenderer = args.pRenderer;
+	const SceneView& sceneView = args.sceneView;
+	//--------------------------------------------------------------------------------------------------------------------
+	struct InstancedGbufferObjectMaterials { SurfaceMaterial objMaterials[DRAW_INSTANCED_COUNT_GBUFFER_PASS]; };
+	auto Is2DGeometry = [](MeshID mesh)
+	{
+		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
+	};
+	auto RenderObject = [&](const GameObject* pObj)
+	{
+		const Transform& tf = pObj->GetTransform();
+		const ModelData& model = pObj->GetModelData();
+
+		const XMMATRIX world = tf.WorldTransformationMatrix();
+		const ObjectMatrices mats =
+		{
+			world * sceneView.viewProj,
+			world,
+			tf.NormalMatrix(world),
+		};
+
+		pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+
+		SurfaceMaterial material;
+		for (MeshID id : model.mMeshIDs)
+		{
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(args.pScene, id);
+
+			// SET MATERIAL CONSTANT BUFFER & TEXTURES
+			//
+			const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(id) != model.mMaterialLookupPerMesh.end();
+			if (bMeshHasMaterial)
+			{
+				const MaterialID materialID = model.mMaterialLookupPerMesh.at(id);
+				const Material* pMat = SceneResourceView::GetMaterial(args.pScene, materialID);
+
+				// #TODO: uncomment below when transparency is implemented.
+				//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
+				//	return;
+
+				material = pMat->GetShaderFriendlyStruct();
+				pRenderer->SetConstantStruct("surfaceMaterial", &material);
+				pRenderer->SetConstantStruct("ObjMatrices", &mats);
+				if (pMat->diffuseMap >= 0)	pRenderer->SetTexture("texDiffuseMap", pMat->diffuseMap);
+				if (pMat->normalMap >= 0)	pRenderer->SetTexture("texNormalMap", pMat->normalMap);
+				if (pMat->specularMap >= 0)	pRenderer->SetTexture("texSpecularMap", pMat->specularMap);
+				if (pMat->mask >= 0)		pRenderer->SetTexture("texAlphaMask", pMat->mask);
+			}
+			else
+			{
+				assert(false);// mMaterials.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, EShaders::DEFERRED_GEOMETRY, sceneView.bIsDeferredRendering);
+			}
+
+			pRenderer->SetVertexBuffer(IABuffer.first);
+			pRenderer->SetIndexBuffer(IABuffer.second);
+			pRenderer->Apply();
+			pRenderer->DrawIndexed();
+		};
+	};
+	//--------------------------------------------------------------------------------------------------------------------
+
+	pRenderer->BeginEvent("Lighting Pass");
+	pRenderer->SetShader(/*mSelectedShader*/fwdBRDF);
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+	pRenderer->Apply();
+
+	//if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
+	{
+		pRenderer->SetTexture("texAmbientOcclusion", args.tSSAO);
+
+		// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
+		//pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
+		const bool bSkylight = args.sceneView.sceneRenderSettings.bSkylightEnabled;
+		if (bSkylight)
+		{
+			pRenderer->SetTexture("tIrradianceMap", args.sceneView.environmentMap.irradianceMap);
+			pRenderer->SetTexture("tPreFilteredEnvironmentMap", args.sceneView.environmentMap.prefilteredEnvironmentMap);
+			pRenderer->SetTexture("tBRDFIntegrationLUT", EnvironmentMap::sBRDFIntegrationLUTTexture);
+			pRenderer->SetSamplerState("sEnvMapSampler", args.sceneView.environmentMap.envMapSampler);
+		}
+
+		//if (mSelectedShader == EShaders::FORWARD_BRDF)
+		{
+			pRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
+			pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
+			pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
+		}
+		//else
+		//	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+		// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
+
+		pRenderer->SetConstant1f("ambientFactor", args.sceneView.sceneRenderSettings.ssao.ambientFactor);
+		pRenderer->SetConstant3f("cameraPos", args.sceneView.cameraPosition);
+		pRenderer->SetConstant2f("screenDimensions", pRenderer->GetWindowDimensionsAsFloat2());
+		pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+
+		ENGINE->SendLightData();
+	}
+	
+	// RENDER NON-INSTANCED SCENE OBJECTS
+	//
+	int numObj = 0;
+	for (const auto* obj : args.sceneView.culledOpaqueList)
+	{
+		RenderObject(obj);
+		++numObj;
+	}
+
+
+
+	// RENDER INSTANCED SCENE OBJECTS
+	//
+#if 1
+	pRenderer->SetShader(fwdBRDFInstanced);
+	pRenderer->BindRenderTarget(args.targetRT);
+	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+	pRenderer->SetTexture("texAmbientOcclusion", args.tSSAO);
+
+	// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
+	//pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
+	const bool bSkylight = args.sceneView.sceneRenderSettings.bSkylightEnabled;
+	if (bSkylight)
+	{
+		pRenderer->SetTexture("tIrradianceMap", args.sceneView.environmentMap.irradianceMap);
+		pRenderer->SetTexture("tPreFilteredEnvironmentMap", args.sceneView.environmentMap.prefilteredEnvironmentMap);
+		pRenderer->SetTexture("tBRDFIntegrationLUT", EnvironmentMap::sBRDFIntegrationLUTTexture);
+		pRenderer->SetSamplerState("sEnvMapSampler", args.sceneView.environmentMap.envMapSampler);
+	}
+
+	//if (mSelectedShader == EShaders::FORWARD_BRDF)
+	{
+		pRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
+		pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
+		pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
+	}
+	//else
+	//	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+	// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
+
+	pRenderer->SetConstant1f("ambientFactor", args.sceneView.sceneRenderSettings.ssao.ambientFactor);
+	pRenderer->SetConstant3f("cameraPos", args.sceneView.cameraPosition);
+	pRenderer->SetConstant2f("screenDimensions", pRenderer->GetWindowDimensionsAsFloat2());
+
+	ENGINE->SendLightData();
+
+	InstancedGbufferObjectMatrices cbufferMatrices;
+	InstancedGbufferObjectMaterials cbufferMaterials;
+
+	for (const RenderListLookupEntry& MeshID_RenderList : sceneView.culluedOpaqueInstancedRenderListLookup)
+	{
+		const MeshID& meshID = MeshID_RenderList.first;
+		const RenderList& renderList = MeshID_RenderList.second;
+		const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(args.pScene, meshID);
+
+		pRenderer->SetRasterizerState(rasterizerState);
+		pRenderer->SetVertexBuffer(IABuffer.first);
+		pRenderer->SetIndexBuffer(IABuffer.second);
+
+		int batchCount = 0;
+		do
+		{
+			int instanceID = 0;
+			for (; instanceID < DRAW_INSTANCED_COUNT_GBUFFER_PASS; ++instanceID)
+			{
+				const int renderListIndex = DRAW_INSTANCED_COUNT_GBUFFER_PASS * batchCount + instanceID;
+				if (renderListIndex == renderList.size())
+					break;
+
+				const GameObject* pObj = renderList[renderListIndex];
+				const Transform& tf = pObj->GetTransform();
+				const ModelData& model = pObj->GetModelData();
+				const XMMATRIX world = tf.WorldTransformationMatrix();
+				cbufferMatrices.objMatrices[instanceID] =
+				{
+					world * sceneView.viewProj,
+					world,
+					tf.NormalMatrix(world),
+				};
+
+				const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(meshID) != model.mMaterialLookupPerMesh.end();
+				if (bMeshHasMaterial)
+				{
+					const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
+					const Material* pMat = SceneResourceView::GetMaterial(args.pScene, materialID);
+					cbufferMaterials.objMaterials[instanceID] = pMat->GetShaderFriendlyStruct();
+				}
+			}
+
+			pRenderer->SetConstantStruct("ObjMatrices", &cbufferMatrices);
+			pRenderer->SetConstantStruct("surfaceMaterial", &cbufferMaterials);
+			pRenderer->Apply();
+			pRenderer->DrawIndexedInstanced(instanceID);
+		} while (batchCount++ < renderList.size() / DRAW_INSTANCED_COUNT_GBUFFER_PASS);
+	}
+#endif
+
+	pRenderer->EndEvent();	// Lighting Pass
 }

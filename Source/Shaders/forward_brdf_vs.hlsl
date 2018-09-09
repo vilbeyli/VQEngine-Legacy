@@ -59,6 +59,9 @@ struct PSIn
 	float3 normal		 : NORMAL;
     float3 tangent		 : TANGENT;
     float2 texCoord		 : TEXCOORD4;
+#ifdef INSTANCED
+	uint instanceID	     : SV_InstanceID;
+#endif
 };
 
 
@@ -70,7 +73,6 @@ PSIn VSMain(VSIn In)
 
 
 	PSIn Out;
-	Out.position = mul(ObjMatrices.worldViewProj, pos);
 #if 0	// experimenting with panini projection, using unreal's implementation
 	// src: https://docs.unrealengine.com/latest/INT/Engine/Rendering/PostProcessEffects/PaniniProjection/
 	// panini projection
@@ -87,16 +89,18 @@ PSIn VSMain(VSIn In)
 #endif
 
 #ifdef INSTANCED
-	Out.worldPos		= mul(ObjMatrices[In.instanceID].world , pos).xyz;
-    Out.normal			= normalize(mul(ObjMatrices[In.instanceID].normal, In.normal));
-    Out.tangent			= normalize(mul(ObjMatrices[In.instanceID].normal, In.tangent));
-	Out.texCoord		= In.texCoord;
+	Out.position = mul(ObjMatrices[In.instanceID].worldViewProj, pos);
+	Out.worldPos = mul(ObjMatrices[In.instanceID].world , pos).xyz;
+    Out.normal	 = normalize(mul(ObjMatrices[In.instanceID].normal, In.normal));
+    Out.tangent	 = normalize(mul(ObjMatrices[In.instanceID].normal, In.tangent));
+	Out.instanceID = In.instanceID;
 #else
-	Out.worldPos		= mul(ObjMatrices.world , pos).xyz;
-    Out.normal			= normalize(mul(ObjMatrices.normal, In.normal));
-    Out.tangent			= normalize(mul(ObjMatrices.normal, In.tangent));
-	Out.texCoord		= In.texCoord;
+	Out.position = mul(ObjMatrices.worldViewProj, pos);
+	Out.worldPos = mul(ObjMatrices.world , pos).xyz;
+    Out.normal	 = normalize(mul(ObjMatrices.normal, In.normal));
+    Out.tangent	 = normalize(mul(ObjMatrices.normal, In.tangent));
 #endif
-	Out.lightSpacePos	= mul(lightSpaceMat, float4(Out.worldPos, 1));
+	Out.texCoord = In.texCoord;
+	Out.lightSpacePos = mul(lightSpaceMat, float4(Out.worldPos, 1));
 	return Out;
 }

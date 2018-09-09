@@ -16,11 +16,19 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-cbuffer perModel
+struct ObjectMatrices
 {
-    matrix world;
+	matrix world;
 	matrix normalMatrix;
 	matrix worldViewProj;
+};
+cbuffer perModel
+{
+#ifdef INSTANCED
+	ObjectMatrices ObjMatrices[INSTANCE_COUNT];
+#else
+	ObjectMatrices ObjMatrices;
+#endif
 }
 
 cbuffer frame
@@ -51,10 +59,18 @@ PSIn VSMain(VSIn In)
 	const float4 pos = float4(In.position, 1);
 
 	PSIn Out;
-	Out.position		= mul(worldViewProj, pos);
-	Out.worldPos		= mul(world        , pos).xyz;
-    Out.normal			= normalize(mul(normalMatrix, In.normal));
-    Out.tangent			= normalize(mul(normalMatrix, In.tangent));
-	Out.texCoord		= In.texCoord;
+#if INSTANCED
+	Out.position   = mul(ObjMatrices[In.instanceID].worldViewProj, pos);
+	Out.worldPos   = mul(ObjMatrices[In.instanceID].world, pos).xyz;
+	Out.normal     = normalize(mul(ObjMatrices[In.instanceID].normalMatrix, In.normal));
+	Out.tangent    = normalize(mul(ObjMatrices[In.instanceID].normalMatrix, In.tangent));
+	Out.instanceID = In.instanceID;
+#else
+	Out.position   = mul(ObjMatrices.worldViewProj, pos);
+	Out.worldPos   = mul(ObjMatrices.world        , pos).xyz;
+    Out.normal	   = normalize(mul(ObjMatrices.normalMatrix, In.normal));
+    Out.tangent	   = normalize(mul(ObjMatrices.normalMatrix, In.tangent));
+#endif
+	Out.texCoord   = In.texCoord;
 	return Out;
 }

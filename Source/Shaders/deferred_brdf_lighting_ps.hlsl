@@ -44,7 +44,8 @@ cbuffer SceneVariables	// frame constants
 	
 	//float2 pointShadowMapDimensions;
 	float2 spotShadowMapDimensions;
-	float2 directionalShadowMapDimensions;
+	float directionalShadowMapDimension;
+	float directionalDepthBias;
 	
 	SceneLighting Lights;
 };
@@ -66,11 +67,14 @@ SamplerState sShadowSampler;
 SamplerState sLinearSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
-{	
+{
+	ShadowTestPCFData pcfTest;
+
 	// base indices for indexing shadow views
 	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
 	const int spotShadowsBaseIndex = 0;		
 	const int directionalShadowBaseIndex = spotShadowsBaseIndex + Lights.numSpotCasters;
+	const float2 dirShadowMapDimensions = directionalShadowMapDimension.xx;
 
 	// lighting & surface parameters (View Space Lighting)
     const float nonLinearDepth = texDepth.Sample(sLinearSampler, In.uv).r;
@@ -143,13 +147,14 @@ float4 PSMain(PSIn In) : SV_TARGET
 	for (int k = 0; k < Lights.numSpotCasters; ++k)
 	{
 		const matrix matShadowView = Lights.shadowViews[spotShadowsBaseIndex + k];
-		const float4 Pl		   = mul(matShadowView, float4(Pw, 1));
+		pcfTest.lightSpacePos  = mul(matShadowView, float4(Pw, 1));
 		const float3 Lv        = mul(matView, float4(Lights.spot_casters[k].position, 1));
 		const float3 Wi        = normalize(Lv - P);
 		const float3 radiance  = SpotlightIntensity(Lights.spot_casters[k], Pw) * Lights.spot_casters[k].color * Lights.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
-		const float  NdotL	   = saturate(dot(s.N, Wi));
-		const float3 shadowing = ShadowTestPCF(Pw, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions);
-		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
+		pcfTest.NdotL          = saturate(dot(s.N, Wi));
+		pcfTest.depthBias = 0.0000005f;
+		const float3 shadowing = ShadowTestPCF(pcfTest, texSpotShadowMaps, sShadowSampler, spotShadowMapDimensions, k);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
 #endif
 
@@ -157,15 +162,16 @@ float4 PSMain(PSIn In) : SV_TARGET
 #if ENABLE_DIRECTIONAL_LIGHTS
 	if (Lights.directional.shadowFactor > 0.0f)
 	{
-		const float4 Pl = mul(Lights.shadowViewDirectional, float4(Pw, 1));
+		pcfTest.lightSpacePos = mul(Lights.shadowViewDirectional, float4(Pw, 1));
 		const float3 Lv = mul(matView, float4(Lights.directional.lightDirection, 0.0f));
 		const float3 Wi = normalize(-Lv);
 		const float3 radiance
 			= Lights.directional.color
 			* Lights.directional.brightness;
-		const float  NdotL = saturate(dot(s.N, Wi));
-		const float3 shadowing = ShadowTestPCF(Pw, Pl, texDirectionalShadowMaps, 0, sShadowSampler, NdotL, directionalShadowMapDimensions);
-		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * NdotL;
+		pcfTest.NdotL = saturate(dot(s.N, Wi));
+		pcfTest.depthBias = directionalDepthBias;
+		const float3 shadowing = ShadowTestPCF(pcfTest, texDirectionalShadowMaps, sShadowSampler, dirShadowMapDimensions, 0);
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
 #endif
 

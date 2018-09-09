@@ -62,16 +62,16 @@ PSIn VSMain(VSIn In)
 
 	PSIn Out;
 #ifdef INSTANCED
-	Out.position		= mul(ObjMatrices[In.instanceID].worldViewProj, pos);
-	Out.viewPosition	= mul(ObjMatrices[In.instanceID].worldView, pos).xyz;
-	Out.viewNormal		= normalize(mul(ObjMatrices[In.instanceID].normalViewMatrix, In.normal));
-	Out.viewTangent		= normalize(mul(ObjMatrices[In.instanceID].normalViewMatrix, In.tangent));
-	Out.instanceID		= In.instanceID;
+	Out.position	 = mul(ObjMatrices[In.instanceID].worldViewProj, pos);
+	Out.viewPosition = mul(ObjMatrices[In.instanceID].worldView, pos).xyz;
+	Out.viewNormal	 = normalize(mul(ObjMatrices[In.instanceID].normalViewMatrix, In.normal));
+	Out.viewTangent	 = normalize(mul(ObjMatrices[In.instanceID].normalViewMatrix, In.tangent));
+	Out.instanceID	 = In.instanceID;
 #else
-	Out.position		= mul(ObjMatrices.worldViewProj, pos);
-	Out.viewPosition	= mul(ObjMatrices.worldView, pos).xyz;
-	Out.viewNormal		= normalize(mul(ObjMatrices.normalViewMatrix, In.normal));
-	Out.viewTangent		= normalize(mul(ObjMatrices.normalViewMatrix, In.tangent));
+	Out.position	 = mul(ObjMatrices.worldViewProj, pos);
+	Out.viewPosition = mul(ObjMatrices.worldView, pos).xyz;
+	Out.viewNormal	 = normalize(mul(ObjMatrices.normalViewMatrix, In.normal));
+	Out.viewTangent	 = normalize(mul(ObjMatrices.normalViewMatrix, In.tangent));
 #endif
 	Out.uv				= In.uv;
 	return Out;

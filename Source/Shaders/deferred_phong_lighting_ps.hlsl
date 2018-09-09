@@ -57,7 +57,11 @@ SamplerState sShadowSampler;
 SamplerState sLinearSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
-{	
+{
+	ShadowTestPCFData pcfTest;
+	pcfTest.depthBias = 0.0000005f;
+	
+
 	// base indices for indexing shadow views
 	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
 	const int spotShadowsBaseIndex = 0;		
@@ -113,15 +117,15 @@ float4 PSMain(PSIn In) : SV_TARGET
 	for (int k = 0; k < sceneLightData.numSpotCasters; ++k)	
     {
 		const matrix matShadowView = sceneLightData.shadowViews[spotShadowsBaseIndex + k];
-		const float4 Pl = mul(matShadowView, float4(Pw, 1));
+		pcfTest.lightSpacePos = mul(matShadowView, float4(Pw, 1));
 		float3 Lw = normalize(sceneLightData.spot_casters[k].position - Pw);
-        float NdotL = saturate(dot(Nw, Lw));
+		pcfTest.NdotL = saturate(dot(Nw, Lw));
         IdIs +=
 		Phong(s, Lw, Vw, sceneLightData.spot_casters[k].color)
 		* SpotlightIntensity(sceneLightData.spot_casters[k], Pw)
-		* ShadowTestPCF(Pw, Pl, texSpotShadowMaps, k, sShadowSampler, NdotL, spotShadowMapDimensions)
+		* ShadowTestPCF(pcfTest, texSpotShadowMaps, sShadowSampler, spotShadowMapDimensions, k)
 		* sceneLightData.spot_casters[k].brightness 
-		* NdotL
+		* pcfTest.NdotL
 		* SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG;
     }
 

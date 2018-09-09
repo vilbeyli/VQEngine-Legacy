@@ -144,10 +144,21 @@ float SpotlightIntensity(SpotLight l, float3 worldPos)
 }
 
 // todo: ESM - http://www.cad.zju.edu.cn/home/jqfeng/papers/Exponential%20Soft%20Shadow%20Mapping.pdf
-float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
+struct ShadowTestPCFData
+{
+	//-------------------------
+	float4 lightSpacePos;
+	//-------------------------
+	float  depthBias;
+	float  NdotL;
+	//...
+	//-------------------------
+};
+float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadowMapArr, SamplerState shadowSampler, float2 shadowMapDimensions, int shadowMapIndex)
+//float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
 {
 	// homogeneous position after interpolation
-	const float3 projLSpaceCoords = lightSpacePos.xyz / lightSpacePos.w;
+	const float3 projLSpaceCoords = pcfTestLightData.lightSpacePos.xyz / pcfTestLightData.lightSpacePos.w;
 
 	// frustum check
 	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
@@ -163,7 +174,7 @@ float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadow
 	// clip space [-1, 1] --> texture space [0, 1]
 	const float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
 	
-    const float BIAS = SHADOW_BIAS * tan(acos(NdotL));
+    const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
 	const float pxDepthInLSpace = projLSpaceCoords.z;
 
 	float shadow = 0.0f;

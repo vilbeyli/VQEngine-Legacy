@@ -21,21 +21,20 @@
 
 struct PSIn
 {
-	float4 position			: SV_POSITION;
-	float3 viewPosition		: POSITION0;
-	float3 viewNormal		: NORMAL;
-	float3 viewTangent		: TANGENT;
-	float2 uv				: TEXCOORD1;
+	float4 position     : SV_POSITION;
+	float3 viewPosition : POSITION0;
+	float3 viewNormal   : NORMAL;
+	float3 viewTangent  : TANGENT;
+	float2 uv           : TEXCOORD1;
 };
 
 struct PSOut
 {
-	float3 normals			 : SV_TARGET0;
+	float3 normals : SV_TARGET0;
 };
 
 cbuffer cbSurfaceMaterial
 {
-    float isNormalMap;
 	float2 uvScale;
 	int textureConfig;
 };
@@ -49,18 +48,18 @@ PSOut PSMain(PSIn In) : SV_TARGET
 {
 	PSOut GBuffer;
 
-	// lighting & surface parameters
-	const float3 P = In.viewPosition;
 	const float3 N = normalize(In.viewNormal);
 	const float3 T = normalize(In.viewTangent);
-	const float3 V = normalize(-P);
 	const float2 uv = In.uv * uvScale;
 	
 	const float alpha = HasAlphaMask(textureConfig) > 0 ? texAlphaMask.Sample(sNormalSampler, uv).r : 1.0f;
 	if (alpha < 0.01f)
 		discard;
 
-	float3 surfaceN				= (isNormalMap) * UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) +	(1.0f - isNormalMap) * N;
-	GBuffer.normals				= surfaceN;
+	// GBuffer.normals = (isNormalMap)* UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) + (1.0f - isNormalMap) * N;
+
+	GBuffer.normals = HasNormalMap(textureConfig) 
+		? UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) 
+		: N;
 	return GBuffer;
 }

@@ -76,6 +76,7 @@ constexpr int TEXTURED_OBJECT_PERCENTAGE = 45;
 #define LOAD_MODELS 1			// toggle model loading
 #define LOAD_MODELS_ASYNC 1		// 30-40% performance gain with the current test data
 #define LOAD_FREE3D_MODELS 1	// use this flag if you have the assets (Models/free3D/)
+#define USE_SAI_MODELS 0
 #pragma endregion
 
 #pragma region GLOBALS
@@ -129,10 +130,10 @@ void StressTestScene::Load(SerializedScene& scene)
 
 		"platform.obj",
 		"nanosuit/nanosuit.obj",	// test for multiple entry async loading
-
+#if USE_SAI_MODELS
 		"SaiNarayan/Wanderer/Wanderer_LP.obj",
 		"SaiNarayan/CorinthianPillar/column.obj",
-
+#endif
 		"EgemenIlbeyli/sise2.obj",
 		"EgemenIlbeyli/zen_orb.obj",
 
@@ -162,9 +163,10 @@ void StressTestScene::Load(SerializedScene& scene)
 		Transform(vec3(+X_UNITS, 20, 0), Q_Platform, vec3(70.0f)),			// platform
 		Transform(vec3(+X_UNITS, 0 , Z_UNITS), Q_I, vec3(15.0f)),			// nano (big)
 
+#if USE_SAI_MODELS
 		Transform(vec3(+X_UNITS*2, 1 , -Z_UNITS), Q_I, vec3(7.0f)),			// wanderer
 		Transform(vec3(+X_UNITS, 25, -Z_UNITS), Q_Pillar, vec3(15.0f)),		// pillar
-
+#endif
 		Transform(vec3(-X_UNITS, 0 , -Z_UNITS* 2.5), Q_I, vec3(2.0f)),		// bottle
 		Transform(vec3(+X_UNITS, 40, -Z_UNITS* 2), Q_I, vec3(3.0f)),		// zen ball
 

@@ -39,8 +39,10 @@ void IBLTestScene::RenderUI() const {}
 #else
 void IBLTestScene::Load(SerializedScene& scene)
 {
+	mTimeAccumulator = 0.0f;
+
 	// sphere grid
-	constexpr float r = 14.0f;
+	constexpr float r = 22.0f;
 	constexpr size_t gridDimension[2] = { 8, 4 };
 	constexpr size_t numSph = gridDimension[0] * gridDimension[1];
 	TextureID cubeNormalMap = mpRenderer->CreateTextureFromFile("openart/185_norm.jpg");
@@ -73,7 +75,8 @@ void IBLTestScene::Load(SerializedScene& scene)
 		//const vec3 offset = vec3(2.1f * r * sphereStep - 1.1f * i * r, 0, 0);
 #endif
 		vec3 pos = origin + offset;
-		const float sphereGroupOffset = gridDimension[0] * r / 2;
+		const float sphereGroupOffset = 12.0f + gridDimension[0] * r / 2;
+		constexpr float SPHERE_SCALE = 5.65f;
 
 		// TODO: Remove the copy paste... this is dumb.
 
@@ -84,7 +87,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			Transform tf;
 			pos.x() += sphereGroupOffset;
 			tf.SetPosition(pos);
-			tf.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
+			tf.SetUniformScale(SPHERE_SCALE + 0 * sinf(sphereStep * PI));
 
 			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 			const float roughnessLowClamp = 0.03f;
@@ -106,7 +109,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			Transform tf;
 			pos.x() -= 2 * sphereGroupOffset;
 			tf.SetPosition(pos);
-			tf.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
+			tf.SetUniformScale(SPHERE_SCALE + 0 * sinf(sphereStep * PI));
 
 			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 			const float roughnessLowClamp = 0.1f;
@@ -132,7 +135,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 			Transform tf;
 			pos.x() += sphereGroupOffset;
 			tf.SetPosition(pos);
-			tf.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
+			tf.SetUniformScale(SPHERE_SCALE + 0 * sinf(sphereStep * PI));
 			sph->SetTransform(tf);
 
 			sph->AddMesh(EGeometry::SPHERE);
@@ -152,14 +155,14 @@ void IBLTestScene::Load(SerializedScene& scene)
 			Transform tf;
 			pos.x() -= 2 * sphereGroupOffset;
 			tf.SetPosition(pos);
-			tf.SetUniformScale(3.0f + 0 * sinf(sphereStep * PI));
+			tf.SetUniformScale(SPHERE_SCALE + 0 * sinf(sphereStep * PI));
 			sph->SetTransform(tf);
 
 			sph->AddMesh(EGeometry::SPHERE);
 
 			BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 			const float roughnessLowClamp = 0.1f;
-			pBRDF->roughness = pBRDF->roughness == 0.0f ? 0.04f : pBRDF->roughness;
+			pBRDF->roughness = 1.04f - std::max(0.04f, rowStep);// roughness [roughnessLowClamp, 1.0f]
 			pBRDF->metalness = colStep;
 			pBRDF->diffuse = vec3(0.04f);
 			sph->AddMaterial(pBRDF);
@@ -200,6 +203,30 @@ void IBLTestScene::Update(float dt)
 		const vec3& point = sSphereCenter;
 		const float angle = rotSpeed;
 		//sphere.mTransform.RotateAroundPointAndAxis(vec3::YAxis, angle, point);
+	}
+
+
+	// animate the grid object
+	constexpr float PERIOD = 2.5f;
+	constexpr float ROTATION_SPEED_DEG_PER_SEC = 10.0f;
+	static float sDirection = 1.0f;
+	mTimeAccumulator += dt;
+	if (std::fabsf(mTimeAccumulator) > PERIOD)
+	{
+		mTimeAccumulator = mTimeAccumulator > 0.0f ? -PERIOD : PERIOD;
+		sDirection *= -1.0f;
+	}
+	for (GameObject* pObj : mpObjects)
+	{
+		if (pObj->GetModelData().mMeshIDs[0] != EGeometry::GRID)
+			continue;
+
+		// rotate the grid obj
+		//Quaternion qRotate = Quaternion::FromAxisAngle(vec3::ZAxis, DEG2RAD * 1.0f);
+
+
+		pObj->GetTransform().RotateAroundGlobalZAxisDegrees(sDirection * ROTATION_SPEED_DEG_PER_SEC * dt);
+		pObj->mRenderSettings.bDontCallBackface = true;
 	}
 }
 

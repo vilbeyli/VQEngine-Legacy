@@ -34,5 +34,7 @@ private:
 	std::vector<GameObject*> spheres;
 	//
 	//GameObject* testQuad;
+
+	float mTimeAccumulator;
 };
 

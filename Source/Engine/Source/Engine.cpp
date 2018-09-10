@@ -756,9 +756,9 @@ void Engine::PreRender()
 	mpActiveScene->mSceneView.bIsDeferredRendering = mEngineConfig.bDeferredOrForward;
 
 	// gather scene lights
-	mpCPUProfiler->BeginEntry("Gather Lights");
+	//mpCPUProfiler->BeginEntry("Gather Lights");
 	mpActiveScene->GatherLightData(mSceneLightData);
-	mpCPUProfiler->EndEntry();
+	//mpCPUProfiler->EndEntry();
 
 	// TODO: #RenderPass or Scene should manage this.
 	// mTBNDrawObjects.clear();
@@ -1077,7 +1077,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		TextureID tBRDF = EnvironmentMap::sBRDFIntegrationLUTTexture;
 		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap;
-		TextureID tDirectionalShadowMap = mShadowMapPass.mDepthTarget_Directional == -1 
+		TextureID tDirectionalShadowMap = (mShadowMapPass.mDepthTarget_Directional == -1 || mpActiveScene->mDirectionalLight.enabled == 0)
 			? white4x4 
 			: mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
 

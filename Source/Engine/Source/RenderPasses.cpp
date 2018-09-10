@@ -660,7 +660,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 		const RenderList& renderList = MeshID_RenderList.second;
 		
 
-		const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
+		const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
 		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(pScene, meshID);
 	
 		pRenderer->SetRasterizerState(rasterizerState);

@@ -1,26 +1,19 @@
 # VQEngine - A DirectX11 & C++11 Real-Time Renderer
 
-![](Data/Icons/VQEngine-icon.png) 
-
-A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
-
-
-
-###### BRDF, Environment Lighting, Directional Lights, PCF Shadows
-
-![](Screenshots/objs3.PNG)
+![](Data/Icons/VQEngine-icon.png) A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
 ###### Model Loading (.obj), Sponza Scene, SSAO, HDR, Bloom
 
 ![](Screenshots/models2.PNG)
 
+###### BRDF, Environment Lighting, Directional Lights, PCF Shadows
+
+![](Screenshots/objs3.PNG)
+
 ###### Debug Rendering, CPU & GPU profiler, Frame Stats, Bounding Boxes
 
-![](Screenshots/debug.PNG)
+![](Screenshots/debug.gif)
 
-###### SSAO w/ Gaussian Blur
-
-![](Screenshots/SSAO.gif)
 
 # Feature List / Version History
 
@@ -80,7 +73,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 
 The projects are set to build with the following configurations:
 
- - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - 10.0.16299.0
+ - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - 10.0.17134.0
  - Visual Studio 2017 - v141, v140
   
 - **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.

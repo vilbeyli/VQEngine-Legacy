@@ -746,7 +746,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	
 	// CLEAN UP RENDER LISTS
 	//
-	pCPUProfiler->BeginEntry("CleanUp");
+	//pCPUProfiler->BeginEntry("CleanUp");
 	// scene view
 	mSceneView.opaqueList.clear();
 	mSceneView.culledOpaqueList.clear();
@@ -758,7 +758,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	mShadowView.casters.clear();
 	mShadowView.shadowMapRenderListLookUp.clear();
 	mShadowView.shadowMapInstancedRenderListLookUp.clear();
-	pCPUProfiler->EndEntry();
+	//pCPUProfiler->EndEntry();
 
 	// POPULATE RENDER LISTS WITH SCENE OBJECTS
 	//

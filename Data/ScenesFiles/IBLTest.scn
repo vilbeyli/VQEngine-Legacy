@@ -28,7 +28,7 @@
 // ---------------------------------------------------------------------------------------------------------------
 
 ao true 1.00 19.0 4.10
-bloom false 1.60
+bloom true 1.60
 skylight true
 
 camera 0.1 1000 60   0 -20 120  180 0 
@@ -36,7 +36,7 @@ camera 0.1 1000 60   0 -20 120  180 0
 // light       s              white      	false       1800         70	           0   120    120	             140  180  	0	 
 
 object begin
-	transform 0 -150 0 0 0 0 400
+	transform 0 -260 0 0 0 0 400
 	mesh grid
 	brdf begin
 		roughness 0.07

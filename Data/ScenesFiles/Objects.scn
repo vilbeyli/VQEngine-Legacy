@@ -50,7 +50,7 @@ object begin
 object end
 
 object begin
-	transform 95 12 -36 30 20 0 20 20 0.15
+	transform 98 12 -37 30 20 0 30 30 0.45
 	mesh cube
 	brdf begin
 		textures "" openart/190_norm.JPG

@@ -226,7 +226,6 @@ void IBLTestScene::Update(float dt)
 
 
 		pObj->GetTransform().RotateAroundGlobalZAxisDegrees(sDirection * ROTATION_SPEED_DEG_PER_SEC * dt);
-		pObj->mRenderSettings.bDontCallBackface = true;
 	}
 }
 

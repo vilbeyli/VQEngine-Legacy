@@ -130,7 +130,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 	const float sphHeight[2] = { 10.0f, 40.0f };
 	{	// sphere grid
 		constexpr float r = 25.0f;
-		constexpr size_t gridDimension = 6;
+		constexpr size_t gridDimension = 5;
 		constexpr size_t numSph = gridDimension * gridDimension;
 
 		const vec3 origin = vec3(-30, 8, 0);

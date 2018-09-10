@@ -8,7 +8,7 @@
 
 ###### BRDF, Environment Lighting, Directional Lights, PCF Shadows
 
-![](Screenshots/objs3.PNG)
+![](Screenshots/objs4.PNG)
 
 ###### Debug Rendering, CPU & GPU profiler, Frame Stats, Bounding Boxes
 

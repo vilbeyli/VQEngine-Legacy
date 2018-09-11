@@ -45,12 +45,14 @@ struct Light
 	};
 
 	Light();
-	Light(ELightType type, 
-			LinearColor color, 
-			float range,
-			float brightness,
-			float spotAngle,
-			bool castsShadows = false
+	Light(ELightType type
+		, LinearColor color
+		, float range
+		, float brightness
+		, float spotAngle
+		, bool castsShadows = false
+		, float farPlaneDistance = 500.0f
+		, float depthBias = 0.0000005f
 		//, bool bEnabled = true // #BreaksRelease
 	);
 	Light(const Light& l);
@@ -67,21 +69,23 @@ struct Light
 	FrustumPlaneset GetViewFrustumPlanes() const;
 	//---------------------------------------------------------------------------------
 	
-	ELightType		_type;
-	LinearColor		_color;
-	float			_range;
-	float			_brightness;	// 300.0f is a good default value for points/spots
-	bool			_castsShadow;
+	ELightType	type;
+	LinearColor	color;
+	float		range;
+	float		brightness;	// 300.0f is a good default value for points/spots
+	bool		castsShadow;
+	float		depthBias;
+	float		farPlaneDistance;
 
 	union // each light uses this vec2 for light-specific data
 	{	
-		vec2		_attenuation;	// point light attenuation
-		vec2		_spotAngle;		// spot light angle (_spotAngle.x() and _spotAngle.y() are the same thing)
+		vec2	attenuation;	// point light attenuation
+		vec2	spotAngle;		// spot light angle (_spotAngle.x() and _spotAngle.y() are the same thing)
 	};	
 
-	Transform		_transform;
-	EGeometry		_renderMesh;	// todo: rename to _builtinMeshID;
-	//bool			_bEnabled; 
+	Transform	transform;
+	EGeometry	renderMesh;	// todo: rename to _builtinMeshID;
+	//bool		_bEnabled; 
 };
 
 

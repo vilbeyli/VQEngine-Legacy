@@ -75,7 +75,7 @@ constexpr int TEXTURED_OBJECT_PERCENTAGE = 45;
 // MODEL
 #define LOAD_MODELS 1			// toggle model loading
 #define LOAD_MODELS_ASYNC 1		// 30-40% performance gain with the current test data
-#define LOAD_FREE3D_MODELS 1	// use this flag if you have the assets (Models/free3D/)
+#define LOAD_FREE3D_MODELS 0	// use this flag if you have the assets (Models/free3D/)
 #define USE_SAI_MODELS 0
 #pragma endregion
 
@@ -250,8 +250,8 @@ void StressTestScene::RenderUI() const
 	if (ENGINE->GetSettingShowControls())
 	{
 		const int NumObj = std::accumulate(RANGE(mpObjects), 0, [](int val, const GameObject* o) { return val + (o->mRenderSettings.bRender ? 1 : 0); });
-		const int NumPointLights = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l._type == Light::POINT) ? 1 : 0); });
-		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l._type == Light::ELightType::SPOT) ? 1 : 0); });
+		const int NumPointLights = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.type == Light::POINT) ? 1 : 0); });
+		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.type == Light::ELightType::SPOT) ? 1 : 0); });
 
 		TextDrawDescription drawDesc;
 		drawDesc.color = vec3(1, 1, 0.3f);
@@ -470,8 +470,8 @@ Light CreateRandomPointLight()
 	const float bright = RandF(100, 300);
 
 	Light l = Light(type, color, range, bright, 0.0f, false);
-	l._transform.SetPosition(RandF(-50, 50), RandF(30, 90), RandF(-40, -90));
-	l._transform.SetUniformScale(0.1f);
+	l.transform.SetPosition(RandF(-50, 50), RandF(30, 90), RandF(-40, -90));
+	l.transform.SetUniformScale(0.1f);
 
 	return l;
 }
@@ -520,8 +520,8 @@ void AddLights(std::vector<Light>& mLights)
 		const float bright = RandF(2500, 5500);
 
 		Light l = Light(type, color, range, bright, 0.0f, false);
-		l._transform.SetPosition(RandF(-70, 40), RandF(30, 90), RandF(-40, -90));
-		l._transform.SetUniformScale(0.3f);
+		l.transform.SetPosition(RandF(-70, 40), RandF(30, 90), RandF(-40, -90));
+		l.transform.SetUniformScale(0.3f);
 		mLights.push_back(l);
 	}
 }

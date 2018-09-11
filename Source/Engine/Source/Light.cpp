@@ -53,59 +53,76 @@ static const std::unordered_map<Light::ELightType, EGeometry>		sLightTypeMeshLoo
 
 Light::Light()
 	:
-	_type(ELightType::POINT),
-	_color(LinearColor::white),
-	_range(50),	// phong
-	_brightness(300.0f),
-	_castsShadow(false),
-	_spotAngle(vec2()),
-	_attenuation(vec2()),
-	_renderMesh(sLightTypeMeshLookup.at(ELightType::POINT))
+	type(ELightType::POINT),
+	color(LinearColor::white),
+	range(50),	// phong
+	brightness(300.0f),
+	castsShadow(false),
+	spotAngle(vec2()),
+	attenuation(vec2()),
+	renderMesh(sLightTypeMeshLookup.at(ELightType::POINT)),
+	depthBias(0.0000005f),
+	farPlaneDistance(500)
 {
-	SetLightRange(_range);
+	SetLightRange(range);
 }
 
 Light::Light(const Light& l)
 	:
-	_type(l._type),
-	_color(l._color),
-	_range(l._range),
-	_brightness(l._brightness),
-	_castsShadow(l._castsShadow),
-	_spotAngle(l._spotAngle),
-	_transform(l._transform),
-	_renderMesh(l._renderMesh)
+	type(l.type),
+	color(l.color),
+	range(l.range),
+	brightness(l.brightness),
+	castsShadow(l.castsShadow),
+	spotAngle(l.spotAngle),
+	transform(l.transform),
+	renderMesh(l.renderMesh),
+	depthBias(l.depthBias),
+	farPlaneDistance(l.farPlaneDistance)
 {}
 
 Light::Light(const Light && l)
 	:
-	_type(l._type),
-	_color(std::move(l._color)),
-	_range(l._range),
-	_brightness(l._brightness),
-	_castsShadow(l._castsShadow),
-	_spotAngle(l._spotAngle),
-	_transform(std::move(l._transform)),
-	_renderMesh(l._renderMesh)
+	type(l.type),
+	color(std::move(l.color)),
+	range(l.range),
+	brightness(l.brightness),
+	castsShadow(l.castsShadow),
+	spotAngle(l.spotAngle),
+	transform(std::move(l.transform)),
+	renderMesh(l.renderMesh),
+	depthBias(l.depthBias),
+	farPlaneDistance(l.farPlaneDistance)
 {}
 
-Light::Light(ELightType type, LinearColor color, float range, float brightness, float spotAngle, bool castsShadows)//, bool bEnabled) 
-	:
-	_type(type),
-	_color(color),
-	_range(range),
-	_brightness(brightness),
-	_castsShadow(castsShadows)
+Light::Light(
+	  ELightType type
+	, LinearColor color
+	, float range
+	, float brightness
+	, float spotAngle
+	, bool castsShadows
+	, float farPlaneDistance
+	, float depthBias
+	//, bool bEnabled = true // #BreaksRelease
+)
+	: type(type)
+	, color(color)
+	, range(range)
+	, brightness(brightness)
+	, castsShadow(castsShadows)
+	, farPlaneDistance(farPlaneDistance)
+	, depthBias(depthBias)
 	// , _bEnabled(bEnabled)
 {
-	switch (_type)
+	switch (type)
 	{
-	case ELightType::POINT: SetLightRange(_range);		break;
-	case ELightType::SPOT:	_spotAngle.x() = spotAngle;	break;
-	case ELightType::DIRECTIONAL:  /* nothing to do */	break;
+	case ELightType::POINT: SetLightRange(range);			break;
+	case ELightType::SPOT:	this->spotAngle.x() = spotAngle;break;
+	case ELightType::DIRECTIONAL:  /* nothing to do */		break;
 	}
 
-	_renderMesh = sLightTypeMeshLookup.at(_type);
+	renderMesh = sLightTypeMeshLookup.at(type);
 }
 
 Light::~Light()
@@ -113,7 +130,7 @@ Light::~Light()
 
 void Light::SetLightRange(float range)
 {
-	_range = range;
+	range = range;
 	// ATTENUATION LOOKUP FOR POINT LIGHTS
 	// find the first greater or equal range value (rangeIndex) 
 	// to look up with in the attenuation map
@@ -121,7 +138,7 @@ void Light::SetLightRange(float range)
 	unsigned rangeIndex = static_cast<unsigned>(ranges[rangeAttenuationMap_.size() - 1]);	// default case = largest range
 	for (size_t i = 0; i < rangeAttenuationMap_.size(); i++)
 	{
-		if (ranges[i] >= _range)
+		if (ranges[i] >= range)
 		{
 			rangeIndex = static_cast<unsigned>(ranges[i]);
 			break;
@@ -129,7 +146,7 @@ void Light::SetLightRange(float range)
 	}
 
 	std::pair<float, float> attn = rangeAttenuationMap_.at(rangeIndex);
-	_attenuation = vec2(attn.first, attn.second);
+	attenuation = vec2(attn.first, attn.second);
 }
 
 XMMATRIX Light::GetLightSpaceMatrix() const
@@ -143,7 +160,7 @@ XMMATRIX Light::GetLightSpaceMatrix() const
 XMMATRIX Light::GetViewMatrix() const
 {
 	const XMMATRIX ViewMatarix = [&]() -> XMMATRIX {
-		switch (_type)
+		switch (type)
 		{
 		case ELightType::POINT:
 		{
@@ -154,9 +171,9 @@ XMMATRIX Light::GetViewMatrix() const
 		{
 			XMVECTOR up		= vec3::Back;
 			XMVECTOR lookAt = vec3::Up;	// spot light default orientation looks up
-			lookAt	= XMVector3TransformCoord(lookAt, _transform.RotationMatrix());
-			up		= XMVector3TransformCoord(up,	  _transform.RotationMatrix());
-			XMVECTOR pos = _transform._position;
+			lookAt	= XMVector3TransformCoord(lookAt, transform.RotationMatrix());
+			up		= XMVector3TransformCoord(up,	  transform.RotationMatrix());
+			XMVECTOR pos = transform._position;
 			XMVECTOR taraget = pos + lookAt;
 			return XMMatrixLookAtLH(pos, taraget, up);
 		}
@@ -171,7 +188,7 @@ XMMATRIX Light::GetViewMatrix() const
 XMMATRIX Light::GetProjectionMatrix() const
 {
 	const XMMATRIX proj = [&]() -> const XMMATRIX{
-		switch (_type)
+		switch (type)
 		{
 		case ELightType::POINT:
 		{
@@ -179,7 +196,7 @@ XMMATRIX Light::GetProjectionMatrix() const
 		}
 		case ELightType::SPOT:
 		{
-			return XMMatrixPerspectiveFovLH((_spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, 500.0f);
+			return XMMatrixPerspectiveFovLH((spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, farPlaneDistance);
 		}
 		default:
 			Log::Warning("INVALID LIGHT TYPE for GetProjectionMatrix()");
@@ -193,29 +210,29 @@ XMMATRIX Light::GetProjectionMatrix() const
 PointLightGPU Light::GetPointLightData() const
 {
 	PointLightGPU l;
-	l.position = _transform._position;
-	l.color = _color.Value();
-	l.brightness = _brightness;
-	l.attenuation = _attenuation;
-	l.range = _range;
+	l.position = transform._position;
+	l.color = color.Value();
+	l.brightness = brightness;
+	l.attenuation = attenuation;
+	l.range = range;
 	return l;
 }
 
 SpotLightGPU Light::GetSpotLightData() const
 {
 	const vec3 spotDirection = [&]() -> const vec3{
-		if (_type == ELightType::SPOT)
+		if (type == ELightType::SPOT)
 		{
-			return XMVector3TransformCoord(vec3::Up, _transform.RotationMatrix());
+			return XMVector3TransformCoord(vec3::Up, transform.RotationMatrix());
 		}
 		return vec3();
 	}();
 
 	SpotLightGPU l;
-	l.position = _transform._position;
-	l.color = _color.Value();
-	l.brightness = _brightness;
-	l.halfAngle = _spotAngle.x() * DEG2RAD / 2;
+	l.position = transform._position;
+	l.color = color.Value();
+	l.brightness = brightness;
+	l.halfAngle = spotAngle.x() * DEG2RAD / 2;
 	l.spotDir = spotDirection;
 	return l;
 }

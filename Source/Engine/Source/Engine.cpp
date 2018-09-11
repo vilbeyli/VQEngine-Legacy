@@ -1216,13 +1216,13 @@ void Engine::RenderLights() const
 	{
 		//if (!light._bEnabled) continue; // #BreaksRelease
 		
-		if (light._type == Light::ELightType::DIRECTIONAL)
+		if (light.type == Light::ELightType::DIRECTIONAL)
 			continue;	// do not render directional lights
 
-		const auto IABuffers = mBuiltinMeshes[light._renderMesh].GetIABuffers();
-		const XMMATRIX world = light._transform.WorldTransformationMatrix();
+		const auto IABuffers = mBuiltinMeshes[light.renderMesh].GetIABuffers();
+		const XMMATRIX world = light.transform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world * mpActiveScene->mSceneView.viewProj;
-		const vec3 color = light._color.Value() * 2.5f;
+		const vec3 color = light.color.Value() * 2.5f;
 
 		mpRenderer->SetVertexBuffer(IABuffers.first);
 		mpRenderer->SetIndexBuffer(IABuffers.second);

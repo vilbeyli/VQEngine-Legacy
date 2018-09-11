@@ -263,7 +263,7 @@ void ObjectsScene::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad9")) tr += vec3::Up;
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
 	if(!mLights.empty())
-		mLights[0]._transform.Translate(dt * tr * moveSpeed);
+		mLights[0].transform.Translate(dt * tr * moveSpeed);
 
 
 #if TEST_EGEMEN

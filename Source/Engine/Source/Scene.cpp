@@ -343,16 +343,16 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 		//const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
 
 		// add to the count of the current light type & whether its shadow casting or not
-		pNumArray& refLightCounts = l._castsShadow ? casterCounts : lightCounts;
+		pNumArray& refLightCounts = l.castsShadow ? casterCounts : lightCounts;
 
-		switch (l._type)
+		switch (l.type)
 		{
 		case Light::ELightType::POINT:
 		{
-			const size_t lightIndex = (*refLightCounts[l._type])++;
+			const size_t lightIndex = (*refLightCounts[l.type])++;
 			cbuffer.pointLights[lightIndex] = l.GetPointLightData();
 			//outLightingData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
-			if (l._castsShadow)
+			if (l.castsShadow)
 			{
 				mShadowView.points.push_back(&l);
 			}
@@ -360,10 +360,10 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 		break;
 		case Light::ELightType::SPOT:
 		{
-			const size_t lightIndex = (*refLightCounts[l._type])++;
+			const size_t lightIndex = (*refLightCounts[l.type])++;
 			cbuffer.spotLights[lightIndex] = l.GetSpotLightData();
 			cbuffer.spotLightsShadowing[lightIndex] = l.GetSpotLightData();
-			if (l._castsShadow)
+			if (l.castsShadow)
 			{
 				cbuffer.shadowViews[numShdSpot++] = l.GetLightSpaceMatrix();
 				mShadowView.spots.push_back(&l);
@@ -878,10 +878,10 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	//pCPUProfiler->BeginEntry("Spots");
 	for (const Light& l : mLights)
 	{
-		if (!l._castsShadow) continue;
+		if (!l.castsShadow) continue;
 
 		std::vector<const GameObject*> objList;
-		switch (l._type)
+		switch (l.type)
 		{
 		case Light::ELightType::SPOT:
 		{
@@ -931,7 +931,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		std::sort(RANGE(casterList), SortByMeshType);
 		for (const Light& l : mLights)
 		{
-			if (!l._castsShadow) continue;
+			if (!l.castsShadow) continue;
 			RenderList& lightRenderList = mShadowView.shadowMapRenderListLookUp.at(&l);
 
 			std::sort(RANGE(lightRenderList), SortByMeshType);

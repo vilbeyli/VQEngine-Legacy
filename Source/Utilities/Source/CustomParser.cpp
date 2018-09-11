@@ -349,6 +349,8 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const bool bCommandHasRange = command.size() >= 9;
 		const bool bCommandHasRotationEntry = command.size() > 10;
 		const bool bCommandHasScaleEntry = command.size() >= 12 || (command.size() == 10);
+		const bool bCommandHasFarPlaneEntry = command.size() > 13;
+		const bool bCommandHasDepthBiasEntry = command.size() > 14;
 		const size_t IdxScale = command.size() >= 12 ? 12 : 9;
 
 		const std::string lightType	 = GetLowercased(command[1]);	// lookups have lowercase keys
@@ -369,20 +371,24 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
 		const float scl  = bCommandHasScaleEntry ? stof(command[IdxScale]) : 1.0f;
 		const bool  bCastsShadows = sBoolTypeReflection.at(shadowing);
-		
+		const float farPlaneDistance = bCommandHasFarPlaneEntry ? stof(command[13]) : 500;
+		const float depthBias = bCommandHasDepthBiasEntry ? stof(command[14]) : 0.0000005f;
+
 		Light l(	// let there be light
 			sLightTypeLookup.at(lightType),
 			sColorLookup.at(colorValue),
 			range,
 			brightness,
 			spotAngle,
-			bCastsShadows
+			bCastsShadows,
+			farPlaneDistance,
+			depthBias
 		);
-		l._transform.SetPosition(stof(command[5]), stof(command[6]), stof(command[7]));
-		l._transform.RotateAroundGlobalXAxisDegrees(rotX);
-		l._transform.RotateAroundGlobalYAxisDegrees(rotY);
-		l._transform.RotateAroundGlobalZAxisDegrees(rotZ);
-		l._transform.SetUniformScale(scl);
+		l.transform.SetPosition(stof(command[5]), stof(command[6]), stof(command[7]));
+		l.transform.RotateAroundGlobalXAxisDegrees(rotX);
+		l.transform.RotateAroundGlobalYAxisDegrees(rotY);
+		l.transform.RotateAroundGlobalZAxisDegrees(rotZ);
+		l.transform.SetUniformScale(scl);
 		scene.lights.push_back(l);
 	}
 	else if (cmd == "object")

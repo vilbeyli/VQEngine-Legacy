@@ -38,12 +38,12 @@ bloom true 1.05
 directional sun 2.2   -20   -25   35  4096 2700 2800 0.00006
 
 // room lights
-light       p         white		false      5800      814.54  115.85  197.38    900	  0.3
+light       p         white		false      5800      814.54  115.85  197.38    900	  0.3  
 light       p         white		false      7800      761.51  143.17  256.48    900	  0.3
 light       p         white		false      8800      776.38  128.57  136.94    3200	  0.3
-light		s		  orange     true       4000      794.38  68.06  183.54    85    -90 0 0   1
-//light		s		  red        true       4000      774.38  68.06  183.54    85    -90 0 0   1
-//light		s		  yellow     true       4000      814.38  68.06  183.54    85    -90 0 0   1
+light		s		  orange     true       6000      794.38  88.06  183.54    78.14    -125 0 0   1  1500  0.0000005
+light		s		  red        true       6000      774.38  88.06  183.54    85    -90 -10  0   1  1500
+light		s		  yellow     true       6000      814.38  88.06  183.54    85    -90 20 0   1  1500
 
 
 // sponza lights
@@ -51,7 +51,7 @@ light       p         cyan		false      1800      -681.67  85.89   359.20    60	 
 light       p         green		false      1800      -676.52  100.49  -330.15    60	  0.3
 light       p         orange	false      1800      -429.20  85.81  359.21     60	  0.3
 light       p         purple	false      1800      -428.95  92.26  -339.49    60	  0.3
-light		s		  white     true       4000      -475.77  218.57  -175.73    80    90 -80 0   1
+light		s		  white     true       6000      -475.77  218.57  -175.73    80    90 -80 0   1 1000
 
 
 object begin

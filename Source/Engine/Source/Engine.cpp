@@ -1033,7 +1033,7 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	mpCPUProfiler->BeginEntry("Post Process");
 	mpGPUProfiler->BeginEntry("Post Process"); 
-	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom);
+	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom, mpCPUProfiler, mpGPUProfiler);
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndEntry();
 	//------------------------------------------------------------------------
@@ -1080,6 +1080,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		TextureID tDirectionalShadowMap = (mShadowMapPass.mDepthTarget_Directional == -1 || mpActiveScene->mDirectionalLight.enabled == 0)
 			? white4x4 
 			: mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
+		TextureID tUABuffer = 5/* todo: mSSAOPass.UABuffer*/;
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() 
 		{
@@ -1092,7 +1093,8 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tNormals			, false },
 			//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false },
-			{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false },
+			//{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false },
+			{ fullscreenTextureScaledDownSize,	screenPosition,			tUABuffer			, false },
 			{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)

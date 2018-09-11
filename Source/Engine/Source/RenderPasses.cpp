@@ -325,7 +325,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc);
 }
 
-void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
+void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pCPU, GPUProfiler* pGPU) const
 {
 	pRenderer->BeginEvent("Post Processing");
 
@@ -340,6 +340,9 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 	if (bBloom)
 	{
 		const ShaderID currentShader = pRenderer->GetActiveShader();
+
+		//pCPU->BeginEntry("Bloom");
+		pGPU->BeginEntry("Bloom");
 
 		// bright filter
 		pRenderer->BeginEvent("Bloom Bright Filter");
@@ -391,6 +394,10 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 		pRenderer->Apply();
 		pRenderer->DrawIndexed();
 		pRenderer->EndEvent();
+		
+		//pCPU->EndEntry(); // bloom
+		pGPU->EndEntry(); // bloom
+
 	}
 
 
@@ -401,6 +408,9 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 	const TextureID colorTex = pRenderer->GetRenderTargetTexture(bBloom ? _bloomPass._finalRT : _worldRenderTarget);
 	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
 	pRenderer->BeginEvent("Tonemapping");
+	//pCPU->BeginEntry("Tonemapping");
+	pGPU->BeginEntry("Tonemapping");
+
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetShader(_tonemappingPass._toneMappingShader, true);
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
@@ -414,9 +424,10 @@ void PostProcessPass::Render(Renderer * pRenderer, bool bBloomOn) const
 	pRenderer->DrawIndexed();
 	pRenderer->EndEvent();
 
+	//pCPU->EndEntry(); // tonemapping
+	pGPU->EndEntry(); // tonemapping
 	pRenderer->EndEvent();	// Post Process
 }
-
 
 
 void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
@@ -955,6 +966,20 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	this->radius = 6.5f;
 	this->intensity = 1.0f;
 #endif
+
+	const ShaderDesc testComputeShaderDesc = 
+	{
+		"TestCompute",
+		ShaderStageDesc { "testCompute_cs.hlsl", {} }
+	};
+	this->testComputeShader = pRenderer->CreateShader(testComputeShaderDesc);
+
+	BufferDesc uaBufferDesc;
+	uaBufferDesc.mType = EBufferType::COMPUTE_RW_BUFFER;
+	uaBufferDesc.mUsage = EBufferUsage::STATIC_RW;
+	uaBufferDesc.mStride = 1920 * sizeof(vec4);
+	uaBufferDesc.mElementCount = 1080;
+	this->UABuffer = pRenderer->CreateBuffer(uaBufferDesc);
 }
 //constexpr size_t sz = sizeof(SSAOConstants);
 constexpr size_t VEC_SZ = 4;
@@ -1042,7 +1067,17 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer)
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 
-	pRenderer->EndEvent();
+	pRenderer->EndEvent();	// Blur Pass
+
+
+	// Compute Shader Unit Test -----------------------------------
+	//pRenderer->BeginEvent("Test Compute");
+	//pRenderer->SetShader(this->testComputeShader);
+	//pRenderer->SetUABuffer(this->UABuffer);
+	//pRenderer->Apply();
+	//pRenderer->Dispatch(1, 1, 1);
+	//pRenderer->EndEvent();
+	// Compute Shader Unit Test -----------------------------------
 }
 
 void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)

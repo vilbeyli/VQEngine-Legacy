@@ -476,8 +476,9 @@ void Renderer::Exit()
 {
 	//m_Direct3D->ReportLiveObjects("BEGIN EXIT");
 
-	std::vector<Buffer>* buffers[2] = { &mVertexBuffers, &mIndexBuffers };
-	for (int i = 0; i < 2; ++i)
+	constexpr size_t BUFFER_SIZE = 3;
+	std::vector<Buffer>* buffers[BUFFER_SIZE] = { &mVertexBuffers, &mIndexBuffers, &mUABuffers };
+	for (int i = 0; i < BUFFER_SIZE; ++i)
 	{
 		auto refBuffer = *buffers[i];
 		std::for_each(refBuffer.begin(), refBuffer.end(), [](Buffer& b) {b.CleanUp(); });
@@ -1103,6 +1104,9 @@ BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData
 		case INDEX_BUFFER:
 			mIndexBuffers.push_back(buffer);
 			return mIndexBuffers.size() - 1;
+		case COMPUTE_RW_BUFFER:
+			mUABuffers.push_back(buffer);
+			return mUABuffers.size() - 1;
 		default:
 			Log::Warning("Unknown Buffer Type");
 			return std::numeric_limits<size_t>::max();
@@ -1438,6 +1442,11 @@ void Renderer::SetVertexBuffer(BufferID bufferID)
 void Renderer::SetIndexBuffer(BufferID bufferID)
 {
 	mPipelineState.indexBuffer = bufferID;
+}
+
+void Renderer::SetUABuffer(BufferID bufferID)
+{
+	//mPipelineState.indexBuffer = bufferID;
 }
 
 void Renderer::ResetPipelineState()
@@ -2019,5 +2028,9 @@ void Renderer::Draw(int vertCount, EPrimitiveTopology topology /*= EPrimitiveTop
 	
 	++mRenderStats.numDrawCalls;
 	mRenderStats.numVertices += vertCount;
-	//mRenderStats.numTriangles += vertCount / 3;
+}
+
+void Renderer::Dispatch(int x, int y, int z)
+{
+	m_deviceContext->Dispatch(x, y, z);
 }

@@ -103,10 +103,12 @@ struct TonemappingCombinePass : public RenderPass
 	ShaderID		_toneMappingShader;
 };
 
+class CPUProfiler;
+class GPUProfiler;
 struct PostProcessPass : public RenderPass
 {
 	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
-	void Render(Renderer* pRenderer, bool bBloomOn) const;
+	void Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pCPU, GPUProfiler* pGPU) const;
 
 	RenderTargetID				_worldRenderTarget;
 	BloomPass					_bloomPass;
@@ -241,6 +243,9 @@ struct AmbientOcclusionPass : public RenderPass
 	ShaderID			SSAOShader;
 	ShaderID			bilateralBlurShader;
 	ShaderID			blurShader;
+
+	ShaderID testComputeShader;
+	BufferID UABuffer;
 
 #if SSAO_DEBUGGING
 	float radius;		

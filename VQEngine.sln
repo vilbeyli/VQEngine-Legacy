@@ -56,6 +56,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Source\Shaders\SSAO_ps.hlsl = Source\Shaders\SSAO_ps.hlsl
 		Source\Shaders\Tangent_ps.hlsl = Source\Shaders\Tangent_ps.hlsl
 		Source\Shaders\Tangent_vs.hlsl = Source\Shaders\Tangent_vs.hlsl
+		Source\Shaders\testCompute_cs.hlsl = Source\Shaders\testCompute_cs.hlsl
 		Source\Shaders\Text_ps.hlsl = Source\Shaders\Text_ps.hlsl
 		Source\Shaders\Text_vs.hlsl = Source\Shaders\Text_vs.hlsl
 		Source\Shaders\TextureCoordinates_ps.hlsl = Source\Shaders\TextureCoordinates_ps.hlsl
@@ -89,9 +90,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Engine", "Source\SolutionFiles\Engine.vcxproj", "{9780D393-8EF6-43C8-B821-6B6A6661831C}"
 EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
@@ -101,6 +99,18 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Debug|x64.ActiveCfg = Debug|x64
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Debug|x64.Build.0 = Debug|x64
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Debug|x86.ActiveCfg = Debug|Win32
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Debug|x86.Build.0 = Debug|Win32
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Profile|x64.ActiveCfg = Debug|x64
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Profile|x64.Build.0 = Debug|x64
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Profile|x86.ActiveCfg = Release|Win32
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Profile|x86.Build.0 = Release|Win32
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Release|x64.ActiveCfg = Release|x64
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Release|x64.Build.0 = Release|x64
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Release|x86.ActiveCfg = Release|Win32
+		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Release|x86.Build.0 = Release|Win32
 		{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}.Debug|x64.ActiveCfg = Debug|x64
 		{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}.Debug|x64.Build.0 = Debug|x64
 		{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}.Debug|x86.ActiveCfg = Debug|Win32
@@ -161,24 +171,15 @@ Global
 		{9780D393-8EF6-43C8-B821-6B6A6661831C}.Release|x64.Build.0 = Release|x64
 		{9780D393-8EF6-43C8-B821-6B6A6661831C}.Release|x86.ActiveCfg = Release|Win32
 		{9780D393-8EF6-43C8-B821-6B6A6661831C}.Release|x86.Build.0 = Release|Win32
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Debug|x64.ActiveCfg = Debug|x64
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Debug|x64.Build.0 = Debug|x64
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Debug|x86.ActiveCfg = Debug|Win32
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Debug|x86.Build.0 = Debug|Win32
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Profile|x64.ActiveCfg = Debug|x64
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Profile|x64.Build.0 = Debug|x64
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Profile|x86.ActiveCfg = Release|Win32
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Profile|x86.Build.0 = Release|Win32
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Release|x64.ActiveCfg = Release|x64
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Release|x64.Build.0 = Release|x64
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Release|x86.ActiveCfg = Release|Win32
-		{54C90DA7-E2C5-4042-BFA0-2699F3403C77}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7FF49A1B-B23B-4DB1-8033-14FFE5B08CD5}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true

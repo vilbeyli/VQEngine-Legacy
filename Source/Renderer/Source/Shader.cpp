@@ -395,7 +395,7 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 		// Currently there's no way to tell if macro value has changed since the caching.
 		// Hence, we exclude the cached shader usage for shaders with preprocessor defines.
 		//
-		// TODO: maybe hash the shaders based on file name + hashes preprocessor defines 
+		// TODO: maybe hash the shaders based on file name + hashed preprocessor defines 
 		//---------------------------------------------------------------------------------
 
 		if (bUseCachedShaders)
@@ -438,80 +438,80 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 	}
 
 
-	// INPUT LAYOUT
-	//---------------------------------------------------------------------------
-	// https://stackoverflow.com/questions/42388979/directx-11-vertex-shader-reflection
-	// setup the layout of the data that goes into the shader
-	//
-	D3D11_SHADER_DESC shaderDesc = {};
-	m_shaderReflections.vsRefl->GetDesc(&shaderDesc);
-	std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(shaderDesc.InputParameters);
-
-	D3D_PRIMITIVE primitiveDesc = shaderDesc.InputPrimitive;
-
-	for (unsigned i = 0; i < shaderDesc.InputParameters; ++i)
+	if(m_shaderReflections.vsRefl)
 	{
-		D3D11_SIGNATURE_PARAMETER_DESC paramDesc;
-		m_shaderReflections.vsRefl->GetInputParameterDesc(i, &paramDesc);
+		// INPUT LAYOUT
+		//---------------------------------------------------------------------------
+		// src: https://stackoverflow.com/questions/42388979/directx-11-vertex-shader-reflection
+		// setup the layout of the data that goes into the shader
+		//
+		D3D11_SHADER_DESC shaderDesc = {};
+		m_shaderReflections.vsRefl->GetDesc(&shaderDesc);
+		std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(shaderDesc.InputParameters);
 
-		// fill out input element desc
-		D3D11_INPUT_ELEMENT_DESC elementDesc;
-		elementDesc.SemanticName = paramDesc.SemanticName;
-		elementDesc.SemanticIndex = paramDesc.SemanticIndex;
-		elementDesc.InputSlot = 0;
-		elementDesc.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-		elementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-		elementDesc.InstanceDataStepRate = 0;
+		D3D_PRIMITIVE primitiveDesc = shaderDesc.InputPrimitive;
 
-		// determine DXGI format
-		if (paramDesc.Mask == 1)
+		for (unsigned i = 0; i < shaderDesc.InputParameters; ++i)
 		{
-			if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32_UINT;
-			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32_SINT;
-			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32_FLOAT;
-		}
-		else if (paramDesc.Mask <= 3)
-		{
-			if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32_UINT;
-			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32_SINT;
-			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
-		}
-		else if (paramDesc.Mask <= 7)
-		{
-			if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32_UINT;
-			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32_SINT;
-			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-		}
-		else if (paramDesc.Mask <= 15)
-		{
-			if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32A32_UINT;
-			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32A32_SINT;
-			else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			D3D11_SIGNATURE_PARAMETER_DESC paramDesc;
+			m_shaderReflections.vsRefl->GetInputParameterDesc(i, &paramDesc);
+
+			// fill out input element desc
+			D3D11_INPUT_ELEMENT_DESC elementDesc;
+			elementDesc.SemanticName = paramDesc.SemanticName;
+			elementDesc.SemanticIndex = paramDesc.SemanticIndex;
+			elementDesc.InputSlot = 0;
+			elementDesc.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+			elementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			elementDesc.InstanceDataStepRate = 0;
+
+			// determine DXGI format
+			if (paramDesc.Mask == 1)
+			{
+				if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32_UINT;
+				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32_SINT;
+				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32_FLOAT;
+			}
+			else if (paramDesc.Mask <= 3)
+			{
+				if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32_UINT;
+				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32_SINT;
+				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
+			}
+			else if (paramDesc.Mask <= 7)
+			{
+				if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32_UINT;
+				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32_SINT;
+				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+			}
+			else if (paramDesc.Mask <= 15)
+			{
+				if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32A32_UINT;
+				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32A32_SINT;
+				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+			}
+
+			inputLayout[i] = elementDesc; //save element desc
 		}
 
+		// Try to create Input Layout
+		const auto* pData = inputLayout.data();
+		if (pData)
+		{
+			result = device->CreateInputLayout(
+				pData,
+				shaderDesc.InputParameters,
+				blobs.vs->GetBufferPointer(),
+				blobs.vs->GetBufferSize(),
+				&m_layout);
 
-		//save element desc
-		inputLayout[i] = elementDesc;
+			if (FAILED(result))
+			{
+				OutputDebugString("Error creating input layout");
+				assert(false);
+			}
+		}
 	}
-
-	// Try to create Input Layout
-	const auto* pData = inputLayout.data();
-	if (pData)
-	{
-		result = device->CreateInputLayout(
-			pData,
-			shaderDesc.InputParameters,
-			blobs.vs->GetBufferPointer(),
-			blobs.vs->GetBufferSize(),
-			&m_layout);
-
-		if (FAILED(result))
-		{
-			OutputDebugString("Error creating input layout");
-			assert(false);
-		}
-	}
-
 
 	// CONSTANT BUFFERS 
 	//---------------------------------------------------------------------------

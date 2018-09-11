@@ -37,7 +37,7 @@ void Buffer::Initialize(ID3D11Device* device, const void* pData /*=nullptr*/)
 	bufDesc.ByteWidth = mDesc.mStride * mDesc.mElementCount;
 	bufDesc.CPUAccessFlags = mDesc.mUsage == EBufferUsage::DYNAMIC ? D3D11_CPU_ACCESS_WRITE : 0;	// dynamic r/w?
 	bufDesc.MiscFlags = 0;
-	bufDesc.StructureByteStride = 0;
+	bufDesc.StructureByteStride = mDesc.mStructureByteStride;
 
 	D3D11_SUBRESOURCE_DATA* pBufData = nullptr;
 	D3D11_SUBRESOURCE_DATA bufData = {};

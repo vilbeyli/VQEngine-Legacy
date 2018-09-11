@@ -124,6 +124,7 @@ public:
 	void					SetShader(ShaderID shaderID, bool bUnbindRenderTargets = false, bool bUnbindTextures = true);
 	void					SetVertexBuffer(BufferID bufferID);
 	void					SetIndexBuffer(BufferID bufferID);
+	void					SetUABuffer(BufferID bufferID);
 	void					SetTexture(const char* texName, TextureID tex);
 	//void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
 	void inline				SetTextureArray(const char* texName, TextureID texArray) { SetTexture(texName, texArray); }
@@ -167,6 +168,8 @@ public:
 	void					DrawIndexedInstanced(int instanceCount, EPrimitiveTopology topology = EPrimitiveTopology::TRIANGLE_LIST);
 	void					Draw(int vertCount, EPrimitiveTopology topology = EPrimitiveTopology::POINT_LIST);
 	
+	void					Dispatch(int x, int y, int z);
+
 	void					DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd); // BottomLeft<x,y> = (0,0)
 	
 	void					DrawLine();
@@ -219,6 +222,7 @@ private:
 	std::vector<Sampler>			mSamplers;
 	std::vector<Buffer>				mVertexBuffers;
 	std::vector<Buffer>				mIndexBuffers;
+	std::vector<Buffer>				mUABuffers;
 
 	std::vector<RenderTarget>		mRenderTargets;
 	std::vector<DepthTarget>		mDepthTargets;

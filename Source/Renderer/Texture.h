@@ -84,6 +84,7 @@ public:
 	//   the type right before binding by reinterpret casting.
 	// note: typed resources are optimized for access. use typeless if you really need. (src?)
 	ID3D11ShaderResourceView*	_srv;
+	ID3D11UnorderedAccessView*	_uav;
 	std::vector<ID3D11ShaderResourceView*> _srvArray;
 	union
 	{

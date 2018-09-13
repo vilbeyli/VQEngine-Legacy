@@ -35,7 +35,7 @@ void Buffer::Initialize(ID3D11Device* device, const void* pData /*=nullptr*/)
 	bufDesc.Usage = static_cast<D3D11_USAGE>(mDesc.mUsage);
 	bufDesc.BindFlags = static_cast<D3D11_BIND_FLAG>(mDesc.mType);
 	bufDesc.ByteWidth = mDesc.mStride * mDesc.mElementCount;
-	bufDesc.CPUAccessFlags = mDesc.mUsage == EBufferUsage::DYNAMIC ? D3D11_CPU_ACCESS_WRITE : 0;	// dynamic r/w?
+	bufDesc.CPUAccessFlags = mDesc.mUsage == EBufferUsage::GPU_READ_CPU_WRITE ? D3D11_CPU_ACCESS_WRITE : 0;	// dynamic r/w?
 	bufDesc.MiscFlags = 0;
 	bufDesc.StructureByteStride = mDesc.mStructureByteStride;
 
@@ -59,13 +59,22 @@ void Buffer::Initialize(ID3D11Device* device, const void* pData /*=nullptr*/)
 	int hr = device->CreateBuffer(&bufDesc, pBufData, &this->mpGPUData);
 	if (FAILED(hr))
 	{
-		Log::Error("Failed to create vertex buffer!");
+		Log::Error("Failed to create TODO buffer!");
 	}
+
+#if defined(_DEBUG) || defined(PROFILE)
+	// no identified for buffers
+	//if (!this->mpCPUData .empty())
+	//{
+	//	this->mpGPUData->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(this->_name.length()), this->_name.c_str());
+	//}
+#endif
 
 	// CPU Buffer
 	// we'll use mCPUData only when the created buffer is dynamic or staging
-	if (mDesc.mUsage == DYNAMIC || mDesc.mUsage == STAGING)
+	if (mDesc.mUsage == GPU_READ_CPU_WRITE || mDesc.mUsage == GPU_READ_CPU_READ)
 	{
+		//assert(false);
 		//const size_t AllocSize = mDesc.mStride * mDesc.mElementCount;
 		//mCPUDataCache = mAllocator.allocate(AllocSize);
 	}

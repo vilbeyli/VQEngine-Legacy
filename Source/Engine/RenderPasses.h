@@ -246,6 +246,7 @@ struct AmbientOcclusionPass : public RenderPass
 
 	ShaderID testComputeShader;
 	BufferID UABuffer;
+	TextureID RWTex2D;
 
 #if SSAO_DEBUGGING
 	float radius;		

@@ -221,7 +221,6 @@ void D3DManager::GetVideoCardInfo(char* cardName, int& memory)
 void D3DManager::ReportLiveObjects(const std::string& LogHeader /*= ""*/) const
 {
 #ifdef _DEBUG
-	return;	// todo:
 	if (!LogHeader.empty())
 		Log::Info(LogHeader);
 

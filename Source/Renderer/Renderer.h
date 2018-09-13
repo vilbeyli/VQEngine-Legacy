@@ -90,7 +90,7 @@ public:
 
 	// --- TEXTURE
 	//						example params:			"bricks_d.png", "Data/Textures/"
-	TextureID				CreateTextureFromFile(	const std::string&	texFileName, const std::string&	fileRoot = sTextureRoot);
+	TextureID				CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot = sTextureRoot);
 	TextureID				CreateTexture2D(const TextureDesc& texDesc);
 	TextureID				CreateTexture2D(D3D11_TEXTURE2D_DESC&	textureDesc, bool initializeSRV);	// used by AddRenderTarget() | todo: remove this?
 	TextureID				CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot = sHDRTextureRoot);

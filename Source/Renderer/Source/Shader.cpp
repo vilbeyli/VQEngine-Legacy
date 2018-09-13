@@ -262,6 +262,12 @@ Shader::~Shader(void)
 		m_geometryShader = nullptr;
 	}
 
+	if (m_computeShader)
+	{
+		m_computeShader->Release();
+		m_computeShader= nullptr;
+	}
+
 	for (unsigned type = EShaderStage::VS; type < EShaderStage::COUNT; ++type)
 	{
 		if (m_shaderReflections.of[type])
@@ -293,10 +299,15 @@ void Shader::CreateShader(ID3D11Device* pDevice, EShaderStage type, void* pBuffe
 	case EShaderStage::GS:
 		if (FAILED(pDevice->CreateGeometryShader(pBuffer, szShaderBinary, NULL, &m_geometryShader)))
 		{
-			msg = "Error creating pixel geometry program";
+			msg = "Error creating geometry shader program";
 		}
 		break;
-
+	case EShaderStage::CS:
+		if (FAILED(pDevice->CreateComputeShader(pBuffer, szShaderBinary, NULL, &m_computeShader)))
+		{
+			msg = "Error creating compute shader program";
+		}
+		break;
 	}
 
 	if (FAILED(result))
@@ -520,35 +531,60 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 
 	// TEXTURES & SAMPLERS
 	//---------------------------------------------------------------------------
-	auto sRefl = m_shaderReflections.psRefl;		// vsRefl? gsRefl?
-	if (sRefl)
+	for (int shaderStage = 0; shaderStage < EShaderStage::COUNT; ++shaderStage)
 	{
-		D3D11_SHADER_DESC desc = {};
-		sRefl->GetDesc(&desc);
-
-		unsigned texSlot = 0;	unsigned smpSlot = 0;
-		for (unsigned i = 0; i < desc.BoundResources; ++i)
+		auto& sRefl = m_shaderReflections.of[shaderStage];
+		if (sRefl)
 		{
-			D3D11_SHADER_INPUT_BIND_DESC shdInpDesc;
-			sRefl->GetResourceBindingDesc(i, &shdInpDesc);
-			if (shdInpDesc.Type == D3D_SIT_SAMPLER)
+			D3D11_SHADER_DESC desc = {};
+			sRefl->GetDesc(&desc);
+
+			unsigned texSlot = 0;	unsigned smpSlot = 0;
+			for (unsigned i = 0; i < desc.BoundResources; ++i)
 			{
-				ShaderSampler smp;
-				smp.shdType = EShaderStage::PS;
-				smp.bufferSlot = smpSlot++;
-				m_samplers.push_back(smp);
-				mShaderSamplerLookup[shdInpDesc.Name] = static_cast<int>(m_samplers.size() - 1);
-			}
-			else if (shdInpDesc.Type == D3D_SIT_TEXTURE)
-			{
-				ShaderTexture tex;
-				tex.shdType = EShaderStage::PS;
-				tex.bufferSlot = texSlot++;
-				m_textures.push_back(tex);
-				mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(m_textures.size() - 1);
-			}
-		}
-	}
+				D3D11_SHADER_INPUT_BIND_DESC shdInpDesc;
+				sRefl->GetResourceBindingDesc(i, &shdInpDesc);
+
+				switch (shdInpDesc.Type)
+				{
+					case D3D_SIT_SAMPLER:
+					{
+						ShaderSampler smp;
+						smp.shaderStage = static_cast<EShaderStage>(shaderStage);
+						smp.bufferSlot = smpSlot++;
+						m_samplers.push_back(smp);
+						mShaderSamplerLookup[shdInpDesc.Name] = static_cast<int>(m_samplers.size() - 1);
+					} break;
+
+					case D3D_SIT_TEXTURE:
+					{
+						ShaderTexture tex;
+						tex.shaderStage = static_cast<EShaderStage>(shaderStage);
+						tex.bufferSlot = texSlot++;
+						m_textures.push_back(tex);
+						mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(m_textures.size() - 1);
+					} break;
+
+					case D3D_SIT_UAV_RWTYPED:
+					{
+						ShaderTexture tex;
+						tex.shaderStage = static_cast<EShaderStage>(shaderStage);
+						tex.bufferSlot = texSlot++;
+						m_textures.push_back(tex);
+						mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(m_textures.size() - 1);
+					} break;
+
+					case D3D_SIT_CBUFFER: break;
+
+
+					default:
+						Log::Warning("Unhandled shader input bind type in shader reflection");
+						break;
+
+				} // switch shader input type
+			} // bound resource
+		} // sRefl
+	} // shaderStage
 
 	// release blobs
 	for (unsigned type = EShaderStage::VS; type < EShaderStage::COUNT; ++type)
@@ -695,7 +731,7 @@ void Shader::SetConstantBuffers(ID3D11Device* device)
 			assert(false);
 		}
 		cBuffer.dirty = true;
-		cBuffer.shdType = cbLayout.stage;
+		cBuffer.shaderStage = cbLayout.stage;
 		cBuffer.bufferSlot = cbLayout.bufSlot;
 		m_cBuffers.push_back(cBuffer);
 	}
@@ -859,7 +895,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 			// TODO: research update sub-resource (Setting constant buffer can be done once in setting the shader)
 
 			// call XSSetConstantBuffers() from array using ShaderType enum
-			(context->*SetShaderConstants[CB.shdType])(CB.bufferSlot, 1, &data);
+			(context->*SetShaderConstants[CB.shaderStage])(CB.bufferSlot, 1, &data);
 			CB.dirty = false;
 		}
 	}

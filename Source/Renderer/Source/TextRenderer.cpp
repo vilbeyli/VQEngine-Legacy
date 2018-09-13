@@ -123,7 +123,7 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 	bufDesc.mElementCount = 6;
 	bufDesc.mStride = sizeof(vec4);
 	bufDesc.mType = VERTEX_BUFER;
-	bufDesc.mUsage = DYNAMIC;
+	bufDesc.mUsage = GPU_READ_CPU_WRITE;
 	mQuadVertexBuffer = pRenderer->CreateBuffer(bufDesc);
 
 	// todo: blend state desc

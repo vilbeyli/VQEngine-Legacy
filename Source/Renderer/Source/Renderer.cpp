@@ -267,7 +267,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		mRenderTargets.push_back(defaultRT);
 		mBackBufferRenderTarget = static_cast<int>(mRenderTargets.size() - 1);
 	}
-	m_Direct3D->ReportLiveObjects("Init Default RT\n");
+	//m_Direct3D->ReportLiveObjects("Init Default RT\n");
 
 
 	// DEFAULT DEPTH TARGET
@@ -288,7 +288,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		depthDesc.textureDesc = depthTexDesc;
 		mDefaultDepthBufferTexture = GetDepthTargetTexture(AddDepthTarget(depthDesc)[0]);
 	}
-	m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
+	//m_Direct3D->ReportLiveObjects("Init Depth Buffer\n");
 
 	// DEFAULT RASTERIZER STATES
 	//--------------------------------------------------------------------
@@ -337,7 +337,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 			Log::Error(err + "Wireframe\n");
 		}
 	}
-	m_Direct3D->ReportLiveObjects("Init Default RS ");
+	//m_Direct3D->ReportLiveObjects("Init Default RS ");
 
 
 	// DEFAULT BLEND STATES
@@ -372,7 +372,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		desc.RenderTarget[0] = rtBlendDesc;
 		m_device->CreateBlendState(&desc, &(mBlendStates[EDefaultBlendState::DISABLED].ptr));
 	}
-	m_Direct3D->ReportLiveObjects("Init Default BlendStates ");
+	//m_Direct3D->ReportLiveObjects("Init Default BlendStates ");
 
 
 	// DEFAULT SAMPLER STATES
@@ -467,7 +467,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	// SHADERS
 	//--------------------------------------------------------------------
 	Shader::LoadShaders(this);
-	m_Direct3D->ReportLiveObjects("Shader loaded");
+	//m_Direct3D->ReportLiveObjects("Shader loaded");
 
 	return true;
 }
@@ -476,11 +476,11 @@ void Renderer::Exit()
 {
 	//m_Direct3D->ReportLiveObjects("BEGIN EXIT");
 
-	constexpr size_t BUFFER_SIZE = 3;
-	std::vector<Buffer>* buffers[BUFFER_SIZE] = { &mVertexBuffers, &mIndexBuffers, &mUABuffers };
-	for (int i = 0; i < BUFFER_SIZE; ++i)
+	constexpr size_t BUFFER_TYPE_COUNT = 3;
+	std::vector<Buffer>* buffers[BUFFER_TYPE_COUNT] = { &mVertexBuffers, &mIndexBuffers, &mUABuffers };
+	for (int i = 0; i < BUFFER_TYPE_COUNT; ++i)
 	{
-		auto refBuffer = *buffers[i];
+		auto& refBuffer = *buffers[i];
 		std::for_each(refBuffer.begin(), refBuffer.end(), [](Buffer& b) {b.CleanUp(); });
 		refBuffer.clear();
 	}
@@ -559,7 +559,7 @@ void Renderer::Exit()
 		}
 	}
 
-	m_Direct3D->ReportLiveObjects("END EXIT\n");	// todo: ifdef debug & log_mem
+	//m_Direct3D->ReportLiveObjects("END EXIT\n");	// todo: ifdef debug & log_mem
 	if (m_Direct3D)
 	{
 		m_Direct3D->Shutdown();
@@ -732,6 +732,13 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	}
 	m_device->CreateTexture2D(&desc, pDataDesc, &tex._tex2D);
 
+#if defined(_DEBUG) || defined(PROFILE)
+	if (!texDesc.texFileName.empty())
+	{
+		tex._tex2D->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(texDesc.texFileName.length()), texDesc.texFileName.c_str());
+	}
+#endif
+
 	// Shader Resource View
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = (DXGI_FORMAT)texDesc.format;
@@ -792,6 +799,16 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 				break;
 			}
 			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+
+			if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+			{
+				D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+				uavDesc.Format = (DXGI_FORMAT)texDesc.format;
+				uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+				uavDesc.Texture2D.MipSlice = 0;
+
+				m_device->CreateUnorderedAccessView(tex._tex2D, &uavDesc, &tex._uav);
+			}
 		}
 	}
 
@@ -1088,6 +1105,7 @@ TextureID Renderer::CreateCubemapFromFaceTextures(const std::vector<std::string>
 	return cubemapOut._id;
 }
 
+
 #ifdef max
 #undef max
 #endif
@@ -1349,7 +1367,7 @@ void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTex
 					constexpr UINT NumNullSRV = 12;
 					ID3D11ShaderResourceView* nullSRV[NumNullSRV] = { nullptr };
 					//(m_deviceContext->*SetShaderResources[tex.shdType])(tex.bufferSlot, 1, nullSRV);
-					switch (tex.shdType)
+					switch (tex.shaderStage)
 					{
 					case EShaderStage::VS:
 						m_deviceContext->VSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
@@ -1367,8 +1385,12 @@ void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTex
 						m_deviceContext->PSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
 						break;
 					case EShaderStage::CS:
+					{
+						ID3D11UnorderedAccessView* nullUAV[NumNullSRV] = { nullptr };
+						UINT UAVInitialCounts = 0;
 						m_deviceContext->CSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
-						break;
+						m_deviceContext->CSSetUnorderedAccessViews(tex.bufferSlot, NumNullSRV, nullUAV, &UAVInitialCounts);
+					}	break;
 					default:
 						break;
 					}

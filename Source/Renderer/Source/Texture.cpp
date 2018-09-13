@@ -25,6 +25,7 @@
 Texture::Texture()
 	:
 	_srv(nullptr),	// assigned and deleted by renderer
+	_uav(nullptr),	// assigned and deleted by renderer
 	_tex2D(nullptr),
 	_width(0),
 	_height(0),
@@ -40,6 +41,12 @@ Texture::~Texture()
 bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Renderer* pRenderer, bool initializeSRV)
 {
 	HRESULT hr = pRenderer->m_device->CreateTexture2D(&descriptor, nullptr, &this->_tex2D);
+#if defined(_DEBUG) || defined(PROFILE)
+	if (!this->_name.empty())
+	{
+		this->_tex2D->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(this->_name.length()), this->_name.c_str());
+	}
+#endif
 	if (!SUCCEEDED(hr))
 	{
 		Log::Error("Texture::InitializeTexture2D(): Cannot create texture2D");
@@ -55,6 +62,12 @@ bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Render
 		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;	// array maybe? check descriptor.
 		srvDesc.Texture2D.MipLevels = descriptor.MipLevels;
 		pRenderer->m_device->CreateShaderResourceView(this->_tex2D, &srvDesc, &this->_srv);
+#if defined(_DEBUG) || defined(PROFILE)
+		if (!this->_name.empty())
+		{
+			this->_srv->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(this->_name.length()), this->_name.c_str());
+		}
+#endif
 	}
 	return true;
 }
@@ -78,6 +91,11 @@ void Texture::Release()
 		{
 			_srv->Release();
 			_srv = nullptr;
+		}
+		if (_uav)
+		{
+			_uav->Release();
+			_uav = nullptr;
 		}
 	}
 

@@ -54,13 +54,13 @@ Mesh::Mesh(
 	BufferDesc bufferDesc = {};
 
 	bufferDesc.mType = VERTEX_BUFER;
-	bufferDesc.mUsage = STATIC_RW;
+	bufferDesc.mUsage = GPU_READ_WRITE;
 	bufferDesc.mElementCount = static_cast<unsigned>(vertices.size());
 	bufferDesc.mStride = sizeof(vertices[0]);
 	mVertexBufferID = spRenderer->CreateBuffer(bufferDesc, vertices.data());
 
 	bufferDesc.mType = INDEX_BUFFER;
-	bufferDesc.mUsage = STATIC_RW;
+	bufferDesc.mUsage = GPU_READ_WRITE;
 	bufferDesc.mElementCount = static_cast<unsigned>(indices.size());
 	bufferDesc.mStride = sizeof(unsigned);
 	mIndexBufferID = spRenderer->CreateBuffer(bufferDesc, indices.data());

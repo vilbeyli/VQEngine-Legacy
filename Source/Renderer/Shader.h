@@ -64,7 +64,7 @@ private:
 };
 struct ConstantBuffer
 {	// GPU side constant buffer
-	EShaderStage shdType;
+	EShaderStage shaderStage;
 	unsigned	bufferSlot;
 	ID3D11Buffer* data;
 	bool dirty;
@@ -72,13 +72,13 @@ struct ConstantBuffer
 struct ShaderTexture
 {
 	unsigned bufferSlot;
-	EShaderStage shdType;
+	EShaderStage shaderStage;
 };
 struct ShaderSampler
 {
-	std::string name;
+	std::string name;	// move this out
 	unsigned bufferSlot;
-	EShaderStage shdType;
+	EShaderStage shaderStage;
 };
 struct InputLayout
 {

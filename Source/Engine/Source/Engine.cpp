@@ -1080,7 +1080,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		TextureID tDirectionalShadowMap = (mShadowMapPass.mDepthTarget_Directional == -1 || mpActiveScene->mDirectionalLight.enabled == 0)
 			? white4x4 
 			: mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
-		TextureID tUABuffer = 5/* todo: mSSAOPass.UABuffer*/;
+		TextureID tUABuffer = mSSAOPass.RWTex2D == 0 ? 15 : mSSAOPass.RWTex2D;
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() 
 		{

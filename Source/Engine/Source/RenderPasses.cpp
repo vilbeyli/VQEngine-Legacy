@@ -16,6 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#define USE_COMPUTE_PASS 1
 
 #include "RenderPasses.h"
 #include "Engine.h"
@@ -41,7 +42,7 @@ void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Set
 	this->mShadowMapDimension_Spot = static_cast<int>(shadowMapSettings.dimension);
 
 #if _DEBUG
-	pRenderer->m_Direct3D->ReportLiveObjects("--------SHADOW_PASS_INIT");
+	//pRenderer->m_Direct3D->ReportLiveObjects("--------SHADOW_PASS_INIT");
 #endif
 
 	// check feature support & error handle:
@@ -750,7 +751,11 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	if(bSkylight)
 	{
 		pRenderer->BeginEvent("Environment Map Lighting Pass");
+#if USE_COMPUTE_PASS
+		pRenderer->SetShader(_ambientIBLShader, bUnbindRenderTargets, true);
+#else
 		pRenderer->SetShader(_ambientIBLShader, bUnbindRenderTargets, false);
+#endif
 		pRenderer->SetTexture("tDiffuseRoughnessMap", texDiffuseRoughness);
 		pRenderer->SetTexture("tSpecularMetalnessMap", texSpecularMetallic);
 		pRenderer->SetTexture("tNormalMap", texNormal);
@@ -967,6 +972,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	this->intensity = 1.0f;
 #endif
 
+	// Compute Shader Unit Test -----------------------------------
 	const ShaderDesc testComputeShaderDesc = 
 	{
 		"TestCompute",
@@ -974,12 +980,22 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	};
 	this->testComputeShader = pRenderer->CreateShader(testComputeShaderDesc);
 
+#if 0 // this leaks GPU memory...
 	BufferDesc uaBufferDesc;
-	uaBufferDesc.mType = EBufferType::COMPUTE_RW_BUFFER;
-	uaBufferDesc.mUsage = EBufferUsage::STATIC_RW;
+	uaBufferDesc.mType = EBufferType::COMPUTE_RW_TEXTURE;
+	uaBufferDesc.mUsage = EBufferUsage::GPU_READ_WRITE;
 	uaBufferDesc.mStride = 1920 * sizeof(vec4);
 	uaBufferDesc.mElementCount = 1080;
 	this->UABuffer = pRenderer->CreateBuffer(uaBufferDesc);
+#endif
+
+	texDesc = TextureDesc();
+	texDesc.usage = ETextureUsage::COMPUTE_RW_TEXTURE;
+	texDesc.height = 1080;
+	texDesc.width = 1920;
+	texDesc.format = EImageFormat::RGBA32F;
+	this->RWTex2D = pRenderer->CreateTexture2D(texDesc);
+	// Compute Shader Unit Test -----------------------------------
 }
 //constexpr size_t sz = sizeof(SSAOConstants);
 constexpr size_t VEC_SZ = 4;
@@ -1070,14 +1086,6 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer)
 	pRenderer->EndEvent();	// Blur Pass
 
 
-	// Compute Shader Unit Test -----------------------------------
-	//pRenderer->BeginEvent("Test Compute");
-	//pRenderer->SetShader(this->testComputeShader);
-	//pRenderer->SetUABuffer(this->UABuffer);
-	//pRenderer->Apply();
-	//pRenderer->Dispatch(1, 1, 1);
-	//pRenderer->EndEvent();
-	// Compute Shader Unit Test -----------------------------------
 }
 
 void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
@@ -1099,6 +1107,19 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	pRenderer->DrawIndexed();
 
 	pRenderer->EndEvent();
+
+
+	// Compute Shader Unit Test -----------------------------------
+#if USE_COMPUTE_PASS
+	pRenderer->BeginEvent("Test Compute");
+	pRenderer->SetShader(this->testComputeShader);
+	////pRenderer->SetUABuffer(this->UABuffer);
+	pRenderer->SetTexture("outColor", this->RWTex2D);
+	pRenderer->Apply();
+	pRenderer->Dispatch(120, 68, 1);
+	pRenderer->EndEvent();
+#endif
+	// Compute Shader Unit Test -----------------------------------
 }
 
 void ZPrePass::Initialize(Renderer* pRenderer)

@@ -77,7 +77,7 @@ struct PipelineState
 struct BufferDesc
 {
 	EBufferType  mType = EBufferType::BUFFER_TYPE_UNKNOWN;
-	EBufferUsage mUsage = EBufferUsage::STATIC_RW;
+	EBufferUsage mUsage = EBufferUsage::GPU_READ_WRITE;
 	unsigned     mElementCount = 0;
 	unsigned     mStride = 0;
 	unsigned     mStructureByteStride = 0;

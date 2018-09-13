@@ -16,9 +16,29 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-[numthreads(1,1,1)]
-void CSMain(int3 dispatchThreadID : SV_DispatchThreadID)
+RWTexture2D<float4> outColor;
+
+[numthreads(16,16,1)]
+void CSMain(
+	uint3 dispatchTID : SV_DispatchThreadID,
+	uint3 groupTID    : SV_GroupThreadID,
+	uint3 groupID     : SV_GroupID,
+	uint  groupIndex  : SV_GroupIndex
+)
 {
+	//outColor[dispatchTID.xy] = float4(((float)groupIndex) / 255.0f, 1, 0, 1);
+	
+	//outColor[dispatchTID.xy] = float4( 
+	//	((float)dispatchTID.x) / 1920.f
+	//	, ((float)dispatchTID.y) / 1080.0f
+	//	, ((float)dispatchTID.z) / 1.0f
+	//	, 1);
+
+	outColor[dispatchTID.xy] = float4(
+		((float)groupTID.x) / 120.0f
+		, ((float)groupTID.y) / 68.0f
+		, ((float)groupTID.z) / 1.0f
+		, 1);
 
 	return;
 }

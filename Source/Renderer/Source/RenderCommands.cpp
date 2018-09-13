@@ -52,7 +52,14 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[EShader
 void SetTextureCommand::SetResource(Renderer * pRenderer)
 {
 	assert(textureID >= 0);
-	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shdType])(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._srv);
+	if (&pRenderer->mTextures[textureID]._uav && shaderTexture.shaderStage == EShaderStage::CS)
+	{
+		UINT UAVInitialCounts = 0;
+		pRenderer->m_deviceContext->CSSetUnorderedAccessViews(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._uav, &UAVInitialCounts);
+		return;
+	}
+
+	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shaderStage])(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._srv);
 }
 
 static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[EShaderStage::COUNT])
@@ -69,7 +76,7 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[EShaderStage::C
 void SetSamplerCommand::SetResource(Renderer * pRenderer)
 {
 	assert(samplerID >= 0);
-	(pRenderer->m_deviceContext->*SetSampler[shaderSampler.shdType])(shaderSampler.bufferSlot, 1, &pRenderer->mSamplers[samplerID]._samplerState);
+	(pRenderer->m_deviceContext->*SetSampler[shaderSampler.shaderStage])(shaderSampler.bufferSlot, 1, &pRenderer->mSamplers[samplerID]._samplerState);
 }
 
 ClearCommand ClearCommand::Depth(float depthClearValue)

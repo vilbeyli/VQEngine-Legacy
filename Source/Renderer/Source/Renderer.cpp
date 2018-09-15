@@ -782,7 +782,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 		else
 		{
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = -1;
+			srvDesc.Texture2D.MipLevels = 1;
 			srvDesc.Texture2D.MostDetailedMip = 0;
 
 			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
@@ -1307,7 +1307,7 @@ std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depth
 	// create depth stencil view
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
 	dsvDesc.Format = static_cast<DXGI_FORMAT>(depthTargetDesc.format);
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2DArray.MipSlice = 0;
 
 	for (int i = 0; i < numTextures; ++i)
@@ -1905,12 +1905,12 @@ void Renderer::Apply()
 	{
 		ID3D11ClassInstance *const * pClassInstance = nullptr;
 		m_deviceContext->IASetInputLayout(shader->m_layout);
-		m_deviceContext->VSSetShader(shader->m_vertexShader   , pClassInstance, 0);
-		m_deviceContext->PSSetShader(shader->m_pixelShader    , pClassInstance, 0);
-		m_deviceContext->GSSetShader(shader->m_geometryShader , pClassInstance, 0);
-		m_deviceContext->HSSetShader(shader->m_hullShader     , pClassInstance, 0);
-		m_deviceContext->DSSetShader(shader->m_domainShader   , pClassInstance, 0);
-		m_deviceContext->CSSetShader(shader->m_computeShader  , pClassInstance, 0);
+		if(shader->m_vertexShader)   m_deviceContext->VSSetShader(shader->m_vertexShader   , pClassInstance, 0);
+		if(shader->m_pixelShader)    m_deviceContext->PSSetShader(shader->m_pixelShader    , pClassInstance, 0);
+		if(shader->m_geometryShader) m_deviceContext->GSSetShader(shader->m_geometryShader , pClassInstance, 0);
+		if(shader->m_hullShader)     m_deviceContext->HSSetShader(shader->m_hullShader     , pClassInstance, 0);
+		if(shader->m_domainShader)   m_deviceContext->DSSetShader(shader->m_domainShader   , pClassInstance, 0);
+		if(shader->m_computeShader)  m_deviceContext->CSSetShader(shader->m_computeShader  , pClassInstance, 0);
 	}
 
 

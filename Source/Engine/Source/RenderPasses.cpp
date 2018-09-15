@@ -1142,7 +1142,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	pRenderer->BeginEvent("SSAO Compute");
 	pRenderer->SetShader(this->ssaoComputeShader, true);
 	pRenderer->SetTexture("texDepth", depthTexture);
-	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetTexture("texSSAOOutput", texSSAOComputeOutput);
 	//pRenderer->SetTexture("texViewSpaceNormals", 0);
 	//pRenderer->SetTexture("texNoise", this->noiseTexture);

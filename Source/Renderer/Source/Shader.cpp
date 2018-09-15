@@ -533,13 +533,14 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 	//---------------------------------------------------------------------------
 	for (int shaderStage = 0; shaderStage < EShaderStage::COUNT; ++shaderStage)
 	{
+		unsigned texSlot = 0;	unsigned smpSlot = 0;
+		unsigned uavSlot = 0;
 		auto& sRefl = m_shaderReflections.of[shaderStage];
 		if (sRefl)
 		{
 			D3D11_SHADER_DESC desc = {};
 			sRefl->GetDesc(&desc);
 
-			unsigned texSlot = 0;	unsigned smpSlot = 0;
 			for (unsigned i = 0; i < desc.BoundResources; ++i)
 			{
 				D3D11_SHADER_INPUT_BIND_DESC shdInpDesc;
@@ -569,7 +570,7 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 					{
 						ShaderTexture tex;
 						tex.shaderStage = static_cast<EShaderStage>(shaderStage);
-						tex.bufferSlot = texSlot++;
+						tex.bufferSlot = uavSlot++;
 						m_textures.push_back(tex);
 						mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(m_textures.size() - 1);
 					} break;

@@ -1103,7 +1103,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false },
 			//{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false },
-			{ fullscreenTextureScaledDownSize,	screenPosition,			tComputeOutput			, false },
+			{ fullscreenTextureScaledDownSize,	screenPosition,			tComputeOutput			, true },
 			{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)

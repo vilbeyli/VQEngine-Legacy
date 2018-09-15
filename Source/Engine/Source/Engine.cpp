@@ -1080,7 +1080,16 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		TextureID tDirectionalShadowMap = (mShadowMapPass.mDepthTarget_Directional == -1 || mpActiveScene->mDirectionalLight.enabled == 0)
 			? white4x4 
 			: mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
-		TextureID tUABuffer = mSSAOPass.RWTex2D == 0 ? 15 : mSSAOPass.RWTex2D;
+
+#if 0
+		TextureID tComputeOutput = mSSAOPass.RWTex2D <= 0
+			? white4x4
+			: mSSAOPass.RWTex2D;
+#else
+		TextureID tComputeOutput = mSSAOPass.texSSAOComputeOutput <= 0
+			? white4x4 
+			: mSSAOPass.texSSAOComputeOutput;
+#endif
 
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() 
 		{
@@ -1094,7 +1103,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false },
 			//{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false },
-			{ fullscreenTextureScaledDownSize,	screenPosition,			tUABuffer			, false },
+			{ fullscreenTextureScaledDownSize,	screenPosition,			tComputeOutput			, false },
 			{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)

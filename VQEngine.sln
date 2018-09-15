@@ -53,6 +53,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Source\Shaders\Skybox_ps.hlsl = Source\Shaders\Skybox_ps.hlsl
 		Source\Shaders\Skybox_vs.hlsl = Source\Shaders\Skybox_vs.hlsl
 		Source\Shaders\SkyboxEquirectangular_ps.hlsl = Source\Shaders\SkyboxEquirectangular_ps.hlsl
+		Source\Shaders\SSAO_cs.hlsl = Source\Shaders\SSAO_cs.hlsl
 		Source\Shaders\SSAO_ps.hlsl = Source\Shaders\SSAO_ps.hlsl
 		Source\Shaders\Tangent_ps.hlsl = Source\Shaders\Tangent_ps.hlsl
 		Source\Shaders\Tangent_vs.hlsl = Source\Shaders\Tangent_vs.hlsl

@@ -16,7 +16,10 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-RWTexture2D<float4> outColor;
+RWTexture2D<float4> texSSAOOutput;
+Texture2D  texDepth;
+SamplerState sPointSampler;
+//Texture2D<float4> texNoise;
 
 #define WorkgroupDimensionX  16
 #define WorkgroupDimensionY  16
@@ -43,13 +46,29 @@ void CSMain(
 	// -------------------------------------------------------------------
 	// WORKGROUP - WARP - WAVEFRONT - WAVE
 	// -------------------------------------------------------------------
-	outColor[dispatchTID.xy] = float4(
-		  ((float)groupTID.x) / max(float(WorkgroupDimensionX - 1), 1.0f)
-		, ((float)groupTID.y) / max(float(WorkgroupDimensionY - 1), 1.0f)
-		, ((float)groupTID.z) / max(float(WorkgroupDimensionZ - 1), 1.0f)
-		, 1);
+	//texSSAOOutput[dispatchTID.xy] = float4(
+	//	  ((float)groupTID.x) / max(float(WorkgroupDimensionX - 1), 1.0f)
+	//	, ((float)groupTID.y) / max(float(WorkgroupDimensionY - 1), 1.0f)
+	//	, ((float)groupTID.z) / max(float(WorkgroupDimensionZ - 1), 1.0f)
+	//	, 1);
 	// -------------------------------------------------------------------
 
+#if 0
+	const float depth = texDepth.Load(uint3(dispatchTID.x, dispatchTID.y, 0)).x;
+#endif
+
+#if 1
+	float2 uv = float2(dispatchTID.xy) / float2(1920, 1080);
+	const float depth = 
+		(texDepth.SampleLevel(sPointSampler, uv, 0).x == 0.0f || true)
+		? 0.19f 
+		: texDepth.SampleLevel(sPointSampler, uv, 0).x * 1000000 + 0.15;
+#else
+	const float depth = 0.19f;
+#endif
+	texSSAOOutput[dispatchTID.xy] = float4(depth, depth, depth, 1.0f);
+
+	//GroupMemoryBarrierWithGroupSync();
 	return;
 }
 

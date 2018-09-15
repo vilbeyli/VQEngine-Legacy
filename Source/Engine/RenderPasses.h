@@ -244,9 +244,18 @@ struct AmbientOcclusionPass : public RenderPass
 	ShaderID			bilateralBlurShader;
 	ShaderID			blurShader;
 
+	// Compute Shader Unit Test ---------------------------
 	ShaderID testComputeShader;
 	BufferID UABuffer;
 	TextureID RWTex2D;
+	// Compute Shader Unit Test ---------------------------
+
+
+	// Compute SSAO ---------------------------------------
+	ShaderID ssaoComputeShader;
+	TextureID texSSAOComputeOutput;
+
+	// Compute SSAO ---------------------------------------
 
 #if SSAO_DEBUGGING
 	float radius;		

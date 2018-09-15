@@ -52,7 +52,7 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[EShader
 void SetTextureCommand::SetResource(Renderer * pRenderer)
 {
 	assert(textureID >= 0);
-	if (&pRenderer->mTextures[textureID]._uav && shaderTexture.shaderStage == EShaderStage::CS)
+	if (pRenderer->mTextures[textureID]._uav != nullptr && shaderTexture.shaderStage == EShaderStage::CS)
 	{
 		UINT UAVInitialCounts = 0;
 		pRenderer->m_deviceContext->CSSetUnorderedAccessViews(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._uav, &UAVInitialCounts);

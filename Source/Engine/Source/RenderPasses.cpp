@@ -16,7 +16,8 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define USE_COMPUTE_PASS 1
+#define USE_COMPUTE_PASS_UNIT_TEST 1
+#define USE_COMPUTE_SSAO           1
 
 #include "RenderPasses.h"
 #include "Engine.h"
@@ -751,7 +752,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	if(bSkylight)
 	{
 		pRenderer->BeginEvent("Environment Map Lighting Pass");
-#if USE_COMPUTE_PASS
+#if USE_COMPUTE_PASS_UNIT_TEST || USE_COMPUTE_SSAO
 		pRenderer->SetShader(_ambientIBLShader, bUnbindRenderTargets, true);
 #else
 		pRenderer->SetShader(_ambientIBLShader, bUnbindRenderTargets, false);
@@ -996,6 +997,23 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	texDesc.format = EImageFormat::RGBA32F;
 	this->RWTex2D = pRenderer->CreateTexture2D(texDesc);
 	// Compute Shader Unit Test -----------------------------------
+
+
+#ifdef USE_COMPUTE_SSAO
+	const ShaderDesc CSDesc =
+	{
+		"SSAO_Compute",
+		ShaderStageDesc { "SSAO_cs.hlsl", {} }
+	};
+	this->ssaoComputeShader = pRenderer->CreateShader(CSDesc);
+
+	texDesc = TextureDesc();
+	texDesc.usage = ETextureUsage::COMPUTE_RW_TEXTURE;
+	texDesc.height = 1080;
+	texDesc.width = 1920;
+	texDesc.format = EImageFormat::RGBA32F;
+	this->texSSAOComputeOutput = pRenderer->CreateTexture2D(texDesc);
+#endif
 }
 //constexpr size_t sz = sizeof(SSAOConstants);
 constexpr size_t VEC_SZ = 4;
@@ -1109,8 +1127,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	pRenderer->EndEvent();
 
 
-	// Compute Shader Unit Test -----------------------------------
-#if USE_COMPUTE_PASS
+#if USE_COMPUTE_PASS_UNIT_TEST
 	pRenderer->BeginEvent("Test Compute");
 	pRenderer->SetShader(this->testComputeShader);
 	////pRenderer->SetUABuffer(this->UABuffer);
@@ -1119,7 +1136,20 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	pRenderer->Dispatch(120, 68, 1);
 	pRenderer->EndEvent();
 #endif
-	// Compute Shader Unit Test -----------------------------------
+
+#ifdef USE_COMPUTE_SSAO
+	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
+	pRenderer->BeginEvent("SSAO Compute");
+	pRenderer->SetShader(this->ssaoComputeShader, true);
+	pRenderer->SetTexture("texDepth", depthTexture);
+	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetTexture("texSSAOOutput", texSSAOComputeOutput);
+	//pRenderer->SetTexture("texViewSpaceNormals", 0);
+	//pRenderer->SetTexture("texNoise", this->noiseTexture);
+	pRenderer->Apply();
+	pRenderer->Dispatch(120, 68, 1);
+	pRenderer->EndEvent();
+#endif
 }
 
 void ZPrePass::Initialize(Renderer* pRenderer)

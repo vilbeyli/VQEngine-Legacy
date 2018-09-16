@@ -1647,6 +1647,32 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 		mSetTextureCmds.push(cmd);
 	}
 
+#ifdef _DEBUG
+	if (!bFound)
+	{
+		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, mPipelineState.shader, shader->Name().c_str());
+	}
+#endif
+}
+
+void Renderer::SetUnorderedAccessTexture(const char* texName, TextureID tex)
+{
+	assert(tex >= 0);
+
+	const Shader* shader = mShaders[mPipelineState.shader];
+	const std::string textureName = std::string(texName);
+
+#if _DEBUG
+	const bool bFound = shader->HasTextureBinding(textureName);
+#else
+	const bool bFound = true;
+#endif
+
+	if (bFound)
+	{
+		SetTextureCommand cmd(tex, shader->GetTextureBinding(textureName), true);
+		mSetTextureCmds.push(cmd);
+	}
 
 #ifdef _DEBUG
 	if (!bFound)
@@ -1655,6 +1681,7 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 	}
 #endif
 }
+
 
 void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 {
@@ -1671,7 +1698,6 @@ void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 		SetSamplerCommand cmd(samplerID, shader->GetSamplerBinding(samplerName));
 		mSetSamplerCmds.push(cmd);
 	}
-
 
 #ifdef _DEBUG
 	if (!bFound)

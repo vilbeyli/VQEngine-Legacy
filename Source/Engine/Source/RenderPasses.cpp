@@ -16,9 +16,6 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define USE_COMPUTE_PASS_UNIT_TEST 1
-#define USE_COMPUTE_SSAO           1
-
 #include "RenderPasses.h"
 #include "Engine.h"
 #include "GameObject.h"
@@ -35,8 +32,16 @@
 
 #include <array>
 
+
+
+#define USE_COMPUTE_PASS_UNIT_TEST 0
+#define USE_COMPUTE_SSAO           0
+#define USE_COMPUTE_BLUR           1
+
 constexpr int DRAW_INSTANCED_COUNT_DEPTH_PASS = 256;
 constexpr int DRAW_INSTANCED_COUNT_GBUFFER_PASS = 64;
+
+
 
 void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings)
 {
@@ -272,7 +277,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	const EImageFormat imageFormat = _settings.HDREnabled ? HDR_Format : LDR_Format;
 
 	RenderTargetDesc rtDesc = {};
-	rtDesc.textureDesc.width = pRenderer->WindowWidth();
+	rtDesc.textureDesc.width  = pRenderer->WindowWidth();
 	rtDesc.textureDesc.height = pRenderer->WindowHeight();
 	rtDesc.textureDesc.mipCount = 1;
 	rtDesc.textureDesc.arraySize = 1;
@@ -325,6 +330,30 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 
 	// World Render Target
 	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc);
+
+#if USE_COMPUTE_BLUR
+	// Blur Compute Resources
+	const ShaderDesc CSDescV =
+	{
+		"Blur_Compute_Vertical",
+		ShaderStageDesc { "Blur_cs.hlsl", {{ "VERTICAL", "1" }} }
+	};
+	const ShaderDesc CSDescH =
+	{
+		"Blur_Compute_Horizontal",
+		ShaderStageDesc { "Blur_cs.hlsl", {{ "HORIZONTAL", "1" }} }
+	};
+	this->_bloomPass.blurComputeShaderPingPong[0] = pRenderer->CreateShader(CSDescV);
+	this->_bloomPass.blurComputeShaderPingPong[1] = pRenderer->CreateShader(CSDescH);
+
+	TextureDesc texDesc = TextureDesc();
+	texDesc.usage = ETextureUsage::COMPUTE_RW_TEXTURE;
+	texDesc.height = pRenderer->WindowHeight(); 
+	texDesc.width = pRenderer->WindowWidth();
+	texDesc.format = imageFormat;
+	this->_bloomPass.blurComputeOutputPingPong[0] = pRenderer->CreateTexture2D(texDesc);
+	this->_bloomPass.blurComputeOutputPingPong[1] = pRenderer->CreateTexture2D(texDesc);
+#endif
 }
 
 void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pCPU, GPUProfiler* pGPU) const
@@ -344,10 +373,11 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 		const ShaderID currentShader = pRenderer->GetActiveShader();
 
 		//pCPU->BeginEntry("Bloom");
+		pRenderer->BeginEvent("Bloom");
 		pGPU->BeginEntry("Bloom");
 
 		// bright filter
-		pRenderer->BeginEvent("Bloom Bright Filter");
+		pRenderer->BeginEvent("Bright Filter");
 		pRenderer->SetShader(_bloomPass._bloomFilterShader, true);
 		pRenderer->BindRenderTargets(_bloomPass._colorRT, _bloomPass._brightRT);
 		pRenderer->UnbindDepthTarget();
@@ -362,9 +392,10 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 
 		// blur
 		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
-		pRenderer->BeginEvent("Bloom Blur Pass");
+		const int BlurPassCount = sBloom.blurStrength * 2;	// 1 pass for Horizontal and Vertical each
+		pRenderer->BeginEvent("Blur Pass");
 		pRenderer->SetShader(_bloomPass._blurShader, true);
-		for (int i = 0; i < 5; ++i)
+		for (int i = 0; i < BlurPassCount; ++i)
 		{
 			const int isHorizontal = i % 2;
 			const TextureID pingPong = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[1 - isHorizontal]);
@@ -384,10 +415,30 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 		}
 		pRenderer->EndEvent();
 
+#if USE_COMPUTE_BLUR
+		pRenderer->BeginEvent("Blur Compute Pass");
+		for (int i = 0; i < BlurPassCount; ++i)
+		{
+			const int INDEX_PING_PONG = i % 2;
+			const int INDEX_PING_PONG_OTHER = (i + 1) % 2;
+			pRenderer->SetShader(this->_bloomPass.blurComputeShaderPingPong[INDEX_PING_PONG]);
+			pRenderer->SetUnorderedAccessTexture("texColorOut", this->_bloomPass.blurComputeOutputPingPong[INDEX_PING_PONG]);
+			pRenderer->SetTexture("texColorIn", i == 0 
+				? brightTexture 
+				: this->_bloomPass.blurComputeOutputPingPong[INDEX_PING_PONG_OTHER]
+			);
+			pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
+			pRenderer->SetConstantStruct("image", &pRenderer->GetWindowDimensionsAsFloat2());
+			pRenderer->Apply();
+			pRenderer->Dispatch(120, 68, 1);
+		}
+		pRenderer->EndEvent();
+#endif
+
 		// additive blend combine
 		const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._colorRT);
 		const TextureID bloomTex = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[0]);
-		pRenderer->BeginEvent("Bloom Combine");
+		pRenderer->BeginEvent("Combine");
 		pRenderer->SetShader(_bloomPass._bloomCombineShader, true);
 		pRenderer->BindRenderTarget(_bloomPass._finalRT);
 		pRenderer->SetTexture("ColorTexture", colorTex);
@@ -398,6 +449,7 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 		pRenderer->EndEvent();
 		
 		//pCPU->EndEntry(); // bloom
+		pRenderer->EndEvent(); // bloom
 		pGPU->EndEntry(); // bloom
 
 	}
@@ -1131,19 +1183,19 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	pRenderer->BeginEvent("Test Compute");
 	pRenderer->SetShader(this->testComputeShader);
 	////pRenderer->SetUABuffer(this->UABuffer);
-	pRenderer->SetTexture("outColor", this->RWTex2D);
+	pRenderer->SetUnorderedAccessTexture("outColor", this->RWTex2D);
 	pRenderer->Apply();
 	pRenderer->Dispatch(120, 68, 1);
 	pRenderer->EndEvent();
 #endif
 
-#ifdef USE_COMPUTE_SSAO
+#if USE_COMPUTE_SSAO
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 	pRenderer->BeginEvent("SSAO Compute");
 	pRenderer->SetShader(this->ssaoComputeShader, true);
 	pRenderer->SetTexture("texDepth", depthTexture);
 	pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
-	pRenderer->SetTexture("texSSAOOutput", texSSAOComputeOutput);
+	pRenderer->SetUnorderedAccessTexture("texSSAOOutput", texSSAOComputeOutput);
 	//pRenderer->SetTexture("texViewSpaceNormals", 0);
 	//pRenderer->SetTexture("texNoise", this->noiseTexture);
 	pRenderer->Apply();

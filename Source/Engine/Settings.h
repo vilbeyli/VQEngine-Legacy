@@ -60,6 +60,7 @@ namespace Settings
 	{
 		bool bEnabled;
 		float brightnessThreshold;
+		int blurStrength = 1;
 	};
 
 	struct PostProcess 

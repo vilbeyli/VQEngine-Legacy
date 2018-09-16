@@ -95,6 +95,10 @@ struct BloomPass : public RenderPass
 	ShaderID						_bilateralBlurShader;
 	ShaderID						_bloomFilterShader;
 	ShaderID						_bloomCombineShader;
+
+
+	std::array<ShaderID, 2>  blurComputeShaderPingPong;
+	std::array<TextureID, 2> blurComputeOutputPingPong;
 };
 
 struct TonemappingCombinePass : public RenderPass
@@ -216,9 +220,10 @@ struct DebugPass : public RenderPass
 // shift+ wheel up/down	:	intensity +/-
 //
 //
-#define BLOOM_DEBUGGING 0
+#define BLOOM_DEBUGGING 1
 //
 // wheel up/down		:	brightness threshold +/-
+// shift+ wheel up/down	:	blur strength +/-
 //
 
 //--------------------------------------------------------------------------------------------

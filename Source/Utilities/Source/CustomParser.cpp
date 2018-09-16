@@ -701,6 +701,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	
 		bloom.bEnabled = sBoolTypeReflection.at(GetLowercased(command[1]));
 		bloom.brightnessThreshold = command.size() > 2 ? stof(command[2]) : 1.5f;
+		bloom.blurStrength = command.size() > 3 ? stoi(command[3]) : 3;	// 3 default blur stregth;
 		// bloom.blurPassCount = stoi(command[3]);	// in case bloom settings should be more flexible
 	}
 	else

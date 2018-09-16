@@ -126,6 +126,7 @@ public:
 	void					SetIndexBuffer(BufferID bufferID);
 	void					SetUABuffer(BufferID bufferID);
 	void					SetTexture(const char* texName, TextureID tex);
+	void					SetUnorderedAccessTexture(const char* texName, TextureID tex);
 	//void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
 	void inline				SetTextureArray(const char* texName, TextureID texArray) { SetTexture(texName, texArray); }
 	void					SetSamplerState(const char* samplerName, SamplerID sampler);

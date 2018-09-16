@@ -51,15 +51,12 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[EShader
 
 void SetTextureCommand::SetResource(Renderer * pRenderer)
 {
+	auto* pContext = pRenderer->m_deviceContext;
 	assert(textureID >= 0);
-	if (pRenderer->mTextures[textureID]._uav != nullptr && shaderTexture.shaderStage == EShaderStage::CS)
-	{
-		UINT UAVInitialCounts = 0;
-		pRenderer->m_deviceContext->CSSetUnorderedAccessViews(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._uav, &UAVInitialCounts);
-		return;
-	}
-
-	(pRenderer->m_deviceContext->*SetShaderResources[shaderTexture.shaderStage])(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._srv);
+	if (bUnorderedAccess)
+		pContext->CSSetUnorderedAccessViews(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._uav, nullptr);
+	else
+		(pContext->*SetShaderResources[shaderTexture.shaderStage])(shaderTexture.bufferSlot, 1, &pRenderer->mTextures[textureID]._srv);
 }
 
 static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[EShaderStage::COUNT])

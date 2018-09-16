@@ -24,15 +24,20 @@
 class Renderer;
 
 
-// inheritance ;... ?
+// inheritance... ?
 
 struct SetTextureCommand
 {
-	SetTextureCommand(TextureID texID, const ShaderTexture& shaderTex) : textureID(texID), shaderTexture(shaderTex) {}
+	SetTextureCommand(TextureID texID, const ShaderTexture& shaderTex, bool bUA = false) 
+		: textureID(texID)
+		, shaderTexture(shaderTex) 
+		, bUnorderedAccess(bUA)
+	{}
 	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
 
 	const TextureID			textureID;
 	const ShaderTexture&	shaderTexture;
+	bool bUnorderedAccess;
 };
 
 struct SetSamplerCommand

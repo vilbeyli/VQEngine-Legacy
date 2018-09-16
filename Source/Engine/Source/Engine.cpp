@@ -627,11 +627,14 @@ void Engine::HandleInput()
 		{
 			Settings::Bloom& bloom = mPostProcessPass._settings.bloom;
 			float& threshold = bloom.brightnessThreshold;
+			int& blurStrength = bloom.blurStrength;
 			const float step = 0.05f;
 			const float threshold_hi = 3.0f;
 			const float threshold_lo = 0.05f;
-			if (mpInput->IsScrollUp()) { threshold += step; if (threshold > threshold_hi) threshold = threshold_hi; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
-			if (mpInput->IsScrollDown()) { threshold -= step; if (threshold < threshold_lo) threshold = threshold_lo; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+			if (mpInput->IsScrollUp()   && !mpInput->IsKeyDown("Shift")) { threshold += step; if (threshold > threshold_hi) threshold = threshold_hi; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+			if (mpInput->IsScrollDown() && !mpInput->IsKeyDown("Shift")) { threshold -= step; if (threshold < threshold_lo) threshold = threshold_lo; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+			if (mpInput->IsScrollUp()   && mpInput->IsKeyDown("Shift"))  { blurStrength += 1; Log::Info("Bloom Blur Strength = %d", blurStrength);}
+			if (mpInput->IsScrollDown() && mpInput->IsKeyDown("Shift"))  { blurStrength -= 1; if (blurStrength == 0) blurStrength = 1; Log::Info("Bloom Blur Strength = %d", blurStrength); }
 		}
 #endif
 
@@ -1102,8 +1105,8 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tNormals			, false },
 			//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false },
-			//{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false },
-			{ fullscreenTextureScaledDownSize,	screenPosition,			tComputeOutput			, true },
+			{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false },
+			//{ fullscreenTextureScaledDownSize,	screenPosition,			tComputeOutput			, true },
 			{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)

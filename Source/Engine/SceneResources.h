@@ -20,11 +20,11 @@
 #include "Application/HandleTypedefs.h"
 
 #include "Mesh.h"
+#include "Material.h"
 
 #include <memory>
 
 class Scene;
-
 
 // https://en.wikibooks.org/wiki/More_C++_Idioms/Friendship_and_the_Attorney-Client
 class SceneResourceView

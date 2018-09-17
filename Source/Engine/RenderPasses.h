@@ -133,7 +133,11 @@ struct ObjectMatrices
 	XMMATRIX normal;
 	XMMATRIX worldViewProj;
 };
-
+template<unsigned NUM_INSTANCES>
+struct InstancedObjectMatrices
+{
+	ObjectMatrices objMatrices[NUM_INSTANCES];
+};
 
 // struct GBufferPass : public RenderPass
 // {

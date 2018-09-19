@@ -43,7 +43,10 @@ void CSMain(
 )
 {
 	// gaussian kernel : src=https://learnopengl.com/#!Advanced-Lighting/Bloom
+	//
 	const half WEIGHTS[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
+	// 	0.053514	0.045235	0.027318	0.011785	0.003631	0.000799	0.000125	0.000014	0.000001	0
+
 
 	// https://twvideo01.ubm-us.net/o1/vault/gdc09/slides/100_Handout%206.pdf
 
@@ -109,12 +112,12 @@ void CSMain(
 #if VERTICAL
 			bool bKernelSampleOutOfBounds = ((outTexel.y + i) >= IMAGE_SIZE_Y);
 			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.y + i;
-			result += gColorLine[idxColorLine] * WEIGHTS[i];
+			result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
 
 			bKernelSampleOutOfBounds = ((outTexel.y - i) < 0);
 			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.y - i;
 
-			result += gColorLine[idxColorLine] * WEIGHTS[i];
+			result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
 #endif
 		}
 

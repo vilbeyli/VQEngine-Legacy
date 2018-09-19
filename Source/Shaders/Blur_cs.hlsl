@@ -21,22 +21,18 @@ Texture2D<float4>   texColorIn;
 SamplerState        sSampler;
 
 // These are defined by the application compiling the shader
-//#define THREAD_GROUP_SIZE_X 512
-//#define THREAD_GROUP_SIZE_Y 512
+//#define THREAD_GROUP_SIZE_X 1024
+//#define THREAD_GROUP_SIZE_Y 1024
 //#define THREAD_GROUP_SIZE_Z 1
 
 
 #if VERTICAL
-#define COLOR_LINE_WIDTH IMAGE_SIZE_Y
+#define PIXEL_CACHE_SIZE    IMAGE_SIZE_Y
 #else
-#define COLOR_LINE_WIDTH IMAGE_SIZE_X
+#define PIXEL_CACHE_SIZE    IMAGE_SIZE_X
 #endif
 
-groupshared float4 gColorLine[COLOR_LINE_WIDTH];
-
-// gaussian kernel : src=https://learnopengl.com/#!Advanced-Lighting/Bloom
-const float WEIGHTS[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
-
+groupshared half4 gColorLine[PIXEL_CACHE_SIZE];
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
 void CSMain(
@@ -46,33 +42,30 @@ void CSMain(
 	uint  groupIndex  : SV_GroupIndex
 )
 {
+	// gaussian kernel : src=https://learnopengl.com/#!Advanced-Lighting/Bloom
+	const half WEIGHTS[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
+
+	// https://twvideo01.ubm-us.net/o1/vault/gdc09/slides/100_Handout%206.pdf
+
 	// READ INPUT TEXTURE AND SAVE INTO SHARED MEM
 	//
 	const uint TEXTURE_READ_COUNT = (uint) ceil(min(
-		  IMAGE_SIZE_X / THREAD_GROUP_SIZE_X
-		, IMAGE_SIZE_Y / THREAD_GROUP_SIZE_Y)) + 1;
+		  ((float)IMAGE_SIZE_X) / THREAD_GROUP_SIZE_X
+		, ((float)IMAGE_SIZE_Y) / THREAD_GROUP_SIZE_Y));
 
 	[unroll] for (uint i = 0; i < TEXTURE_READ_COUNT; ++i)
 	{
 #if VERTICAL
 		const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * i);
-		const int idxColorLine = outTexel.y;
+		const int idxColorLine = outTexel.y >= IMAGE_SIZE_Y ? IMAGE_SIZE_Y -1 : outTexel.y;
 #else
 		const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * i, 0);
-		const int idxColorLine = outTexel.x;
+		const int idxColorLine = outTexel.x >= IMAGE_SIZE_X ? IMAGE_SIZE_X - 1 : outTexel.x;
 #endif
 
-		// test color output ------------------------------------------------
-		// texColorOut[outTexel] = float4(
-		// 	color.x, 
-		// 	color.y, 
-		// 	((float)groupIndex) / (THREAD_GROUP_SIZE_X * THREAD_GROUP_SIZE_Y), 
-		// 	1).xzyw;
-		// test color output ------------------------------------------------
-
 		const float2 uv = float2(outTexel.xy) / float2(IMAGE_SIZE_X, IMAGE_SIZE_Y);
-		const float4 color = texColorIn.SampleLevel(sSampler, uv, 0);
-		
+		const half4 color = texColorIn.SampleLevel(sSampler, uv, 0);
+
 		gColorLine[idxColorLine] = color;
 	}
 
@@ -83,42 +76,48 @@ void CSMain(
 	GroupMemoryBarrierWithGroupSync();
 
 
-
 	// RUN THE HORIZONTAL/VERTICAL BLUR KERNEL
 	//
-
-
-	[unroll] for (uint i = 0; i < TEXTURE_READ_COUNT; ++i)
+	[unroll] for (uint px = 0; px < TEXTURE_READ_COUNT; ++px)
 	{
 #if VERTICAL
-		const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * i);
-		const int idxColorLine = outTexel.y;
+		const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * px);
+		int idxColorLine = outTexel.y;
 #else
-		const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * i, 0);
-		const int idxColorLine = outTexel.x;
+		const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px, 0);
+		int idxColorLine = outTexel.x;
 #endif
 
-		const float3 color = gColorLine[idxColorLine].xyz;
-		float3 result = color * 1.0f;//WEIGHTS[0];	// use first weight 
 
+		// use first weight 
+		half4 result = half4(gColorLine[idxColorLine].xyz * WEIGHTS[0], 1);
+
+		// and tap the next and previous pixels in increments
+		[unroll] for (int i = 1; i < 5; ++i)
+		{
 #if HORIZONTAL
-		for (int i = 1; i < 5; ++i)
-		{
-			//const float2 weighedOffset = float2(texOffset.x * i, 0.0f);
-			//result += InputTexture.Sample(BlurSampler, In.texCoord + weighedOffset).rgb * WEIGHTS[i];
-			//result += InputTexture.Sample(BlurSampler, In.texCoord - weighedOffset).rgb * WEIGHTS[i];
+			bool bKernelSampleOutOfBounds = ((outTexel.x + i) >= IMAGE_SIZE_X);
+			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x + i;
+			result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0.0f : WEIGHTS[i]);
+			
+			bKernelSampleOutOfBounds = ((outTexel.x - i) < 0);
+			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x - i;
 
-			//result += gColorLine[idxColorLine]
-		}
+			result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
 #endif
-		
+
 #if VERTICAL
-		for (int i = 1; i < 5; ++i)
-		{
-		}
+			bool bKernelSampleOutOfBounds = ((outTexel.y + i) >= IMAGE_SIZE_Y);
+			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.y + i;
+			result += gColorLine[idxColorLine] * WEIGHTS[i];
+
+			bKernelSampleOutOfBounds = ((outTexel.y - i) < 0);
+			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.y - i;
+
+			result += gColorLine[idxColorLine] * WEIGHTS[i];
 #endif
+		}
 
-
-		texColorOut[outTexel] = float4(result, 1.0f);
+		texColorOut[outTexel] = half4(result.xyz, 1.0f);
 	}
 }

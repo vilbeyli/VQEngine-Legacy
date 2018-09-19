@@ -349,6 +349,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	// a row or a column of pixels of the image so that each thread covers
 	// one pixel.
 	//
+	const int KERNEL_DIMENSION = 1024;
 	const ShaderDesc CSDescV =
 	{
 		"Blur_Compute_Vertical",
@@ -357,7 +358,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 			{ "IMAGE_SIZE_X", std::to_string(texDesc.width) },
 			{ "IMAGE_SIZE_Y", std::to_string(texDesc.height) },
 			{ "THREAD_GROUP_SIZE_X", "1" }, // max=1024
-			{ "THREAD_GROUP_SIZE_Y", "512"},
+			{ "THREAD_GROUP_SIZE_Y", std::to_string(KERNEL_DIMENSION) },
 			{ "THREAD_GROUP_SIZE_Z", "1"} }
 		}
 	};
@@ -368,8 +369,8 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 			{ "HORIZONTAL" , "1" },
 			{ "IMAGE_SIZE_X", std::to_string(texDesc.width) },
 			{ "IMAGE_SIZE_Y", std::to_string(texDesc.height) },
-			{ "THREAD_GROUP_SIZE_X", "512"},
-			{ "THREAD_GROUP_SIZE_Y", "1" }, // max=1024
+			{ "THREAD_GROUP_SIZE_X", std::to_string(KERNEL_DIMENSION) },
+			{ "THREAD_GROUP_SIZE_Y", "1" }, 
 			{ "THREAD_GROUP_SIZE_Z", "1"} }
 		}
 	};
@@ -396,7 +397,7 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 
 		//pCPU->BeginEntry("Bloom");
 		pRenderer->BeginEvent("Bloom");
-		pGPU->BeginEntry("Bloom");
+		pGPU->BeginEntry("Bloom Filter");
 
 		// bright filter
 		pRenderer->BeginEvent("Bright Filter");
@@ -411,10 +412,14 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 		pRenderer->Apply();
 		pRenderer->DrawIndexed();
 		pRenderer->EndEvent();
+		
+		pGPU->EndEntry();
 
 		// blur
 		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
 		const int BlurPassCount = sBloom.blurStrength * 2;	// 1 pass for Horizontal and Vertical each
+
+		pGPU->BeginEntry("Bloom Blur<PS>");
 		pRenderer->BeginEvent("Blur Pass");
 		pRenderer->SetShader(_bloomPass._blurShader, true);
 		for (int i = 0; i < BlurPassCount; ++i)
@@ -438,6 +443,9 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 		pRenderer->EndEvent();
 
 #if USE_COMPUTE_BLUR
+
+		pGPU->EndEntry();
+		pGPU->BeginEntry("Bloom Blur<CS>");
 		pRenderer->BeginEvent("Blur Compute Pass");
 		for (int i = 0; i < BlurPassCount; ++i)
 		{
@@ -446,10 +454,10 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 
 			//const int NUM_DIPATCH_CALLS = std::max();
 			const int DISPATCH_GROUP_Y = i % 2 == 0		// HORIZONTAL BLUR
-				? pRenderer->GetWindowDimensionsAsFloat2().y()
+				? static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().y())
 				: 1;
 			const int DISPATCH_GROUP_X = i % 2 != 0 
-				? pRenderer->GetWindowDimensionsAsFloat2().x()
+				? static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().x())
 				: 1;
 			const int DISPATCH_GROUP_Z = 1;
 
@@ -464,11 +472,14 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 			pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
 		}
 		pRenderer->EndEvent();
+		pGPU->EndEntry();
 #endif
 
 		// additive blend combine
 		const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._colorRT);
 		const TextureID bloomTex = pRenderer->GetRenderTargetTexture(_bloomPass._blurPingPong[0]);
+
+		pGPU->BeginEntry("Bloom Combine");
 		pRenderer->BeginEvent("Combine");
 		pRenderer->SetShader(_bloomPass._bloomCombineShader, true);
 		pRenderer->BindRenderTarget(_bloomPass._finalRT);

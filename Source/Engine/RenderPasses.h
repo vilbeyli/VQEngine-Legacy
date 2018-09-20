@@ -99,6 +99,10 @@ struct BloomPass : public RenderPass
 
 	std::array<ShaderID, 2>  blurComputeShaderPingPong;
 	std::array<TextureID, 2> blurComputeOutputPingPong;
+
+	ShaderID transpozeCompute;
+	ShaderID blurHorizontalTranspozeComputeShader;
+	TextureID texTransposedImage;
 };
 
 struct TonemappingCombinePass : public RenderPass

@@ -34,9 +34,10 @@
 
 
 
-#define USE_COMPUTE_PASS_UNIT_TEST 0
-#define USE_COMPUTE_SSAO           0
-#define USE_COMPUTE_BLUR           1
+#define USE_COMPUTE_PASS_UNIT_TEST   0
+#define USE_COMPUTE_SSAO             0
+#define USE_COMPUTE_BLUR             1
+#define USE_COMPUTE_BLUR_TRANSPOZE   1
 
 constexpr int DRAW_INSTANCED_COUNT_DEPTH_PASS = 256;
 
@@ -322,7 +323,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_tonemappingPass._finalRenderTarget = pRenderer->GetDefaultRenderTarget();
 
 	const ShaderDesc tonemappingShaderDesc = ShaderDesc{"Tonemapping",
-		ShaderStageDesc{ pFSQ_VS         , {} },
+		ShaderStageDesc{ pFSQ_VS              , {} },
 		ShaderStageDesc{ "Tonemapping_ps.hlsl", {} }
 	};
 	this->_tonemappingPass._toneMappingShader = pRenderer->CreateShader(tonemappingShaderDesc);
@@ -379,6 +380,40 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_bloomPass.blurComputeShaderPingPong[0] = pRenderer->CreateShader(CSDescH);
 	this->_bloomPass.blurComputeShaderPingPong[1] = pRenderer->CreateShader(CSDescV);
 #endif
+
+#if USE_COMPUTE_BLUR_TRANSPOZE
+#if !USE_COMPUTE_BLUR
+	const int KERNEL_DIMENSION = 1024;
+#endif
+	const ShaderDesc CSDescHTz =
+	{
+		"Blur_Compute_Transpoze",
+		ShaderStageDesc { "BlurTranspoze_cs.hlsl", {
+			{ "IMAGE_SIZE_X", std::to_string(texDesc.height) },
+			{ "IMAGE_SIZE_Y", std::to_string(texDesc.width) },
+			{ "THREAD_GROUP_SIZE_X", "1" }, // max=1024
+			{ "THREAD_GROUP_SIZE_Y", std::to_string(KERNEL_DIMENSION) },
+			{ "THREAD_GROUP_SIZE_Z", "1"},
+			{ "PASS_COUNT", std::to_string(_settings.bloom.blurStrength) } }
+		}
+	};
+	this->_bloomPass.blurHorizontalTranspozeComputeShader = pRenderer->CreateShader(CSDescHTz);
+
+	// Transpose Image Shader and Resource
+	const ShaderDesc CSDescTranspose =
+	{
+		"Transpose_Compute",
+		ShaderStageDesc { "Transpose_cs.hlsl", {} }
+	};
+	this->_bloomPass.transpozeCompute = pRenderer->CreateShader(CSDescTranspose);
+
+	texDesc = TextureDesc();
+	texDesc.usage = ETextureUsage::COMPUTE_RW_TEXTURE;
+	texDesc.height = pRenderer->WindowWidth(); 
+	texDesc.width  = pRenderer->WindowHeight();
+	texDesc.format = imageFormat;
+	this->_bloomPass.texTransposedImage = pRenderer->CreateTexture2D(texDesc);
+#endif
 }
 
 void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pCPU, GPUProfiler* pGPU) const
@@ -421,6 +456,7 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 		const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_bloomPass._brightRT);
 		const int BlurPassCount = sBloom.blurStrength * 2;	// 1 pass for Horizontal and Vertical each
 
+		// PIXEL_SHADER_BLUR // 1.84 ms 1080p
 		pGPU->BeginEntry("Bloom Blur<PS>");
 		pRenderer->BeginEvent("Blur Pass");
 		pRenderer->SetShader(_bloomPass._blurShader, true);
@@ -442,10 +478,10 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 			pRenderer->Apply();
 			pRenderer->DrawIndexed();
 		}
-		pRenderer->EndEvent();
+		pRenderer->EndEvent(); // PIXEL_SHADER_BLUR
+		
 
-#if USE_COMPUTE_BLUR
-
+#if USE_COMPUTE_BLUR // 1.10 ms 1080p
 		pGPU->EndEntry();
 		pGPU->BeginEntry("Bloom Blur<CS>");
 		pRenderer->BeginEvent("Blur Compute Pass");
@@ -476,6 +512,52 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 		pRenderer->EndEvent();
 		pGPU->EndEntry();
 #endif
+
+#if USE_COMPUTE_BLUR_TRANSPOZE // 0.74 ms 1080p
+		pGPU->BeginEntry("Bloom Blur<CS_T>");
+		pRenderer->BeginEvent("Blur Compute_Transpoze Pass");
+
+		// Horizontal Blur
+		//
+		int       DISPATCH_GROUP_X = 1;
+		int       DISPATCH_GROUP_Y = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().y());
+		const int DISPATCH_GROUP_Z = 1;
+		pRenderer->SetShader(this->_bloomPass.blurComputeShaderPingPong[0]);
+		pRenderer->SetTexture("texColorIn", brightTexture);
+		pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
+		pRenderer->SetUnorderedAccessTexture("texColorOut", this->_bloomPass.blurComputeOutputPingPong[0]);
+		pRenderer->Apply();
+		pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
+
+
+		// Transpoze
+		//
+		DISPATCH_GROUP_X = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().x() / 16);
+		DISPATCH_GROUP_Y = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().y() / 16);
+		pRenderer->SetShader(this->_bloomPass.transpozeCompute);
+		pRenderer->SetUnorderedAccessTexture("texImageIn", this->_bloomPass.blurComputeOutputPingPong[0]);
+		pRenderer->SetUnorderedAccessTexture("texTranspozeOut", this->_bloomPass.texTransposedImage);
+		pRenderer->Apply();
+		pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
+
+
+		// Horizontal Blur on Transpozed Image In ==> Transpoze Out
+		//
+		DISPATCH_GROUP_X = 1;
+		DISPATCH_GROUP_Y = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().x());
+		pRenderer->SetShader(this->_bloomPass.blurHorizontalTranspozeComputeShader);
+		pRenderer->SetTexture("texColorIn", this->_bloomPass.texTransposedImage);
+		pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
+		pRenderer->SetUnorderedAccessTexture("texColorOut", this->_bloomPass.blurComputeOutputPingPong[1]);
+		pRenderer->Apply();
+		pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
+
+
+		pRenderer->EndEvent();
+		pGPU->EndEntry();
+#endif
+
+
 
 		// additive blend combine
 		const TextureID colorTex = pRenderer->GetRenderTargetTexture(_bloomPass._colorRT);

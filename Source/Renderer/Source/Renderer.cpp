@@ -1387,9 +1387,8 @@ void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTex
 					case EShaderStage::CS:
 					{
 						ID3D11UnorderedAccessView* nullUAV[NumNullSRV] = { nullptr };
-						UINT UAVInitialCounts = 0;
 						m_deviceContext->CSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
-						m_deviceContext->CSSetUnorderedAccessViews(tex.bufferSlot, NumNullSRV, nullUAV, &UAVInitialCounts);
+						m_deviceContext->CSSetUnorderedAccessViews(tex.bufferSlot, NumNullSRV, nullUAV, nullptr);
 					}	break;
 					default:
 						break;
@@ -1428,7 +1427,6 @@ void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTex
 			}
 #endif
 
-#if 1
 			if (bUnbindRenderTargets)
 			{
 				ID3D11RenderTargetView* nullRTV[6] = { nullptr };
@@ -1436,11 +1434,6 @@ void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTex
 				m_deviceContext->OMSetRenderTargets(6, nullRTV, nullDSV);
 				UnbindRenderTargets();	// update the state to reflect the current OM
 			}
-#else
-			UnbindRenderTargets();
-			UnbindDepthTarget();
-			Apply();
-#endif
 
 			const float blendFactor[4] = { 1,1,1,1 };
 			m_deviceContext->OMSetBlendState(nullptr, blendFactor, 0xffffffff);

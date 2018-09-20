@@ -359,7 +359,8 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 			{ "IMAGE_SIZE_Y", std::to_string(texDesc.height) },
 			{ "THREAD_GROUP_SIZE_X", "1" }, // max=1024
 			{ "THREAD_GROUP_SIZE_Y", std::to_string(KERNEL_DIMENSION) },
-			{ "THREAD_GROUP_SIZE_Z", "1"} }
+			{ "THREAD_GROUP_SIZE_Z", "1"},
+			{ "PASS_COUNT", std::to_string(_settings.bloom.blurStrength) } }
 		}
 	};
 	const ShaderDesc CSDescH =
@@ -371,7 +372,8 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 			{ "IMAGE_SIZE_Y", std::to_string(texDesc.height) },
 			{ "THREAD_GROUP_SIZE_X", std::to_string(KERNEL_DIMENSION) },
 			{ "THREAD_GROUP_SIZE_Y", "1" }, 
-			{ "THREAD_GROUP_SIZE_Z", "1"} }
+			{ "THREAD_GROUP_SIZE_Z", "1"},
+			{ "PASS_COUNT", std::to_string(_settings.bloom.blurStrength) } }
 		}
 	};
 	this->_bloomPass.blurComputeShaderPingPong[0] = pRenderer->CreateShader(CSDescH);
@@ -447,7 +449,7 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 		pGPU->EndEntry();
 		pGPU->BeginEntry("Bloom Blur<CS>");
 		pRenderer->BeginEvent("Blur Compute Pass");
-		for (int i = 0; i < BlurPassCount; ++i)
+		for (int i = 0; i < 2; ++i)
 		{
 			const int INDEX_PING_PONG = i % 2;
 			const int INDEX_PING_PONG_OTHER = (i + 1) % 2;
@@ -493,7 +495,6 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 		//pCPU->EndEntry(); // bloom
 		pRenderer->EndEvent(); // bloom
 		pGPU->EndEntry(); // bloom
-
 	}
 
 

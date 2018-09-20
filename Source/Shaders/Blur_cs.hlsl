@@ -24,7 +24,7 @@ SamplerState        sSampler;
 //#define THREAD_GROUP_SIZE_X 1024
 //#define THREAD_GROUP_SIZE_Y 1024
 //#define THREAD_GROUP_SIZE_Z 1
-
+//#define PASS_COUNT 6
 
 #if VERTICAL
 #define PIXEL_CACHE_SIZE    IMAGE_SIZE_Y
@@ -32,7 +32,7 @@ SamplerState        sSampler;
 #define PIXEL_CACHE_SIZE    IMAGE_SIZE_X
 #endif
 
-groupshared half4 gColorLine[PIXEL_CACHE_SIZE];
+groupshared half3 gColorLine[PIXEL_CACHE_SIZE];
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
 void CSMain(
@@ -42,13 +42,13 @@ void CSMain(
 	uint  groupIndex  : SV_GroupIndex
 )
 {
-	// gaussian kernel : src=https://learnopengl.com/#!Advanced-Lighting/Bloom
-	//
+	// gaussian kernel : src
+	// https://learnopengl.com/#!Advanced-Lighting/Bloom
+	// https://twvideo01.ubm-us.net/o1/vault/gdc09/slides/100_Handout%206.pdf
 	const half WEIGHTS[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
 	// 	0.053514	0.045235	0.027318	0.011785	0.003631	0.000799	0.000125	0.000014	0.000001	0
 
 
-	// https://twvideo01.ubm-us.net/o1/vault/gdc09/slides/100_Handout%206.pdf
 
 	// READ INPUT TEXTURE AND SAVE INTO SHARED MEM
 	//
@@ -58,69 +58,99 @@ void CSMain(
 
 	[unroll] for (uint i = 0; i < TEXTURE_READ_COUNT; ++i)
 	{
+
 #if VERTICAL
 		const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * i);
-		const int idxColorLine = outTexel.y >= IMAGE_SIZE_Y ? IMAGE_SIZE_Y -1 : outTexel.y;
+		if (outTexel.y >= IMAGE_SIZE_Y)
+			break;
+		const int idxColorLine = outTexel.y;
 #else
 		const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * i, 0);
-		const int idxColorLine = outTexel.x >= IMAGE_SIZE_X ? IMAGE_SIZE_X - 1 : outTexel.x;
+		if (outTexel.x >= IMAGE_SIZE_X)
+			break;
+		const int idxColorLine = outTexel.x;
 #endif
 
 		const float2 uv = float2(outTexel.xy) / float2(IMAGE_SIZE_X, IMAGE_SIZE_Y);
 		const half4 color = texColorIn.SampleLevel(sSampler, uv, 0);
 
-		gColorLine[idxColorLine] = color;
+		gColorLine[idxColorLine] = color.xyz;
+		texColorOut[outTexel] = float4(0, 0, 0, 1);
 	}
 
 
 
-	// SYNC UP SHARED-MEM SO IT'S READY TO READ
-	//
-	GroupMemoryBarrierWithGroupSync();
-
-
 	// RUN THE HORIZONTAL/VERTICAL BLUR KERNEL
 	//
-	[unroll] for (uint px = 0; px < TEXTURE_READ_COUNT; ++px)
+	[unroll] for(uint passCount=0; passCount< PASS_COUNT; ++passCount)
 	{
-#if VERTICAL
-		const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * px);
-		int idxColorLine = outTexel.y;
-#else
-		const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px, 0);
-		int idxColorLine = outTexel.x;
-#endif
+		// SYNC UP SHARED-MEM SO IT'S READY TO READ
+		//
+		GroupMemoryBarrierWithGroupSync();
 
 
-		// use first weight 
-		half4 result = half4(gColorLine[idxColorLine].xyz * WEIGHTS[0], 1);
-
-		// and tap the next and previous pixels in increments
-		[unroll] for (int i = 1; i < 5; ++i)
+		// BLUR
+		//
+		[unroll] for (uint px = 0; px < TEXTURE_READ_COUNT; ++px)
 		{
-#if HORIZONTAL
-			bool bKernelSampleOutOfBounds = ((outTexel.x + i) >= IMAGE_SIZE_X);
-			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x + i;
-			result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0.0f : WEIGHTS[i]);
-			
-			bKernelSampleOutOfBounds = ((outTexel.x - i) < 0);
-			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x - i;
+	#if VERTICAL
+			const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * px);
+			int idxColorLine = outTexel.y;
+	#else
+			const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px, 0);
+			int idxColorLine = outTexel.x;
+	#endif
 
-			result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
-#endif
+			// use first weight 
+			half3 result = gColorLine[idxColorLine] * WEIGHTS[0];
 
+			// and tap the next and previous pixels in increments
+			[unroll] for (int i = 1; i < 5; ++i)
+			{
+	#if HORIZONTAL
+				bool bKernelSampleOutOfBounds = ((outTexel.x + i) >= IMAGE_SIZE_X);
+				idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x + i;
+				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0.0f : WEIGHTS[i]);
+
+				bKernelSampleOutOfBounds = ((outTexel.x - i) < 0);
+				idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x - i;
+
+				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
+	#endif
+
+	#if VERTICAL
+				bool bKernelSampleOutOfBounds = ((outTexel.y + i) >= IMAGE_SIZE_Y);
+				idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.y + i;
+				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
+
+				bKernelSampleOutOfBounds = ((outTexel.y - i) < 0);
+				idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.y - i;
+
+				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
+	#endif
+			}
+
+			// save the blurred pixel value
+			texColorOut[outTexel] = half4(result, 0.0f);
+		}
+		if (passCount == PASS_COUNT - 1) break;
+
+
+		// UPDATE LDS
+		//
+		GroupMemoryBarrierWithGroupSync();
+
+		[unroll] for (uint px = 0; px < TEXTURE_READ_COUNT; ++px)
+		{
 #if VERTICAL
-			bool bKernelSampleOutOfBounds = ((outTexel.y + i) >= IMAGE_SIZE_Y);
-			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.y + i;
-			result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
-
-			bKernelSampleOutOfBounds = ((outTexel.y - i) < 0);
-			idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.y - i;
-
-			result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
+			const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * px);
+			int idxColorLine = outTexel.y;
+#else
+			const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px, 0);
+			int idxColorLine = outTexel.x;
 #endif
+			gColorLine[idxColorLine] = texColorOut[outTexel].xyz;
 		}
 
-		texColorOut[outTexel] = half4(result.xyz, 1.0f);
 	}
 }

@@ -44,7 +44,6 @@ class Renderer
 {
 	friend class Engine;		
 	friend class SceneManager;
-	friend class Shader;		// shader load/unload
 
 	friend struct SetTextureCommand;
 	friend struct SetSamplerCommand;	// todo: refactor commands - don't use friend for commands
@@ -58,7 +57,7 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	bool					Initialize(HWND hwnd, const Settings::Window& settings);
 	void					Exit();
-	inline void				ReloadShaders() { Shader::UnloadShaders(this); Shader::LoadShaders(this); }
+	void					ReloadShaders();
 
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS

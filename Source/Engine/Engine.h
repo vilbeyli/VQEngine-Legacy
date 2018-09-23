@@ -122,6 +122,7 @@ private:
 
 	bool LoadSceneFromFile();
 	bool LoadScene(int level);
+	bool LoadShaders();
 	bool ReloadScene();
 
 	void CalcFrameStats(float dt);
@@ -175,6 +176,7 @@ private:
 	int								mCurrentLevel;
 
 	bool							mbUsePaniniProjection;//(UNUSED)
+	std::vector<ShaderID>			mBuiltinShaders;
 	std::vector<Mesh>				mBuiltinMeshes;
 	std::vector<TextureID>			mLoadingScreenTextures;
 

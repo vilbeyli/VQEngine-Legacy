@@ -131,6 +131,9 @@ class Shader
 	friend class Renderer;
 
 	using ShaderArray = std::array<ShaderID, EShaders::SHADER_COUNT>;
+	using ShaderTextureLookup = std::unordered_map<std::string, int>;
+	using ShaderSamplerLookup = std::unordered_map<std::string, int>;
+	using ShaderDirectoryLookup = std::unordered_map<EShaderStage, std::string>;
 
 public:
 	//----------------------------------------------------------------------------------------------------------------
@@ -175,22 +178,23 @@ public:
 		EShaderStage								stage;
 		unsigned									bufSlot;
 	};
+	struct ShaderStages
+	{
+		ID3D11VertexShader*    mVertexShader   = nullptr;
+		ID3D11PixelShader*     mPixelShader    = nullptr;
+		ID3D11GeometryShader*  mGeometryShader = nullptr;
+		ID3D11HullShader*      mHullShader     = nullptr;
+		ID3D11DomainShader*    mDomainShader   = nullptr;
+		ID3D11ComputeShader*   mComputeShader  = nullptr;
 
-public:
-	//----------------------------------------------------------------------------------------------------------------
-	// STATIC INTERFACE
-	//----------------------------------------------------------------------------------------------------------------
-	static const ShaderArray&		Get() { return s_shaders; }
-	static void						LoadShaders(Renderer* pRenderer);
-	static std::stack<std::string>	UnloadShaders(Renderer* pRenderer);
-	static bool						IsForwardPassShader(ShaderID shader);
+		ShaderDirectoryLookup mDirectories;
+	};
 
 public:
 	//----------------------------------------------------------------------------------------------------------------
 	// MEMBER INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
 	Shader(const ShaderDesc& desc);
-
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
@@ -205,8 +209,8 @@ public:
 	const std::vector<ConstantBufferLayout>&	GetConstantBufferLayouts() const;
 	const std::vector<ConstantBuffer>&			GetConstantBuffers() const;
 	
-	const ShaderTexture&						GetTextureBinding(const std::string& textureName) const;
-	const ShaderSampler&						GetSamplerBinding(const std::string& samplerName) const;
+	const ShaderTexture& GetTextureBinding(const std::string& textureName) const;
+	const ShaderSampler& GetSamplerBinding(const std::string& samplerName) const;
 	bool HasTextureBinding(const std::string& textureName) const;
 	bool HasSamplerBinding(const std::string& samplerName) const;
 
@@ -217,10 +221,10 @@ private:
 	// Compiles shader from source file with the given shader macros
 	//
 	static bool CompileFromSource(
-		const std::string& pathToFile
-		, const EShaderStage& type
-		, ID3D10Blob *& ref_pBob
-		, std::string& outErrMsg
+		  const std::string&              pathToFile
+		, const EShaderStage&             type
+		, ID3D10Blob *&                   ref_pBob
+		, std::string&                    outErrMsg
 		, const std::vector<ShaderMacro>& macros);
 	
 	// Reads in cached binary from %APPDATA%/VQEngine/ShaderCache folder into ID3D10Blob 
@@ -236,48 +240,38 @@ private:
 	static EShaderStage	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
 
 	//----------------------------------------------------------------------------------------------------------------
-	// HELPER FUNCTIONS
+	// UTILITY FUNCTIONS
 	//----------------------------------------------------------------------------------------------------------------
-	void RegisterConstantBufferLayout(ID3D11ShaderReflection * sRefl, EShaderStage type);
+	void ReflectConstantBufferLayouts(ID3D11ShaderReflection * sRefl, EShaderStage type);
 	void CompileShaders(ID3D11Device* device, const ShaderDesc& desc);
 	void SetReflections(const ShaderBlobs& blobs);
-	void CreateShader(ID3D11Device* pDevice, EShaderStage type, void* pBuffer, const size_t szShaderBinary);
-	void SetConstantBuffers(ID3D11Device* device);
+	void CreateShaderStage(ID3D11Device* pDevice, EShaderStage stage, void* pBuffer, const size_t szShaderBinary);
+	void CreateConstantBuffers(ID3D11Device* device);
 	void CheckSignatures();
-	
-
 	void LogConstantBufferLayouts() const;
 
 private:
 	//----------------------------------------------------------------------------------------------------------------
 	// DATA
 	//----------------------------------------------------------------------------------------------------------------
-	static ShaderArray s_shaders;
-	static std::string s_shaderCacheDirectory;
+	ShaderID mID;
+	ShaderStages mStages;
 
-	const std::string					m_name;
-	std::vector<ConstantBuffer>			m_cBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx
-	ShaderID							m_id;
+	ShaderReflections	mReflections;	// shader reflections, temporary?
+	ID3D11InputLayout*	mpInputLayout = nullptr;
 
-	ID3D11VertexShader*					m_vertexShader   = nullptr;
-	ID3D11PixelShader*					m_pixelShader    = nullptr;
-	ID3D11GeometryShader*				m_geometryShader = nullptr;
-	ID3D11HullShader*					m_hullShader     = nullptr;
-	ID3D11DomainShader*					m_domainShader   = nullptr;
-	ID3D11ComputeShader*				m_computeShader  = nullptr;
-	ShaderReflections					m_shaderReflections;	// shader reflections, temporary?
+	std::string	mName;
 
-	ID3D11InputLayout*					m_layout = nullptr;
+	std::vector<ConstantBuffer>	mConstantBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx
+	std::vector<ConstantBufferLayout>  m_CBLayouts;
+	std::vector<ConstantBufferMapping> m_constants;
+	std::vector<ConstantBufferMapping> m_constantsUnsorted;	// duplicate data...
 
-	std::vector<ConstantBufferLayout>	m_CBLayouts;
-	std::vector<ConstantBufferMapping>	m_constants;
-	std::vector<ConstantBufferMapping>	m_constantsUnsorted;	// duplicate data...
-
-	std::vector<ShaderTexture>			m_textures;
-	std::vector<ShaderSampler>			m_samplers;
+	std::vector<ShaderTexture> mTextureBindings;
+	std::vector<ShaderSampler> mSamplerBindings;
 	
-	using ShaderTextureLookup = std::unordered_map<std::string, int>;
-	using ShaderSamplerLookup = std::unordered_map<std::string, int>;
-	ShaderTextureLookup					mShaderTextureLookup;
-	ShaderSamplerLookup					mShaderSamplerLookup;
+	ShaderTextureLookup mShaderTextureLookup;
+	ShaderSamplerLookup mShaderSamplerLookup;
+
+	ShaderDesc mDescriptor;	// used for shader reloading
 };

@@ -40,6 +40,7 @@
 #define xLOG_WINDOW_EVENTS
 
 std::string Application::s_WorkspaceDirectory = "";
+std::string Application::s_ShaderCacheDirectory = "";
 
 Application::Application()
 	:

@@ -463,11 +463,8 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	depthStencilDesc.StencilEnable = true;
 	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_TEST_ONLY]);
 	if (!checkFailed(hr)) return false;
-
-	// SHADERS
-	//--------------------------------------------------------------------
-	Shader::LoadShaders(this);
-	m_Direct3D->ReportLiveObjects("Shader loaded");
+	
+	//m_Direct3D->ReportLiveObjects("Shader loaded");
 
 	return true;
 }
@@ -486,7 +483,13 @@ void Renderer::Exit()
 
 	CPUConstant::CleanUp();	// todo: move constant buffer logic into Buffer
 	
-	Shader::UnloadShaders(this);
+	// Unload shaders
+	for (Shader*& shd : mShaders)
+	{
+		delete shd;
+		shd = nullptr;
+	}
+	mShaders.clear();
 
 	for (Texture& tex : mTextures)
 	{
@@ -569,6 +572,18 @@ void Renderer::Exit()
 	Log::Info("---------------------------");
 }
 
+void Renderer::ReloadShaders()
+{
+	for (Shader* pShader : mShaders)
+	{
+		Shader* pReloadedShader = new Shader(pShader->mDescriptor);
+		pReloadedShader->mID = pShader->ID();
+		delete pShader;
+		pReloadedShader->CompileShaders(m_device, pReloadedShader->mDescriptor);
+		mShaders[pReloadedShader->mID] = pReloadedShader;
+	}
+}
+
 float	 Renderer::AspectRatio()	const { return m_Direct3D->AspectRatio(); };
 unsigned Renderer::WindowHeight()	const { return m_Direct3D->WindowHeight(); };
 unsigned Renderer::WindowWidth()	const { return m_Direct3D->WindowWidth(); }
@@ -594,7 +609,7 @@ ShaderID Renderer::CreateShader(const ShaderDesc& shaderDesc)
 	shader->CompileShaders(m_device, shaderDesc);
 
 	mShaders.push_back(shader);
-	shader->m_id = (static_cast<int>(mShaders.size()) - 1);
+	shader->mID = (static_cast<int>(mShaders.size()) - 1);
 	return shader->ID();
 }
 
@@ -1206,23 +1221,6 @@ BlendStateID Renderer::AddBlendState()
 	return static_cast<BlendStateID>(mBlendStates.size() - 1);
 }
 
-#if 0
-RenderTargetID Renderer::AddRenderTarget(D3D11_TEXTURE2D_DESC & RTTextureDesc, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
-{
-	RenderTarget newRenderTarget;
-	newRenderTarget.texture = GetTextureObject(CreateTexture2D(RTTextureDesc, true));
-	HRESULT hr = m_device->CreateRenderTargetView(newRenderTarget.texture._tex2D, &RTVDesc, &newRenderTarget.pRenderTargetView);
-	if (!SUCCEEDED(hr))
-	{
-		Log::Error("Render Target View");
-		return -1;
-	}
-
-	mRenderTargets.push_back(newRenderTarget);
-	return static_cast<int>(mRenderTargets.size() - 1);
-}
-#endif
-
 RenderTargetID Renderer::AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc)
 {
 	RenderTarget newRenderTarget;
@@ -1340,7 +1338,7 @@ void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTex
 			// nullify texture units 
 			if (bUnbindTextures)
 			{
-				for (ShaderTexture& tex : shader->m_textures)
+				for (ShaderTexture& tex : shader->mTextureBindings)
 				{
 					constexpr UINT NumNullSRV = 12;
 					ID3D11ShaderResourceView* nullSRV[NumNullSRV] = { nullptr };
@@ -1494,7 +1492,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 		{
 			found = true;
 			memcpy(c._data, data, c._size);
-			shader->m_cBuffers[GPUcBufferSlot].dirty = true;
+			shader->mConstantBuffers[GPUcBufferSlot].dirty = true;
 			break;	// ensures write on first occurrence
 		}
 	}
@@ -1591,7 +1589,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 	if (memcmp(c._data, data, c._size) != 0)	// copy data if its not the same
 	{
 		memcpy(c._data, data, c._size);
-		shader->m_cBuffers[GPUcBufferSlot].dirty = true;
+		shader->mConstantBuffers[GPUcBufferSlot].dirty = true;
 	}
 #endif
 
@@ -1873,13 +1871,13 @@ void Renderer::Apply()
 	if (bShaderChanged)
 	{
 		ID3D11ClassInstance *const * pClassInstance = nullptr;
-		m_deviceContext->IASetInputLayout(shader->m_layout);
-		m_deviceContext->VSSetShader(shader->m_vertexShader   , pClassInstance, 0);
-		m_deviceContext->PSSetShader(shader->m_pixelShader    , pClassInstance, 0);
-		m_deviceContext->GSSetShader(shader->m_geometryShader , pClassInstance, 0);
-		m_deviceContext->HSSetShader(shader->m_hullShader     , pClassInstance, 0);
-		m_deviceContext->DSSetShader(shader->m_domainShader   , pClassInstance, 0);
-		m_deviceContext->CSSetShader(shader->m_computeShader  , pClassInstance, 0);
+		m_deviceContext->IASetInputLayout(shader->mpInputLayout);
+		m_deviceContext->VSSetShader(shader->mStages.mVertexShader   , pClassInstance, 0);
+		m_deviceContext->PSSetShader(shader->mStages.mPixelShader    , pClassInstance, 0);
+		m_deviceContext->GSSetShader(shader->mStages.mGeometryShader , pClassInstance, 0);
+		m_deviceContext->HSSetShader(shader->mStages.mHullShader     , pClassInstance, 0);
+		m_deviceContext->DSSetShader(shader->mStages.mDomainShader   , pClassInstance, 0);
+		m_deviceContext->CSSetShader(shader->mStages.mComputeShader  , pClassInstance, 0);
 	}
 
 

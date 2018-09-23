@@ -32,31 +32,32 @@ cbuffer constants
 	int textureHeight;
 };
 
+// gaussian kernel : src=https://learnopengl.com/#!Advanced-Lighting/Bloom
 float4 PSMain(PSIn In) : SV_TARGET
 {
+	#include "GaussianKernels.hlsl"
+
 	const float4 color = InputTexture.Sample(BlurSampler, In.texCoord);
 	const float2 texOffset = float2(1.0f, 1.0f) / float2(textureWidth, textureHeight);
 	
-	// gaussian kernel : src=https://learnopengl.com/#!Advanced-Lighting/Bloom
-	const float weight[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
-	
-	float3 result = weight[0] * color;	// use first weight 
+	int kernelOffset = 0;
+	float3 result = KERNEL_WEIGHTS[kernelOffset] * color;	// use first weight 
 	if(isHorizontal)
 	{
-		for (int i = 1; i < 5; ++i)
+		[unroll] for (kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
 		{
-			const float2 weighedOffset = float2(texOffset.x * i, 0.0f);
-			result += InputTexture.Sample(BlurSampler, In.texCoord + weighedOffset).rgb * weight[i];
-			result += InputTexture.Sample(BlurSampler, In.texCoord - weighedOffset).rgb * weight[i];
+			const float2 weighedOffset = float2(texOffset.x * kernelOffset, 0.0f);
+			result += InputTexture.Sample(BlurSampler, In.texCoord + weighedOffset).rgb * KERNEL_WEIGHTS[kernelOffset];
+			result += InputTexture.Sample(BlurSampler, In.texCoord - weighedOffset).rgb * KERNEL_WEIGHTS[kernelOffset];
 		}
 	}
 	else
 	{
-		for (int i = 1; i < 5; ++i)
+		[unroll] for (kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
 		{
-			const float2 weighedOffset = float2(0.0f, texOffset.y * i);
-			result += InputTexture.Sample(BlurSampler, In.texCoord + weighedOffset).rgb * weight[i];
-			result += InputTexture.Sample(BlurSampler, In.texCoord - weighedOffset).rgb * weight[i];
+			const float2 weighedOffset = float2(0.0f, texOffset.y * kernelOffset);
+			result += InputTexture.Sample(BlurSampler, In.texCoord + weighedOffset).rgb * KERNEL_WEIGHTS[kernelOffset];
+			result += InputTexture.Sample(BlurSampler, In.texCoord - weighedOffset).rgb * KERNEL_WEIGHTS[kernelOffset];
 		}
 	}
 

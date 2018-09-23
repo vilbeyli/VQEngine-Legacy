@@ -390,7 +390,9 @@ void GPUProfiler::BeginEntry(const std::string & tag)
 		}
 		else
 		{	// rest of the nodes
-			mState.pLastEntryNode = mQueryDataTree.AddChild(*mState.pLastEntryNode, pCurrentPerfEntry);
+			mState.pLastEntryNode = mQueryDataTree.AddChild(
+				mState.pLastEntryNode == nullptr ? *mQueryDataTree.FindNode(pParentPerfEntry) : *mState.pLastEntryNode
+				, pCurrentPerfEntry);
 		}
 
 		D3D11_QUERY_DESC queryDesc = {};
@@ -416,7 +418,7 @@ void GPUProfiler::EndEntry()
 
 	mpContext->End(mFrameQueries.at(tag).pTimestampQueryEnd[bufferIndex]);
 
-	if (mState.pLastEntryNode && mState.pLastEntryNode->pParent)
+	if (mState.pLastEntryNode)
 		mState.pLastEntryNode = mState.pLastEntryNode->pParent;
 }
 

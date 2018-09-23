@@ -38,14 +38,16 @@ class Camera;
 class Renderer;
 class GameObject;
 class Scene;
+class GPUProfiler;
+class CPUProfiler;
+
 struct Light;
 struct DirectionalLight;
 struct ID3D11Device;
-class GPUProfiler;
 struct SceneLightingData;
 struct ShadowView;
 struct SceneView;
-
+struct RenderTargetDesc;
 
 struct RenderPass
 {
@@ -79,6 +81,15 @@ struct ShadowMapPass : public RenderPass
 
 struct BloomPass : public RenderPass
 {
+	enum BloomShader : int
+	{
+		PS_1DKernel_MultiPsss = 0,
+		CS_1DKernel_MultiPsss,
+		CS_Transpoze_1DKernel_MultiPsss,
+
+		NUM_BLOOM_SHADERS
+	};
+
 	BloomPass() : 
 		_blurSampler(-1), 
 		_colorRT(-1), 
@@ -100,9 +111,14 @@ struct BloomPass : public RenderPass
 	std::array<ShaderID, 2>  blurComputeShaderPingPong;
 	std::array<TextureID, 2> blurComputeOutputPingPong;
 
-	ShaderID transpozeCompute;
-	ShaderID blurHorizontalTranspozeComputeShader;
+	ShaderID  transpozeCompute;
+	ShaderID  blurHorizontalTranspozeComputeShader;
 	TextureID texTransposedImage;
+
+	BloomShader mSelectedBloomShader;
+
+	void Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSettings, const RenderTargetDesc& rtDesc);
+	void Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU, RenderTargetID rtDestination, const Settings::Bloom& settings) const;
 };
 
 struct TonemappingCombinePass : public RenderPass
@@ -111,17 +127,15 @@ struct TonemappingCombinePass : public RenderPass
 	ShaderID		_toneMappingShader;
 };
 
-class CPUProfiler;
-class GPUProfiler;
 struct PostProcessPass : public RenderPass
 {
 	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
 	void Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pCPU, GPUProfiler* pGPU) const;
 
-	RenderTargetID				_worldRenderTarget;
-	BloomPass					_bloomPass;
-	TonemappingCombinePass		_tonemappingPass;
-	Settings::PostProcess		_settings;
+	RenderTargetID			_worldRenderTarget;
+	BloomPass				_bloomPass;
+	TonemappingCombinePass	_tonemappingPass;
+	Settings::PostProcess	_settings;
 };
 
 struct GBuffer
@@ -232,6 +246,7 @@ struct DebugPass : public RenderPass
 //
 // wheel up/down		:	brightness threshold +/-
 // shift+ wheel up/down	:	blur strength +/-
+// ctrl + wheel up/down :	shader selection +/-
 //
 
 //--------------------------------------------------------------------------------------------
@@ -262,13 +277,6 @@ struct AmbientOcclusionPass : public RenderPass
 	BufferID UABuffer;
 	TextureID RWTex2D;
 	// Compute Shader Unit Test ---------------------------
-
-
-	// Compute SSAO ---------------------------------------
-	ShaderID ssaoComputeShader;
-	TextureID texSSAOComputeOutput;
-
-	// Compute SSAO ---------------------------------------
 
 #if SSAO_DEBUGGING
 	float radius;		

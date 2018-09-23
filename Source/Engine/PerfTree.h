@@ -72,6 +72,10 @@ public:
 	//
 	const TreeNode<T>* FindNode(const std::string& tag) const;
 
+	// Finds the TreeNode given address of the TreeNode's data.
+	//
+	TreeNode<T>* FindNode(const T* pData);
+
 	// Removes all the nodes from the tree
 	//
 	void Clear();
@@ -98,13 +102,10 @@ public:
 
 
 private:
-	// Finds the TreeNode given address of the TreeNode's data.
-	//
-	TreeNode<T>* FindNode(const T* pData) const;
 
 	// searches among children | depth first, returns nullptr if not found
 	//
-	TreeNode<T>* SearchSubTree(const TreeNode<T>& node, const T* pSearchEntry) const;
+	TreeNode<T>* SearchSubTree(const TreeNode<T>& node, const T* pSearchEntry);
 	const TreeNode<T>* SearchSubTree(const TreeNode<T>& node, const std::string& tag) const;
 
 	size_t RenderSubTree(
@@ -219,7 +220,7 @@ inline size_t Tree<T>::RenderTree(TextRenderer * pTextRenderer, const vec2 & scr
 }
 
 template<class T>
-inline TreeNode<T>* Tree<T>::FindNode(const T * pData) const
+inline TreeNode<T>* Tree<T>::FindNode(const T * pData)
 {
 	if (root.pData == pData) return &root;
 	return SearchSubTree(root, pData);
@@ -238,7 +239,7 @@ inline const TreeNode<T>* Tree<T>::FindNode(const std::string& tag) const
 
 
 template<class T>
-inline TreeNode<T>* Tree<T>::SearchSubTree(const TreeNode<T>& node, const T * pSearchEntry) const
+inline TreeNode<T>* Tree<T>::SearchSubTree(const TreeNode<T>& node, const T * pSearchEntry)
 {
 	TreeNode<T>* pSearchResult = nullptr;
 

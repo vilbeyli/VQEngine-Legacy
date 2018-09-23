@@ -42,7 +42,7 @@ void CSMain(
 	// gaussian kernel : src
 	// https://learnopengl.com/#!Advanced-Lighting/Bloom
 	// https://twvideo01.ubm-us.net/o1/vault/gdc09/slides/100_Handout%206.pdf
-	const half WEIGHTS[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
+	const half KERNEL_WEIGHTS[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
 	// 	0.053514	0.045235	0.027318	0.011785	0.003631	0.000799	0.000125	0.000014	0.000001	0
 
 
@@ -64,11 +64,11 @@ void CSMain(
 		const half4 color = texColorIn.SampleLevel(sSampler, uv, 0);
 
 		gColorLine[idxColorLine] = color.xyz;
-		texColorOut[outTexel] = float4(0, 0, 0, 1);
+		texColorOut[outTexel.yx] = float4(0, 0, 0, 1);
 	}
 
 
-
+#if 1
 	// RUN THE HORIZONTAL/VERTICAL BLUR KERNEL
 	//
 	[unroll] for (uint passCount = 0; passCount < PASS_COUNT; ++passCount)
@@ -86,7 +86,7 @@ void CSMain(
 			int idxColorLine = outTexel.x;
 
 			// use first weight 
-			half3 result = gColorLine[idxColorLine] * WEIGHTS[0];
+			half3 result = gColorLine[idxColorLine] * KERNEL_WEIGHTS[0];
 
 			// and tap the next and previous pixels in increments
 			[unroll] for (int i = 1; i < 5; ++i)
@@ -94,12 +94,12 @@ void CSMain(
 #if HORIZONTAL
 				bool bKernelSampleOutOfBounds = ((outTexel.x + i) >= IMAGE_SIZE_X);
 				idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x + i;
-				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0.0f : WEIGHTS[i]);
+				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0.0f : KERNEL_WEIGHTS[i]);
 
 				bKernelSampleOutOfBounds = ((outTexel.x - i) < 0);
 				idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x - i;
 
-				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : WEIGHTS[i]);
+				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : KERNEL_WEIGHTS[i]);
 #endif
 
 			}
@@ -123,4 +123,5 @@ void CSMain(
 		}
 
 	}
+#endif
 }

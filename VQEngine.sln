@@ -39,6 +39,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Source\Shaders\Forward_Phong_vs.hlsl = Source\Shaders\Forward_Phong_vs.hlsl
 		Source\Shaders\FullScreenQuad_vs.hlsl = Source\Shaders\FullScreenQuad_vs.hlsl
 		Source\Shaders\GaussianBlur4x4_ps.hlsl = Source\Shaders\GaussianBlur4x4_ps.hlsl
+		Source\Shaders\GaussianKernels.hlsl = Source\Shaders\GaussianKernels.hlsl
 		Source\Shaders\IntegrateBRDF_IBL_ps.hlsl = Source\Shaders\IntegrateBRDF_IBL_ps.hlsl
 		Source\Shaders\LightingCommon.hlsl = Source\Shaders\LightingCommon.hlsl
 		Source\Shaders\Line_gs.hlsl = Source\Shaders\Line_gs.hlsl

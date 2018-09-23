@@ -631,10 +631,20 @@ void Engine::HandleInput()
 			const float step = 0.05f;
 			const float threshold_hi = 3.0f;
 			const float threshold_lo = 0.05f;
-			if (mpInput->IsScrollUp()   && !mpInput->IsKeyDown("Shift")) { threshold += step; if (threshold > threshold_hi) threshold = threshold_hi; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
-			if (mpInput->IsScrollDown() && !mpInput->IsKeyDown("Shift")) { threshold -= step; if (threshold < threshold_lo) threshold = threshold_lo; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+			if (mpInput->IsScrollUp()   && !mpInput->IsKeyDown("Shift") && !mpInput->IsKeyDown("Ctrl")) { threshold += step; if (threshold > threshold_hi) threshold = threshold_hi; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+			if (mpInput->IsScrollDown() && !mpInput->IsKeyDown("Shift") && !mpInput->IsKeyDown("Ctrl")) { threshold -= step; if (threshold < threshold_lo) threshold = threshold_lo; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
 			if (mpInput->IsScrollUp()   && mpInput->IsKeyDown("Shift"))  { blurStrength += 1; Log::Info("Bloom Blur Strength = %d", blurStrength);}
 			if (mpInput->IsScrollDown() && mpInput->IsKeyDown("Shift"))  { blurStrength -= 1; if (blurStrength == 0) blurStrength = 1; Log::Info("Bloom Blur Strength = %d", blurStrength); }
+			if ((mpInput->IsScrollDown() || mpInput->IsScrollUp()) && mpInput->IsKeyDown("Ctrl"))   
+			{ 
+				const int direction = mpInput->IsScrollDown() ? -1 : +1;
+				int nextShader = mPostProcessPass._bloomPass.mSelectedBloomShader + direction;
+				if (nextShader < 0)
+					nextShader = BloomPass::BloomShader::NUM_BLOOM_SHADERS - 1;
+				if (nextShader == BloomPass::BloomShader::NUM_BLOOM_SHADERS)
+					nextShader = 0;
+				mPostProcessPass._bloomPass.mSelectedBloomShader = static_cast<BloomPass::BloomShader>(nextShader);
+			}
 		}
 #endif
 
@@ -1084,16 +1094,6 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			? white4x4 
 			: mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
 
-#if 0
-		TextureID tComputeOutput = mSSAOPass.RWTex2D <= 0
-			? white4x4
-			: mSSAOPass.RWTex2D;
-#else
-		TextureID tComputeOutput = mSSAOPass.texSSAOComputeOutput <= 0
-			? white4x4 
-			: mSSAOPass.texSSAOComputeOutput;
-#endif
-
 		const std::vector<DrawQuadOnScreenCommand> quadCmds = [&]() 
 		{
 			// first row -----------------------------------------
@@ -1106,7 +1106,6 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false },
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false },
-			//{ fullscreenTextureScaledDownSize,	screenPosition,			tComputeOutput			, true },
 			{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)

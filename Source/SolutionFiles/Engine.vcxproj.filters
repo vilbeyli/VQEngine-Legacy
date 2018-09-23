@@ -122,5 +122,14 @@
     <ClCompile Include="..\Engine\Source\ForwardPasses.cpp">
       <Filter>RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Source\AmbientOcclusionPass.cpp">
+      <Filter>RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Source\BloomPass.cpp">
+      <Filter>RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Engine\Source\ShadowPass.cpp">
+      <Filter>RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

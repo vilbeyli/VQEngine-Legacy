@@ -86,9 +86,6 @@ static std::unordered_map <std::string, EShaderStage > s_ShaderTypeStrLookup =
 	{"ps", EShaderStage::PS}
 };
 
-CPUConstant::CPUConstantPool CPUConstant::s_constants;
-size_t CPUConstant::s_nextConstIndex = 0;
-
 
 //-------------------------------------------------------------------------------------------------------------
 // STATIC FUNCTIONS
@@ -161,6 +158,7 @@ bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
 					return true;
 				includeStack.push(includeSourcePath);
 			}
+			src.close();
 		}
 		return false;
 	};
@@ -239,8 +237,6 @@ EShaderStage Shader::GetShaderTypeFromSourceFilePath(const std::string & shaderF
 //-------------------------------------------------------------------------------------------------------------
 // PUBLIC INTERFACE
 //-------------------------------------------------------------------------------------------------------------
-const std::string& Shader::Name() const { return mName; }
-ShaderID Shader::ID() const { return mID; }
 const std::vector<Shader::ConstantBufferLayout>& Shader::GetConstantBufferLayouts() const { return m_CBLayouts; }
 const std::vector<ConstantBuffer>& Shader::GetConstantBuffers() const { return mConstantBuffers; }
 const ShaderTexture& Shader::GetTextureBinding(const std::string& textureName) const { return mTextureBindings[mShaderTextureLookup.at(textureName)]; }
@@ -276,6 +272,19 @@ Shader::~Shader(void)
 			cbuf.data = nullptr;
 		}
 	}
+
+	for (CPUConstant cbuf : mCPUConstantBuffers)
+	{
+		if (cbuf._data)
+		{
+			delete cbuf._data;
+			cbuf._data = nullptr;
+		}
+	}
+
+
+	m_constants.clear();
+
 
 	if (mpInputLayout)
 	{
@@ -332,7 +341,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 			// Map sub-resource to GPU - update contents - discard the sub-resource
 			context->Map(data, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 			char* bufferPos = static_cast<char*>(mappedResource.pData);	// char* so we can advance the pointer
-			for (const ConstantBufferMapping& indexIDPair : m_constantsUnsorted)
+			for (const ConstantBufferMapping& indexIDPair : m_constants)
 			{
 				if (indexIDPair.first != i)
 				{
@@ -342,7 +351,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 				const int slotIndex = indexIDPair.first;
 				const CPUConstantID c_id = indexIDPair.second;
 
-				CPUConstant& c = CPUConstant::Get(c_id);
+				CPUConstant& c = mCPUConstantBuffers[c_id];
 				memcpy(bufferPos, c._data, c._size);
 				bufferPos += c._size;
 			}
@@ -692,27 +701,18 @@ void Shader::CreateConstantBuffers(ID3D11Device* device)
 		std::vector<CPUConstantID> cpuBuffers;
 		for (D3D11_SHADER_VARIABLE_DESC varDesc : cbLayout.variables)
 		{
-			auto& next = CPUConstant::GetNextAvailable();
-			CPUConstantID c_id = std::get<1>(next);
-			CPUConstant& c = std::get<0>(next);
+			CPUConstant c;
+			CPUConstantID c_id = static_cast<CPUConstantID>(mCPUConstantBuffers.size());
 
 			c._name = varDesc.Name;
 			c._size = varDesc.Size;
 			c._data = new char[c._size];
 			memset(c._data, 0, c._size);
 			m_constants.push_back(std::make_pair(constantBufferSlot, c_id));
-			
+			mCPUConstantBuffers.push_back(c);
 		}
 		++constantBufferSlot;
 	}
-
-	//LogConstantBufferLayouts();
-	m_constantsUnsorted = m_constants;
-	std::sort(m_constants.begin(), m_constants.end(), [](const ConstantBufferMapping& lhs, const ConstantBufferMapping& rhs) {
-		const std::string& lstr = CPUConstant::Get(lhs.second)._name;	const std::string& rstr = CPUConstant::Get(rhs.second)._name;
-		return lstr <= rstr;
-	});
-	//LogConstantBufferLayouts();
 
 	// GPU CBuffer Description
 	D3D11_BUFFER_DESC cBufferDesc;
@@ -743,9 +743,9 @@ void Shader::LogConstantBufferLayouts() const
 {
 	char inputTable[2048];
 	sprintf_s(inputTable, "\n%s ConstantBuffers: -----\n", this->mName.c_str());
-	std::for_each(m_constants.begin(), m_constants.end(), [&inputTable](const ConstantBufferMapping& cMapping) {
+	std::for_each(m_constants.begin(), m_constants.end(), [&](const ConstantBufferMapping& cMapping) {
 		char entry[32];
-		sprintf_s(entry, "(%d, %d)\t- %s\n", cMapping.first, cMapping.second, CPUConstant::Get(cMapping.second)._name.c_str());
+		sprintf_s(entry, "(%d, %d)\t- %s\n", cMapping.first, cMapping.second, mCPUConstantBuffers[cMapping.second]._name.c_str());
 		strcat_s(inputTable, entry);
 	});
 	strcat_s(inputTable, "-----\n");
@@ -791,30 +791,7 @@ void Shader::ReflectConstantBufferLayouts(ID3D11ShaderReflection* sRefl, EShader
 
 
 
-
-
-//-------------------------------------------------------------------------------------------------------------
-// CPU CONSTANT DEFINITIONS
-//-------------------------------------------------------------------------------------------------------------
-std::tuple<CPUConstant&, CPUConstantID> CPUConstant::GetNextAvailable()
-{
-	const CPUConstantID id = static_cast<CPUConstantID>(s_nextConstIndex++);
-	return std::make_tuple(std::ref(s_constants[id]), id);
-}
-
-void CPUConstant::CleanUp()
-{
-	for (size_t i = 0; i < MAX_CONSTANT_BUFFERS; i++)
-	{
-		if (s_constants[i]._data)
-		{
-			delete s_constants[i]._data;
-			s_constants[i]._data = nullptr;
-		}
-	}
-}
-
-std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT> ShaderDesc:: CreateStageDescsFromShaderName(const char* pShaderName, unsigned flagStages)
+std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT> ShaderDesc::CreateStageDescsFromShaderName(const char* pShaderName, unsigned flagStages)
 {
 	const std::string shaderName = pShaderName;
 	std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT> descs;

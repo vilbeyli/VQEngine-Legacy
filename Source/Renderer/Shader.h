@@ -29,8 +29,6 @@
 #include <stack>
 #include <unordered_map>
 
-constexpr size_t MAX_CONSTANT_BUFFERS = 512;
-
 using CPUConstantID = int;
 using GPU_ConstantBufferSlotIndex = int;
 using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
@@ -40,15 +38,10 @@ using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstant
 //----------------------------------------------------------------------------------------------------------------
 struct CPUConstant
 {
-	using CPUConstantPool = std::array<CPUConstant, MAX_CONSTANT_BUFFERS>;
 	using CPUConstantRefIDPair = std::tuple<CPUConstant&, CPUConstantID>;
 
 	friend class Renderer;
 	friend class Shader;
-
-	inline static	CPUConstant&			Get(int id) { return s_constants[id]; }
-	static			CPUConstantRefIDPair	GetNextAvailable();
-	static			void					CleanUp();	// call once
 
 	CPUConstant() : _name(), _size(0), _data(nullptr) {}
 	std::string _name;
@@ -56,16 +49,13 @@ struct CPUConstant
 	void*		_data;
 
 private:
-	static CPUConstantPool	s_constants;
-	static size_t			s_nextConstIndex;
-
 	inline bool operator==(const CPUConstant& c) const { return (((this->_data == c._data) && this->_size == c._size) && this->_name == c._name); }
 	inline bool operator!=(const CPUConstant& c) const { return ((this->_data != c._data) || this->_size != c._size || this->_name != c._name); }
 };
-struct ConstantBuffer
-{	// GPU side constant buffer
+struct ConstantBuffer	// GPU side constant buffer
+{	
 	EShaderStage shdType;
-	unsigned	bufferSlot;
+	unsigned bufferSlot;
 	ID3D11Buffer* data;
 	bool dirty;
 };
@@ -123,9 +113,7 @@ struct ShaderDesc
 
 
 
-//----------------------------------------------------------------------------------------------------------------
-// SHADER CLASS
-//----------------------------------------------------------------------------------------------------------------
+
 class Shader
 {
 	friend class Renderer;
@@ -136,13 +124,12 @@ class Shader
 	using ShaderDirectoryLookup = std::unordered_map<EShaderStage, std::string>;
 
 public:
-	//----------------------------------------------------------------------------------------------------------------
 	// STRUCTS/ENUMS
-	//----------------------------------------------------------------------------------------------------------------
+	//
 	// Current limitations for Constant Buffers: 
-	//  todo: revise this
 	//  - cbuffers with same names in different shaders (PS/VS/GS/...)
 	//  - cbuffers with same names in the same shader (not tested)
+	//----------------------------------------------------------------------------------------------------------------
 	union ShaderBlobs
 	{
 		struct 
@@ -204,8 +191,8 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
 	//----------------------------------------------------------------------------------------------------------------
-	const std::string&							Name() const;
-	ShaderID									ID() const;
+	const std::string& Name() const { return mName; }
+	inline ShaderID    ID()   const { return mID; }
 	const std::vector<ConstantBufferLayout>&	GetConstantBufferLayouts() const;
 	const std::vector<ConstantBuffer>&			GetConstantBuffers() const;
 	
@@ -264,8 +251,8 @@ private:
 
 	std::vector<ConstantBuffer>	mConstantBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx
 	std::vector<ConstantBufferLayout>  m_CBLayouts;
-	std::vector<ConstantBufferMapping> m_constants;
-	std::vector<ConstantBufferMapping> m_constantsUnsorted;	// duplicate data...
+	std::vector<ConstantBufferMapping> m_constants;// currently redundant
+	std::vector<CPUConstant> mCPUConstantBuffers;
 
 	std::vector<ShaderTexture> mTextureBindings;
 	std::vector<ShaderSampler> mSamplerBindings;

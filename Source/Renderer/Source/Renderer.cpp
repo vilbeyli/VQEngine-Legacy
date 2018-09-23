@@ -480,8 +480,6 @@ void Renderer::Exit()
 		std::for_each(refBuffer.begin(), refBuffer.end(), [](Buffer& b) {b.CleanUp(); });
 		refBuffer.clear();
 	}
-
-	CPUConstant::CleanUp();	// todo: move constant buffer logic into Buffer
 	
 	// Unload shaders
 	for (Shader*& shd : mShaders)
@@ -576,6 +574,8 @@ void Renderer::ReloadShaders()
 {
 	for (Shader* pShader : mShaders)
 	{
+		//if(pShader->)
+
 		Shader* pReloadedShader = new Shader(pShader->mDescriptor);
 		pReloadedShader->mID = pShader->ID();
 		delete pShader;
@@ -1483,11 +1483,11 @@ void Renderer::SetConstant(const char * cName, const void * data)
 #if 1
 	// LINEAR LOOKUP
 	bool found = false;
-	for (const ConstantBufferMapping& bufferSlotIDPair : shader->m_constantsUnsorted)
+	for (const ConstantBufferMapping& bufferSlotIDPair : shader->m_constants)
 	{
 		const size_t GPUcBufferSlot = bufferSlotIDPair.first;
 		const CPUConstantID constID = bufferSlotIDPair.second;
-		CPUConstant& c = CPUConstant::Get(constID);
+		CPUConstant& c = shader->mCPUConstantBuffers[constID];
 		if (strcmp(cName, c._name.c_str()) == 0)		// if name matches
 		{
 			found = true;

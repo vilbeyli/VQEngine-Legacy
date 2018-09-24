@@ -33,6 +33,7 @@ class Application
 {
 public: 
 	static std::string s_WorkspaceDirectory;
+	static std::string s_ShaderCacheDirectory;
 
 public:
 	Application();

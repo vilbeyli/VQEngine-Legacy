@@ -31,7 +31,9 @@
 #define LOAD_ASYNC 1
 // -------------------------------------------------------
 #include "Engine.h"
+#include "Camera.h"
 
+#include "Application/Application.h"
 #include "Application/Input.h"
 #include "Application/ThreadPool.h"
 
@@ -39,7 +41,6 @@
 #include "Utilities/PerfTimer.h"
 #include "Utilities/CustomParser.h"
 #include "Utilities/Profiler.h"
-#include "Camera.h"
 
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
@@ -161,6 +162,9 @@ bool Engine::Initialize(HWND hwnd)
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
 	}
+
+	LoadShaders();
+	
 
 	// PRIMITIVES
 	//--------------------------------------------------------------------
@@ -431,6 +435,64 @@ bool Engine::LoadScene(int level)
 	Engine::sEngineSettings.levelToLoad = level;
 	return LoadSceneFromFile();
 #endif
+}
+
+bool Engine::LoadShaders()
+{
+	{
+		// create the ShaderCache folder if it doesn't exist
+		Application::s_ShaderCacheDirectory = Application::s_WorkspaceDirectory + "\\ShaderCache";
+		DirectoryUtil::CreateFolderIfItDoesntExist(Application::s_ShaderCacheDirectory);
+
+		PerfTimer timer;
+		timer.Start();
+
+		Log::Info("------------------------ COMPILING SHADERS ------------------------");
+		constexpr unsigned VS_PS = SHADER_STAGE_VS | SHADER_STAGE_PS;
+		const std::vector<ShaderDesc> shaderDescs =
+		{
+			ShaderDesc{ "PhongLighting<forward>",{
+				ShaderStageDesc{ "Forward_Phong_vs.hlsl", {} },
+				ShaderStageDesc{ "Forward_Phong_ps.hlsl", {} }
+			}},
+			ShaderDesc{ "UnlitTextureColor" , ShaderDesc::CreateStageDescsFromShaderName("UnlitTextureColor", VS_PS) },
+			ShaderDesc{ "TextureCoordinates", {
+				ShaderStageDesc{"MVPTransformationWithUVs_vs.hlsl", {} },
+				ShaderStageDesc{"TextureCoordinates_ps.hlsl"      , {} }
+			}},
+			ShaderDesc{ "Normal"            , ShaderDesc::CreateStageDescsFromShaderName("Normal", VS_PS)},
+			ShaderDesc{ "Tangent"           , ShaderDesc::CreateStageDescsFromShaderName("Tangent", VS_PS)},
+			ShaderDesc{ "Binormal"          , ShaderDesc::CreateStageDescsFromShaderName("Binormal", VS_PS)},
+			ShaderDesc{ "Line"              , ShaderDesc::CreateStageDescsFromShaderName("Line", VS_PS)},
+			ShaderDesc{ "TNB"               , ShaderDesc::CreateStageDescsFromShaderName("TNB", VS_PS)},
+			ShaderDesc{ "Debug"             , ShaderDesc::CreateStageDescsFromShaderName("Debug", VS_PS)},
+			ShaderDesc{ "Skybox"            , ShaderDesc::CreateStageDescsFromShaderName("Skybox", VS_PS)},
+			ShaderDesc{ "SkyboxEquirectangular", {
+				ShaderStageDesc{"Skybox_vs.hlsl"               , {} },
+				ShaderStageDesc{"SkyboxEquirectangular_ps.hlsl", {} }
+			}},
+			ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Forward_BRDF", VS_PS)},
+			ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
+			ShaderDesc{ "BilateralBlur", {
+				ShaderStageDesc{"FullscreenQuad_vs.hlsl", {} },
+				ShaderStageDesc{"BilateralBlur_ps.hlsl" , {} }
+			}},
+			ShaderDesc{ "GaussianBlur4x4", {
+				ShaderStageDesc{"FullscreenQuad_vs.hlsl" , {} },
+				ShaderStageDesc{"GaussianBlur4x4_ps.hlsl", {} }
+			}},
+		};
+		
+		// todo: do not depend on array index, use a lookup, remove s_shaders[]
+		for (int i = 0; i < shaderDescs.size(); ++i)
+		{
+			mBuiltinShaders.push_back(mpRenderer->CreateShader(shaderDescs[i]));
+		}
+
+		timer.Stop();
+		Log::Info("---------------------- COMPILING SHADERS DONE IN %.2fs ---------------------", timer.DeltaTime());
+	}
+	return true;
 }
 
 void Engine::Exit()

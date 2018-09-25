@@ -29,9 +29,12 @@
 #include <stack>
 #include <unordered_map>
 
+#include <experimental/filesystem>	// cpp17
+
 using CPUConstantID = int;
 using GPU_ConstantBufferSlotIndex = int;
 using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
+using FileTimeStamp = std::experimental::filesystem::file_time_type;
 
 //----------------------------------------------------------------------------------------------------------------
 // SHADER DATA/RESOURCE INTERFACE STRUCTS
@@ -111,7 +114,11 @@ struct ShaderDesc
 	std::array<ShaderStageDesc, EShaderStage::COUNT> stages;
 };
 
-
+struct ShaderLoadDesc
+{
+	std::string fullPath;
+	FileTimeStamp lastWriteTime;
+};
 
 
 class Shader
@@ -121,7 +128,7 @@ class Shader
 	using ShaderArray = std::array<ShaderID, EShaders::SHADER_COUNT>;
 	using ShaderTextureLookup = std::unordered_map<std::string, int>;
 	using ShaderSamplerLookup = std::unordered_map<std::string, int>;
-	using ShaderDirectoryLookup = std::unordered_map<EShaderStage, std::string>;
+	using ShaderDirectoryLookup = std::unordered_map<EShaderStage, ShaderLoadDesc>;
 
 public:
 	// STRUCTS/ENUMS
@@ -173,8 +180,6 @@ public:
 		ID3D11HullShader*      mHullShader     = nullptr;
 		ID3D11DomainShader*    mDomainShader   = nullptr;
 		ID3D11ComputeShader*   mComputeShader  = nullptr;
-
-		ShaderDirectoryLookup mDirectories;
 	};
 
 public:
@@ -185,6 +190,8 @@ public:
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
+	void Reload(ID3D11Device* device);
+	bool HasSourceFileBeenUpdated() const;
 	void ClearConstantBuffers();
 	void UpdateConstants(ID3D11DeviceContext* context);
 
@@ -236,6 +243,7 @@ private:
 	void CreateConstantBuffers(ID3D11Device* device);
 	void CheckSignatures();
 	void LogConstantBufferLayouts() const;
+	void ReleaseResources();
 
 private:
 	//----------------------------------------------------------------------------------------------------------------
@@ -261,4 +269,5 @@ private:
 	ShaderSamplerLookup mShaderSamplerLookup;
 
 	ShaderDesc mDescriptor;	// used for shader reloading
+	ShaderDirectoryLookup mDirectories;
 };

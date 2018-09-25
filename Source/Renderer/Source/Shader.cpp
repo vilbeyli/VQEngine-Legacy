@@ -264,6 +264,10 @@ Shader::~Shader(void)
 	// todo: this really could use smart pointers...
 
 	// release constants
+	ReleaseResources();
+}
+void Shader::ReleaseResources()
+{
 	for (ConstantBuffer& cbuf : mConstantBuffers)
 	{
 		if (cbuf.data)
@@ -272,6 +276,7 @@ Shader::~Shader(void)
 			cbuf.data = nullptr;
 		}
 	}
+	mConstantBuffers.clear();
 
 	for (CPUConstant cbuf : mCPUConstantBuffers)
 	{
@@ -281,9 +286,7 @@ Shader::~Shader(void)
 			cbuf._data = nullptr;
 		}
 	}
-
-
-	m_constants.clear();
+	mCPUConstantBuffers.clear();
 
 
 	if (mpInputLayout)
@@ -324,6 +327,39 @@ Shader::~Shader(void)
 			mReflections.of[type] = nullptr;
 		}
 	}
+
+	m_CBLayouts.clear();
+	m_constants.clear();
+	mTextureBindings.clear();
+	mSamplerBindings.clear();
+	mShaderTextureLookup.clear();
+	mShaderSamplerLookup.clear();
+}
+
+
+
+
+void Shader::Reload(ID3D11Device* device)
+{
+	Shader copy(this->mDescriptor);
+	copy.mID = this->mID;
+	ReleaseResources();
+	this->mID = copy.mID;
+	CompileShaders(device, copy.mDescriptor);
+}
+
+bool Shader::HasSourceFileBeenUpdated() const
+{
+	bool bUpdated = false;
+	for (EShaderStage stage = EShaderStage::VS; stage < EShaderStage::COUNT; stage = (EShaderStage)(stage + 1))
+	{
+		if (mDirectories.find(stage) != mDirectories.end())
+		{
+			const std::string& path = mDirectories.at(stage).fullPath;
+			bUpdated |= mDirectories.at(stage).lastWriteTime < std::experimental::filesystem::last_write_time(path);
+		}
+	}
+	return bUpdated;
 }
 
 void Shader::ClearConstantBuffers()
@@ -392,15 +428,15 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 
 	// COMPILE SHADERS
 	//----------------------------------------------------------------------------
-	for (const ShaderStageDesc& stage : desc.stages)
+	for (const ShaderStageDesc& stageDesc : desc.stages)
 	{
-		if (stage.fileName.empty())
+		if (stageDesc.fileName.empty())
 			continue;
 
 		// stage.macros
-		const std::string sourceFilePath = std::string(Renderer::sShaderRoot + stage.fileName);
+		const std::string sourceFilePath = std::string(Renderer::sShaderRoot + stageDesc.fileName);
 		
-		const EShaderStage type = GetShaderTypeFromSourceFilePath(sourceFilePath);
+		const EShaderStage stage = GetShaderTypeFromSourceFilePath(sourceFilePath);
 
 		// USE SHADER CACHE
 		//
@@ -409,7 +445,7 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 		const bool bUseCachedShaders = 
 			DirectoryUtil::FileExists(cacheFilePath) 
 			&& !IsCacheDirty(sourceFilePath, cacheFilePath)
-			&& stage.macros.empty();
+			&& stageDesc.macros.empty();
 		//  ^^^^^^^^^^^^^^^^^^^^^^^
 		// Currently there's no way to tell if macro value has changed since the caching.
 		// Hence, we exclude the cached shader usage for shaders with preprocessor defines.
@@ -419,20 +455,20 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 
 		if (bUseCachedShaders)
 		{
-			blobs.of[type] = CompileFromCachedBinary(cacheFilePath);
+			blobs.of[stage] = CompileFromCachedBinary(cacheFilePath);
 		}
 		else
 		{
 			std::string errMsg;
 			ID3D10Blob* pBlob;
-			if (CompileFromSource(sourceFilePath, type, pBlob, errMsg, stage.macros))
+			if (CompileFromSource(sourceFilePath, stage, pBlob, errMsg, stageDesc.macros))
 			{
-				blobs.of[type] = pBlob;
+				blobs.of[stage] = pBlob;
 
 				// We also create cached binaries only for shaders with no preprocessor defines.
-				if (stage.macros.empty())
+				if (stageDesc.macros.empty())
 				{
-					CacheShaderBinary(cacheFilePath, blobs.of[type]);
+					CacheShaderBinary(cacheFilePath, blobs.of[stage]);
 				}
 			}
 			else
@@ -443,7 +479,6 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 			}
 		}
 
-		CreateShaderStage(device, type, blobs.of[type]->GetBufferPointer(), blobs.of[type]->GetBufferSize());
 		if (!bPrinted)
 		{
 			const char* pMsgLoad = bUseCachedShaders ? "Loading cached shader binaries" : "Compiling shader from source";
@@ -451,10 +486,14 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 			bPrinted = true;
 		}
 
+		CreateShaderStage(device, stage, blobs.of[stage]->GetBufferPointer(), blobs.of[stage]->GetBufferSize());
 		SetReflections(blobs);
 		//CheckSignatures();
 
-		mStages.mDirectories[type] = sourceFilePath;
+		ShaderLoadDesc loadDesc = {};
+		loadDesc.fullPath = sourceFilePath;
+		loadDesc.lastWriteTime = std::experimental::filesystem::last_write_time(sourceFilePath);
+		mDirectories[stage] = loadDesc;
 	}
 
 

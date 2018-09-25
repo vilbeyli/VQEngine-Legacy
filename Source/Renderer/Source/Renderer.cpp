@@ -571,15 +571,27 @@ void Renderer::Exit()
 
 void Renderer::ReloadShaders()
 {
+	int reloadedShaderCount = 0;
+	std::vector<std::string> reloadedShaderNames;
 	for (Shader* pShader : mShaders)
 	{
-		//if(pShader->)
+		if (pShader->HasSourceFileBeenUpdated())
+		{
+			pShader->Reload(m_device);
+			++reloadedShaderCount;
+			reloadedShaderNames.push_back(pShader->Name());
+		}
+	}
 
-		Shader* pReloadedShader = new Shader(pShader->mDescriptor);
-		pReloadedShader->mID = pShader->ID();
-		delete pShader;
-		pReloadedShader->CompileShaders(m_device, pReloadedShader->mDescriptor);
-		mShaders[pReloadedShader->mID] = pReloadedShader;
+	if (reloadedShaderCount == 0)
+	{
+		Log::Info("No updates have been made to shader source files: no shaders have been loaded");
+	}
+	else
+	{
+		Log::Info("Reloaded %d Shaders:", reloadedShaderCount);
+		for (const std::string& name : reloadedShaderNames)
+			Log::Info("\t%s", name.c_str());
 	}
 }
 

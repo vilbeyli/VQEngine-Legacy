@@ -210,7 +210,7 @@ bool Engine::Initialize(HWND hwnd)
 	mEngineConfig.bDeferredOrForward = rendererSettings.bUseDeferredRendering;
 	mEngineConfig.bSSAO = rendererSettings.bAmbientOcclusion;
 	mEngineConfig.bBloom = true;	// currently not deserialized
-	mEngineConfig.bRenderTargets = true;
+	mEngineConfig.bRenderTargets = false;
 	mEngineConfig.bBoundingBoxes = false;
 	mSelectedShader = mEngineConfig.bDeferredOrForward ? mDeferredRenderingPasses._geometryShader : EShaders::FORWARD_BRDF;
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
@@ -1143,7 +1143,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		// Textures to draw
 		const TextureID white4x4 = mSSAOPass.whiteTexture4x4;
 		//TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._spotShadowDepthTargets);
-		TextureID tBlurredBloom = mpRenderer->GetRenderTargetTexture(mPostProcessPass._bloomPass._blurPingPong[0]);
+		TextureID tBlurredBloom = mPostProcessPass._bloomPass.GetBloomTexture(mpRenderer);
 		TextureID tDiffuseRoughness = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
 		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
 		TextureID tSceneDepth = mpRenderer->GetDepthTargetTexture(0);

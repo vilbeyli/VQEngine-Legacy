@@ -339,13 +339,13 @@ void Shader::ReleaseResources()
 
 
 
-void Shader::Reload(ID3D11Device* device)
+bool Shader::Reload(ID3D11Device* device)
 {
 	Shader copy(this->mDescriptor);
 	copy.mID = this->mID;
 	ReleaseResources();
 	this->mID = copy.mID;
-	CompileShaders(device, copy.mDescriptor);
+	return CompileShaders(device, copy.mDescriptor);
 }
 
 bool Shader::HasSourceFileBeenUpdated() const
@@ -414,7 +414,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 //-------------------------------------------------------------------------------------------------------------
 // UTILITY FUNCTIONS
 //-------------------------------------------------------------------------------------------------------------
-void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
+bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 {
 	mDescriptor = desc;
 	HRESULT result;
@@ -424,9 +424,7 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 	PerfTimer timer;
 	timer.Start();
 
-	
-
-	// COMPILE SHADERS
+	// COMPILE SHADER STAGES
 	//----------------------------------------------------------------------------
 	for (const ShaderStageDesc& stageDesc : desc.stages)
 	{
@@ -452,7 +450,13 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 		//
 		// TODO: maybe hash the shaders based on file name + hashed preprocessor defines 
 		//---------------------------------------------------------------------------------
-
+		if (!bPrinted)	// quick status print here
+		{
+			const char* pMsgLoad = bUseCachedShaders ? "Loading cached shader binaries" : "Compiling shader from source";
+			Log::Info("\t%s %s...", pMsgLoad, mName.c_str());
+			bPrinted = true;
+		}
+		//---------------------------------------------------------------------------------
 		if (bUseCachedShaders)
 		{
 			blobs.of[stage] = CompileFromCachedBinary(cacheFilePath);
@@ -474,16 +478,8 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 			else
 			{
 				Log::Error(errMsg);
-				assert(false);
-				continue;
+				return false;
 			}
-		}
-
-		if (!bPrinted)
-		{
-			const char* pMsgLoad = bUseCachedShaders ? "Loading cached shader binaries" : "Compiling shader from source";
-			Log::Info("\t%s %s...", pMsgLoad, mName.c_str());
-			bPrinted = true;
 		}
 
 		CreateShaderStage(device, stage, blobs.of[stage]->GetBufferPointer(), blobs.of[stage]->GetBufferSize());
@@ -496,14 +492,14 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 		mDirectories[stage] = loadDesc;
 	}
 
-
+	// INPUT LAYOUT (VS)
+	//---------------------------------------------------------------------------
+	// src: https://stackoverflow.com/questions/42388979/directx-11-vertex-shader-reflection
+	// setup the layout of the data that goes into the shader
+	//
 	if(mReflections.vsRefl)
 	{
-		// INPUT LAYOUT
-		//---------------------------------------------------------------------------
-		// src: https://stackoverflow.com/questions/42388979/directx-11-vertex-shader-reflection
-		// setup the layout of the data that goes into the shader
-		//
+
 		D3D11_SHADER_DESC shaderDesc = {};
 		mReflections.vsRefl->GetDesc(&shaderDesc);
 		std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(shaderDesc.InputParameters);
@@ -567,14 +563,64 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 			if (FAILED(result))
 			{
 				OutputDebugString("Error creating input layout");
-				assert(false);
+				return false;
 			}
 		}
 	}
 
 	// CONSTANT BUFFERS 
 	//---------------------------------------------------------------------------
-	CreateConstantBuffers(device);
+	// Obtain cbuffer layout information
+	for (EShaderStage type = EShaderStage::VS; type < EShaderStage::COUNT; type = (EShaderStage)(type + 1))
+	{
+		if (mReflections.of[type])
+		{
+			ReflectConstantBufferLayouts(mReflections.of[type], type);
+		}
+	}
+
+	// Create CPU & GPU constant buffers
+	// CPU CBuffers
+	int constantBufferSlot = 0;
+	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
+	{
+		std::vector<CPUConstantID> cpuBuffers;
+		for (D3D11_SHADER_VARIABLE_DESC varDesc : cbLayout.variables)
+		{
+			CPUConstant c;
+			CPUConstantID c_id = static_cast<CPUConstantID>(mCPUConstantBuffers.size());
+
+			c._name = varDesc.Name;
+			c._size = varDesc.Size;
+			c._data = new char[c._size];
+			memset(c._data, 0, c._size);
+			m_constants.push_back(std::make_pair(constantBufferSlot, c_id));
+			mCPUConstantBuffers.push_back(c);
+		}
+		++constantBufferSlot;
+	}
+
+	// GPU CBuffers
+	D3D11_BUFFER_DESC cBufferDesc;
+	cBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+	cBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	cBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+	cBufferDesc.MiscFlags = 0;
+	cBufferDesc.StructureByteStride = 0;
+	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
+	{
+		ConstantBuffer cBuffer;
+		cBufferDesc.ByteWidth = cbLayout.desc.Size;
+		if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &cBuffer.data)))
+		{
+			OutputDebugString("Error creating constant buffer");
+			return false;
+		}
+		cBuffer.dirty = true;
+		cBuffer.shaderStage = cbLayout.stage;
+		cBuffer.bufferSlot = cbLayout.bufSlot;
+		mConstantBuffers.push_back(cBuffer);
+	}
 
 
 	// TEXTURES & SAMPLERS
@@ -641,6 +687,8 @@ void Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 		if (blobs.of[type])
 			blobs.of[type]->Release();
 	}
+
+	return true;
 }
 
 void Shader::CreateShaderStage(ID3D11Device* pDevice, EShaderStage stage, void* pBuffer, const size_t szShaderBinary)
@@ -755,66 +803,6 @@ void Shader::CheckSignatures()
 	assert(false); // todo: refactor this
 }
 
-void Shader::CreateConstantBuffers(ID3D11Device* device)
-{
-	// example: http://gamedev.stackexchange.com/a/62395/39920
-
-	// OBTAIN CBUFFER LAYOUT INFORMATION
-	//---------------------------------------------------------------------------------------
-	for (EShaderStage type = EShaderStage::VS; type < EShaderStage::COUNT; type = (EShaderStage)(type + 1))
-	{
-		if (mReflections.of[type])
-		{
-			ReflectConstantBufferLayouts(mReflections.of[type], type);
-		}
-	}
-
-	// CREATE CPU & GPU CONSTANT BUFFERS
-	//---------------------------------------------------------------------------------------
-	// CPU CBuffers
-	int constantBufferSlot = 0;
-	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
-	{
-		std::vector<CPUConstantID> cpuBuffers;
-		for (D3D11_SHADER_VARIABLE_DESC varDesc : cbLayout.variables)
-		{
-			CPUConstant c;
-			CPUConstantID c_id = static_cast<CPUConstantID>(mCPUConstantBuffers.size());
-
-			c._name = varDesc.Name;
-			c._size = varDesc.Size;
-			c._data = new char[c._size];
-			memset(c._data, 0, c._size);
-			m_constants.push_back(std::make_pair(constantBufferSlot, c_id));
-			mCPUConstantBuffers.push_back(c);
-		}
-		++constantBufferSlot;
-	}
-
-	// GPU CBuffer Description
-	D3D11_BUFFER_DESC cBufferDesc;
-	cBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	cBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	cBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	cBufferDesc.MiscFlags = 0;
-	cBufferDesc.StructureByteStride = 0;
-
-	// GPU CBuffers
-	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
-	{
-		ConstantBuffer cBuffer;
-		cBufferDesc.ByteWidth = cbLayout.desc.Size;
-		if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &cBuffer.data)))
-		{
-			OutputDebugString("Error creating constant buffer");
-			assert(false);
-		}
-		cBuffer.dirty = true;
-		cBuffer.shaderStage = cbLayout.stage;
-		cBuffer.bufferSlot = cbLayout.bufSlot;
-		mConstantBuffers.push_back(cBuffer);
-	}
-}
 
 void Shader::LogConstantBufferLayouts() const
 {

@@ -119,6 +119,7 @@ struct BloomPass : public RenderPass
 
 	void Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSettings, const RenderTargetDesc& rtDesc);
 	void Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU, RenderTargetID rtDestination, const Settings::Bloom& settings) const;
+	TextureID GetBloomTexture(const Renderer* pRenderer) const;
 };
 
 struct TonemappingCombinePass : public RenderPass

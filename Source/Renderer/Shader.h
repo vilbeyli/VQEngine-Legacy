@@ -190,7 +190,7 @@ public:
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
-	void Reload(ID3D11Device* device);
+	bool Reload(ID3D11Device* device);
 	bool HasSourceFileBeenUpdated() const;
 	void ClearConstantBuffers();
 	void UpdateConstants(ID3D11DeviceContext* context);
@@ -237,10 +237,9 @@ private:
 	// UTILITY FUNCTIONS
 	//----------------------------------------------------------------------------------------------------------------
 	void ReflectConstantBufferLayouts(ID3D11ShaderReflection * sRefl, EShaderStage type);
-	void CompileShaders(ID3D11Device* device, const ShaderDesc& desc);
+	bool CompileShaders(ID3D11Device* device, const ShaderDesc& desc);
 	void SetReflections(const ShaderBlobs& blobs);
 	void CreateShaderStage(ID3D11Device* pDevice, EShaderStage stage, void* pBuffer, const size_t szShaderBinary);
-	void CreateConstantBuffers(ID3D11Device* device);
 	void CheckSignatures();
 	void LogConstantBufferLayouts() const;
 	void ReleaseResources();

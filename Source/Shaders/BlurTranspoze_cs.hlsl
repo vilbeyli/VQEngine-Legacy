@@ -20,6 +20,15 @@
 RWTexture2D<float4> texColorOut;
 Texture2D<float4>   texColorIn;
 SamplerState        sSampler;
+#if USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH
+cbuffer BlurParametersBuffer
+{
+	struct Params
+	{
+		uint strength;
+	} cBlurParameters;
+};
+#endif
 
 // These are defined by the application compiling the shader
 //#define THREAD_GROUP_SIZE_X 1
@@ -39,18 +48,13 @@ void CSMain(
 	uint  groupIndex : SV_GroupIndex
 )
 {
-	// gaussian kernel : src
-	// https://learnopengl.com/#!Advanced-Lighting/Bloom
-	// https://twvideo01.ubm-us.net/o1/vault/gdc09/slides/100_Handout%206.pdf
-	const half KERNEL_WEIGHTS[5] = { 0.227027, 0.1945946, 0.1216216, 0.054054, 0.016216 };
-	// 	0.053514	0.045235	0.027318	0.011785	0.003631	0.000799	0.000125	0.000014	0.000001	0
 
+	#include "GaussianKernels.hlsl"
 
-
-	// READ INPUT TEXTURE AND SAVE INTO SHARED MEM
+	// READ INPUT TEXTURE AND SAVE INTO SHARED MEM (LDS = Local Data Share)
 	//
 	const uint TEXTURE_READ_COUNT = (uint) ceil(min(
-		((float)IMAGE_SIZE_X) / THREAD_GROUP_SIZE_X
+		  ((float)IMAGE_SIZE_X) / THREAD_GROUP_SIZE_X
 		, ((float)IMAGE_SIZE_Y) / THREAD_GROUP_SIZE_Y));
 
 	[unroll] for (uint i = 0; i < TEXTURE_READ_COUNT; ++i)
@@ -68,10 +72,13 @@ void CSMain(
 	}
 
 
-#if 1
 	// RUN THE HORIZONTAL/VERTICAL BLUR KERNEL
 	//
+#if USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH
+	for (uint passCount = 0; passCount < cBlurParameters.strength; ++passCount)
+#else
 	[unroll] for (uint passCount = 0; passCount < PASS_COUNT; ++passCount)
+#endif
 	{
 		// SYNC UP SHARED-MEM SO IT'S READY TO READ
 		//
@@ -89,25 +96,32 @@ void CSMain(
 			half3 result = gColorLine[idxColorLine] * KERNEL_WEIGHTS[0];
 
 			// and tap the next and previous pixels in increments
-			[unroll] for (int i = 1; i < 5; ++i)
+			[unroll] for (uint kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
 			{
-#if HORIZONTAL
-				bool bKernelSampleOutOfBounds = ((outTexel.x + i) >= IMAGE_SIZE_X);
-				idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x + i;
-				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0.0f : KERNEL_WEIGHTS[i]);
+				bool bKernelSampleOutOfBounds = ((outTexel.x + kernelOffset) >= IMAGE_SIZE_X);
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[IMAGE_SIZE_X - 1] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
+				{
+					result += gColorLine[outTexel.x + kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
+				}
 
-				bKernelSampleOutOfBounds = ((outTexel.x - i) < 0);
-				idxColorLine = bKernelSampleOutOfBounds ? 0 : outTexel.x - i;
-
-				result += gColorLine[idxColorLine] * (bKernelSampleOutOfBounds ? 0 : KERNEL_WEIGHTS[i]);
-#endif
-
+				bKernelSampleOutOfBounds = ((outTexel.x - kernelOffset) < 0);
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[0] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
+				{
+					result += gColorLine[outTexel.x - kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
+				}
 			}
 
 			// save the blurred pixel value
 			texColorOut[outTexel.yx] = half4(result, 0.0f);
 		}
-		if (passCount == PASS_COUNT - 1) break;
 
 
 		// UPDATE LDS
@@ -123,5 +137,4 @@ void CSMain(
 		}
 
 	}
-#endif
 }

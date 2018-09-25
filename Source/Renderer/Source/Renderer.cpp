@@ -577,7 +577,13 @@ void Renderer::ReloadShaders()
 	{
 		if (pShader->HasSourceFileBeenUpdated())
 		{
-			pShader->Reload(m_device);
+			const bool bLoadSuccess = pShader->Reload(m_device);
+			if (!bLoadSuccess)
+			{
+				//Log::Error("");
+				continue;
+			}
+
 			++reloadedShaderCount;
 			reloadedShaderNames.push_back(pShader->Name());
 		}
@@ -1636,11 +1642,7 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 	const Shader* shader = mShaders[mPipelineState.shader];
 	const std::string textureName = std::string(texName);
 
-#if _DEBUG
 	const bool bFound = shader->HasTextureBinding(textureName);
-#else
-	const bool bFound = true;
-#endif
 
 	if (bFound)
 	{
@@ -1663,11 +1665,7 @@ void Renderer::SetUnorderedAccessTexture(const char* texName, TextureID tex)
 	const Shader* shader = mShaders[mPipelineState.shader];
 	const std::string textureName = std::string(texName);
 
-#if _DEBUG
 	const bool bFound = shader->HasTextureBinding(textureName);
-#else
-	const bool bFound = true;
-#endif
 
 	if (bFound)
 	{
@@ -1688,11 +1686,7 @@ void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 {
 	const Shader* shader = mShaders[mPipelineState.shader];
 
-#if _DEBUG
 	const bool bFound = shader->HasSamplerBinding(samplerName);
-#else
-	const bool bFound = true;
-#endif
 
 	if (bFound)
 	{

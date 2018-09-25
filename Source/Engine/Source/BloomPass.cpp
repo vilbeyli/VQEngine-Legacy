@@ -27,8 +27,16 @@
 
 #include "Renderer/Renderer.h"
 
+
+#include <algorithm>
+#ifdef min
+#undef min
+#endif
+
 #define ENABLE_COMPUTE_BLUR             1
-#define ENABLE_COMPUTE_BLUR_TRANSPOZE   1
+#define ENABLE_COMPUTE_BLUR_TRANSPOZE   0 // this is slightly slower than the regular blur
+constexpr bool USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH = false;
+
 #define USE_COMPUTE_BLUR                ENABLE_COMPUTE_BLUR || ENABLE_COMPUTE_BLUR_TRANSPOZE
 
 
@@ -90,17 +98,20 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	// one pixel.
 	//
 	const int COMPUTE_KERNEL_DIMENSION = 1024;
+	const char* pCBufferPreProcessorValue = USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH ? "1" : "0";
 	const ShaderDesc CSDescV =
 	{
 		"Blur_Compute_Vertical",
 		ShaderStageDesc { "Blur_cs.hlsl", {
 			{ "VERTICAL"    , "1" },
+			{ "HORIZONTAL"  , "0" },
 			{ "IMAGE_SIZE_X", std::to_string(texDesc.width) },
 			{ "IMAGE_SIZE_Y", std::to_string(texDesc.height) },
-			{ "THREAD_GROUP_SIZE_X", "1" }, // max=1024
+			{ "THREAD_GROUP_SIZE_X", "1" },
 			{ "THREAD_GROUP_SIZE_Y", std::to_string(COMPUTE_KERNEL_DIMENSION) },
 			{ "THREAD_GROUP_SIZE_Z", "1"},
-			{ "PASS_COUNT", std::to_string(bloomSettings.blurStrength) },
+			{ "USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH", pCBufferPreProcessorValue}, // use this w/ "1" to make blur strength dynamic
+			{ "PASS_COUNT", std::to_string(bloomSettings.blurStrength) },          // lets us unroll the blur strength loop (faster)
 			{ "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) } }
 		}
 	};
@@ -108,13 +119,15 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	{
 		"Blur_Compute_Horizontal",
 		ShaderStageDesc { "Blur_cs.hlsl", {
+			{ "VERTICAL"   , "0" },
 			{ "HORIZONTAL" , "1" },
 			{ "IMAGE_SIZE_X", std::to_string(texDesc.width) },
 			{ "IMAGE_SIZE_Y", std::to_string(texDesc.height) },
 			{ "THREAD_GROUP_SIZE_X", std::to_string(COMPUTE_KERNEL_DIMENSION) },
 			{ "THREAD_GROUP_SIZE_Y", "1" },
 			{ "THREAD_GROUP_SIZE_Z", "1"},
-			{ "PASS_COUNT", std::to_string(bloomSettings.blurStrength) },
+			{ "USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH", pCBufferPreProcessorValue}, // use this w/ "1" to make blur strength dynamic
+			{ "PASS_COUNT", std::to_string(bloomSettings.blurStrength) },          // lets us unroll the blur strength loop (faster)
 			{ "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) } }
 		}
 	};
@@ -132,10 +145,12 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 		ShaderStageDesc { "BlurTranspoze_cs.hlsl", {
 			{ "IMAGE_SIZE_X", std::to_string(texDesc.height) },
 			{ "IMAGE_SIZE_Y", std::to_string(texDesc.width) },
-			{ "THREAD_GROUP_SIZE_X", "1" }, // max=1024
-			{ "THREAD_GROUP_SIZE_Y", std::to_string(COMPUTE_KERNEL_DIMENSION) },
-			{ "THREAD_GROUP_SIZE_Z", "1"},
-			{ "PASS_COUNT", std::to_string(bloomSettings.blurStrength) } }
+			{ "THREAD_GROUP_SIZE_X", std::to_string(COMPUTE_KERNEL_DIMENSION) },
+			{ "THREAD_GROUP_SIZE_Y", "1" },
+			{ "THREAD_GROUP_SIZE_Z", "1" },
+			{ "USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH", pCBufferPreProcessorValue}, // use this w/ "1" to make blur strength dynamic
+			{ "PASS_COUNT", std::to_string(bloomSettings.blurStrength) },          // lets us unroll the blur strength loop (faster)
+			{ "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) } }
 		}
 	};
 	this->blurHorizontalTranspozeComputeShader = pRenderer->CreateShader(CSDescHTz);
@@ -157,6 +172,7 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 #endif
 }
 
+struct BlurParameters { unsigned blurStrength; };
 void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU, RenderTargetID _worldRenderTarget, const Settings::Bloom& settings) const
 {
 	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
@@ -187,6 +203,8 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 	const TextureID brightTexture = pRenderer->GetRenderTargetTexture(_brightRT);
 	const int BlurPassCount = settings.blurStrength * 2;	// 1 pass for Horizontal and Vertical each
 
+	BlurParameters params;
+	params.blurStrength = settings.blurStrength;
 	switch (mSelectedBloomShader)
 	{
 	case BloomPass::PS_1DKernel_MultiPsss:	// PIXEL_SHADER_BLUR : 1.78 ms 1080p
@@ -238,6 +256,8 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 			pRenderer->SetTexture("texColorIn", i == 0 ? brightTexture : this->blurComputeOutputPingPong[INDEX_PING_PONG_OTHER]);
 			pRenderer->SetUnorderedAccessTexture("texColorOut", this->blurComputeOutputPingPong[INDEX_PING_PONG]);
 			pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
+			if(USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH)
+				pRenderer->SetConstantStruct("cBlurParameters", &params);
 			pRenderer->Apply();
 			pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
 		}
@@ -257,9 +277,12 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 		int       DISPATCH_GROUP_X = 1;
 		int       DISPATCH_GROUP_Y = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().y());
 		const int DISPATCH_GROUP_Z = 1;
+		
 		pRenderer->SetShader(this->blurComputeShaderPingPong[0], true, true);
 		pRenderer->SetTexture("texColorIn", brightTexture);
 		pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
+		if (USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH)
+			pRenderer->SetConstantStruct("cBlurParameters", &params);
 		pRenderer->SetUnorderedAccessTexture("texColorOut", this->blurComputeOutputPingPong[0]);
 		pRenderer->Apply();
 		pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
@@ -283,7 +306,8 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 		pRenderer->SetShader(this->blurHorizontalTranspozeComputeShader, true, true);
 		pRenderer->SetTexture("texColorIn", this->texTransposedImage);
 		pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
-		pRenderer->Apply();
+		if (USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH)
+			pRenderer->SetConstantStruct("cBlurParameters", &params);
 		pRenderer->SetUnorderedAccessTexture("texColorOut", this->blurComputeOutputPingPong[0]);
 		pRenderer->Apply();
 		pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
@@ -300,18 +324,7 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 
 	// additive blend combine
 	const TextureID colorTex = pRenderer->GetRenderTargetTexture(_colorRT);
-	const TextureID bloomTex = [&]() 
-	{
-		switch (mSelectedBloomShader)
-		{
-		case BloomPass::PS_1DKernel_MultiPsss: return pRenderer->GetRenderTargetTexture(_blurPingPong[0]);
-		case BloomPass::CS_1DKernel_MultiPsss: return blurComputeOutputPingPong[1];
-		case BloomPass::CS_Transpoze_1DKernel_MultiPsss: return blurComputeOutputPingPong[0];
-		case BloomPass::NUM_BLOOM_SHADERS: 
-		default:
-			return -1;
-		}
-	}();
+	const TextureID bloomTex = GetBloomTexture(pRenderer);
 
 	pGPU->BeginEntry("Bloom Combine");
 	pRenderer->BeginEvent("Combine");
@@ -327,4 +340,18 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 	//pCPU->EndEntry(); // bloom
 	pRenderer->EndEvent(); // bloom
 	pGPU->EndEntry(); // bloom
+}
+
+
+TextureID BloomPass::GetBloomTexture(const Renderer* pRenderer) const
+{
+	switch (mSelectedBloomShader)
+	{
+	case BloomPass::PS_1DKernel_MultiPsss: return pRenderer->GetRenderTargetTexture(_blurPingPong[0]);
+	case BloomPass::CS_1DKernel_MultiPsss: return blurComputeOutputPingPong[1];
+	case BloomPass::CS_Transpoze_1DKernel_MultiPsss: return blurComputeOutputPingPong[0];
+	case BloomPass::NUM_BLOOM_SHADERS:
+	default:
+		return -1;
+	}
 }

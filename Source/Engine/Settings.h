@@ -80,7 +80,7 @@ namespace Settings
 		ShadowMap	shadowMap;
 		PostProcess postProcess;
 		bool		bUseDeferredRendering;
-		bool		bUseBRDFLighting;	// should use enums when there's more than brdf and blinn-phong lighting
+		bool		bUseBRDFLighting = true;	// should use enums when there's more than brdf and blinn-phong lighting
 		bool		bAmbientOcclusion;
 		bool		bEnableEnvironmentLighting;
 		bool		bPreLoadEnvironmentMaps;

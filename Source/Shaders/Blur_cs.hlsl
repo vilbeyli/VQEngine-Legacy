@@ -20,6 +20,16 @@ RWTexture2D<float4> texColorOut;
 Texture2D<float4>   texColorIn;
 SamplerState        sSampler;
 
+#if USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH
+cbuffer BlurParametersBuffer
+{
+	struct Params
+	{
+		uint strength;
+	} cBlurParameters;
+};
+#endif
+
 // These are defined by the application compiling the shader
 //#define THREAD_GROUP_SIZE_X 1
 //#define THREAD_GROUP_SIZE_Y 1920
@@ -48,7 +58,7 @@ void CSMain(
 	#include "GaussianKernels.hlsl"
 
 
-	// READ INPUT TEXTURE AND SAVE INTO SHARED MEM (LDS)
+	// READ INPUT TEXTURE AND SAVE INTO SHARED MEM (LDS = Local Data Share)
 	//
 	const uint TEXTURE_READ_COUNT = (uint) ceil(min(
 		  ((float)IMAGE_SIZE_X) / THREAD_GROUP_SIZE_X
@@ -79,7 +89,11 @@ void CSMain(
 
 	// RUN THE HORIZONTAL/VERTICAL BLUR KERNEL
 	//
-	[unroll] for(uint passCount=0; passCount< PASS_COUNT; ++passCount)
+#if USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH
+	for(uint passCount=0; passCount< cBlurParameters.strength; ++passCount)
+#else
+	[unroll] for (uint passCount = 0; passCount < PASS_COUNT; ++passCount)
+#endif
 	{
 		// SYNC UP SHARED-MEM SO IT'S READY TO READ
 		//
@@ -104,26 +118,42 @@ void CSMain(
 			{
 	#if HORIZONTAL
 				bool bKernelSampleOutOfBounds = ((outTexel.x + kernelOffset) >= IMAGE_SIZE_X);
-				if (!bKernelSampleOutOfBounds)
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[IMAGE_SIZE_X - 1] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
 				{
 					result += gColorLine[outTexel.x + kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
 				}
 
 				bKernelSampleOutOfBounds = ((outTexel.x - kernelOffset) < 0);
-				if (!bKernelSampleOutOfBounds)
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[0] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
 				{
 					result += gColorLine[outTexel.x - kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
 				}
 	#endif
 	#if VERTICAL
 				bool bKernelSampleOutOfBounds = ((outTexel.y + kernelOffset) >= IMAGE_SIZE_Y);
-				if (!bKernelSampleOutOfBounds)
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[IMAGE_SIZE_Y-1] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
 				{
 					result += gColorLine[outTexel.y + kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
 				}
 
 				bKernelSampleOutOfBounds = ((outTexel.y - kernelOffset) < 0);
-				if (!bKernelSampleOutOfBounds)
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[0] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
 				{
 					result += gColorLine[outTexel.y - kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
 				}
@@ -138,13 +168,13 @@ void CSMain(
 		//
 		GroupMemoryBarrierWithGroupSync();
 
-		[unroll] for (uint px = 0; px < TEXTURE_READ_COUNT; ++px)
+		[unroll] for (uint px_ = 0; px_ < TEXTURE_READ_COUNT; ++px_)
 		{
 #if VERTICAL
-			const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * px);
+			const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * px_);
 			gColorLine[outTexel.y] = texColorOut[outTexel].xyz;
 #else
-			const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px, 0);
+			const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px_, 0);
 			gColorLine[outTexel.x] = texColorOut[outTexel].xyz;
 #endif
 		}

@@ -26,6 +26,7 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
+#include <functional>
 
 //-------------------------------------------------------------------------------------------------------------
 // CONSTANTS & STATICS
@@ -119,9 +120,10 @@ bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
 	auto GetIncludeFileName = [](const std::string& line)
 	{
 		const std::string str_search = "#include \"";
-		if (line.find(str_search) != std::string::npos)
+		const size_t foundPos = line.find(str_search);
+		if (foundPos != std::string::npos)
 		{
-			std::string quotedFileName = line.substr(str_search.size() - 1);
+			std::string quotedFileName = line.substr(foundPos + strlen("#include "), line.size() - foundPos);// +str_search.size() - 1);
 			return quotedFileName.substr(1, quotedFileName.size() - 2);
 		}
 		return std::string();
@@ -130,7 +132,7 @@ bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
 	const std::string ShaderSourceDir = DirectoryUtil::GetFolderPath(sourcePath);
 	const std::string ShaderCacheDir = DirectoryUtil::GetFolderPath(cachePath);
 
-	auto AreIncludesDirty = [&](const std::string srcPath)
+	auto AreIncludesDirty = [&](const std::string& srcPath)
 	{
 		std::stack<std::string> includeStack;
 		includeStack.push(srcPath);
@@ -151,6 +153,7 @@ bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
 				const std::string includeFileName = GetIncludeFileName(line);
 				if (includeFileName.empty()) continue;
 
+				const std::string includeFileName_ = GetIncludeFileName(line);
 				const std::string includeSourcePath = ShaderSourceDir + includeFileName;
 				const std::string includeCachePath = ShaderCacheDir + includeFileName;
 
@@ -339,6 +342,15 @@ void Shader::ReleaseResources()
 
 
 
+size_t Shader::GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro>& macros) const
+{
+	if (macros.empty()) return 0;
+	std::string concatenatedMacros;
+	for (const ShaderMacro& macro : macros)
+		concatenatedMacros += macro.name + macro.value;
+	return std::hash<std::string>()(concatenatedMacros);
+}
+
 bool Shader::Reload(ID3D11Device* device)
 {
 	Shader copy(this->mDescriptor);
@@ -416,6 +428,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 //-------------------------------------------------------------------------------------------------------------
 bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 {
+	constexpr const char * SHADER_BINARY_EXTENSION = ".bin";
 	mDescriptor = desc;
 	HRESULT result;
 	ShaderBlobs blobs;
@@ -438,17 +451,14 @@ bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 
 		// USE SHADER CACHE
 		//
-		const std::string cacheFileName = DirectoryUtil::GetFileNameFromPath(sourceFilePath) + ".bin";
+		const size_t ShaderHash = GeneratePreprocessorDefinitionsHash(stageDesc.macros);
+		const std::string cacheFileName = stageDesc.macros.empty()
+			? DirectoryUtil::GetFileNameFromPath(sourceFilePath) + SHADER_BINARY_EXTENSION
+			: DirectoryUtil::GetFileNameFromPath(sourceFilePath) + "_" + std::to_string(ShaderHash) + SHADER_BINARY_EXTENSION;
 		const std::string cacheFilePath = Application::s_ShaderCacheDirectory + "\\" + cacheFileName;
-		const bool bUseCachedShaders = 
-			DirectoryUtil::FileExists(cacheFilePath) 
-			&& !IsCacheDirty(sourceFilePath, cacheFilePath)
-			&& stageDesc.macros.empty();
-		//  ^^^^^^^^^^^^^^^^^^^^^^^
-		// Currently there's no way to tell if macro value has changed since the caching.
-		// Hence, we exclude the cached shader usage for shaders with preprocessor defines.
-		//
-		// TODO: maybe hash the shaders based on file name + hashed preprocessor defines 
+		const bool bUseCachedShaders =
+			DirectoryUtil::FileExists(cacheFilePath)
+			&& !IsCacheDirty(sourceFilePath, cacheFilePath);
 		//---------------------------------------------------------------------------------
 		if (!bPrinted)	// quick status print here
 		{
@@ -468,12 +478,7 @@ bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 			if (CompileFromSource(sourceFilePath, stage, pBlob, errMsg, stageDesc.macros))
 			{
 				blobs.of[stage] = pBlob;
-
-				// We also create cached binaries only for shaders with no preprocessor defines.
-				if (stageDesc.macros.empty())
-				{
-					CacheShaderBinary(cacheFilePath, blobs.of[stage]);
-				}
+				CacheShaderBinary(cacheFilePath, blobs.of[stage]);
 			}
 			else
 			{

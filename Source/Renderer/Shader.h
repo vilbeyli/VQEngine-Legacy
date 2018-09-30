@@ -243,6 +243,7 @@ private:
 	void CheckSignatures();
 	void LogConstantBufferLayouts() const;
 	void ReleaseResources();
+	size_t GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro>& macros) const;
 
 private:
 	//----------------------------------------------------------------------------------------------------------------

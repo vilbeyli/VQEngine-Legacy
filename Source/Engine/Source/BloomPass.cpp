@@ -34,7 +34,7 @@
 #endif
 
 #define ENABLE_COMPUTE_BLUR             1
-#define ENABLE_COMPUTE_BLUR_TRANSPOZE   0 // this is slightly slower than the regular blur
+#define ENABLE_COMPUTE_BLUR_TRANSPOZE   1
 constexpr bool USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH = false;
 
 #define USE_COMPUTE_BLUR                ENABLE_COMPUTE_BLUR || ENABLE_COMPUTE_BLUR_TRANSPOZE
@@ -76,18 +76,14 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	blurSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	blurSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 	this->_blurSampler = pRenderer->CreateSamplerState(blurSamplerDesc);
-	mSelectedBloomShader = BloomShader::CS_1DKernel_MultiPsss;
 
-#if ENABLE_COMPUTE_BLUR
+#if USE_COMPUTE_BLUR
 	// Blur Compute Resources
 	TextureDesc texDesc = TextureDesc();
 	texDesc.usage = ETextureUsage::COMPUTE_RW_TEXTURE;
 	texDesc.height = pRenderer->WindowHeight();
 	texDesc.width = pRenderer->WindowWidth();
 	texDesc.format = rtDesc.textureDesc.format;
-	this->blurComputeOutputPingPong[0] = pRenderer->CreateTexture2D(texDesc);
-	this->blurComputeOutputPingPong[1] = pRenderer->CreateTexture2D(texDesc);
-
 
 	// Dispatch() spawns a thread group among X or Y dimensions.
 	// The compute shader kernel describes the thread group size
@@ -97,8 +93,8 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	// a row or a column of pixels of the image so that each thread covers
 	// one pixel.
 	//
-	const int COMPUTE_KERNEL_DIMENSION = 1024;
 	const char* pCBufferPreProcessorValue = USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH ? "1" : "0";
+	const int COMPUTE_KERNEL_DIMENSION = 1024;
 	const ShaderDesc CSDescV =
 	{
 		"Blur_Compute_Vertical",
@@ -131,13 +127,22 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 			{ "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) } }
 		}
 	};
+#endif
+#if ENABLE_COMPUTE_BLUR
+
+	this->blurComputeOutputPingPong[0] = pRenderer->CreateTexture2D(texDesc);
+	this->blurComputeOutputPingPong[1] = pRenderer->CreateTexture2D(texDesc);
 	this->blurComputeShaderPingPong[0] = pRenderer->CreateShader(CSDescH);
 	this->blurComputeShaderPingPong[1] = pRenderer->CreateShader(CSDescV);
+	mSelectedBloomShader = BloomShader::CS_1D_Kernels;
 #endif
 
 #if ENABLE_COMPUTE_BLUR_TRANSPOZE
 #if !ENABLE_COMPUTE_BLUR
-	const int COMPUTE_KERNEL_DIMENSION = 1024;
+	// Compute Blur Transpoze needs the regular compute horizontal blur shader
+	this->blurComputeOutputPingPong[0] = pRenderer->CreateTexture2D(texDesc);
+	// as well as one output buffer to store the results in
+	this->blurComputeShaderPingPong[0] = pRenderer->CreateShader(CSDescH);
 #endif
 	const ShaderDesc CSDescHTz =
 	{
@@ -169,6 +174,8 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	texDesc.width = pRenderer->WindowHeight();
 	texDesc.format = rtDesc.textureDesc.format;
 	this->texTransposedImage = pRenderer->CreateTexture2D(texDesc);
+
+	mSelectedBloomShader = BloomShader::CS_1D_Kernels_Transpoze_Out;
 #endif
 }
 
@@ -207,7 +214,7 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 	params.blurStrength = settings.blurStrength;
 	switch (mSelectedBloomShader)
 	{
-	case BloomPass::PS_1DKernel_MultiPsss:	// PIXEL_SHADER_BLUR : 1.78 ms 1080p
+	case BloomPass::PS_1D_Kernels:	// PIXEL_SHADER_BLUR : 1.78 ms 1080p
 	{
 		pGPU->BeginEntry("Bloom Blur<PS>");
 		pRenderer->BeginEvent("Blur Pass");
@@ -235,7 +242,7 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 	}	break;
 
 #if ENABLE_COMPUTE_BLUR
-	case BloomPass::CS_1DKernel_MultiPsss:
+	case BloomPass::CS_1D_Kernels:
 	{
 		pGPU->BeginEntry("Bloom Blur<CS>");
 		pRenderer->BeginEvent("Blur Compute Pass");
@@ -267,7 +274,7 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 #endif
 
 #if ENABLE_COMPUTE_BLUR_TRANSPOZE
-	case BloomPass::CS_Transpoze_1DKernel_MultiPsss:
+	case BloomPass::CS_1D_Kernels_Transpoze_Out:
 	{
 		pGPU->BeginEntry("Bloom Blur<CS_T>");
 		pRenderer->BeginEvent("Blur Compute_Transpoze Pass");
@@ -347,9 +354,9 @@ TextureID BloomPass::GetBloomTexture(const Renderer* pRenderer) const
 {
 	switch (mSelectedBloomShader)
 	{
-	case BloomPass::PS_1DKernel_MultiPsss: return pRenderer->GetRenderTargetTexture(_blurPingPong[0]);
-	case BloomPass::CS_1DKernel_MultiPsss: return blurComputeOutputPingPong[1];
-	case BloomPass::CS_Transpoze_1DKernel_MultiPsss: return blurComputeOutputPingPong[0];
+	case BloomPass::PS_1D_Kernels: return pRenderer->GetRenderTargetTexture(_blurPingPong[0]);
+	case BloomPass::CS_1D_Kernels: return blurComputeOutputPingPong[1];
+	case BloomPass::CS_1D_Kernels_Transpoze_Out: return blurComputeOutputPingPong[0];
 	case BloomPass::NUM_BLOOM_SHADERS:
 	default:
 		return -1;

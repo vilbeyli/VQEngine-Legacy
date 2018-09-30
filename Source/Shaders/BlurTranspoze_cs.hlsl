@@ -36,7 +36,27 @@ cbuffer BlurParametersBuffer
 //#define THREAD_GROUP_SIZE_Z 1
 //#define PASS_COUNT 6
 
-#define PIXEL_CACHE_SIZE    IMAGE_SIZE_X
+
+// KERNEL_RANGE is this: center + half width of the kernel
+//
+// consider a blur kernel 5x5 - '*' indicates the center of the kernel
+//
+// x   x   x   x   x
+// x   x   x   x   x
+// x   x   x*  x   x
+// x   x   x   x   x
+// x   x   x   x   x
+//
+//
+// separate into 1D kernels
+//
+// x   x   x*  x   x
+//         ^-------^
+//        KERNEL_RANGE
+//
+#define KERNEL_RANGE  ((KERNEL_DIMENSION - 1) / 2) + 1
+#define KERNEL_RANGE_EXCLUDING_MIDDLE  (KERNEL_RANGE - 1)
+#define PIXEL_CACHE_SIZE    IMAGE_SIZE_X + KERNEL_RANGE_EXCLUDING_MIDDLE * 2
 
 groupshared half3 gColorLine[PIXEL_CACHE_SIZE];
 
@@ -62,12 +82,21 @@ void CSMain(
 		const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * i, 0);
 		if (outTexel.x >= IMAGE_SIZE_X)
 			break;
-		const int idxColorLine = outTexel.x;
-
+		
 		const float2 uv = float2(outTexel.xy) / float2(IMAGE_SIZE_X, IMAGE_SIZE_Y);
 		const half4 color = texColorIn.SampleLevel(sSampler, uv, 0);
 
-		gColorLine[idxColorLine] = color.xyz;
+		const bool bFirstPixel = outTexel.x == 0;
+		const bool bLastPixel = outTexel.x == (IMAGE_SIZE_X - 1);
+		if ( bFirstPixel || bLastPixel )
+		{
+			const int offset = outTexel.x / (IMAGE_SIZE_X - 1);
+			[unroll] for (int krn = 0; krn < KERNEL_RANGE_EXCLUDING_MIDDLE; ++krn)
+			{
+				gColorLine[outTexel.x + krn + KERNEL_RANGE_EXCLUDING_MIDDLE * offset + offset] = color.xyz;
+			}
+		}
+		gColorLine[outTexel.x + KERNEL_RANGE_EXCLUDING_MIDDLE] = color.xyz;
 		texColorOut[outTexel.yx] = float4(0, 0, 0, 1);
 	}
 
@@ -90,36 +119,26 @@ void CSMain(
 		[unroll] for (uint px = 0; px < TEXTURE_READ_COUNT; ++px)
 		{
 			const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px, 0);
-			int idxColorLine = outTexel.x;
+			if (outTexel.x >= IMAGE_SIZE_X)
+				break;
 
-			// use first weight 
-			half3 result = gColorLine[idxColorLine] * KERNEL_WEIGHTS[0];
-
-			// and tap the next and previous pixels in increments
+#if 1
+			// linearly run the blur kernel
+			half3 result = 0.0f.xxx;
+			[unroll] for (int kernelOffset = -(KERNEL_DIMENSION / 2); kernelOffset <= (KERNEL_DIMENSION / 2); ++kernelOffset)
+			{
+				result += gColorLine[outTexel.x + kernelOffset + KERNEL_RANGE_EXCLUDING_MIDDLE] * KERNEL_WEIGHTS[abs(kernelOffset)];
+			}
+#else
+			// use first weight and tap the next and previous pixels in increments
+			half3 result = gColorLine[outTexel.x + KERNEL_RANGE_EXCLUDING_MIDDLE] * KERNEL_WEIGHTS[0];
 			[unroll] for (uint kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
 			{
-				bool bKernelSampleOutOfBounds = ((outTexel.x + kernelOffset) >= IMAGE_SIZE_X);
-				if (bKernelSampleOutOfBounds)
-				{
-					result += gColorLine[IMAGE_SIZE_X - 1] * KERNEL_WEIGHTS[kernelOffset];
-				}
-				else
-				{
-					result += gColorLine[outTexel.x + kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
-				}
-
-				bKernelSampleOutOfBounds = ((outTexel.x - kernelOffset) < 0);
-				if (bKernelSampleOutOfBounds)
-				{
-					result += gColorLine[0] * KERNEL_WEIGHTS[kernelOffset];
-				}
-				else
-				{
-					result += gColorLine[outTexel.x - kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
-				}
+				result += gColorLine[outTexel.x + kernelOffset + KERNEL_RANGE_EXCLUDING_MIDDLE] * KERNEL_WEIGHTS[kernelOffset];
+				result += gColorLine[outTexel.x - kernelOffset + KERNEL_RANGE_EXCLUDING_MIDDLE] * KERNEL_WEIGHTS[kernelOffset];
 			}
-
-			// save the blurred pixel value
+#endif
+			// save the blurred pixel value transpozed
 			texColorOut[outTexel.yx] = half4(result, 0.0f);
 		}
 
@@ -128,13 +147,24 @@ void CSMain(
 		//
 		GroupMemoryBarrierWithGroupSync();
 
-		[unroll] for (uint px = 0; px < TEXTURE_READ_COUNT; ++px)
+		[unroll] for (uint i = 0; i < TEXTURE_READ_COUNT; ++i)
 		{
-			const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px, 0);
-			int idxColorLine = outTexel.x;
+			const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * i, 0);
+			if (outTexel.x >= IMAGE_SIZE_X)
+				break;
+			const half3 color = texColorOut[outTexel.yx].xyz;
 
-			gColorLine[idxColorLine] = texColorOut[outTexel.yx].xyz;
+			const bool bFirstPixel = outTexel.x == 0;
+			const bool bLastPixel = outTexel.x == (IMAGE_SIZE_X - 1);
+			if (bFirstPixel || bLastPixel)
+			{
+				const int offset = outTexel.x / (IMAGE_SIZE_X - 1);
+				[unroll] for (int krn = 0; krn < KERNEL_RANGE_EXCLUDING_MIDDLE; ++krn)
+				{
+					gColorLine[outTexel.x + KERNEL_RANGE_EXCLUDING_MIDDLE*offset + krn + offset] = color.xyz;
+				}
+			}
+			gColorLine[outTexel.x + KERNEL_RANGE_EXCLUDING_MIDDLE] = color.xyz;
 		}
-
 	}
 }

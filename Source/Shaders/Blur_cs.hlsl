@@ -114,51 +114,38 @@ void CSMain(
 	#endif
 
 			// and tap the next and previous pixels in increments
+#if HORIZONTAL
 			[unroll] for (kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
 			{
-	#if HORIZONTAL
 				bool bKernelSampleOutOfBounds = ((outTexel.x + kernelOffset) >= IMAGE_SIZE_X);
-				if (bKernelSampleOutOfBounds)
-				{
-					result += gColorLine[IMAGE_SIZE_X - 1] * KERNEL_WEIGHTS[kernelOffset];
-				}
-				else
-				{
-					result += gColorLine[outTexel.x + kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
-				}
+				int index = bKernelSampleOutOfBounds
+					? IMAGE_SIZE_X - 1
+					: outTexel.x + kernelOffset;
+				result += gColorLine[index] * KERNEL_WEIGHTS[kernelOffset];
 
 				bKernelSampleOutOfBounds = ((outTexel.x - kernelOffset) < 0);
-				if (bKernelSampleOutOfBounds)
-				{
-					result += gColorLine[0] * KERNEL_WEIGHTS[kernelOffset];
-				}
-				else
-				{
-					result += gColorLine[outTexel.x - kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
-				}
-	#endif
-	#if VERTICAL
+				index = bKernelSampleOutOfBounds
+					? 0
+					: outTexel.x - kernelOffset;
+				result += gColorLine[index] * KERNEL_WEIGHTS[kernelOffset];
+			}
+#endif
+#if VERTICAL
+			[unroll] for (kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
+			{
 				bool bKernelSampleOutOfBounds = ((outTexel.y + kernelOffset) >= IMAGE_SIZE_Y);
-				if (bKernelSampleOutOfBounds)
-				{
-					result += gColorLine[IMAGE_SIZE_Y-1] * KERNEL_WEIGHTS[kernelOffset];
-				}
-				else
-				{
-					result += gColorLine[outTexel.y + kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
-				}
+				int index = bKernelSampleOutOfBounds
+					? IMAGE_SIZE_Y - 1
+					: outTexel.y + kernelOffset;
+				result += gColorLine[index] * KERNEL_WEIGHTS[kernelOffset];
 
 				bKernelSampleOutOfBounds = ((outTexel.y - kernelOffset) < 0);
-				if (bKernelSampleOutOfBounds)
-				{
-					result += gColorLine[0] * KERNEL_WEIGHTS[kernelOffset];
-				}
-				else
-				{
-					result += gColorLine[outTexel.y - kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
-				}
-	#endif
+				index = bKernelSampleOutOfBounds
+					? 0
+					: outTexel.y - kernelOffset;
+				result += gColorLine[index] * KERNEL_WEIGHTS[kernelOffset];
 			}
+#endif
 
 			// save the blurred pixel value
 			texColorOut[outTexel] = half4(result, 0.0f);

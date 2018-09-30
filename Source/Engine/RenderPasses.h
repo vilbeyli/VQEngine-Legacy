@@ -83,9 +83,9 @@ struct BloomPass : public RenderPass
 {
 	enum BloomShader : int
 	{
-		PS_1DKernel_MultiPsss = 0,
-		CS_1DKernel_MultiPsss,
-		CS_Transpoze_1DKernel_MultiPsss,
+		PS_1D_Kernels = 0,
+		CS_1D_Kernels,
+		CS_1D_Kernels_Transpoze_Out,
 
 		NUM_BLOOM_SHADERS
 	};

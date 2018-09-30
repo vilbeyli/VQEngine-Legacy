@@ -44,7 +44,9 @@
 //         ^-------^
 //        KERNEL_RANGE
 //
+#ifndef KERNEL_RANGE
 #define KERNEL_RANGE  ((KERNEL_DIMENSION - 1) / 2) + 1
+#endif
 
 const half KERNEL_WEIGHTS[KERNEL_RANGE] =
 //----------------------------------------------------------------------------------------------------------------------------------

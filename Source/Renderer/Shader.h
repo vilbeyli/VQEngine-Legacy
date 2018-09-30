@@ -80,19 +80,6 @@ struct InputLayout
 };
 
 
-//----------------------------------------------------------------------
-// Note:
-//
-// If a ShaderMacro is added to the shader compilation after the shader 
-// is cached and the engine is configured to use the shader cache, the
-// engine will use the cached shader which will result in shaders not
-// being compiled with the given macro values/definitions.
-// 
-// To avoid this, do one of the following:
-//
-// - turn shader caching off from EngineSettings.ini
-// - delete the %AppData%\VQEngine\ShaderCache folder
-//----------------------------------------------------------------------
 struct ShaderMacro
 {
 	std::string name;
@@ -191,7 +178,6 @@ public:
 	~Shader();
 
 	bool Reload(ID3D11Device* device);
-	bool HasSourceFileBeenUpdated() const;
 	void ClearConstantBuffers();
 	void UpdateConstants(ID3D11DeviceContext* context);
 
@@ -200,13 +186,16 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	const std::string& Name() const { return mName; }
 	inline ShaderID    ID()   const { return mID; }
-	const std::vector<ConstantBufferLayout>&	GetConstantBufferLayouts() const;
-	const std::vector<ConstantBuffer>&			GetConstantBuffers() const;
+	
+	const std::vector<ConstantBufferLayout>& GetConstantBufferLayouts() const;
+	const std::vector<ConstantBuffer      >& GetConstantBuffers() const;
 	
 	const ShaderTexture& GetTextureBinding(const std::string& textureName) const;
 	const ShaderSampler& GetSamplerBinding(const std::string& samplerName) const;
 	bool HasTextureBinding(const std::string& textureName) const;
 	bool HasSamplerBinding(const std::string& samplerName) const;
+
+	bool HasSourceFileBeenUpdated() const;
 
 private:
 	//----------------------------------------------------------------------------------------------------------------

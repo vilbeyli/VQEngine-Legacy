@@ -50,18 +50,18 @@ groupshared half3 gColorLine[PIXEL_CACHE_SIZE];
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
 void CSMain(
 	uint3 groupID     : SV_GroupID,
-	uint3 groupTID    : SV_GroupThreadID,
+	uint3 groupTID : SV_GroupThreadID,
 	uint3 dispatchTID : SV_DispatchThreadID,
-	uint  groupIndex  : SV_GroupIndex
+	uint  groupIndex : SV_GroupIndex
 )
 {
-	#include "GaussianKernels.hlsl"
+#include "GaussianKernels.hlsl"
 
 
 	// READ INPUT TEXTURE AND SAVE INTO SHARED MEM (LDS = Local Data Share)
 	//
 	const uint TEXTURE_READ_COUNT = (uint) ceil(min(
-		  ((float)IMAGE_SIZE_X) / THREAD_GROUP_SIZE_X
+		((float)IMAGE_SIZE_X) / THREAD_GROUP_SIZE_X
 		, ((float)IMAGE_SIZE_Y) / THREAD_GROUP_SIZE_Y));
 
 	[unroll] for (uint i = 0; i < TEXTURE_READ_COUNT; ++i)
@@ -90,7 +90,7 @@ void CSMain(
 	// RUN THE HORIZONTAL/VERTICAL BLUR KERNEL
 	//
 #if USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH
-	for(uint passCount=0; passCount< cBlurParameters.strength; ++passCount)
+	for (uint passCount = 0; passCount < cBlurParameters.strength; ++passCount)
 #else
 	[unroll] for (uint passCount = 0; passCount < PASS_COUNT; ++passCount)
 #endif
@@ -105,47 +105,60 @@ void CSMain(
 		[unroll] for (uint px = 0; px < TEXTURE_READ_COUNT; ++px)
 		{
 			int kernelOffset = 0;
-	#if VERTICAL
+#if VERTICAL
 			const uint2 outTexel = dispatchTID.xy + uint2(0, THREAD_GROUP_SIZE_Y * px);
 			half3 result = gColorLine[outTexel.y] * KERNEL_WEIGHTS[kernelOffset];
-	#else
+#else
 			const uint2 outTexel = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px, 0);
 			half3 result = gColorLine[outTexel.x] * KERNEL_WEIGHTS[kernelOffset];
-	#endif
+#endif
 
 			// and tap the next and previous pixels in increments
-#if HORIZONTAL
 			[unroll] for (kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
 			{
+#if HORIZONTAL
 				bool bKernelSampleOutOfBounds = ((outTexel.x + kernelOffset) >= IMAGE_SIZE_X);
-				int index = bKernelSampleOutOfBounds
-					? IMAGE_SIZE_X - 1
-					: outTexel.x + kernelOffset;
-				result += gColorLine[index] * KERNEL_WEIGHTS[kernelOffset];
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[IMAGE_SIZE_X - 1] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
+				{
+					result += gColorLine[outTexel.x + kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
+				}
 
 				bKernelSampleOutOfBounds = ((outTexel.x - kernelOffset) < 0);
-				index = bKernelSampleOutOfBounds
-					? 0
-					: outTexel.x - kernelOffset;
-				result += gColorLine[index] * KERNEL_WEIGHTS[kernelOffset];
-			}
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[0] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
+				{
+					result += gColorLine[outTexel.x - kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
+				}
 #endif
 #if VERTICAL
-			[unroll] for (kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
-			{
 				bool bKernelSampleOutOfBounds = ((outTexel.y + kernelOffset) >= IMAGE_SIZE_Y);
-				int index = bKernelSampleOutOfBounds
-					? IMAGE_SIZE_Y - 1
-					: outTexel.y + kernelOffset;
-				result += gColorLine[index] * KERNEL_WEIGHTS[kernelOffset];
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[IMAGE_SIZE_Y - 1] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
+				{
+					result += gColorLine[outTexel.y + kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
+				}
 
 				bKernelSampleOutOfBounds = ((outTexel.y - kernelOffset) < 0);
-				index = bKernelSampleOutOfBounds
-					? 0
-					: outTexel.y - kernelOffset;
-				result += gColorLine[index] * KERNEL_WEIGHTS[kernelOffset];
-			}
+				if (bKernelSampleOutOfBounds)
+				{
+					result += gColorLine[0] * KERNEL_WEIGHTS[kernelOffset];
+				}
+				else
+				{
+					result += gColorLine[outTexel.y - kernelOffset] * KERNEL_WEIGHTS[kernelOffset];
+				}
 #endif
+			}
 
 			// save the blurred pixel value
 			texColorOut[outTexel] = half4(result, 0.0f);

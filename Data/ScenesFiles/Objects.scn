@@ -30,7 +30,7 @@
 
 ao true 0.23 17.0 3.40
 skylight true
-bloom true 0.08 6
+bloom true 1.22 8
 
 directional sun 4.5   3   -5   15  2048 256 300 0.001f
 

@@ -119,6 +119,8 @@ struct BloomPass : public RenderPass
 
 	void Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSettings, const RenderTargetDesc& rtDesc);
 	void Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU, RenderTargetID rtDestination, const Settings::Bloom& settings) const;
+	void UpdateSettings(Renderer* pRenderer, const Settings::Bloom& bloomSettings);
+
 	TextureID GetBloomTexture(const Renderer* pRenderer) const;
 };
 
@@ -130,6 +132,7 @@ struct TonemappingCombinePass : public RenderPass
 
 struct PostProcessPass : public RenderPass
 {
+	void UpdateSettings(const Settings::PostProcess& newSettings, Renderer* pRenderer);
 	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
 	void Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pCPU, GPUProfiler* pGPU) const;
 
@@ -243,7 +246,7 @@ struct DebugPass : public RenderPass
 // shift+ wheel up/down	:	intensity +/-
 //
 //
-#define BLOOM_DEBUGGING 1
+#define BLOOM_DEBUGGING 0
 //
 // wheel up/down		:	brightness threshold +/-
 // shift+ wheel up/down	:	blur strength +/-

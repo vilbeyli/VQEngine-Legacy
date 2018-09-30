@@ -425,6 +425,10 @@ bool Engine::LoadScene(int level)
 		}
 		Engine::sEngineSettings.levelToLoad = level;
 		bool bLoadSuccess = LoadSceneFromFile();
+
+		sEngineSettings.rendering.postProcess.bloom = mpActiveScene->mSceneRenderSettings.bloom;
+		mPostProcessPass.UpdateSettings(sEngineSettings.rendering.postProcess, mpRenderer);
+
 		mbLoading = false;
 		return bLoadSuccess;
 	};
@@ -773,7 +777,7 @@ void Engine::CalcFrameStats(float dt)
 
 const Settings::Engine& Engine::ReadSettingsFromFile()
 {
-	sEngineSettings = Parser::ReadSettings("EngineSettings.ini");
+	sEngineSettings = Parser::ReadSettings("Data/EngineSettings.ini");
 	return sEngineSettings;
 }
 

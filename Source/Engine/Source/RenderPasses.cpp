@@ -33,16 +33,19 @@
 #include <array>
 
 
+constexpr const EImageFormat HDR_Format = RGBA16F;
+constexpr const EImageFormat LDR_Format = RGBA8UN;
+static bool bFirstInitialization = true;
+
+void PostProcessPass::UpdateSettings(const Settings::PostProcess& newSettings, Renderer* pRenderer)
+{
+	_settings = newSettings;
+	_bloomPass.UpdateSettings(pRenderer, newSettings.bloom);
+}
 
 void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings)
 {
 	_settings = postProcessSettings;
-	DXGI_SAMPLE_DESC smpDesc;
-	smpDesc.Count = 1;
-	smpDesc.Quality = 0;
-
-	constexpr const EImageFormat HDR_Format = RGBA16F;
-	constexpr const EImageFormat LDR_Format = RGBA8UN;
 
 	const EImageFormat imageFormat = _settings.HDREnabled ? HDR_Format : LDR_Format;
 
@@ -68,7 +71,6 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 
 	// World Render Target
 	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc);
-
 }
 
 

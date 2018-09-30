@@ -33,7 +33,7 @@
 #undef min
 #endif
 
-#define ENABLE_COMPUTE_BLUR             1
+#define ENABLE_COMPUTE_BLUR             0
 #define ENABLE_COMPUTE_BLUR_TRANSPOZE   1
 constexpr bool USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH = false;
 
@@ -49,7 +49,7 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	this->_blurPingPong[0] = pRenderer->AddRenderTarget(rtDesc);
 	this->_blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc);
 
-	const int BLUR_KERNEL_DIMENSION = 21;	// should be odd
+	const int BLUR_KERNEL_DIMENSION = 15;	// should be odd
 	const char* pFSQ_VS = "FullScreenquad_vs.hlsl";
 	const ShaderDesc bloomPipelineShaders[] =
 	{
@@ -178,6 +178,35 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	mSelectedBloomShader = BloomShader::CS_1D_Kernels_Transpoze_Out;
 #endif
 }
+
+
+void BloomPass::UpdateSettings(Renderer* pRenderer, const Settings::Bloom& bloomSettings)
+{
+#if USE_COMPUTE_BLUR
+	ShaderDesc CSDesc = pRenderer->GetShaderDesc(blurComputeShaderPingPong[0]);
+	auto& Macros = CSDesc.stages[/*EShaderStage::CS*/0].macros;
+	// PASS_COUNT macro is 1 before the last element in the Macros array, hence size-2
+	Macros[Macros.size() - 2] = { "PASS_COUNT", std::to_string(bloomSettings.blurStrength) };
+	this->blurComputeShaderPingPong[0] = pRenderer->CreateShader(CSDesc);
+#if ENABLE_COMPUTE_BLUR
+	CSDesc = pRenderer->GetShaderDesc(blurComputeShaderPingPong[1]);
+	Macros = CSDesc.stages[/*EShaderStage::CS*/0].macros;
+	// PASS_COUNT macro is 1 before the last element in the Macros array, hence size-2
+	Macros[Macros.size() - 2] = { "PASS_COUNT", std::to_string(bloomSettings.blurStrength) };
+	this->blurComputeShaderPingPong[1] = pRenderer->CreateShader(CSDesc);
+#endif
+#if ENABLE_COMPUTE_BLUR_TRANSPOZE
+	CSDesc = pRenderer->GetShaderDesc(blurHorizontalTranspozeComputeShader);
+	Macros = CSDesc.stages[/*EShaderStage::CS*/0].macros;
+	// PASS_COUNT macro is 1 before the last element in the Macros array, hence size-2
+	Macros[Macros.size() - 2] = { "PASS_COUNT", std::to_string(bloomSettings.blurStrength) };
+	this->blurHorizontalTranspozeComputeShader = pRenderer->CreateShader(CSDesc);
+#endif
+
+#endif // USE_COMPUTE_BLUR
+}
+
+
 
 struct BlurParameters { unsigned blurStrength; };
 void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU, RenderTargetID _worldRenderTarget, const Settings::Bloom& settings) const
@@ -348,6 +377,7 @@ void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU
 	pRenderer->EndEvent(); // bloom
 	pGPU->EndEntry(); // bloom
 }
+
 
 
 TextureID BloomPass::GetBloomTexture(const Renderer* pRenderer) const

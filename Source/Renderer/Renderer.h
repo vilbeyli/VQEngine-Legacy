@@ -86,6 +86,7 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// --- SHADER
 	ShaderID				CreateShader(const ShaderDesc& shaderDesc);
+	ShaderDesc				GetShaderDesc(ShaderID shaderID) const;
 
 	// --- TEXTURE
 	//						example params:			"bricks_d.png", "Data/Textures/"
@@ -95,25 +96,27 @@ public:
 	TextureID				CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot = sHDRTextureRoot);
 	TextureID				CreateCubemapFromFaceTextures(const std::vector<std::string>& textureFiles, bool bGenerateMips, unsigned mipLevels = 1);
 
+	// --- SAMPLER
+	//
+	SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc);	// TODO: samplerDesc
+
 	// --- BUFFER
 	BufferID				CreateBuffer(const BufferDesc& bufferDesc, const void* pData = nullptr);
 
-	// --- PIPELINE STATE OBJECTS
-	SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc );	// TODO: samplerDesc
-
+	// --- PIPELINE STATES
 	RasterizerStateID		AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors);
+	DepthStencilStateID		AddDepthStencilState(bool bEnableDepth, bool bEnableStencil);	// TODO: depthStencilStateDesc
+	DepthStencilStateID		AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);   //
+	BlendStateID			AddBlendState( /*TODO params*/);
 
-	DepthStencilStateID		AddDepthStencilState(bool bEnableDepth, bool bEnableStencil);	// todo params
-	DepthStencilStateID		AddDepthStencilState(const D3D11_DEPTH_STENCIL_DESC& dsDesc);
-
-	BlendStateID			AddBlendState( /*todo params*/);
-
-	RenderTargetID			AddRenderTarget(const RenderTargetDesc& renderTargetDesc);
+	// --- RENDER / DEPTH TARGETS
+	RenderTargetID				AddRenderTarget(const RenderTargetDesc& renderTargetDesc);
+	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
 	
 	// uses the given texture object, doesn't create a new texture for the render target
-	RenderTargetID			AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
+	//
+	RenderTargetID				AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
 	
-	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
 	
 	//----------------------------------------------------------------------------------------------------------------
 	// PIPELINE STATE MANAGEMENT

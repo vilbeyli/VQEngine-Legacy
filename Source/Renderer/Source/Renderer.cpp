@@ -630,6 +630,12 @@ ShaderID Renderer::CreateShader(const ShaderDesc& shaderDesc)
 	return shader->ID();
 }
 
+ShaderDesc Renderer::GetShaderDesc(ShaderID shaderID) const
+{
+	assert(shaderID >= 0 && mShaders.size() > shaderID);
+	return mShaders[shaderID]->mDescriptor;
+}
+
 RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors)
 {
 	D3D11_RASTERIZER_DESC RSDesc = {};

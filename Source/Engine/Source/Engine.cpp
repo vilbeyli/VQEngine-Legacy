@@ -235,8 +235,11 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpThreadPool = pThreadPool;
 	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 	
-	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen0.png"));
-
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/0.png"));
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/1.png"));
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/2.png"));
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/3.png"));
+	mActiveLoadingScreen = mLoadingScreenTextures[RandU(0, mLoadingScreenTextures.size())];
 #if LOAD_ASYNC
 
 	// quickly render one frame of loading screen
@@ -415,6 +418,7 @@ bool Engine::LoadSceneFromFile()
 bool Engine::LoadScene(int level)
 {
 #if LOAD_ASYNC
+	mActiveLoadingScreen = mLoadingScreenTextures[RandU(0, mLoadingScreenTextures.size())];
 	mbLoading = true;
 	Log::Info("LoadScene: %d", level);
 	auto loadFn = [&, level]()
@@ -1314,7 +1318,6 @@ void Engine::RenderLights() const
 
 void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 {
-	const TextureID texLoadingScreen = mLoadingScreenTextures.back();
 	const XMMATRIX matTransformation = XMMatrixIdentity();
 	const auto IABuffers = mBuiltinMeshes[EGeometry::FULLSCREENQUAD].GetIABuffers();
 
@@ -1331,7 +1334,7 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 	mpRenderer->BindRenderTarget(0);
 	mpRenderer->SetVertexBuffer(IABuffers.first);
 	mpRenderer->SetIndexBuffer(IABuffers.second);
-	mpRenderer->SetTexture("texDiffuseMap", texLoadingScreen);
+	mpRenderer->SetTexture("texDiffuseMap", mActiveLoadingScreen);
 	mpRenderer->SetConstant1f("isDiffuseMap", 1.0f);
 	mpRenderer->SetConstant3f("diffuse", vec3(1.0f, 1, 1));
 	mpRenderer->SetConstant4x4f("worldViewProj", matTransformation);

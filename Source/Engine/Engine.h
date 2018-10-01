@@ -184,7 +184,8 @@ private:
 	// RENDERING 
 	//----------------------------------------------------------------------------------------------------------------
 	ShaderID						mSelectedShader;
-	
+	TextureID						mActiveLoadingScreen;
+
 	DepthTargetID					mWorldDepthTarget;
 
 	// #RenderPassRefactoring

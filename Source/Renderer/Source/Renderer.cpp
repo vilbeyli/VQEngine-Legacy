@@ -1327,7 +1327,7 @@ std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depth
 	// create depth stencil view
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
 	dsvDesc.Format = static_cast<DXGI_FORMAT>(depthTargetDesc.format);
-	dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.ViewDimension = numTextures == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
 	dsvDesc.Texture2DArray.MipSlice = 0;
 
 	for (int i = 0; i < numTextures; ++i)

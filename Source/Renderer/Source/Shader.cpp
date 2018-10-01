@@ -153,7 +153,6 @@ bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
 				const std::string includeFileName = GetIncludeFileName(line);
 				if (includeFileName.empty()) continue;
 
-				const std::string includeFileName_ = GetIncludeFileName(line);
 				const std::string includeSourcePath = ShaderSourceDir + includeFileName;
 				const std::string includeCachePath = ShaderCacheDir + includeFileName;
 

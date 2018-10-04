@@ -49,15 +49,23 @@ struct ShadowView;
 struct SceneView;
 struct RenderTargetDesc;
 
+
 struct RenderPass
 {
-	// TODO:
+	RenderPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_)
+		: pCPU(pCPU_)
+		, pGPU(pGPU_)
+	{}
+	
+	CPUProfiler*& pCPU;
+	GPUProfiler*& pGPU;
 };
 
 
 using DepthTargetIDArray = std::vector<DepthTargetID>;
 struct ShadowMapPass : public RenderPass
 {
+	ShadowMapPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	void InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
 	void InitializeDirectionalLightShadowMap(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
 	void RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const;
@@ -86,16 +94,16 @@ struct BloomPass : public RenderPass
 		PS_1D_Kernels = 0,
 		CS_1D_Kernels,
 		CS_1D_Kernels_Transpoze_Out,
-
 		NUM_BLOOM_SHADERS
 	};
-
-	BloomPass() : 
-		_blurSampler(-1), 
-		_colorRT(-1), 
-		_brightRT(-1), 
-		_blurPingPong({ -1, -1 })
-	{}
+	
+	BloomPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_)
+		: RenderPass(pCPU_, pGPU_)
+		, _blurSampler(-1)
+		, _colorRT(-1)
+		, _brightRT(-1)
+		, _blurPingPong({ -1, -1 }
+		) {}
 
 	SamplerID						_blurSampler;
 	RenderTargetID					_colorRT;
@@ -103,7 +111,6 @@ struct BloomPass : public RenderPass
 	RenderTargetID					_finalRT;
 	std::array<RenderTargetID, 2>	_blurPingPong;
 	ShaderID						_blurShader;
-	ShaderID						_bilateralBlurShader;
 	ShaderID						_bloomFilterShader;
 	ShaderID						_bloomCombineShader;
 
@@ -117,8 +124,9 @@ struct BloomPass : public RenderPass
 
 	BloomShader mSelectedBloomShader;
 
+
 	void Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSettings, const RenderTargetDesc& rtDesc);
-	void Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU, RenderTargetID rtDestination, const Settings::Bloom& settings) const;
+	void Render(Renderer* pRenderer, RenderTargetID rtDestination, const Settings::Bloom& settings) const;
 	void UpdateSettings(Renderer* pRenderer, const Settings::Bloom& bloomSettings);
 
 	TextureID GetBloomTexture(const Renderer* pRenderer) const;
@@ -126,15 +134,21 @@ struct BloomPass : public RenderPass
 
 struct TonemappingCombinePass : public RenderPass
 {
+	TonemappingCombinePass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	RenderTargetID	_finalRenderTarget;
 	ShaderID		_toneMappingShader;
 };
 
 struct PostProcessPass : public RenderPass
 {
+	PostProcessPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) 
+		: RenderPass(pCPU_, pGPU_) 
+		, _bloomPass(pCPU_, pGPU_)
+		, _tonemappingPass(pCPU_, pGPU_) 
+	{}
 	void UpdateSettings(const Settings::PostProcess& newSettings, Renderer* pRenderer);
 	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
-	void Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pCPU, GPUProfiler* pGPU) const;
+	void Render(Renderer* pRenderer, bool bBloomOn) const;
 
 	RenderTargetID			_worldRenderTarget;
 	BloomPass				_bloomPass;
@@ -178,6 +192,7 @@ struct InstancedObjectMatrices
 
 struct DeferredRenderingPasses : public RenderPass
 {
+	DeferredRenderingPasses(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	struct RenderParams
 	{
 		Renderer* pRenderer;
@@ -212,6 +227,7 @@ struct DeferredRenderingPasses : public RenderPass
 
 struct ForwardLightingPass : public RenderPass
 {
+	ForwardLightingPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	struct RenderParams
 	{
 		Renderer* pRenderer;
@@ -233,6 +249,7 @@ struct ForwardLightingPass : public RenderPass
 
 struct DebugPass : public RenderPass
 {
+	DebugPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	void Initialize(Renderer* pRenderer);
 	RasterizerStateID _scissorsRasterizer;
 };
@@ -259,22 +276,39 @@ struct DebugPass : public RenderPass
 // Blizzard Dev Paper:	http://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf
 struct AmbientOcclusionPass : public RenderPass
 {
+	AmbientOcclusionPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	static TextureID whiteTexture4x4;
 	
 	void Initialize(Renderer* pRenderer);
+	void RenderAmbientOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
+
 	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
+	void RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
 	void BilateralBlurPass(Renderer* pRenderer);
 	void GaussianBlurPass(Renderer* pRenderer);	// Gaussian 4x4 kernel
 
+	// SSAO resources
 	std::vector<vec3>	sampleKernel;
 	std::vector<vec4>	noiseKernel;
 	TextureID			noiseTexture;
 	SamplerID			noiseSampler;
+
+	// Regular SSAO resources -------------------------------
 	RenderTargetID		occlusionRenderTarget;
 	RenderTargetID		blurRenderTarget;
+	TextureID			bilateralBlurUAV;
+
 	ShaderID			SSAOShader;
-	ShaderID			bilateralBlurShader;
-	ShaderID			blurShader;
+	ShaderID			blurShader; // gaussian
+	// Regular SSAO resources -------------------------------
+
+
+	// Interleaved SSAO resources -------------------------------
+	std::array<RenderTargetID, 4> interleavedDepthTextures;
+	std::array<RenderTargetID, 4> interleavedNormalTextures;
+	//RenderTargetID			 
+	// Interleaved SSAO resources -------------------------------
+
 
 	// Compute Shader Unit Test ---------------------------
 	ShaderID testComputeShader;
@@ -291,6 +325,7 @@ struct AmbientOcclusionPass : public RenderPass
 
 struct ZPrePass : public RenderPass
 {
+	ZPrePass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	struct RenderParams
 	{
 		Renderer* pRenderer;

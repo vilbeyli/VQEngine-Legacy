@@ -86,12 +86,12 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	texDesc.format = rtDesc.textureDesc.format;
 
 	// Dispatch() spawns a thread group among X or Y dimensions.
-	// The compute shader kernel describes the thread group size
-	// essentially the other dimension (of X or Y) to cover the entire image.
-	//
-	// In short, Dispatch() spawns a thread group, which corresponds to a 
-	// a row or a column of pixels of the image so that each thread covers
-	// one pixel.
+	// Think of this as scanning the image from left-to-right and
+	// top-to-bottom. 
+	// Each thread group processes one scan line, often times multiple
+	// pixels per thread. Maximum thread group size is 1024 for GCN,
+	// hence if the image dimensions exceed 1024 in X or Y, each 
+	// thread will process more than one pixel, in strides of 1024.
 	//
 	const char* pCBufferPreProcessorValue = USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH ? "1" : "0";
 	const int COMPUTE_KERNEL_DIMENSION = 1024;
@@ -138,6 +138,11 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 #endif
 
 #if ENABLE_COMPUTE_BLUR_TRANSPOZE
+	
+	// Dispatch() now only spawns thread groups to blur from left-to-right
+	// while adding an additional transpoze pass. Horizontal memory access
+	// has better cache utilization, hence yields better performance.
+	//
 #if !ENABLE_COMPUTE_BLUR
 	// Compute Blur Transpoze needs the regular compute horizontal blur shader
 	this->blurComputeOutputPingPong[0] = pRenderer->CreateTexture2D(texDesc);
@@ -209,7 +214,7 @@ void BloomPass::UpdateSettings(Renderer* pRenderer, const Settings::Bloom& bloom
 
 
 struct BlurParameters { unsigned blurStrength; };
-void BloomPass::Render(Renderer* pRenderer, CPUProfiler* pCPU, GPUProfiler* pGPU, RenderTargetID _worldRenderTarget, const Settings::Bloom& settings) const
+void BloomPass::Render(Renderer* pRenderer, RenderTargetID _worldRenderTarget, const Settings::Bloom& settings) const
 {
 	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
 	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);

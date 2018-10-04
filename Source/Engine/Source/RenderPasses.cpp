@@ -76,7 +76,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 
 
 
-void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pCPU, GPUProfiler* pGPU) const
+void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn) const
 {
 	pRenderer->BeginEvent("Post Processing");
 
@@ -90,7 +90,7 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, CPUProfiler* pC
 	const bool bBloom = bBloomOn && _settings.bloom.bEnabled;
 	if (bBloom)
 	{
-		this->_bloomPass.Render(pRenderer, pCPU, pGPU, _worldRenderTarget, sBloom);
+		this->_bloomPass.Render(pRenderer, _worldRenderTarget, sBloom);
 	}
 
 	// ======================================================================================

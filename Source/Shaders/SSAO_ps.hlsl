@@ -77,7 +77,7 @@ float PSMain(PSIn In) : SV_TARGET
 
 	float occlusion = 0.0;
 
-	[loop]	// when unrolled, VGPR usage skyrockets and reduces #waves in flight
+	[unroll]	// when unrolled, VGPR usage skyrockets and reduces #waves in flight
     for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
 		const float3 kernelSample = P + mul(SSAO_constants.samples[i], TBN) * SSAO_constants.radius; // From tangent to view-space

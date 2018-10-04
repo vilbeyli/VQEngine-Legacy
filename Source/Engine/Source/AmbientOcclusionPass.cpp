@@ -28,7 +28,7 @@
 
 #define ENABLE_COMPUTE_PASS_UNIT_TEST   0
 
-
+#define ENABLE_BILATERAL_BLUR_PASS      1
 
 constexpr size_t SSAO_SAMPLE_KERNEL_SIZE = 64;
 TextureID AmbientOcclusionPass::whiteTexture4x4 = -1;
@@ -123,7 +123,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	//--------------------------------------------------------------------
 	const EImageFormat imageFormat = R32F;
 	RenderTargetDesc rtDesc = {};
-	rtDesc.textureDesc.width = pRenderer->WindowWidth();
+	rtDesc.textureDesc.width  = pRenderer->WindowWidth();
 	rtDesc.textureDesc.height = pRenderer->WindowHeight();
 	rtDesc.textureDesc.mipCount = 1;
 	rtDesc.textureDesc.arraySize = 1;
@@ -147,7 +147,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	this->intensity = 1.0f;
 #endif
 
-	// Compute Shader Unit Test -----------------------------------
+#if USE_COMPUTE_PASS_UNIT_TEST
 	const ShaderDesc testComputeShaderDesc =
 	{
 		"TestCompute",
@@ -170,9 +170,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	texDesc.width = 1920;
 	texDesc.format = EImageFormat::RGBA32F;
 	this->RWTex2D = pRenderer->CreateTexture2D(texDesc);
-	// Compute Shader Unit Test -----------------------------------
-
-
+#endif
 #ifdef USE_COMPUTE_SSAO
 	const ShaderDesc CSDesc =
 	{
@@ -188,10 +186,153 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	texDesc.format = EImageFormat::RGBA32F;
 	this->texSSAOComputeOutput = pRenderer->CreateTexture2D(texDesc);
 #endif
+
+#ifdef ENABLE_BILATERAL_BLUR_PASS
+	texDesc = TextureDesc();
+	texDesc.usage = ETextureUsage::COMPUTE_RW_TEXTURE;
+	texDesc.width = pRenderer->WindowWidth();
+	texDesc.height = pRenderer->WindowHeight();
+	texDesc.format = EImageFormat::RGBA32F;
+
+	bilateralBlurUAV = pRenderer->CreateTexture2D(texDesc);
+
+#endif
 }
+
+
+
+void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView)
+{
+	// SIMPLE SSAO
+	//
+	pGPU->BeginEntry("SSAO");
+	// early out if we are not rendering anything into the G-Buffer
+	if (sceneView.culledOpaqueList.empty() && sceneView.culluedOpaqueInstancedRenderListLookup.empty())
+	{
+		pRenderer->BindRenderTarget(this->occlusionRenderTarget);
+		pRenderer->UnbindDepthTarget();
+		pRenderer->BeginRender(ClearCommand::Color(1, 1, 1, 1));
+	}
+	else
+	{
+		pRenderer->BeginEvent("Occlusion Pass");
+		pGPU->BeginEntry("Occl");
+		RenderOcclusion(pRenderer, texNormals, sceneView);
+		pGPU->EndEntry();
+		pRenderer->EndEvent(); // Occlusion Pass
+
+		pRenderer->BeginEvent("Blur Simple 4x4");
+		pGPU->BeginEntry("Simple Blur");
+		GaussianBlurPass(pRenderer);
+		pGPU->EndEntry();
+		pRenderer->EndEvent();
+	}
+	pGPU->EndEntry(); // SSAO
+
+
+	// INTERLEAVED SSAO
+	//
+	pGPU->BeginEntry("SSAO_Interleaved");
+	// early out if we are not rendering anything into the G-Buffer
+	if (sceneView.culledOpaqueList.empty() && sceneView.culluedOpaqueInstancedRenderListLookup.empty())
+	{
+		//pRenderer->BindRenderTarget(this->occlusionRenderTarget);
+		//pRenderer->UnbindDepthTarget();
+		//pRenderer->BeginRender(ClearCommand::Color(1, 1, 1, 1));
+	}
+	else
+	{
+		pRenderer->BeginEvent("Deinterleave Pass");
+		pGPU->BeginEntry("Deinterleave");
+
+		pGPU->EndEntry();
+		pRenderer->EndEvent(); // Deinterleave Pass
+
+		pRenderer->BeginEvent("Interleaved Occlusion Pass");
+		pGPU->BeginEntry("Occl<Intlrv>");
+		RenderOcclusionInterleaved(pRenderer, texNormals, sceneView);
+		pGPU->EndEntry();
+		pRenderer->EndEvent(); // Interleaved Occlusion Pass
+
+
+		pRenderer->BeginEvent("Blur Bilateral");
+		pGPU->BeginEntry("Bilateral Blur");
+		BilateralBlurPass(pRenderer);
+		pGPU->EndEntry();
+		pRenderer->EndEvent();
+
+
+		pRenderer->BeginEvent("Interleave Pass");
+		pGPU->BeginEntry("Interleave");
+
+		pGPU->EndEntry();
+		pRenderer->EndEvent(); // Interleave Pass
+	}
+	pGPU->EndEntry();
+}
+
+
 
 void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView)
 {
+	pRenderer->BeginEvent("Occlusion Pass");
+
+	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+
+	XMFLOAT4X4 proj = {};
+	XMStoreFloat4x4(&proj, sceneView.proj);
+
+	XMFLOAT4X4 projInv = {};
+	XMStoreFloat4x4(&projInv, sceneView.projInverse);
+
+	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * VEC_SZ> samples;
+	size_t idx = 0;
+	for (const vec3& v : sampleKernel)
+	{
+		samples[idx + 0] = v.x();
+		samples[idx + 1] = v.y();
+		samples[idx + 2] = v.z();
+		samples[idx + 3] = -1.0f;
+		idx += VEC_SZ;
+	}
+
+	SSAOConstants ssaoConsts = {
+		proj,
+		projInv,
+		pRenderer->GetWindowDimensionsAsFloat2(),
+#if SSAO_DEBUGGING
+		this->radius,
+		this->intensity,
+#else
+		sceneView.sceneRenderSettings.ssao.radius,
+		sceneView.sceneRenderSettings.ssao.intensity,
+#endif
+		samples
+	};
+
+	pRenderer->SetShader(SSAOShader, true);
+	pRenderer->BindRenderTarget(this->occlusionRenderTarget);
+	pRenderer->UnbindDepthTarget();
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
+	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
+	//pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
+	pRenderer->SetTexture("texNoise", this->noiseTexture);
+	pRenderer->SetTexture("texDepth", depthTexture);
+	pRenderer->SetConstantStruct("SSAO_constants", &ssaoConsts);
+	pRenderer->SetVertexBuffer(IABuffersQuad.first);
+	pRenderer->SetIndexBuffer(IABuffersQuad.second);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
+
+	pRenderer->EndEvent(); // Occlusion Pass
+}
+
+void AmbientOcclusionPass::RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView)
+{
+#if 0
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 
@@ -245,26 +386,37 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->DrawIndexed();
 
 	pRenderer->EndEvent();
+#endif
+
+	// INTERLEAVE
+	//
+
+	// OCCLUSION x4
+	//
+
+	// DEINTERLEAVE
+	//
 }
+
 
 void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer)
 {
-	pRenderer->UnbindRenderTargets();
-	return;
-	pRenderer->BeginEvent("Blur Pass");
-	pRenderer->SetShader(bilateralBlurShader);
-
-	//pRenderer->BindRenderTarget(this->renderTarget);
-
+#ifdef ENABLE_BILATERAL_BLUR_PASS
 	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
-	pRenderer->SetVertexBuffer(IABuffersQuad.first);
-	pRenderer->SetIndexBuffer(IABuffersQuad.second);
+	const TextureID texOcclusion = pRenderer->GetRenderTargetTexture(this->occlusionRenderTarget);
+	const vec2 texDimensions = pRenderer->GetWindowDimensionsAsFloat2();
+
+	pRenderer->BeginEvent("Blur Pass <BiL>");
+	pRenderer->SetShader(EShaders::BILATERAL_BLUR, true);
+	//pRenderer->SetTexture("texNormals", 0);
+	//pRenderer->SetTexture("texDepth", 0);
+	//pRenderer->SetConstant2f("inputTextureDimensions", texDimensions);
+	//pRenderer->SetTexture("texOcclusion", texOcclusion);
+	//pRenderer->SetTexture("texBlurredOcclusionOut", this->bilateralBlurUAV);
 	pRenderer->Apply();
-	pRenderer->DrawIndexed();
-
-	pRenderer->EndEvent();	// Blur Pass
-
-
+	pRenderer->Dispatch(1, 1, 1);
+	pRenderer->EndEvent();	// Blur Pass <BiL>
+#endif
 }
 
 void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
@@ -273,7 +425,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	const vec2 texDimensions = pRenderer->GetWindowDimensionsAsFloat2();
 	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 
-	pRenderer->BeginEvent("Blur Pass");
+	pRenderer->BeginEvent("Blur Pass <Gau>");
 
 	pRenderer->SetShader(EShaders::GAUSSIAN_BLUR_4x4, true);
 	pRenderer->BindRenderTarget(this->blurRenderTarget);

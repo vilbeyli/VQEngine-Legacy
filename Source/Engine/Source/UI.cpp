@@ -119,9 +119,9 @@ auto GetFPSColor = [](int FPS) -> LinearColor
 
 // TODO: data drive these and call it a day.
 // Background constants
-constexpr float X_MARGIN_PX = 10.0f;    // leave 3px margin on the X-axis to cover
+constexpr float X_MARGIN_PX = 10.0f;    // leave 10px margin on the X-axis to cover
 constexpr float Y_OFFSET_PX = 24.0f;    // we offset Y equal to height of a letter to fit the background on text
-constexpr float BACKGROUND_NORMALIZED_LENGTH_X = 0.212f;
+constexpr float BACKGROUND_NORMALIZED_LENGTH_X = 0.252f;
 constexpr float BACKGROUND_ALPHA = 0.6f;
 static const LinearColor sBackgroundColor = LinearColor::black;
 
@@ -129,13 +129,13 @@ constexpr float X_NORMALIZED_POSITION_CONTROLS = 0.005f;
 constexpr float Y_NORMALIZED_POSITION_CONTROLS = 0.009f;
 
 
-constexpr float X_NORMALIZED_POSITION_FRAME_STATS = 0.780f;
+constexpr float X_NORMALIZED_POSITION_FRAME_STATS = 0.745f;
 constexpr float Y_NORMALIZED_POSITION_FRAME_STATS = 0.550f;
 
 constexpr float X_NORMALIZED_POSITION_PROFILER_CPU = X_NORMALIZED_POSITION_FRAME_STATS;
 constexpr float Y_NORMALIZED_POSITION_PROFILER_CPU = 0.665f;
 
-constexpr float CPU_GPU_GAP = 0.110f;
+constexpr float CPU_GPU_GAP = 0.115f;
 constexpr float X_NORMALIZED_POSITION_PROFILER_GPU = X_NORMALIZED_POSITION_FRAME_STATS + CPU_GPU_GAP;
 constexpr float Y_NORMALIZED_POSITION_PROFILER_GPU = Y_NORMALIZED_POSITION_PROFILER_CPU;
 

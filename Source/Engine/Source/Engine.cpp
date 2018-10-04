@@ -135,6 +135,13 @@ Engine::Engine()
 	, mFrameCount(0)
 	, mAccumulator(0.0f)
 	, mUI(mBuiltinMeshes, mEngineConfig)
+	, mShadowMapPass(mpCPUProfiler, mpGPUProfiler)
+	, mDeferredRenderingPasses(mpCPUProfiler, mpGPUProfiler)
+	, mSSAOPass(mpCPUProfiler, mpGPUProfiler)
+	, mPostProcessPass(mpCPUProfiler, mpGPUProfiler)
+	, mDebugPass(mpCPUProfiler, mpGPUProfiler)
+	, mZPrePass(mpCPUProfiler, mpGPUProfiler)
+	, mForwardLightingPass(mpCPUProfiler, mpGPUProfiler)
 {}
 
 Engine::~Engine(){}
@@ -456,6 +463,10 @@ bool Engine::LoadShaders()
 		timer.Start();
 
 		Log::Info("------------------------ COMPILING SHADERS ------------------------");
+		ShaderDesc BilateralBlurShaderDesc = {};
+		BilateralBlurShaderDesc.shaderName = "BilateralBlur<CS>";
+		BilateralBlurShaderDesc.stages = { ShaderStageDesc{ "BilateralBlur_cs.hlsl", {} } };
+
 		constexpr unsigned VS_PS = SHADER_STAGE_VS | SHADER_STAGE_PS;
 		const std::vector<ShaderDesc> shaderDescs =
 		{
@@ -481,10 +492,7 @@ bool Engine::LoadShaders()
 			}},
 			ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Forward_BRDF", VS_PS)},
 			ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
-			ShaderDesc{ "BilateralBlur", {
-				ShaderStageDesc{"FullscreenQuad_vs.hlsl", {} },
-				ShaderStageDesc{"BilateralBlur_ps.hlsl" , {} }
-			}},
+			BilateralBlurShaderDesc,
 			ShaderDesc{ "GaussianBlur4x4", {
 				ShaderStageDesc{"FullscreenQuad_vs.hlsl" , {} },
 				ShaderStageDesc{"GaussianBlur4x4_ps.hlsl", {} }
@@ -882,7 +890,7 @@ void Engine::Render()
 	mpGPUProfiler->BeginEntry("Shadow Pass");
 	mpRenderer->BeginEvent("Shadow Pass");
 	
-	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass has their own render targets
+	mpRenderer->UnbindRenderTargets();	// unbind the back render target | every pass should have their own render targets
 	mShadowMapPass.RenderShadowMaps(mpRenderer, mpActiveScene->mShadowView, mpGPUProfiler);
 	
 	mpRenderer->EndEvent();
@@ -929,23 +937,11 @@ void Engine::Render()
 
 		// AMBIENT OCCLUSION  PASS
 		mpCPUProfiler->BeginEntry("SSAO Pass");
-		mpGPUProfiler->BeginEntry("SSAO");
 		if (mEngineConfig.bSSAO && bSceneSSAO)
 		{
-			// TODO: if BeginEntry() is inside, it's never reset to 0 if ambient occl is turned off
-			mpGPUProfiler->BeginEntry("Occlusion");
-			mpRenderer->BeginEvent("Ambient Occlusion Pass");
-			mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
-			//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
-			mpGPUProfiler->EndEntry();
-
-			mpGPUProfiler->BeginEntry("Blur");
-			mSSAOPass.GaussianBlurPass(mpRenderer);
-			mpRenderer->EndEvent();	
-			mpGPUProfiler->EndEntry();
+			mSSAOPass.RenderAmbientOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
 		}
-		mpCPUProfiler->EndEntry();
-		mpGPUProfiler->EndEntry();
+		mpCPUProfiler->EndEntry(); // SSAO Pass
 
 		// DEFERRED LIGHTING PASS
 		mpCPUProfiler->BeginEntry("Lighting Pass");
@@ -1116,7 +1112,7 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	mpCPUProfiler->BeginEntry("Post Process");
 	mpGPUProfiler->BeginEntry("Post Process"); 
-	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom, mpCPUProfiler, mpGPUProfiler);
+	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom);
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndEntry();
 	//------------------------------------------------------------------------

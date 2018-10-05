@@ -284,6 +284,7 @@ struct AmbientOcclusionPass : public RenderPass
 
 	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
 	void RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
+	void DeinterleaveDepth(Renderer* pRenderer);
 	void BilateralBlurPass(Renderer* pRenderer);
 	void GaussianBlurPass(Renderer* pRenderer);	// Gaussian 4x4 kernel
 
@@ -304,8 +305,9 @@ struct AmbientOcclusionPass : public RenderPass
 
 
 	// Interleaved SSAO resources -------------------------------
-	std::array<RenderTargetID, 4> interleavedDepthTextures;
-	std::array<RenderTargetID, 4> interleavedNormalTextures;
+	ShaderID			deinterleaveShader;
+	ShaderID			deinterleavedSSAOShader;
+	TextureID			deinterleavedDepthTextures;
 	//RenderTargetID			 
 	// Interleaved SSAO resources -------------------------------
 

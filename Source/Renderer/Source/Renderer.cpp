@@ -791,7 +791,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 		if (bIsTextureArray)
 		{
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-			srvDesc.Texture2DArray.MipLevels = 1;
+			srvDesc.Texture2DArray.MipLevels = 1; // texDesc.mipCount?
 			srvDesc.Texture2DArray.MostDetailedMip = 0;
 			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
 
@@ -815,11 +815,30 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 				if (i == 0)
 					tex._srv = tex._srvArray[i];
 			}
+
+			if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+			{
+				D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+				uavDesc.Format = (DXGI_FORMAT)texDesc.format;
+				uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+				uavDesc.Texture2D.MipSlice = 0;
+
+				tex._uavArray.resize(desc.ArraySize, nullptr);
+				tex._depth = desc.ArraySize;
+				for (unsigned i = 0; i < desc.ArraySize; ++i)
+				{
+					uavDesc.Texture2DArray.FirstArraySlice = i;
+					uavDesc.Texture2DArray.ArraySize = desc.ArraySize - i;
+					m_device->CreateUnorderedAccessView(tex._tex2D, &uavDesc, &tex._uavArray[i]);
+					if (i == 0)
+						tex._uav = tex._uavArray[i];
+				}
+			}
 		}
 		else
 		{
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = 1;
+			srvDesc.Texture2D.MipLevels = 1;  // texDesc.mipCount?
 			srvDesc.Texture2D.MostDetailedMip = 0;
 
 			srvDesc.Format = (DXGI_FORMAT)texDesc.format;

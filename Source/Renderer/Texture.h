@@ -85,7 +85,8 @@ public:
 	// note: typed resources are optimized for access. use typeless if you really need. (src?)
 	ID3D11ShaderResourceView*	_srv;
 	ID3D11UnorderedAccessView*	_uav;
-	std::vector<ID3D11ShaderResourceView*> _srvArray;
+	std::vector<ID3D11ShaderResourceView*>  _srvArray;
+	std::vector<ID3D11UnorderedAccessView*> _uavArray;
 	union
 	{
 		ID3D11Texture3D*		_tex3D;

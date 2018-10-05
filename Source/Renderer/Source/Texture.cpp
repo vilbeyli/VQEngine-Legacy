@@ -72,32 +72,34 @@ bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Render
 	return true;
 }
 
-void Texture::Release()
+template<class T>
+void ReleaseResources(std::vector<T*>& resources, T*& pResourceView)
 {
-	if (_srvArray.size() > 0)
+	if (resources.size() > 0)
 	{
-		for (size_t i = 0; i < _srvArray.size(); ++i)
+		for (size_t i = 0; i < resources.size(); ++i)
 		{
-			if(_srvArray[i])
+			if (resources[i])
 			{
-				_srvArray[i]->Release();
-				_srvArray[i] = nullptr;
+				resources[i]->Release();
+				resources[i] = nullptr;
 			}
 		}
 	}
 	else
 	{
-		if (_srv)
+		if (pResourceView)
 		{
-			_srv->Release();
-			_srv = nullptr;
-		}
-		if (_uav)
-		{
-			_uav->Release();
-			_uav = nullptr;
+			pResourceView->Release();
+			pResourceView = nullptr;
 		}
 	}
+}
+
+void Texture::Release()
+{
+	ReleaseResources(_srvArray, _srv);
+	ReleaseResources(_uavArray, _uav);
 
 	if (_tex2D)
 	{

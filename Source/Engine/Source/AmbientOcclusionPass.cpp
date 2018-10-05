@@ -195,8 +195,27 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	texDesc.format = EImageFormat::RGBA32F;
 
 	bilateralBlurUAV = pRenderer->CreateTexture2D(texDesc);
-
 #endif
+
+
+	// DEINTERLEAVED SSAO RESOURCES
+	//
+	const ShaderDesc deinterleaveShaderDesc = 
+	{
+		"Deinterleave_Shader",
+		ShaderStageDesc{ "Deinterleave_cs.hlsl", {} },
+	};
+	this->deinterleaveShader = pRenderer->CreateShader(deinterleaveShaderDesc);
+
+	TextureDesc deinterleavedDepthTextureArrayDesc = {};
+	deinterleavedDepthTextureArrayDesc.arraySize     = 4;
+	deinterleavedDepthTextureArrayDesc.bGenerateMips = false;
+	deinterleavedDepthTextureArrayDesc.format        = imageFormat;
+	deinterleavedDepthTextureArrayDesc.mipCount      = 1;
+	deinterleavedDepthTextureArrayDesc.width         = static_cast<int>(pRenderer->WindowWidth()  / 2.0f);
+	deinterleavedDepthTextureArrayDesc.height        = static_cast<int>(pRenderer->WindowHeight() / 2.0f);
+	deinterleavedDepthTextureArrayDesc.usage         = ETextureUsage::COMPUTE_RW_TEXTURE;
+	this->deinterleavedDepthTextures = pRenderer->CreateTexture2D(deinterleavedDepthTextureArrayDesc);
 }
 
 
@@ -205,6 +224,7 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 {
 	// SIMPLE SSAO
 	//
+	pRenderer->BeginEvent("SSAO");
 	pGPU->BeginEntry("SSAO");
 	// early out if we are not rendering anything into the G-Buffer
 	if (sceneView.culledOpaqueList.empty() && sceneView.culluedOpaqueInstancedRenderListLookup.empty())
@@ -228,10 +248,11 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 		pRenderer->EndEvent();
 	}
 	pGPU->EndEntry(); // SSAO
-
+	pRenderer->EndEvent(); // SSAO
 
 	// INTERLEAVED SSAO
 	//
+	pRenderer->BeginEvent("SSAO_Interleaved");
 	pGPU->BeginEntry("SSAO_Interleaved");
 	// early out if we are not rendering anything into the G-Buffer
 	if (sceneView.culledOpaqueList.empty() && sceneView.culluedOpaqueInstancedRenderListLookup.empty())
@@ -244,7 +265,7 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 	{
 		pRenderer->BeginEvent("Deinterleave Pass");
 		pGPU->BeginEntry("Deinterleave");
-
+		DeinterleaveDepth(pRenderer);
 		pGPU->EndEntry();
 		pRenderer->EndEvent(); // Deinterleave Pass
 
@@ -264,11 +285,12 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 
 		pRenderer->BeginEvent("Interleave Pass");
 		pGPU->BeginEntry("Interleave");
-
+		// TODO
 		pGPU->EndEntry();
 		pRenderer->EndEvent(); // Interleave Pass
 	}
 	pGPU->EndEntry();
+	pRenderer->EndEvent(); // SSAO_Interleaved
 }
 
 
@@ -330,11 +352,25 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->EndEvent(); // Occlusion Pass
 }
 
+
+
+void AmbientOcclusionPass::DeinterleaveDepth(Renderer* pRenderer)
+{
+	const TextureID texDepth = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
+	const vec2 imageDimensions = pRenderer->GetWindowDimensionsAsFloat2();
+
+	pRenderer->BeginEvent("Deinterleave");
+	pRenderer->SetShader(deinterleaveShader, true);
+	pRenderer->SetTexture("texInput", texDepth);
+	pRenderer->SetUnorderedAccessTexture("texOutputs", deinterleavedDepthTextures);
+	pRenderer->Apply();
+	pRenderer->Dispatch((int)imageDimensions.x() / 2, (int)imageDimensions.y() / 2, 1);
+	pRenderer->EndEvent();
+}
+
 void AmbientOcclusionPass::RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView)
 {
-#if 0
-	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	// https://developer.nvidia.com/sites/default/files/akamai/gameworks/samples/DeinterleavedTexturing.pdf
 
 	XMFLOAT4X4 proj = {};
 	XMStoreFloat4x4(&proj, sceneView.proj);
@@ -367,35 +403,38 @@ void AmbientOcclusionPass::RenderOcclusionInterleaved(Renderer* pRenderer, const
 		samples
 	};
 
+#if 0
 	pRenderer->BeginEvent("Occlusion Pass");
 
-	pRenderer->SetShader(SSAOShader, true);
 	pRenderer->BindRenderTarget(this->occlusionRenderTarget);
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
-	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
-	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
-	//pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
-	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
-	pRenderer->SetTexture("texNoise", this->noiseTexture);
-	pRenderer->SetTexture("texDepth", depthTexture);
-	pRenderer->SetConstantStruct("SSAO_constants", &ssaoConsts);
-	pRenderer->SetVertexBuffer(IABuffersQuad.first);
-	pRenderer->SetIndexBuffer(IABuffersQuad.second);
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
 
-	pRenderer->EndEvent();
+	//pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+
+
 #endif
 
-	// INTERLEAVE
-	//
 
+#if 0
 	// OCCLUSION x4
 	//
-
-	// DEINTERLEAVE
-	//
+	pRenderer->BeginEvent("Deinterleaved Occlusion Pass");
+	pRenderer->SetShader(deinterleavedSSAOShader, true);
+	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
+	pRenderer->SetTexture("texNoise", this->noiseTexture);
+	pRenderer->SetTexture("texDepth", texDepth);
+	pRenderer->SetConstantStruct("SSAO_constants", &ssaoConsts);
+	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
+	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
+	for (int i = 0; i < 4; ++i)
+	{
+		//pRenderer->SetUnorderedAccessTexture("texOut")
+		//pRenderer->Apply();
+		//pRenderer->
+	}
+	pRenderer->EndEvent();
+#endif
 }
 
 

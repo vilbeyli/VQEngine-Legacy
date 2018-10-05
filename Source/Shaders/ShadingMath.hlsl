@@ -101,7 +101,7 @@ float2 Hammersley(int i, int count)
 }
 
 
-float LinearDepth(in float zBufferSample, in float A, in float B)
+inline float LinearDepth(in float zBufferSample, in float A, in float B)
 {
 	// src:
 	// https://developer.nvidia.com/content/depth-precision-visualized

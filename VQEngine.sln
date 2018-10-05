@@ -11,7 +11,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Renderer", "Source\Solution
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571DA824-A6F1-4944-8C39-85DC665C8A81}"
 	ProjectSection(SolutionItems) = preProject
-		Source\Shaders\BilateralBlur_ps.hlsl = Source\Shaders\BilateralBlur_ps.hlsl
+		Source\Shaders\BilateralBlur_cs.hlsl = Source\Shaders\BilateralBlur_cs.hlsl
 		Source\Shaders\Binormal_ps.hlsl = Source\Shaders\Binormal_ps.hlsl
 		Source\Shaders\Binormal_vs.hlsl = Source\Shaders\Binormal_vs.hlsl
 		Source\Shaders\Bloom_ps.hlsl = Source\Shaders\Bloom_ps.hlsl
@@ -31,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Source\Shaders\deferred_geometry_vs.hlsl = Source\Shaders\deferred_geometry_vs.hlsl
 		Source\Shaders\deferred_phong_lighting_ps.hlsl = Source\Shaders\deferred_phong_lighting_ps.hlsl
 		Source\Shaders\deferred_rendering_vs.hlsl = Source\Shaders\deferred_rendering_vs.hlsl
+		Source\Shaders\Deinterleave_cs.hlsl = Source\Shaders\Deinterleave_cs.hlsl
+		Source\Shaders\DeinterleavedSSAO_ps.hlsl = Source\Shaders\DeinterleavedSSAO_ps.hlsl
 		Source\Shaders\DepthShader_ps.hlsl = Source\Shaders\DepthShader_ps.hlsl
 		Source\Shaders\DepthShader_vs.hlsl = Source\Shaders\DepthShader_vs.hlsl
 		Source\Shaders\forward_brdf_ps.hlsl = Source\Shaders\forward_brdf_ps.hlsl

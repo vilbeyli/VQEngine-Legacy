@@ -46,6 +46,9 @@ public:
 	LRESULT CALLBACK MessageHandler(HWND, UINT, WPARAM, LPARAM);
 	void UpdateWindowDimensions(int w, int h);
 
+	void LaunchControlPanelUI();
+	void ShutdownControlPanel();
+
 private:
 	void InitRawInputDevices();
 	void InitWindow(Settings::Window& windowSettings);

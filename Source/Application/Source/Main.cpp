@@ -24,13 +24,9 @@
 int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdShow)
 {
 	srand(static_cast<unsigned>(time(NULL)));
-	
 	Application VQDemo;
 	if (VQDemo.Init())
-	{
 		VQDemo.Run();
-	}
 	VQDemo.Exit();
-	
 	return 0;
 }

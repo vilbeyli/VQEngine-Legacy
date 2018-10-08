@@ -186,6 +186,9 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ProjectReference Include="..\VQUI\VQUI.csproj">
+      <Project>{63aa6f95-d7cb-47f6-8d87-1b33609c48a6}</Project>
+    </ProjectReference>
     <ProjectReference Include="Application.vcxproj">
       <Project>{ab5bc0cc-a11f-4edc-9338-9ba351c624a8}</Project>
     </ProjectReference>

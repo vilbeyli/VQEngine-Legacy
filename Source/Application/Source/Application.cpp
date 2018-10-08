@@ -340,6 +340,16 @@ void Application::UpdateWindowDimensions(int w, int h)
 	m_windowWidth = w;
 }
 
+void Application::LaunchControlPanelUI()
+{
+
+}
+
+void Application::ShutdownControlPanel()
+{
+
+}
+
 void Application::InitWindow(Settings::Window& windowSettings)
 {
 	int width, height;

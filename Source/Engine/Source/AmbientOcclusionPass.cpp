@@ -150,8 +150,8 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	this->SSAOShader = pRenderer->CreateShader(ssaoShaderDesc);
 	this->gaussianBlurShader = pRenderer->CreateShader(gaussianBlurShaderdesc);
 #if SSAO_DEBUGGING
-	this->radius = 6.5f;
-	this->intensity = 1.0f;
+	this->radius = 17.5f;
+	this->intensity = 3.40f;
 #endif
 
 #if USE_COMPUTE_PASS_UNIT_TEST
@@ -285,17 +285,19 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 		pGPU->EndEntry();
 		pRenderer->EndEvent(); // Occlusion Pass
 
-		pRenderer->BeginEvent("Blur Simple 4x4");
-		pGPU->BeginEntry("Simple Blur");
-		GaussianBlurPass(pRenderer);
-		pGPU->EndEntry();
-		pRenderer->EndEvent();
-
-		pRenderer->BeginEvent("Blur Bilateral");
-		pGPU->BeginEntry("Bilateral Blur");
-		BilateralBlurPass(pRenderer, texNormals);
-		pGPU->EndEntry();
-		pRenderer->EndEvent();
+		switch (quality)
+		{
+		case AmbientOcclusionPass::LOW:
+			pGPU->BeginEntry("Simple Blur");
+			GaussianBlurPass(pRenderer);
+			pGPU->EndEntry();
+			break;
+		case AmbientOcclusionPass::HIGH:
+			pGPU->BeginEntry("Bilateral Blur");
+			BilateralBlurPass(pRenderer, texNormals);
+			pGPU->EndEntry();
+			break;
+		}
 	}
 	pGPU->EndEntry(); // SSAO
 	pRenderer->EndEvent(); // SSAO
@@ -571,4 +573,29 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 	pRenderer->EndEvent();
 #endif
 
+}
+void AmbientOcclusionPass::ChangeQualityLevel(int upOrDown)
+{
+	int desiredQuality = this->quality + upOrDown;
+	if (upOrDown > 0)	desiredQuality = desiredQuality >= SSAO_QUALITY_LEVEL_COUNT ? SSAO_QUALITY_LEVEL_COUNT-1 : desiredQuality;
+	else				desiredQuality = desiredQuality < 0 ? 0 : desiredQuality;
+	this->quality = static_cast<SSAOQuality>(desiredQuality);
+	//Log::Info("SSAO Blur Quality: %d", this->quality);
+}
+TextureID AmbientOcclusionPass::GetBlurredAOTexture(Renderer* pRenderer) const
+{
+	TextureID ret = 0;
+	switch (quality)
+	{
+	case AmbientOcclusionPass::LOW:
+		ret = pRenderer->GetRenderTargetTexture(this->blurRenderTarget);	// gaussian blur RT
+		break;
+	case AmbientOcclusionPass::HIGH:
+		ret = this->bilateralBlurUAVs[0];
+		break;
+	default:
+		assert(false);
+		break;
+	}
+	return ret;
 }

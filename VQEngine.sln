@@ -18,6 +18,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Source\Shaders\BloomCombine_ps.hlsl = Source\Shaders\BloomCombine_ps.hlsl
 		Source\Shaders\Blur_cs.hlsl = Source\Shaders\Blur_cs.hlsl
 		Source\Shaders\Blur_ps.hlsl = Source\Shaders\Blur_ps.hlsl
+		Source\Shaders\BlurCommon.hlsl = Source\Shaders\BlurCommon.hlsl
 		Source\Shaders\BlurTranspoze_cs.hlsl = Source\Shaders\BlurTranspoze_cs.hlsl
 		Source\Shaders\BRDF.hlsl = Source\Shaders\BRDF.hlsl
 		Source\Shaders\Debug_ps.hlsl = Source\Shaders\Debug_ps.hlsl

@@ -683,6 +683,11 @@ void Engine::HandleInput()
 				if (mpInput->IsScrollUp()) { mSSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
 				if (mpInput->IsScrollDown()) { mSSAOPass.intensity -= step; if (mSSAOPass.intensity < 0.301) mSSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
 			}
+			else if (mpInput->IsKeyDown("Ctrl"))
+			{
+				if (mpInput->IsScrollUp())		mSSAOPass.ChangeQualityLevel(+1);
+				if (mpInput->IsScrollDown())	mSSAOPass.ChangeQualityLevel(-1);
+			}
 			else
 			{
 				const float step = 0.5f;
@@ -906,7 +911,7 @@ void Engine::Render()
 		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
 		const TextureID texDepthTexture = mpRenderer->mDefaultDepthBufferTexture;
 		const TextureID tSSAO = mEngineConfig.bSSAO && bSceneSSAO
-			? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget)
+			? mSSAOPass.GetBlurredAOTexture(mpRenderer)
 			: mSSAOPass.whiteTexture4x4;
 		const DeferredRenderingPasses::RenderParams deferredLightingParams = 
 		{
@@ -1014,8 +1019,8 @@ void Engine::Render()
 	else
 	{
 		const bool bZPrePass = mEngineConfig.bSSAO && bSceneSSAO;
-		const TextureID tSSAO = bZPrePass 
-			? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) 
+		const TextureID tSSAO = bZPrePass
+			? mSSAOPass.GetBlurredAOTexture(mpRenderer)
 			: mSSAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mpActiveScene->mSceneView.environmentMap.irradianceMap;
 		const SamplerID smpEnvMap = mpActiveScene->mSceneView.environmentMap.envMapSampler < 0 
@@ -1138,14 +1143,14 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 
 		// Textures to draw
 		const TextureID white4x4 = mSSAOPass.whiteTexture4x4;
-		//TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._spotShadowDepthTargets);
-		TextureID tBlurredBloom = mPostProcessPass._bloomPass.GetBloomTexture(mpRenderer);
-		TextureID tDiffuseRoughness = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
-		//TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
-		TextureID tSceneDepth = mpRenderer->GetDepthTargetTexture(0);
-		TextureID tNormals = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
-		TextureID tAO = mEngineConfig.bSSAO ? mpRenderer->GetRenderTargetTexture(mSSAOPass.blurRenderTarget) : mSSAOPass.whiteTexture4x4;
-		TextureID tBRDF = EnvironmentMap::sBRDFIntegrationLUTTexture;
+		//const TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._spotShadowDepthTargets);
+		const TextureID tBlurredBloom = mPostProcessPass._bloomPass.GetBloomTexture(mpRenderer);
+		const TextureID tDiffuseRoughness = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
+		//const TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
+		const TextureID tSceneDepth = mpRenderer->GetDepthTargetTexture(0);
+		const TextureID tNormals = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
+		const TextureID tAO = mEngineConfig.bSSAO ? mSSAOPass.GetBlurredAOTexture(mpRenderer) : mSSAOPass.whiteTexture4x4;
+		const TextureID tBRDF = EnvironmentMap::sBRDFIntegrationLUTTexture;
 		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap;
 		TextureID tDirectionalShadowMap = (mShadowMapPass.mDepthTarget_Directional == -1 || mpActiveScene->mDirectionalLight.enabled == 0)

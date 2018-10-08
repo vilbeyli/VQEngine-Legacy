@@ -105,7 +105,7 @@ private:
 
 	// searches among children | depth first, returns nullptr if not found
 	//
-	TreeNode<T>* SearchSubTree(const TreeNode<T>& node, const T* pSearchEntry);
+	TreeNode<T>* SearchSubTree(TreeNode<T>& node, const T* pSearchEntry);
 	const TreeNode<T>* SearchSubTree(const TreeNode<T>& node, const std::string& tag) const;
 
 	size_t RenderSubTree(
@@ -239,14 +239,14 @@ inline const TreeNode<T>* Tree<T>::FindNode(const std::string& tag) const
 
 
 template<class T>
-inline TreeNode<T>* Tree<T>::SearchSubTree(const TreeNode<T>& node, const T * pSearchEntry)
+inline TreeNode<T>* Tree<T>::SearchSubTree(TreeNode<T>& node, const T * pSearchEntry)
 {
 	TreeNode<T>* pSearchResult = nullptr;
 
 	// visit children | depth first
 	for (size_t i = 0; i < node.children.size(); i++)
 	{
-		TreeNode<T>* pEntryNode = &root.children[i];
+		TreeNode<T>* pEntryNode = &node.children[i];
 		if (pSearchEntry == pEntryNode->pData)
 			return pEntryNode;
 

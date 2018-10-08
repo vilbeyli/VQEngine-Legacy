@@ -17,9 +17,12 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "BlurCommon.hlsl"
+
 RWTexture2D<float4> texColorOut;
 Texture2D<float4>   texColorIn;
 SamplerState        sSampler;
+
 #if USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH
 cbuffer BlurParametersBuffer
 {
@@ -86,9 +89,7 @@ void CSMain(
 		const float2 uv = float2(outTexel.xy) / float2(IMAGE_SIZE_X, IMAGE_SIZE_Y);
 		const half4 color = texColorIn.SampleLevel(sSampler, uv, 0);
 
-		const bool bFirstPixel = outTexel.x == 0;
-		const bool bLastPixel = outTexel.x == (IMAGE_SIZE_X - 1);
-		if ( bFirstPixel || bLastPixel )
+		if ( IsOnImageBorder(outTexel.x, IMAGE_SIZE_X) )
 		{
 			const int offset = outTexel.x / (IMAGE_SIZE_X - 1);
 			[unroll] for (int krn = 0; krn < KERNEL_RANGE_EXCLUDING_MIDDLE; ++krn)
@@ -146,6 +147,7 @@ void CSMain(
 		// UPDATE LDS
 		//
 		GroupMemoryBarrierWithGroupSync();
+		//LoadLDSFromOutput(TEXTURE_READ_COUNT, )
 
 		[unroll] for (uint i = 0; i < TEXTURE_READ_COUNT; ++i)
 		{
@@ -154,9 +156,7 @@ void CSMain(
 				break;
 			const half3 color = texColorOut[outTexel.yx].xyz;
 
-			const bool bFirstPixel = outTexel.x == 0;
-			const bool bLastPixel = outTexel.x == (IMAGE_SIZE_X - 1);
-			if (bFirstPixel || bLastPixel)
+			if (IsOnImageBorder(outTexel.x, IMAGE_SIZE_X))
 			{
 				const int offset = outTexel.x / (IMAGE_SIZE_X - 1);
 				[unroll] for (int krn = 0; krn < KERNEL_RANGE_EXCLUDING_MIDDLE; ++krn)

@@ -96,8 +96,8 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn) const
 	// ======================================================================================
 	// TONEMAPPING PASS
 	// ======================================================================================
-	//const TextureID colorTex = pRenderer->GetRenderTargetTexture(bBloom ? _bloomPass._finalRT : _worldRenderTarget);
-	const TextureID colorTex = 161;
+	const TextureID colorTex = pRenderer->GetRenderTargetTexture(bBloom ? _bloomPass._finalRT : _worldRenderTarget);
+	//const TextureID colorTex = 161;
 	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
 	pRenderer->BeginEvent("Tonemapping");
 	//pCPU->BeginEntry("Tonemapping");
@@ -129,3 +129,5 @@ void DebugPass::Initialize(Renderer * pRenderer)
 {
 	_scissorsRasterizer = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, false, true);
 }
+
+

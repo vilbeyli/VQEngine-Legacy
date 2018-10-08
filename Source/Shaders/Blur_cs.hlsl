@@ -16,6 +16,8 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "BlurCommon.hlsl"
+
 RWTexture2D<float4> texColorOut;
 Texture2D<float4>   texColorIn;
 SamplerState        sSampler;

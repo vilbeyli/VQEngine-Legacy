@@ -16,6 +16,8 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "BlurCommon.hlsl"
+
 Texture2D<float>  texOcclusion;
 Texture2D<half4>  texNormals;
 Texture2D<float>  texDepth;
@@ -101,9 +103,8 @@ void CSMain(
 		//const float detph  = texDepth.SampleLevel(sSampler, uv, 0).r;
 		const float occlusion = texOcclusion.SampleLevel(sSampler, uv, 0).r;
 
-		const bool bFirstPixel = outTexel.x == 0;
-		const bool bLastPixel = outTexel.x == (IMAGE_SIZE_X - 1);
-		if ( bFirstPixel || bLastPixel )
+
+		if( IsOnImageBorder(outTexel.x, IMAGE_SIZE_X) )
 		{
 			const int offset = outTexel.x / (IMAGE_SIZE_X - 1);
 			[unroll] for (int krn = 0; krn < KERNEL_RANGE_EXCLUDING_MIDDLE; ++krn)
@@ -152,7 +153,7 @@ void CSMain(
 				const uint kernelImageIndex = outTexel.x + kernelOffset + KERNEL_RANGE_EXCLUDING_MIDDLE;
 				const half3 kernelNormal = gNormals[kernelImageIndex];
 				
-				const bool bReduceGaussianWeightToZero = false &&
+				const bool bReduceGaussianWeightToZero = true &&
 					dot(centerTapNormal, kernelNormal) < cParameters.normalDotThreshold
 					|| abs(centerTapDepth - sampledDepth /*gDepth[kernelImageIndex]*/) > 0.0050f; //cParameters.depthThreshold;
 				const float WEIGHT = bReduceGaussianWeightToZero ? 0.0f : KERNEL_WEIGHTS[abs(kernelOffset)];
@@ -161,7 +162,7 @@ void CSMain(
 				wghSq += WEIGHT * WEIGHT;
 			}
 
-			result /= 
+			result /= sqrt(wghSq);
 
 			// save the blurred pixel value //transpozed
 			texBlurredOcclusionOut[outTexel.xy] = result;

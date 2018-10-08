@@ -258,10 +258,11 @@ struct DebugPass : public RenderPass
 //--------------------------------------------------------------------------------------------
 // TODO: move the defines into cpp, use pimpl to hide members so we dont compile a lot of
 // code when we want to change these defines
-#define SSAO_DEBUGGING 0
+#define SSAO_DEBUGGING 1
 //
 // wheel up/down		:	radius +/-
 // shift+ wheel up/down	:	intensity +/-
+// ctrl + wheel up/down :	ssao quality
 //
 //
 #define BLOOM_DEBUGGING 0
@@ -282,18 +283,28 @@ struct AmbientOcclusionPass : public RenderPass
 		float normalDotThreshold;
 		float depthThreshold;
 	};
+	enum SSAOQuality
+	{
+		LOW = 0,	// Gaussian Blur
+		HIGH,		// Bilateral Blur
+		SSAO_QUALITY_LEVEL_COUNT
+	};
 
 	AmbientOcclusionPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	static TextureID whiteTexture4x4;
 	
 	void Initialize(Renderer* pRenderer);
 	void RenderAmbientOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
+	void ChangeQualityLevel(int upOrDown);	// -1 or 1 as input
+	TextureID GetBlurredAOTexture(Renderer* pRenderer) const;
 
 	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
 	void RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
 	void DeinterleaveDepth(Renderer* pRenderer);
 	void BilateralBlurPass(Renderer* pRenderer, const TextureID texNormals);
 	void GaussianBlurPass(Renderer* pRenderer);	// Gaussian 4x4 kernel
+
+	SSAOQuality quality;
 
 	// SSAO resources
 	std::vector<vec3>	sampleKernel;

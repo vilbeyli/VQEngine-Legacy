@@ -129,8 +129,6 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 
 		D3D11_DEPTH_STENCIL_DESC desc = {};
 		desc.FrontFace = dsOpDesc;
-
-		//dsOpDesc.StencilDepthFailOp = D3D11_STENCIL_OP_DECR;
 		desc.BackFace = dsOpDesc;
 
 		desc.DepthEnable = true;

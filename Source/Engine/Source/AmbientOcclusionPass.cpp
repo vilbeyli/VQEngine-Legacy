@@ -29,6 +29,7 @@
 #define ENABLE_COMPUTE_PASS_UNIT_TEST   0
 
 #define ENABLE_BILATERAL_BLUR_PASS      1
+#define ENABLE_INTERLEAVED_SSAO_PASS    0
 
 constexpr size_t SSAO_SAMPLE_KERNEL_SIZE = 64;
 TextureID AmbientOcclusionPass::whiteTexture4x4 = -1;
@@ -141,7 +142,13 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 		ShaderStageDesc{ "FullscreenQuad_vs.hlsl", {} },
 		ShaderStageDesc{ "SSAO_ps.hlsl", {} },
 	};
+	const ShaderDesc gaussianBlurShaderdesc = 
+	{ "GaussianBlur4x4", 
+		ShaderStageDesc{"FullscreenQuad_vs.hlsl" , {} },
+		ShaderStageDesc{"GaussianBlur4x4_ps.hlsl", {} }
+	};
 	this->SSAOShader = pRenderer->CreateShader(ssaoShaderDesc);
+	this->gaussianBlurShader = pRenderer->CreateShader(gaussianBlurShaderdesc);
 #if SSAO_DEBUGGING
 	this->radius = 6.5f;
 	this->intensity = 1.0f;
@@ -187,19 +194,55 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	this->texSSAOComputeOutput = pRenderer->CreateTexture2D(texDesc);
 #endif
 
-#ifdef ENABLE_BILATERAL_BLUR_PASS
+#if ENABLE_BILATERAL_BLUR_PASS
 	texDesc = TextureDesc();
 	texDesc.usage = ETextureUsage::COMPUTE_RW_TEXTURE;
 	texDesc.width = pRenderer->WindowWidth();
 	texDesc.height = pRenderer->WindowHeight();
 	texDesc.format = EImageFormat::RGBA32F;
+	bilateralBlurUAVs[0] = pRenderer->CreateTexture2D(texDesc);
+	bilateralBlurUAVs[1] = pRenderer->CreateTexture2D(texDesc);
 
-	bilateralBlurUAV = pRenderer->CreateTexture2D(texDesc);
+	constexpr int BILATERAL_BLUR_PASS_COUNT = 1;
+	constexpr int COMPUTE_KERNEL_DIMENSION = 1024;
+	constexpr int BLUR_KERNEL_DIMENSION = 15;
+	const ShaderDesc CSDescV =
+	{
+		"BilateralBlur<CS>_Vertical",
+		ShaderStageDesc { "BilateralBlur_cs.hlsl", {
+			{ "VERTICAL"    , "1" },
+			{ "HORIZONTAL"  , "0" },
+			{ "IMAGE_SIZE_X", std::to_string(texDesc.width) },
+			{ "IMAGE_SIZE_Y", std::to_string(texDesc.height) },
+			{ "THREAD_GROUP_SIZE_X", "1" },
+			{ "THREAD_GROUP_SIZE_Y", std::to_string(COMPUTE_KERNEL_DIMENSION) },
+			{ "THREAD_GROUP_SIZE_Z", "1"},
+			{ "PASS_COUNT", std::to_string(BILATERAL_BLUR_PASS_COUNT) },          // lets us unroll the blur strength loop (faster)
+			{ "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) } }
+		}
+	};
+	const ShaderDesc CSDescH =
+	{
+		"BilateralBlur<CS>_Horizontal",
+		ShaderStageDesc { "BilateralBlur_cs.hlsl", {
+			{ "VERTICAL"   , "0" },
+			{ "HORIZONTAL" , "1" },
+			{ "IMAGE_SIZE_X", std::to_string(texDesc.width) },
+			{ "IMAGE_SIZE_Y", std::to_string(texDesc.height) },
+			{ "THREAD_GROUP_SIZE_X", std::to_string(COMPUTE_KERNEL_DIMENSION) },
+			{ "THREAD_GROUP_SIZE_Y", "1" },
+			{ "THREAD_GROUP_SIZE_Z", "1"},
+			{ "PASS_COUNT", std::to_string(BILATERAL_BLUR_PASS_COUNT) },          // lets us unroll the blur strength loop (faster)
+			{ "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) } }
+		}
+	};
+	this->bilateralBlurShaderH = pRenderer->CreateShader(CSDescH);
+	this->bilateralBlurShaderV = pRenderer->CreateShader(CSDescV);
 #endif
 
 
-	// DEINTERLEAVED SSAO RESOURCES
-	//
+#if ENABLE_INTERLEAVED_SSAO_PASS
+	// INTERLEAVED SSAO RESOURCES
 	const ShaderDesc deinterleaveShaderDesc = 
 	{
 		"Deinterleave_Shader",
@@ -216,6 +259,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	deinterleavedDepthTextureArrayDesc.height        = static_cast<int>(pRenderer->WindowHeight() / 2.0f);
 	deinterleavedDepthTextureArrayDesc.usage         = ETextureUsage::COMPUTE_RW_TEXTURE;
 	this->deinterleavedDepthTextures = pRenderer->CreateTexture2D(deinterleavedDepthTextureArrayDesc);
+#endif // ENABLE_INTERLEAVED_SSAO_PASS
 }
 
 
@@ -246,10 +290,18 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 		GaussianBlurPass(pRenderer);
 		pGPU->EndEntry();
 		pRenderer->EndEvent();
+
+		pRenderer->BeginEvent("Blur Bilateral");
+		pGPU->BeginEntry("Bilateral Blur");
+		BilateralBlurPass(pRenderer, texNormals);
+		pGPU->EndEntry();
+		pRenderer->EndEvent();
 	}
 	pGPU->EndEntry(); // SSAO
 	pRenderer->EndEvent(); // SSAO
 
+
+#if ENABLE_INTERLEAVED_SSAO_PASS
 	// INTERLEAVED SSAO
 	//
 	pRenderer->BeginEvent("SSAO_Interleaved");
@@ -278,7 +330,7 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 
 		pRenderer->BeginEvent("Blur Bilateral");
 		pGPU->BeginEntry("Bilateral Blur");
-		BilateralBlurPass(pRenderer);
+		BilateralBlurPass(pRenderer, texNormals);
 		pGPU->EndEntry();
 		pRenderer->EndEvent();
 
@@ -291,6 +343,7 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 	}
 	pGPU->EndEntry();
 	pRenderer->EndEvent(); // SSAO_Interleaved
+#endif
 }
 
 
@@ -368,6 +421,7 @@ void AmbientOcclusionPass::DeinterleaveDepth(Renderer* pRenderer)
 	pRenderer->EndEvent();
 }
 
+// TODO: impl
 void AmbientOcclusionPass::RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView)
 {
 	// https://developer.nvidia.com/sites/default/files/akamai/gameworks/samples/DeinterleavedTexturing.pdf
@@ -438,23 +492,51 @@ void AmbientOcclusionPass::RenderOcclusionInterleaved(Renderer* pRenderer, const
 }
 
 
-void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer)
+void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer, const TextureID texNormals)
 {
-#ifdef ENABLE_BILATERAL_BLUR_PASS
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+#if ENABLE_BILATERAL_BLUR_PASS
 	const TextureID texOcclusion = pRenderer->GetRenderTargetTexture(this->occlusionRenderTarget);
+	const TextureID texDepth = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 	const vec2 texDimensions = pRenderer->GetWindowDimensionsAsFloat2();
+	const int DISPATCH_GROUP_Z = 1;
+
+	bilateralBlurParameters.depthThreshold = 0.0001f;
+	bilateralBlurParameters.normalDotThreshold = 0.995f;
 
 	pRenderer->BeginEvent("Blur Pass <BiL>");
-	pRenderer->SetShader(EShaders::BILATERAL_BLUR, true);
-	//pRenderer->SetTexture("texNormals", 0);
-	//pRenderer->SetTexture("texDepth", 0);
-	//pRenderer->SetConstant2f("inputTextureDimensions", texDimensions);
-	//pRenderer->SetTexture("texOcclusion", texOcclusion);
-	//pRenderer->SetTexture("texBlurredOcclusionOut", this->bilateralBlurUAV);
+
+	// HORIZONTAL BLUR
+	//
+	int DISPATCH_GROUP_X = 1;
+	int DISPATCH_GROUP_Y = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().y());
+
+	pRenderer->SetShader(this->bilateralBlurShaderH, true, true);
+	pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetTexture("texOcclusion", texOcclusion);
+	pRenderer->SetTexture("texNormals", texNormals);
+	pRenderer->SetTexture("texDepth", texDepth);
+	pRenderer->SetConstantStruct("cParameters", &bilateralBlurParameters);
+	pRenderer->SetUnorderedAccessTexture("texBlurredOcclusionOut", this->bilateralBlurUAVs[0]);
 	pRenderer->Apply();
-	pRenderer->Dispatch(1, 1, 1);
+	pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
+
+	// VERTICAL BLUR
+	//
+	DISPATCH_GROUP_X = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().x());
+	DISPATCH_GROUP_Y = 1;
+	
+#if 0
+	pRenderer->SetShader(this->bilateralBlurShaderV);
+	pRenderer->SetTexture("texOcclusion", this->bilateralBlurUAVs[0]);
+	pRenderer->SetConstantStruct("cParameters", &bilateralBlurParameters);
+	pRenderer->SetUnorderedAccessTexture("texBlurredOcclusionOut", this->bilateralBlurUAVs[1]);
+	pRenderer->Apply();
+	pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
+#endif
+
 	pRenderer->EndEvent();	// Blur Pass <BiL>
+	pRenderer->SetShader(this->bilateralBlurShaderV, true, true);
+
 #endif
 }
 
@@ -466,7 +548,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer * pRenderer)
 
 	pRenderer->BeginEvent("Blur Pass <Gau>");
 
-	pRenderer->SetShader(EShaders::GAUSSIAN_BLUR_4x4, true);
+	pRenderer->SetShader(this->gaussianBlurShader, true);
 	pRenderer->BindRenderTarget(this->blurRenderTarget);
 	pRenderer->SetTexture("tOcclusion", texOcclusion);
 	pRenderer->SetSamplerState("BlurSampler", EDefaultSamplerState::POINT_SAMPLER);

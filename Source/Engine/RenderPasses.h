@@ -256,7 +256,8 @@ struct DebugPass : public RenderPass
 
 // Engine will be updating the values in Engine::HandleInput()
 //--------------------------------------------------------------------------------------------
-//
+// TODO: move the defines into cpp, use pimpl to hide members so we dont compile a lot of
+// code when we want to change these defines
 #define SSAO_DEBUGGING 0
 //
 // wheel up/down		:	radius +/-
@@ -276,6 +277,12 @@ struct DebugPass : public RenderPass
 // Blizzard Dev Paper:	http://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf
 struct AmbientOcclusionPass : public RenderPass
 {
+	struct BilateralBlurConstants
+	{
+		float normalDotThreshold;
+		float depthThreshold;
+	};
+
 	AmbientOcclusionPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	static TextureID whiteTexture4x4;
 	
@@ -285,7 +292,7 @@ struct AmbientOcclusionPass : public RenderPass
 	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
 	void RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
 	void DeinterleaveDepth(Renderer* pRenderer);
-	void BilateralBlurPass(Renderer* pRenderer);
+	void BilateralBlurPass(Renderer* pRenderer, const TextureID texNormals);
 	void GaussianBlurPass(Renderer* pRenderer);	// Gaussian 4x4 kernel
 
 	// SSAO resources
@@ -295,26 +302,29 @@ struct AmbientOcclusionPass : public RenderPass
 	SamplerID			noiseSampler;
 
 	// Regular SSAO resources -------------------------------
-	RenderTargetID		occlusionRenderTarget;
-	RenderTargetID		blurRenderTarget;
-	TextureID			bilateralBlurUAV;
+	RenderTargetID			 occlusionRenderTarget;
+	RenderTargetID			 blurRenderTarget;
+	std::array<TextureID, 2> bilateralBlurUAVs;
+	BilateralBlurConstants	 bilateralBlurParameters;
 
-	ShaderID			SSAOShader;
-	ShaderID			blurShader; // gaussian
+	ShaderID SSAOShader;
+	ShaderID gaussianBlurShader;
+	ShaderID bilateralBlurShaderH;
+	ShaderID bilateralBlurShaderV;
 	// Regular SSAO resources -------------------------------
 
 
 	// Interleaved SSAO resources -------------------------------
-	ShaderID			deinterleaveShader;
-	ShaderID			deinterleavedSSAOShader;
-	TextureID			deinterleavedDepthTextures;
+	ShaderID	deinterleaveShader;
+	ShaderID	deinterleavedSSAOShader;
+	TextureID	deinterleavedDepthTextures;
 	//RenderTargetID			 
 	// Interleaved SSAO resources -------------------------------
 
 
 	// Compute Shader Unit Test ---------------------------
-	ShaderID testComputeShader;
-	BufferID UABuffer;
+	ShaderID  testComputeShader;
+	BufferID  UABuffer;
 	TextureID RWTex2D;
 	// Compute Shader Unit Test ---------------------------
 

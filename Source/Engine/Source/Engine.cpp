@@ -463,9 +463,6 @@ bool Engine::LoadShaders()
 		timer.Start();
 
 		Log::Info("------------------------ COMPILING SHADERS ------------------------");
-		ShaderDesc BilateralBlurShaderDesc = {};
-		BilateralBlurShaderDesc.shaderName = "BilateralBlur<CS>";
-		BilateralBlurShaderDesc.stages = { ShaderStageDesc{ "BilateralBlur_cs.hlsl", {} } };
 
 		constexpr unsigned VS_PS = SHADER_STAGE_VS | SHADER_STAGE_PS;
 		const std::vector<ShaderDesc> shaderDescs =
@@ -492,11 +489,6 @@ bool Engine::LoadShaders()
 			}},
 			ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Forward_BRDF", VS_PS)},
 			ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
-			BilateralBlurShaderDesc,
-			ShaderDesc{ "GaussianBlur4x4", {
-				ShaderStageDesc{"FullscreenQuad_vs.hlsl" , {} },
-				ShaderStageDesc{"GaussianBlur4x4_ps.hlsl", {} }
-			}},
 		};
 		
 		// todo: do not depend on array index, use a lookup, remove s_shaders[]

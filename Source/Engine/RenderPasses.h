@@ -308,7 +308,7 @@ struct AmbientOcclusionPass : public RenderPass
 
 	// SSAO resources
 	std::vector<vec3>	sampleKernel;
-	std::vector<vec4>	noiseKernel;
+	std::vector<vec2>	noiseKernel;
 	TextureID			noiseTexture;
 	SamplerID			noiseSampler;
 

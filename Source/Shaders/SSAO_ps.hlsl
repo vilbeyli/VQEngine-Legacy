@@ -45,7 +45,7 @@ cbuffer cSceneVariables
 };
 
 Texture2D texViewSpaceNormals;
-Texture2D<float4> texNoise;
+Texture2D<float2> texNoise;
 Texture2D texDepth;
 
 SamplerState sNoiseSampler;
@@ -65,13 +65,12 @@ float PSMain(PSIn In) : SV_TARGET
 
 	// tile noise texture (4x4) over whole screen by scaling UV coords (textures wrap)
 	const float2 noiseScale = SSAO_constants.screenSize / 4.0f;
-	const float3 noise = texNoise.Sample(sNoiseSampler, uv * noiseScale).xyz;
+	const float3 noise = float3(texNoise.Sample(sNoiseSampler, uv * noiseScale).xy, 0.0f);
 
 	// Gramm-Schmidt process for orthogonal basis creation: https://en.wikipedia.org/wiki/Gram%E2%80%93Schmidt_process
 	// in short: project noise on N vector, and subtract that projection from the noise vector
 	//			 this would give us a vector perpendicular to N. see gif in link 
 	const float3 T = normalize(noise - N * dot(noise, N));
-
 	const float3 B = cross(T, N);
 	const float3x3 TBN = float3x3(T, B, N);
 
@@ -91,10 +90,11 @@ float PSMain(PSIn In) : SV_TARGET
 		const float sampleDepth = LinearDepth(texDepth.Sample(sPointSampler, offset.xy).r, SSAO_constants.matProjection[2][3], SSAO_constants.matProjection[2][2]);
 
 		// range check & accumulate
-		const float rangeCheck = smoothstep(0.0f, 1.0f, SSAO_constants.radius / abs(P.z - sampleDepth));
-		//const float rangeCheck = abs(P.z - sampleDepth) < SSAO_constants.radius ? 1.0f : 0.0f;
-		
-		occlusion += (sampleDepth < kernelSample.z ? 1.0f : 0.0f) * rangeCheck;
+		if (smoothstep(0.0f, 1.0f, SSAO_constants.radius / abs(P.z - sampleDepth)) > 0)
+		{
+			if (sampleDepth < kernelSample.z)
+				occlusion += 1.0f;
+		}
 	}
 	occlusion = 1.0 - (occlusion / KERNEL_SIZE);
 

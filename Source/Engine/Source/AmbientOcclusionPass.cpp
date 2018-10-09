@@ -85,21 +85,21 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	//--------------------------------------------------------------------
 	for (size_t i = 0; i < NOISE_KERNEL_SIZE * NOISE_KERNEL_SIZE; i++)
 	{	// create a square noise texture using random directions
-		vec3 noise
+		vec2 noise
 		(
-			RandF(-1, 1),
-			RandF(-1, 1),
-			0 // noise rotates the kernel around z-axis
+			  RandF(-1, 1)
+			, RandF(-1, 1)
+			// 0 // noise rotates the kernel around z-axis
 		);
-		this->noiseKernel.push_back(vec4(noise.normalized()));
+		this->noiseKernel.push_back( vec3(noise).normalized() );
 	}
 	TextureDesc texDesc = {};
 	texDesc.width = NOISE_KERNEL_SIZE;
 	texDesc.height = NOISE_KERNEL_SIZE;
-	texDesc.format = EImageFormat::RGBA32F;
+	texDesc.format = EImageFormat::RG32F;
 	texDesc.texFileName = "noiseKernel";
 	texDesc.pData = this->noiseKernel.data();
-	texDesc.dataPitch = sizeof(vec4) * NOISE_KERNEL_SIZE;
+	texDesc.dataPitch = sizeof(this->noiseKernel.back()) * NOISE_KERNEL_SIZE;
 	this->noiseTexture = pRenderer->CreateTexture2D(texDesc);
 
 	const float whiteValue = 1.0f;

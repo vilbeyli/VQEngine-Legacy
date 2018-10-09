@@ -58,6 +58,7 @@ Application::~Application(){}
 void Application::Exit()
 {
 	ENGINE->Exit();
+	ShutdownCOMInterface();
 	ShutdownWindows();
 }
 
@@ -83,6 +84,15 @@ bool Application::Init()
 	//
 	InitRawInputDevices();
 #endif
+
+	// UI
+	// 
+	std::string errMsg;
+	if (!InitCOMInterface(errMsg))
+	{
+		Log::Error(errMsg);
+		//return false;
+	}
 
 	// ENGINE
 	//
@@ -356,7 +366,7 @@ void Application::InitWindow(Settings::Window& windowSettings)
 	int posX, posY;				// window position
 	gp_appHandle = this;		// global handle		
 
-								// default settings for windows class
+	// default settings for windows class
 	WNDCLASSEX wc;
 	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	wc.lpfnWndProc = WndProc;
@@ -431,6 +441,32 @@ void Application::InitWindow(Settings::Window& windowSettings)
 	return;
 }
 
+bool Application::InitCOMInterface(std::string& errMsg)
+{
+	// =================================================================================================================================
+	// https://docs.microsoft.com/en-us/windows/desktop/learnwin32/initializing-the-com-library
+	// HR CoInitializeEx();
+	// enum tagCOINIT: 
+	// =================================================================================================================================
+	// - COINIT_APARTMENTTHREADED: 
+	//   App must guarantee the following:
+	//     1) You will access each COM object from a single thread; you will not share COM interface pointers between multiple threads.
+	//     2) The thread will have a message loop.
+	//
+	// - COINIT_MULTITHREADED
+	//   If no guarantee to any of the above.
+	// =================================================================================================================================
+	tagCOINIT COM_mode = COINIT_APARTMENTTHREADED;
+	HRESULT hr = CoInitializeEx(NULL /*reserved, must be NULL*/, COM_mode);
+	if (FAILED(hr))
+	{
+		errMsg = std::string("Could not initialize COM interface, error=") + std::to_string(hr);
+		return false;
+	}
+	Log::Info("COM Interface initialized successfully.");
+	return true;
+}
+
 void Application::ShutdownWindows()
 {
 	ShowCursor(true);
@@ -454,6 +490,11 @@ void Application::ShutdownWindows()
 	return;
 }
 
+
+void Application::ShutdownCOMInterface()
+{
+	CoUninitialize();
+}
 
 void Application::InitRawInputDevices()
 {

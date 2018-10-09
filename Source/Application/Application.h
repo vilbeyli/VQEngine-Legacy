@@ -18,16 +18,29 @@
 
 #pragma once 
 
+#ifdef _WIN32
+#include <windows.h>
+
 // https://stackoverflow.com/questions/11040133/what-does-defining-win32-lean-and-mean-exclude-exactly
 // https://msdn.microsoft.com/en-us/library/windows/desktop/aa383745(v=vs.85).aspx
 #define WIN32_LEAN_AND_MEAN		// speeds up build process
 
+#   ifdef LIBRARY_EXPORTS
+#        define LIBRARY_API __declspec(dllexport)
+#   else
+#        define LIBRARY_API __declspec(dllimport)
+#   endif
+#elif // Other platforms
+#    define LIBRARY_API
+#endif
+
 #include "ThreadPool.h"
 
-#include <windows.h>
 #include <string>
 
 namespace Settings { struct Window; }
+
+
 
 class Application
 {
@@ -52,7 +65,9 @@ public:
 private:
 	void InitRawInputDevices();
 	void InitWindow(Settings::Window& windowSettings);
+	bool InitCOMInterface(std::string& errMsg); // to talk to the C# UI DLL
 	void ShutdownWindows();
+	void ShutdownCOMInterface();
 	
 	void CaptureMouse(bool bDoCapture);
 

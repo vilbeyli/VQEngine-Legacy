@@ -441,6 +441,7 @@ void Application::InitWindow(Settings::Window& windowSettings)
 	return;
 }
 
+//extern "C" __declspec(dllimport) void TestFn();
 bool Application::InitCOMInterface(std::string& errMsg)
 {
 	// =================================================================================================================================
@@ -464,6 +465,29 @@ bool Application::InitCOMInterface(std::string& errMsg)
 		return false;
 	}
 	Log::Info("COM Interface initialized successfully.");
+
+	// Load VQUI.dll
+	HMODULE mdl;
+	mdl = LoadLibrary(TEXT("VQUI.dll"));
+	if (mdl == NULL)
+	{
+		errMsg = std::string("LoadLibrary() failed for VQUI.dll");
+		return false;
+	}
+
+	// get the Function Address for TestFn
+	using pfnTestFn = void(*)();
+	pfnTestFn TestFn = (pfnTestFn)GetProcAddress(mdl, "TestFn");
+	if (TestFn == NULL)
+	{
+		errMsg = std::string("TestFn doesn't exist in ProcAddress");
+		FreeLibrary(mdl);
+		return false;
+	}
+
+	TestFn();
+
+	FreeLibrary(mdl);
 	return true;
 }
 

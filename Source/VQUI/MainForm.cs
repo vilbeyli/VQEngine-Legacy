@@ -33,5 +33,8 @@ namespace VQUI
         {
             Shutdown();
         }
+
+        [DllExport("TestFn", CallingConvention = CallingConvention.Cdecl)]
+        static public void TestFn() { MessageBox.Show("Test: Hi"); }
     }
 }

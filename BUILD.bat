@@ -55,16 +55,19 @@ cls
 if not exist "%APPDATA%\VQEngine\Logs\Build" mkdir "%APPDATA%\VQEngine\Logs\Build
 
 call :MSBuild_Build RELEASE, %log_devenv%
-call :PackageBinaries
 
 :: Error checking
 if %ERRORLEVEL% GEQ 1 (
     echo Error building solution file: %solution%
     pause
+    EXIT /B -1
 )
 
 @echo:
-echo Build Finished.
+echo Build Finished. Packaging Binaries...
+
+call :PackageBinaries
+
 @echo:
 echo ./Build/_artifacts contains the release version of the project executable.
 
@@ -109,9 +112,9 @@ if exist EngineSettings.ini (
 if %errorlevel% NEQ 0 (
     xcopy "./Data/EngineSettings.ini" "./Build/_artifacts/"\ /Y /Q /F
 )
-
-
 EXIT /B 0
+
+
 
 
 :MSBuild_Build
@@ -128,6 +131,9 @@ echo              end   %t_msb_end%
 :: set duration=%t_msb_end%-%t_msb_begin%
 echo ------------------------------------------
 EXIT /B 0
+
+
+
 
 :Devenv_Build
 

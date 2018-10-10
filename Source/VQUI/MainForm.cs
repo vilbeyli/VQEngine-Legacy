@@ -1,6 +1,4 @@
-﻿using RGiesecke.DllExport;
-using System;
-using System.Runtime.InteropServices;
+﻿using System;
 using System.Windows.Forms;
 
 // -------------------------------------------------------------------------------------------------
@@ -13,8 +11,9 @@ using System.Windows.Forms;
 
 namespace VQUI
 {
-    
-    /*static*/ public partial class VQUIMainForm : Form
+
+    /*static*/
+    public partial class VQUIMainForm : Form
     {
         //VQUIMainForm Get();
 
@@ -24,17 +23,20 @@ namespace VQUI
         }
 
         //[DllExport("Shutdown", CallingConvention = CallingConvention.Cdecl)]
-        /*static*/ public void Shutdown()
+        /*static*/
+        public void Shutdown()
         {
-            this.Shutdown();
+            //this.Shutdown();
+            //Application.Exit();
+            Close();
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
+            //MessageBox.Show("Shutting Down UI");
             Shutdown();
         }
 
-        [DllExport("TestFn", CallingConvention = CallingConvention.Cdecl)]
-        static public void TestFn() { MessageBox.Show("Test: Hi"); }
     }
+
 }

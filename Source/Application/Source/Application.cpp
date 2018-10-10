@@ -20,6 +20,7 @@
 #include "Application.h"
 #include "Input.h"
 
+//#import 
 
 #include "Engine/Engine.h"
 #include "Engine/Settings.h"
@@ -355,7 +356,7 @@ void Application::LaunchControlPanelUI()
 
 }
 
-void Application::ShutdownControlPanel()
+void Application::ShutdownControlPanelUI()
 {
 
 }
@@ -467,25 +468,37 @@ bool Application::InitCOMInterface(std::string& errMsg)
 	Log::Info("COM Interface initialized successfully.");
 
 	// Load VQUI.dll
+	const char* pDLL = "VQUI.dll";
 	HMODULE mdl;
-	mdl = LoadLibrary(TEXT("VQUI.dll"));
+	mdl = LoadLibrary(TEXT(pDLL));
 	if (mdl == NULL)
 	{
-		errMsg = std::string("LoadLibrary() failed for VQUI.dll");
+		errMsg = std::string("LoadLibrary() failed for " + std::string(pDLL));
 		return false;
 	}
 
 	// get the Function Address for TestFn
+#if 0
+	const char* pFnName = "TestFn";
+#else
+	const char* pFnName = "LaunchWindow";
+#endif
 	using pfnTestFn = void(*)();
-	pfnTestFn TestFn = (pfnTestFn)GetProcAddress(mdl, "TestFn");
+	pfnTestFn TestFn = (pfnTestFn)GetProcAddress(mdl, pFnName);
 	if (TestFn == NULL)
 	{
-		errMsg = std::string("TestFn doesn't exist in ProcAddress");
+		errMsg = std::string(std::string(pFnName) + " doesn't exist in ProcAddress");
 		FreeLibrary(mdl);
 		return false;
 	}
 
-	TestFn();
+	std::thread th(TestFn);
+	Log::Info("Sleeping...");
+	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+	std::thread th2(TestFn);
+	Log::Info("Woke Up");
+	th.join();
+	th2.join();
 
 	FreeLibrary(mdl);
 	return true;

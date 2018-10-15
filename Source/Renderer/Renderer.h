@@ -267,7 +267,7 @@ private:
 //
 template<typename... Args> inline void pass(Args&&...) {}
 // note: we can use the expand operator (...) in a function parameter scope
-//       to access the expanded parameters one by one in an enclosing function call.
+//       to access the expanded parameters one by one in an enclosed function call.
 
 template <typename... Args>
 void Renderer::SetTextureArray(const char* texName, Args const&... TextureIDs)

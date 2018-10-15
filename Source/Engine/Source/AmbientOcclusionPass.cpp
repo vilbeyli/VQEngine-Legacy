@@ -380,12 +380,12 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 		switch (blurQuality)
 		{
 		case AmbientOcclusionPass::LOW:
-			pGPU->BeginEntry("Simple Blur");
+			pGPU->BeginEntry("Simple Blur<Intlrv>");
 			GaussianBlurPass(pRenderer, this->interleavedAOTexture);
 			pGPU->EndEntry();
 			break;
 		case AmbientOcclusionPass::HIGH:
-			pGPU->BeginEntry("Bilateral Blur");
+			pGPU->BeginEntry("Bilateral Blur<Intlrv>");
 			BilateralBlurPass(pRenderer, texNormals);
 			pGPU->EndEntry();
 			break;
@@ -476,7 +476,7 @@ void AmbientOcclusionPass::DeinterleaveDepth(Renderer* pRenderer) const
 	pRenderer->SetTexture("texInput", texDepth);
 	pRenderer->SetRWTexture("texOutputs", deinterleavedDepthTextures);
 	pRenderer->Apply();
-	pRenderer->Dispatch((int)imageDimensions.x() / 2, (int)imageDimensions.y() / 2, 1);
+	pRenderer->Dispatch((int)imageDimensions.x() / 4, (int)imageDimensions.y() / 4, 1);
 	pRenderer->EndEvent();
 }
 
@@ -506,7 +506,7 @@ void AmbientOcclusionPass::InterleaveAOTexture(Renderer* pRenderer) const
 #endif
 	pRenderer->SetRWTexture("texOutput", interleavedAOTexture);
 	pRenderer->Apply();
-	pRenderer->Dispatch((int)imageDimensions.x() / 2, (int)imageDimensions.y() / 2, 1);
+	pRenderer->Dispatch((int)imageDimensions.x() / 4, (int)imageDimensions.y() / 4, 1);
 	pRenderer->EndEvent();
 }
 

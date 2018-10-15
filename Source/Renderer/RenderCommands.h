@@ -26,27 +26,41 @@ class Renderer;
 
 // inheritance... ?
 
+constexpr size_t TEXTURE_ARRAY_SIZE = 32;
 struct SetTextureCommand
 {
-	SetTextureCommand(TextureID texID, const ShaderTexture& shaderTex, bool bUA = false) 
-		: textureID(texID)
-		, shaderTexture(shaderTex) 
+	SetTextureCommand(TextureID texID, const TextureBinding& shaderBinding, unsigned sliceIn, bool bUA = false)
+		: textureIDs({ texID })
+		, binding(shaderBinding)
 		, bUnorderedAccess(bUA)
+		, slice(sliceIn)
+		, numTextures(1)
 	{}
+
+	SetTextureCommand(const std::array<TextureID, TEXTURE_ARRAY_SIZE>& texIDs, unsigned numTexturesIn, const TextureBinding& shaderBinding, unsigned sliceIn, bool bUA = false)
+		: textureIDs(texIDs)
+		, binding(shaderBinding)
+		, bUnorderedAccess(bUA)
+		, slice(sliceIn)
+		, numTextures(numTexturesIn)
+	{}
+
 	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
 
-	const TextureID			textureID;
-	const ShaderTexture&	shaderTexture;
+	const std::array<TextureID, TEXTURE_ARRAY_SIZE> textureIDs;
+	const TextureBinding&	binding;
+	const unsigned			slice;
+	const unsigned			numTextures;
 	bool bUnorderedAccess;
 };
 
 struct SetSamplerCommand
 {
-	SetSamplerCommand(SamplerID sampID, const ShaderSampler& shaderSamp) : samplerID(sampID), shaderSampler(shaderSamp) {}
+	SetSamplerCommand(SamplerID sampID, const SamplerBinding& shaderSamp) : samplerID(sampID), binding(shaderSamp) {}
 	void SetResource(Renderer* pRenderer);	// this can't be inlined due to circular include between this and renderer
 
 	const SamplerID			samplerID;
-	const ShaderSampler&	shaderSampler;
+	const SamplerBinding&	binding;
 };
 
 struct ClearCommand
@@ -86,4 +100,5 @@ struct DrawQuadOnScreenCommand
 	vec2 bottomLeftCornerScreenCoordinates;	// (0, 0) is bottom left corner of the screen
 	TextureID texture;
 	bool bIsDepthTexture;
+	int numChannels = 3;
 };

@@ -295,7 +295,7 @@ void BloomPass::Render(Renderer* pRenderer, RenderTargetID _worldRenderTarget, c
 
 			pRenderer->SetShader(this->blurComputeShaderPingPong[INDEX_PING_PONG], true);
 			pRenderer->SetTexture("texColorIn", i == 0 ? brightTexture : this->blurComputeOutputPingPong[INDEX_PING_PONG_OTHER]);
-			pRenderer->SetUnorderedAccessTexture("texColorOut", this->blurComputeOutputPingPong[INDEX_PING_PONG]);
+			pRenderer->SetRWTexture("texColorOut", this->blurComputeOutputPingPong[INDEX_PING_PONG]);
 			pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
 			if(USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH)
 				pRenderer->SetConstantStruct("cBlurParameters", &params);
@@ -324,7 +324,7 @@ void BloomPass::Render(Renderer* pRenderer, RenderTargetID _worldRenderTarget, c
 		pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
 		if (USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH)
 			pRenderer->SetConstantStruct("cBlurParameters", &params);
-		pRenderer->SetUnorderedAccessTexture("texColorOut", this->blurComputeOutputPingPong[0]);
+		pRenderer->SetRWTexture("texColorOut", this->blurComputeOutputPingPong[0]);
 		pRenderer->Apply();
 		pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
 
@@ -334,8 +334,8 @@ void BloomPass::Render(Renderer* pRenderer, RenderTargetID _worldRenderTarget, c
 		DISPATCH_GROUP_X = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().x() / 16);
 		DISPATCH_GROUP_Y = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().y() / 16);
 		pRenderer->SetShader(this->transpozeCompute, true, true);
-		pRenderer->SetUnorderedAccessTexture("texImageIn", this->blurComputeOutputPingPong[0]);
-		pRenderer->SetUnorderedAccessTexture("texTranspozeOut", this->texTransposedImage);
+		pRenderer->SetRWTexture("texImageIn", this->blurComputeOutputPingPong[0]);
+		pRenderer->SetRWTexture("texTranspozeOut", this->texTransposedImage);
 		pRenderer->Apply();
 		pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
 
@@ -349,7 +349,7 @@ void BloomPass::Render(Renderer* pRenderer, RenderTargetID _worldRenderTarget, c
 		pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
 		if (USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH)
 			pRenderer->SetConstantStruct("cBlurParameters", &params);
-		pRenderer->SetUnorderedAccessTexture("texColorOut", this->blurComputeOutputPingPong[0]);
+		pRenderer->SetRWTexture("texColorOut", this->blurComputeOutputPingPong[0]);
 		pRenderer->Apply();
 		pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
 

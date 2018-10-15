@@ -25,13 +25,14 @@
 
 #include <ctime>
 
-#include "shlobj.h"		// SHGetKnownFolderPath()
-
 #ifdef _DEBUG
 #include <cassert>
-#endif _DEBUG
+#endif
 
+#ifdef _WIN32
 #include <winnt.h>
+#include "shlobj.h"		// SHGetKnownFolderPath()
+#endif
 
 // 2011**L::C++11 | 201402L::C++14 | 201703L::C++17
 #if _MSVC_LANG >= 201703L	// CPP17
@@ -136,6 +137,7 @@ namespace DirectoryUtil
 {
 	std::string GetSpecialFolderPath(ESpecialFolder folder)
 	{
+#if _WIN32
 		PWSTR retPath = {};
 		REFKNOWNFOLDERID folder_id = [&]()
 		{
@@ -155,8 +157,11 @@ namespace DirectoryUtil
 			// Log::Error("SHGetKnownFolderPath() returned %s.", hr == E_FAIL ? "E_FAIL" : "E_INVALIDARG");
 			return "";
 		}
-
 		return StrUtil::UnicodeString::ToASCII(retPath);
+#else
+		assert(false);	// IMPLEMENT: platform-specific logic for other platforms
+		return "";
+#endif
 	}
 
 	std::string GetFolderPath(const std::string & pathToFile)

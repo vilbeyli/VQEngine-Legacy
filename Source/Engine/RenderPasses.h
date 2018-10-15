@@ -267,10 +267,10 @@ struct DebugPass : public RenderPass
 //
 #define BLOOM_DEBUGGING 0
 //
-// wheel up/down		:	brightness threshold +/-
-// shift+ wheel up/down	:	blur strength +/-
-// ctrl + wheel up/down :	shader selection +/-
-//
+// wheel up/down             : brightness threshold +/-
+// shift+ wheel up/down      : blur strength +/-
+// ctrl + wheel up/down      : shader selection +/-
+// ctrl+shift+ wheel up/down : AO Technique selection +/-
 
 //--------------------------------------------------------------------------------------------
 
@@ -283,28 +283,40 @@ struct AmbientOcclusionPass : public RenderPass
 		float normalDotThreshold;
 		float depthThreshold;
 	};
-	enum SSAOQuality
+	enum EBlurQuality
 	{
 		LOW = 0,	// Gaussian Blur
 		HIGH,		// Bilateral Blur
 		SSAO_QUALITY_LEVEL_COUNT
 	};
+	enum EAOTechnique
+	{
+		HBAO = 0,
+		HBAO_DT,
+
+		NUM_AO_TECHNIQUES
+	};
 
 	AmbientOcclusionPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	static TextureID whiteTexture4x4;
 	
+	// Pass interface
 	void Initialize(Renderer* pRenderer);
-	void RenderAmbientOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
-	void ChangeQualityLevel(int upOrDown);	// -1 or 1 as input
+	void RenderAmbientOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const;
+	void ChangeBlurQualityLevel(int upOrDown);	// -1 or 1 as input
+	void ChangeAOTechnique(int upOrDown);       // -1 or 1 as input
 	TextureID GetBlurredAOTexture(Renderer* pRenderer) const;
 
-	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
-	void RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
-	void DeinterleaveDepth(Renderer* pRenderer);
-	void BilateralBlurPass(Renderer* pRenderer, const TextureID texNormals);
-	void GaussianBlurPass(Renderer* pRenderer);	// Gaussian 4x4 kernel
+	// draw functions
+	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const;
+	void RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const;
+	void DeinterleaveDepth(Renderer* pRenderer) const;
+	void InterleaveAOTexture(Renderer* pRenderer) const;
+	void BilateralBlurPass(Renderer* pRenderer, const TextureID texNormals) const;
+	void GaussianBlurPass(Renderer* pRenderer, TextureID texAO) const;	// Gaussian 4x4 kernel
 
-	SSAOQuality quality;
+	EBlurQuality blurQuality;
+	EAOTechnique aoTech;
 
 	// SSAO resources
 	std::vector<vec3>	sampleKernel;
@@ -328,8 +340,11 @@ struct AmbientOcclusionPass : public RenderPass
 	// Interleaved SSAO resources -------------------------------
 	ShaderID	deinterleaveShader;
 	ShaderID	deinterleavedSSAOShader;
+	ShaderID	interleaveShader;
+
 	TextureID	deinterleavedDepthTextures;
-	//RenderTargetID			 
+	TextureID	interleavedAOTexture;
+	RenderTargetID	deinterleavedAORenderTargets[4];
 	// Interleaved SSAO resources -------------------------------
 
 

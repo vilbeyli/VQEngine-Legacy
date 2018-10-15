@@ -677,7 +677,12 @@ void Engine::HandleInput()
 		// todo: wire this to some UI text/control
 		if (mEngineConfig.bSSAO)
 		{
-			if (mpInput->IsKeyDown("Shift"))
+			if (mpInput->IsKeyDown("Shift") && mpInput->IsKeyDown("Ctrl"))
+			{
+				if (mpInput->IsScrollUp())		mSSAOPass.ChangeAOTechnique(+1);
+				if (mpInput->IsScrollDown())	mSSAOPass.ChangeAOTechnique(-1);
+			}
+			else if (mpInput->IsKeyDown("Shift"))
 			{
 				const float step = 0.1f;
 				if (mpInput->IsScrollUp()) { mSSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
@@ -685,8 +690,8 @@ void Engine::HandleInput()
 			}
 			else if (mpInput->IsKeyDown("Ctrl"))
 			{
-				if (mpInput->IsScrollUp())		mSSAOPass.ChangeQualityLevel(+1);
-				if (mpInput->IsScrollDown())	mSSAOPass.ChangeQualityLevel(-1);
+				if (mpInput->IsScrollUp())		mSSAOPass.ChangeBlurQualityLevel(+1);
+				if (mpInput->IsScrollDown())	mSSAOPass.ChangeBlurQualityLevel(-1);
 			}
 			else
 			{
@@ -1057,7 +1062,7 @@ void Engine::Render()
 
 				mpGPUProfiler->BeginEntry("Blur");
 				//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
-				mSSAOPass.GaussianBlurPass(mpRenderer);
+				mSSAOPass.GaussianBlurPass(mpRenderer, tSSAO);
 				mpGPUProfiler->EndEntry(); // Blur
 				mpGPUProfiler->EndEntry(); // SSAO
 			}
@@ -1168,7 +1173,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tNormals			, false },
 			//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false },
-			{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false },
+			{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false, 1 },
 			{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)

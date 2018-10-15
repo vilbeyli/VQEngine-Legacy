@@ -84,10 +84,10 @@ namespace DirectoryUtil
 
 	// returns true if folder exists, false otherwise after creating the folder
 	//
-	bool	CreateFolderIfItDoesntExist(const std::string& directoryPath);
+	bool		CreateFolderIfItDoesntExist(const std::string& directoryPath);
 
 	// returns the folder path given a file path
-	// e.g.: @pathToFile="C:\\Folder\\File.text" -> return "C:\\Folder\\"
+	// e.g.: @pathToFile="C:\\Folder\\File.txt" -> returns "C:\\Folder\\"
 	//
 	std::string GetFolderPath(const std::string& pathToFile);
 
@@ -95,7 +95,7 @@ namespace DirectoryUtil
 	//
 	bool		IsImageName(const std::string& pathToImageFile);
 
-	// returns true if file0 has been written into later than file1 has.
+	// returns true if @file0 has been written into later than @file1 has.
 	//
 	bool		IsFileNewer(const std::string& file0, const std::string& file1);
 }

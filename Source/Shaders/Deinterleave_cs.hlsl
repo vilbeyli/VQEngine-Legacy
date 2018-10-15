@@ -16,8 +16,15 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#if DEINTERLEAVE
 Texture2D<float>		texInput;
 RWTexture2DArray<float> texOutputs; // 4
+#endif
+
+#if INTERLEAVE
+Texture2DArray<float>	texInputs; // 4
+RWTexture2D<float>		texOutput;
+#endif
 
 [numthreads(2,2,1)]
 void CSMain(
@@ -27,5 +34,12 @@ void CSMain(
 	uint  groupIndex  : SV_GroupIndex
 )
 {
+#if DEINTERLEAVE
 	texOutputs[uint3(groupID.xy, groupTID.x + groupTID.y * 2)] = texInput[/*groupID.xy * 2.0f.xx + groupTID.xy*/dispatchTID.xy];
+#endif
+
+#if INTERLEAVE
+	texOutput[dispatchTID.xy] = texInputs[uint3(groupID.xy, groupTID.x + groupTID.y * 2)];
+#endif
 }
+

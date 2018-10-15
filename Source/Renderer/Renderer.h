@@ -42,7 +42,7 @@ namespace DirectX  { class ScratchImage; }
 
 class Renderer
 {
-	friend class Engine;		
+	friend class Engine;
 	friend class SceneManager;
 
 	friend struct SetTextureCommand;
@@ -62,31 +62,31 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
 	//----------------------------------------------------------------------------------------------------------------
-	HWND					GetWindow()		const; 
+	HWND					GetWindow()		const;
 	float					AspectRatio()	const;
 	unsigned				WindowHeight()	const;
 	unsigned				WindowWidth()	const;
 	vec2					GetWindowDimensionsAsFloat2() const;
-	inline RenderTargetID	GetDefaultRenderTarget() const	                { return mBackBufferRenderTarget; }
-	inline DepthTargetID	GetBoundDepthTarget() const	                    { return mPipelineState.depthTargets; }
-	inline TextureID		GetDefaultRenderTargetTexture() const           { return mRenderTargets[mBackBufferRenderTarget].texture._id; }
+	inline RenderTargetID	GetDefaultRenderTarget() const { return mBackBufferRenderTarget; }
+	inline DepthTargetID	GetBoundDepthTarget() const { return mPipelineState.depthTargets; }
+	inline TextureID		GetDefaultRenderTargetTexture() const { return mRenderTargets[mBackBufferRenderTarget].texture._id; }
 	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return mRenderTargets[RT].texture._id; }
-	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const   { return mDepthTargets[DT].texture._id; }
+	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const { return mDepthTargets[DT].texture._id; }
 	const PipelineState&	GetState() const;
-	const RendererStats&	GetRenderStats() const { return mRenderStats; }
+	inline const RendererStats&	GetRenderStats() const { return mRenderStats; }
 
 	const Shader*			GetShader(ShaderID shader_id) const;
 	const Texture&			GetTextureObject(TextureID) const;
 	const TextureID			GetTexture(const std::string name) const;
 	inline const ShaderID	GetActiveShader() const { return mPipelineState.shader; }
-	const Buffer&			GetVertexBuffer(BufferID id) { return mVertexBuffers[id]; }
+	inline const Buffer&	GetVertexBuffer(BufferID id) { return mVertexBuffers[id]; }
+	ShaderDesc				GetShaderDesc(ShaderID shaderID) const;
 
 	//----------------------------------------------------------------------------------------------------------------
 	// RESOURCE INITIALIZATION
 	//----------------------------------------------------------------------------------------------------------------
 	// --- SHADER
 	ShaderID				CreateShader(const ShaderDesc& shaderDesc);
-	ShaderDesc				GetShaderDesc(ShaderID shaderID) const;
 
 	// --- TEXTURE
 	//						example params:			"bricks_d.png", "Data/Textures/"
@@ -112,12 +112,12 @@ public:
 	// --- RENDER / DEPTH TARGETS
 	RenderTargetID				AddRenderTarget(const RenderTargetDesc& renderTargetDesc);
 	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
-	
+
 	// uses the given texture object, doesn't create a new texture for the render target
 	//
 	RenderTargetID				AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
-	
-	
+
+
 	//----------------------------------------------------------------------------------------------------------------
 	// PIPELINE STATE MANAGEMENT
 	//----------------------------------------------------------------------------------------------------------------
@@ -128,9 +128,17 @@ public:
 	void					SetIndexBuffer(BufferID bufferID);
 	void					SetUABuffer(BufferID bufferID);
 	void					SetTexture(const char* texName, TextureID tex);
-	void					SetUnorderedAccessTexture(const char* texName, TextureID tex);
+	void					SetRWTexture(const char* texName, TextureID tex);
 	//void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
-	void inline				SetTextureArray(const char* texName, TextureID texArray) { SetTexture(texName, texArray); }
+	inline void				SetTextureArray(const char* texName, TextureID texArray) { SetTexture(texName, texArray); }
+	inline void				SetTextureFromArraySlice(const char* texName, TextureID texArray, unsigned slice) { SetTexture_(texName, texArray, slice); }
+	
+	template <typename... Args>
+	void					SetTextureArray(const char* texName, Args const&... TextureIDs);
+
+	void					SetTextureArray(const char* texName, const std::array<TextureID, TEXTURE_ARRAY_SIZE>& TextureIDs, unsigned numTextures);
+
+	
 	void					SetSamplerState(const char* samplerName, SamplerID sampler);
 	void					SetRasterizerState(RasterizerStateID rsStateID);
 	void					SetBlendState(BlendStateID blendStateID);
@@ -182,6 +190,7 @@ public:
 
 private:
 	void					SetConstant(const char* cName, const void* data);
+	void					SetTexture_(const char* texName, TextureID tex, unsigned slice = 0 /* only for texture arrays */ );
 
 public:
 	//----------------------------------------------------------------------------------------------------------------
@@ -251,4 +260,24 @@ private:
 	std::mutex						mTexturesMutex;
 	//Worker						m_ShaderHotswapPollWatcher;
 };
- 
+
+
+
+// template helper empty function
+//
+template<typename... Args> inline void pass(Args&&...) {}
+// note: we can use the expand operator (...) in a function parameter scope
+//       to access the expanded parameters one by one in an enclosing function call.
+
+template <typename... Args>
+void Renderer::SetTextureArray(const char* texName, Args const&... TextureIDs)
+{
+	std::array<TextureID, TEXTURE_ARRAY_SIZE> texIDs = {};
+	texIDs.fill(-1);
+
+	unsigned numTextures = 0;
+	auto fnAddTextureID = [&](TextureID texID) -> TextureID {texIDs[numTextures++] = texID; return texID; };
+	pass ( fnAddTextureID(TextureIDs)... ); // unpack args
+
+	SetTextureArray(texName, texIDs, numTextures);
+}

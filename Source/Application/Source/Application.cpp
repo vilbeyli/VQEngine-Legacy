@@ -65,7 +65,7 @@ bool Application::Init()
 {
 	// SETTINGS
 	//
-	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "\\VQEngine";
+	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "/VQEngine";
 	Settings::Engine& settings = const_cast<Settings::Engine&>(Engine::ReadSettingsFromFile());	// namespace doesn't make sense.
 
 	// LOG

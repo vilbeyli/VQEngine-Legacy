@@ -67,7 +67,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 			RandF(-1, 1),
 			RandF(0, 1)	// hemisphere normal direction (up)
 		);
-		sample.normalize();				// bring the sample to the hemisphere surface
+		sample.normalize();					// bring the sample to the hemisphere surface
 		sample = sample * RandF(0.1f, 1);	// scale to distribute samples within the hemisphere
 
 		// scale vectors with a power curve based on i to make samples close to center of the
@@ -75,7 +75,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 		// from, which starts from outer region of the hemisphere and as it increases, we 
 		// sample closer to the normal direction. 
 		float scale = static_cast<float>(i) / (SSAO_SAMPLE_KERNEL_SIZE-1);
-		scale = lerp(0.025f, 1.0f, scale * scale);
+		scale = lerp(0.1f, 1.0f, scale * scale);
 		sample = sample * scale;
 
 		this->sampleKernel.push_back(sample);
@@ -91,7 +91,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 			, RandF(-1, 1)
 			// 0 // noise rotates the kernel around z-axis
 		);
-		this->noiseKernel.push_back( vec3(noise).normalized() );
+		this->noiseKernel.push_back(noise.normalized());
 	}
 	TextureDesc texDesc = {};
 	texDesc.width = NOISE_KERNEL_SIZE;
@@ -247,6 +247,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 
 
 #if ENABLE_INTERLEAVED_SSAO_PASS
+
 	// INTERLEAVED SSAO RESOURCES
 	const ShaderDesc deinterleaveShaderDesc = 
 	{
@@ -335,7 +336,7 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 
 	const char* passName = aoTech == HBAO
 		? "SSAO"
-		: "SSAO_Interleaved";
+		: "SSAO_DT";
 	pRenderer->BeginEvent(passName);
 	pGPU->BeginEntry(passName);
 	switch (aoTech)
@@ -369,7 +370,7 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 		DeinterleaveDepth(pRenderer);
 		pGPU->EndEntry();
 
-		pGPU->BeginEntry("Occl<Intlrv>");
+		pGPU->BeginEntry("Occl_DT");
 		RenderOcclusionInterleaved(pRenderer, texNormals, sceneView);
 		pGPU->EndEntry();
 
@@ -380,12 +381,12 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 		switch (blurQuality)
 		{
 		case AmbientOcclusionPass::LOW:
-			pGPU->BeginEntry("Simple Blur<Intlrv>");
+			pGPU->BeginEntry("Simple Blur_DT");
 			GaussianBlurPass(pRenderer, this->interleavedAOTexture);
 			pGPU->EndEntry();
 			break;
 		case AmbientOcclusionPass::HIGH:
-			pGPU->BeginEntry("Bilateral Blur<Intlrv>");
+			pGPU->BeginEntry("Bilateral Blur_DT");
 			BilateralBlurPass(pRenderer, texNormals);
 			pGPU->EndEntry();
 			break;
@@ -494,16 +495,20 @@ void AmbientOcclusionPass::InterleaveAOTexture(Renderer* pRenderer) const
 
 	pRenderer->BeginEvent("Interleave");
 	pRenderer->SetShader(interleaveShader, true);
-#if 0
-	pRenderer->SetTextureArray("texInputs", AOHalfResTextures);
-#else
-	pRenderer->SetTextureArray("texInputs", 
-		  pRenderer->GetRenderTargetTexture(deinterleavedAORenderTargets[0])
-		, pRenderer->GetRenderTargetTexture(deinterleavedAORenderTargets[1])
-		, pRenderer->GetRenderTargetTexture(deinterleavedAORenderTargets[2])
-		, pRenderer->GetRenderTargetTexture(deinterleavedAORenderTargets[3])
-	);
-#endif
+//#if 0
+//	pRenderer->SetTextureArray("texInputs", AOHalfResTextures);
+//#else
+//	pRenderer->SetTextureArray("texInputs", 
+//		  pRenderer->GetRenderTargetTexture(deinterleavedAORenderTargets[0])
+//		, pRenderer->GetRenderTargetTexture(deinterleavedAORenderTargets[1])
+//		, pRenderer->GetRenderTargetTexture(deinterleavedAORenderTargets[2])
+//		, pRenderer->GetRenderTargetTexture(deinterleavedAORenderTargets[3])
+//	);
+//#endif
+	pRenderer->SetTextureArray("texInput0", AOHalfResTextures[0]);
+	pRenderer->SetTextureArray("texInput1", AOHalfResTextures[1]);
+	pRenderer->SetTextureArray("texInput2", AOHalfResTextures[2]);
+	pRenderer->SetTextureArray("texInput3", AOHalfResTextures[3]);
 	pRenderer->SetRWTexture("texOutput", interleavedAOTexture);
 	pRenderer->Apply();
 	pRenderer->Dispatch((int)imageDimensions.x() / 4, (int)imageDimensions.y() / 4, 1);

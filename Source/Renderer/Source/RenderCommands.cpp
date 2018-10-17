@@ -49,14 +49,52 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[EShader
 	&ID3D11DeviceContext::CSSetShaderResources,
 };
 
+#if 0 // experimental (there's code duplication that can use some template programming)
+template<class T>
+void SetResource(SetTextureCommand& cmd, Renderer* pRenderer, ID3D11DeviceContext* pContext)
+{
+	constexpr UINT NUM_RESOURCE_VIEWS = 1;
+
+	if (cmd.numTextures == 1)
+	{
+		const TextureID textureID = cmd.textureIDs[0];
+		assert(textureID >= 0);
+		const bool bUseArray = pRenderer->mTextures[textureID]._uavArray.size() != 0;
+		ID3D11UnorderedAccessView** ppUAVs = !bUseArray
+			? &pRenderer->mTextures[textureID]._uav
+			: &pRenderer->mTextures[textureID]._uavArray[slice];
+		pContext->CSSetUnorderedAccessViews(binding.textureSlot, NUM_UAVs, ppUAVs, nullptr);
+	}
+	else
+	{
+		std::vector< ID3D11UnorderedAccessView* > pUAVs = [&]()
+		{
+			std::vector< ID3D11UnorderedAccessView* > pUAVs(numTextures);
+			for (unsigned i = 0; i < numTextures; ++i)
+			{
+				const TextureID textureID = textureIDs[i];
+				assert(textureID >= 0);
+				pUAVs[i] = pRenderer->mTextures[textureID]._uav;
+			}
+			return pUAVs;
+		}();
+		pContext->CSSetUnorderedAccessViews(binding.textureSlot, NUM_UAVs, pUAVs.data(), nullptr);
+	}
+}
+#endif
+
 void SetTextureCommand::SetResource(Renderer * pRenderer)
 {
 	auto* pContext = pRenderer->m_deviceContext;
+	auto* pDevice = pRenderer->m_device;
 	if (bUnorderedAccess)
 	{
 		constexpr UINT NUM_UAVs = 1;
-		if (numTextures == 1)
-		{
+		
+		// UAV
+		//
+		if (numTextures == 1)	
+		{	
 			const TextureID textureID = textureIDs[0];
 			assert(textureID >= 0);
 			const bool bUseArray = pRenderer->mTextures[textureID]._uavArray.size() != 0;
@@ -65,8 +103,12 @@ void SetTextureCommand::SetResource(Renderer * pRenderer)
 				: &pRenderer->mTextures[textureID]._uavArray[slice];
 			pContext->CSSetUnorderedAccessViews(binding.textureSlot, NUM_UAVs, ppUAVs, nullptr);
 		}
+
+		// UAV ARRAY
+		//
 		else
 		{
+			assert(false);
 			std::vector< ID3D11UnorderedAccessView* > pUAVs = [&]()
 			{
 				std::vector< ID3D11UnorderedAccessView* > pUAVs(numTextures);
@@ -84,6 +126,9 @@ void SetTextureCommand::SetResource(Renderer * pRenderer)
 	else
 	{
 		constexpr UINT NUM_SRVs = 1;
+
+		// SRV
+		//
 		if (numTextures == 1)
 		{
 			const TextureID textureID = textureIDs[0];
@@ -94,8 +139,12 @@ void SetTextureCommand::SetResource(Renderer * pRenderer)
 				: &pRenderer->mTextures[textureID]._srvArray[slice];
 			(pContext->*SetShaderResources[binding.shaderStage])(binding.textureSlot, NUM_SRVs, ppSRVs);
 		}
+
+		// SRV ARRAY
+		//
 		else
 		{
+			assert(false);
 			std::vector< ID3D11ShaderResourceView* > pSRVs = [&]() 
 			{
 				std::vector< ID3D11ShaderResourceView* > pSRVs(numTextures);

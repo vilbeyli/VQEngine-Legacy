@@ -22,6 +22,10 @@
 #include "ShadingMath.hlsl"
 #define KERNEL_SIZE 64
 
+// this helps removing the false occlusion due to 
+// low tesselation (sponza arches)
+#define SSAO_DEPTH_BIAS 1.2f	// bias to apply during depth testing
+
 struct PSIn
 {
 	float4 position	: SV_POSITION;
@@ -65,7 +69,7 @@ float PSMain(PSIn In) : SV_TARGET
 	const float2 uv = In.uv;
 
 	float3 N = texViewSpaceNormals.Sample(sPointSampler, uv).xyz;
-	if(dot(N, N) < 0.00001) return 0.995f.xxxx;
+	if(dot(N, N) < 0.00001) return 1.0f;
 	N = normalize(N);
 
 #if INTERLEAVED_TEXTURING
@@ -91,7 +95,7 @@ float PSMain(PSIn In) : SV_TARGET
 	[unroll]	// when unrolled, VGPR usage skyrockets and reduces #waves in flight
 	for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
-		const float3 kernelSample = P + mul(SSAO_constants.samples[i], TBN) * SSAO_constants.radius; // From tangent to view-space
+		float3 kernelSample = P + mul(SSAO_constants.samples[i], TBN) * SSAO_constants.radius; // From tangent to view-space
 
 		// get the screenspace position of the sample
 		float4 offset = float4(kernelSample, 1.0f);
@@ -111,8 +115,15 @@ float PSMain(PSIn In) : SV_TARGET
 		// range check & accumulate
 		if (smoothstep(0.0f, 1.0f, SSAO_constants.radius / abs(P.z - sampleDepth)) > 0)
 		{
-			if (sampleDepth < kernelSample.z)
+			if (sampleDepth < kernelSample.z - SSAO_DEPTH_BIAS)
+			{
+#if 1
 				occlusion += 1.0f;
+#else
+				const float depthDistance = abs(sampleDepth - kernelSample.z);
+				occlusion += pow(depthDistance, -1.05f);
+#endif
+			}
 		}
 	}
 	occlusion = 1.0 - (occlusion / KERNEL_SIZE);

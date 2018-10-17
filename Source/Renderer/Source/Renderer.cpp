@@ -797,9 +797,9 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 			switch (texDesc.format)
 			{
-				// caution: if initializing for depth texture, and the depth texture
-				//			has stencil defined (d24s8), we have to check for 
-				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+			// caution: if initializing for depth texture, and the depth texture
+			//			has stencil defined (d24s8), we have to check for 
+			//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
 			case EImageFormat::R32:
 				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R32F;
 				break;
@@ -844,9 +844,9 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
 			switch (texDesc.format)
 			{
-				// caution: if initializing for depth texture, and the depth texture
-				//			has stencil defined (d24s8), we have to check for 
-				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+			// caution: if initializing for depth texture, and the depth texture
+			//			has stencil defined (d24s8), we have to check for 
+			//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
 			case EImageFormat::R24G8:
 				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R24_UNORM_X8_TYPELESS;
 				break;

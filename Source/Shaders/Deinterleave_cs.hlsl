@@ -22,7 +22,11 @@ RWTexture2DArray<float> texOutputs; // 4
 #endif
 
 #if INTERLEAVE
-Texture2DArray<float>	texInputs; // 4
+//Texture2DArray<float>	texInputs; // 4
+Texture2D<float> texInput0;
+Texture2D<float> texInput1;
+Texture2D<float> texInput2;
+Texture2D<float> texInput3; // TODO: use an array for these
 RWTexture2D<float>		texOutput;
 #endif
 
@@ -67,7 +71,13 @@ void CSMain(
 #endif
 
 #if INTERLEAVE
-	texOutput[dispatchTID.xy] = texInputs[uint3(groupID.xy * 2 + threadGroupOffset, slice)];
+	switch (slice)
+	{
+	case 0: texOutput[dispatchTID.xy] = texInput0.Load(uint3(groupID.xy * 2 + threadGroupOffset, 0)); break;
+	case 1: texOutput[dispatchTID.xy] = texInput1.Load(uint3(groupID.xy * 2 + threadGroupOffset, 0)); break;
+	case 2: texOutput[dispatchTID.xy] = texInput2.Load(uint3(groupID.xy * 2 + threadGroupOffset, 0)); break;
+	case 3: texOutput[dispatchTID.xy] = texInput3.Load(uint3(groupID.xy * 2 + threadGroupOffset, 0)); break;
+	}
 #endif
 }
 

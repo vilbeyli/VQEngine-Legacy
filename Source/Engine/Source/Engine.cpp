@@ -1174,7 +1174,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 			//{ squareTextureScaledDownSize    ,	screenPosition,			tShadowMap			, true},
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tBlurredBloom		, false },
 			{ fullscreenTextureScaledDownSize,	screenPosition,			tAO					, false, 1 },
-			{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
+			//{ squareTextureScaledDownSize,		screenPosition,			tBRDF				, false },
 			};
 			for (size_t i = 1; i < c.size(); i++)	// offset textures accordingly (using previous' x-dimension)
 				c[i].bottomLeftCornerScreenCoordinates.x() = c[i - 1].bottomLeftCornerScreenCoordinates.x() + c[i - 1].dimensionsInPixels.x() + paddingPx;

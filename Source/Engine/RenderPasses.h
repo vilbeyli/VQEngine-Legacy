@@ -52,6 +52,15 @@ struct RenderTargetDesc;
 
 struct RenderPass
 {
+	enum ECommonShaders
+	{
+		TRANSPOZE = 0,
+
+		NUM_COMMON_SHADERS
+	};
+	static ShaderID sShaderTranspoze;
+	static void InitializeCommonSaders(Renderer* pRenderer);
+
 	RenderPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_)
 		: pCPU(pCPU_)
 		, pGPU(pGPU_)
@@ -78,9 +87,9 @@ struct ShadowMapPass : public RenderPass
 	D3D11_VIEWPORT		mShadowViewPort_Spot;	// spot light viewport
 	D3D11_VIEWPORT		mShadowViewPort_Directional;
 	
-	TextureID			mShadowMapTextures_Spot = -1;			// tex2D array
-	TextureID			mShadowMapTexture_Directional = -1;		// tex2D array
-	TextureID			mShadowMapTextures_Point = -1;			// cubemap array
+	TextureID			mShadowMapTextures_Spot = -1;		// tex2D array
+	TextureID			mShadowMapTexture_Directional = -1;	// tex2D array
+	TextureID			mShadowMapTextures_Point = -1;		// cubemap array
 
 	DepthTargetIDArray	mDepthTargets_Spot;
 	DepthTargetID		mDepthTarget_Directional = -1;
@@ -118,7 +127,6 @@ struct BloomPass : public RenderPass
 	std::array<ShaderID, 2>  blurComputeShaderPingPong;
 	std::array<TextureID, 2> blurComputeOutputPingPong;
 
-	ShaderID  transpozeCompute;
 	ShaderID  blurHorizontalTranspozeComputeShader;
 	TextureID texTransposedImage;
 
@@ -312,8 +320,8 @@ struct AmbientOcclusionPass : public RenderPass
 	void RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const;
 	void DeinterleaveDepth(Renderer* pRenderer) const;
 	void InterleaveAOTexture(Renderer* pRenderer) const;
-	void BilateralBlurPass(Renderer* pRenderer, const TextureID texNormals) const;
-	void GaussianBlurPass(Renderer* pRenderer, TextureID texAO) const;	// Gaussian 4x4 kernel
+	void BilateralBlurPass(Renderer* pRenderer, const TextureID texNormals, const TextureID texAO, const SceneView& sceneView) const;
+	void GaussianBlurPass(Renderer* pRenderer, const TextureID texAO) const;	// Gaussian 4x4 kernel
 
 	EBlurQuality blurQuality;
 	EAOTechnique aoTech;
@@ -326,16 +334,19 @@ struct AmbientOcclusionPass : public RenderPass
 
 	// Regular SSAO resources -------------------------------
 	RenderTargetID			 occlusionRenderTarget;
-	RenderTargetID			 blurRenderTarget;
+	ShaderID SSAOShader;
+	// Regular SSAO resources -------------------------------
+
+	// Blur resources --------------------------------------
+	RenderTargetID			 blurRenderTarget; // Gaussian
 	std::array<TextureID, 2> bilateralBlurUAVs;
+	TextureID				 bilateralBlurTranspozeUAV;
 	BilateralBlurConstants	 bilateralBlurParameters;
 
-	ShaderID SSAOShader;
 	ShaderID gaussianBlurShader;
 	ShaderID bilateralBlurShaderH;
 	ShaderID bilateralBlurShaderV;
-	// Regular SSAO resources -------------------------------
-
+	// Blur resources --------------------------------------
 
 	// Interleaved SSAO resources -------------------------------
 	ShaderID	deinterleaveShader;
@@ -344,7 +355,7 @@ struct AmbientOcclusionPass : public RenderPass
 
 	TextureID	deinterleavedDepthTextures;
 	TextureID	interleavedAOTexture;
-	RenderTargetID	deinterleavedAORenderTargets[4];
+	RenderTargetID	deinterleavedAORenderTargets[4]; // TODO: RTArray
 	// Interleaved SSAO resources -------------------------------
 
 

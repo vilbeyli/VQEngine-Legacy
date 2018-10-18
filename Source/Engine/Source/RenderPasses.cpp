@@ -33,6 +33,20 @@
 #include <array>
 
 
+
+ShaderID RenderPass::sShaderTranspoze = -1;
+
+void RenderPass::InitializeCommonSaders(Renderer* pRenderer)
+{
+	const ShaderDesc CSDescTranspose =
+	{
+		"Transpose_Compute",
+		ShaderStageDesc { "Transpose_cs.hlsl", {} }
+	};
+	sShaderTranspoze = pRenderer->CreateShader(CSDescTranspose);
+}
+
+
 constexpr const EImageFormat HDR_Format = RGBA16F;
 constexpr const EImageFormat LDR_Format = RGBA8UN;
 static bool bFirstInitialization = true;
@@ -129,3 +143,4 @@ void DebugPass::Initialize(Renderer * pRenderer)
 {
 	_scissorsRasterizer = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, false, true);
 }
+

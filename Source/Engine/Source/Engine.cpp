@@ -496,7 +496,7 @@ bool Engine::LoadShaders()
 		{
 			mBuiltinShaders.push_back(mpRenderer->CreateShader(shaderDescs[i]));
 		}
-
+		RenderPass::InitializeCommonSaders(mpRenderer);
 		timer.Stop();
 		Log::Info("---------------------- COMPILING SHADERS DONE IN %.2fs ---------------------", timer.DeltaTime());
 	}

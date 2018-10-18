@@ -33,6 +33,7 @@ struct BlurConstants
 cbuffer BlurConstantsBuffer
 {
 	BlurConstants cParameters;
+	matrix matPorjInverse;
 };
 
 // These are defined by the application compiling the shader
@@ -144,24 +145,36 @@ void CSMain(
 			float result = 0.0f;
 			const half3 centerTapNormal = gNormals[outTexel.x];
 			const float centerTapDepth = texDepth.SampleLevel(sSampler, uv, 0).r; //gDepth[outTexel.x];
+			const float centerTapDepthLinear = LinearDepth(centerTapDepth, matPorjInverse);
+
+			// no need to blur if there's no surface
+			if (dot(centerTapNormal, centerTapNormal) < 0.00001)
+			{
+				texBlurredOcclusionOut[outTexel.xy] = 1.0f;
+				continue;
+			}
 
 			float wghSq = 0.0f;
 			[unroll] for (int kernelOffset = -(KERNEL_DIMENSION / 2); kernelOffset <= (KERNEL_DIMENSION / 2); ++kernelOffset)
 			{
 				uv = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px + kernelOffset, 0);
 				const float sampledDepth = texDepth.SampleLevel(sSampler, uv, 0).r;
+				const float sampledDepthLinear = LinearDepth(sampledDepth, matPorjInverse);
+
 				const uint kernelImageIndex = outTexel.x + kernelOffset + KERNEL_RANGE_EXCLUDING_MIDDLE;
 				const half3 kernelNormal = gNormals[kernelImageIndex];
 				
 				const bool bReduceGaussianWeightToZero = true &&
-					dot(centerTapNormal, kernelNormal) < cParameters.normalDotThreshold
-					|| abs(centerTapDepth - sampledDepth /*gDepth[kernelImageIndex]*/) > 0.0050f; //cParameters.depthThreshold;
+					   (dot(kernelNormal, kernelNormal)  < 0.00001)
+					|| (dot(centerTapNormal, kernelNormal) < 0.985/*cParameters.normalDotThreshold*/)
+					|| (abs(centerTapDepthLinear - sampledDepthLinear /*gDepth[kernelImageIndex]*/) > 1.1f /*cParameters.depthThreshold*/);
 				const float WEIGHT = bReduceGaussianWeightToZero ? 0.0f : KERNEL_WEIGHTS[abs(kernelOffset)];
 
 				result += gOcclusion[kernelImageIndex] * WEIGHT;
 				wghSq += WEIGHT * WEIGHT;
 			}
 
+			//if (sqrt(wghSq) > 0.00001)
 			result /= sqrt(wghSq);
 
 			// save the blurred pixel value //transpozed

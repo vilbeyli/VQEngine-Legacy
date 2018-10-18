@@ -165,14 +165,7 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	};
 	this->blurHorizontalTranspozeComputeShader = pRenderer->CreateShader(CSDescHTz);
 
-	// Transpose Image Shader and Resource
-	const ShaderDesc CSDescTranspose =
-	{
-		"Transpose_Compute",
-		ShaderStageDesc { "Transpose_cs.hlsl", {} }
-	};
-	this->transpozeCompute = pRenderer->CreateShader(CSDescTranspose);
-
+	// Transpose Image Resource
 	texDesc = TextureDesc();
 	texDesc.usage = ETextureUsage::COMPUTE_RW_TEXTURE;
 	texDesc.height = pRenderer->WindowWidth();
@@ -333,7 +326,7 @@ void BloomPass::Render(Renderer* pRenderer, RenderTargetID _worldRenderTarget, c
 		//
 		DISPATCH_GROUP_X = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().x() / 16);
 		DISPATCH_GROUP_Y = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().y() / 16);
-		pRenderer->SetShader(this->transpozeCompute, true, true);
+		pRenderer->SetShader(RenderPass::sShaderTranspoze, true, true);
 		pRenderer->SetRWTexture("texImageIn", this->blurComputeOutputPingPong[0]);
 		pRenderer->SetRWTexture("texTranspozeOut", this->texTransposedImage);
 		pRenderer->Apply();

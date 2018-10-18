@@ -16,6 +16,8 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "ShadingMath.hlsl"
+
 inline bool IsOnImageBorder(uint px, uint imageSize) { return px == 0 || px == (imageSize - 1); }
 
 inline void LoadLDSFromOutput(

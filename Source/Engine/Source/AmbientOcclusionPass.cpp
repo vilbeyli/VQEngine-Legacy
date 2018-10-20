@@ -200,7 +200,7 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	texDesc.usage = ETextureUsage::COMPUTE_RW_TEXTURE;
 	texDesc.width = pRenderer->WindowWidth();
 	texDesc.height = pRenderer->WindowHeight();
-	texDesc.format = EImageFormat::RGBA32F;
+	texDesc.format = EImageFormat::R32F;
 	bilateralBlurUAVs[0] = pRenderer->CreateTexture2D(texDesc);
 	bilateralBlurUAVs[1] = pRenderer->CreateTexture2D(texDesc);
 
@@ -218,12 +218,13 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	{
 		"BilateralBlur<CS>_Vertical",
 		ShaderStageDesc { "BilateralBlur_cs.hlsl", {
-			{ "VERTICAL"    , "1" },
-			{ "HORIZONTAL"  , "0" },
-			{ "IMAGE_SIZE_X", std::to_string(texDesc.width) },
-			{ "IMAGE_SIZE_Y", std::to_string(texDesc.height) },
-			{ "THREAD_GROUP_SIZE_X", "1" },
-			{ "THREAD_GROUP_SIZE_Y", std::to_string(COMPUTE_KERNEL_DIMENSION) },
+			{ "VERTICAL"    , "0" },
+			{ "HORIZONTAL"  , "1" },
+			{ "TRANSPOZED_OUT", "1" },
+			{ "IMAGE_SIZE_X", std::to_string(texDesc.height) },
+			{ "IMAGE_SIZE_Y", std::to_string(texDesc.width) },
+			{ "THREAD_GROUP_SIZE_X", std::to_string(COMPUTE_KERNEL_DIMENSION) },
+			{ "THREAD_GROUP_SIZE_Y", "1" },
 			{ "THREAD_GROUP_SIZE_Z", "1"},
 			{ "PASS_COUNT", std::to_string(BILATERAL_BLUR_PASS_COUNT) },          // lets us unroll the blur strength loop (faster)
 			{ "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) } }
@@ -246,7 +247,16 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	};
 	this->bilateralBlurShaderH = pRenderer->CreateShader(CSDescH);
 	this->bilateralBlurShaderV = pRenderer->CreateShader(CSDescV);
-
+	
+	const ShaderDesc CSDescTranspose =
+	{
+		"Transpose_Compute",
+		ShaderStageDesc { "Transpose_cs.hlsl", {
+			{ "R32F", "1" }
+		} 
+	}
+	};
+	this->transposeAOShader = pRenderer->CreateShader(CSDescTranspose);
 
 	bilateralBlurParameters.depthThreshold = 2.0f;
 	bilateralBlurParameters.normalDotThreshold = 0.995f;
@@ -619,32 +629,34 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer, const Texture
 
 	// TRANSPOZE
 	//
-#if 1
 	DISPATCH_GROUP_X = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().x() / 16);
 	DISPATCH_GROUP_Y = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().y() / 16);
-	pRenderer->SetShader(RenderPass::sShaderTranspoze, true, true);
+	pRenderer->SetShader(this->transposeAOShader, true, true);
 	pRenderer->SetRWTexture("texImageIn", this->bilateralBlurUAVs[0]);
 	pRenderer->SetRWTexture("texTranspozeOut", this->bilateralBlurTranspozeUAV);
 	pRenderer->Apply();
 	pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
-#endif
 
 	// VERTICAL BLUR
 	//
-	DISPATCH_GROUP_X = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().x());
-	DISPATCH_GROUP_Y = 1;
+	DISPATCH_GROUP_X = 1;
+	DISPATCH_GROUP_Y = static_cast<int>(pRenderer->GetWindowDimensionsAsFloat2().x());
 	
-#if 0
-	pRenderer->SetShader(this->bilateralBlurShaderV);
-	pRenderer->SetTexture("texOcclusion", this->bilateralBlurUAVs[0]);
+#if 1
+	pRenderer->SetShader(this->bilateralBlurShaderV, true, true);
+	pRenderer->SetSamplerState("sSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetTexture("texOcclusion", this->bilateralBlurTranspozeUAV);
+	pRenderer->SetTexture("texNormals", texNormals);
+	pRenderer->SetTexture("texDepth", texDepth);
 	pRenderer->SetConstantStruct("cParameters", &bilateralBlurParameters);
+	pRenderer->SetConstantStruct("matPorjInverse", &sceneView.projInverse);
 	pRenderer->SetRWTexture("texBlurredOcclusionOut", this->bilateralBlurUAVs[1]);
 	pRenderer->Apply();
 	pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
 #endif
 
 	pRenderer->EndEvent();	// Blur Pass <BiL>
-	pRenderer->SetShader(this->bilateralBlurShaderV, true, true);
+	pRenderer->SetShader(this->bilateralBlurShaderH, true, true);
 
 #endif
 }
@@ -704,7 +716,7 @@ TextureID AmbientOcclusionPass::GetBlurredAOTexture(Renderer* pRenderer) const
 		ret = pRenderer->GetRenderTargetTexture(this->blurRenderTarget);	// gaussian blur RT
 		break;
 	case AmbientOcclusionPass::HIGH:
-		ret = this->bilateralBlurUAVs[0];
+		ret = this->bilateralBlurUAVs[1];
 		break;
 	default:
 		assert(false);

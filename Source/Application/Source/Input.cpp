@@ -53,6 +53,7 @@ const Input::KeyMapping Input::sKeyMap = []()
 	m["Backspace"] = 8; m["backspace"] = 8;
 	m["Escape"] = 0x1B; m["escape"] = 0x1B; m["ESC"] = 0x1B; m["esc"] = 0x1B;
 	m["PageUp"] = 33;	m["PageDown"] = 34;
+	m["Space"] = VK_SPACE; m["space"] = VK_SPACE;
 
 	m["ctrl"] = VK_CONTROL;  m["Ctrl"] = VK_CONTROL;
 	m["rctrl"] = VK_RCONTROL; m["RCtrl"] = VK_RCONTROL; m["rCtrl"] = VK_RCONTROL;

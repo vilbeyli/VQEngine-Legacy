@@ -31,6 +31,7 @@ cbuffer constants
 {
 	float exposure;
 	float isHDR;
+	int isSingleChannel;
 };
 
 // src
@@ -52,6 +53,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 	float3 toneMapped = color;
 #endif
 
-	toneMapped = pow(toneMapped, float3(gamma, gamma, gamma));
+	toneMapped = pow(isSingleChannel ? toneMapped.xxx : toneMapped, float3(gamma, gamma, gamma));
 	return float4(toneMapped, 1.0f);
 }

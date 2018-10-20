@@ -156,7 +156,7 @@ struct PostProcessPass : public RenderPass
 	{}
 	void UpdateSettings(const Settings::PostProcess& newSettings, Renderer* pRenderer);
 	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
-	void Render(Renderer* pRenderer, bool bBloomOn) const;
+	void Render(Renderer* pRenderer, bool bBloomOn, TextureID texOverride = -1) const;
 
 	RenderTargetID			_worldRenderTarget;
 	BloomPass				_bloomPass;
@@ -344,6 +344,7 @@ struct AmbientOcclusionPass : public RenderPass
 	BilateralBlurConstants	 bilateralBlurParameters;
 
 	ShaderID gaussianBlurShader;
+	ShaderID transposeAOShader;
 	ShaderID bilateralBlurShaderH;
 	ShaderID bilateralBlurShaderV;
 	// Blur resources --------------------------------------

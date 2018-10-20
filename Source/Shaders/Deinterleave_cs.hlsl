@@ -27,7 +27,7 @@ Texture2D<float> texInput0;
 Texture2D<float> texInput1;
 Texture2D<float> texInput2;
 Texture2D<float> texInput3; // TODO: use an array for these
-RWTexture2D<float>		texOutput;
+RWTexture2D<float> texOutput;
 #endif
 
 #if 0 // 2x2 thread group (0.6 ms 1080p)

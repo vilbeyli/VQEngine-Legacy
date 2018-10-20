@@ -23,12 +23,61 @@
 
 namespace Settings
 {
+	//------------------------------------------------------------
+	// RENDERING
+	//------------------------------------------------------------
+	struct ShadowMap
+	{
+		size_t	dimension;
+	};
+
+	struct Bloom
+	{
+		bool bEnabled;
+		float brightnessThreshold;
+		int blurStrength = 1;
+	};
+
+	struct PostProcess
+	{
+		struct Tonemapping
+		{
+			float	exposure;
+		} toneMapping;
+
+		Bloom bloom;
+
+		bool HDREnabled = false;
+	};
+
+	struct SSAO
+	{
+		bool bEnabled;
+		float ambientFactor;
+		float radius;
+		float intensity;
+	};
+
+	struct Rendering
+	{
+		ShadowMap	shadowMap;
+		PostProcess postProcess;
+		bool		bUseDeferredRendering;
+		bool		bUseBRDFLighting = true;	// should use enums when there's more than brdf and blinn-phong lighting
+		bool		bAmbientOcclusion;
+		bool		bEnableEnvironmentLighting;
+		bool		bPreLoadEnvironmentMaps;
+	};
+
+
+	//------------------------------------------------------------
+	// ENGINE
+	//------------------------------------------------------------
 	struct Logger
 	{
 		bool bConsole;
 		bool bFile;
 	};
-
 	struct Window
 	{
 		int width;
@@ -36,8 +85,7 @@ namespace Settings
 		int fullscreen;
 		int vsync;
 	};
-
-	struct Camera 
+	struct Camera
 	{
 		union
 		{
@@ -50,42 +98,6 @@ namespace Settings
 		float x, y, z;
 		float yaw, pitch;
 	};
-
-	struct ShadowMap 
-	{
-		size_t	dimension;
-	};
-
-	struct Bloom
-	{
-		bool bEnabled;
-		float brightnessThreshold;
-		int blurStrength = 1;
-	};
-
-	struct PostProcess 
-	{
-		struct Tonemapping 
-		{
-			float	exposure;
-		} toneMapping;
-
-		Bloom bloom;
-
-		bool HDREnabled = false;
-	};
-	
-	struct Rendering
-	{
-		ShadowMap	shadowMap;
-		PostProcess postProcess;
-		bool		bUseDeferredRendering;
-		bool		bUseBRDFLighting = true;	// should use enums when there's more than brdf and blinn-phong lighting
-		bool		bAmbientOcclusion;
-		bool		bEnableEnvironmentLighting;
-		bool		bPreLoadEnvironmentMaps;
-	};
-
 	struct Engine 
 	{
 		Logger logger;
@@ -94,17 +106,15 @@ namespace Settings
 		int levelToLoad;
 		std::vector<std::string> sceneNames;
 
-		bool bCacheEnvironmentMapsOnDisk = false;	// caching is slower... keep this false.
+		// caching is slower... keeping this false.
+		// it can be useful: environment map textures can be dumped on disk.
+		bool bCacheEnvironmentMapsOnDisk = false;
 	};
 
-	struct SSAO
-	{
-		bool bEnabled;
-		float ambientFactor;
-		float radius;
-		float intensity;
-	};
 
+	//------------------------------------------------------------
+	// SCENE
+	//------------------------------------------------------------
 	struct Optimization
 	{
 		bool bViewFrustumCull_MainView = true;
@@ -112,7 +122,6 @@ namespace Settings
 		bool bShadowViewCull = false;	// not implemented yet
 		bool bSortRenderLists = true;
 	};
-
 	struct SceneRender
 	{
 		SSAO ssao;

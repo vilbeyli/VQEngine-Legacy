@@ -21,7 +21,7 @@
 
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
 #define OVERRIDE_LEVEL_VALUE 0	// which level to load
-
+#define FULLSCREEN_DEBUG_TEXTURE 1
 
 // ASYNC / THREADED LOADING SWITCHES
 // -------------------------------------------------------
@@ -137,7 +137,7 @@ Engine::Engine()
 	, mUI(mBuiltinMeshes, mEngineConfig)
 	, mShadowMapPass(mpCPUProfiler, mpGPUProfiler)
 	, mDeferredRenderingPasses(mpCPUProfiler, mpGPUProfiler)
-	, mSSAOPass(mpCPUProfiler, mpGPUProfiler)
+	, mAOPass(mpCPUProfiler, mpGPUProfiler)
 	, mPostProcessPass(mpCPUProfiler, mpGPUProfiler)
 	, mDebugPass(mpCPUProfiler, mpGPUProfiler)
 	, mZPrePass(mpCPUProfiler, mpGPUProfiler)
@@ -319,7 +319,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			}
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-				mSSAOPass.Initialize(mpRenderer);
+				mAOPass.Initialize(mpRenderer);
 			}
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
@@ -381,7 +381,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		mDeferredRenderingPasses.Initialize(mpRenderer);
 		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
 		mDebugPass.Initialize(mpRenderer);
-		mSSAOPass.Initialize(mpRenderer);
+		mAOPass.Initialize(mpRenderer);
 	}
 	Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->StopGetDeltaTimeAndReset());
 	mpCPUProfiler->EndEntry();
@@ -654,13 +654,14 @@ void Engine::HandleInput()
 {
 	if (mpInput->IsKeyTriggered("Backspace"))	TogglePause();
 
-	if (mpInput->IsKeyTriggered("F1")) ToggleRenderingPath();
+	if (mpInput->IsKeyTriggered("F1")) ToggleControlsTextRendering();
 	if (mpInput->IsKeyTriggered("F2")) ToggleAmbientOcclusion();
 	if (mpInput->IsKeyTriggered("F3")) ToggleBloom();
 	if (mpInput->IsKeyTriggered("F4")) mEngineConfig.bRenderTargets = !mEngineConfig.bRenderTargets;
 	if (mpInput->IsKeyTriggered("F5")) mEngineConfig.bBoundingBoxes = !mEngineConfig.bBoundingBoxes;
+	if (mpInput->IsKeyTriggered("F6")) ToggleRenderingPath();
 
-	if (mpInput->IsKeyTriggered("'")) ToggleControlsTextRendering();
+	//if (mpInput->IsKeyTriggered("'")) 
 	if (mpInput->IsKeyTriggered("F"))// && mpInput->AreKeysDown(2, "ctrl", "shift"))
 	{
 		if(mpInput->IsKeyDown("ctrl") && mpInput->IsKeyDown("shift"))
@@ -679,25 +680,25 @@ void Engine::HandleInput()
 		{
 			if (mpInput->IsKeyDown("Shift") && mpInput->IsKeyDown("Ctrl"))
 			{
-				if (mpInput->IsScrollUp())		mSSAOPass.ChangeAOTechnique(+1);
-				if (mpInput->IsScrollDown())	mSSAOPass.ChangeAOTechnique(-1);
+				if (mpInput->IsScrollUp())		mAOPass.ChangeAOTechnique(+1);
+				if (mpInput->IsScrollDown())	mAOPass.ChangeAOTechnique(-1);
 			}
 			else if (mpInput->IsKeyDown("Shift"))
 			{
 				const float step = 0.1f;
-				if (mpInput->IsScrollUp()) { mSSAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
-				if (mpInput->IsScrollDown()) { mSSAOPass.intensity -= step; if (mSSAOPass.intensity < 0.301) mSSAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mSSAOPass.intensity); }
+				if (mpInput->IsScrollUp()) { mAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mAOPass.intensity); }
+				if (mpInput->IsScrollDown()) { mAOPass.intensity -= step; if (mAOPass.intensity < 0.301) mAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mAOPass.intensity); }
 			}
 			else if (mpInput->IsKeyDown("Ctrl"))
 			{
-				if (mpInput->IsScrollUp())		mSSAOPass.ChangeBlurQualityLevel(+1);
-				if (mpInput->IsScrollDown())	mSSAOPass.ChangeBlurQualityLevel(-1);
+				if (mpInput->IsScrollUp())		mAOPass.ChangeBlurQualityLevel(+1);
+				if (mpInput->IsScrollDown())	mAOPass.ChangeBlurQualityLevel(-1);
 			}
 			else
 			{
 				const float step = 0.5f;
-				if (mpInput->IsScrollUp()) { mSSAOPass.radius += step; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
-				if (mpInput->IsScrollDown()) { mSSAOPass.radius -= step; if (mSSAOPass.radius < 0.301) mSSAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mSSAOPass.radius); }
+				if (mpInput->IsScrollUp()) { mAOPass.radius += step; Log::Info("SSAO Radius: %.2f", mAOPass.radius); }
+				if (mpInput->IsScrollDown()) { mAOPass.radius -= step; if (mAOPass.radius < 0.301) mAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mAOPass.radius); }
 			}
 		}
 #endif
@@ -728,6 +729,9 @@ void Engine::HandleInput()
 		}
 #endif
 
+#if FULLSCREEN_DEBUG_TEXTURE
+		if (mpInput->IsKeyTriggered("Space")) mbOutputDebugTexture = !mbOutputDebugTexture;
+#endif
 		// SCENE -------------------------------------------------------------
 		if (mpInput->IsKeyTriggered("R"))
 		{
@@ -916,8 +920,8 @@ void Engine::Render()
 		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
 		const TextureID texDepthTexture = mpRenderer->mDefaultDepthBufferTexture;
 		const TextureID tSSAO = mEngineConfig.bSSAO && bSceneSSAO
-			? mSSAOPass.GetBlurredAOTexture(mpRenderer)
-			: mSSAOPass.whiteTexture4x4;
+			? mAOPass.GetBlurredAOTexture(mpRenderer)
+			: mAOPass.whiteTexture4x4;
 		const DeferredRenderingPasses::RenderParams deferredLightingParams = 
 		{
 			mpRenderer
@@ -938,12 +942,12 @@ void Engine::Render()
 		mpGPUProfiler->EndEntry();
 
 		// AMBIENT OCCLUSION  PASS
-		mpCPUProfiler->BeginEntry("SSAO Pass");
+		mpCPUProfiler->BeginEntry("AO Pass");
 		if (mEngineConfig.bSSAO && bSceneSSAO)
 		{
-			mSSAOPass.RenderAmbientOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
+			mAOPass.RenderAmbientOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
 		}
-		mpCPUProfiler->EndEntry(); // SSAO Pass
+		mpCPUProfiler->EndEntry(); // AO Pass
 
 		// DEFERRED LIGHTING PASS
 		mpCPUProfiler->BeginEntry("Lighting Pass");
@@ -1025,8 +1029,8 @@ void Engine::Render()
 	{
 		const bool bZPrePass = mEngineConfig.bSSAO && bSceneSSAO;
 		const TextureID tSSAO = bZPrePass
-			? mSSAOPass.GetBlurredAOTexture(mpRenderer)
-			: mSSAOPass.whiteTexture4x4;
+			? mAOPass.GetBlurredAOTexture(mpRenderer)
+			: mAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mpActiveScene->mSceneView.environmentMap.irradianceMap;
 		const SamplerID smpEnvMap = mpActiveScene->mSceneView.environmentMap.envMapSampler < 0 
 			? EDefaultSamplerState::POINT_SAMPLER 
@@ -1054,17 +1058,16 @@ void Engine::Render()
 
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			{
-				mpGPUProfiler->BeginEntry("SSAO");
+				mpGPUProfiler->BeginEntry("AO");
 
 				mpGPUProfiler->BeginEntry("Occlusion");
-				mSSAOPass.RenderOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
+				mAOPass.RenderOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
 				mpGPUProfiler->EndEntry();	// Occlusion
 
 				mpGPUProfiler->BeginEntry("Blur");
-				//m_SSAOPass.BilateralBlurPass(m_pRenderer);	// todo
-				mSSAOPass.GaussianBlurPass(mpRenderer, tSSAO);
+				mAOPass.GaussianBlurPass(mpRenderer, tSSAO);
 				mpGPUProfiler->EndEntry(); // Blur
-				mpGPUProfiler->EndEntry(); // SSAO
+				mpGPUProfiler->EndEntry(); // AO
 			}
 			mpRenderer->EndEvent(); // Ambient Occlusion Pass
 		}
@@ -1097,7 +1100,7 @@ void Engine::Render()
 		// LIGHTING
 		const ForwardLightingPass::RenderParams forwardLightingParams = 
 		{
-			mpRenderer
+			  mpRenderer
 			, mpActiveScene
 			, mpActiveScene->mSceneView
 			, mSceneLightData
@@ -1114,7 +1117,12 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	mpCPUProfiler->BeginEntry("Post Process");
 	mpGPUProfiler->BeginEntry("Post Process"); 
+#if FULLSCREEN_DEBUG_TEXTURE
+	const TextureID texDebug = mAOPass.GetBlurredAOTexture(mpRenderer);
+	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom, mbOutputDebugTexture ? texDebug : -1);
+#else
 	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom);
+#endif
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndEntry();
 	//------------------------------------------------------------------------
@@ -1147,14 +1155,14 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		const vec2 squareTextureScaledDownSize((float)heightPx, (float)heightPx);
 
 		// Textures to draw
-		const TextureID white4x4 = mSSAOPass.whiteTexture4x4;
+		const TextureID white4x4 = mAOPass.whiteTexture4x4;
 		//const TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._spotShadowDepthTargets);
 		const TextureID tBlurredBloom = mPostProcessPass._bloomPass.GetBloomTexture(mpRenderer);
 		const TextureID tDiffuseRoughness = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
 		//const TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
 		const TextureID tSceneDepth = mpRenderer->GetDepthTargetTexture(0);
 		const TextureID tNormals = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
-		const TextureID tAO = mEngineConfig.bSSAO ? mSSAOPass.GetBlurredAOTexture(mpRenderer) : mSSAOPass.whiteTexture4x4;
+		const TextureID tAO = mEngineConfig.bSSAO ? mAOPass.GetBlurredAOTexture(mpRenderer) : mAOPass.whiteTexture4x4;
 		const TextureID tBRDF = EnvironmentMap::sBRDFIntegrationLUTTexture;
 		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap;

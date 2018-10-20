@@ -193,22 +193,23 @@ void CSMain(
 			float wghSq = 0.0f;
 			[unroll] for (int kernelOffset = -(KERNEL_DIMENSION / 2); kernelOffset <= (KERNEL_DIMENSION / 2); ++kernelOffset)
 			{
-				uv = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px + kernelOffset, 0);
+				uv = (dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px + kernelOffset, 0)) / float2(IMAGE_SIZE_X, IMAGE_SIZE_Y);;
 
 #if TRANSPOZED_OUT
-				const float sampledDepth = texDepth.SampleLevel(sSampler, uv.yx, 0).r;
+				const float kernelTapDepth = texDepth.SampleLevel(sSampler, uv.yx, 0).r;
 #else
-				const float sampledDepth = texDepth.SampleLevel(sSampler, uv, 0).r;
+				const float kernelTapDepth = texDepth.SampleLevel(sSampler, uv, 0).r;
 #endif
-				const float sampledDepthLinear = LinearDepth(sampledDepth, matPorjInverse);
+				const float kernelTapDepthLinear = LinearDepth(kernelTapDepth, matPorjInverse);
 
 				const uint kernelImageIndex = outTexel.x + kernelOffset + KERNEL_RANGE_EXCLUDING_MIDDLE;
 				const float3 kernelNormal = gNormals[kernelImageIndex];
 				
+				// TODO: there are issues here: depth taps have the same value...
 				const bool bReduceGaussianWeightToZero = true &&
-				(	   (dot(kernelNormal, kernelNormal) < 0.00001)
-					|| (dot(centerTapNormal, kernelNormal) < 0.987/*cParameters.normalDotThreshold*/)
-					|| (abs(centerTapDepthLinear - sampledDepthLinear /*gDepth[kernelImageIndex]*/) > 0.1f /*cParameters.depthThreshold*/)
+				(	false//   (dot(kernelNormal, kernelNormal) < 0.00001)
+					//|| (dot(centerTapNormal, kernelNormal) < 0.987 /*cParameters.normalDotThreshold*/)
+					|| ( abs(centerTapDepthLinear - kernelTapDepthLinear) == 0.0f /*cParameters.depthThreshold*/)
 				);
 				const float WEIGHT = bReduceGaussianWeightToZero ? 0.0f : KERNEL_WEIGHTS[abs(kernelOffset)];
 #if WQHD
@@ -229,8 +230,10 @@ void CSMain(
 
 
 			// normalize weights
-			if (sqrt(wghSq) > 0.00001)
-				result /= sqrt(wghSq);
+			//
+			// TODO: fix the incorrect math...
+			//if (sqrt(wghSq) > 0.00001)
+			//	result /= sqrt(wghSq);
 
 
 			// save the blurred pixel value

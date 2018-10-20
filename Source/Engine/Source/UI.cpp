@@ -177,6 +177,12 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 	vec2 pos = PX_POS_FRAMESTATS - vec2(X_MARGIN_PX, Y_OFFSET_PX);
 	RenderBackground(sBackgroundColor, BACKGROUND_ALPHA, sz, pos);
 
+	// PROFILER STATS
+	//
+	const size_t cpu_perf_rows = mProfilerStack.pCPU->RenderPerformanceStats(mpTextRenderer, PX_POS_PROFILER_CPU, drawDesc, bSortStats);
+	mProfilerStack.pGPU->RenderPerformanceStats(mpTextRenderer, PX_POS_PROFILER_GPU, drawDesc, bSortStats);
+
+
 	// FRAME STATS
 	//
 	mpTextRenderer->RenderText(drawDesc);
@@ -198,12 +204,6 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 		mpTextRenderer->RenderText(drawDesc);
 	}
 	mpRenderer->EndEvent();
-
-
-	// PROFILER STATS
-	//
-	const size_t cpu_perf_rows = mProfilerStack.pCPU->RenderPerformanceStats(mpTextRenderer, PX_POS_PROFILER_CPU, drawDesc, bSortStats);
-	mProfilerStack.pGPU->RenderPerformanceStats(mpTextRenderer, PX_POS_PROFILER_GPU, drawDesc, bSortStats);
 
 
 }

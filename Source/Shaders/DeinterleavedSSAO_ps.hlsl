@@ -20,7 +20,6 @@
 // http://developer.amd.com/wordpress/media/2013/05/GCNPerformanceTweets.pdf
 
 #include "ShadingMath.hlsl"
-#define KERNEL_SIZE 64
 
 struct PSIn
 {

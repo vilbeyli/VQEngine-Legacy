@@ -307,7 +307,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		rsDesc.SlopeScaledDepthBias = 0.0f;
 		rsDesc.DepthClipEnable = true;
 		rsDesc.AntialiasedLineEnable = true;
-		rsDesc.MultisampleEnable = true;
+		rsDesc.MultisampleEnable = false;
 
 		rsDesc.CullMode = D3D11_CULL_BACK;
 		hr = m_device->CreateRasterizerState(&rsDesc, &mRasterizerStates[(int)EDefaultRasterizerState::CULL_BACK]);
@@ -797,9 +797,9 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 			switch (texDesc.format)
 			{
-				// caution: if initializing for depth texture, and the depth texture
-				//			has stencil defined (d24s8), we have to check for 
-				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+			// caution: if initializing for depth texture, and the depth texture
+			//			has stencil defined (d24s8), we have to check for 
+			//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
 			case EImageFormat::R32:
 				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R32F;
 				break;
@@ -844,9 +844,9 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
 			switch (texDesc.format)
 			{
-				// caution: if initializing for depth texture, and the depth texture
-				//			has stencil defined (d24s8), we have to check for 
-				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+			// caution: if initializing for depth texture, and the depth texture
+			//			has stencil defined (d24s8), we have to check for 
+			//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
 			case EImageFormat::R24G8:
 				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R24_UNORM_X8_TYPELESS;
 				break;
@@ -1401,7 +1401,7 @@ void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTex
 			// nullify texture units 
 			if (bUnbindTextures)
 			{
-				for (ShaderTexture& tex : shader->mTextureBindings)
+				for (TextureBinding& tex : shader->mTextureBindings)
 				{
 					constexpr UINT NumNullSRV = 12;
 					ID3D11ShaderResourceView* nullSRV[NumNullSRV] = { nullptr };
@@ -1409,25 +1409,25 @@ void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTex
 					switch (tex.shaderStage)
 					{
 					case EShaderStage::VS:
-						m_deviceContext->VSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						m_deviceContext->VSSetShaderResources(tex.textureSlot, NumNullSRV, nullSRV);
 						break;
 					case EShaderStage::GS:
-						m_deviceContext->GSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						m_deviceContext->GSSetShaderResources(tex.textureSlot, NumNullSRV, nullSRV);
 						break;
 					case EShaderStage::HS:
-						m_deviceContext->HSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						m_deviceContext->HSSetShaderResources(tex.textureSlot, NumNullSRV, nullSRV);
 						break;
 					case EShaderStage::DS:
-						m_deviceContext->DSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						m_deviceContext->DSSetShaderResources(tex.textureSlot, NumNullSRV, nullSRV);
 						break;
 					case EShaderStage::PS:
-						m_deviceContext->PSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
+						m_deviceContext->PSSetShaderResources(tex.textureSlot, NumNullSRV, nullSRV);
 						break;
 					case EShaderStage::CS:
 					{
 						ID3D11UnorderedAccessView* nullUAV[NumNullSRV] = { nullptr };
-						m_deviceContext->CSSetShaderResources(tex.bufferSlot, NumNullSRV, nullSRV);
-						m_deviceContext->CSSetUnorderedAccessViews(tex.bufferSlot, NumNullSRV, nullUAV, nullptr);
+						m_deviceContext->CSSetShaderResources(tex.textureSlot, NumNullSRV, nullSRV);
+						m_deviceContext->CSSetUnorderedAccessViews(tex.textureSlot, NumNullSRV, nullUAV, nullptr);
 					}	break;
 					default:
 						break;
@@ -1660,10 +1660,10 @@ void Renderer::SetConstant(const char * cName, const void * data)
 
 }
 
-void Renderer::SetTexture(const char * texName, TextureID tex)
+void Renderer::SetTexture_(const char* texName, TextureID tex, unsigned slice /*= 0 /* only for texture arrays */)
 {
 	assert(tex >= 0);
-	
+
 	const Shader* shader = mShaders[mPipelineState.shader];
 	const std::string textureName = std::string(texName);
 
@@ -1671,7 +1671,7 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 
 	if (bFound)
 	{
-		SetTextureCommand cmd(tex, shader->GetTextureBinding(textureName));
+		SetTextureCommand cmd(tex, shader->GetTextureBinding(textureName), slice);
 		mSetTextureCmds.push(cmd);
 	}
 
@@ -1683,7 +1683,26 @@ void Renderer::SetTexture(const char * texName, TextureID tex)
 #endif
 }
 
-void Renderer::SetUnorderedAccessTexture(const char* texName, TextureID tex)
+void Renderer::SetTextureArray(const char* texName, const std::array<TextureID, TEXTURE_ARRAY_SIZE>& TextureIDs, unsigned numTextures)
+{
+	const Shader* shader = mShaders[mPipelineState.shader];
+	if (shader->HasTextureBinding(texName))
+	{
+		SetTextureCommand cmd(TextureIDs, numTextures, shader->GetTextureBinding(texName), 0);
+		mSetTextureCmds.push(cmd);
+	}
+#ifdef _DEBUG
+	else
+	{
+		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, mPipelineState.shader, shader->Name().c_str());
+	}
+#endif
+}
+
+
+void Renderer::SetTexture(const char * texName, TextureID tex) { SetTexture_(texName, tex, 0); }
+
+void Renderer::SetRWTexture(const char* texName, TextureID tex)
 {
 	assert(tex >= 0);
 
@@ -1694,18 +1713,17 @@ void Renderer::SetUnorderedAccessTexture(const char* texName, TextureID tex)
 
 	if (bFound)
 	{
-		SetTextureCommand cmd(tex, shader->GetTextureBinding(textureName), true);
+		SetTextureCommand cmd(tex, shader->GetTextureBinding(textureName), 0, true);
 		mSetTextureCmds.push(cmd);
 	}
 
 #ifdef _DEBUG
 	if (!bFound)
 	{
-		Log::Error("Texture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, mPipelineState.shader, shader->Name().c_str());
+		Log::Error("UnorderedAccessTexture not found: \"%s\" in Shader(Id=%d) \"%s\"", texName, mPipelineState.shader, shader->Name().c_str());
 	}
 #endif
 }
-
 
 void Renderer::SetSamplerState(const char * samplerName, SamplerID samplerID)
 {
@@ -1824,6 +1842,7 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 
 	SetConstant4x4f("screenSpaceTransformation", transformation);
 	SetConstant1f("isDepthTexture", cmd.bIsDepthTexture ? 1.0f : 0.0f);
+	SetConstant1i("numChannels", cmd.numChannels);
 	SetTexture("inputTexture", cmd.texture);
 	SetVertexBuffer(IABuffers.first);
 	SetIndexBuffer(IABuffers.second);

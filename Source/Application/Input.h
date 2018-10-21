@@ -29,10 +29,17 @@ using KeyCode = unsigned int;
 class Input
 {
 	using KeyMapping = std::unordered_map<const char*, KeyCode>;
-
+	
 	static const KeyMapping sKeyMap;
 	friend class Application;
 public:
+	enum EMouseButtons
+	{	// windows btn codes
+		MOUSE_BUTTON_LEFT = 1,
+		MOUSE_BUTTON_RIGHT = 2,
+		MOUSE_BUTTON_MIDDLE = 16
+	};
+
 	Input();
 	Input(const Input&);
 	~Input();
@@ -43,8 +50,8 @@ public:
 	// update state
 	void KeyDown(KeyCode);
 	void KeyUp(KeyCode);
-	void ButtonDown(KeyCode);
-	void ButtonUp(KeyCode);
+	void ButtonDown(EMouseButtons);
+	void ButtonUp(EMouseButtons);
 	void UpdateMousePos(long x, long y, short scroll);
 
 	bool IsKeyDown(KeyCode) const;

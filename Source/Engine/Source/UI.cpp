@@ -139,9 +139,8 @@ constexpr float CPU_GPU_GAP = 0.115f;
 constexpr float X_NORMALIZED_POSITION_PROFILER_GPU = X_NORMALIZED_POSITION_FRAME_STATS + CPU_GPU_GAP;
 constexpr float Y_NORMALIZED_POSITION_PROFILER_GPU = Y_NORMALIZED_POSITION_PROFILER_CPU;
 
-constexpr float PX_CPU_GPU_PROFILER_DISTANCE = 9.0f;
-
 constexpr float LINE_HEIGHT_IN_PX = 17.0f;
+constexpr int PX_OFFSET_FRAMESTATS_PERFNUMBERS = 40;
 
 void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 {
@@ -152,17 +151,17 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 	const vec2 screenSizeInPixels = mpRenderer->GetWindowDimensionsAsFloat2();
 
 	// these are all pixel positions, starting from top left corner.
-	const float X_PX_POS_PROFILER_CPU = screenSizeInPixels.x() * X_NORMALIZED_POSITION_PROFILER_CPU;
-	const float Y_PX_POS_PROFILER_CPU = screenSizeInPixels.y() * Y_NORMALIZED_POSITION_PROFILER_CPU;
-	const vec2  PX_POS_PROFILER_CPU   = vec2(X_PX_POS_PROFILER_CPU, Y_PX_POS_PROFILER_CPU);
-
-	const float X_PX_POS_PROFILER_GPU = screenSizeInPixels.x() * X_NORMALIZED_POSITION_PROFILER_GPU;
-	const float Y_PX_POS_PROFILER_GPU = screenSizeInPixels.y() * Y_NORMALIZED_POSITION_PROFILER_GPU;
-	const vec2  PX_POS_PROFILER_GPU   = vec2(X_PX_POS_PROFILER_GPU, Y_PX_POS_PROFILER_GPU);
-
 	const float X_PX_POS_FRAMESTATS = screenSizeInPixels.x() * X_NORMALIZED_POSITION_FRAME_STATS;
 	const float Y_PX_POS_FRAMESTATS = screenSizeInPixels.y() * Y_NORMALIZED_POSITION_FRAME_STATS;
 	const vec2  PX_POS_FRAMESTATS   = vec2(X_PX_POS_FRAMESTATS, Y_PX_POS_FRAMESTATS);
+
+	const float X_PX_POS_PROFILER_CPU = screenSizeInPixels.x() * X_NORMALIZED_POSITION_PROFILER_CPU;
+	const float Y_PX_POS_PROFILER_CPU = Y_PX_POS_FRAMESTATS + LINE_HEIGHT_IN_PX * (sizeof(RENDER_ORDER_FRAME_STATS_ROW_1) / sizeof(size_t)) + PX_OFFSET_FRAMESTATS_PERFNUMBERS;
+	const vec2  PX_POS_PROFILER_CPU = vec2(X_PX_POS_PROFILER_CPU, Y_PX_POS_PROFILER_CPU);
+
+	const float X_PX_POS_PROFILER_GPU = screenSizeInPixels.x() * X_NORMALIZED_POSITION_PROFILER_GPU;
+	const float Y_PX_POS_PROFILER_GPU = Y_PX_POS_FRAMESTATS + LINE_HEIGHT_IN_PX * (sizeof(RENDER_ORDER_FRAME_STATS_ROW_1) / sizeof(size_t)) + PX_OFFSET_FRAMESTATS_PERFNUMBERS;
+	const vec2  PX_POS_PROFILER_GPU = vec2(X_PX_POS_PROFILER_GPU, Y_PX_POS_PROFILER_GPU);
 
 	const bool bSortStats = true;
 
@@ -174,10 +173,9 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 	const vec2 GPUProfilerAreaBounds = mProfilerStack.pGPU->GetEntryAreaBounds(screenSizeInPixels);
 	const vec2 ProfilerAreaBounds(BACKGROUND_NORMALIZED_LENGTH_X, std::max(CPUProfilerAreaBounds.y(), GPUProfilerAreaBounds.y()) );
 
-	vec2 sz = ProfilerAreaBounds + vec2(0.0f, (8 * LINE_HEIGHT_IN_PX) / screenSizeInPixels.y());
+	vec2 sz = ProfilerAreaBounds +vec2(0.0f, (8 * LINE_HEIGHT_IN_PX) / screenSizeInPixels.y());
 	vec2 pos = PX_POS_FRAMESTATS - vec2(X_MARGIN_PX, Y_OFFSET_PX);
 	RenderBackground(sBackgroundColor, BACKGROUND_ALPHA, sz, pos);
-	
 
 	// PROFILER STATS
 	//
@@ -206,6 +204,8 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 		mpTextRenderer->RenderText(drawDesc);
 	}
 	mpRenderer->EndEvent();
+
+
 }
 
 
@@ -233,13 +233,21 @@ void VQEngine::UI::RenderEngineControls() const
 	auto ToogleToString = [](const bool b) { return b ? "On" : "Off"; };
 	const std::vector<std::string> ControlEntries =
 	{	// this might use some optimization. maybe. profile this.
-		std::string("F1 - Render Mode: ") + (!mEngineControls.bDeferredOrForward ? "Forward" : "Deferred"),
+		std::string("F1 - Toggle Displaying Controls"),
 		std::string("F2 - SSAO: ") + ToogleToString(mEngineControls.bSSAO),
 		std::string("F3 - Bloom: ") + ToogleToString(mEngineControls.bBloom),
 		std::string("F4 - Display Render Targets: ") + ToogleToString(mEngineControls.bRenderTargets),
+		std::string(" "),
 		std::string("F5 - Toggle Rendering AABBs: ") + ToogleToString(mEngineControls.bBoundingBoxes),
+		std::string("F6 - Render Mode: ") + (!mEngineControls.bDeferredOrForward ? "Forward" : "Deferred"),
 
-		// std::string("F6 - Toggle Frustum Culling: ") + ToogleToString(mEngineControls.bBoundingBoxes),
+
+//#if _DEBUG
+//		std::string("F7 - Frustum Cull Main View: ") + ToogleToString(mEngineControls.bBoundingBoxes),
+//		std::string("F8 - Frustum Cull Local Lights: ") + ToogleToString(mEngineControls.bBoundingBoxes),
+//		std::string(" "),
+//		std::string("F9 - Sort Render Lists: ") + ToogleToString(mEngineControls.bBoundingBoxes),
+//#endif
 	};
 	const float backGroundLineSpan = static_cast<float>(ControlEntries.size() + 2);	// back ground a little bigger - 2 lines bigger.
 	const float avgLetterWidthInPixels = 7.0f;		// hardcoded... determines background width

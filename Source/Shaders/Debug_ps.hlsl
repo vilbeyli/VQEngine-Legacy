@@ -35,6 +35,7 @@ SamplerState samAnisotropic
 
 cbuffer c{
 	float isDepthTexture;
+	int numChannels;
 };
 
 float4 PSMain(PSIn In) : SV_TARGET
@@ -46,5 +47,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 		color.yzw = float3(color.x, color.x, color.x);
 		color = pow(color, float4(depthExponent, depthExponent, depthExponent, 1));
 	}
-	return color;
+	if (numChannels == 1)
+		return float4(color.xxx, color.w);
+	else
+		return color;
 }

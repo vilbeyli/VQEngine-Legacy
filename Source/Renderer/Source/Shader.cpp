@@ -240,9 +240,9 @@ EShaderStage Shader::GetShaderTypeFromSourceFilePath(const std::string & shaderF
 // PUBLIC INTERFACE
 //-------------------------------------------------------------------------------------------------------------
 const std::vector<Shader::ConstantBufferLayout>& Shader::GetConstantBufferLayouts() const { return m_CBLayouts; }
-const std::vector<ConstantBuffer>& Shader::GetConstantBuffers() const { return mConstantBuffers; }
-const ShaderTexture& Shader::GetTextureBinding(const std::string& textureName) const { return mTextureBindings[mShaderTextureLookup.at(textureName)]; }
-const ShaderSampler& Shader::GetSamplerBinding(const std::string& samplerName) const { return mSamplerBindings[mShaderSamplerLookup.at(samplerName)]; }
+const std::vector<ConstantBufferBinding>& Shader::GetConstantBuffers() const { return mConstantBuffers; }
+const TextureBinding& Shader::GetTextureBinding(const std::string& textureName) const { return mTextureBindings[mShaderTextureLookup.at(textureName)]; }
+const SamplerBinding& Shader::GetSamplerBinding(const std::string& samplerName) const { return mSamplerBindings[mShaderSamplerLookup.at(samplerName)]; }
 bool Shader::HasTextureBinding(const std::string& textureName) const { return mShaderTextureLookup.find(textureName) != mShaderTextureLookup.end(); }
 bool Shader::HasSamplerBinding(const std::string& samplerName) const { return mShaderSamplerLookup.find(samplerName) != mShaderSamplerLookup.end(); }
 
@@ -270,7 +270,7 @@ Shader::~Shader(void)
 }
 void Shader::ReleaseResources()
 {
-	for (ConstantBuffer& cbuf : mConstantBuffers)
+	for (ConstantBufferBinding& cbuf : mConstantBuffers)
 	{
 		if (cbuf.data)
 		{
@@ -375,7 +375,7 @@ bool Shader::HasSourceFileBeenUpdated() const
 
 void Shader::ClearConstantBuffers()
 {
-	for (ConstantBuffer& cBuffer : mConstantBuffers)
+	for (ConstantBufferBinding& cBuffer : mConstantBuffers)
 	{
 		cBuffer.dirty = true;
 	}
@@ -385,7 +385,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 {
 	for (unsigned i = 0; i < mConstantBuffers.size(); ++i)
 	{
-		ConstantBuffer& CB = mConstantBuffers[i];
+		ConstantBufferBinding& CB = mConstantBuffers[i];
 		if (CB.dirty)	// if the CPU-side buffer is updated
 		{
 			ID3D11Buffer* data = CB.data;
@@ -613,7 +613,7 @@ bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 	cBufferDesc.StructureByteStride = 0;
 	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
 	{
-		ConstantBuffer cBuffer;
+		ConstantBufferBinding cBuffer;
 		cBufferDesc.ByteWidth = cbLayout.desc.Size;
 		if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &cBuffer.data)))
 		{
@@ -648,27 +648,27 @@ bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 				{
 					case D3D_SIT_SAMPLER:
 					{
-						ShaderSampler smp;
+						SamplerBinding smp;
 						smp.shaderStage = static_cast<EShaderStage>(shaderStage);
-						smp.bufferSlot = smpSlot++;
+						smp.samplerSlot = smpSlot++;
 						mSamplerBindings.push_back(smp);
 						mShaderSamplerLookup[shdInpDesc.Name] = static_cast<int>(mSamplerBindings.size() - 1);
 					} break;
 
 					case D3D_SIT_TEXTURE:
 					{
-						ShaderTexture tex;
+						TextureBinding tex;
 						tex.shaderStage = static_cast<EShaderStage>(shaderStage);
-						tex.bufferSlot = texSlot++;
+						tex.textureSlot = texSlot++;
 						mTextureBindings.push_back(tex);
 						mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(mTextureBindings.size() - 1);
 					} break;
 
 					case D3D_SIT_UAV_RWTYPED:
 					{
-						ShaderTexture tex;
+						TextureBinding tex;
 						tex.shaderStage = static_cast<EShaderStage>(shaderStage);
-						tex.bufferSlot = uavSlot++;
+						tex.textureSlot = uavSlot++;
 						mTextureBindings.push_back(tex);
 						mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(mTextureBindings.size() - 1);
 					} break;

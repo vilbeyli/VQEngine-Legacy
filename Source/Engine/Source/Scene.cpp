@@ -580,7 +580,8 @@ void Scene::UpdateScene(float dt)
 
 	// OPTIMIZATION SETTINGS TOGGLES
 	//
-	if (ENGINE->INP()->IsKeyTriggered("F6"))
+#if _DEBUG
+	if (ENGINE->INP()->IsKeyTriggered("F7"))
 	{
 		bool& toggle = ENGINE->INP()->IsKeyDown("Shift")
 			? mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights
@@ -588,24 +589,23 @@ void Scene::UpdateScene(float dt)
 		
 		toggle = !toggle;
 	}
-	if (ENGINE->INP()->IsKeyTriggered("F7"))
+	if (ENGINE->INP()->IsKeyTriggered("F8"))
 	{
 		mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights= !mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights;
 	}
-	if (ENGINE->INP()->IsKeyTriggered("F8"))
+	if (ENGINE->INP()->IsKeyTriggered("F9"))
 	{
 
-#if _DEBUG
 		if (ENGINE->INP()->IsKeyDown("Shift"))
 		{
 			bReportedList = false;
 		}
 		else
-#endif
 		{
 			mSceneRenderSettings.optimization.bSortRenderLists = !mSceneRenderSettings.optimization.bSortRenderLists;
 		}
 	}
+#endif
 
 
 

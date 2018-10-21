@@ -192,7 +192,7 @@ private:
 	// keeping passes around like this doesn't make sense...
 	ShadowMapPass					mShadowMapPass;
 	DeferredRenderingPasses			mDeferredRenderingPasses;
-	AmbientOcclusionPass			mSSAOPass;
+	AmbientOcclusionPass			mAOPass;
 	PostProcessPass					mPostProcessPass;
 	DebugPass						mDebugPass;
 	ZPrePass						mZPrePass;
@@ -207,6 +207,7 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	FrameStats			mFrameStats;
 	bool				mbIsPaused;
+	bool				mbOutputDebugTexture;
 
 	EngineConfig		mEngineConfig;
 

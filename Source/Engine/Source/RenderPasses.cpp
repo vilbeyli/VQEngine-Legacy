@@ -33,6 +33,20 @@
 #include <array>
 
 
+
+ShaderID RenderPass::sShaderTranspoze = -1;
+
+void RenderPass::InitializeCommonSaders(Renderer* pRenderer)
+{
+	const ShaderDesc CSDescTranspose =
+	{
+		"Transpose_Compute",
+		ShaderStageDesc { "Transpose_cs.hlsl", {} }
+	};
+	sShaderTranspoze = pRenderer->CreateShader(CSDescTranspose);
+}
+
+
 constexpr const EImageFormat HDR_Format = RGBA16F;
 constexpr const EImageFormat LDR_Format = RGBA8UN;
 static bool bFirstInitialization = true;
@@ -76,31 +90,28 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 
 
 
-void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn) const
+void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID texOverride) const
 {
-	pRenderer->BeginEvent("Post Processing");
-
-	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
+	const bool bBloom = bBloomOn && _settings.bloom.bEnabled && (texOverride == -1);
 	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 
+	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
+	const TextureID colorTex = texOverride == -1
+		? ( pRenderer->GetRenderTargetTexture(bBloom ? _bloomPass._finalRT : _worldRenderTarget) )
+		: ( texOverride );
+
+
+	pRenderer->BeginEvent("Post Processing");
 	// ======================================================================================
 	// BLOOM  PASS
 	// ======================================================================================
-	const Settings::Bloom& sBloom = _settings.bloom;
-	const bool bBloom = bBloomOn && _settings.bloom.bEnabled;
-	if (bBloom)
-	{
-		this->_bloomPass.Render(pRenderer, _worldRenderTarget, sBloom);
-	}
+	if (bBloom) this->_bloomPass.Render(pRenderer, _worldRenderTarget, _settings.bloom);
+
 
 	// ======================================================================================
 	// TONEMAPPING PASS
 	// ======================================================================================
-	const TextureID colorTex = pRenderer->GetRenderTargetTexture(bBloom ? _bloomPass._finalRT : _worldRenderTarget);
-	//const TextureID colorTex = 161;
-	const float isHDR = _settings.HDREnabled ? 1.0f : 0.0f;
 	pRenderer->BeginEvent("Tonemapping");
-	//pCPU->BeginEntry("Tonemapping");
 	pGPU->BeginEntry("Tonemapping");
 
 	pRenderer->UnbindDepthTarget();
@@ -109,15 +120,19 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn) const
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
 	pRenderer->SetConstant1f("exposure", _settings.toneMapping.exposure);
-	pRenderer->SetConstant1f("isHDR", isHDR);
+	pRenderer->SetConstant1f("isHDR", _settings.HDREnabled ? 1.0f : 0.0f);
 	pRenderer->BindRenderTarget(_tonemappingPass._finalRenderTarget);
 	pRenderer->SetTexture("ColorTexture", colorTex);
+
+	// quick hack for outputting white texture for fullscreen AO debugging
+	pRenderer->SetConstant1i("isSingleChannel", texOverride != -1 ? 1 : 0);
+	// quick hack for outputting white texture for fullscreen AO debugging
+
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
-	pRenderer->EndEvent();
 
-	//pCPU->EndEntry(); // tonemapping
-	pGPU->EndEntry(); // tonemapping
+	pRenderer->EndEvent();	// Tonemapping
+	pGPU->EndEntry();		// Tonemapping
 	pRenderer->EndEvent();	// Post Process
 }
 
@@ -129,5 +144,4 @@ void DebugPass::Initialize(Renderer * pRenderer)
 {
 	_scissorsRasterizer = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, false, true);
 }
-
 

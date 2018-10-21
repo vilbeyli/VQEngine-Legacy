@@ -23,18 +23,27 @@ See [Milestones](https://github.com/vilbeyli/VQEngine/milestones) for the planne
 
 The latest changes can be found in the [dev branch](https://github.com/vilbeyli/VQEngine/tree/dev), or another branch named with the feature being implemented. _These branches might be unstable before the release_.
 
-**[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - Performance Optimization & Debugging Enchancements** - TBA
- 
- - Performance Optimizations
- - ASSAO & Render Quality Settings
- - Instanced Rendering
- - Frustum Culling
- - Cached Environment Maps
- - Improved Stability
+**[0.6.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.6.0) - Rendering Improvements: DoF, SSR, Point & Area Lights** - TBA
+
+- Point Light Shadows
+- Depth of Field
+- Screen Space Reflections
+- Linear (Cylinder) Lights
+- Mipped Textures
 
 ## Released
 
- **[v0.4.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.4.0) - Data-Oriented Engine, Multi-threaded Tasking System, Model Loading w/ assimp, Loading Screen** - July15-2018
+**[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - CPU & GPU Optimizations, Compute Shaders, Improved SSAO** - October##-2018
+ 
+ - Compute Shader Pipeline
+ - Live Shader Editing (Launch Once - Edit Shader Source - Reload Shader)
+ - Compute-Optimized Blur Shaders
+ - Improved SSAO: Bilateral Blur Filter & [Deinterleaved Texturing](https://developer.nvidia.com/sites/default/files/akamai/gameworks/samples/DeinterleavedTexturing.pdf)
+ - View Frustum Culling
+ - Instanced Rendering
+
+
+ **[v0.4.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.4.0) - Data-Oriented Engine, Multi-threaded Tasking System, Model Importing, Loading Screen** - July15-2018
  - Refactored Scene, Engine and Renderer classes in favor of [Data-Oriented Design](https://en.wikipedia.org/wiki/Data-oriented_design)
  - Asynchronous Model Loading using [assimp](https://github.com/assimp/assimp)
  - [Sponza](http://www.crytek.com/cryengine/cryengine3/downloads) Scene & More Models
@@ -60,12 +69,12 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
  - SSAO w/ Gaussian Blur
  - Custom Scene Files, Switchable/Reloadable Scenes
 
-**[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) - Phong Lighting, Shadow Mapping, Texturing and Shader Reflection** - July15-2017
+**[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) -  Shader Reflection, Phong Lighting, Shadow Mapping & Texturing** - July15-2017
  - Vertex-Geometry-Pixel Shader Pipeline
  - Shader Reflection
  - Phong Lighting
- - Point/Spot Lights
- - Simple Shadow Mapping Algorithm for Spot Lights
+ - Point Lights (No Shadows)
+ - Spot Lights (Simpe Shadow Mapping)
  - Normal/Diffuse Maps
  - Procedural Geometry: Cube, Sphere, Cylinder, Grid
   
@@ -76,14 +85,21 @@ The projects are set to build with the following configurations:
  - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - 10.0.17134.0
  - Visual Studio 2017 - v141, v140
   
-- **GPU**: Radeon R9 380 equivalent or higher. Demo hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
+- **System**: Ryzen/GCN. VQEngine hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 
 # Build
 
 ![https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true](https://ci.appveyor.com/api/projects/status/8u0a89j15naw0jlp/branch/master?svg=true)
 
-Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will contain the VQEngine executable built in release mode and the data and shaders needed to run the demo. You need Visual Studio 2017 installed for the build scripts to work.
+Run `PRE_BUILD.bat` once to initialize the submodules, and run `BUILD.bat` or `BUILD.py` to build VQEngine. `./Build/_artifacts` will contain the VQEngine executable built in release mode and the data and shaders needed to run the demo. You need Visual Studio 2017 installed for the build scripts to work.
 
+| Scripts | |
+| :-- | :-- |
+| `PRE_BUILD.bat` | Initializes and updates submodules required to build the project.<br/>*Run this script the first time you clone the repo.* |
+| `BUILD_CLEAN.bat` | Calls 'Clean Solution' on `VQEngine.sln` and deletes the contents of the Build folder.<br/>*Run this script before building VQEngine.* |
+| `BUILD.bat` | Builds VQEngine. |
+| `CONSOLIDATE_ARTIFACTS.bat` | Copies binaries and resources required to run VQEngine into `Build/_artifacts` folder.<br/>*Run this script after running `BUILD.bat`.* |
+| `PRE_BUILD_CLEAN.bat` | Deletes contents of the submodule folders. |
 
 # Controls
 
@@ -92,6 +108,7 @@ Run `BUILD.bat` or `BUILD.py` to build the project. `./Build/_artifacts` will co
 | **WASD** |	Camera Movement |
 | **R** | Reset Camera |
 | **C** | Cycle Through Scene Cameras |
+| **\\** | Reload Shaders (live shader editing) |
 | **Shift+R** |	Reload Current Scene From File |
 | **0-5** |	**Switch Scenes**: <br>**1**: Objects Scene <br>**2**: SSAO Test <br>**3**: Environment Map Test <br>**4**: Stress Test <br>**5**: Sponza Scene
 

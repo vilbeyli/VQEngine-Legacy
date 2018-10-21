@@ -55,23 +55,23 @@ private:
 	inline bool operator==(const CPUConstant& c) const { return (((this->_data == c._data) && this->_size == c._size) && this->_name == c._name); }
 	inline bool operator!=(const CPUConstant& c) const { return ((this->_data != c._data) || this->_size != c._size || this->_name != c._name); }
 };
-struct ConstantBuffer	// GPU side constant buffer
+struct ConstantBufferBinding
 {	
-	EShaderStage shaderStage;
-	unsigned bufferSlot;
+	EShaderStage  shaderStage;
+	unsigned      bufferSlot;
 	ID3D11Buffer* data;
-	bool dirty;
+	bool          dirty;
 };
-struct ShaderTexture
+struct TextureBinding
 {
-	unsigned bufferSlot;
 	EShaderStage shaderStage;
+	unsigned     textureSlot;
 };
-struct ShaderSampler
+struct SamplerBinding
 {
-	std::string name;	// move this out
-	unsigned bufferSlot;
 	EShaderStage shaderStage;
+	unsigned     samplerSlot;
+	std::string  name;	// TODO: move this out
 };
 struct InputLayout
 {
@@ -188,10 +188,10 @@ public:
 	inline ShaderID    ID()   const { return mID; }
 	
 	const std::vector<ConstantBufferLayout>& GetConstantBufferLayouts() const;
-	const std::vector<ConstantBuffer      >& GetConstantBuffers() const;
+	const std::vector<ConstantBufferBinding      >& GetConstantBuffers() const;
 	
-	const ShaderTexture& GetTextureBinding(const std::string& textureName) const;
-	const ShaderSampler& GetSamplerBinding(const std::string& samplerName) const;
+	const TextureBinding& GetTextureBinding(const std::string& textureName) const;
+	const SamplerBinding& GetSamplerBinding(const std::string& samplerName) const;
 	bool HasTextureBinding(const std::string& textureName) const;
 	bool HasSamplerBinding(const std::string& samplerName) const;
 
@@ -246,13 +246,13 @@ private:
 
 	std::string	mName;
 
-	std::vector<ConstantBuffer>	mConstantBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx
+	std::vector<ConstantBufferBinding>	mConstantBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx
 	std::vector<ConstantBufferLayout>  m_CBLayouts;
 	std::vector<ConstantBufferMapping> m_constants;// currently redundant
 	std::vector<CPUConstant> mCPUConstantBuffers;
 
-	std::vector<ShaderTexture> mTextureBindings;
-	std::vector<ShaderSampler> mSamplerBindings;
+	std::vector<TextureBinding> mTextureBindings;
+	std::vector<SamplerBinding> mSamplerBindings;
 	
 	ShaderTextureLookup mShaderTextureLookup;
 	ShaderSamplerLookup mShaderSamplerLookup;

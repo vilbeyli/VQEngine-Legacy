@@ -33,6 +33,7 @@ struct BlurConstants
 cbuffer BlurConstantsBuffer
 {
 	BlurConstants cParameters;
+	matrix matPorjInverse;
 };
 
 // These are defined by the application compiling the shader
@@ -64,16 +65,25 @@ cbuffer BlurConstantsBuffer
 //
 #define KERNEL_RANGE  ((KERNEL_DIMENSION - 1) / 2) + 1
 #define KERNEL_RANGE_EXCLUDING_MIDDLE  (KERNEL_RANGE - 1)
+
 #if VERTICAL
 	#define PIXEL_CACHE_SIZE    IMAGE_SIZE_Y + KERNEL_RANGE_EXCLUDING_MIDDLE * 2
 #else
 	#define PIXEL_CACHE_SIZE    IMAGE_SIZE_X + KERNEL_RANGE_EXCLUDING_MIDDLE * 2
 #endif
+
+#define WQHD (IMAGE_SIZE_X > 1920)
 //-----------------------------------------------------------
 
-groupshared half3 gNormals[PIXEL_CACHE_SIZE];
+#if WQHD
+groupshared float3 gNormals[PIXEL_CACHE_SIZE];
+//groupshared float gDepth[PIXEL_CACHE_SIZE];		// out of LDS memory
+//groupshared float gOcclusion[PIXEL_CACHE_SIZE];	// out of LDS memory
+#else
+groupshared float3 gNormals[PIXEL_CACHE_SIZE];
 //groupshared float gDepth[PIXEL_CACHE_SIZE];	// out of LDS memory
 groupshared float gOcclusion[PIXEL_CACHE_SIZE];
+#endif
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
 void CSMain(
@@ -99,8 +109,12 @@ void CSMain(
 		
 		const float2 uv = float2(outTexel.xy) / float2(IMAGE_SIZE_X, IMAGE_SIZE_Y);
 
-		const half3 normal = texNormals.SampleLevel(sSampler, uv, 0).xyz;
-		//const float detph  = texDepth.SampleLevel(sSampler, uv, 0).r;
+#if TRANSPOZED_OUT
+		const float3 normal = texNormals.SampleLevel(sSampler, uv.yx, 0).xyz;
+#else
+		const float3 normal = texNormals.SampleLevel(sSampler, uv, 0).xyz;
+#endif
+		//const float detph  = texDepth.SampleLevel(sSampler, uv, 0).r; 	// out of LDS memory
 		const float occlusion = texOcclusion.SampleLevel(sSampler, uv, 0).r;
 
 
@@ -111,20 +125,34 @@ void CSMain(
 			{
 				const uint outOfBoundsIndex = outTexel.x + krn + KERNEL_RANGE_EXCLUDING_MIDDLE * offset + offset;
 				gNormals  [outOfBoundsIndex] = normal;
-				//gDepth    [outOfBoundsIndex] = detph;
+				//gDepth    [outOfBoundsIndex] = detph;	// out of LDS memory
+#if WQHD
+				;
+#else
 				gOcclusion[outOfBoundsIndex] = occlusion;
+#endif
 			}
 		}
 		const uint imageIndex = outTexel.x + KERNEL_RANGE_EXCLUDING_MIDDLE;
 		gNormals  [imageIndex] = normal;
-		//gDepth    [imageIndex] = detph;
+		//gDepth    [imageIndex] = detph;	// out of LDS memory
+#if WQHD
+		;
+#else
 		gOcclusion[imageIndex] = occlusion;
+#endif
+
+
+#if TRANSPOZED_OUT
+		texBlurredOcclusionOut[outTexel.yx] = 1.0f;
+#else
 		texBlurredOcclusionOut[outTexel.xy] = 1.0f;
+#endif
 	}
 
 	// RUN THE HORIZONTAL/VERTICAL BLUR KERNEL
 	//
-	[unroll] for (uint passCount = 0; passCount < PASS_COUNT; ++passCount)
+	[unroll] for (uint passCount = 0; passCount < 1/*PASS_COUNT*/; ++passCount)
 	{
 		// SYNC UP SHARED-MEM SO IT'S READY TO READ
 		//
@@ -142,33 +170,84 @@ void CSMain(
 
 			// linearly run the blur kernel
 			float result = 0.0f;
-			const half3 centerTapNormal = gNormals[outTexel.x];
+			const float3 centerTapNormal = gNormals[outTexel.x];
+
+#if TRANSPOZED_OUT
+			const float centerTapDepth = texDepth.SampleLevel(sSampler, uv.yx, 0).r; //gDepth[outTexel.x];
+#else
 			const float centerTapDepth = texDepth.SampleLevel(sSampler, uv, 0).r; //gDepth[outTexel.x];
+#endif
+			const float centerTapDepthLinear = LinearDepth(centerTapDepth, matPorjInverse);
+
+			// no need to blur if there's no surface
+			if (dot(centerTapNormal, centerTapNormal) < 0.00001)
+			{
+#if TRANSPOZED_OUT
+				texBlurredOcclusionOut[outTexel.yx] = 1.0f;
+#else
+				texBlurredOcclusionOut[outTexel.xy] = 1.0f;
+#endif
+				continue;
+			}
 
 			float wghSq = 0.0f;
 			[unroll] for (int kernelOffset = -(KERNEL_DIMENSION / 2); kernelOffset <= (KERNEL_DIMENSION / 2); ++kernelOffset)
 			{
-				uv = dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px + kernelOffset, 0);
-				const float sampledDepth = texDepth.SampleLevel(sSampler, uv, 0).r;
-				const uint kernelImageIndex = outTexel.x + kernelOffset + KERNEL_RANGE_EXCLUDING_MIDDLE;
-				const half3 kernelNormal = gNormals[kernelImageIndex];
-				
-				const bool bReduceGaussianWeightToZero = true &&
-					dot(centerTapNormal, kernelNormal) < cParameters.normalDotThreshold
-					|| abs(centerTapDepth - sampledDepth /*gDepth[kernelImageIndex]*/) > 0.0050f; //cParameters.depthThreshold;
-				const float WEIGHT = bReduceGaussianWeightToZero ? 0.0f : KERNEL_WEIGHTS[abs(kernelOffset)];
+				uv = (dispatchTID.xy + uint2(THREAD_GROUP_SIZE_X * px + kernelOffset, 0)) / float2(IMAGE_SIZE_X, IMAGE_SIZE_Y);;
 
+#if TRANSPOZED_OUT
+				const float kernelTapDepth = texDepth.SampleLevel(sSampler, uv.yx, 0).r;
+#else
+				const float kernelTapDepth = texDepth.SampleLevel(sSampler, uv, 0).r;
+#endif
+				const float kernelTapDepthLinear = LinearDepth(kernelTapDepth, matPorjInverse);
+
+				const uint kernelImageIndex = outTexel.x + kernelOffset + KERNEL_RANGE_EXCLUDING_MIDDLE;
+				const float3 kernelNormal = gNormals[kernelImageIndex];
+				
+				// TODO: there are issues here: depth taps have the same value...
+				const bool bReduceGaussianWeightToZero = true &&
+				(	false//   (dot(kernelNormal, kernelNormal) < 0.00001)
+					//|| (dot(centerTapNormal, kernelNormal) < 0.987 /*cParameters.normalDotThreshold*/)
+					|| ( abs(centerTapDepthLinear - kernelTapDepthLinear) == 0.0f /*cParameters.depthThreshold*/)
+				);
+				const float WEIGHT = bReduceGaussianWeightToZero ? 0.0f : KERNEL_WEIGHTS[abs(kernelOffset)];
+#if WQHD
+				//if (passCount == 0)
+				//{
+#if TRANSPOZED_OUT
+					result += texOcclusion.SampleLevel(sSampler, uv.yx, 0).r * WEIGHT;
+#else
+					result += texOcclusion.SampleLevel(sSampler, uv, 0).r * WEIGHT;
+#endif
+				//}
+
+#else
 				result += gOcclusion[kernelImageIndex] * WEIGHT;
+#endif
 				wghSq += WEIGHT * WEIGHT;
 			}
 
-			result /= sqrt(wghSq);
 
-			// save the blurred pixel value //transpozed
+			// normalize weights
+			//
+			// TODO: fix the incorrect math...
+			//if (sqrt(wghSq) > 0.00001)
+			//	result /= sqrt(wghSq);
+
+
+			// save the blurred pixel value
+#if TRANSPOZED_OUT
+			texBlurredOcclusionOut[outTexel.yx] = result;
+#else
 			texBlurredOcclusionOut[outTexel.xy] = result;
+#endif
+
 		}
 
-
+#if WQHD
+		;
+#else
 		// UPDATE LDS
 		//
 		GroupMemoryBarrierWithGroupSync();
@@ -179,7 +258,11 @@ void CSMain(
 			if (outTexel.x >= IMAGE_SIZE_X)
 				break;
 
+#if TRANSPOZED_OUT
+			const float occlusion = texBlurredOcclusionOut[outTexel.yx];
+#else
 			const float occlusion = texBlurredOcclusionOut[outTexel.xy];
+#endif
 
 			const bool bFirstPixel = outTexel.x == 0;
 			const bool bLastPixel = outTexel.x == (IMAGE_SIZE_X - 1);
@@ -193,7 +276,6 @@ void CSMain(
 			}
 			gOcclusion[outTexel.x + KERNEL_RANGE_EXCLUDING_MIDDLE] = occlusion;
 		}
+#endif
 	}
-
-
 }

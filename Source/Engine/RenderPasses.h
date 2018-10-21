@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-// #TODO: baseclass pass / better naming
+// #TODO: base class pass / better naming
 
 #pragma once
 
@@ -52,6 +52,15 @@ struct RenderTargetDesc;
 
 struct RenderPass
 {
+	enum ECommonShaders
+	{
+		TRANSPOZE = 0,
+
+		NUM_COMMON_SHADERS
+	};
+	static ShaderID sShaderTranspoze;
+	static void InitializeCommonSaders(Renderer* pRenderer);
+
 	RenderPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_)
 		: pCPU(pCPU_)
 		, pGPU(pGPU_)
@@ -78,9 +87,9 @@ struct ShadowMapPass : public RenderPass
 	D3D11_VIEWPORT		mShadowViewPort_Spot;	// spot light viewport
 	D3D11_VIEWPORT		mShadowViewPort_Directional;
 	
-	TextureID			mShadowMapTextures_Spot = -1;			// tex2D array
-	TextureID			mShadowMapTexture_Directional = -1;		// tex2D array
-	TextureID			mShadowMapTextures_Point = -1;			// cubemap array
+	TextureID			mShadowMapTextures_Spot = -1;		// tex2D array
+	TextureID			mShadowMapTexture_Directional = -1;	// tex2D array
+	TextureID			mShadowMapTextures_Point = -1;		// cubemap array
 
 	DepthTargetIDArray	mDepthTargets_Spot;
 	DepthTargetID		mDepthTarget_Directional = -1;
@@ -118,7 +127,6 @@ struct BloomPass : public RenderPass
 	std::array<ShaderID, 2>  blurComputeShaderPingPong;
 	std::array<TextureID, 2> blurComputeOutputPingPong;
 
-	ShaderID  transpozeCompute;
 	ShaderID  blurHorizontalTranspozeComputeShader;
 	TextureID texTransposedImage;
 
@@ -148,7 +156,7 @@ struct PostProcessPass : public RenderPass
 	{}
 	void UpdateSettings(const Settings::PostProcess& newSettings, Renderer* pRenderer);
 	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
-	void Render(Renderer* pRenderer, bool bBloomOn) const;
+	void Render(Renderer* pRenderer, bool bBloomOn, TextureID texOverride = -1) const;
 
 	RenderTargetID			_worldRenderTarget;
 	BloomPass				_bloomPass;
@@ -256,21 +264,20 @@ struct DebugPass : public RenderPass
 
 // Engine will be updating the values in Engine::HandleInput()
 //--------------------------------------------------------------------------------------------
-// TODO: move the defines into cpp, use pimpl to hide members so we dont compile a lot of
-// code when we want to change these defines
-#define SSAO_DEBUGGING 1
+#define SSAO_DEBUGGING 0
 //
-// wheel up/down		:	radius +/-
-// shift+ wheel up/down	:	intensity +/-
-// ctrl + wheel up/down :	ssao quality
+// wheel up/down             : radius +/-
+// shift+ wheel up/down      : intensity +/-
+// ctrl + wheel up/down      : ssao quality
+// ctrl+shift+ wheel up/down : AO Technique selection +/-
+// k/j                       : AO quality (# taps) +/-
 //
 //
 #define BLOOM_DEBUGGING 0
 //
-// wheel up/down		:	brightness threshold +/-
-// shift+ wheel up/down	:	blur strength +/-
-// ctrl + wheel up/down :	shader selection +/-
-//
+// wheel up/down             : brightness threshold +/-
+// shift+ wheel up/down      : blur strength +/-
+// ctrl + wheel up/down      : shader selection +/-
 
 //--------------------------------------------------------------------------------------------
 
@@ -283,53 +290,82 @@ struct AmbientOcclusionPass : public RenderPass
 		float normalDotThreshold;
 		float depthThreshold;
 	};
-	enum SSAOQuality
+	enum EAOQuality
 	{
-		LOW = 0,	// Gaussian Blur
-		HIGH,		// Bilateral Blur
-		SSAO_QUALITY_LEVEL_COUNT
+		AO_QUALITY_LOW = 0, // 16 taps / px
+		AO_QUALITY_MEDIUM,  // 32 taps / px
+		AO_QUALITY_HIGH,    // 64 taps / px
+
+		AO_QUALITY_NUM_OPTIONS
+	};
+	enum EBlurQuality
+	{
+		BLUR_QUALITY_LOW = 0,	// Gaussian Blur
+		BLUR_QUALITY_HIGH,		// Bilateral Blur (currently disabled)
+		BLUR_QUALITY_NUM_OPTIONS
+	};
+	enum EAOTechnique
+	{
+		HBAO = 0, // Modified Crytek - Normal-aligned hemisphere sampling
+		HBAO_DT,  // De-interleaved Texturing (currently disabled)
+
+		NUM_AO_TECHNIQUES
 	};
 
 	AmbientOcclusionPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	static TextureID whiteTexture4x4;
 	
+	// Pass interface
 	void Initialize(Renderer* pRenderer);
-	void RenderAmbientOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
-	void ChangeQualityLevel(int upOrDown);	// -1 or 1 as input
+	void RenderAmbientOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const;
+	void ChangeBlurQualityLevel(int upOrDown);  // -1 or 1 as input
+	void ChangeAOTechnique(int upOrDown);       // -1 or 1 as input
+	void ChangeAOQuality(int upOrDown);         // -1 or 1 as input
 	TextureID GetBlurredAOTexture(Renderer* pRenderer) const;
 
-	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
-	void RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView);
-	void DeinterleaveDepth(Renderer* pRenderer);
-	void BilateralBlurPass(Renderer* pRenderer, const TextureID texNormals);
-	void GaussianBlurPass(Renderer* pRenderer);	// Gaussian 4x4 kernel
+	// draw functions
+	void RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const;
+	void RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const;
+	void DeinterleaveDepth(Renderer* pRenderer) const;
+	void InterleaveAOTexture(Renderer* pRenderer) const;
+	void BilateralBlurPass(Renderer* pRenderer, const TextureID texNormals, const TextureID texAO, const SceneView& sceneView) const;
+	void GaussianBlurPass(Renderer* pRenderer, const TextureID texAO) const;	// Gaussian 4x4 kernel
 
-	SSAOQuality quality;
+	EBlurQuality blurQuality;
+	EAOTechnique aoTech;
+	EAOQuality aoQuality;
 
 	// SSAO resources
-	std::vector<vec3>	sampleKernel;
-	std::vector<vec4>	noiseKernel;
+	std::vector<vec3>	sampleKernel[AO_QUALITY_NUM_OPTIONS];
+	std::vector<vec2>	noiseKernel;
 	TextureID			noiseTexture;
 	SamplerID			noiseSampler;
 
 	// Regular SSAO resources -------------------------------
-	RenderTargetID			 occlusionRenderTarget;
-	RenderTargetID			 blurRenderTarget;
-	std::array<TextureID, 2> bilateralBlurUAVs;
-	BilateralBlurConstants	 bilateralBlurParameters;
-
-	ShaderID SSAOShader;
-	ShaderID gaussianBlurShader;
-	ShaderID bilateralBlurShaderH;
-	ShaderID bilateralBlurShaderV;
+	RenderTargetID		occlusionRenderTarget;
+	ShaderID			SSAOShader[AO_QUALITY_NUM_OPTIONS];
 	// Regular SSAO resources -------------------------------
 
+	// Blur resources --------------------------------------
+	RenderTargetID			 gaussianBlurRenderTarget;
+	std::array<TextureID, 2> bilateralBlurUAVs;
+	TextureID				 bilateralBlurTranspozeUAV;
+	BilateralBlurConstants	 bilateralBlurParameters;
+
+	ShaderID gaussianBlurShader;
+	ShaderID transposeAOShader;
+	ShaderID bilateralBlurShaderH;
+	ShaderID bilateralBlurShaderV;
+	// Blur resources --------------------------------------
 
 	// Interleaved SSAO resources -------------------------------
 	ShaderID	deinterleaveShader;
-	ShaderID	deinterleavedSSAOShader;
+	ShaderID	deinterleavedSSAOShader[AO_QUALITY_NUM_OPTIONS];
+	ShaderID	interleaveShader;
+
 	TextureID	deinterleavedDepthTextures;
-	//RenderTargetID			 
+	TextureID	interleavedAOTexture;
+	RenderTargetID	deinterleavedAORenderTargets[4]; // TODO: RTArray
 	// Interleaved SSAO resources -------------------------------
 
 

@@ -237,17 +237,28 @@ LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
 	{
-		if (m_bMouseCaptured)	ENGINE->mpInput->KeyDown((KeyCode)wparam);
+		if (m_bMouseCaptured)	ENGINE->mpInput->ButtonDown((Input::EMouseButtons)wparam);
 		else					this->CaptureMouse(true);
 		break;
 	}
 
+	// todo: wparam is 0 for all cases? 
 	case WM_MBUTTONUP:
+	{
+		if (m_bMouseCaptured)
+			ENGINE->mpInput->ButtonUp((Input::EMouseButtons)16);
+		break;
+	}
 	case WM_RBUTTONUP:
+	{
+		if (m_bMouseCaptured)
+			ENGINE->mpInput->ButtonUp((Input::EMouseButtons)2);
+		break;
+	}
 	case WM_LBUTTONUP:
 	{
 		if (m_bMouseCaptured)
-			ENGINE->mpInput->KeyUp((KeyCode)wparam);
+			ENGINE->mpInput->ButtonUp((Input::EMouseButtons)1);
 		break;
 	}
 

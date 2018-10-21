@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-// #TODO: baseclass pass / better naming
+// #TODO: base class pass / better naming
 
 #pragma once
 
@@ -264,13 +264,13 @@ struct DebugPass : public RenderPass
 
 // Engine will be updating the values in Engine::HandleInput()
 //--------------------------------------------------------------------------------------------
-// TODO: move the defines into cpp, use pimpl to hide members so we dont compile a lot of
-// code when we want to change these defines
-#define SSAO_DEBUGGING 1
+#define SSAO_DEBUGGING 0
 //
-// wheel up/down		:	radius +/-
-// shift+ wheel up/down	:	intensity +/-
-// ctrl + wheel up/down :	ssao quality
+// wheel up/down             : radius +/-
+// shift+ wheel up/down      : intensity +/-
+// ctrl + wheel up/down      : ssao quality
+// ctrl+shift+ wheel up/down : AO Technique selection +/-
+// k/j                       : AO quality (# taps) +/-
 //
 //
 #define BLOOM_DEBUGGING 0
@@ -278,7 +278,6 @@ struct DebugPass : public RenderPass
 // wheel up/down             : brightness threshold +/-
 // shift+ wheel up/down      : blur strength +/-
 // ctrl + wheel up/down      : shader selection +/-
-// ctrl+shift+ wheel up/down : AO Technique selection +/-
 
 //--------------------------------------------------------------------------------------------
 
@@ -291,16 +290,24 @@ struct AmbientOcclusionPass : public RenderPass
 		float normalDotThreshold;
 		float depthThreshold;
 	};
+	enum EAOQuality
+	{
+		AO_QUALITY_LOW = 0, // 16 taps / px
+		AO_QUALITY_MEDIUM,  // 32 taps / px
+		AO_QUALITY_HIGH,    // 64 taps / px
+
+		AO_QUALITY_NUM_OPTIONS
+	};
 	enum EBlurQuality
 	{
-		LOW = 0,	// Gaussian Blur
-		HIGH,		// Bilateral Blur
-		SSAO_QUALITY_LEVEL_COUNT
+		BLUR_QUALITY_LOW = 0,	// Gaussian Blur
+		BLUR_QUALITY_HIGH,		// Bilateral Blur (currently disabled)
+		BLUR_QUALITY_NUM_OPTIONS
 	};
 	enum EAOTechnique
 	{
-		HBAO = 0,
-		HBAO_DT,
+		HBAO = 0, // Modified Crytek - Normal-aligned hemisphere sampling
+		HBAO_DT,  // De-interleaved Texturing (currently disabled)
 
 		NUM_AO_TECHNIQUES
 	};
@@ -311,8 +318,9 @@ struct AmbientOcclusionPass : public RenderPass
 	// Pass interface
 	void Initialize(Renderer* pRenderer);
 	void RenderAmbientOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const;
-	void ChangeBlurQualityLevel(int upOrDown);	// -1 or 1 as input
+	void ChangeBlurQualityLevel(int upOrDown);  // -1 or 1 as input
 	void ChangeAOTechnique(int upOrDown);       // -1 or 1 as input
+	void ChangeAOQuality(int upOrDown);         // -1 or 1 as input
 	TextureID GetBlurredAOTexture(Renderer* pRenderer) const;
 
 	// draw functions
@@ -325,20 +333,21 @@ struct AmbientOcclusionPass : public RenderPass
 
 	EBlurQuality blurQuality;
 	EAOTechnique aoTech;
+	EAOQuality aoQuality;
 
 	// SSAO resources
-	std::vector<vec3>	sampleKernel;
+	std::vector<vec3>	sampleKernel[AO_QUALITY_NUM_OPTIONS];
 	std::vector<vec2>	noiseKernel;
 	TextureID			noiseTexture;
 	SamplerID			noiseSampler;
 
 	// Regular SSAO resources -------------------------------
-	RenderTargetID			 occlusionRenderTarget;
-	ShaderID SSAOShader;
+	RenderTargetID		occlusionRenderTarget;
+	ShaderID			SSAOShader[AO_QUALITY_NUM_OPTIONS];
 	// Regular SSAO resources -------------------------------
 
 	// Blur resources --------------------------------------
-	RenderTargetID			 blurRenderTarget; // Gaussian
+	RenderTargetID			 gaussianBlurRenderTarget;
 	std::array<TextureID, 2> bilateralBlurUAVs;
 	TextureID				 bilateralBlurTranspozeUAV;
 	BilateralBlurConstants	 bilateralBlurParameters;
@@ -351,7 +360,7 @@ struct AmbientOcclusionPass : public RenderPass
 
 	// Interleaved SSAO resources -------------------------------
 	ShaderID	deinterleaveShader;
-	ShaderID	deinterleavedSSAOShader;
+	ShaderID	deinterleavedSSAOShader[AO_QUALITY_NUM_OPTIONS];
 	ShaderID	interleaveShader;
 
 	TextureID	deinterleavedDepthTextures;

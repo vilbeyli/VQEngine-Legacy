@@ -25,17 +25,30 @@
 
 #include "Renderer/Renderer.h"
 
-
+// temp
 #define ENABLE_COMPUTE_PASS_UNIT_TEST   0
 
-#define ENABLE_BILATERAL_BLUR_PASS      1
-#define ENABLE_INTERLEAVED_SSAO_PASS    1
+// Current implementation has issues and need further investigation.
+// currently switched off, will be fixed in a later milestone.
+#define ENABLE_BILATERAL_BLUR_PASS      0
 
-constexpr size_t SSAO_SAMPLE_KERNEL_SIZE = 64;
+// Current implementation has issues and need further investigation.
+// currently switched off, will be fixed in a later milestone.
+#define ENABLE_INTERLEAVED_SSAO_PASS    0
+
+
 TextureID AmbientOcclusionPass::whiteTexture4x4 = -1;
 
-//constexpr size_t sz = sizeof(SSAOConstants);
+constexpr size_t sAOQualityKernelSizeLookup[] = 
+{
+	16, // AmbientOcclusionPass::EAOQuality::AO_QUALITY_LOW   
+	32, // AmbientOcclusionPass::EAOQuality::AO_QUALITY_MEDIUM
+	64, // AmbientOcclusionPass::EAOQuality::AO_QUALITY_HIGH  
+};
+
 constexpr size_t VEC_SZ = 4;
+
+template<size_t KERNEL_SIZE>
 struct SSAOConstants
 {
 	XMFLOAT4X4 matProjection;
@@ -46,7 +59,7 @@ struct SSAOConstants
 	float radius;
 	float intensity;
 	//-----------------------------
-	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * VEC_SZ> samples;
+	std::array<float, KERNEL_SIZE * VEC_SZ> samples;
 };
 
 void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
@@ -55,30 +68,34 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	//--------------------------------------------------------------------
 	constexpr size_t NOISE_KERNEL_SIZE = 4;
 
-	// src: https://john-chapman-graphics.blogspot.nl/2013/01/ssao-tutorial.html
-	for (size_t i = 0; i < SSAO_SAMPLE_KERNEL_SIZE; i++)
+	for (size_t aoQuality = 0; aoQuality < AO_QUALITY_NUM_OPTIONS; ++aoQuality)
 	{
-		// get a random direction in tangent space, Z-up.
-		// As the sample kernel will be oriented along the surface normal, 
-		// the resulting sample vectors will all end up in the hemisphere.
-		vec3 sample
-		(
-			RandF(-1, 1),
-			RandF(-1, 1),
-			RandF(0, 1)	// hemisphere normal direction (up)
-		);
-		sample.normalize();					// bring the sample to the hemisphere surface
-		sample = sample * RandF(0.1f, 1);	// scale to distribute samples within the hemisphere
+		// src: https://john-chapman-graphics.blogspot.nl/2013/01/ssao-tutorial.html
+		const size_t AO_KERNEL_SIZE = sAOQualityKernelSizeLookup[(EAOQuality)aoQuality];
+		for (size_t i = 0; i < AO_KERNEL_SIZE; i++)
+		{
+			// get a random direction in tangent space, Z-up.
+			// As the sample kernel will be oriented along the surface normal, 
+			// the resulting sample vectors will all end up in the hemisphere.
+			vec3 sample
+			(
+				RandF(-1, 1),
+				RandF(-1, 1),
+				RandF(0, 1)	// hemisphere normal direction (up)
+			);
+			sample.normalize();					// bring the sample to the hemisphere surface
+			sample = sample * RandF(0.1f, 1);	// scale to distribute samples within the hemisphere
 
-		// scale vectors with a power curve based on i to make samples close to center of the
-		// hemisphere more significant. think of it as i selects where we sample the hemisphere
-		// from, which starts from outer region of the hemisphere and as it increases, we 
-		// sample closer to the normal direction. 
-		float scale = static_cast<float>(i) / (SSAO_SAMPLE_KERNEL_SIZE-1);
-		scale = lerp(0.1f, 1.0f, scale * scale);
-		sample = sample * scale;
+			// scale vectors with a power curve based on i to make samples close to center of the
+			// hemisphere more significant. think of it as i selects where we sample the hemisphere
+			// from, which starts from outer region of the hemisphere and as it increases, we 
+			// sample closer to the normal direction. 
+			float scale = static_cast<float>(i) / (AO_KERNEL_SIZE - 1);
+			scale = lerp(0.1f, 1.0f, scale * scale);
+			sample = sample * scale;
 
-		this->sampleKernel.push_back(sample);
+			this->sampleKernel[aoQuality].push_back(sample);
+		}
 	}
 
 	// CREATE NOISE TEXTURE & SAMPLER
@@ -103,8 +120,8 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	this->noiseTexture = pRenderer->CreateTexture2D(texDesc);
 
 	const float whiteValue = 1.0f;
-	std::vector<vec4> white4x4 = std::vector<vec4>(16, vec4(whiteValue, whiteValue, whiteValue, 1));
 	texDesc.width = texDesc.height = 4;
+	std::vector<vec4> white4x4 = std::vector<vec4>(texDesc.height * texDesc.width, vec4(whiteValue, whiteValue, whiteValue, 1));
 	texDesc.texFileName = "white4x4";
 	texDesc.pData = white4x4.data();
 	this->whiteTexture4x4 = pRenderer->CreateTexture2D(texDesc);
@@ -133,26 +150,34 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	rtDesc.format = imageFormat;
 
 	this->occlusionRenderTarget = pRenderer->AddRenderTarget(rtDesc);
-	this->blurRenderTarget = pRenderer->AddRenderTarget(rtDesc);
+	this->gaussianBlurRenderTarget = pRenderer->AddRenderTarget(rtDesc);
 
 	// SHADER
 	//--------------------------------------------------------------------
-	const ShaderDesc ssaoShaderDesc =
-	{ "SSAO_Shader",
-		ShaderStageDesc{ "FullscreenQuad_vs.hlsl", {} },
-		ShaderStageDesc{ "SSAO_ps.hlsl", {} },
-	};
+	for (int i = 0; i < EAOQuality::AO_QUALITY_NUM_OPTIONS; ++i)
+	{
+		const ShaderDesc ssaoShaderDesc =
+		{ "SSAO_Shader",
+			ShaderStageDesc{ "FullscreenQuad_vs.hlsl", {} },
+			ShaderStageDesc{ "SSAO_ps.hlsl", {
+				{ "KERNEL_SIZE", std::to_string(sAOQualityKernelSizeLookup[i]) }
+			} },
+		};
+		this->SSAOShader[i] = pRenderer->CreateShader(ssaoShaderDesc);
+	}
 	const ShaderDesc gaussianBlurShaderdesc = 
 	{ "GaussianBlur4x4", 
 		ShaderStageDesc{"FullscreenQuad_vs.hlsl" , {} },
 		ShaderStageDesc{"GaussianBlur4x4_ps.hlsl", {} }
 	};
-	this->SSAOShader = pRenderer->CreateShader(ssaoShaderDesc);
 	this->gaussianBlurShader = pRenderer->CreateShader(gaussianBlurShaderdesc);
 #if SSAO_DEBUGGING
 	this->radius = 17.5f;
 	this->intensity = 3.40f;
 #endif
+	this->blurQuality = BLUR_QUALITY_LOW;
+	this->aoQuality = AO_QUALITY_MEDIUM;
+	this->aoTech = HBAO;
 
 #if USE_COMPUTE_PASS_UNIT_TEST
 	const ShaderDesc testComputeShaderDesc =
@@ -324,15 +349,20 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	this->deinterleavedAORenderTargets[2] = pRenderer->AddRenderTarget(rtDesc);
 	this->deinterleavedAORenderTargets[3] = pRenderer->AddRenderTarget(rtDesc);
 
-	const ShaderDesc deinterleavedSSAOSahderDesc = 
+	for (int i = 0; i < EAOQuality::AO_QUALITY_NUM_OPTIONS; ++i)
 	{
-		"SSAO_DT", { 
-		ShaderStageDesc{ "FullscreenQuad_vs.hlsl", {} },
-		ShaderStageDesc{ "SSAO_ps.hlsl", {{ "INTERLEAVED_TEXTURING", "1" }} }
-		}
-	};
-	deinterleavedSSAOShader = pRenderer->CreateShader(deinterleavedSSAOSahderDesc);
-
+		const ShaderDesc deinterleavedSSAOSahderDesc =
+		{
+			"SSAO_DT", {
+			ShaderStageDesc{ "FullscreenQuad_vs.hlsl", {} },
+			ShaderStageDesc{ "SSAO_ps.hlsl", {
+				{ "INTERLEAVED_TEXTURING", "1" },
+				{ "KERNEL_SIZE", std::to_string(sAOQualityKernelSizeLookup[i]) }
+			} }
+			}
+		};
+		deinterleavedSSAOShader[i] = pRenderer->CreateShader(deinterleavedSSAOSahderDesc);
+	}
 #endif // ENABLE_INTERLEAVED_SSAO_PASS
 }
 
@@ -351,6 +381,23 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 		return;
 	}
 
+	auto RenderBlur = [&](EBlurQuality blurQuality, TextureID texAO, const bool bDeinterleavedPass)
+	{
+		switch (blurQuality)
+		{
+		case AmbientOcclusionPass::BLUR_QUALITY_LOW:
+			pGPU->BeginEntry(bDeinterleavedPass ? "Simple Blur_DT" : "Simple Blur");
+			GaussianBlurPass(pRenderer, texAO);
+			pGPU->EndEntry();
+			break;
+		case AmbientOcclusionPass::BLUR_QUALITY_HIGH:
+			pGPU->BeginEntry(bDeinterleavedPass ? "Bilateral Blur_DT" : "Bilateral Blur");
+			BilateralBlurPass(pRenderer, texNormals, texAO, sceneView);
+			pGPU->EndEntry();
+			break;
+		}
+	};
+
 	const char* passName = aoTech == HBAO
 		? "SSAO"
 		: "SSAO_DT";
@@ -366,19 +413,7 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 		RenderOcclusion(pRenderer, texNormals, sceneView);
 		pGPU->EndEntry();
 
-		switch (blurQuality)
-		{
-		case AmbientOcclusionPass::LOW:
-			pGPU->BeginEntry("Simple Blur");
-			GaussianBlurPass(pRenderer, texAO);
-			pGPU->EndEntry();
-			break;
-		case AmbientOcclusionPass::HIGH:
-			pGPU->BeginEntry("Bilateral Blur");
-			BilateralBlurPass(pRenderer, texNormals, texAO, sceneView);
-			pGPU->EndEntry();
-			break;
-		}
+		RenderBlur(blurQuality, texAO, false);
 	} break;
 
 
@@ -398,24 +433,11 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 		InterleaveAOTexture(pRenderer);
 		pGPU->EndEntry();
 
-		switch (blurQuality)
-		{
-		case AmbientOcclusionPass::LOW:
-			pGPU->BeginEntry("Simple Blur_DT");
-			GaussianBlurPass(pRenderer, texAO);
-			pGPU->EndEntry();
-			break;
-		case AmbientOcclusionPass::HIGH:
-			pGPU->BeginEntry("Bilateral Blur_DT");
-			BilateralBlurPass(pRenderer, texNormals, texAO, sceneView);
-			pGPU->EndEntry();
-			break;
-		}
+		RenderBlur(blurQuality, texAO, true);
 
 		pRenderer->EndEvent(); // SSAO_Interleaved
 #endif // ENABLE_INTERLEAVED_SSAO_PASS
 	}break;
-	
 	
 	} // switch
 
@@ -426,23 +448,19 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 }
 
 
-
-void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const
+template<size_t kernelSampleSize>
+SSAOConstants<kernelSampleSize> FillAOConstBuffer(const AmbientOcclusionPass* pThis, const SceneView& sceneView, Renderer* pRenderer)
 {
-	pRenderer->BeginEvent("Occlusion Pass");
-
-	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
-
 	XMFLOAT4X4 proj = {};
 	XMStoreFloat4x4(&proj, sceneView.proj);
 
 	XMFLOAT4X4 projInv = {};
 	XMStoreFloat4x4(&projInv, sceneView.projInverse);
 
-	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * VEC_SZ> samples;
+
+	std::array<float, kernelSampleSize * VEC_SZ> samples;
 	size_t idx = 0;
-	for (const vec3& v : sampleKernel)
+	for (const vec3& v : pThis->sampleKernel[pThis->aoQuality])
 	{
 		samples[idx + 0] = v.x();
 		samples[idx + 1] = v.y();
@@ -451,21 +469,32 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 		idx += VEC_SZ;
 	}
 
-	SSAOConstants ssaoConsts = {
+	return SSAOConstants<kernelSampleSize> {
 		proj,
 		projInv,
 		pRenderer->GetWindowDimensionsAsFloat2(),
 #if SSAO_DEBUGGING
-		this->radius,
-		this->intensity,
+		pThis->radius,
+		pThis->intensity,
 #else
 		sceneView.sceneRenderSettings.ssao.radius,
 		sceneView.sceneRenderSettings.ssao.intensity,
 #endif
 		samples
 	};
+}
 
-	pRenderer->SetShader(SSAOShader, true);
+void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const
+{
+	pRenderer->BeginEvent("Occlusion Pass");
+
+	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
+	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+
+	constexpr size_t AO_KERNEL_SIZE = sAOQualityKernelSizeLookup[EAOQuality::AO_QUALITY_HIGH];
+	SSAOConstants<AO_KERNEL_SIZE> aoConsts = FillAOConstBuffer<AO_KERNEL_SIZE>(this, sceneView, pRenderer);
+
+	pRenderer->SetShader(SSAOShader[this->aoQuality], true);
 	pRenderer->BindRenderTarget(this->occlusionRenderTarget);
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
@@ -475,7 +504,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
 	pRenderer->SetTexture("texNoise", this->noiseTexture);
 	pRenderer->SetTexture("texDepth", depthTexture);
-	pRenderer->SetConstantStruct("SSAO_constants", &ssaoConsts);
+	pRenderer->SetConstantStruct("SSAO_constants", &aoConsts);
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
@@ -540,49 +569,22 @@ void AmbientOcclusionPass::RenderOcclusionInterleaved(Renderer* pRenderer, const
 {
 	// https://developer.nvidia.com/sites/default/files/akamai/gameworks/samples/DeinterleavedTexturing.pdf
 
-	XMFLOAT4X4 proj = {};
-	XMStoreFloat4x4(&proj, sceneView.proj);
-
-	XMFLOAT4X4 projInv = {};
-	XMStoreFloat4x4(&projInv, sceneView.projInverse);
-
-	std::array<float, SSAO_SAMPLE_KERNEL_SIZE * VEC_SZ> samples;
-	size_t idx = 0;
-	for (const vec3& v : sampleKernel)
-	{
-		samples[idx + 0] = v.x();
-		samples[idx + 1] = v.y();
-		samples[idx + 2] = v.z();
-		samples[idx + 3] = -1.0f;
-		idx += VEC_SZ;
-	}
-
-	SSAOConstants ssaoConsts = {
-		proj,
-		projInv,
-		pRenderer->GetWindowDimensionsAsFloat2(),
-#if SSAO_DEBUGGING
-		this->radius,
-		this->intensity,
-#else
-		sceneView.sceneRenderSettings.ssao.radius,
-		sceneView.sceneRenderSettings.ssao.intensity,
-#endif
-		samples
-	};
 
 	const vec2 halfScreenSize = pRenderer->GetWindowDimensionsAsFloat2() * 0.5f;
 	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
 
+	constexpr size_t AO_KERNEL_SIZE = sAOQualityKernelSizeLookup[EAOQuality::AO_QUALITY_HIGH];
+	SSAOConstants<AO_KERNEL_SIZE> aoConsts = FillAOConstBuffer<AO_KERNEL_SIZE>(this, sceneView, pRenderer);
+
 	// OCCLUSION x4
 	//
 	pRenderer->BeginEvent("Deinterleaved Occlusion Pass");
-	pRenderer->SetShader(deinterleavedSSAOShader, true);
+	pRenderer->SetShader(deinterleavedSSAOShader[this->aoQuality], true);
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
 	pRenderer->SetTexture("texNoise", this->noiseTexture);
-	pRenderer->SetConstantStruct("SSAO_constants", &ssaoConsts);
+	pRenderer->SetConstantStruct("SSAO_constants", &aoConsts);
 	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
 	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetViewport(static_cast<unsigned>(halfScreenSize.x()), static_cast<unsigned>(halfScreenSize.y()));
@@ -661,6 +663,7 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer, const Texture
 #endif
 }
 
+#include "Utilities/Log.h"
 void AmbientOcclusionPass::GaussianBlurPass(Renderer* pRenderer, const TextureID texOcclusion) const
 {
 	const vec2 texDimensions = pRenderer->GetWindowDimensionsAsFloat2();
@@ -669,7 +672,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer* pRenderer, const TextureID
 	pRenderer->BeginEvent("Blur Pass <Gau>");
 
 	pRenderer->SetShader(this->gaussianBlurShader, true);
-	pRenderer->BindRenderTarget(this->blurRenderTarget);
+	pRenderer->BindRenderTarget(this->gaussianBlurRenderTarget);
 	pRenderer->SetTexture("tOcclusion", texOcclusion);
 	pRenderer->SetSamplerState("BlurSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetConstant2f("inputTextureDimensions", texDimensions);
@@ -695,7 +698,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer* pRenderer, const TextureID
 void AmbientOcclusionPass::ChangeBlurQualityLevel(int upOrDown)
 {
 	int desiredQuality = this->blurQuality + upOrDown;
-	if (upOrDown > 0)	desiredQuality = desiredQuality >= SSAO_QUALITY_LEVEL_COUNT ? SSAO_QUALITY_LEVEL_COUNT-1 : desiredQuality;
+	if (upOrDown > 0)	desiredQuality = desiredQuality >= BLUR_QUALITY_NUM_OPTIONS ? BLUR_QUALITY_NUM_OPTIONS - 1 : desiredQuality;
 	else				desiredQuality = desiredQuality < 0 ? 0 : desiredQuality;
 	this->blurQuality = static_cast<EBlurQuality>(desiredQuality);
 	//Log::Info("SSAO Blur Quality: %d", this->quality);
@@ -707,15 +710,23 @@ void AmbientOcclusionPass::ChangeAOTechnique(int upOrDown)
 	else				desiredQuality = desiredQuality < 0 ? 0 : desiredQuality;
 	this->aoTech = static_cast<EAOTechnique>(desiredQuality);
 }
+void AmbientOcclusionPass::ChangeAOQuality(int upOrDown)
+{
+	int desiredQuality = this->aoQuality + upOrDown;
+	if (upOrDown > 0)	desiredQuality = desiredQuality >= AO_QUALITY_NUM_OPTIONS ? AO_QUALITY_NUM_OPTIONS - 1 : desiredQuality;
+	else				desiredQuality = desiredQuality < 0 ? 0 : desiredQuality;
+	this->aoQuality = static_cast<EAOQuality>(desiredQuality);
+	Log::Info("AO Quality: %d", this->aoQuality);
+}
 TextureID AmbientOcclusionPass::GetBlurredAOTexture(Renderer* pRenderer) const
 {
 	TextureID ret = 0;
 	switch (blurQuality)
 	{
-	case AmbientOcclusionPass::LOW:
-		ret = pRenderer->GetRenderTargetTexture(this->blurRenderTarget);	// gaussian blur RT
+	case AmbientOcclusionPass::BLUR_QUALITY_LOW:
+		ret = pRenderer->GetRenderTargetTexture(this->gaussianBlurRenderTarget);	// gaussian blur RT
 		break;
-	case AmbientOcclusionPass::HIGH:
+	case AmbientOcclusionPass::BLUR_QUALITY_HIGH:
 		ret = this->bilateralBlurUAVs[1];
 		break;
 	default:

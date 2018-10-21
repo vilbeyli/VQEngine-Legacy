@@ -43,8 +43,9 @@ const Input::KeyMapping Input::sKeyMap = []()
 	m["A"] = 65;		m["a"] = 65;	m["B"] = 66;	m["b"] = 66;
 	m["C"] = 67;		m["c"] = 67;	m["N"] = 78;	m["n"] = 78;
 	m["R"] = 82;		m["r"] = 82;	m["T"] = 'T';	m["t"] = 'T';
-	m["F"] = 'F';		m["f"] = 'F';
-	
+	m["F"] = 'F';		m["f"] = 'F';	m["J"] = 'J';	m["j"] = 'J';
+	m["K"] = 'K';		m["k"] = 'K';
+
 
 	m["\\"] = 220;		m[";"] = 186;
 	m["'"] = 222;
@@ -111,7 +112,7 @@ void Input::KeyUp(KeyCode key)
 	m_keys[key] = false;
 }
 
-void Input::ButtonDown(KeyCode btn)
+void Input::ButtonDown(EMouseButtons btn)
 {
 #if defined(_DEBUG) && defined(LOG)
 	Log::Info("Mouse Button Down: %d", btn);
@@ -120,7 +121,7 @@ void Input::ButtonDown(KeyCode btn)
 	m_buttons[btn] = true;
 }
 
-void Input::ButtonUp(KeyCode btn)
+void Input::ButtonUp(EMouseButtons btn)
 {
 #if defined(_DEBUG) && defined(LOG)
 	Log::Info("Mouse Button Up: %d", btn);
@@ -226,6 +227,7 @@ void Input::PostUpdate()
 	memcpy(m_prevKeys, m_keys, sizeof(bool) * KEY_COUNT);
 	m_mouseDelta[0] = m_mouseDelta[1] = 0;
 	m_mouseScroll = 0;
+	memset(m_buttons, false, sizeof(bool) * 17);
 }
 
 const long * Input::GetDelta() const

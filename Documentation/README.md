@@ -27,8 +27,8 @@ Below is the collection of resources used for building the VQEngine. Items marke
 ## Ambient Occlusion (SSAO)
  - [**Modified Crysis SSAO w/ Normal Oriented Hemisphere***](https://john-chapman-graphics.blogspot.com/2013/01/ssao-tutorial.html)
  - [NVIDIA HBAO](http://developer.download.nvidia.com/presentations/2008/SIGGRAPH/HBAO_SIG08b.pdf)
- - [**NVIDIA (Bavoil) Deinterleaved Texturing & Sampling Patterns***](http://twvideo01.ubm-us.net/o1/vault/gdc2013/slides/822298Bavoil_Louis_ParticleShadows.pdf)
-- [**Filion & McNaughton: StarCraft II Effects & Techniques***](https://developer.amd.com/wordpress/media/2013/01/Chapter05-Filion-StarCraftII.pdf) / [Powerpoint (PDF)](https://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf)
+ - [NVIDIA (Bavoil) Deinterleaved Texturing & Sampling Patterns](http://twvideo01.ubm-us.net/o1/vault/gdc2013/slides/822298Bavoil_Louis_ParticleShadows.pdf)
+- [Filion & McNaughton: StarCraft II Effects & Techniques](https://developer.amd.com/wordpress/media/2013/01/Chapter05-Filion-StarCraftII.pdf) / [Powerpoint (PDF)](https://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf)
 - [Frederik P. Aalund: A Comparative Study of SSAO Methods](https://www.gamedevs.org/uploads/comparative-study-of-ssao-methods.pdf)
 - [Simon Wallner: Ogre3D - 5 SSAO Techniques](https://www.cg.tuwien.ac.at/research/publications/2010/WALLNER-2010-CSSAO/WALLNER-2010-CSSAO-doc.pdf)
 

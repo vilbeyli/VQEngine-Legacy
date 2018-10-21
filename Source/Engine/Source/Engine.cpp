@@ -688,6 +688,7 @@ void Engine::HandleInput()
 				const float step = 0.1f;
 				if (mpInput->IsScrollUp()) { mAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mAOPass.intensity); }
 				if (mpInput->IsScrollDown()) { mAOPass.intensity -= step; if (mAOPass.intensity < 0.301) mAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mAOPass.intensity); }
+				//if (mpInput->IsMouseDown(Input::EMouseButtons::MOUSE_BUTTON_MIDDLE)) mAOPass.ChangeAOQuality(-1);
 			}
 			else if (mpInput->IsKeyDown("Ctrl"))
 			{
@@ -699,6 +700,9 @@ void Engine::HandleInput()
 				const float step = 0.5f;
 				if (mpInput->IsScrollUp()) { mAOPass.radius += step; Log::Info("SSAO Radius: %.2f", mAOPass.radius); }
 				if (mpInput->IsScrollDown()) { mAOPass.radius -= step; if (mAOPass.radius < 0.301) mAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mAOPass.radius); }
+				//if (mpInput->IsMouseDown(Input::EMouseButtons::MOUSE_BUTTON_MIDDLE)) mAOPass.ChangeAOQuality(+1);
+				if (mpInput->IsKeyTriggered("K")) mAOPass.ChangeAOQuality(+1);
+				if (mpInput->IsKeyTriggered("J")) mAOPass.ChangeAOQuality(-1);
 			}
 		}
 #endif
@@ -966,6 +970,8 @@ void Engine::Render()
 #endif
 
 #if ENABLE_TRANSPARENCY
+		// Untested. to be refactored when transparency is fully implemented.
+		
 		// TRANSPARENT OBJECTS - FORWARD RENDER
 		mpGPUProfiler->BeginEntry("Alpha Pass (Forward)");
 		mpCPUProfiler->BeginEntry("Alpha Pass (Forward)");

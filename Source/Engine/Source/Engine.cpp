@@ -1045,6 +1045,7 @@ void Engine::Render()
 		const bool bZPrePass = mEngineConfig.bSSAO && bSceneSSAO;
 		const TextureID tSSAO = bZPrePass
 			? mAOPass.GetBlurredAOTexture(mpRenderer)
+			? mAOPass.GetBlurredAOTexture(mpRenderer) 
 			: mAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mpActiveScene->mSceneView.environmentMap.irradianceMap;
 		const SamplerID smpEnvMap = mpActiveScene->mSceneView.environmentMap.envMapSampler < 0 
@@ -1073,16 +1074,7 @@ void Engine::Render()
 
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			{
-				mpGPUProfiler->BeginEntry("AO");
-
-				mpGPUProfiler->BeginEntry("Occlusion");
-				mAOPass.RenderOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
-				mpGPUProfiler->EndEntry();	// Occlusion
-
-				mpGPUProfiler->BeginEntry("Blur");
-				mAOPass.GaussianBlurPass(mpRenderer, tSSAO);
-				mpGPUProfiler->EndEntry(); // Blur
-				mpGPUProfiler->EndEntry(); // AO
+				mAOPass.RenderAmbientOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
 			}
 			mpRenderer->EndEvent(); // Ambient Occlusion Pass
 		}
@@ -1122,7 +1114,10 @@ void Engine::Render()
 			, tSSAO
 			, renderTarget
 		};
+
+		mpGPUProfiler->BeginEntry("Lighting<Forward> Pass");
 		mForwardLightingPass.RenderLightingPass(forwardLightingParams);
+		mpGPUProfiler->EndEntry();
 	}
 
 	RenderLights();

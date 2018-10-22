@@ -1045,7 +1045,6 @@ void Engine::Render()
 		const bool bZPrePass = mEngineConfig.bSSAO && bSceneSSAO;
 		const TextureID tSSAO = bZPrePass
 			? mAOPass.GetBlurredAOTexture(mpRenderer)
-			? mAOPass.GetBlurredAOTexture(mpRenderer) 
 			: mAOPass.whiteTexture4x4;
 		const TextureID texIrradianceMap = mpActiveScene->mSceneView.environmentMap.irradianceMap;
 		const SamplerID smpEnvMap = mpActiveScene->mSceneView.environmentMap.envMapSampler < 0 

@@ -68,11 +68,13 @@ void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Set
 
 
 	ShaderDesc instancedShaderDesc = { "DepthShader",
-		ShaderStageDesc{"DepthShader_vs.hlsl", { ShaderMacro{ "INSTANCED", "1"}, ShaderMacro{"INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) } } },
+		ShaderStageDesc{"DepthShader_vs.hlsl", { 
+			ShaderMacro{ "INSTANCED"     , "1" }, 
+			ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) } 
+		}},
 		ShaderStageDesc{"DepthShader_ps.hlsl" , {} }
 	};
 	this->mShadowMapShaderInstanced = pRenderer->CreateShader(instancedShaderDesc);
-
 
 	ZeroMemory(&mShadowViewPort_Spot, sizeof(D3D11_VIEWPORT));
 	this->mShadowViewPort_Spot.Height = static_cast<float>(mShadowMapDimension_Spot);
@@ -85,34 +87,30 @@ void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Set
 void ShadowMapPass::InitializeDirectionalLightShadowMap(Renderer * pRenderer, const Settings::ShadowMap & shadowMapSettings)
 {
 	const int textureDimension = static_cast<int>(shadowMapSettings.dimension);
-	const bool bDepthOnly = true;
-	const EImageFormat format = bDepthOnly ? R32 : R24G8;
+	const EImageFormat format = R32;
 
 	DepthTargetDesc depthDesc;
-	depthDesc.format = bDepthOnly ? D32F : D24UNORM_S8U;
+	depthDesc.format = D32F;
 	TextureDesc& texDesc = depthDesc.textureDesc;
 	texDesc.format = format;
 	texDesc.usage = static_cast<ETextureUsage>(DEPTH_TARGET | RESOURCE);
-
 	texDesc.height = texDesc.width = textureDimension;
 	texDesc.arraySize = 1;
 
-#if 0
 	// first time - add target
 	if (this->mDepthTarget_Directional == -1)
 	{
 		this->mDepthTarget_Directional = pRenderer->AddDepthTarget(depthDesc)[0];
 		this->mShadowMapTexture_Directional = pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional);
 	}
-	else // other times - resize target
+	else // other times - check if dimension changed
 	{
-		pRenderer->ResizeDepthTarget(this->mDepthTarget_Directional, depthDesc);
+		const bool bDimensionChanged = shadowMapSettings.dimension != pRenderer->GetTextureObject(pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional))._width;
+		if (bDimensionChanged)
+		{
+			pRenderer->RecycleDepthTarget(this->mDepthTarget_Directional, depthDesc);
+		}
 	}
-#else
-	// always add depth target when loading a new scene
-	this->mDepthTarget_Directional = pRenderer->AddDepthTarget(depthDesc)[0];
-	this->mShadowMapTexture_Directional = pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional);
-#endif
 
 	mShadowViewPort_Directional.Width = static_cast<FLOAT>(textureDimension);
 	mShadowViewPort_Directional.Height = static_cast<FLOAT>(textureDimension);

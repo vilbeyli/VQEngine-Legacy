@@ -87,6 +87,7 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// --- SHADER
 	ShaderID				CreateShader(const ShaderDesc& shaderDesc);
+	ShaderID				ReloadShader(const ShaderDesc& shaderDesc, const ShaderID shaderID);
 
 	// --- TEXTURE
 	//						example params:			"bricks_d.png", "Data/Textures/"
@@ -113,6 +114,8 @@ public:
 	RenderTargetID				AddRenderTarget(const RenderTargetDesc& renderTargetDesc);
 	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
 
+	bool						RecycleDepthTarget(DepthTargetID depthTargetID, const DepthTargetDesc& newDepthTargetDesc);
+
 	// uses the given texture object, doesn't create a new texture for the render target
 	//
 	RenderTargetID				AddRenderTarget(const Texture& textureObj, D3D11_RENDER_TARGET_VIEW_DESC& RTVDesc);
@@ -129,7 +132,6 @@ public:
 	void					SetUABuffer(BufferID bufferID);
 	void					SetTexture(const char* texName, TextureID tex);
 	void					SetRWTexture(const char* texName, TextureID tex);
-	//void					SetTextureArray(const char* texName, const std::vector<TextureID>& tex); // do we allow multiple texture id -> tex2dArr srv ?
 	inline void				SetTextureArray(const char* texName, TextureID texArray) { SetTexture(texName, texArray); }
 	inline void				SetTextureFromArraySlice(const char* texName, TextureID texArray, unsigned slice) { SetTexture_(texName, texArray, slice); }
 	
@@ -227,7 +229,7 @@ private:
 	RenderTargetID					mBackBufferRenderTarget;	// todo: remove or rename
 	TextureID						mDefaultDepthBufferTexture;	// todo: remove or rename
 
-	// DATA
+	// RENDERING RESOURCES
 	//
 	std::vector<Shader*>			mShaders;
 	std::vector<Texture>			mTextures;

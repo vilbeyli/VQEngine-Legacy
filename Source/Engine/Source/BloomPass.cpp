@@ -184,21 +184,31 @@ void BloomPass::UpdateSettings(Renderer* pRenderer, const Settings::Bloom& bloom
 	ShaderDesc CSDesc = pRenderer->GetShaderDesc(blurComputeShaderPingPong[0]);
 	auto& Macros = CSDesc.stages[/*EShaderStage::CS*/0].macros;
 	// PASS_COUNT macro is 1 before the last element in the Macros array, hence size-2
-	Macros[Macros.size() - 2] = { "PASS_COUNT", std::to_string(bloomSettings.blurStrength) };
-	this->blurComputeShaderPingPong[0] = pRenderer->CreateShader(CSDesc);
+
+	const char* pStrPassCount = Macros[Macros.size() - 2].value.c_str();
+	const int blurStrengthPrev = std::stoi(pStrPassCount);
+	if (blurStrengthPrev != bloomSettings.blurStrength)
+	{
+		Macros[Macros.size() - 2] = { "PASS_COUNT", std::to_string(bloomSettings.blurStrength) };
+		this->blurComputeShaderPingPong[0] = pRenderer->ReloadShader(CSDesc, this->blurComputeShaderPingPong[0]);
+	}
+
 #if ENABLE_COMPUTE_BLUR
 	CSDesc = pRenderer->GetShaderDesc(blurComputeShaderPingPong[1]);
 	Macros = CSDesc.stages[/*EShaderStage::CS*/0].macros;
 	// PASS_COUNT macro is 1 before the last element in the Macros array, hence size-2
 	Macros[Macros.size() - 2] = { "PASS_COUNT", std::to_string(bloomSettings.blurStrength) };
-	this->blurComputeShaderPingPong[1] = pRenderer->CreateShader(CSDesc);
+	this->blurComputeShaderPingPong[1] = pRenderer->ReloadShader(CSDesc, this->blurComputeShaderPingPong[1]);
 #endif
 #if ENABLE_COMPUTE_BLUR_TRANSPOZE
 	CSDesc = pRenderer->GetShaderDesc(blurHorizontalTranspozeComputeShader);
 	Macros = CSDesc.stages[/*EShaderStage::CS*/0].macros;
 	// PASS_COUNT macro is 1 before the last element in the Macros array, hence size-2
-	Macros[Macros.size() - 2] = { "PASS_COUNT", std::to_string(bloomSettings.blurStrength) };
-	this->blurHorizontalTranspozeComputeShader = pRenderer->CreateShader(CSDesc);
+	if (blurStrengthPrev != bloomSettings.blurStrength)
+	{
+		Macros[Macros.size() - 2] = { "PASS_COUNT", std::to_string(bloomSettings.blurStrength) };
+		this->blurHorizontalTranspozeComputeShader = pRenderer->ReloadShader(CSDesc, this->blurHorizontalTranspozeComputeShader);
+	}
 #endif
 
 #endif // USE_COMPUTE_BLUR

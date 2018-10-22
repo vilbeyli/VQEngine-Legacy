@@ -15,3 +15,32 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
+
+#pragma once
+
+#include <windows.h>
+#include <string>
+
+namespace VQEngine
+{
+	class VQUI
+	{
+	public:
+		static const char* pDLLName;
+
+		bool Initialize(std::string& errMsgIn);
+		void Exit();
+
+
+		void ShowWindow() const ;
+
+	private:
+		HMODULE mHModule;
+
+		int mHControlPanel0;
+		int mHControlPanel1;
+
+		void (*pFnShowWindow)(int);
+		int  (*pFnCreateWindow)(int data);
+	};
+}

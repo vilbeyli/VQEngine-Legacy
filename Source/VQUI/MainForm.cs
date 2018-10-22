@@ -17,9 +17,17 @@ namespace VQUI
     {
         //VQUIMainForm Get();
 
+        int val;
+
         public VQUIMainForm()
         {
             InitializeComponent();
+        }
+        public VQUIMainForm(int v)
+        {
+            val = v;
+            InitializeComponent();
+            labelData.Text = val.ToString();
         }
 
         //[DllExport("Shutdown", CallingConvention = CallingConvention.Cdecl)]

@@ -4,7 +4,6 @@
     <ClCompile Include="$(SolutionDir)Source\Application\Source\Input.cpp" />
     <ClCompile Include="..\Application\Source\ThreadPool.cpp" />
     <ClCompile Include="..\Application\Source\Application.cpp" />
-    <ClCompile Include="..\Application\Source\VQUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Application\Input.h" />
@@ -12,6 +11,5 @@
     <ClInclude Include="$(SolutionDir)Source\Application\HandleTypedefs.h" />
     <ClInclude Include="..\Application\ThreadPool.h" />
     <ClInclude Include="..\Application\Application.h" />
-    <ClInclude Include="..\Application\VQUI.h" />
   </ItemGroup>
 </Project>

@@ -32,7 +32,11 @@ struct EngineConfig;
 
 namespace VQEngine
 {
-class UI
+
+// Heads-Up Display
+//
+// Renders performance numbers, engine controls and frame stats;
+class HUD
 {
 public:
 	struct ProfilerStack
@@ -43,7 +47,7 @@ public:
 
 
 public:
-	UI(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig);
+	HUD(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig);
 
 	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer, ProfilerStack& profilers);
 	void Update();
@@ -64,5 +68,6 @@ private:
 
 	ProfilerStack	mProfilerStack;
 
+	float mTestFloat;
 };
 }

@@ -65,9 +65,11 @@ public:
 
 private:
 	void InitRawInputDevices();
+
 	void InitWindow(Settings::Window& windowSettings);
-	bool InitCOMInterface(std::string& errMsg); // to talk to the C# UI DLL
 	void ShutdownWindows();
+	
+	bool InitCOMInterface(std::string& errMsg); // to talk to the C# UI DLL
 	void ShutdownCOMInterface();
 	
 	void CaptureMouse(bool bDoCapture);

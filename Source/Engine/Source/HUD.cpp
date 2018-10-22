@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "UI.h"
+#include "HUD.h"
 #include "Transform.h"
 #include "DataStructures.h"
 
@@ -31,7 +31,7 @@ using namespace VQEngine;
 
 
 
-void UI::RenderBackground(const vec3& color, float alpha, const vec2& size, const vec2& screenPosition) const
+void HUD::RenderBackground(const vec3& color, float alpha, const vec2& size, const vec2& screenPosition) const
 {
 	assert(mpRenderer);
 	const vec2 windowSizeXY = mpRenderer->GetWindowDimensionsAsFloat2();
@@ -64,19 +64,20 @@ void UI::RenderBackground(const vec3& color, float alpha, const vec2& size, cons
 
 
 
-VQEngine::UI::UI(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig)
+VQEngine::HUD::HUD(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig)
 	: mBuiltInMeshes(BuiltInMeshes)
 	, mEngineControls(engineConfig)
+	, mTestFloat(0.0f)
 {}
 
-void VQEngine::UI::Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer, ProfilerStack& profilers)
+void VQEngine::HUD::Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer, ProfilerStack& profilers)
 {
 	mpRenderer = pRenderer;
 	mpTextRenderer = pTextRenderer;
 	mProfilerStack = profilers;
 }
 
-void VQEngine::UI::Exit()
+void VQEngine::HUD::Exit()
 {
 	; //empty
 }
@@ -142,7 +143,7 @@ constexpr float Y_NORMALIZED_POSITION_PROFILER_GPU = Y_NORMALIZED_POSITION_PROFI
 constexpr float LINE_HEIGHT_IN_PX = 17.0f;
 constexpr int PX_OFFSET_FRAMESTATS_PERFNUMBERS = 40;
 
-void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
+void VQEngine::HUD::RenderPerfStats(const FrameStats& stats) const
 {
 	TextDrawDescription drawDesc;
 	drawDesc.color = LinearColor::white;
@@ -209,7 +210,7 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 }
 
 
-void VQEngine::UI::RenderEngineControls() const
+void VQEngine::HUD::RenderEngineControls() const
 {
 	const vec2 screenSizeInPixels = mpRenderer->GetWindowDimensionsAsFloat2();
 
@@ -252,7 +253,11 @@ void VQEngine::UI::RenderEngineControls() const
 	const float backGroundLineSpan = static_cast<float>(ControlEntries.size() + 2);	// back ground a little bigger - 2 lines bigger.
 	const float avgLetterWidthInPixels = 7.0f;		// hardcoded... determines background width
 
-	vec2 sz = vec2(avgLetterWidthInPixels * longestStringLength / screenSizeInPixels.x(), LINE_HEIGHT_PX * backGroundLineSpan / screenSizeInPixels.y());
+	vec2 sz = vec2
+	(
+		  avgLetterWidthInPixels * longestStringLength / screenSizeInPixels.x()
+		, LINE_HEIGHT_PX * backGroundLineSpan / screenSizeInPixels.y()
+	);
 	RenderBackground(sBackgroundColor, BACKGROUND_ALPHA, sz, PX_POS_CONTROLS - vec2(X_MARGIN_PX, X_MARGIN_PX));
 
 
@@ -263,6 +268,11 @@ void VQEngine::UI::RenderEngineControls() const
 		drawDesc.text = Entry;
 		mpTextRenderer->RenderText(drawDesc);
 	});
+
+	drawDesc.color = LinearColor::green;
+	drawDesc.screenPosition = vec2(PX_POS_CONTROLS.x(), PX_POS_CONTROLS.y() + (line) * LINE_HEIGHT_PX);
+	drawDesc.text = "mTestFloat = " + std::to_string(mTestFloat);
+	mpTextRenderer->RenderText(drawDesc);
 
 	mpRenderer->EndEvent();
 }

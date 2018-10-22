@@ -477,41 +477,6 @@ bool Application::InitCOMInterface(std::string& errMsg)
 		return false;
 	}
 	Log::Info("COM Interface initialized successfully.");
-
-	// Load VQUI.dll
-	const char* pDLL = "VQUI.dll";
-	HMODULE mdl;
-	mdl = LoadLibrary(TEXT(pDLL));
-	if (mdl == NULL)
-	{
-		errMsg = std::string("LoadLibrary() failed for " + std::string(pDLL));
-		return false;
-	}
-
-	// get the Function Address for TestFn
-#if 0
-	const char* pFnName = "TestFn";
-#else
-	const char* pFnName = "LaunchWindow";
-#endif
-	using pfnTestFn = void(*)();
-	pfnTestFn TestFn = (pfnTestFn)GetProcAddress(mdl, pFnName);
-	if (TestFn == NULL)
-	{
-		errMsg = std::string(std::string(pFnName) + " doesn't exist in ProcAddress");
-		FreeLibrary(mdl);
-		return false;
-	}
-
-	std::thread th(TestFn);
-	Log::Info("Sleeping...");
-	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-	std::thread th2(TestFn);
-	Log::Info("Woke Up");
-	th.join();
-	th2.join();
-
-	FreeLibrary(mdl);
 	return true;
 }
 

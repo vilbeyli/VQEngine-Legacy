@@ -182,7 +182,6 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
     <ClCompile Include="$(SolutionDir)Source\Application\Source\Input.cpp" />
     <ClCompile Include="..\Application\Source\Application.cpp" />
     <ClCompile Include="..\Application\Source\ThreadPool.cpp" />
-    <ClCompile Include="..\Application\Source\VQUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Application\Application.h" />
@@ -190,7 +189,6 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
     <ClInclude Include="$(SolutionDir)Source\Application\SystemDefs.h" />
     <ClInclude Include="..\Application\ThreadPool.h" />
     <ClInclude Include="$(SolutionDir)Source\Application\HandleTypedefs.h" />
-    <ClInclude Include="..\Application\VQUI.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

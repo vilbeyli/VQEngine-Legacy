@@ -134,7 +134,7 @@ Engine::Engine()
 	, mbUsePaniniProjection(false)
 	, mFrameCount(0)
 	, mAccumulator(0.0f)
-	, mUI(mBuiltinMeshes, mEngineConfig)
+	, mHUD(mBuiltinMeshes, mEngineConfig)
 	, mShadowMapPass(mpCPUProfiler, mpGPUProfiler)
 	, mDeferredRenderingPasses(mpCPUProfiler, mpGPUProfiler)
 	, mAOPass(mpCPUProfiler, mpGPUProfiler)
@@ -205,10 +205,16 @@ bool Engine::Initialize(HWND hwnd)
 	if (!mpTextRenderer->Initialize(mpRenderer))
 	{
 		Log::Error("Cannot initialize Text Renderer.\n");
-		return false;
+		//return false;
 	}
-	mUI.Initialize(mpRenderer, mpTextRenderer, UI::ProfilerStack{mpCPUProfiler, mpGPUProfiler});
+	mHUD.Initialize(mpRenderer, mpTextRenderer, HUD::ProfilerStack{mpCPUProfiler, mpGPUProfiler});
 	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
+
+	std::string errMsg;
+	if (!mUI.Initialize(errMsg))
+	{
+		Log::Error(errMsg);
+	}
 
 	// INITIALIZE RENDERING
 	//--------------------------------------------------------------
@@ -517,6 +523,7 @@ void Engine::Exit()
 	mpCPUProfiler->EndProfile();
 	mpGPUProfiler->Exit();
 	mUI.Exit();
+	mHUD.Exit();
 	mpTextRenderer->Exit();
 	mpRenderer->Exit();
 	mBuiltinMeshes.clear();
@@ -1283,8 +1290,8 @@ void Engine::RenderUI() const
 	mpGPUProfiler->BeginEntry("UI");
 	mpCPUProfiler->BeginEntry("UI");
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);	
-	if (mEngineConfig.mbShowProfiler) { mUI.RenderPerfStats(mFrameStats); }
-	if (mEngineConfig.mbShowControls) { mUI.RenderEngineControls(); }
+	if (mEngineConfig.mbShowProfiler) { mHUD.RenderPerfStats(mFrameStats); }
+	if (mEngineConfig.mbShowControls) { mHUD.RenderEngineControls(); }
 	if (!mbLoading)
 	{
 		if (!mpActiveScene)

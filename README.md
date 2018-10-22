@@ -27,13 +27,13 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 
 - Point Light Shadows
 - Depth of Field
-- Screen Space Reflections
+- Reflections
 - Linear (Cylinder) Lights
 - Mipped Textures
 
 ## Released
 
-**[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - CPU & GPU Optimizations, Compute Shaders, Improved SSAO** - October##-2018
+**[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - CPU & GPU Optimizations, Compute Shaders** - October21-2018
  
  - Compute Shader Pipeline
  - Live Shader Editing (Launch Once - Edit Shader Source - Reload Shader)

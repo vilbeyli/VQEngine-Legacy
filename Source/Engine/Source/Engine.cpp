@@ -32,6 +32,7 @@
 // -------------------------------------------------------
 #include "Engine.h"
 #include "Camera.h"
+#include "VQUI.h"
 
 #include "Application/Application.h"
 #include "Application/Input.h"
@@ -142,6 +143,7 @@ Engine::Engine()
 	, mDebugPass(mpCPUProfiler, mpGPUProfiler)
 	, mZPrePass(mpCPUProfiler, mpGPUProfiler)
 	, mForwardLightingPass(mpCPUProfiler, mpGPUProfiler)
+	, mpUI(nullptr)
 {}
 
 Engine::~Engine(){}
@@ -211,9 +213,12 @@ bool Engine::Initialize(HWND hwnd)
 	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
 
 	std::string errMsg;
-	if (!mUI.Initialize(errMsg))
+	mpUI = new VQUI();
+	if (!mpUI->Initialize(errMsg))
 	{
 		Log::Error(errMsg);
+		delete mpUI;
+		mpUI = nullptr;
 	}
 
 	// INITIALIZE RENDERING
@@ -522,7 +527,12 @@ void Engine::Exit()
 {
 	mpCPUProfiler->EndProfile();
 	mpGPUProfiler->Exit();
-	mUI.Exit();
+	if (mpUI)
+	{
+		mpUI->Exit();
+		delete mpUI;
+		mpUI = nullptr;
+	}
 	mHUD.Exit();
 	mpTextRenderer->Exit();
 	mpRenderer->Exit();

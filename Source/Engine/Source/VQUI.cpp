@@ -21,6 +21,8 @@
 
 #include "Utilities/Log.h"
 
+#include "Application/ThreadPool.h"
+
 #include <thread>
 #include <assert.h>
 
@@ -30,8 +32,15 @@ using namespace VQEngine;
 
 const char* VQEngine::VQUI::pDLLName = "VQUI.dll";
 
+void VQEngine::VQUI::ShowWindow0() const { auto fnLaunchWnd = [&]() { pFnShowWindow(mHControlPanel0); }; mpThreadPool->AddTask(fnLaunchWnd); }
+void VQEngine::VQUI::ShowWindow1() const { auto fnLaunchWnd = [&]() { pFnShowWindow(mHControlPanel1); }; mpThreadPool->AddTask(fnLaunchWnd); }
+void VQEngine::VQUI::ShowWindow2() const { auto fnLaunchWnd = [&]() { pFnShowWindow(mHControlPanel2); }; mpThreadPool->AddTask(fnLaunchWnd); }
+void VQEngine::VQUI::ShowWindow3() const { auto fnLaunchWnd = [&]() { pFnShowWindow(mHControlPanel3); }; mpThreadPool->AddTask(fnLaunchWnd); }
+
 bool VQUI::Initialize(std::string& errMsg)
 {
+	mpThreadPool = new ThreadPool(4);
+
 	// Load the DLL
 	mHModule = LoadLibrary(TEXT(VQUI::pDLLName));
 	if (mHModule == NULL)
@@ -75,17 +84,15 @@ bool VQUI::Initialize(std::string& errMsg)
 		assert(false);
 	}
 
-
 	mHControlPanel0 = pFnCreateWindow(42);
 	mHControlPanel1 = pFnCreateWindow(154);
+	mHControlPanel2 = pFnCreateWindow(3);
+	mHControlPanel3 = pFnCreateWindow(14);
 
-	std::thread th(pFnShowWindow, mHControlPanel0);
-	Log::Info("Sleeping...");
-	std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-	std::thread th2(pFnShowWindow, mHControlPanel1);
-	Log::Info("Woke Up");
-	th.join();
-	th2.join();
+	this->ShowWindow0();
+	//	this->ShowWindow1();
+	//	this->ShowWindow3();
+	//	this->ShowWindow2();
 #else
 
 #endif
@@ -97,6 +104,7 @@ bool VQUI::Initialize(std::string& errMsg)
 
 void VQUI::Exit()
 {
+	delete mpThreadPool;
 	FreeLibrary(mHModule);
 }
 

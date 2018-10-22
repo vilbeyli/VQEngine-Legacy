@@ -30,6 +30,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 - Screen Space Reflections
 - Linear (Cylinder) Lights
 - Mipped Textures
+- UI
 
 ## Released
 
@@ -84,6 +85,7 @@ The projects are set to build with the following configurations:
 
  - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk) - 10.0.17134.0
  - Visual Studio 2017 - v141, v140
+ - C# .NET Framework 4.7 (if VQUI enabled)
   
 - **System**: Ryzen/GCN. VQEngine hasn't been tested on other systems. Feel free to [open an issue](https://github.com/vilbeyli/VQEngine/issues) in case of crashes / errors.
 

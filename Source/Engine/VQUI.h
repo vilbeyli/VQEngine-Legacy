@@ -21,6 +21,8 @@
 #include <windows.h>
 #include <string>
 
+namespace VQEngine { class ThreadPool; }
+
 namespace VQEngine
 {
 	class VQUI
@@ -31,14 +33,27 @@ namespace VQEngine
 		bool Initialize(std::string& errMsgIn);
 		void Exit();
 
-
-		void ShowWindow() const ;
+		
+		// currently running windows on class's own threadpool.
+		//
+		// due to the limitation of the threading system ( no
+		// function parameters supported when using AddTask() )
+		// using dedicated functions for now.
+		void ShowWindow0() const;
+		void ShowWindow1() const; // unused
+		void ShowWindow2() const; // unused
+		void ShowWindow3() const; // unused
 
 	private:
 		HMODULE mHModule;
 
+		// need our own threadpool, Application's won't work.
+		ThreadPool* mpThreadPool;
+
 		int mHControlPanel0;
 		int mHControlPanel1;
+		int mHControlPanel2;
+		int mHControlPanel3;
 
 		void (*pFnShowWindow)(int);
 		int  (*pFnCreateWindow)(int data);

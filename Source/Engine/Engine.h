@@ -28,7 +28,6 @@
 #include "Settings.h"
 #include "RenderPasses.h"
 #include "HUD.h"
-#include "VQUI.h"
 
 #include <memory>
 #include <atomic>
@@ -38,7 +37,7 @@
 using std::shared_ptr;
 using std::unique_ptr;
 
-namespace VQEngine { class ThreadPool; }
+namespace VQEngine { class ThreadPool; class VQUI; }
 
 class Renderer;
 class TextRenderer;
@@ -77,10 +76,6 @@ public:
 	static Engine*					GetEngine();
 
 	~Engine();
-
-#ifdef _WIN64
-	//fasdfkl
-#endif
 
 #ifdef _WIN32
 	void* operator new(size_t size) { return _mm_malloc(size, 16); }
@@ -206,7 +201,7 @@ private:
 	std::vector<const GameObject*>	mTBNDrawObjects;
 	
 	VQEngine::HUD					mHUD;
-	VQEngine::VQUI					mUI;
+	VQEngine::VQUI*					mpUI;
 
 	//----------------------------------------------------------------------------------------------------------------
 	// ENGINE STATE

@@ -28,7 +28,6 @@
 
 // http://www.cplusplus.com/reference/thread/thread/
 // https://stackoverflow.com/a/32593825/2034041
-// todo: finish implementation for shader hotswapping
 
 using Task = std::function<void()>;
 
@@ -93,7 +92,6 @@ private:
 namespace VQEngine
 {
 	// src: https://www.youtube.com/watch?v=eWTGtp3HXiw
-
 	class ThreadPool
 	{
 	public:

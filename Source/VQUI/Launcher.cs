@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace VQUI
 {
-    class Launcher
+    public class Launcher
     {
         [DllExport("TestFn", CallingConvention = CallingConvention.Cdecl)]
         static public void TestFn() { MessageBox.Show("Test: Hi"); }
@@ -20,19 +20,41 @@ namespace VQUI
             Application.Run(new VQUIMainForm());
         }
 
-        static List<VQUIMainForm> UIWindowList = new List<VQUIMainForm>();
+
+        // CONTROL PANELS
+        //
+        static List<ControlPanelForm> ControlPanelFormList = new List<ControlPanelForm>();
+
+        static int GetFormIndex(int VQHandle) { return VQHandle-1024; }
 
         [DllExport("CreateControlPanel", CallingConvention = CallingConvention.Cdecl)]
         static public int CreateControlPanel(int val)
         {
-            UIWindowList.Add(new VQUIMainForm(val));
-            return UIWindowList.Count - 1;
+            ControlPanelFormList.Add(new ControlPanelForm());
+            return ControlPanelFormList.Count - 1 + 1024;
         }
 
+        [STAThread]
         [DllExport("ShowControlPanel", CallingConvention = CallingConvention.Cdecl)]
         static public void ShowControlPanel(int windowHandle)
         {
-            Application.Run(UIWindowList[windowHandle]);
+            Application.Run(ControlPanelFormList[GetFormIndex(windowHandle)]);
+        }
+
+
+        [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
+        public unsafe struct SliderDescData
+        {
+            public IntPtr pData;
+            //[MarshalAs(UnmanagedType.LPStr)] public string name;
+            //[MarshalAs(UnmanagedType.LPArray, SizeConst = 256)] public char[] name;
+            public unsafe fixed char name[256];
+        };
+
+        [DllExport("AddSliderFToControlPanel", CallingConvention = CallingConvention.Cdecl)]
+        public static unsafe void AddSliderFToControlPanel(int hPanel, SliderDescData* pDesc)
+        {
+            ControlPanelFormList[GetFormIndex(hPanel)].AddSliderF(*pDesc);
         }
     }
 }

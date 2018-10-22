@@ -187,12 +187,17 @@ private:
 	template<class T>
 	void mv(std::vector<T>& vTarget, std::vector<T>& vSource, T*& pNext, T* pNextOther)
 	{
+		if (vTarget.size() < vSource.size())
+		{
+			vTarget.resize(vSource.size());
+		}
 		std::move(vSource.begin(), vSource.end(), vTarget.begin());
 		pNext = &vTarget[GetBufferIndex(pNextOther->ID)];
 		for (size_t i = 1; i < vTarget.size(); ++i)
 		{
 			vTarget[i - 1].pNextAvailable = &vTarget[i];
 		}
+		vTarget[vTarget.size() - 1].pNextAvailable = nullptr;
 	}
 };
 

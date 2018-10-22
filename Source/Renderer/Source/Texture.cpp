@@ -100,13 +100,14 @@ void Texture::Release()
 {
 	ReleaseResources(_srvArray, _srv);
 	ReleaseResources(_uavArray, _uav);
-
 	if (_tex2D)
 	{
 		_tex2D->Release();
 		_tex2D = nullptr;
 	}
-
+	_width = _height = _depth = 0;
+	_name = "";
+	_id = -1;
 }
 
 EImageFormat Texture::GetImageFormat() const

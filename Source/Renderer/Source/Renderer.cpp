@@ -243,6 +243,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 			return false;
 		}
 		defaultRT.texture._tex2D = backBufferPtr;
+		defaultRT.texture._id = 0;
 
 		D3D11_TEXTURE2D_DESC texDesc;		// get back buffer description
 		backBufferPtr->GetDesc(&texDesc);
@@ -630,6 +631,25 @@ ShaderID Renderer::CreateShader(const ShaderDesc& shaderDesc)
 	return shader->ID();
 }
 
+ShaderID Renderer::ReloadShader(const ShaderDesc& shaderDesc, const ShaderID shaderID)
+{
+	if (shaderID == -1)
+	{
+		Log::Warning("Reload shader called on uninitialized shader.");
+		return CreateShader(shaderDesc);
+	}
+
+	assert(shaderID >= 0 && shaderID < mShaders.size());
+	Shader* pShader = mShaders[shaderID];
+	delete pShader;
+	pShader = new Shader(shaderDesc.shaderName);
+
+	pShader->CompileShaders(m_device, shaderDesc);
+	pShader->mID = shaderID;
+	mShaders[shaderID] = pShader;
+	return pShader->ID();
+}
+
 ShaderDesc Renderer::GetShaderDesc(ShaderID shaderID) const
 {
 	assert(shaderID >= 0 && mShaders.size() > shaderID);
@@ -725,10 +745,10 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 {
 	Texture tex;
-	tex._width  = texDesc.width;
+	tex._width = texDesc.width;
 	tex._height = texDesc.height;
-	tex._name   = texDesc.texFileName;
-	
+	tex._name = texDesc.texFileName;
+
 
 	// check multi sampling quality level
 	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb173072(v=vs.85).aspx
@@ -741,7 +761,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	UINT miscFlags = 0;
 	miscFlags |= texDesc.bIsCubeMap ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;
 	miscFlags |= texDesc.bGenerateMips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
-	
+
 	UINT arrSize = texDesc.arraySize;
 	const bool bIsTextureArray = texDesc.arraySize > 1;
 	arrSize = texDesc.bIsCubeMap ? 6 : arrSize;
@@ -758,7 +778,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	desc.CPUAccessFlags = static_cast<D3D11_CPU_ACCESS_FLAG>(texDesc.cpuAccessMode);
 	desc.MiscFlags = miscFlags;
 
-	D3D11_SUBRESOURCE_DATA dataDesc = {};	
+	D3D11_SUBRESOURCE_DATA dataDesc = {};
 	D3D11_SUBRESOURCE_DATA* pDataDesc = nullptr;
 	if (texDesc.pData)
 	{
@@ -797,9 +817,9 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 			switch (texDesc.format)
 			{
-			// caution: if initializing for depth texture, and the depth texture
-			//			has stencil defined (d24s8), we have to check for 
-			//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+				// caution: if initializing for depth texture, and the depth texture
+				//			has stencil defined (d24s8), we have to check for 
+				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
 			case EImageFormat::R32:
 				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R32F;
 				break;
@@ -807,7 +827,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 			tex._srvArray.resize(desc.ArraySize, nullptr);
 			tex._depth = desc.ArraySize;
-			for (unsigned i = 0; i < desc.ArraySize; ++i) 
+			for (unsigned i = 0; i < desc.ArraySize; ++i)
 			{
 				srvDesc.Texture2DArray.FirstArraySlice = i;
 				srvDesc.Texture2DArray.ArraySize = desc.ArraySize - i;
@@ -844,9 +864,9 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
 			switch (texDesc.format)
 			{
-			// caution: if initializing for depth texture, and the depth texture
-			//			has stencil defined (d24s8), we have to check for 
-			//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+				// caution: if initializing for depth texture, and the depth texture
+				//			has stencil defined (d24s8), we have to check for 
+				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
 			case EImageFormat::R24G8:
 				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R24_UNORM_X8_TYPELESS;
 				break;
@@ -868,9 +888,21 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 		}
 	}
 
-	tex._id = static_cast<int>(mTextures.size());
-	mTextures.push_back(tex);
-	return mTextures.back()._id;
+	TextureID retID = -1;
+	auto itTex = std::find_if(mTextures.begin(), mTextures.end(), [](const Texture& tex1) {return tex1._id == -1; });
+	if (itTex != mTextures.end())
+	{
+		*itTex = tex;
+		itTex->_id = static_cast<TextureID>((int)std::distance(mTextures.begin(), itTex));
+		retID = itTex->_id;
+	}
+	else
+	{
+		tex._id = static_cast<int>(mTextures.size());
+		mTextures.push_back(tex);
+		retID = mTextures.back()._id;
+	}
+	return retID;
 }
 
 TextureID Renderer::CreateTexture2D(D3D11_TEXTURE2D_DESC & textureDesc, bool initializeSRV)
@@ -1370,6 +1402,42 @@ std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depth
 	return newDepthTargetIDs;
 }
 
+
+bool Renderer::RecycleDepthTarget(DepthTargetID depthTargetID, const DepthTargetDesc& newDepthTargetDesc)
+{
+	const int numTextures = newDepthTargetDesc.textureDesc.arraySize;
+	assert(newDepthTargetDesc.textureDesc.arraySize == 1); // depth target array not supported.
+	
+	// recycle depth target texture and DSV
+	const TextureID texID = GetDepthTargetTexture(depthTargetID);
+	Texture& textureObj = const_cast<Texture&>(GetTextureObject(texID));
+	textureObj.Release();
+	mDepthTargets[depthTargetID].pDepthStencilView->Release();
+	mDepthTargets[depthTargetID].pDepthStencilView = nullptr;
+
+	// CreateTexture2D will use the first Release()d Texture instead of adding a new one.
+	CreateTexture2D(newDepthTargetDesc.textureDesc);
+
+	// create depth stencil view
+	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+	dsvDesc.Format = static_cast<DXGI_FORMAT>(newDepthTargetDesc.format);
+	dsvDesc.ViewDimension = numTextures == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	dsvDesc.Texture2DArray.MipSlice = 0;
+
+	for (int i = 0; i < numTextures; ++i)
+	{
+		dsvDesc.Texture2DArray.ArraySize = numTextures - i;
+		dsvDesc.Texture2DArray.FirstArraySlice = i;
+		HRESULT hr = m_device->CreateDepthStencilView(textureObj._tex2D, &dsvDesc, &mDepthTargets[depthTargetID].pDepthStencilView);
+		if (FAILED(hr))
+		{
+			Log::Error("Depth Stencil Target View");
+			continue;
+		}
+	}
+
+	return true;
+}
 
 const Texture& Renderer::GetTextureObject(TextureID id) const
 {

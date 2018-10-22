@@ -396,7 +396,11 @@ bool Engine::Load(ThreadPool* pThreadPool)
 bool Engine::LoadSceneFromFile()
 {
 	mCurrentLevel = sEngineSettings.levelToLoad;
-	SerializedScene mSerializedScene = Parser::ReadScene(mpRenderer, sEngineSettings.sceneNames[mCurrentLevel]);
+	SerializedScene mSerializedScene;
+	{
+		std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+		mSerializedScene = Parser::ReadScene(mpRenderer, sEngineSettings.sceneNames[mCurrentLevel]);
+	}
 	if (mSerializedScene.loadSuccess == '0')
 	{
 		Log::Error("Scene[%d] did not load.", mCurrentLevel);
@@ -432,6 +436,11 @@ bool Engine::LoadScene(int level)
 	{
 		{
 			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+
+			mpRenderer->UnbindDepthTarget();
+			mpRenderer->UnbindRenderTargets();
+			mpRenderer->Apply();
+
 			mpActiveScene->UnloadScene();
 		}
 		Engine::sEngineSettings.levelToLoad = level;
@@ -1064,16 +1073,7 @@ void Engine::Render()
 
 			mpRenderer->BeginEvent("Ambient Occlusion Pass");
 			{
-				mpGPUProfiler->BeginEntry("AO");
-
-				mpGPUProfiler->BeginEntry("Occlusion");
-				mAOPass.RenderOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
-				mpGPUProfiler->EndEntry();	// Occlusion
-
-				mpGPUProfiler->BeginEntry("Blur");
-				mAOPass.GaussianBlurPass(mpRenderer, tSSAO);
-				mpGPUProfiler->EndEntry(); // Blur
-				mpGPUProfiler->EndEntry(); // AO
+				mAOPass.RenderAmbientOcclusion(mpRenderer, texNormal, mpActiveScene->mSceneView);
 			}
 			mpRenderer->EndEvent(); // Ambient Occlusion Pass
 		}
@@ -1113,7 +1113,10 @@ void Engine::Render()
 			, tSSAO
 			, renderTarget
 		};
+
+		mpGPUProfiler->BeginEntry("Lighting<Forward> Pass");
 		mForwardLightingPass.RenderLightingPass(forwardLightingParams);
+		mpGPUProfiler->EndEntry();
 	}
 
 	RenderLights();

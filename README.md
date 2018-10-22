@@ -38,9 +38,9 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
  - Compute Shader Pipeline
  - Live Shader Editing (Launch Once - Edit Shader Source - Reload Shader)
  - Compute-Optimized Blur Shaders
- - Improved SSAO: Bilateral Blur Filter & [Deinterleaved Texturing](https://developer.nvidia.com/sites/default/files/akamai/gameworks/samples/DeinterleavedTexturing.pdf)
  - View Frustum Culling
  - Instanced Rendering
+ - Shader Permutations w/ Shader Binary Cache support 
 
 
  **[v0.4.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.4.0) - Data-Oriented Engine, Multi-threaded Tasking System, Model Importing, Loading Screen** - July15-2018
@@ -100,6 +100,7 @@ Run `PRE_BUILD.bat` once to initialize the submodules, and run `BUILD.bat` or `B
 | `BUILD.bat` | Builds VQEngine. |
 | `CONSOLIDATE_ARTIFACTS.bat` | Copies binaries and resources required to run VQEngine into `Build/_artifacts` folder.<br/>*Run this script after running `BUILD.bat`.* |
 | `PRE_BUILD_CLEAN.bat` | Deletes contents of the submodule folders. |
+| `CLEAN_SHADER_CACHE.bat` | Removes the `ShaderCache/` folder from VQEngines temporary directory: `%APPDATA%\VQEngine` |
 
 # Controls
 
@@ -115,18 +116,18 @@ Run `PRE_BUILD.bat` once to initialize the submodules, and run `BUILD.bat` or `B
 | Engine Controls |  |
 | :---: | :--- |
 | **Page Up/Down** | Change Environment Map |
-| **;** |	Toggle Displaying CPU/GPU Performance Numbers |
-| **'** / **Shift + '** |	Toggle Displaying Rendering Stats / Renderer Controls |
+| **Ctrl + Shift + F** |	Toggle Displaying CPU/GPU Performance Numbers & Frame Stats |
 | **Backspace** | Pause App |
 | **ESC** |	Exit App |
 
 | Renderer Controls | |
 | :---: | :--- |
-| **F1** |	Toggle Forward/Deferred Rendering |
+| **F1** |	Toggle Controls |
 | **F2** |	Toggle Ambient Occlusion |
 | **F3** |	Toggle Bloom |
 | **F4** |	Toggle Display Render Targets |
 | **F5** |  Toggle Bounding Box Rendering |
+| **F6** |	Toggle Forward/Deferred Rendering |
 
 # 3rd Party Open Source Libraries
  

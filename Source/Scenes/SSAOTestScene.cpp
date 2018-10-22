@@ -18,7 +18,6 @@
 
 #include "SSAOTestScene.h"
 #include "Renderer/Renderer.h"
-#include "Engine/RenderPasses.h"
 
 #undef min
 #undef max

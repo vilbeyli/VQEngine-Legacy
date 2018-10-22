@@ -25,12 +25,13 @@ Below is the collection of resources used for building the VQEngine. Items marke
 # Rendering
 
 ## Ambient Occlusion (SSAO)
- - [**Modified Crysis SSAO w/ Normal Oriented Hemisphere***](https://john-chapman-graphics.blogspot.com/2013/01/ssao-tutorial.html)
- - [NVIDIA HBAO](http://developer.download.nvidia.com/presentations/2008/SIGGRAPH/HBAO_SIG08b.pdf)
- - [NVIDIA (Bavoil) Deinterleaved Texturing & Sampling Patterns](http://twvideo01.ubm-us.net/o1/vault/gdc2013/slides/822298Bavoil_Louis_ParticleShadows.pdf)
+- [**Modified Crysis SSAO w/ Normal Oriented Hemisphere***](https://john-chapman-graphics.blogspot.com/2013/01/ssao-tutorial.html)
+- [NVIDIA HBAO](http://developer.download.nvidia.com/presentations/2008/SIGGRAPH/HBAO_SIG08b.pdf)
+- [NVIDIA (Bavoil) Deinterleaved Texturing & Sampling Patterns](http://twvideo01.ubm-us.net/o1/vault/gdc2013/slides/822298Bavoil_Louis_ParticleShadows.pdf)
 - [Filion & McNaughton: StarCraft II Effects & Techniques](https://developer.amd.com/wordpress/media/2013/01/Chapter05-Filion-StarCraftII.pdf) / [Powerpoint (PDF)](https://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf)
 - [Frederik P. Aalund: A Comparative Study of SSAO Methods](https://www.gamedevs.org/uploads/comparative-study-of-ssao-methods.pdf)
 - [Simon Wallner: Ogre3D - 5 SSAO Techniques](https://www.cg.tuwien.ac.at/research/publications/2010/WALLNER-2010-CSSAO/WALLNER-2010-CSSAO-doc.pdf)
+- [Scalable Ambient Obscurance (Alchemy paper)](https://research.nvidia.com/sites/default/files/pubs/2012-06_Scalable-Ambient-Obscurance/McGuire12SAO.pdf)
 
 ## Bloom
  - [**Fabian Giesen: Fast Blurs Part 1***](https://fgiesen.wordpress.com/2012/07/30/fast-blurs-1/)
@@ -53,6 +54,7 @@ Below is the collection of resources used for building the VQEngine. Items marke
  - [Wolfgang Engel: Compute Shader Optimizations for AMD GPUs - Parallel Reduction](https://diaryofagraphicsprogrammer.blogspot.com/2014/03/compute-shader-optimizations-for-amd.html)
  - [NVIDIA GPU Technology Conference: DirectCompute Optimizations & Best Practices](http://on-demand.gputechconf.com/gtc/2010/presentations/S12312-DirectCompute-Pre-Conference-Tutorial.pdf)
  - [Life of a triangle - NVIDIA's logical pipeline](https://developer.nvidia.com/content/life-triangle-nvidias-logical-pipeline)
+ - [Introduction to Compute Shaders](https://anteru.net/blog/2018/intro-to-compute-shaders/index.html)
 
 
 ## Culling: Shadow View 
@@ -79,6 +81,9 @@ Below is the collection of resources used for building the VQEngine. Items marke
 ## Environment Mapping
  - [**Joe DeVayo: LearnOpenGL - Image-Based Lighting I: Diffuse Irradiance\***](https://learnopengl.com/PBR/IBL/Diffuse-irradiance)
  - [**Joe DeVayo: LearnOpenGL - Image-Based Lighting II: Specular IBL\***](https://learnopengl.com/PBR/IBL/Specular-IBL)
+
+## Hardware / GPU Architecture
+ - [GCN Architecture whitepaper](https://www.amd.com/Documents/GCN_Architecture_whitepaper.pdf)
 
 ## Math
 - [gamedev StackExchange QA: Cylindrical Projection UV Coordinates](https://gamedev.stackexchange.com/questions/114412/how-to-get-uv-coordinates-for-sphere-cylindrical-projection)

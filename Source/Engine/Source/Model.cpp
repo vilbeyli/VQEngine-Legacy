@@ -104,7 +104,10 @@ std::vector<TextureID> LoadMaterialTextures(
 		aiString str;
 		pMaterial->GetTexture(type, i, &str);
 		std::string path = str.C_Str();
-		textures.push_back(mpRenderer->CreateTextureFromFile(path, modelDirectory));
+		{
+			std::unique_lock<std::mutex> lock(Engine::mLoadRenderingMutex);
+			textures.push_back(mpRenderer->CreateTextureFromFile(path, modelDirectory, true));
+		}
 	}
 	return textures;
 }

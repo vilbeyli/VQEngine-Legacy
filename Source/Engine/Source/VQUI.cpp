@@ -77,18 +77,21 @@ bool VQUI::Initialize(std::string& errMsg)
 #if 1
 	// test launching windows with separate data using handles
 	pFnCreateWindow = (int(*)(int))  GetProcAddress(mHModule, "CreateControlPanel");
-	pFnShowWindow   = (void(*)(int)) GetProcAddress(mHModule, "ShowControlPanel");
+	pFnShowWindow = (void(*)(int)) GetProcAddress(mHModule, "ShowControlPanel");
+	pFnShutdownWindows = (void(*)(void)) GetProcAddress(mHModule, "ShutdownWindows");
 
-	if (pFnCreateWindow == NULL || pFnShowWindow == NULL)
+	if (pFnCreateWindow == NULL || pFnShowWindow == NULL || pFnShutdownWindows == NULL)
 	{
 		assert(false);
 	}
 
+	// test w/ random numbers
 	mHControlPanel0 = pFnCreateWindow(42);
 	mHControlPanel1 = pFnCreateWindow(154);
 	mHControlPanel2 = pFnCreateWindow(3);
 	mHControlPanel3 = pFnCreateWindow(14);
 
+	// TODO: fix mouse capture / focus steal with this window launch.
 	this->ShowWindow0();
 	//	this->ShowWindow1();
 	//	this->ShowWindow3();
@@ -104,6 +107,7 @@ bool VQUI::Initialize(std::string& errMsg)
 
 void VQUI::Exit()
 {
+	pFnShutdownWindows();
 	delete mpThreadPool;
 	FreeLibrary(mHModule);
 }

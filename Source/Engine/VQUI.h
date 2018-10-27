@@ -57,5 +57,6 @@ namespace VQEngine
 
 		void (*pFnShowWindow)(int);
 		int  (*pFnCreateWindow)(int data);
+		void (*pFnShutdownWindows)();
 	};
 }

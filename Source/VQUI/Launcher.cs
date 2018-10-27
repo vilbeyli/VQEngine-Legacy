@@ -41,6 +41,12 @@ namespace VQUI
             Application.Run(ControlPanelFormList[GetFormIndex(windowHandle)]);
         }
 
+        [DllExport("ShutdownWindows", CallingConvention = CallingConvention.Cdecl)]
+        static public void ShutdownWindows()
+        {
+            Application.Exit();
+        }
+
 
         [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
         public unsafe struct SliderDescData

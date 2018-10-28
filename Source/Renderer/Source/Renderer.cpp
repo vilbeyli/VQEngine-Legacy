@@ -41,6 +41,9 @@
 #include <cassert>
 #include <fstream>
 
+#if _DEBUG
+#include "Application/Application.h"
+#endif
 
 // HELPER FUNCTIONS
 //=======================================================================================================================================================
@@ -396,6 +399,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
 		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW]._samplerState));
 
 		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
@@ -680,7 +684,7 @@ RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERa
 }
 
 // example params: "openart/185.png", "Data/Textures/"
-TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/)
+TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/, bool bGenerateMips /*= false*/)
 {
 	// renderer is single threaded in general, therefore finer granularity is not currently provided
 	// and instead, a mutex lcok is employed for the entire duration of creating a texture from file.
@@ -713,26 +717,66 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
 	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
 	{
-		CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), img->GetMetadata(), &tex._srv);
-
-		// get srv from img
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		tex._srv->GetDesc(&srvDesc);
+		auto meta = img->GetMetadata();
 		
-		// read width & height
-		ID3D11Resource* resource = nullptr;
-		tex._srv->GetResource(&resource);
-		if (SUCCEEDED(resource->QueryInterface(&tex._tex2D)))
+		CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), meta, &tex._srv);
+		if (bGenerateMips)
 		{
-			D3D11_TEXTURE2D_DESC desc;
-			tex._tex2D->GetDesc(&desc);
-			tex._width = desc.Width;
-			tex._height = desc.Height;
-		}
-		resource->Release();
 
-		tex._id = static_cast<int>(mTextures.size());
-		mTextures.emplace_back(std::move(tex));
+			ID3D11Resource* resource = nullptr;
+			tex._srv->GetResource(&resource);
+			if (tex._srv) tex._srv->Release();
+			if (tex._tex2D) tex._tex2D->Release();
+
+			meta.mipLevels = min(std::log2(meta.width), std::log2(meta.height));
+
+			TextureDesc texDesc = {};
+			texDesc.arraySize = meta.arraySize;
+			texDesc.bGenerateMips = true;
+			texDesc.bIsCubeMap = meta.depth != 1; // false?
+			texDesc.format = static_cast<EImageFormat>(meta.format);
+			texDesc.width = meta.width;
+			texDesc.height = meta.height;
+			texDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+			texDesc.mipCount = meta.mipLevels;
+			texDesc.texFileName = texFileName;
+			
+			//texDesc.pData = img->GetPixels();
+			//texDesc.dataPitch = img->GetImages()->rowPitch;
+			//texDesc.dataSlicePitch = img->GetImages()->slicePitch;
+
+			tex = GetTextureObject(CreateTexture2D(texDesc));
+
+			m_deviceContext->CopySubresourceRegion(tex._tex2D, 0, 0, 0, 0, resource, 0, NULL);
+			m_deviceContext->GenerateMips(tex._srv);
+			m_deviceContext->Flush();
+//#if _DEBUG
+//			SaveTextureToDisk(tex._id, Application::s_WorkspaceDirectory + "/DEBUG.png", false);
+//#endif
+			resource->Release();
+		}
+		else
+		{
+
+			// get srv from img
+			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+			tex._srv->GetDesc(&srvDesc);
+
+			// read width & height
+			ID3D11Resource* resource = nullptr;
+			tex._srv->GetResource(&resource);
+			if (SUCCEEDED(resource->QueryInterface(&tex._tex2D)))
+			{
+				D3D11_TEXTURE2D_DESC desc;
+				tex._tex2D->GetDesc(&desc);
+				tex._width = desc.Width;
+				tex._height = desc.Height;
+			}
+			resource->Release();
+
+			tex._id = static_cast<int>(mTextures.size());
+			mTextures.emplace_back(std::move(tex));
+		}
 		return mTextures.back()._id;
 	}
 	else
@@ -811,7 +855,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 		if (bIsTextureArray)
 		{
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
-			srvDesc.Texture2DArray.MipLevels = 1; // texDesc.mipCount?
+			srvDesc.Texture2DArray.MipLevels = texDesc.mipCount;
 			srvDesc.Texture2DArray.MostDetailedMip = 0;
 			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
 
@@ -858,7 +902,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 		else
 		{
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = 1;  // texDesc.mipCount?
+			srvDesc.Texture2D.MipLevels = texDesc.mipCount;
 			srvDesc.Texture2D.MostDetailedMip = 0;
 
 			srvDesc.Format = (DXGI_FORMAT)texDesc.format;

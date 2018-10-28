@@ -33,6 +33,10 @@ Below is the collection of resources used for building the VQEngine. Items marke
 - [Simon Wallner: Ogre3D - 5 SSAO Techniques](https://www.cg.tuwien.ac.at/research/publications/2010/WALLNER-2010-CSSAO/WALLNER-2010-CSSAO-doc.pdf)
 - [Scalable Ambient Obscurance (Alchemy paper)](https://research.nvidia.com/sites/default/files/pubs/2012-06_Scalable-Ambient-Obscurance/McGuire12SAO.pdf)
 
+## Area Lights
+ - [Eric Heitz, Stephen Hill: Real-Time Area Lighting: A Journey from Research to Production](http://advances.realtimerendering.com/s2016/s2016_ltc_rnd.pdf)
+ - [Real-Time Polygonal-Light Shading with Linearly Transformed Cosines (whitepaper)](https://drive.google.com/file/d/0BzvWIdpUpRx_d09ndGVjNVJzZjA/view)
+
 ## Bloom
  - [**Fabian Giesen: Fast Blurs Part 1***](https://fgiesen.wordpress.com/2012/07/30/fast-blurs-1/)
  - [Fabian Giesen: Fast Blurs Part 2](https://fgiesen.wordpress.com/2012/08/01/fast-blurs-2/)

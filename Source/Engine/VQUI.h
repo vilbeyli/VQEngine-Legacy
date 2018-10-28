@@ -44,19 +44,41 @@ namespace VQEngine
 		void ShowWindow2() const; // unused
 		void ShowWindow3() const; // unused
 
-	private:
-		HMODULE mHModule;
+		// UI STRUCTS
+		//
+		
+		// needs to match the C# struct
+		#define UI_LABEL_SIZE 256 
+		struct SliderDescData
+		{
+			float* pData;
+			wchar_t label[UI_LABEL_SIZE];
+		};
 
-		// need our own threadpool, Application's won't work.
+
+		float testFloat = 0.0f;
+	private:
+
+		HMODULE mHModule; // DLL module handle
+
+		// need our own thread pool, Application's won't work.
 		ThreadPool* mpThreadPool;
 
+		// test desc
+		SliderDescData mSliderDescTest;
+
+		// test windows
 		int mHControlPanel0;
 		int mHControlPanel1;
 		int mHControlPanel2;
 		int mHControlPanel3;
 
+		// imported functions from C#
 		void (*pFnShowWindow)(int);
 		int  (*pFnCreateWindow)(int data);
 		void (*pFnShutdownWindows)();
+		void (*pFnAddSliderFToControlPanel)(int hPanel, SliderDescData pDesc);
 	};
 }
+
+constexpr size_t t = sizeof(VQEngine::VQUI::SliderDescData);

@@ -11,15 +11,41 @@ using System.Runtime.InteropServices;
 
 namespace VQUI.Controls
 {
-    public partial class Slider : UserControl
-    {
-        public Slider(Launcher.SliderDescData desc)
-        {
-            InitializeComponent();
+	public unsafe partial class Slider : UserControl
+	{
+		IntPtr pData = IntPtr.Zero;
 
-           // groupdBoxVariable.Text = desc.name;
+		public Slider(Launcher.SliderDescData desc)
+		{
+			InitializeComponent();
 
-            //numericUpDown1.Value = Marshal.Copy()
-        }
-    }
+			unsafe
+			{
+				pData = desc.pData;
+				groupdBoxVariable.Text = new String(desc.name);
+				numericUpDownForData.Value = desc.pData == IntPtr.Zero 
+					? 0
+					: new Decimal(*(float*)desc.pData);
+				trackBarDataSlider.Value = (int)numericUpDownForData.Value;
+			}
+		}
+
+		private void numericUpDownForData_ValueChanged(object sender, EventArgs e)
+		{
+			trackBarDataSlider.Value = (int)numericUpDownForData.Value;
+			unsafe
+			{
+				*(float*)pData = (float)numericUpDownForData.Value;
+			}
+		}
+
+		private void trackBarDataSlider_Scroll(object sender, EventArgs e)
+		{
+			numericUpDownForData.Value = trackBarDataSlider.Value;
+			unsafe
+			{
+				*(float*)pData = (float)numericUpDownForData.Value;
+			}
+		}
+	}
 }

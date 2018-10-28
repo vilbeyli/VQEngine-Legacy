@@ -60,8 +60,8 @@ bool VQUI::Initialize(std::string& errMsg)
 	if (TestFn == NULL)
 	{
 		errMsg = std::string(std::string(pFnName) + " doesn't exist in ProcAddress");
-		FreeLibrary(mHModule);
-		return false;
+		//FreeLibrary(mHModule);
+		//return false;
 	}
 
 #if 0
@@ -79,8 +79,9 @@ bool VQUI::Initialize(std::string& errMsg)
 	pFnCreateWindow = (int(*)(int))  GetProcAddress(mHModule, "CreateControlPanel");
 	pFnShowWindow = (void(*)(int)) GetProcAddress(mHModule, "ShowControlPanel");
 	pFnShutdownWindows = (void(*)(void)) GetProcAddress(mHModule, "ShutdownWindows");
+	pFnAddSliderFToControlPanel = (void(*)(int, SliderDescData)) GetProcAddress(mHModule, "AddSliderFToControlPanel");
 
-	if (pFnCreateWindow == NULL || pFnShowWindow == NULL || pFnShutdownWindows == NULL)
+	if (pFnCreateWindow == NULL || pFnShowWindow == NULL || pFnShutdownWindows == NULL || pFnAddSliderFToControlPanel == NULL)
 	{
 		assert(false);
 	}
@@ -90,6 +91,13 @@ bool VQUI::Initialize(std::string& errMsg)
 	mHControlPanel1 = pFnCreateWindow(154);
 	mHControlPanel2 = pFnCreateWindow(3);
 	mHControlPanel3 = pFnCreateWindow(14);
+
+	//desc.label = "Test Float";
+	//strcpy_s(mDesc.label, "vfTest Float");
+	wcscpy_s(mSliderDescTest.label, L"vfTest Float");
+	testFloat = 0.1f;
+	mSliderDescTest.pData = &testFloat;
+	pFnAddSliderFToControlPanel(mHControlPanel0, mSliderDescTest);
 
 	// TODO: fix mouse capture / focus steal with this window launch.
 	this->ShowWindow0();

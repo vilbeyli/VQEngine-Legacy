@@ -19,6 +19,7 @@
 #include "HUD.h"
 #include "Transform.h"
 #include "DataStructures.h"
+#include "VQUI.h"
 
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
@@ -64,10 +65,10 @@ void HUD::RenderBackground(const vec3& color, float alpha, const vec2& size, con
 
 
 
-VQEngine::HUD::HUD(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig)
+VQEngine::HUD::HUD(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig, VQEngine::VQUI*& pUI)
 	: mBuiltInMeshes(BuiltInMeshes)
 	, mEngineControls(engineConfig)
-	, mTestFloat(0.0f)
+	, mpUI(pUI)
 {}
 
 void VQEngine::HUD::Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer, ProfilerStack& profilers)
@@ -271,7 +272,8 @@ void VQEngine::HUD::RenderEngineControls() const
 
 	drawDesc.color = LinearColor::green;
 	drawDesc.screenPosition = vec2(PX_POS_CONTROLS.x(), PX_POS_CONTROLS.y() + (line) * LINE_HEIGHT_PX);
-	drawDesc.text = "mTestFloat = " + std::to_string(mTestFloat);
+	
+	drawDesc.text = "mTestFloat = " + std::to_string(mpUI->testFloat);
 	mpTextRenderer->RenderText(drawDesc);
 
 	mpRenderer->EndEvent();

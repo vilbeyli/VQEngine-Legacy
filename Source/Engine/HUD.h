@@ -32,6 +32,7 @@ struct EngineConfig;
 
 namespace VQEngine
 {
+	class VQUI;
 
 // Heads-Up Display
 //
@@ -47,7 +48,7 @@ public:
 
 
 public:
-	HUD(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig);
+	HUD(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig, VQEngine::VQUI*& pUI);
 
 	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer, ProfilerStack& profilers);
 	void Update();
@@ -63,11 +64,10 @@ private:
 	const std::vector<Mesh>& mBuiltInMeshes;
 	const EngineConfig& mEngineControls;
 
+	VQUI*&			mpUI;
 	Renderer*		mpRenderer;
 	TextRenderer*	mpTextRenderer;
 
 	ProfilerStack	mProfilerStack;
-
-	float mTestFloat;
 };
 }

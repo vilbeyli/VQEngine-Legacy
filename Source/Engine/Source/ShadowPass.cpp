@@ -32,9 +32,38 @@
 constexpr int DRAW_INSTANCED_COUNT_DEPTH_PASS = 256;
 
 
-
-void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings)
+vec2 ShadowMapPass::GetDirectionalShadowMapDimensions(Renderer* pRenderer) const
 {
+	if (this->mDepthTarget_Directional == -1)
+		return vec2(0, 0);
+
+	const float dim = static_cast<float>(pRenderer->GetTextureObject(pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional))._width);
+	return vec2(dim);
+}
+
+
+
+void ShadowMapPass::Initialize(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings)
+{
+	this->mpRenderer = pRenderer;
+	this->mShadowMapShader = EShaders::SHADOWMAP_DEPTH;
+	const ShaderDesc instancedShaderDesc = { "DepthShader",
+		ShaderStageDesc{"DepthShader_vs.hlsl", {
+			ShaderMacro{ "INSTANCED"     , "1" },
+			ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) }
+		}},
+		ShaderStageDesc{"DepthShader_ps.hlsl" , {} }
+	};
+	this->mShadowMapShaderInstanced = pRenderer->CreateShader(instancedShaderDesc);
+
+	InitializeSpotLightShadowMaps(shadowMapSettings);
+	InitializePointLightShadowMaps(shadowMapSettings);
+}
+
+
+void ShadowMapPass::InitializeSpotLightShadowMaps(const Settings::ShadowMap& shadowMapSettings)
+{
+	assert(mpRenderer);
 	this->mShadowMapDimension_Spot = static_cast<int>(shadowMapSettings.dimension);
 
 #if _DEBUG
@@ -48,44 +77,65 @@ void ShadowMapPass::InitializeSpotLightShadowMaps(Renderer* pRenderer, const Set
 
 	DepthTargetDesc depthDesc;
 	depthDesc.format = bDepthOnly ? D32F : D24UNORM_S8U;
+
 	TextureDesc& texDesc = depthDesc.textureDesc;
 	texDesc.format = format;
 	texDesc.usage = static_cast<ETextureUsage>(DEPTH_TARGET | RESOURCE);
+	texDesc.height = texDesc.width = mShadowMapDimension_Spot;
+	texDesc.arraySize = NUM_SPOT_LIGHT_SHADOW;
 
 	// CREATE DEPTH TARGETS: SPOT LIGHTS
 	//
-	texDesc.height = texDesc.width = mShadowMapDimension_Spot;
-	texDesc.arraySize = NUM_SPOT_LIGHT_SHADOW;
-	auto DepthTargetIDs = pRenderer->AddDepthTarget(depthDesc);
+	auto DepthTargetIDs = mpRenderer->AddDepthTarget(depthDesc);
 	this->mDepthTargets_Spot.resize(NUM_SPOT_LIGHT_SHADOW);
 	std::copy(RANGE(DepthTargetIDs), this->mDepthTargets_Spot.begin());
 
 	this->mShadowMapTextures_Spot = this->mDepthTargets_Spot.size() > 0
-		? pRenderer->GetDepthTargetTexture(this->mDepthTargets_Spot[0])
+		? mpRenderer->GetDepthTargetTexture(this->mDepthTargets_Spot[0])
 		: -1;
 
-	this->mShadowMapShader = EShaders::SHADOWMAP_DEPTH;
-
-
-	ShaderDesc instancedShaderDesc = { "DepthShader",
-		ShaderStageDesc{"DepthShader_vs.hlsl", { 
-			ShaderMacro{ "INSTANCED"     , "1" }, 
-			ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) } 
-		}},
-		ShaderStageDesc{"DepthShader_ps.hlsl" , {} }
-	};
-	this->mShadowMapShaderInstanced = pRenderer->CreateShader(instancedShaderDesc);
-
-	ZeroMemory(&mShadowViewPort_Spot, sizeof(D3D11_VIEWPORT));
-	this->mShadowViewPort_Spot.Height = static_cast<float>(mShadowMapDimension_Spot);
-	this->mShadowViewPort_Spot.Width = static_cast<float>(mShadowMapDimension_Spot);
-	this->mShadowViewPort_Spot.MinDepth = 0.f;
-	this->mShadowViewPort_Spot.MaxDepth = 1.f;
 
 }
-
-void ShadowMapPass::InitializeDirectionalLightShadowMap(Renderer * pRenderer, const Settings::ShadowMap & shadowMapSettings)
+void ShadowMapPass::InitializePointLightShadowMaps(const Settings::ShadowMap& shadowMapSettings)
 {
+	assert(mpRenderer);
+	this->mShadowMapDimension_Point = static_cast<int>(shadowMapSettings.dimension);
+
+#if _DEBUG
+	//pRenderer->m_Direct3D->ReportLiveObjects("--------SHADOW_PASS_INIT");
+#endif
+
+	// check feature support & error handle:
+	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
+	const bool bDepthOnly = true;
+	const EImageFormat format = bDepthOnly ? R32 : R24G8;
+
+
+	// CREATE DEPTH TARGETS: POINT LIGHTS
+	//
+	DepthTargetDesc depthDesc;
+	depthDesc.format = bDepthOnly ? D32F : D24UNORM_S8U;
+
+	TextureDesc& texDesc = depthDesc.textureDesc;
+	texDesc.format = format;
+	texDesc.usage = static_cast<ETextureUsage>(DEPTH_TARGET | RESOURCE);
+	texDesc.bIsCubeMap = true;
+	texDesc.height = texDesc.width = this->mShadowMapDimension_Point;
+	texDesc.arraySize = NUM_POINT_LIGHT_SHADOW;
+	texDesc.texFileName = "Point Light Shadow Maps";
+
+	auto DepthTargetIDs = mpRenderer->AddDepthTarget(depthDesc);
+	this->mDepthTargets_Point.resize(NUM_POINT_LIGHT_SHADOW * 6 /*each face = one depth target*/);
+	std::copy(RANGE(DepthTargetIDs), this->mDepthTargets_Point.begin());
+
+	this->mShadowMapTextures_Point = this->mDepthTargets_Point.size() > 0
+		? mpRenderer->GetDepthTargetTexture(this->mDepthTargets_Point[0])
+		: -1;
+
+}
+void ShadowMapPass::InitializeDirectionalLightShadowMap(const Settings::ShadowMap & shadowMapSettings)
+{
+	assert(mpRenderer);
 	const int textureDimension = static_cast<int>(shadowMapSettings.dimension);
 	const EImageFormat format = R32;
 
@@ -100,23 +150,19 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(Renderer * pRenderer, co
 	// first time - add target
 	if (this->mDepthTarget_Directional == -1)
 	{
-		this->mDepthTarget_Directional = pRenderer->AddDepthTarget(depthDesc)[0];
-		this->mShadowMapTexture_Directional = pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional);
+		this->mDepthTarget_Directional = mpRenderer->AddDepthTarget(depthDesc)[0];
+		this->mShadowMapTexture_Directional = mpRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional);
 	}
 	else // other times - check if dimension changed
 	{
-		const bool bDimensionChanged = shadowMapSettings.dimension != pRenderer->GetTextureObject(pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional))._width;
+		const bool bDimensionChanged = shadowMapSettings.dimension != mpRenderer->GetTextureObject(mpRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional))._width;
 		if (bDimensionChanged)
 		{
-			pRenderer->RecycleDepthTarget(this->mDepthTarget_Directional, depthDesc);
+			mpRenderer->RecycleDepthTarget(this->mDepthTarget_Directional, depthDesc);
 		}
 	}
-
-	mShadowViewPort_Directional.Width = static_cast<FLOAT>(textureDimension);
-	mShadowViewPort_Directional.Height = static_cast<FLOAT>(textureDimension);
-	mShadowViewPort_Directional.MinDepth = 0.f;
-	mShadowViewPort_Directional.MaxDepth = 1.f;
 }
+
 
 #define INSTANCED_DRAW 1
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const
@@ -147,7 +193,9 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		});
 	};
 	//-----------------------------------------------------------------------------------------------
-
+	D3D11_VIEWPORT viewPort = {};
+	viewPort.MinDepth = 0.f;
+	viewPort.MaxDepth = 1.f;
 
 	const bool bNoShadowingLights = shadowView.spots.empty() && shadowView.points.empty() && shadowView.pDirectional == nullptr;
 	if (bNoShadowingLights) return;
@@ -155,10 +203,13 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
 	pRenderer->SetShader(mShadowMapShader);					// shader for rendering z buffer
 
+	//-----------------------------------------------------------------------------------------------
 	// SPOT LIGHT SHADOW MAPS
-	//
+	//-----------------------------------------------------------------------------------------------
+	viewPort.Height = static_cast<float>(mShadowMapDimension_Spot);
+	viewPort.Width = static_cast<float>(mShadowMapDimension_Spot);
 	pGPUProfiler->BeginEntry("Spots");
-	pRenderer->SetViewport(mShadowViewPort_Spot);
+	pRenderer->SetViewport(viewPort);
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
 		const XMMATRIX viewProj = shadowView.spots[i]->GetLightSpaceMatrix();
@@ -167,7 +218,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		if (shadowView.shadowMapRenderListLookUp.find(shadowView.spots[i]) == shadowView.shadowMapRenderListLookUp.end())
 		{
 			Log::Error("Spot light not found in shadowmap render list lookup");
-			continue;;
+			continue;
 		}
 #endif
 		pRenderer->BindDepthTarget(mDepthTargets_Spot[i]);	// only depth stencil buffer
@@ -183,8 +234,51 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	pGPUProfiler->EndEntry();	// spots
 
 
+#if 1
+	//-----------------------------------------------------------------------------------------------
+	// POINT LIGHT SHADOW MAPS
+	//-----------------------------------------------------------------------------------------------
+	viewPort.Height = static_cast<float>(mShadowMapDimension_Point);
+	viewPort.Width = static_cast<float>(mShadowMapDimension_Point);
+	pGPUProfiler->BeginEntry("Points");
+	pRenderer->SetViewport(viewPort);
+	for (size_t i = 0; i < shadowView.points.size(); i++)
+	{
+#if _DEBUG
+		if (shadowView.shadowMapRenderListLookUp.find(shadowView.points[i]) == shadowView.shadowMapRenderListLookUp.end())
+		{
+			Log::Error("Point light not found in shadowmap render list lookup");
+			continue;;
+		}
+#endif
+		
+		pRenderer->BeginEvent("Point[" + std::to_string(i) + "]: DrawSceneZ()");
+		for (int face = 0; face < 6; ++face)
+		{
+			const XMMATRIX viewProj = 
+				  Texture::CubemapUtility::GetViewMatrix(face, shadowView.points[i]->transform._position) 
+				* shadowView.points[i]->GetProjectionMatrix();
+
+			const size_t depthTargetIndex = i * 6 + face;
+			pRenderer->BindDepthTarget(mDepthTargets_Point[depthTargetIndex]);	// only depth stencil buffer
+			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
+			pRenderer->Apply();
+
+			// todo: objects per view direction?
+			for (const GameObject* pObj : shadowView.shadowMapRenderListLookUp.at(shadowView.points[i]))
+			{
+				RenderDepth(pObj, viewProj);
+			}
+		}
+		pRenderer->EndEvent();
+	}
+	pGPUProfiler->EndEntry();	// Points
+#endif
+
+
+	//-----------------------------------------------------------------------------------------------
 	// DIRECTIONAL SHADOW MAP
-	//
+	//-----------------------------------------------------------------------------------------------
 	if (shadowView.pDirectional != nullptr)
 	{
 		const XMMATRIX viewProj = shadowView.pDirectional->GetLightSpaceMatrix();
@@ -194,7 +288,10 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 
 		// RENDER NON-INSTANCED SCENE OBJECTS
 		//
-		pRenderer->SetViewport(mShadowViewPort_Directional);
+		const int shadowMapDimension = pRenderer->GetTextureObject(pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional))._width;
+		viewPort.Height = static_cast<float>(shadowMapDimension);
+		viewPort.Width = static_cast<float>(shadowMapDimension);
+		pRenderer->SetViewport(viewPort);
 		pRenderer->BindDepthTarget(mDepthTarget_Directional);
 		pRenderer->Apply();
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));

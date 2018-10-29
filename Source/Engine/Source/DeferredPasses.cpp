@@ -381,6 +381,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 
 	// DIFFUSE & SPECULAR LIGHTING
 	//-----------------------------------------------------------------------------------------
+	pRenderer->BeginEvent("Lighting Pass");
 	pRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
 
 	// draw fullscreen quad for lighting for now. Will add light volumes
@@ -456,6 +457,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 #endif	// light volumes
-
+	pRenderer->EndEvent(); // Lighting Pass
 	pRenderer->SetBlendState(EDefaultBlendState::DISABLED);
+
 }

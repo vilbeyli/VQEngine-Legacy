@@ -22,6 +22,8 @@
 #include <vector>
 #include "RenderingEnums.h"
 
+#include "Utilities/vectormath.h"
+
 using TextureID = int;
 using SamplerID = int;
 
@@ -69,6 +71,29 @@ struct TextureDesc
 
 struct Texture
 {
+public:
+	struct CubemapUtility
+	{
+		// cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
+		//------------------------------------------------------------------------------------------------------
+		// 0: RIGHT		1: LEFT
+		// 2: UP		3: DOWN
+		// 4: FRONT		5: BACK
+		//------------------------------------------------------------------------------------------------------
+		enum ECubeMapLookDirections
+		{
+			CUBEMAP_LOOK_RIGHT = 0,
+			CUBEMAP_LOOK_LEFT,
+			CUBEMAP_LOOK_UP,
+			CUBEMAP_LOOK_DOWN,
+			CUBEMAP_LOOK_FRONT,
+			CUBEMAP_LOOK_BACK,
+
+			NUM_CUBEMAP_LOOK_DIRECTIONS
+		};
+		static XMMATRIX GetViewMatrix(ECubeMapLookDirections cubeFace, const vec3& position = vec3::Zero);
+		inline static XMMATRIX GetViewMatrix(int face, const vec3& position = vec3::Zero) { return GetViewMatrix(static_cast<ECubeMapLookDirections>(face), position); }
+	};
 public:
 	Texture();
 	~Texture();

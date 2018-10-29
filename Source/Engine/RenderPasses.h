@@ -75,17 +75,22 @@ using DepthTargetIDArray = std::vector<DepthTargetID>;
 struct ShadowMapPass : public RenderPass
 {
 	ShadowMapPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
-	void InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
-	void InitializeDirectionalLightShadowMap(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
+	void Initialize(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
 	void RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const;
 	
+	vec2 GetDirectionalShadowMapDimensions(Renderer* pRenderer) const;
+
+
+	void InitializeSpotLightShadowMaps(const Settings::ShadowMap& shadowMapSettings);
+	void InitializePointLightShadowMaps(const Settings::ShadowMap& shadowMapSettings);
+	void InitializeDirectionalLightShadowMap(const Settings::ShadowMap& shadowMapSettings);
+
 	Renderer*			mpRenderer = nullptr;
 	ShaderID			mShadowMapShader = -1;
 	ShaderID			mShadowMapShaderInstanced = -1;
 
 	unsigned			mShadowMapDimension_Spot = 0;
-	D3D11_VIEWPORT		mShadowViewPort_Spot;	// spot light viewport
-	D3D11_VIEWPORT		mShadowViewPort_Directional;
+	unsigned			mShadowMapDimension_Point = 0;
 	
 	TextureID			mShadowMapTextures_Spot = -1;		// tex2D array
 	TextureID			mShadowMapTexture_Directional = -1;	// tex2D array
@@ -93,7 +98,7 @@ struct ShadowMapPass : public RenderPass
 
 	DepthTargetIDArray	mDepthTargets_Spot;
 	DepthTargetID		mDepthTarget_Directional = -1;
-	DepthTargetID		mDepthTargets_Point = -1;
+	DepthTargetIDArray	mDepthTargets_Point;
 };
 
 struct BloomPass : public RenderPass

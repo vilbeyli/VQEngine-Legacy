@@ -192,7 +192,7 @@ XMMATRIX Light::GetProjectionMatrix() const
 		{
 		case ELightType::POINT:
 		{
-			return XMMatrixIdentity();
+			return XMMatrixPerspectiveFovLH(70.0f * DEG2RAD, 1.0f, 0.1f, farPlaneDistance);
 		}
 		case ELightType::SPOT:
 		{

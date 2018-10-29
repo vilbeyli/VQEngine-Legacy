@@ -20,7 +20,7 @@
 #define ENABLE_TRANSPARENCY 0
 
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
-#define OVERRIDE_LEVEL_VALUE 0	// which level to load
+#define OVERRIDE_LEVEL_VALUE 1	// which level to load
 #define FULLSCREEN_DEBUG_TEXTURE 1
 
 // ASYNC / THREADED LOADING SWITCHES
@@ -284,7 +284,10 @@ bool Engine::Load(ThreadPool* pThreadPool)
 #if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
 		sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
 #endif
-		
+		{
+			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+			mShadowMapPass.Initialize(mpRenderer, rendererSettings.shadowMap);
+		}
 		if (!LoadSceneFromFile())
 		{
 			Log::Error("Engine couldn't load scene.");
@@ -300,10 +303,6 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//mpTimer->Start();
 		{	// #AsyncLoad: Mutex DEVICE
 			//Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
-			{
-				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-				mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
-			}
 			//renderer->m_Direct3D->ReportLiveObjects();
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
@@ -375,7 +374,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpTimer->Start();
 	{	
 		Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
-		mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
+		mShadowMapPass.Initialize(mpRenderer, rendererSettings.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
 		
 		mDeferredRenderingPasses.Initialize(mpRenderer);
@@ -421,7 +420,7 @@ bool Engine::LoadSceneFromFile()
 	{
 		// #AsyncLoad: Mutex DEVICE
 		std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-		mShadowMapPass.InitializeDirectionalLightShadowMap(mpRenderer, mpActiveScene->mDirectionalLight.GetSettings());
+		mShadowMapPass.InitializeDirectionalLightShadowMap(mpActiveScene->mDirectionalLight.GetSettings());
 	}
 	return true;
 }
@@ -834,8 +833,7 @@ void Engine::SendLightData() const
 
 	// LIGHTS ( POINT | SPOT | DIRECTIONAL )
 	//
-	const vec2 directionalShadowMapDimensions
-		= vec2(mShadowMapPass.mShadowViewPort_Directional.Width, mShadowMapPass.mShadowViewPort_Directional.Height);
+	const vec2 directionalShadowMapDimensions = mShadowMapPass.GetDirectionalShadowMapDimensions(mpRenderer);
 	mpRenderer->SetConstantStruct("Lights", &mSceneLightData._cb);
 	mpRenderer->SetConstant2f("spotShadowMapDimensions", vec2(shadowDimension, shadowDimension));
 	//mpRenderer->SetConstant2f("directionalShadowMapDimensions", directionalShadowMapDimensions);
@@ -845,6 +843,7 @@ void Engine::SendLightData() const
 	// SHADOW MAPS
 	//
 	mpRenderer->SetTextureArray("texSpotShadowMaps", mShadowMapPass.mShadowMapTextures_Spot);
+	mpRenderer->SetTextureArray("texPointShadowMaps", mShadowMapPass.mShadowMapTextures_Point);
 	if (mShadowMapPass.mShadowMapTexture_Directional != -1)
 		mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass.mShadowMapTexture_Directional);
 

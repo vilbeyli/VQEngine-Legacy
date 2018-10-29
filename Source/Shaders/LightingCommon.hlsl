@@ -169,18 +169,19 @@ float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadow
 		return 1.0f;
 	}
 
+
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	float shadow = 0.0f;
+
     const float2 texelSize = 1.0f / (shadowMapDimensions);
 	
 	// clip space [-1, 1] --> texture space [0, 1]
 	const float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
-	
-    const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
 	const float pxDepthInLSpace = projLSpaceCoords.z;
 
-	float shadow = 0.0f;
-	const int rowHalfSize = 2;
 
 	// PCF
+	const int rowHalfSize = 2;
     for (int x = -rowHalfSize; x <= rowHalfSize; ++x)
     {
 		for (int y = -rowHalfSize; y <= rowHalfSize; ++y)
@@ -194,6 +195,69 @@ float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadow
     }
 
     shadow /= (rowHalfSize * 2 + 1) * (rowHalfSize * 2 + 1);
+
+	return 1.0 - shadow;
+}
+
+float ShadowTestPCF(
+	in ShadowTestPCFData pcfTestLightData
+	, TextureCubeArray shadowCubeMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, float3 lightDirection
+)
+{
+#if 0
+	// homogeneous position after interpolation
+	const float3 projLSpaceCoords = pcfTestLightData.lightSpacePos.xyz / pcfTestLightData.lightSpacePos.w;
+
+	// frustum check
+	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
+		projLSpaceCoords.y < -1.0f || projLSpaceCoords.y > 1.0f ||
+		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
+		)
+	{
+		return 1.0f;
+	}
+#endif
+
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	float shadow = 0.0f;
+
+#if 0
+	const float2 texelSize = 1.0f / (shadowMapDimensions);
+
+	// clip space [-1, 1] --> texture space [0, 1]
+	const float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
+	const float pxDepthInLSpace = projLSpaceCoords.z;
+
+
+	// PCF
+	const int rowHalfSize = 2;
+	for (int x = -rowHalfSize; x <= rowHalfSize; ++x)
+	{
+		for (int y = -rowHalfSize; y <= rowHalfSize; ++y)
+		{
+			float2 texelOffset = float2(x, y) * texelSize;
+			
+			// todo?
+			float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, float4(lightDirection, shadowMapIndex)).x;
+
+			// depth check
+			shadow += (pxDepthInLSpace - BIAS > closestDepthInLSpace) ? 1.0f : 0.0f;
+		}
+	}
+
+	shadow /= (rowHalfSize * 2 + 1) * (rowHalfSize * 2 + 1);
+#else
+
+	// depth check
+	const float far_plane = 500.0f;
+	float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, float4(lightDirection, shadowMapIndex)).x * far_plane;
+	shadow += (length(lightDirection) - 0.05 > closestDepthInLSpace) ? 1.0f : 0.0f;
+#endif
+
 	return 1.0 - shadow;
 }
 

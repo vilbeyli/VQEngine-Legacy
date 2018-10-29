@@ -351,7 +351,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 		{
 			const size_t lightIndex = (*refLightCounts[l.type])++;
 			cbuffer.pointLights[lightIndex] = l.GetPointLightData();
-			//outLightingData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
+			cbuffer.pointLightsShadowing[lightIndex] = l.GetPointLightData();
 			if (l.castsShadow)
 			{
 				mShadowView.points.push_back(&l);
@@ -722,6 +722,52 @@ static size_t CullGameObjects(
 
 void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 {
+	// LAMBDA DEFINITIONS
+	//---------------------------------------------------------------------------------------------
+	// Meshes are sorted according to BUILT_IN_TYPE < CUSTOM, 
+	// and BUILT_IN_TYPEs are sorted in themselves
+	auto SortByMeshType = [&](const GameObject* pObj0, const GameObject* pObj1)
+	{
+		const ModelData& model0 = pObj0->GetModelData();
+		const ModelData& model1 = pObj1->GetModelData();
+
+		const MeshID mID0 = model0.mMeshIDs.empty() ? -1 : model0.mMeshIDs.back();
+		const MeshID mID1 = model1.mMeshIDs.empty() ? -1 : model1.mMeshIDs.back();
+
+		assert(mID0 != -1 && mID1 != -1);
+
+		// case: one of the objects have a custom mesh
+		if (mID0 >= EGeometry::MESH_TYPE_COUNT || mID1 >= EGeometry::MESH_TYPE_COUNT)
+		{
+			if (mID0 < EGeometry::MESH_TYPE_COUNT)
+				return true;
+
+			if (mID1 < EGeometry::MESH_TYPE_COUNT)
+				return false;
+
+			return false;
+		}
+
+		// case: both objects are built-in types
+		else
+		{
+			return mID0 < mID1;
+		}
+	};
+	auto SortByMaterialID = [](const GameObject* pObj0, const GameObject* pObj1)
+	{
+		// TODO:
+		return true;
+	};
+	auto SortByViewSpaceDepth = [](const GameObject* pObj0, const GameObject* pObj1)
+	{
+		// TODO:
+		return true;
+	};
+	//---------------------------------------------------------------------------------------------
+
+
+
 	// set scene view
 	const Camera& viewCamera = GetActiveCamera();
 	const XMMATRIX view = viewCamera.GetViewMatrix();
@@ -730,7 +776,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	XMVECTOR det = XMMatrixDeterminant(proj);
 	const XMMATRIX projInv = XMMatrixInverse(&det, proj);
 
-	// scene veiw matrices
+	// scene view matrices
 	mSceneView.viewProj = view * proj;
 	mSceneView.view = view;
 	mSceneView.viewInverse = viewInverse;
@@ -743,7 +789,11 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
 	mSceneView.bIsIBLEnabled = mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
 
-	
+
+
+	//----------------------------------------------------------------------------
+	// PREPARE RENDER LISTS
+	//----------------------------------------------------------------------------
 	// CLEAN UP RENDER LISTS
 	//
 	//pCPUProfiler->BeginEntry("CleanUp");
@@ -796,53 +846,14 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	stats.scene.numObjects = numObjects;
 	pCPUProfiler->EndEntry();
 
-	// CULL MAIN & SHADOW VIEWS
-	//
+
+	//----------------------------------------------------------------------------
+	// CULL RENDER LISTS
+	//----------------------------------------------------------------------------
 	const bool& bSortRenderLists = mSceneRenderSettings.optimization.bSortRenderLists;
 	const bool& bCullMainView = mSceneRenderSettings.optimization.bViewFrustumCull_MainView;
 	const bool& bCullLightView = mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights;
 	const bool& bShadowViewCull = mSceneRenderSettings.optimization.bShadowViewCull;
-
-	// Meshes are sorted according to BUILT_IN_TYPE < CUSTOM, 
-	// and BUILT_IN_TYPEs are sorted in themselves
-	auto SortByMeshType = [&](const GameObject* pObj0, const GameObject* pObj1)
-	{
-		const ModelData& model0 = pObj0->GetModelData();
-		const ModelData& model1 = pObj1->GetModelData();
-
-		const MeshID mID0 = model0.mMeshIDs.empty() ? -1 : model0.mMeshIDs.back();
-		const MeshID mID1 = model1.mMeshIDs.empty() ? -1 : model1.mMeshIDs.back();
-		
-		assert(mID0 != -1 && mID1 != -1);
-
-		// case: one of the objects have a custom mesh
-		if (mID0 >= EGeometry::MESH_TYPE_COUNT || mID1 >= EGeometry::MESH_TYPE_COUNT)
-		{
-			if (mID0 < EGeometry::MESH_TYPE_COUNT)
-				return true;
-				
-			if (mID1 < EGeometry::MESH_TYPE_COUNT)
-				return false;
-
-			return false;
-		}
-
-		// case: both objects are built-in types
-		else
-		{
-			return mID0 < mID1;
-		}
-	};
-	auto SortByMaterialID = [](const GameObject* pObj0, const GameObject* pObj1)
-	{
-		// TODO:
-		return true;
-	};
-	auto SortByViewSpaceDepth = [](const GameObject* pObj0, const GameObject* pObj1)
-	{
-		// TODO:
-		return true;
-	};
 
 
 	// start counting these
@@ -856,7 +867,8 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	// TODO: utilize thread pool for each render list
 
 #else
-	// main view
+	// MAIN VIEW
+	//
 	pCPUProfiler->BeginEntry("Cull Views");
 	//pCPUProfiler->BeginEntry("Main View");
 	if (bCullMainView)
@@ -874,7 +886,10 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	}
 	//pCPUProfiler->EndEntry();
 
-	// shadow frusta
+
+
+	// SHADOW FRUSTA
+	//
 	//pCPUProfiler->BeginEntry("Spots");
 	for (const Light& l : mLights)
 	{
@@ -894,15 +909,23 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 			{
 				objList.resize(casterList.size());
 				std::copy(RANGE(casterList), objList.begin());
-				stats.scene.numSpotsCulledObjects += 0;
 			}
 		}
 		break;
 		case Light::ELightType::POINT:
 			++stats.scene.numPoints;
+			
 			// TODO: cull against 6 frustums
-			if (bCullLightView) { }
-			else { }
+			if (bCullLightView) 
+			{ 
+				objList.resize(casterList.size());
+				std::copy(RANGE(casterList), objList.begin());
+			}
+			else 
+			{ 
+				objList.resize(casterList.size());
+				std::copy(RANGE(casterList), objList.begin());
+			}
 			break;
 		}
 
@@ -911,6 +934,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	//pCPUProfiler->EndEntry();
 #endif
 	
+
 	// CULL DIRECTIONAL SHADOW VIEW 
 	//
 	if (bShadowViewCull)
@@ -922,7 +946,10 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	pCPUProfiler->EndEntry(); // Cull Views
 
 
-	// SORT OBJECTS PER MESH TYPE, ETC...
+	//----------------------------------------------------------------------------
+	// SORT & BATCH RENDER LISTS
+	//----------------------------------------------------------------------------
+	// SORT
 	//
 	pCPUProfiler->BeginEntry("Sort");
 	if (bSortRenderLists) 
@@ -943,8 +970,6 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	// PREPARE INSTANCED DRAW BATCHES
 	//
 	// Shadow Caster Render Lists
-
-	
 	//pCPUProfiler->BeginEntry("Lists");
 	pCPUProfiler->BeginEntry("[Instanced] Directional");
 	for(int i=0; i<casterList.size(); ++i)

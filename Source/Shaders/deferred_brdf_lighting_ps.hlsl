@@ -20,7 +20,7 @@
 #include "LightingCommon.hlsl"
 
 #define ENABLE_POINT_LIGHTS 1
-#define ENABLE_POINT_LIGHTS_SHADOW 0
+#define ENABLE_POINT_LIGHTS_SHADOW 1
 
 #define ENABLE_SPOT_LIGHTS 1
 #define ENABLE_SPOT_LIGHTS_SHADOW 1
@@ -117,16 +117,24 @@ float4 PSMain(PSIn In) : SV_TARGET
 #endif
 
 #if ENABLE_POINT_LIGHTS_SHADOW
-	for (int i = 0; i < Lights.numPointCasters; ++i)
+	for (int l = 0; l < Lights.numPointCasters; ++l)
 	{
-	// TODO shadow caster points
-	//	const float3 Lv       = mul(matView, float4(Lights.point_lights[i].position, 1));
-	//	const float3 Wi       = normalize(Lv - P);
-	//	const float3 radiance = 
-	//		AttenuationBRDF(Lights.point_lights[i].attenuation, length(Lights.point_lights[i].position - Pw))
-	//		* Lights.point_lights[i].color 
-	//		* Lights.point_lights[i].brightness;
-	//	IdIs += BRDF(Wi, s, V, P) * radiance;
+		const float3 Lw		  = Lights.point_lights[l].position;
+		const float3 Lv       = mul(matView, float4(Lw, 1));
+		const float3 Wi       = normalize(Lv - P);
+		const float3 radiance = 
+			AttenuationBRDF(Lights.point_lights[l].attenuation, length(Lights.point_lights[l].position - Pw))
+			* Lights.point_lights[l].color 
+			* Lights.point_lights[l].brightness;
+
+		// shadow view?
+		const matrix matShadowView = Lights.shadowViews[spotShadowsBaseIndex + l];
+		pcfTest.lightSpacePos = mul(matShadowView, float4(Pw, 1));
+
+		pcfTest.NdotL = saturate(dot(s.N, Wi));
+		pcfTest.depthBias = 0.0000005f;
+		const float3 shadowing = ShadowTestPCF(pcfTest, texPointShadowMaps, sShadowSampler, spotShadowMapDimensions, l, (Lw - Pw));
+		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
 #endif
 

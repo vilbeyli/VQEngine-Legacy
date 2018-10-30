@@ -346,6 +346,15 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		// | Light Type	| Color	| Shadowing? |  Brightness | Spot.Angle OR Point.Range | Position3 | Rotation3
 		//--------------------------------------------------------------
 
+		auto ParseDirectionalLight = [&]()
+		{
+
+		};
+		auto ParsePointLight = [&]()
+		{
+			
+		};
+
 		const bool bCommandHasRange = command.size() >= 9;
 		const bool bCommandHasRotationEntry = command.size() > 10;
 		const bool bCommandHasScaleEntry = command.size() >= 12 || (command.size() == 10);
@@ -371,10 +380,10 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
 		const float scl  = bCommandHasScaleEntry ? stof(command[IdxScale]) : 1.0f;
 		const bool  bCastsShadows = sBoolTypeReflection.at(shadowing);
-		const float farPlaneDistance = bCommandHasFarPlaneEntry ? stof(command[13]) : 500;
+		const float farPlaneDistance = bCommandHasFarPlaneEntry ? stof(command[13]) : range;
 		const float depthBias = bCommandHasDepthBiasEntry ? stof(command[14]) : 0.0000005f;
 
-		Light l(	// let there be light
+		Light l(	// let there be light (enter Maxwell)
 			sLightTypeLookup.at(lightType),
 			sColorLookup.at(colorValue),
 			range,

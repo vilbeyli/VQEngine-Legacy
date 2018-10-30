@@ -29,6 +29,139 @@
 
 #include <DirectXMath.h>
 
+#define USE_NEW_LIGHT_IMPL 0
+
+#if USE_NEW_LIGHT_IMPL
+class Light
+{
+public:
+
+	// returns the projection matrix for the light space transformation. 
+	//
+	virtual XMMATRIX GetProjectionMatrix() const = 0;
+
+	// returns the (View * Projection) matrix for Directional/Spot lights
+	//
+	virtual XMMATRIX GetLightSpaceMatrix() const;
+
+	// returns the view matrix for Directional/Spot lights. 
+	// See PointLight struct for cube-face view matrices.
+	//
+	virtual XMMATRIX GetViewMatrix() const;
+
+	Light()
+		: mColor(LinearColor::white)
+		, mBrightness(300.0f)
+		, mbCastingShadows(false)
+		, mDepthBias(0.0f)
+		, mNearPlaneDistance(0.0f)
+		, mFarPlaneDistance(0.0f)
+		, mAttenuation(0,0) // sopotAngle/FalloOff | directional viewportSize
+		, mRange(100.0f)
+		, mTransform()
+		, mMeshID(EGeometry::SPHERE)
+	{}
+	Light
+	(
+		  LinearColor color
+		, float brightness
+		, bool bCastShadows
+		, float depthBias
+		, float farPlaneDistance
+		, float nearPlaneDistance
+		, vec2 attenuation
+		, float range
+		, Transform transform
+		, EGeometry mesh
+	)
+		: mColor(color)
+		, mBrightness(brightness)
+		, mbCastingShadows(bCastShadows)
+		, mDepthBias(depthBias)
+		, mNearPlaneDistance(nearPlaneDistance)
+		, mFarPlaneDistance(farPlaneDistance)
+		, mAttenuation(attenuation) // sopotAngle/FalloOff | directional viewportSize
+		, mRange(range)
+		, mTransform(transform)
+		, mMeshID(mesh)
+	{}
+
+//private:
+	LinearColor	mColor;
+	float mBrightness;
+
+	bool mbCastingShadows;
+	float mDepthBias;
+	float mFarPlaneDistance;
+	float mNearPlaneDistance;
+
+	union // each light type (point/spot) uses this vec2 for light-specific data
+	{
+		vec2 mAttenuation;				//       point light attenuation
+		vec2 mSpotAngle_SpotFallOff;		//        spot light angle and falloff multiplier
+		vec2 mShadowMapAndViewportSize;	// directional light viewport size
+	};
+
+
+	float mRange;	// point/spot
+
+	Transform mTransform;
+	EGeometry mMeshID;
+
+};
+
+class DirectionalLight : public Light
+{
+public:
+	XMMATRIX GetProjectionMatrix() const override;
+	XMMATRIX GetViewMatrix() const override;
+	XMMATRIX GetLightSpaceMatrix() const override;
+
+	DirectionalLight();
+};
+
+
+class PointLight : public Light
+{
+public:
+	XMMATRIX GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections direction) const;
+	XMMATRIX GetLightSpaceMatrix(Texture::CubemapUtility::ECubeMapLookDirections direction) const;
+
+	XMMATRIX GetProjectionMatrix() const override;
+	inline XMMATRIX GetViewMatrix() const override { return GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections::CUBEMAP_LOOK_FRONT); }
+	inline XMMATRIX GetLightSpaceMatrix() const override { return GetLightSpaceMatrix(Texture::CubemapUtility::ECubeMapLookDirections::CUBEMAP_LOOK_FRONT); }
+
+	PointLight(){}
+
+};
+
+
+class SpotLight : public Light
+{
+	XMMATRIX GetProjectionMatrix() const override;
+	XMMATRIX GetViewMatrix() const override;
+	XMMATRIX GetLightSpaceMatrix() const override;
+	
+	SpotLight();
+};
+
+
+// TODO: v0.6.0 linear lights from GPU Zen
+#if 0
+// Eric Heitz Slides: https://drive.google.com/file/d/0BzvWIdpUpRx_Z2pZWWFtam5xTFE/view
+class AreaLight : public Light
+{
+	XMMATRIX GetProjectionMatrix() const override;
+	XMMATRIX GetViewMatrix() const override;
+	XMMATRIX GetLightSpaceMatrix() const override;
+
+	AreaLight()
+};
+#endif
+
+
+#else
+
 // this needs refactoring. design is pretty old and convoluted.
 //
 struct Light
@@ -73,18 +206,20 @@ struct Light
 	LinearColor	color;
 	float		range;
 	float		brightness;	// 300.0f is a good default value for points/spots
+
 	bool		castsShadow;
 	float		depthBias;
 	float		farPlaneDistance;
+	float		nearPlaneDistance;
 
-	union // each light uses this vec2 for light-specific data
+	union // each light type (point/spot) uses this vec2 for light-specific data
 	{	
-		vec2	attenuation;	// point light attenuation
-		vec2	spotAngle;		// spot light angle (_spotAngle.x() and _spotAngle.y() are the same thing)
+		vec2	attenuation;			// point light attenuation
+		vec2	spotAngle_spotFallOff;	// spot light angle and falloff multiplier
 	};	
 
 	Transform	transform;
-	EGeometry	renderMesh;	// todo: rename to _builtinMeshID;
+	EGeometry	renderMeshID;
 	//bool		_bEnabled; 
 };
 
@@ -93,7 +228,9 @@ struct Light
 //
 struct DirectionalLight
 {
+	// ELightType	type;
 	LinearColor color;
+	// range
 	float brightness;
 
 	vec3 direction;
@@ -111,45 +248,4 @@ struct DirectionalLight
 	Settings::ShadowMap GetSettings() const;
 };
 
-
-
-
-// TODO #Refactoring 
-#if 0
-class Light
-{
-public:
-
-	XMMATRIX GetLightSpaceMatrix() const;
-	XMMATRIX GetViewMatrix() const;
-	XMMATRIX GetProjectionMatrix() const;
-
-private:
-	vec3 mPosition;
-	float mRange;
-	float mBrightness;
-	bool mCastingShadows;
-};
-
-class PointLight : public Light
-{
-
-};
-
-class DirectionalLight : public Light
-{
-
-};
-
-class SpotLight : public Light
-{
-
-};
-
-
-// TODO: v0.6.0 linear lights from GPU Zen
-class AreaLight : public Light
-{
-
-};
 #endif

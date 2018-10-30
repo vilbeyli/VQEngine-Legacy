@@ -66,6 +66,35 @@ Texture2D texDepth;
 SamplerState sShadowSampler;
 SamplerState sLinearSampler;
 
+float ShadowTestPCF(
+	in ShadowTestPCFData pcfTestLightData
+	, TextureCubeArray shadowCubeMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, float3 lightDirection
+	, in matrix lightProjectionMat
+)
+{
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	float shadow = 0.0f;
+
+	// depth check
+	const float far_plane = 80;
+
+#if 1
+	const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, float4(-lightDirection, shadowMapIndex)).x;
+	const float closestDepthInWorldSpace = LinearDepth(closestDepthInLSpace, lightProjectionMat);
+	shadow += (length(lightDirection) - 1.9525 > closestDepthInWorldSpace) ? 1.0f : 0.0f;
+#else
+	const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, float4(-lightDirection, shadowMapIndex)).x * far_plane;
+	//shadow += (length(lightDirection) - 1.15 > closestDepthInLSpace) ? 1.0f : 0.0f;
+	shadow += (length(lightDirection) - 0.005 > closestDepthInLSpace) ? 1.0f : 0.0f;
+#endif
+
+	return 1.0 - shadow;
+}
+
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	ShadowTestPCFData pcfTest;
@@ -133,7 +162,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 		pcfTest.NdotL = saturate(dot(s.N, Wi));
 		pcfTest.depthBias = 0.0000005f;
-		const float3 shadowing = ShadowTestPCF(pcfTest, texPointShadowMaps, sShadowSampler, spotShadowMapDimensions, l, (Lw - Pw));
+		const float3 shadowing = ShadowTestPCF(pcfTest, texPointShadowMaps, sShadowSampler, spotShadowMapDimensions, l, (Lw - Pw), Lights.pointLightProjMats[l]);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
 #endif

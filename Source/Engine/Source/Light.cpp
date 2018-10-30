@@ -25,6 +25,10 @@
 
 using std::string;
 
+#if USE_NEW_LIGHT_IMPL
+
+#else
+
 // For Phong Lighting
 // range(distance)   -   (Linear, Quadratic) attenuation factor map
 // source: http://www.ogre3d.org/tikiwiki/tiki-index.php?page=-Point+Light+Attenuation
@@ -58,9 +62,9 @@ Light::Light()
 	range(50),	// phong
 	brightness(300.0f),
 	castsShadow(false),
-	spotAngle(vec2()),
+	spotAngle_spotFallOff(vec2()),
 	attenuation(vec2()),
-	renderMesh(sLightTypeMeshLookup.at(ELightType::POINT)),
+	renderMeshID(sLightTypeMeshLookup.at(ELightType::POINT)),
 	depthBias(0.0000005f),
 	farPlaneDistance(500)
 {
@@ -74,9 +78,9 @@ Light::Light(const Light& l)
 	range(l.range),
 	brightness(l.brightness),
 	castsShadow(l.castsShadow),
-	spotAngle(l.spotAngle),
+	spotAngle_spotFallOff(l.spotAngle_spotFallOff),
 	transform(l.transform),
-	renderMesh(l.renderMesh),
+	renderMeshID(l.renderMeshID),
 	depthBias(l.depthBias),
 	farPlaneDistance(l.farPlaneDistance)
 {}
@@ -88,9 +92,9 @@ Light::Light(const Light && l)
 	range(l.range),
 	brightness(l.brightness),
 	castsShadow(l.castsShadow),
-	spotAngle(l.spotAngle),
+	spotAngle_spotFallOff(l.spotAngle_spotFallOff),
 	transform(std::move(l.transform)),
-	renderMesh(l.renderMesh),
+	renderMeshID(l.renderMeshID),
 	depthBias(l.depthBias),
 	farPlaneDistance(l.farPlaneDistance)
 {}
@@ -118,11 +122,11 @@ Light::Light(
 	switch (type)
 	{
 	case ELightType::POINT: SetLightRange(range);			break;
-	case ELightType::SPOT:	this->spotAngle.x() = spotAngle;break;
+	case ELightType::SPOT:	this->spotAngle_spotFallOff.x() = spotAngle;break;
 	case ELightType::DIRECTIONAL:  /* nothing to do */		break;
 	}
 
-	renderMesh = sLightTypeMeshLookup.at(type);
+	renderMeshID = sLightTypeMeshLookup.at(type);
 }
 
 Light::~Light()
@@ -187,16 +191,18 @@ XMMATRIX Light::GetViewMatrix() const
 
 XMMATRIX Light::GetProjectionMatrix() const
 {
-	const XMMATRIX proj = [&]() -> const XMMATRIX{
+	const XMMATRIX proj = [&]() -> const XMMATRIX
+	{
+		constexpr float ASPECT_RATIO = 1.0f;	// cube textures / cubemaps
 		switch (type)
 		{
 		case ELightType::POINT:
 		{
-			return XMMatrixPerspectiveFovLH(70.0f * DEG2RAD, 1.0f, 0.1f, farPlaneDistance);
+			return XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, 0.01f /*todo: nearPlaneDistance*/, farPlaneDistance);
 		}
 		case ELightType::SPOT:
 		{
-			return XMMatrixPerspectiveFovLH((spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, farPlaneDistance);
+			return XMMatrixPerspectiveFovLH((spotAngle_spotFallOff.x() * spotAngle_spotFallOff.y()) * DEG2RAD, ASPECT_RATIO, nearPlaneDistance, farPlaneDistance);
 		}
 		default:
 			Log::Warning("INVALID LIGHT TYPE for GetProjectionMatrix()");
@@ -232,7 +238,7 @@ SpotLightGPU Light::GetSpotLightData() const
 	l.position = transform._position;
 	l.color = color.Value();
 	l.brightness = brightness;
-	l.halfAngle = spotAngle.x() * DEG2RAD / 2;
+	l.halfAngle = spotAngle_spotFallOff.x() * DEG2RAD / 2;
 	l.spotDir = spotDirection;
 	return l;
 }
@@ -284,3 +290,5 @@ Settings::ShadowMap DirectionalLight::GetSettings() const
 	settings.dimension = static_cast<size_t>(shadowMapAndViewportSize.x());
 	return settings;
 }
+
+#endif

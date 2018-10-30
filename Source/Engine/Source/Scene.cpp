@@ -335,6 +335,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 	};
 
 	unsigned numShdSpot = 0;
+	unsigned numPtSpot = 0;
 	for (const Light& l : mLights)
 	{
 		//if (!l._bEnabled) continue;	// #BreaksRelease
@@ -354,6 +355,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 			cbuffer.pointLightsShadowing[lightIndex] = l.GetPointLightData();
 			if (l.castsShadow)
 			{
+				cbuffer.pointProjMats[numPtSpot++] = l.GetProjectionMatrix();
 				mShadowView.points.push_back(&l);
 			}
 		}

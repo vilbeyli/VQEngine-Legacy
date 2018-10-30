@@ -1023,6 +1023,7 @@ void Engine::Render()
 		mpGPUProfiler->EndEntry();
 
 		mpCPUProfiler->BeginEntry("Skybox & Lights");
+		
 		// LIGHT SOURCES
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		
@@ -1314,10 +1315,10 @@ void Engine::RenderLights() const
 		if (light.type == Light::ELightType::DIRECTIONAL)
 			continue;	// do not render directional lights
 
-		const auto IABuffers = mBuiltinMeshes[light.renderMesh].GetIABuffers();
+		const auto IABuffers = mBuiltinMeshes[light.renderMeshID].GetIABuffers();
 		const XMMATRIX world = light.transform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world * mpActiveScene->mSceneView.viewProj;
-		const vec3 color = light.color.Value() * 2.5f;
+		const vec3 color = light.color.Value() * light.brightness;
 
 		mpRenderer->SetVertexBuffer(IABuffers.first);
 		mpRenderer->SetIndexBuffer(IABuffers.second);

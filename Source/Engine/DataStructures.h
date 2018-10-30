@@ -73,11 +73,13 @@ using ShadowingPointLightDataArray			= std::array<PointLightGPU, NUM_POINT_LIGHT
 using ShadowingSpotLightDataArray			= std::array<SpotLightGPU, NUM_SPOT_LIGHT_SHADOW>;
 
 using SpotShadowViewArray = std::array<XMMATRIX, NUM_SPOT_LIGHT_SHADOW>;
+using PointShadowProjMatArray = std::array<XMMATRIX, NUM_POINT_LIGHT_SHADOW>;
 
 //#pragma pack(push, 1)
 struct SceneLightingData
 {
-	struct cb{	// shader constant buffer
+	struct cb	// shader constant buffer
+	{	
 		int pointLightCount;
 		int spotLightCount;
 		int pointLightCount_shadow;
@@ -93,10 +95,12 @@ struct SceneLightingData
 		ShadowingSpotLightDataArray spotLightsShadowing;
 
 		SpotShadowViewArray shadowViews;
+		PointShadowProjMatArray pointProjMats;
 	} _cb;
 
 
-	inline void ResetCounts() {
+	inline void ResetCounts() 
+	{
 		_cb.pointLightCount = _cb.spotLightCount =
 		_cb.pointLightCount_shadow = _cb.spotLightCount_shadow = 0;
 	}

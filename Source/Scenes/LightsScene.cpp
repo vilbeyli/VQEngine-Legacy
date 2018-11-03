@@ -16,14 +16,14 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#include "SceneTemplate.h"
+#include "LightsScene.h"
 #include "Engine/Engine.h"
 #include "Application/Input.h"
 
 
 // Scene-specific loading logic
 //
-void SceneTemplate::Load(SerializedScene& scene)
+void LightsScene::Load(SerializedScene& scene)
 {
 	pHelloObject = Scene::CreateNewGameObject();
 	pHelloObject->AddMesh(EGeometry::CUBE);
@@ -32,14 +32,14 @@ void SceneTemplate::Load(SerializedScene& scene)
 
 // Scene-specific unloading logic
 //
-void SceneTemplate::Unload()
+void LightsScene::Unload()
 {
 
 }
 
 // Update() is called each frame
 //
-void SceneTemplate::Update(float dt)
+void LightsScene::Update(float dt)
 {
 	pHelloObject->GetTransform().RotateAroundGlobalYAxisDegrees(dt * 45.0f);
 }
@@ -47,7 +47,7 @@ void SceneTemplate::Update(float dt)
 // RenderUI() is called at the last stage of rendering before presenting the frame.
 // Scene-specific UI rendering goes in here.
 //
-void SceneTemplate::RenderUI() const 
+void LightsScene::RenderUI() const 
 {
 	
 }

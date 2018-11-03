@@ -87,6 +87,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SceneFiles", "SceneFiles", "{2C145C7D-4AE8-44FD-8933-0649D7918E13}"
 	ProjectSection(SolutionItems) = preProject
 		Data\ScenesFiles\IBLTest.scn = Data\ScenesFiles\IBLTest.scn
+		Data\ScenesFiles\LightsScene.scn = Data\ScenesFiles\LightsScene.scn
 		Data\ScenesFiles\Objects.scn = Data\ScenesFiles\Objects.scn
 		Data\ScenesFiles\Sponza.scn = Data\ScenesFiles\Sponza.scn
 		Data\ScenesFiles\SSAOTest.scn = Data\ScenesFiles\SSAOTest.scn

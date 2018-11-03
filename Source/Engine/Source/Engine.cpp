@@ -20,7 +20,7 @@
 #define ENABLE_TRANSPARENCY 0
 
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
-#define OVERRIDE_LEVEL_VALUE 1	// which level to load
+#define OVERRIDE_LEVEL_VALUE 5	// which level to load
 #define FULLSCREEN_DEBUG_TEXTURE 1
 
 // ASYNC / THREADED LOADING SWITCHES
@@ -51,6 +51,7 @@
 #include "Scenes/IBLTestScene.h"
 #include "Scenes/StressTestScene.h"
 #include "Scenes/SponzaScene.h"
+#include "Scenes/LightsScene.h"
 
 #include <sstream>
 #include <DirectXMath.h>
@@ -228,6 +229,7 @@ bool Engine::Initialize(HWND hwnd)
 	mpScenes.push_back(new IBLTestScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new StressTestScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new SponzaScene(mpRenderer, mpTextRenderer));
+	mpScenes.push_back(new LightsScene(mpRenderer, mpTextRenderer));
 
 	mpTimer->Stop();
 	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
@@ -751,11 +753,13 @@ void Engine::HandleInput()
 			else							 mpActiveScene->ResetActiveCamera();
 		}
 
+
 		if (mpInput->IsKeyTriggered("1"))	mLevelLoadQueue.push(0);
 		if (mpInput->IsKeyTriggered("2"))	mLevelLoadQueue.push(1);
 		if (mpInput->IsKeyTriggered("3"))	mLevelLoadQueue.push(2);
 		if (mpInput->IsKeyTriggered("4"))	mLevelLoadQueue.push(3);
 		if (mpInput->IsKeyTriggered("5"))	mLevelLoadQueue.push(4);
+		if (mpInput->IsKeyTriggered("6"))	mLevelLoadQueue.push(5);
 
 
 		// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.

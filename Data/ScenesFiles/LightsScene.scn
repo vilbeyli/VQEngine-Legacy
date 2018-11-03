@@ -1,0 +1,151 @@
+// Object initializations
+// ---------------------------------------------------------------------------------------------------------------
+// Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
+// Camera		: near far vfov  pos(3:xyz)  yaw pitch
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
+// BRDF		:
+// Phong		:
+// Object		: transform, brdf/phong, mesh
+// example: 
+//     object begin
+//      transform 85 5 -30 30 120 0 20
+//      mesh triangle
+//      brdf begin
+//     		textures "" openart/190_norm.JPG
+//     		diffuse 0.24 0.74 0.74
+//     		roughness 0.4
+//     		metalness 0.9
+//     	brdf end
+//     object end
+// ---------------------------------------------------------------------------------------------------------------
+    
+// Scene Render Settings initializations
+// ---------------------------------------------------------------------------------------------------------------
+// ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
+// bloom	    : enabled?, brighness threshold
+// skylight	    : enabled?
+// directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
+// ---------------------------------------------------------------------------------------------------------------
+
+ao true 0.1   12.00 2.40
+bloom false 0.70
+skylight false
+
+camera 0.1 1500 50   -2.11 29.59 -151.24    0 0
+camera 0.1 1500 50   -2.11 29.59 -151.24    0 0
+
+
+
+//directional sun 2.2   -20   -25   35  4096 2700 2800 0.00006
+//
+//// room lights
+//light       p         white		false      5800      814.54  115.85  197.38    900	  0.3  
+//light       p         white		false      7800      761.51  143.17  256.48    900	  0.3
+//light       p         white		false      8800      776.38  128.57  136.94    3200	  0.3
+//light		s		  orange     true       6000      794.38  88.06  183.54    78.14    -125 0 0   1  1500  0.0000005
+//light		s		  red        true       6000      774.38  88.06  183.54    85    -90 -10  0   1  1500
+//light		s		  yellow     true       6000      814.38  88.06  183.54    85    -90 20 0   1  1500
+//
+//
+//// sponza lights
+//light       p         cyan		false      1800      -681.67  85.89   359.20    60	  0.3
+//light       p         green		false      1800      -676.52  100.49  -330.15    60	  0.3
+//light       p         orange	false      1800      -429.20  85.81  359.21     60	  0.3
+//light       p         purple	false      1800      -428.95  92.26  -339.49    60	  0.3
+//light		s		  white     true       6000      -475.77  218.57  -175.73    80    90 -80 0   1 1000
+//
+//
+//object begin
+//	mesh cube
+//	transform 0 -10 0 0 0 0 1200 5 700
+//	brdf
+//		diffuse 0.4 0.35 0.4
+//		tiling 10
+//		roughness 0.6
+//		metalness 0
+//	brdf
+//object end
+//
+//
+////light       s         white      	true       9000         80	     -100    45     0	   180  0  	65  0.8	 
+////light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 
+//
+//
+
+//------------------------------------
+// ROOM UP
+//------------------------------------
+object begin
+	mesh cube
+	brdf
+		diffuse 0.3 0.3 0.3
+	brdf
+	transform 0 0 0 90 0 0 130 130 0.9
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.3 0.3 0.3
+	brdf
+	transform 0 50 0 90 0 0 130 130 0.9
+object end
+
+object begin
+	mesh cube
+	brdf
+		diffuse 0.3 0.3 0.3
+	brdf
+	transform -130 25 0 0 0 0 0.9 25 130
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.3 0.3 0.3
+	brdf
+	transform 130 25 0 0 0 0 0.9 25 130
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.3 0.3 0.3
+	brdf
+	transform 0 175 -25 0 0 0 130 25 0.9
+object end
+
+object begin
+	mesh sphere
+	brdf
+		diffuse 1.0 1.0 1.0
+	brdf
+	transform 0 14 -30 0 0 0 7
+object end
+
+object begin
+	mesh sphere
+	brdf
+		diffuse 0.05 0.1 0.8
+	brdf
+	transform 20 6 -55 0 0 0 3
+object end
+object begin
+	mesh sphere
+	brdf
+		diffuse 0.1 0.8 0.1
+	brdf
+	transform 0 6 -60 0 0 0 3
+object end
+object begin
+	mesh sphere
+	brdf
+		diffuse 0.8 0.1 0.05
+	brdf
+	transform -20 6 -55 0 0 0 3
+object end
+
+
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
+// directional  : colorPreset, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
+
+//directional sun 7.8   40 -100 15    4096 1024 600
+//light s	 white true  2850      -138.39  150.60  2.75     80    90 -90 50   1
+light p  white true  3400       1.68  170.36  -48.41     80	  0.15

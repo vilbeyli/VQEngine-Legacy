@@ -144,6 +144,7 @@
     <ClInclude Include="$(SolutionDir)Source\Scenes\SSAOTestScene.h" />
     <ClInclude Include="$(SolutionDir)Source\Scenes\StressTestScene.h" />
     <ClInclude Include="..\Scenes\SponzaScene.h" />
+    <ClInclude Include="$(SolutionDir)Source\Scenes\LightsScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Scenes\IBLTestScene.cpp" />
@@ -151,6 +152,7 @@
     <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Scenes\StressTestScene.cpp" />
     <ClCompile Include="..\Scenes\SponzaScene.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Scenes\LightsScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\Scenes\SceneTemplate.cpp">

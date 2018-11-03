@@ -38,104 +38,23 @@ camera 0.1 1500 50   -2.11 29.59 -151.24    0 0
 //------------------------------------
 // ROOM DOWN - ORIGINAL AO TEST SCENE
 //------------------------------------
-//object begin
-//	mesh cube
-//	brdf
-//		diffuse 0.3 0.3 0.3
-//	brdf
-//	transform 0 0 0 90 0 0 130 130 0.9
-//object end
-//
-//
-//
-//object begin
-//	mesh cube
-//	transform 40 7 -50 45 0 45 13
-//	brdf
-//		diffuse 0.9 0.9 0.9
-//		textures openart/183.jpg openart/183_norm.jpg
-//	brdf
-//object end
-//
-//object begin
-//	mesh sphere
-//	brdf
-//		diffuse 1.0 1.0 1.0
-//	brdf
-//	transform 0 12 -50 0 0 0 7
-//object end
-//
-//object begin
-//	mesh sphere
-//	brdf
-//		diffuse 0.05 0.1 0.8
-//	brdf
-//	transform 20 6 -75 0 0 0 3
-//object end
-//object begin
-//	mesh sphere
-//	brdf
-//		diffuse 0.1 0.8 0.1
-//	brdf
-//	transform 0 6 -80 0 0 0 3
-//object end
-//object begin
-//	mesh sphere
-//	brdf
-//		diffuse 0.8 0.1 0.05
-//	brdf
-//	transform -20 6 -75 0 0 0 3
-//object end
-//
-//
-//object begin
-//	mesh grid
-//	transform -45 15 -50 -40 0 0 35
-//	brdf
-//		diffuse 0.7 0.8 0.7
-//		textures openart/186.jpg openart/186_norm.jpg
-//	brdf
-//object end
-
-
-//------------------------------------
-// ROOM UP
-//------------------------------------
 object begin
 	mesh cube
 	brdf
 		diffuse 0.3 0.3 0.3
 	brdf
-	transform 0 150 0 90 0 0 130 130 0.9
-object end
-object begin
-	mesh cube
-	brdf
-		diffuse 0.3 0.3 0.3
-	brdf
-	transform 0 200 0 90 0 0 130 130 0.9
+	transform 0 0 0 90 0 0 130 130 0.9
 object end
 
+
+
 object begin
 	mesh cube
+	transform 40 7 -50 45 0 45 13
 	brdf
-		diffuse 0.3 0.3 0.3
+		diffuse 0.9 0.9 0.9
+		textures openart/183.jpg openart/183_norm.jpg
 	brdf
-	transform -130 175 0 0 0 0 0.9 25 130
-object end
-object begin
-	mesh cube
-	brdf
-		diffuse 0.3 0.3 0.3
-	brdf
-	transform 130 175 0 0 0 0 0.9 25 130
-object end
-object begin
-	mesh cube
-	brdf
-		diffuse 0.3 0.3 0.3
-	brdf
-	transform 0 175 130 0 0 0 130 25 0.9
 object end
 
 object begin
@@ -143,7 +62,7 @@ object begin
 	brdf
 		diffuse 1.0 1.0 1.0
 	brdf
-	transform 0 164 -30 0 0 0 7
+	transform 0 12 -50 0 0 0 7
 object end
 
 object begin
@@ -151,27 +70,29 @@ object begin
 	brdf
 		diffuse 0.05 0.1 0.8
 	brdf
-	transform 20 156 -55 0 0 0 3
+	transform 20 6 -75 0 0 0 3
 object end
 object begin
 	mesh sphere
 	brdf
 		diffuse 0.1 0.8 0.1
 	brdf
-	transform 0 156 -60 0 0 0 3
+	transform 0 6 -80 0 0 0 3
 object end
 object begin
 	mesh sphere
 	brdf
 		diffuse 0.8 0.1 0.05
 	brdf
-	transform -20 156 -55 0 0 0 3
+	transform -20 6 -75 0 0 0 3
 object end
 
 
-// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
-// directional  : colorPreset, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
-
-//directional sun 7.8   40 -100 15    4096 1024 600
-//light s	 white true  2850      -138.39  150.60  2.75     80    90 -90 50   1
-light p  white true  3400       1.68  170.36  -48.41     80	  0.15
+object begin
+	mesh grid
+	transform -45 15 -50 -40 0 0 35
+	brdf
+		diffuse 0.7 0.8 0.7
+		textures openart/186.jpg openart/186_norm.jpg
+	brdf
+object end

@@ -15,39 +15,22 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
-
-#include "SceneTemplate.h"
-#include "Engine/Engine.h"
-#include "Application/Input.h"
-
-
-// Scene-specific loading logic
-//
-void SceneTemplate::Load(SerializedScene& scene)
+#pragma once
+#include "Engine/Scene.h"
+class LightsScene : public Scene
 {
-	pHelloObject = Scene::CreateNewGameObject();
-	pHelloObject->AddMesh(EGeometry::CUBE);
-	pHelloObject->AddMaterial(Scene::CreateRandomMaterialOfType(GGX_BRDF));
-}
+public:
 
-// Scene-specific unloading logic
-//
-void SceneTemplate::Unload()
-{
+	void Load(SerializedScene& scene) override;
+	void Unload() override;
+	void Update(float dt) override;
+	void RenderUI() const override;
 
-}
+	LightsScene(Renderer* pRenderer, TextRenderer* pTextRenderer) : Scene(pRenderer, pTextRenderer) {}
+	~LightsScene() = default;
 
-// Update() is called each frame
-//
-void SceneTemplate::Update(float dt)
-{
-	pHelloObject->GetTransform().RotateAroundGlobalYAxisDegrees(dt * 45.0f);
-}
+private:
+	// custom scene stuff here
+	GameObject * pHelloObject;	// example
+};
 
-// RenderUI() is called at the last stage of rendering before presenting the frame.
-// Scene-specific UI rendering goes in here.
-//
-void SceneTemplate::RenderUI() const 
-{
-	
-}

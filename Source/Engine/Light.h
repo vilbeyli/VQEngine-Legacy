@@ -98,7 +98,7 @@ public:
 	union // each light type (point/spot) uses this vec2 for light-specific data
 	{
 		vec2 mAttenuation;				//       point light attenuation
-		vec2 mSpotAngle_SpotFallOff;		//        spot light angle and falloff multiplier
+		vec2 mSpotAngle_SpotFallOff;	//        spot light angle and falloff multiplier
 		vec2 mShadowMapAndViewportSize;	// directional light viewport size
 	};
 
@@ -158,6 +158,8 @@ class AreaLight : public Light
 	AreaLight()
 };
 #endif
+
+
 
 
 #else

@@ -23,32 +23,46 @@
 #include <sstream>
 #include <iomanip>
 
-struct PointLightGPU	// 48 Bytes | 3 registers
+struct PointLightGPU
 {	
+	// 48 Bytes | 3 registers
+	//-----------------------
 	vec3 position;
 	float  range;
+	//-----------------------
 	vec3 color;
 	float  brightness;
+	//-----------------------
 	vec2 attenuation;
 	vec2 padding;
+	//-----------------------
 };
 
-struct SpotLightGPU		// 48 bytes | 3 registers
+struct SpotLightGPU
 {
+	// 48 bytes | 3 registers
+	//-----------------------
 	vec3 position;
 	float  halfAngle;
+	//-----------------------
 	vec3 color;
 	float  brightness;
+	//-----------------------
 	vec3 spotDir;
 	float padding;
+	//-----------------------
 };
 
-struct DirectionalLightGPU // 28(+4) Bytes | 2 registers
+struct DirectionalLightGPU
 {
+	// 28(+4) Bytes | 2 registers
+	//-----------------------
 	vec3 lightDirection;
 	float  brightness;
+	//-----------------------
 	vec3 color;
 	float shadowFactor;	// todo: use as depthBias
+	//-----------------------
 };
 
 //struct ShadowView
@@ -66,11 +80,11 @@ struct DirectionalLightGPU // 28(+4) Bytes | 2 registers
 #define NUM_SPOT_LIGHT 20
 #define NUM_SPOT_LIGHT_SHADOW 5
 
-using PointLightDataArray					= std::array<PointLightGPU, NUM_POINT_LIGHT>;
-using SpotLightDataArray					= std::array<SpotLightGPU, NUM_SPOT_LIGHT>;
+using PointLightDataArray			= std::array<PointLightGPU, NUM_POINT_LIGHT>;
+using SpotLightDataArray			= std::array<SpotLightGPU, NUM_SPOT_LIGHT>;
 
-using ShadowingPointLightDataArray			= std::array<PointLightGPU, NUM_POINT_LIGHT_SHADOW>;
-using ShadowingSpotLightDataArray			= std::array<SpotLightGPU, NUM_SPOT_LIGHT_SHADOW>;
+using ShadowingPointLightDataArray	= std::array<PointLightGPU, NUM_POINT_LIGHT_SHADOW>;
+using ShadowingSpotLightDataArray	= std::array<SpotLightGPU, NUM_SPOT_LIGHT_SHADOW>;
 
 using SpotShadowViewArray = std::array<XMMATRIX, NUM_SPOT_LIGHT_SHADOW>;
 using PointShadowProjMatArray = std::array<XMMATRIX, NUM_POINT_LIGHT_SHADOW>;

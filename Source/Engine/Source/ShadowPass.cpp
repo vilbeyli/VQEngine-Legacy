@@ -256,7 +256,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		for (int face = 0; face < 6; ++face)
 		{
 			const XMMATRIX viewProj = 
-				  Texture::CubemapUtility::GetViewMatrix(face, shadowView.points[i]->transform._position) 
+				  shadowView.points[i]->GetViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face))
 				* shadowView.points[i]->GetProjectionMatrix();
 
 			const size_t depthTargetIndex = i * 6 + face;

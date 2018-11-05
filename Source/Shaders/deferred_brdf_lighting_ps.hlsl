@@ -66,6 +66,10 @@ Texture2D texDepth;
 SamplerState sShadowSampler;
 SamplerState sLinearSampler;
 
+
+
+// SHADOW TEST
+//
 float ShadowTestPCF(
 	in ShadowTestPCFData pcfTestLightData
 	, TextureCubeArray shadowCubeMapArr
@@ -95,6 +99,10 @@ float ShadowTestPCF(
 	return 1.0 - shadow;
 }
 
+
+
+// ENTRY POINT
+//
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	ShadowTestPCFData pcfTest;
@@ -127,8 +135,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
 
-//-----------------------------------------------------------------------------------------------------------------------------------------
-
+//-- POINT LIGHTS --------------------------------------------------------------------------------------------------------------------------
 #if ENABLE_POINT_LIGHTS
 	// brightness default: 300
 	for (int i = 0; i < Lights.numPointLights; ++i)		
@@ -144,7 +151,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
 #endif
-
 #if ENABLE_POINT_LIGHTS_SHADOW
 	for (int l = 0; l < Lights.numPointCasters; ++l)
 	{
@@ -167,8 +173,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 #endif
 
-//-----------------------------------------------------------------------------------------------------------------------------------------
 
+
+//-- SPOT LIGHTS ---------------------------------------------------------------------------------------------------------------------------
 #if ENABLE_SPOT_LIGHTS
 	for (int j = 0; j < Lights.numSpots; ++j)
 	{
@@ -179,7 +186,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
 #endif
-
 #if ENABLE_SPOT_LIGHTS_SHADOW
 	for (int k = 0; k < Lights.numSpotCasters; ++k)
 	{
@@ -195,7 +201,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 #endif
 
-//-- DIRECTIONAL LIGHT --------------------------------------------------------------------------------------------------------------------------
+
+
+//-- DIRECTIONAL LIGHT ----------------------------------------------------------------------------------------------------------------------
 #if ENABLE_DIRECTIONAL_LIGHTS
 	if (Lights.directional.shadowFactor > 0.0f)
 	{

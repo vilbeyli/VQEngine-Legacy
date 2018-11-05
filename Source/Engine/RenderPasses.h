@@ -49,7 +49,8 @@ struct ShadowView;
 struct SceneView;
 struct RenderTargetDesc;
 
-
+// BASE CLASS
+//
 struct RenderPass
 {
 	enum ECommonShaders
@@ -69,6 +70,11 @@ struct RenderPass
 	CPUProfiler*& pCPU;
 	GPUProfiler*& pGPU;
 };
+
+
+
+
+
 
 
 using DepthTargetIDArray = std::vector<DepthTargetID>;

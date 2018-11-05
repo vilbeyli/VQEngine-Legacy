@@ -22,6 +22,7 @@
 #include <unordered_map>
 
 struct Light;
+struct PointLight;
 struct DirectionalLight;
 class GameObject;
 
@@ -42,7 +43,7 @@ struct ShadowView
 	// shadowing Lights
 	std::vector<const Light*> spots;
 	std::vector<const Light*> points;
-	const DirectionalLight* pDirectional;
+	const Light* pDirectional;
 
 	// game obj casting shadows (=render list of directional light)
 	std::vector<const GameObject*> casters;

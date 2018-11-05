@@ -814,8 +814,8 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 	D3D11_TEXTURE2D_DESC desc = {};
 	desc.Format = (DXGI_FORMAT)texDesc.format;
-	desc.Height = texDesc.height;
-	desc.Width = texDesc.width;
+	desc.Height = max(texDesc.height, 1);
+	desc.Width =  max(texDesc.width, 1);
 	desc.ArraySize = arrSize;
 	desc.MipLevels = texDesc.mipCount;
 	desc.SampleDesc = { 1, 0 };

@@ -194,6 +194,7 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneFileName)
 {
 	SerializedScene scene;
+	scene.lights.resize(5);
 	std::string filePath = scene_root + sceneFileName;
 	std::ifstream sceneFile(filePath.c_str());
 
@@ -241,12 +242,16 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 
 // state tracking
 static bool bIsReadingGameObject = false;
+static bool bIsReadingLight = false;
 static bool bIsReadingMaterial = false;
 
 enum MaterialType { UNKNOWN, BRDF, PHONG };
 static MaterialType materialType = MaterialType::UNKNOWN;
 static Material* pMaterial = nullptr;
 static GameObject* pObject = nullptr;
+
+Light light = Light();
+static Light* pLight = nullptr;
 
 using ParseFunctionType = void(__cdecl *)(const std::vector<std::string>&);
 using ParseFunctionLookup = std::unordered_map<std::string, ParseFunctionType>;
@@ -255,7 +260,11 @@ static const std::unordered_map<std::string, Light::ELightType>	sLightTypeLookup
 { 
 	{"s", Light::ELightType::SPOT },
 	{"p", Light::ELightType::POINT},
-	{"d", Light::ELightType::DIRECTIONAL}
+	{"d", Light::ELightType::DIRECTIONAL},
+
+	{"spot", Light::ELightType::SPOT },
+	{"point", Light::ELightType::POINT},
+	{"directional", Light::ELightType::DIRECTIONAL},
 };
 
 static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
@@ -317,38 +326,59 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		camSettings.pitch       = stof(command[8]);
 		scene.cameras.push_back(camSettings);
 	}
-	else if (cmd == "directional")
-	{
-		const std::string colorValue = GetLowercased(command[1]);
-		const float brightness		 = stof(command[2]);
-		const vec3 direction		 = vec3(stof(command[3]), stof(command[4]), stof(command[5])).normalized();
-		const int shadowMapDimension = command.size() > 6 ? stoi(command[6]) : 1024;
-		const int shadowViewportDimension = command.size() > 7 ? stoi(command[7]) : shadowMapDimension;
-		const float range			 = command.size() > 8 ? stof(command[8]) : 1.0f;
-		const float depthBias		 = command.size() > 9 ? stof(command[9]) : 0.00000001f;
-
-		DirectionalLight l{
-			sColorLookup.at(colorValue),
-			brightness,
-			direction,
-			1,
-			range,
-			depthBias,
-			vec2(shadowMapDimension, shadowViewportDimension)
-		};
-
-		scene.directionalLight = l;
-	}
 	else if (cmd == "light")
 	{
-		// #Parameters: 11
+		// #Parameters: 2
 		//--------------------------------------------------------------
-		// | Light Type	| Color	| Shadowing? |  Brightness | Spot.Angle OR Point.Range | Position3 | Rotation3
+		// begin/end
 		//--------------------------------------------------------------
+		const std::string objCmd = GetLowercased(command[1]);
+		if (objCmd == "begin")
+		{
+			if (bIsReadingLight)
+			{
+				Log::Error(" expecting \"light end\" before starting a new light definition");
+				return;
+			}
+			bIsReadingLight = true;
+			//pLight = scene.CreateNewGameObject();
+			// pLight is set when type is processed
 
+		}
+
+		if (objCmd == "end")
+		{
+			if (!bIsReadingLight)
+			{
+				Log::Error(" expecting \"light begin\" before ending a light definition");
+				return;
+			}
+			bIsReadingLight = false;
+			pLight = nullptr;
+		}
+
+#if 0
 		auto ParseDirectionalLight = [&]()
 		{
+			const std::string colorValue = GetLowercased(command[1]);
+			const float brightness		 = stof(command[2]);
+			const vec3 direction		 = vec3(stof(command[3]), stof(command[4]), stof(command[5])).normalized();
+			const int shadowMapDimension = command.size() > 6 ? stoi(command[6]) : 1024;
+			const int shadowViewportDimension = command.size() > 7 ? stoi(command[7]) : shadowMapDimension;
+			const float range			 = command.size() > 8 ? stof(command[8]) : 1.0f;
+			const float depthBias		 = command.size() > 9 ? stof(command[9]) : 0.00000001f;
 
+			DirectionalLight l{
+				sColorLookup.at(colorValue),
+				brightness,
+				direction,
+				1,
+				range,
+				depthBias,
+				vec2(shadowMapDimension, shadowViewportDimension)
+			};
+
+			scene.directionalLight = l;
 		};
 		auto ParsePointLight = [&]()
 		{
@@ -399,6 +429,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		l.transform.RotateAroundGlobalZAxisDegrees(rotZ);
 		l.transform.SetUniformScale(scl);
 		scene.lights.push_back(l);
+#endif
+	}
+
+	else if (cmd == "")
+	{
+
 	}
 	else if (cmd == "object")
 	{
@@ -699,13 +735,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	{
 		scene.settings.bSkylightEnabled= sBoolTypeReflection.at(command[1]);
 	}
-
-	// Parameters
-	//---------------------------------------------------------------
-	// | Bloom Threshold | BlurPassCount
-	//---------------------------------------------------------------
 	else if (cmd == "bloom")
 	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Bloom Threshold | BlurPassCount
+		//---------------------------------------------------------------
 		Settings::Bloom& bloom = scene.settings.bloom;
 	
 		bloom.bEnabled = sBoolTypeReflection.at(GetLowercased(command[1]));

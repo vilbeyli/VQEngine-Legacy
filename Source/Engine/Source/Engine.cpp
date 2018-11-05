@@ -418,7 +418,7 @@ bool Engine::LoadSceneFromFile()
 	// todo: multiple data - inconsistent state -> sort out ownership
 	sEngineSettings.rendering.postProcess.bloom = mSerializedScene.settings.bloom;
 	mPostProcessPass._settings = sEngineSettings.rendering.postProcess;
-	if (mpActiveScene->mDirectionalLight.enabled)
+	if (mpActiveScene->mDirectionalLight.mbEnabled)
 	{
 		// #AsyncLoad: Mutex DEVICE
 		std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
@@ -842,7 +842,7 @@ void Engine::SendLightData() const
 	mpRenderer->SetConstant2f("spotShadowMapDimensions", vec2(shadowDimension, shadowDimension));
 	//mpRenderer->SetConstant2f("directionalShadowMapDimensions", directionalShadowMapDimensions);
 	mpRenderer->SetConstant1f("directionalShadowMapDimension", directionalShadowMapDimensions.x());
-	mpRenderer->SetConstant1f("directionalDepthBias", mpActiveScene->mDirectionalLight.depthBias);
+	mpRenderer->SetConstant1f("directionalDepthBias", mpActiveScene->mDirectionalLight.mDepthBias);
 
 	// SHADOW MAPS
 	//
@@ -1179,7 +1179,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		const TextureID tBRDF = EnvironmentMap::sBRDFIntegrationLUTTexture;
 		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap;
-		TextureID tDirectionalShadowMap = (mShadowMapPass.mDepthTarget_Directional == -1 || mpActiveScene->mDirectionalLight.enabled == 0)
+		TextureID tDirectionalShadowMap = (mShadowMapPass.mDepthTarget_Directional == -1 || mpActiveScene->mDirectionalLight.mbEnabled == 0)
 			? white4x4 
 			: mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
 
@@ -1316,13 +1316,13 @@ void Engine::RenderLights() const
 	{
 		//if (!light._bEnabled) continue; // #BreaksRelease
 		
-		if (light.type == Light::ELightType::DIRECTIONAL)
+		if (light.mType == Light::ELightType::DIRECTIONAL)
 			continue;	// do not render directional lights
 
-		const auto IABuffers = mBuiltinMeshes[light.renderMeshID].GetIABuffers();
-		const XMMATRIX world = light.transform.WorldTransformationMatrix();
+		const auto IABuffers = mBuiltinMeshes[light.mMeshID].GetIABuffers();
+		const XMMATRIX world = light.mTransform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world * mpActiveScene->mSceneView.viewProj;
-		const vec3 color = light.color.Value() * light.brightness;
+		const vec3 color = light.mColor.Value() * light.mBrightness;
 
 		mpRenderer->SetVertexBuffer(IABuffers.first);
 		mpRenderer->SetIndexBuffer(IABuffers.second);

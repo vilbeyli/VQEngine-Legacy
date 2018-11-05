@@ -48,7 +48,7 @@ class CPUProfiler;
 
 namespace VQEngine { class ThreadPool; }
 
-#define DO_NOT_LOAD_SCENES 0
+#define DO_NOT_LOAD_SCENES 1
 
 struct ModelLoadQueue
 {
@@ -96,6 +96,11 @@ protected:
 	//	Use this function to programmatically create new objects in the scene.
 	//
 	GameObject* CreateNewGameObject();
+
+	// Use this function to programmatically create new lights in the scene.
+	// TODO: finalize design after light refactor
+	//
+	//Light* CreateNewLight();
 	
 	//	Loads an assimp model - blocks the thread until the model loads
 	//
@@ -177,7 +182,11 @@ protected:
 	std::vector<Light>			mLights;
 	std::vector<GameObject*>	mpObjects;
 
+#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
+	Light						mDirectionalLight;
+#else
 	DirectionalLight			mDirectionalLight;
+#endif
 	Skybox						mSkybox;
 
 	EEnvironmentMapPresets		mActiveSkyboxPreset;
@@ -224,7 +233,11 @@ struct SerializedScene
 
 	std::vector<Settings::Camera>	cameras;
 	std::vector<Light>				lights;
+#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
+	Light							directionalLight;
+#else
 	DirectionalLight				directionalLight;
+#endif
 	MaterialPool					materials;
 	std::vector<GameObject>			objects;
 	Settings::SceneRender			settings;

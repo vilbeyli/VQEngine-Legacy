@@ -341,19 +341,23 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 		//if (!l._bEnabled) continue;	// #BreaksRelease
 
 		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
-		//const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
+		//const size_t shadowIndex = l._mbCastingShadows ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
 
 		// add to the count of the current light type & whether its shadow casting or not
-		pNumArray& refLightCounts = l.castsShadow ? casterCounts : lightCounts;
+		pNumArray& refLightCounts = l.mbCastingShadows ? casterCounts : lightCounts;
 
-		switch (l.type)
+		switch (l.mType)
 		{
 		case Light::ELightType::POINT:
 		{
-			const size_t lightIndex = (*refLightCounts[l.type])++;
-			cbuffer.pointLights[lightIndex] = l.GetPointLightData();
-			cbuffer.pointLightsShadowing[lightIndex] = l.GetPointLightData();
-			if (l.castsShadow)
+			const size_t lightIndex = (*refLightCounts[l.mType])++;
+
+			PointLightGPU plData;
+			l.GetGPUData(plData);
+			cbuffer.pointLights[lightIndex] = plData;
+			cbuffer.pointLightsShadowing[lightIndex] = plData;
+
+			if (l.mbCastingShadows)
 			{
 				cbuffer.pointProjMats[numPtSpot++] = l.GetProjectionMatrix();
 				mShadowView.points.push_back(&l);
@@ -362,10 +366,16 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 		break;
 		case Light::ELightType::SPOT:
 		{
-			const size_t lightIndex = (*refLightCounts[l.type])++;
-			cbuffer.spotLights[lightIndex] = l.GetSpotLightData();
-			cbuffer.spotLightsShadowing[lightIndex] = l.GetSpotLightData();
-			if (l.castsShadow)
+			const size_t lightIndex = (*refLightCounts[l.mType])++;
+			//const SpotLight& sl = static_cast<const SpotLight&>(l);
+			//cbuffer.spotLights[lightIndex] = sl.GetGPUData();
+			//cbuffer.spotLightsShadowing[lightIndex] = sl.GetGPUData();
+			SpotLightGPU slData;
+			l.GetGPUData(slData);
+			cbuffer.spotLights[lightIndex] = slData;
+			cbuffer.spotLightsShadowing[lightIndex] = slData;
+
+			if (l.mbCastingShadows)
 			{
 				cbuffer.shadowViews[numShdSpot++] = l.GetLightSpaceMatrix();
 				mShadowView.spots.push_back(&l);
@@ -378,11 +388,15 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 		}
 	}
 
-	cbuffer.directionalLight = mDirectionalLight.GetGPUData();
-	cbuffer.shadowViewDirectional = mDirectionalLight.GetLightSpaceMatrix();
-	if (mDirectionalLight.enabled)
+	if (mDirectionalLight.mbEnabled)
 	{
+		mDirectionalLight.GetGPUData(cbuffer.directionalLight);
+		cbuffer.shadowViewDirectional = mDirectionalLight.GetLightSpaceMatrix();
 		mShadowView.pDirectional = &mDirectionalLight;
+	}
+	else
+	{
+		cbuffer.directionalLight = {};
 	}
 }
 
@@ -828,11 +842,11 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		{
 			const bool bMeshListEmpty = obj.mModel.mData.mMeshIDs.empty();
 			const bool bTransparentMeshListEmpty = obj.mModel.mData.mTransparentMeshIDs.empty();
-			const bool bCastingShadows = obj.mRenderSettings.bCastShadow && !bMeshListEmpty;
+			const bool mbCastingShadows = obj.mRenderSettings.bCastShadow && !bMeshListEmpty;
 
 			if (!bMeshListEmpty)            { mSceneView.opaqueList.push_back(&obj); }
 			if (!bTransparentMeshListEmpty) { mSceneView.alphaList.push_back(&obj); }
-			if (bCastingShadows)            { casterList.push_back(&obj); }
+			if (mbCastingShadows)            { casterList.push_back(&obj); }
 
 #if _DEBUG
 			if (bMeshListEmpty && bTransparentMeshListEmpty)
@@ -895,10 +909,10 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	//pCPUProfiler->BeginEntry("Spots");
 	for (const Light& l : mLights)
 	{
-		if (!l.castsShadow) continue;
+		if (!l.mbCastingShadows) continue;
 
 		std::vector<const GameObject*> objList;
-		switch (l.type)
+		switch (l.mType)
 		{
 		case Light::ELightType::SPOT:
 		{
@@ -960,7 +974,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		std::sort(RANGE(casterList), SortByMeshType);
 		for (const Light& l : mLights)
 		{
-			if (!l.castsShadow) continue;
+			if (!l.mbCastingShadows) continue;
 			RenderList& lightRenderList = mShadowView.shadowMapRenderListLookUp.at(&l);
 
 			std::sort(RANGE(lightRenderList), SortByMeshType);
@@ -1063,6 +1077,7 @@ void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
 }
 
 GameObject* Scene::CreateNewGameObject(){ mpObjects.push_back(mObjectPool.Create(this)); return mpObjects.back(); }
+
 Material* Scene::CreateNewMaterial(EMaterialType type){ return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type)); }
 Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type)); }
 

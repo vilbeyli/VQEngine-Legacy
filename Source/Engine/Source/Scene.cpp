@@ -790,7 +790,13 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
 	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
 	XMVECTOR det = XMMatrixDeterminant(proj);
-	const XMMATRIX projInv = XMMatrixInverse(&det, proj);
+	const XMMATRIX projInv = XMMatrixInverse(&det, proj); 
+	det = mDirectionalLight.mbEnabled 
+		? XMMatrixDeterminant(mDirectionalLight.GetProjectionMatrix()) 
+		: XMVECTOR();
+	const XMMATRIX directionalLightProjectionInverse = mDirectionalLight.mbEnabled
+		? XMMatrixInverse(&det, mDirectionalLight.GetProjectionMatrix())
+		: XMMatrixIdentity();
 
 	// scene view matrices
 	mSceneView.viewProj = view * proj;
@@ -798,6 +804,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	mSceneView.viewInverse = viewInverse;
 	mSceneView.proj = proj;
 	mSceneView.projInverse = projInv;
+	mSceneView.directionalLightProjectionInverse = directionalLightProjectionInverse;
 
 	// render/scene settings
 	mSceneView.sceneRenderSettings = GetSceneRenderSettings();

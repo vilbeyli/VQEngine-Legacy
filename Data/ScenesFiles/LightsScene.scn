@@ -137,10 +137,11 @@ object end
 
 light begin
 	type directional
-	transform 1.68  70.36  -48.41    90 30 0    1
+	transform 0 0 0    9 35 0    1
 	color sun
-	brightness 100
-	shadows true 0.001  0.01 1000
+	brightness 1.2
+	shadows true 0.001  1 2000 
+	directional 512 100
 light end
 
 // TODO: LINEAR LIGHTS

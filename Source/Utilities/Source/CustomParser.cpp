@@ -194,7 +194,6 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneFileName)
 {
 	SerializedScene scene;
-	scene.lights.resize(5);
 	std::string filePath = scene_root + sceneFileName;
 	std::ifstream sceneFile(filePath.c_str());
 
@@ -250,8 +249,7 @@ static MaterialType materialType = MaterialType::UNKNOWN;
 static Material* pMaterial = nullptr;
 static GameObject* pObject = nullptr;
 
-Light light = Light();
-static Light* pLight = nullptr;
+Light sLight = Light();
 
 using ParseFunctionType = void(__cdecl *)(const std::vector<std::string>&);
 using ParseFunctionLookup = std::unordered_map<std::string, ParseFunctionType>;
@@ -304,7 +302,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 {
 	if (command.empty()){return;}
 	const std::string& cmd = command[0];	// shorthand
-	if (cmd == "camera")
+	if (cmd == "camera") // there's a lot of else's... :( (todo: use a map of function pointers...)
 	{
 		if (command.size() != 9)
 		{
@@ -340,10 +338,8 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 				Log::Error(" expecting \"light end\" before starting a new light definition");
 				return;
 			}
-			bIsReadingLight = true;
-			//pLight = scene.CreateNewGameObject();
-			// pLight is set when type is processed
-
+			bIsReadingLight = true; 
+			sLight = Light();
 		}
 
 		if (objCmd == "end")
@@ -354,7 +350,11 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 				return;
 			}
 			bIsReadingLight = false;
-			pLight = nullptr;
+			
+			if (sLight.mType == Light::ELightType::DIRECTIONAL)
+				scene.directionalLight = sLight;
+			else
+				scene.lights.push_back(sLight);
 		}
 
 #if 0
@@ -432,10 +432,6 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 #endif
 	}
 
-	else if (cmd == "")
-	{
-
-	}
 	else if (cmd == "object")
 	{
 		// #Parameters: 2
@@ -465,6 +461,9 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			pObject = nullptr;
 		}
 	}
+
+
+	// material
 	else if (cmd == "mesh")
 	{
 		// #Parameters: 1
@@ -671,15 +670,69 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		}
 	}
 
+	// light
+	else if (cmd == "type")
+	{
+		std::string lowercaseTypeValue = command[1];
+		std::transform(RANGE(lowercaseTypeValue), lowercaseTypeValue.begin(), ::tolower);
+		if (sLightTypeLookup.find(lowercaseTypeValue) == sLightTypeLookup.end())
+		{
+			Log::Warning("Invalid light type: %s", command[1]);
+		}
+		else
+		{
+			sLight.mType = sLightTypeLookup.at(lowercaseTypeValue);
+		}
+	}
+	else if (cmd == "color")
+	{
+		std::string lowercaseTypeValue = command[1];
+		std::transform(RANGE(lowercaseTypeValue), lowercaseTypeValue.begin(), ::tolower);
+		if (sColorLookup.find(lowercaseTypeValue) == sColorLookup.end())
+		{
+			Log::Warning("Unknown color: %s", command[1]);
+		}
+		else
+		{
+			sLight.mColor = sColorLookup.at(lowercaseTypeValue);
+		}
+	}
+	else if (cmd == "brightness")
+	{
+		sLight.mBrightness = stof(command[1]);
+	}
+	else if (cmd == "shadows")
+	{
+		sLight.mbCastingShadows = sBoolTypeReflection.at(command[1]);
+		sLight.mDepthBias = stof(command[2]);			// TODO: default values
+		sLight.mNearPlaneDistance = stof(command[3]);	// TODO: default values
+		sLight.mFarPlaneDistance = stof(command[4]);	// TODO: default values
+	}
+	else if (cmd == "spot")
+	{
+		sLight.mSpotAngleDegrees = stof(command[1]);
+		sLight.mSpotFalloffAngleDegrees= stof(command[2]);
+	}
+	else if (cmd == "directional")
+	{
+		sLight.mViewportX = sLight.mViewportY = stof(command[1]);
+		sLight.mDistanceFromOrigin = stof(command[2]);
+	}
+	else if (cmd == "attenuation")
+	{
+		sLight.mAttenuationConstant = stof(command[1]);
+		if (command.size() > 2) sLight.mAttenuationLinear = stof(command[2]);
+		if (command.size() > 3) sLight.mAttenuationQuadratic = stof(command[3]);
+	}
 	else if (cmd == "transform")
 	{
 		// #Parameters: 7-9
 		//--------------------------------------------------------------
 		// Position(3), Rotation(3), UniformScale(1)/Scale(3)
 		//--------------------------------------------------------------
-		if (!bIsReadingGameObject)
+		if (!bIsReadingGameObject && !bIsReadingLight)
 		{
-			Log::Error(" Creating Transform without defining a game object (missing cmd: \"%s\"", "object begin");
+			Log::Error(" Creating Transform without defining a game object (missing cmd: \"%s\"), or a light (missing cmd: \"light begin\")", "object begin");
 			return;
 		}
 		
@@ -707,7 +760,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			float sclZ = stof(command[9]);
 			tf.SetScale(sclX, sclY, sclZ);
 		}
-		pObject->SetTransform(tf);
+
+		if(bIsReadingGameObject)
+			pObject->SetTransform(tf);
+
+		if (bIsReadingLight)
+			sLight.mTransform = tf;
 	}
 	else if (cmd == "model")
 	{

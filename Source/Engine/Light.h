@@ -182,7 +182,7 @@ struct Light
 		{
 			float mViewportX;
 			float mViewportY;
-			float dummy0;
+			float mDistanceFromOrigin;
 		};
 		
 

@@ -80,9 +80,7 @@ DirectX::XMMATRIX Light::GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDire
 		const XMVECTOR lookAt = vec3::Zero;
 		const XMMATRIX mRot = mTransform.RotationMatrix();
 		const vec3 direction = XMVector3Transform(vec3::Forward, mRot);
-
-		float shadowMapDistance = 1500.0f; // TODO:
-		const XMVECTOR lightPos = direction * -shadowMapDistance;	// away from the origin along the direction vector 
+		const XMVECTOR lightPos = direction * -mDistanceFromOrigin;	// away from the origin along the direction vector 
 		return XMMatrixLookAtLH(lightPos, lookAt, up);
 	}
 	default:

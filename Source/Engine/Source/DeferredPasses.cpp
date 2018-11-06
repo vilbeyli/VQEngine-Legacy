@@ -444,7 +444,8 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 
 	pRenderer->SetConstant4x4f("matView", args.sceneView.view);
 	pRenderer->SetConstant4x4f("matViewToWorld", args.sceneView.viewInverse);
-	pRenderer->SetConstant4x4f("matPorjInverse", args.sceneView.projInverse);
+	pRenderer->SetConstant4x4f("directionalProjInverse", args.sceneView.directionalLightProjectionInverse);
+	pRenderer->SetConstant4x4f("matProjInverse", args.sceneView.projInverse);
 	//pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
 	pRenderer->SetSamplerState("sShadowSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);

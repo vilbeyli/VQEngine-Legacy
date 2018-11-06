@@ -109,7 +109,7 @@ inline float LinearDepth(in float zBufferSample, in float A, in float B)
 	// http://www.humus.name/index.php?ID=255
     return A / (zBufferSample - B);
 }
-inline float LinearDepth(in float zBufferSample, in matrix matPorjInverse) { return LinearDepth(zBufferSample, matPorjInverse[2][3], matPorjInverse[2][2]); }
+inline float LinearDepth(in float zBufferSample, in matrix matProjInverse) { return LinearDepth(zBufferSample, matProjInverse[2][3], matProjInverse[2][2]); }
 
 float3 ViewSpacePosition(in const float nonLinearDepth, const in float2 uv, const in matrix invProjection)
 {

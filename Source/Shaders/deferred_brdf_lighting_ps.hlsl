@@ -40,12 +40,13 @@ cbuffer SceneVariables	// frame constants
 {
 	matrix matView;
 	matrix matViewToWorld;
-	matrix matPorjInverse;
+	matrix matProjInverse;
 	
 	//float2 pointShadowMapDimensions;
 	float2 spotShadowMapDimensions;
 	float directionalShadowMapDimension;
 	float directionalDepthBias;
+	matrix directionalProjInverse;
 	
 	SceneLighting Lights;
 };
@@ -99,6 +100,64 @@ float ShadowTestPCF(
 	return 1.0 - shadow;
 }
 
+float _ShadowTestPCF(
+	in ShadowTestPCFData pcfTestLightData
+	, Texture2DArray shadowMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, in matrix camProjInv
+	, in matrix lightProjInv
+)
+//float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
+{
+	// homogeneous position after interpolation
+	const float3 projLSpaceCoords = pcfTestLightData.lightSpacePos.xyz / pcfTestLightData.lightSpacePos.w;
+
+	// frustum check
+	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
+		projLSpaceCoords.y < -1.0f || projLSpaceCoords.y > 1.0f ||
+		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
+		)
+	{
+		return 1.0f;
+	}
+
+
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	float shadow = 0.0f;
+
+	const float2 texelSize = 1.0f / (shadowMapDimensions);
+
+	// clip space [-1, 1] --> texture space [0, 1]
+	const float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
+	const float pxDepthInLSpace = projLSpaceCoords.z;
+
+
+	// PCF
+	const int rowHalfSize = 2;
+	for (int x = -rowHalfSize; x <= rowHalfSize; ++x)
+	{
+		for (int y = -rowHalfSize; y <= rowHalfSize; ++y)
+		{
+			float2 texelOffset = float2(x, y) * texelSize;
+			float closestDepthInLSpace = shadowMapArr.Sample(shadowSampler, float3(shadowTexCoords + texelOffset, shadowMapIndex)).x;
+
+			// depth check
+			const float linearCurrentPx = LinearDepth(pxDepthInLSpace, camProjInv);
+			const float linearClosestPx = LinearDepth(closestDepthInLSpace, camProjInv);
+#if 1
+			shadow += (pxDepthInLSpace - BIAS > closestDepthInLSpace) ? 1.0f : 0.0f;
+#else
+			shadow += (linearCurrentPx < linearClosestPx - 0.500) ? 1.0f : 0.0f;
+#endif
+		}
+	}
+
+	shadow /= (rowHalfSize * 2 + 1) * (rowHalfSize * 2 + 1);
+
+	return 1.0 - shadow;
+}
 
 
 // ENTRY POINT
@@ -115,7 +174,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	// lighting & surface parameters (View Space Lighting)
     const float nonLinearDepth = texDepth.Sample(sLinearSampler, In.uv).r;
-	const float3 P = ViewSpacePosition(nonLinearDepth, In.uv, matPorjInverse);
+	const float3 P = ViewSpacePosition(nonLinearDepth, In.uv, matProjInverse);
 	const float3 N = texNormals.Sample(sLinearSampler, In.uv);
 	//const float3 T = normalize(In.tangent);
 	const float3 V = normalize(- P);
@@ -215,7 +274,14 @@ float4 PSMain(PSIn In) : SV_TARGET
 			* Lights.directional.brightness;
 		pcfTest.NdotL = saturate(dot(s.N, Wi));
 		pcfTest.depthBias = directionalDepthBias;
-		const float3 shadowing = ShadowTestPCF(pcfTest, texDirectionalShadowMaps, sShadowSampler, dirShadowMapDimensions, 0);
+		const float3 shadowing = _ShadowTestPCF(
+			pcfTest
+			, texDirectionalShadowMaps
+			, sShadowSampler
+			, dirShadowMapDimensions
+			, 0
+			, matProjInverse
+			, directionalProjInverse);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
 #endif

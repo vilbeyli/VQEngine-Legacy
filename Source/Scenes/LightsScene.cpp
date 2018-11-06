@@ -28,6 +28,7 @@ void LightsScene::Load(SerializedScene& scene)
 	pHelloObject = Scene::CreateNewGameObject();
 	pHelloObject->AddMesh(EGeometry::CUBE);
 	pHelloObject->AddMaterial(Scene::CreateRandomMaterialOfType(GGX_BRDF));
+	pHelloObject->SetTransform(Transform(vec3(0, 15, 0)));
 }
 
 // Scene-specific unloading logic

@@ -115,6 +115,7 @@ struct Light
 	//
 	Light() // DEFAULTS
 		: mColor(LinearColor::white)
+		, mbEnabled(true)
 		, mType(LIGHT_TYPE_COUNT)
 		, mBrightness(300.0f)
 		, mbCastingShadows(false)

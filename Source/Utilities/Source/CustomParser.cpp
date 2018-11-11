@@ -199,6 +199,7 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 
 	scene.materials.Clear();
 	scene.materials.Initialize(4096);
+	scene.directionalLight.mbEnabled = false;
 
 	if (sceneFile.is_open())
 	{

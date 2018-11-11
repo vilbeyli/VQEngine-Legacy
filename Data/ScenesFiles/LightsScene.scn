@@ -39,14 +39,14 @@ camera 0.1 1500 50   -2.11 29.59 -151.24    0 0
 object begin
 	mesh cube
 	brdf
-		diffuse 0.3 0.3 0.3
+		diffuse 0.12 0.12 0.12
 	brdf
 	transform 0 0 0 90 0 0 130 130 0.9
 object end
 object begin
 	mesh cube
 	brdf
-		diffuse 0.3 0.3 0.3
+		diffuse 1 1 1
 	brdf
 	transform 0 50 0 90 0 0 130 130 0.9
 object end
@@ -54,14 +54,14 @@ object end
 object begin
 	mesh cube
 	brdf
-		diffuse 0.3 0.3 0.3
+		diffuse 1 1 1
 	brdf
 	transform -130 25 0 0 0 0 0.9 25 130
 object end
 object begin
 	mesh cube
 	brdf
-		diffuse 0.3 0.3 0.3
+		diffuse 1 1 1
 	brdf
 	transform 130 25 0 0 0 0 0.9 25 130
 object end
@@ -76,7 +76,10 @@ object end
 object begin
 	mesh sphere
 	brdf
-		diffuse 1.0 1.0 1.0
+		//diffuse 1.0 1.0 1.0
+		diffuse 0.01 0.01 0.01
+		roughness 0.54
+		//metalness 1.0
 	brdf
 	transform 0 14 -30 0 0 0 7
 object end
@@ -115,16 +118,16 @@ object end
 //light p  white true  3400       1.68  20.36  -48.41     120	  0.15
 //light p  white true  3400       1.68  70.36  -48.41     120	  0.15
 
-//light begin
-//	type point
-//	transform 1.68  70.36  -48.41    0 0 0   1
-//	color white
-//	brightness 1000
-//	shadows true 0.001 0.01 100
-//	attenuation 1 1
-//	range 100
-//light end
-//
+light begin
+	type point
+	transform 5  15.36  0    0 0 0   0.1
+	color white
+	brightness 4700
+	shadows true 0.001 0.1 500
+	attenuation 1 1
+//	range 500
+light end
+
 //light begin
 //	type spot
 //	transform 11.68  70.36  -48.41   0 0 0    1
@@ -135,14 +138,14 @@ object end
 //	range 150
 //light end
 
-light begin
-	type directional
-	transform 0 0 0    9 35 0    1
-	color sun
-	brightness 1.2
-	shadows true 0.001  1 2000 
-	directional 512 100
-light end
+//light begin
+//	type directional
+//	transform 0 0 0    9 35 0    1
+//	color sun
+//	brightness 1.2
+//	shadows true 0.001  1 2000 
+//	directional 512 100
+//light end
 
 // TODO: LINEAR LIGHTS
 //light begin

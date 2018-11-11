@@ -121,7 +121,7 @@ void Light::GetGPUData(PointLightGPU& l) const
 	l.color = mColor.Value();
 	l.brightness = mBrightness;
 	//l.attenuation = mAttenuation; // TODO
-	assert(false);
+	//assert(false);
 	l.range = mRange;
 }
 

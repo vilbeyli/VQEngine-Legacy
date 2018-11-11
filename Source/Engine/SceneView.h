@@ -69,7 +69,7 @@ struct SceneView
 	XMMATRIX		viewInverse;
 	XMMATRIX		proj;
 	XMMATRIX		projInverse;
-	XMMATRIX		directionalLightProjectionInverse;
+	XMMATRIX		directionalLightProjection;
 
 	vec3			cameraPosition;
 	bool			bIsPBRLightingUsed;

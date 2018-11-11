@@ -242,6 +242,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	viewPort.Width = static_cast<float>(mShadowMapDimension_Point);
 	pGPUProfiler->BeginEntry("Points");
 	pRenderer->SetViewport(viewPort);
+	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 	for (size_t i = 0; i < shadowView.points.size(); i++)
 	{
 #if _DEBUG
@@ -279,6 +280,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	//-----------------------------------------------------------------------------------------------
 	// DIRECTIONAL SHADOW MAP
 	//-----------------------------------------------------------------------------------------------
+	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_FRONT);
 	if (shadowView.pDirectional != nullptr)
 	{
 		const XMMATRIX viewProj = shadowView.pDirectional->GetLightSpaceMatrix();

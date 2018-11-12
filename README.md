@@ -2,6 +2,11 @@
 
 ![](Data/Icons/VQEngine-icon.png) A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
+Quick Look:
+
+ - [Renderer.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/Renderer/Renderer.h)
+ - [Scene.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/Engine/Scene.h)
+
 ###### Model Loading (.obj), Sponza Scene, SSAO, HDR, Bloom
 
 ![](Screenshots/models2.PNG)
@@ -23,7 +28,7 @@ See [Milestones](https://github.com/vilbeyli/VQEngine/milestones) for the planne
 
 The latest changes can be found in the [dev branch](https://github.com/vilbeyli/VQEngine/tree/dev), or another branch named with the feature being implemented. _These branches might be unstable before the release_.
 
-**[0.6.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.6.0) - Rendering Improvements: DoF, SSR, Point & Area Lights** - TBA
+**[v0.6.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.6.0) - Rendering Improvements: DoF, SSR, Point & Area Lights** - TBA
 
 - Point Light Shadows
 - Depth of Field

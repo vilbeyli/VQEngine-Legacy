@@ -705,9 +705,13 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	else if (cmd == "shadows")
 	{
 		sLight.mbCastingShadows = sBoolTypeReflection.at(command[1]);
-		sLight.mDepthBias = stof(command[2]);			// TODO: default values
-		sLight.mNearPlaneDistance = stof(command[3]);	// TODO: default values
-		sLight.mFarPlaneDistance = stof(command[4]);	// TODO: default values
+		sLight.mDepthBias = command.size() > 2 ? stof(command[2]) : 0.15f;
+		sLight.mNearPlaneDistance = command.size() > 3 ? stof(command[3]) : 0.01f;
+		sLight.mFarPlaneDistance  = command.size() > 4 ? stof(command[4]) : 1000.0f;
+	}
+	else if (cmd == "range")
+	{
+		sLight.mRange = stof(command[1]);
 	}
 	else if (cmd == "spot")
 	{

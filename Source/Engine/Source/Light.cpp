@@ -117,12 +117,15 @@ void Light::GetGPUData(SpotLightGPU& l) const
 void Light::GetGPUData(PointLightGPU& l) const
 {
 	assert(mType == ELightType::POINT);
+
 	l.position = mTransform._position;
+	l.range = mRange;
+
 	l.color = mColor.Value();
 	l.brightness = mBrightness;
-	//l.attenuation = mAttenuation; // TODO
-	//assert(false);
-	l.range = mRange;
+	
+	l.attenuation = vec3(mAttenuationConstant, mAttenuationLinear, mAttenuationQuadratic);
+	l.depthBias = mDepthBias;
 }
 
 Settings::ShadowMap Light::GetSettings() const

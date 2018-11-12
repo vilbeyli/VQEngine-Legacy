@@ -56,6 +56,16 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, const Settings::ShadowMap& s
 	};
 	this->mShadowMapShaderInstanced = pRenderer->CreateShader(instancedShaderDesc);
 
+	const ShaderDesc cubemapDepthShaderDesc = { "ShadowCubeMapShader",
+		ShaderStageDesc{"ShadowCubeMapShader_vs.hlsl", {
+		//	ShaderMacro{ "INSTANCED"     , "1" },
+		//	ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) }
+			{}
+		}},
+		ShaderStageDesc{"ShadowCubeMapShader_ps.hlsl" , {} }
+	};
+	this->mShadowCubeMapShader = pRenderer->CreateShader(cubemapDepthShaderDesc);
+
 	InitializeSpotLightShadowMaps(shadowMapSettings);
 	InitializePointLightShadowMaps(shadowMapSettings);
 }
@@ -169,17 +179,27 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 {
 	//-----------------------------------------------------------------------------------------------
 	struct PerObjectMatrices { XMMATRIX wvp; };
+	struct PerObjectMatricesCubemap { XMMATRIX matWorld; XMMATRIX wvp; };
 	struct InstancedObjectCBuffer { PerObjectMatrices objMatrices[DRAW_INSTANCED_COUNT_DEPTH_PASS]; };
 	auto Is2DGeometry = [](MeshID mesh)
 	{
 		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
 	};
-	auto RenderDepth = [&](const GameObject* pObj, const XMMATRIX& viewProj)
+	auto RenderDepth = [&](const GameObject* pObj, const XMMATRIX& viewProj, bool bIsCubemap = false)
 	{
 		const ModelData& model = pObj->GetModelData();
-		const PerObjectMatrices objMats = PerObjectMatrices({ pObj->GetTransform().WorldTransformationMatrix() * viewProj });
+		const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
 
-		pRenderer->SetConstantStruct("ObjMats", &objMats);
+		if (bIsCubemap)
+		{
+			const PerObjectMatricesCubemap objMats = PerObjectMatricesCubemap({ matWorld, matWorld * viewProj });
+			pRenderer->SetConstantStruct("ObjMats", &objMats);
+		}
+		else
+		{
+			const PerObjectMatrices objMats = PerObjectMatrices({ matWorld * viewProj });
+			pRenderer->SetConstantStruct("ObjMats", &objMats);
+		}
 		std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
 		{
 			const RasterizerStateID rasterizerState = Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
@@ -232,49 +252,6 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		pRenderer->EndEvent();
 	}
 	pGPUProfiler->EndEntry();	// spots
-
-
-#if 1
-	//-----------------------------------------------------------------------------------------------
-	// POINT LIGHT SHADOW MAPS
-	//-----------------------------------------------------------------------------------------------
-	viewPort.Height = static_cast<float>(mShadowMapDimension_Point);
-	viewPort.Width = static_cast<float>(mShadowMapDimension_Point);
-	pGPUProfiler->BeginEntry("Points");
-	pRenderer->SetViewport(viewPort);
-	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
-	for (size_t i = 0; i < shadowView.points.size(); i++)
-	{
-#if _DEBUG
-		if (shadowView.shadowMapRenderListLookUp.find(shadowView.points[i]) == shadowView.shadowMapRenderListLookUp.end())
-		{
-			Log::Error("Point light not found in shadowmap render list lookup");
-			continue;;
-		}
-#endif
-		
-		pRenderer->BeginEvent("Point[" + std::to_string(i) + "]: DrawSceneZ()");
-		for (int face = 0; face < 6; ++face)
-		{
-			const XMMATRIX viewProj = 
-				  shadowView.points[i]->GetViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face))
-				* shadowView.points[i]->GetProjectionMatrix();
-
-			const size_t depthTargetIndex = i * 6 + face;
-			pRenderer->BindDepthTarget(mDepthTargets_Point[depthTargetIndex]);	// only depth stencil buffer
-			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
-			pRenderer->Apply();
-
-			// todo: objects per view direction?
-			for (const GameObject* pObj : shadowView.shadowMapRenderListLookUp.at(shadowView.points[i]))
-			{
-				RenderDepth(pObj, viewProj);
-			}
-		}
-		pRenderer->EndEvent();
-	}
-	pGPUProfiler->EndEntry();	// Points
-#endif
 
 
 	//-----------------------------------------------------------------------------------------------
@@ -346,5 +323,60 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		pRenderer->EndEvent();
 		pGPUProfiler->EndEntry();
 	}
+
+
+
+#if 1
+	//-----------------------------------------------------------------------------------------------
+	// POINT LIGHT SHADOW MAPS
+	//-----------------------------------------------------------------------------------------------
+	viewPort.Height = static_cast<float>(mShadowMapDimension_Point);
+	viewPort.Width = static_cast<float>(mShadowMapDimension_Point);
+	pGPUProfiler->BeginEntry("Points");
+	pRenderer->SetShader(this->mShadowCubeMapShader);
+	pRenderer->SetViewport(viewPort);
+	//pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+	for (size_t i = 0; i < shadowView.points.size(); i++)
+	{
+		struct PointLightCBuffer
+		{
+			vec4 lightPosition_farPlane;
+		} _cbLight;
+
+#if _DEBUG
+		if (shadowView.shadowMapRenderListLookUp.find(shadowView.points[i]) == shadowView.shadowMapRenderListLookUp.end())
+		{
+			Log::Error("Point light not found in shadowmap render list lookup");
+			continue;;
+		}
+#endif
+
+		pRenderer->BeginEvent("Point[" + std::to_string(i) + "]: DrawSceneZ()");
+		
+		_cbLight.lightPosition_farPlane = vec4(shadowView.points[i]->mTransform._position, shadowView.points[i]->mRange);
+
+		for (int face = 0; face < 6; ++face)
+		{
+			const XMMATRIX viewProj =
+				shadowView.points[i]->GetViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face))
+				* shadowView.points[i]->GetProjectionMatrix();
+
+			const size_t depthTargetIndex = i * 6 + face;
+			pRenderer->BindDepthTarget(mDepthTargets_Point[depthTargetIndex]);	// only depth stencil buffer
+			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
+			pRenderer->SetConstantStruct("cbLight", &_cbLight);
+			pRenderer->Apply();
+			
+			// TODO: culled object list per view direction
+			for (const GameObject* pObj : shadowView.shadowMapRenderListLookUp.at(shadowView.points[i]))
+			{
+				RenderDepth(pObj, viewProj, true);
+			}
+		}
+		pRenderer->EndEvent();
+	}
+	pGPUProfiler->EndEntry();	// Points
+#endif
+
 }
 

@@ -359,7 +359,6 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 
 			if (l.mbCastingShadows)
 			{
-				cbuffer.pointProjMats[numPtSpot++] = l.GetProjectionMatrix();
 				mShadowView.points.push_back(&l);
 			}
 		}

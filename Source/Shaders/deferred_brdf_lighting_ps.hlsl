@@ -71,27 +71,23 @@ SamplerState sLinearSampler;
 
 // SHADOW TEST
 //
-float ShadowTestPCF(
+float OmnidirectionalShadowTestPCF(
 	in ShadowTestPCFData pcfTestLightData
 	, TextureCubeArray shadowCubeMapArr
 	, SamplerState shadowSampler
 	, float2 shadowMapDimensions
 	, int shadowMapIndex
-	, float3 lightDirection
-	, in matrix lightProjectionMat
+	, float3 lightVectorWorldSpace
+	, float range
 )
 {
 	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
 	float shadow = 0.0f;
 
+	const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, float4(-lightVectorWorldSpace, shadowMapIndex)).x;
+	const float closestDepthInWorldSpace = closestDepthInLSpace * range;
+	shadow += (length(lightVectorWorldSpace) > closestDepthInWorldSpace + pcfTestLightData.depthBias) ? 1.0f : 0.0f;
 
-	const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, float4(-lightDirection, shadowMapIndex)).x;
-	const float closestDepthInWorldSpace = LinearDepth(closestDepthInLSpace, lightProjectionMat);
-	shadow += (length(lightDirection)  > closestDepthInWorldSpace + 0.15) ? 1.0f : 0.0f;
-
-	//return 50000;
-	//return max(0.0f, 1.0 - shadow*0.95f);
-	//return 1;
 	return 1.0f - shadow;
 }
 
@@ -101,7 +97,6 @@ float _ShadowTestPCF(
 	, SamplerState shadowSampler
 	, float2 shadowMapDimensions
 	, int shadowMapIndex
-	, in matrix camProjInv
 	, in matrix lightProjInv
 )
 //float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
@@ -216,20 +211,16 @@ float4 PSMain(PSIn In) : SV_TARGET
 			* Lights.point_lights[l].color 
 			* Lights.point_lights[l].brightness;
 
-		// shadow view?
-		const matrix matShadowView = Lights.shadowViews[spotShadowsBaseIndex + l];
-		pcfTest.lightSpacePos = mul(matShadowView, float4(Pw, 1));
-
 		pcfTest.NdotL = saturate(dot(s.N, Wi));
-		pcfTest.depthBias = 0.0000005f;
-		const float3 shadowing = ShadowTestPCF(
+		pcfTest.depthBias = Lights.point_lights[l].depthBias;
+		const float3 shadowing = OmnidirectionalShadowTestPCF(
 			pcfTest, 
 			texPointShadowMaps, 
 			sShadowSampler, 
 			spotShadowMapDimensions, 
 			l, 
 			(Lw - Pw), 
-			Lights.pointLightProjMats[l]
+			Lights.point_lights[l].range
 		);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
@@ -283,7 +274,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 			, sShadowSampler
 			, dirShadowMapDimensions
 			, 0
-			, directionalProj
 			, directionalProj);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}

@@ -37,7 +37,8 @@ struct PointLight
 	float  range;
 	float3 color;
 	float  brightness;
-	float2 attenuation;
+	float3 attenuation;
+	float  depthBias;
 };
 
 struct SpotLight
@@ -87,7 +88,6 @@ struct SceneLighting
 	SpotLight spot_casters[NUM_SPOT_LIGHT_SHADOW];
 	//----------------------------------------------
 	matrix shadowViews[NUM_SPOT_LIGHT_SHADOW];
-	matrix pointLightProjMats[NUM_POINT_LIGHT_SHADOW];
 };
 
 
@@ -123,12 +123,16 @@ inline float AttenuationBRDF(float2 coeffs, float dist)
 	return 1.0f / (dist * dist);	// quadratic attenuation (inverse square) is physically more accurate
 }
 
-inline float AttenuationPhong(float2 coeffs, float dist)
+// LearnOpenGL: PBR Lighting
+//
+// You may still want to use the constant, linear, quadratic attenuation equation that(while not physically correct) 
+// can offer you significantly more control over the light's energy falloff.
+inline float Attenuation(float3 coeffs, float dist)
 {
     return 1.0f / (
-			1.0f
-			+ coeffs[0] * dist
-			+ coeffs[1] * dist * dist
+		coeffs[0]
+		+ coeffs[1] * dist
+		+ coeffs[2] * dist * dist
 	);
 }
 

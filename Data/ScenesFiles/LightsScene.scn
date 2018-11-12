@@ -88,6 +88,8 @@ object begin
 	mesh sphere
 	brdf
 		diffuse 0.05 0.1 0.8
+		//metalness 1.0
+		roughness 0.08
 	brdf
 	transform 20 6 -55 0 0 0 3
 object end
@@ -95,6 +97,8 @@ object begin
 	mesh sphere
 	brdf
 		diffuse 0.1 0.8 0.1
+		metalness 0.8
+		roughness 0.04
 	brdf
 	transform 0 6 -60 0 0 0 3
 object end
@@ -102,6 +106,8 @@ object begin
 	mesh sphere
 	brdf
 		diffuse 0.8 0.1 0.05
+		//metalness 1.0
+		roughness 0.08
 	brdf
 	transform -20 6 -55 0 0 0 3
 object end
@@ -109,7 +115,12 @@ object end
 
 //------------------------------------
 // LIGHTS
+//
+// shadows     : true/false, depthBias, nearPlane, farPlane
+// spot        : spot angle, fall-off angle
+// directional :
 //------------------------------------
+
 // Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
 // directional  : colorPreset, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
 
@@ -120,12 +131,12 @@ object end
 
 light begin
 	type point
-	transform 5  15.36  0    0 0 0   0.1
+	transform 5  9.36  -50    0 0 0   0.1
 	color white
-	brightness 4700
-	shadows true 0.001 0.1 500
-	attenuation 1 1
-//	range 500
+	brightness 1700
+	shadows true 0.01
+//	attenuation 1 1 1 // currently unused
+	range 1000
 light end
 
 //light begin

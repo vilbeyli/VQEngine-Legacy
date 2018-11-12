@@ -33,8 +33,8 @@ struct PointLightGPU
 	vec3 color;
 	float  brightness;
 	//-----------------------
-	vec2 attenuation;
-	vec2 padding;
+	vec3 attenuation;
+	float depthBias;
 	//-----------------------
 };
 
@@ -49,7 +49,7 @@ struct SpotLightGPU
 	float  brightness;
 	//-----------------------
 	vec3 spotDir;
-	float padding;
+	float depthBias;
 	//-----------------------
 };
 
@@ -109,7 +109,6 @@ struct SceneLightingData
 		ShadowingSpotLightDataArray spotLightsShadowing;
 
 		SpotShadowViewArray shadowViews;
-		PointShadowProjMatArray pointProjMats;
 	} _cb;
 
 

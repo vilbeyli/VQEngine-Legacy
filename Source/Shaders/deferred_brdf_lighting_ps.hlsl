@@ -97,7 +97,7 @@ float _ShadowTestPCF(
 	, SamplerState shadowSampler
 	, float2 shadowMapDimensions
 	, int shadowMapIndex
-	, in matrix lightProjInv
+	, in matrix lightProj
 )
 //float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
 {
@@ -134,8 +134,8 @@ float _ShadowTestPCF(
 			float closestDepthInLSpace = shadowMapArr.Sample(shadowSampler, float3(shadowTexCoords + texelOffset, shadowMapIndex)).x;
 
 			// depth check
-			const float linearCurrentPx = LinearDepth(pxDepthInLSpace, lightProjInv);
-			const float linearClosestPx = LinearDepth(closestDepthInLSpace, lightProjInv);
+			const float linearCurrentPx = LinearDepth(pxDepthInLSpace, lightProj);
+			const float linearClosestPx = LinearDepth(closestDepthInLSpace, lightProj);
 #if 1
 			shadow += (pxDepthInLSpace - 0.000035 > closestDepthInLSpace) ? 1.0f : 0.0f;
 #else
@@ -248,7 +248,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 Wi        = normalize(Lv - P);
 		const float3 radiance  = SpotlightIntensity(Lights.spot_casters[k], Pw) * Lights.spot_casters[k].color * Lights.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		pcfTest.NdotL          = saturate(dot(s.N, Wi));
-		pcfTest.depthBias = 0.0000005f;
+		pcfTest.depthBias = Lights.spot_casters[k].depthBias;
 		const float3 shadowing = ShadowTestPCF(pcfTest, texSpotShadowMaps, sShadowSampler, spotShadowMapDimensions, k);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}

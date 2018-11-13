@@ -106,7 +106,6 @@ struct ShadowMapPass : public RenderPass
 	DepthTargetIDArray	mDepthTargets_Spot;
 	DepthTargetID		mDepthTarget_Directional = -1;
 	DepthTargetIDArray	mDepthTargets_Point;
-	RenderTargetID		mDepthRenderTargets_Point;
 };
 
 struct BloomPass : public RenderPass

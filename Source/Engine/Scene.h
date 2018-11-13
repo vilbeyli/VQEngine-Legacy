@@ -48,7 +48,7 @@ class CPUProfiler;
 
 namespace VQEngine { class ThreadPool; }
 
-#define DO_NOT_LOAD_SCENES 1
+#define DO_NOT_LOAD_SCENES 0
 
 struct ModelLoadQueue
 {

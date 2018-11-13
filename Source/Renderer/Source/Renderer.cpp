@@ -810,7 +810,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 	UINT arrSize = texDesc.arraySize;
 	const bool bIsTextureArray = texDesc.arraySize > 1;
-	arrSize = texDesc.bIsCubeMap ? 6 : arrSize;
+	arrSize = texDesc.bIsCubeMap ? 6 * arrSize : arrSize;
 
 	D3D11_TEXTURE2D_DESC desc = {};
 	desc.Format = (DXGI_FORMAT)texDesc.format;
@@ -860,10 +860,22 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 	if (texDesc.bIsCubeMap)
 	{
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-		srvDesc.TextureCube.MipLevels = texDesc.mipCount;
-		srvDesc.TextureCube.MostDetailedMip = 0;
-		m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+		if (bIsTextureArray)
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+			srvDesc.TextureCubeArray.NumCubes = arrSize / 6;
+			srvDesc.TextureCubeArray.MipLevels = texDesc.mipCount;
+			srvDesc.TextureCubeArray.MostDetailedMip = 0;
+			srvDesc.TextureCubeArray.First2DArrayFace = 0;
+			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+		}
+		else
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+			srvDesc.TextureCube.MipLevels = texDesc.mipCount;
+			srvDesc.TextureCube.MostDetailedMip = 0;
+			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+		}
 	}
 	else
 	{
@@ -1418,14 +1430,15 @@ std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depth
 	dsvDesc.Texture2DArray.MipSlice = 0;
 
 	const int faceCount = (bIsDepthTargetCubemap ? 6 : 1);
-	for (int i = 0; i < numTextures/ faceCount; ++i)
+	const int cubemapCount = bIsDepthTargetCubemap ? (numTextures / faceCount) : 1;
+	for (int i = 0; i < cubemapCount; ++i)
 	{
 		for (int face = 0; face < faceCount; ++face)
 		{
 			const int depthTargetIndex = i * faceCount + face;
 			DepthTarget& newDepthTarget = newDepthTargets[depthTargetIndex];
-			dsvDesc.Texture2DArray.ArraySize = faceCount - face;
-			dsvDesc.Texture2DArray.FirstArraySlice = face;
+			dsvDesc.Texture2DArray.ArraySize = numTextures - (face + i * faceCount);
+			dsvDesc.Texture2DArray.FirstArraySlice = face + i * faceCount;
 
 			HRESULT hr = m_device->CreateDepthStencilView(textureObj._tex2D, &dsvDesc, &newDepthTarget.pDepthStencilView);
 			if (FAILED(hr))

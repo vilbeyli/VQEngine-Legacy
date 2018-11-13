@@ -26,10 +26,10 @@
 // ---------------------------------------------------------------------------------------------------------------
 
 ao true 0.010   3.00 2.40
-bloom false 0.70
+bloom true 0.01
 skylight false
 
-camera 0.1 1500 50   -2.11 29.59 -151.24    0 0
+camera 0.1 1500 50   -107.01 29.59 -50.48    90 10
 camera 0.1 1500 50   -2.11 29.59 -151.24    0 0
 
 
@@ -70,9 +70,11 @@ object begin
 	brdf
 		diffuse 0.3 0.3 0.3
 	brdf
-	transform 0 75 -25 0 0 0 130 25 0.9
+	transform 0 25 -15 0 0 0 130 25 0.9
 object end
 
+// SPHERES
+//
 object begin
 	mesh sphere
 	brdf
@@ -112,11 +114,51 @@ object begin
 	transform -20 6 -55 0 0 0 3
 object end
 
+object begin
+	mesh cube
+	brdf
+		diffuse 1.0 1.0 1.0
+		//diffuse 0.01 0.01 0.01
+		roughness 0.32
+		metalness 1.0
+	brdf
+	transform 0 14 5 0 0 0 7
+object end
+
+object begin
+	mesh cube
+	brdf
+		diffuse 0.05 0.05 0.8
+		//metalness 1.0
+		roughness 0.08
+	brdf
+	transform 20 6 55 0 0 0 3
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.85 0.3 0.06
+		//metalness 0.8
+		roughness 0.94
+	brdf
+	transform 0 6 60 0 0 0 3
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.79 0.1 0.85
+		//metalness 1.0
+		roughness 0.08
+	brdf
+	transform -20 6 55 0 0 0 3
+object end
+
 
 //------------------------------------
 // LIGHTS
 //
 // shadows     : true/false, depthBias, nearPlane, farPlane
+// range       : == farPlane;
 // spot        : spot angle, fall-off angle
 // directional :
 //------------------------------------
@@ -132,21 +174,21 @@ object end
 light begin
 	type point
 	transform 5  9.36  -50    0 0 0   0.1
-	color white
+	color red
 	brightness 1700
-	shadows true 0.01
+	shadows true 0.005
 //	attenuation 1 1 1 // currently unused
 	range 1000
 light end
 
 //light begin
 //	type spot
-//	transform 11.68  70.36  -48.41   0 0 0    1
-//	color white
+//	transform -71.68  10.36  -48.41   0 90 0    0
+//	color yellow
 //	brightness 1000
-//	shadows true 0.001 0.01 100
-//	spot 80 70
-//	range 150
+//	shadows true 0.00000009 0.01
+//	spot 80 1
+//	range 500
 //light end
 
 //light begin
@@ -164,3 +206,14 @@ light end
 //	transform 1.68  70.36  -48.41
 //
 //light end
+
+
+light begin
+	type point
+	transform 5  19.36  35    0 0 0   0.1
+	color white
+	brightness 1700
+	shadows true 0.005
+//	attenuation 1 1 1 // currently unused
+	range 1000
+light end

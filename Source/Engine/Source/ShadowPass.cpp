@@ -335,7 +335,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	pGPUProfiler->BeginEntry("Points");
 	pRenderer->SetShader(this->mShadowCubeMapShader);
 	pRenderer->SetViewport(viewPort);
-	//pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 	for (size_t i = 0; i < shadowView.points.size(); i++)
 	{
 		struct PointLightCBuffer

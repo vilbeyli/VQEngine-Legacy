@@ -64,8 +64,8 @@ DirectX::XMMATRIX Light::GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDire
 	}
 	case Light::SPOT:
 	{
-		XMVECTOR up = vec3::Back;
-		XMVECTOR lookAt = vec3::Up;	// spot light default orientation looks up
+		XMVECTOR up = vec3::Up;
+		XMVECTOR lookAt = vec3::Forward;	// spot light default orientation looks up
 		lookAt = XMVector3TransformCoord(lookAt, mTransform.RotationMatrix());
 		up = XMVector3TransformCoord(up, mTransform.RotationMatrix());
 		XMVECTOR pos = mTransform._position;
@@ -105,14 +105,16 @@ void Light::GetGPUData(DirectionalLightGPU& l) const
 void Light::GetGPUData(SpotLightGPU& l) const
 {
 	assert(mType == ELightType::SPOT);
-	const vec3 spotDirection = XMVector3TransformCoord(vec3::Up, mTransform.RotationMatrix());
+	const vec3 spotDirection = XMVector3TransformCoord(vec3::Forward, mTransform.RotationMatrix());
 
 	l.position = mTransform._position;
+	l.halfAngle = mSpotAngleDegrees * DEG2RAD * 0.5f;
+
 	l.color = mColor.Value();
 	l.brightness = mBrightness;
-	//l.halfAngle = spotAngle_spotFallOff.x() * DEG2RAD / 2; // TODO
-	assert(false);
+
 	l.spotDir = spotDirection;
+	l.depthBias = mDepthBias;
 }
 void Light::GetGPUData(PointLightGPU& l) const
 {

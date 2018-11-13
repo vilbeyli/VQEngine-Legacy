@@ -48,6 +48,7 @@ struct SpotLight
 	float3 color;
 	float  brightness;
 	float3 spotDir;
+	float  depthBias;
 };
 
 struct DirectionalLight
@@ -122,6 +123,17 @@ inline float AttenuationBRDF(float2 coeffs, float dist)
 {
 	return 1.0f / (dist * dist);	// quadratic attenuation (inverse square) is physically more accurate
 }
+
+inline float AttenuationPhong(float2 coeffs, float dist)
+{
+	return 1.0f / (
+		1.0f
+		+ coeffs[0] * dist
+		+ coeffs[1] * dist * dist
+		);
+}
+
+
 
 // LearnOpenGL: PBR Lighting
 //

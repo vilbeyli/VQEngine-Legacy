@@ -1430,7 +1430,7 @@ std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depth
 	dsvDesc.Texture2DArray.MipSlice = 0;
 
 	const int faceCount = (bIsDepthTargetCubemap ? 6 : 1);
-	const int cubemapCount = bIsDepthTargetCubemap ? (numTextures / faceCount) : 1;
+	const int cubemapCount = bIsDepthTargetCubemap ? (numTextures / faceCount) : numTextures;
 	for (int i = 0; i < cubemapCount; ++i)
 	{
 		for (int face = 0; face < faceCount; ++face)

@@ -58,7 +58,7 @@ light begin
 	transform  814.54  115.85  197.38    0 0 0   0.2
 	color white
 	brightness 5800
-	shadows false 0.005
+	shadows false 0.05 0.01
 	range 1000
 light end
 light begin
@@ -80,30 +80,30 @@ light end
 
 light begin
 	type spot
-	transform 794.38  88.06  183.54    0 -90 50    0
+	transform 794.38  88.06  183.54    0 180 50    0
 	color orange
 	brightness 6000
-	shadows true 0.00000009 0.01
+	shadows true 0.00000009 0.1
 	spot 80 1
-	range 500
+	range 1000
 light end
 light begin
 	type spot
-	transform 774.38  88.06  183.54    0 -90 50    0
+	transform 774.38  88.06  183.54    0 180 50    0
 	color red
 	brightness 6000
 	shadows true 0.00000009 0.01
 	spot 80 1
-	range 500
+	range 1000
 light end
 light begin
 	type spot
-	transform 814.38  88.06  183.54     0 -90 50    0
+	transform 814.38  68.06  183.54     0 180 50    0
 	color yellow
 	brightness 6000
 	shadows true 0.00000009 0.01
 	spot 80 1
-	range 500
+	range 1000
 light end
 
 
@@ -139,11 +139,11 @@ light begin
 light end
 light begin
 	type point
-	transform-428.95  92.26  -339.49    0 0 0   0.1
+	transform -428.95  92.26  -339.49    0 0 0   0.1
 	color purple
 	brightness 1800
 	shadows false 0.005
-	range 1000
+	range 10000
 light end
 light begin
 	type spot
@@ -169,6 +169,14 @@ object begin
 object end
 
 
-//light       s         white      	true       9000         80	     -100    45     0	   180  0  	65  0.8	 
-//light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 
 
+// PERF TEST for culling. this is the point light of death (30ms)
+//light begin
+//	type point
+//	//transform -428.95  92.26  -339.49    0 0 0   0.1
+//	transform 60 250 0    0 0 0   0.1
+//	color purple
+//	brightness 17800
+//	shadows true 0.005
+//	range 10000
+//light end

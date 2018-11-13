@@ -241,6 +241,17 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			continue;
 		}
 #endif
+
+
+		if (mDepthTargets_Spot[i] == -1)
+		{
+#if _DEBUG
+			Log::Error("Invalid depth target =-1 !");
+#endif
+			pRenderer->EndEvent();
+			continue;
+		}
+		
 		pRenderer->BindDepthTarget(mDepthTargets_Spot[i]);	// only depth stencil buffer
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 		pRenderer->Apply();

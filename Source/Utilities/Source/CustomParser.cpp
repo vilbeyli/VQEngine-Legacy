@@ -813,6 +813,11 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	}
 	else
 	{
-		Log::Error("Parser: Unknown command \"%s\"", cmd.c_str());
+		auto tokens = StrUtil::split(cmd, ' ', '\t');
+		std::string strCmd = std::string(cmd);
+		if (strCmd.find("//") == 0)
+			;
+		else
+			Log::Error("Parser: Unknown command \"%s\"", cmd.c_str());
 	}
 }

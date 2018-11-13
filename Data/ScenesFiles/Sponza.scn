@@ -44,46 +44,60 @@ bloom true 0.35 6
 //  light		s		  white     true       2850      -138.39  150.60  2.75   80    90 -90 50   1
 
 //TODO
-//light begin
-//	type directional
-//	transform 0 0 0    9 35 0    1
-//	color sun
-//	brightness 1.2
-//	shadows true 0.001  1 2000 
-//	directional 512 100
-//light end
 light begin
-	type point
-	transform -239.88  23.97  88.63    0 0 0   0.2
-	color orange
-	brightness 1800
-	shadows true 0.0005 0.01 1000
-//	range 30
+	type directional
+	transform 0 0 0    9 35 0    1
+	color sun
+	brightness 1.2
+	shadows true 0.001  1 2000 
+	directional 512 100
 light end
+
+// POINT LIGHTS
+//
 //light begin
 //	type point
-//	transform -240.91  31.97  -82.25    0 0 0   0.1
+//	transform -239.88  19.97  88.63    0 0 0   0.2
+//	color orange
+//	brightness 1800
+//	shadows true 0.000091 0.001 200
+////	range 30
+//light end
+//light begin
+//	type point
+//	transform -240.91  21.97  -82.25    0 0 0   0.1
 //	color purple
 //	brightness 1800
 //	shadows true 0.005
-//	range 30
+//	range 1000
 //light end
 //light begin
 //	type point
-//	transform 224.36  31.97  -77.28    0 0 0   0.1
+//	transform 224.36  21.97  -77.28    0 0 0   0.1
 //	color green
 //	brightness 1800
 //	shadows true 0.00000005
-//	range 30
+//	range 1000
 //light end
 //light begin
 //	type point
-//	transform 222.78  31.97  89.55    0 0 0   0.1
+//	transform 222.78  21.97  89.55    0 0 0   0.1
 //	color cyan
 //	brightness 1800
 //	shadows true 0.005
-//	range 30
+//	range 1000
 //light end
+
+light begin
+	type point
+//	transform 115.43  114.62  5.28    0 0 0   0.1
+	transform -138.39  150.60  2.75    0 0 0   0.1
+
+	color white
+	brightness 5800
+	shadows true 0.0005
+	range 350
+light end
 
 
 //light begin

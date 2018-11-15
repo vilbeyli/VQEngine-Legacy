@@ -142,12 +142,12 @@ light begin
 	transform -428.95  92.26  -339.49    0 0 0   0.1
 	color purple
 	brightness 1800
-	shadows false 0.005
+	shadows true 0.005
 	range 10000
 light end
 light begin
 	type spot
-	transform -475.77  218.57  -175.73    0 -90 50    0
+	transform -475.77  218.57  -175.73    0 -90 50    0.5
 	color white
 	brightness 6000
 	shadows true 0.00000009 0.01

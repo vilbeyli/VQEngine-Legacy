@@ -33,6 +33,7 @@ using RenderList = std::vector<const GameObject*>;
 
 using RenderListLookup = std::unordered_map<MeshID, RenderList>;
 using LightRenderListLookup = std::unordered_map<const Light*, RenderList>;
+using PointLightRenderListLookup = std::unordered_map<const Light*, std::array<RenderList, 6>>;
 using LightInstancedRenderListLookup = std::unordered_map<const Light*, RenderListLookup>;
 
 using RenderListLookupEntry = std::pair<MeshID, RenderList>;
@@ -52,6 +53,7 @@ struct ShadowView
 	// culled render lists per shadowing light
 	LightRenderListLookup shadowMapRenderListLookUp;
 	LightInstancedRenderListLookup shadowMapInstancedRenderListLookUp;
+	PointLightRenderListLookup shadowCubeMapRenderListLookup;
 
 	void Clear()
 	{

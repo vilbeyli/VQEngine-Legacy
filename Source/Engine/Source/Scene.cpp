@@ -595,7 +595,8 @@ void Scene::UpdateScene(float dt)
 
 	// OPTIMIZATION SETTINGS TOGGLES
 	//
-#if _DEBUG
+//#if _DEBUG
+#if 1
 	if (ENGINE->INP()->IsKeyTriggered("F7"))
 	{
 		bool& toggle = ENGINE->INP()->IsKeyDown("Shift")
@@ -611,14 +612,14 @@ void Scene::UpdateScene(float dt)
 	if (ENGINE->INP()->IsKeyTriggered("F9"))
 	{
 
-		if (ENGINE->INP()->IsKeyDown("Shift"))
-		{
-			bReportedList = false;
-		}
-		else
-		{
-			mSceneRenderSettings.optimization.bSortRenderLists = !mSceneRenderSettings.optimization.bSortRenderLists;
-		}
+		//if (ENGINE->INP()->IsKeyDown("Shift"))
+		//{
+		//	bReportedList = false;
+		//}
+		//else
+		//{
+		//	mSceneRenderSettings.optimization.bSortRenderLists = !mSceneRenderSettings.optimization.bSortRenderLists;
+		//}
 	}
 #endif
 
@@ -913,11 +914,15 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	// SHADOW FRUSTA
 	//
 	//pCPUProfiler->BeginEntry("Spots");
+
+	using GameObjectVector = std::vector<const GameObject*>;
+	GameObjectVector objList;
+	std::array< GameObjectVector, 6 > objListForPoints;
+
 	for (const Light& l : mLights)
 	{
 		if (!l.mbCastingShadows) continue;
 
-		std::vector<const GameObject*> objList;
 		switch (l.mType)
 		{
 		case Light::ELightType::SPOT:
@@ -932,26 +937,42 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 				objList.resize(casterList.size());
 				std::copy(RANGE(casterList), objList.begin());
 			}
+
+			mShadowView.shadowMapRenderListLookUp[&l] = objList;
+			break;
 		}
-		break;
 		case Light::ELightType::POINT:
 			++stats.scene.numPoints;
 			
-			// TODO: cull against 6 frustums
+
 			if (bCullLightView) 
-			{ 
-				objList.resize(casterList.size());
-				std::copy(RANGE(casterList), objList.begin());
+			{
+				for (int face = 0; face < 6; ++face)
+				{
+					stats.scene.numPointsCulledObjects += static_cast<int>(CullGameObjects
+					(
+						l.GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face))
+						, casterList
+						, objListForPoints[face])
+					);
+				}
 			}
 			else 
 			{ 
-				objList.resize(casterList.size());
-				std::copy(RANGE(casterList), objList.begin());
+				for (int i = 0; i < 6; ++i)
+				{
+					objListForPoints[i].resize(casterList.size());
+					std::copy(RANGE(casterList), objListForPoints[i].begin());
+				}
 			}
+
+			mShadowView.shadowCubeMapRenderListLookup[&l] = objListForPoints;
 			break;
 		}
 
-		mShadowView.shadowMapRenderListLookUp[&l] = objList;
+		
+		objList.clear();
+		for(int i=0; i<6; ++i) objListForPoints[i].clear();
 	}
 	//pCPUProfiler->EndEntry();
 #endif
@@ -981,9 +1002,27 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		for (const Light& l : mLights)
 		{
 			if (!l.mbCastingShadows) continue;
-			RenderList& lightRenderList = mShadowView.shadowMapRenderListLookUp.at(&l);
 
-			std::sort(RANGE(lightRenderList), SortByMeshType);
+			switch (l.mType)
+			{
+
+			case Light::ELightType::POINT:
+			{
+				for(int i=0; i<6; ++i)
+				{
+					RenderList& lightRenderList = mShadowView.shadowCubeMapRenderListLookup.at(&l)[i];
+					std::sort(RANGE(lightRenderList), SortByMeshType);
+				}
+				break;
+			}
+			case Light::ELightType::SPOT:
+			{
+				RenderList& lightRenderList = mShadowView.shadowMapRenderListLookUp.at(&l);
+				std::sort(RANGE(lightRenderList), SortByMeshType);
+				break;
+			}
+			}
+			
 		}
 	}
 	pCPUProfiler->EndEntry();

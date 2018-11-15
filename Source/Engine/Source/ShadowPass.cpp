@@ -336,8 +336,6 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	}
 
 
-
-#if 1
 	//-----------------------------------------------------------------------------------------------
 	// POINT LIGHT SHADOW MAPS
 	//-----------------------------------------------------------------------------------------------
@@ -355,7 +353,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		} _cbLight;
 
 #if _DEBUG
-		if (shadowView.shadowMapRenderListLookUp.find(shadowView.points[i]) == shadowView.shadowMapRenderListLookUp.end())
+		if (shadowView.shadowCubeMapRenderListLookup.find(shadowView.points[i]) == shadowView.shadowCubeMapRenderListLookup.end())
 		{
 			Log::Error("Point light not found in shadowmap render list lookup");
 			continue;;
@@ -377,9 +375,8 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 			pRenderer->SetConstantStruct("cbLight", &_cbLight);
 			pRenderer->Apply();
-			
-			// TODO: culled object list per view direction
-			for (const GameObject* pObj : shadowView.shadowMapRenderListLookUp.at(shadowView.points[i]))
+	
+			for (const GameObject* pObj : shadowView.shadowCubeMapRenderListLookup.at(shadowView.points[i])[face])
 			{
 				RenderDepth(pObj, viewProj, true);
 			}
@@ -387,7 +384,6 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		pRenderer->EndEvent();
 	}
 	pGPUProfiler->EndEntry();	// Points
-#endif
 
 }
 

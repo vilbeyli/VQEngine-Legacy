@@ -26,14 +26,16 @@ struct PointLight;
 struct DirectionalLight;
 class GameObject;
 
+#include "RenderPasses.h"
 
-
-
+// TODO: consistent & clear naming...
 using RenderList = std::vector<const GameObject*>;
+using MeshDrawList = std::vector<MeshDrawData>;
 
 using RenderListLookup = std::unordered_map<MeshID, RenderList>;
 using LightRenderListLookup = std::unordered_map<const Light*, RenderList>;
 using PointLightRenderListLookup = std::unordered_map<const Light*, std::array<RenderList, 6>>;
+using PointLightMeshDrawListLookup = std::unordered_map<const Light*, std::array<MeshDrawList, 6>>;
 using LightInstancedRenderListLookup = std::unordered_map<const Light*, RenderListLookup>;
 
 using RenderListLookupEntry = std::pair<MeshID, RenderList>;
@@ -47,13 +49,15 @@ struct ShadowView
 	const Light* pDirectional;
 
 	// game obj casting shadows (=render list of directional light)
-	std::vector<const GameObject*> casters;
+	RenderList casters;
+	MeshDrawList casterMeshDrawData;
 	RenderListLookup RenderListsPerMeshType;
 
 	// culled render lists per shadowing light
 	LightRenderListLookup shadowMapRenderListLookUp;
 	LightInstancedRenderListLookup shadowMapInstancedRenderListLookUp;
 	PointLightRenderListLookup shadowCubeMapRenderListLookup;
+	PointLightMeshDrawListLookup shadowCubeMapMeshDrawListLookup;
 
 	void Clear()
 	{

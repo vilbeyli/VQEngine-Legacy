@@ -263,10 +263,16 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	);
 	std::copy(RANGE(mSceneView.opaqueList), pObjects.begin());
 	std::copy(RANGE(mSceneView.alphaList), pObjects.begin() + mSceneView.opaqueList.size());
-	mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
 	for(const GameObject* pObj : pObjects)
 	{
+		mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
 		pObj->mBoundingBox.Render(mpRenderer, pObj->GetTransform().WorldTransformationMatrix() * viewProj);
+
+		mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
+		for (const MeshID meshID : pObj->mModel.mData.mMeshIDs)
+		{
+			pObj->mMeshBoundingBoxes[meshID].Render(mpRenderer, pObj->GetTransform().WorldTransformationMatrix() * viewProj);
+		}
 	};
 
 
@@ -488,6 +494,7 @@ void Scene::CalculateSceneBoundingBox()
 		vec3 maxs_obj(-(max_f - 1.0f));
 
 		const ModelData& modelData = pObj->GetModelData();
+		pObj->mMeshBoundingBoxes.clear();
 		std::for_each(RANGE(modelData.mMeshIDs), [&](const MeshID& meshID)
 		{
 			const BufferID VertexBufferID = mMeshes[meshID].GetIABuffers().first;
@@ -518,16 +525,33 @@ void Scene::CalculateSceneBoundingBox()
 					return;
 				}
 
+				vec3 mins_mesh(max_f);
+				vec3 maxs_mesh(-(max_f - 1.0f));
 				for (int i = 0; i < numVerts; ++i)
 				{
+					const float x_mesh_local = pData[i].position.x();
+					const float y_mesh_local = pData[i].position.y();
+					const float z_mesh_local = pData[i].position.z();
+
+					mins_mesh = vec3
+					(
+						std::min(x_mesh_local, mins_mesh.x()),
+						std::min(y_mesh_local, mins_mesh.y()),
+						std::min(z_mesh_local, mins_mesh.z())
+					);
+					maxs_mesh = vec3
+					(
+						std::max(x_mesh_local, maxs_mesh.x()),
+						std::max(y_mesh_local, maxs_mesh.y()),
+						std::max(z_mesh_local, maxs_mesh.z())
+					);
+
+
 					const vec3 worldPos = vec3(XMVector4Transform(vec4(pData[i].position, 1.0f), worldMatrix));
 					const float x_mesh = std::min(worldPos.x(), DegenerateMeshPositionChannelValueMax);
 					const float y_mesh = std::min(worldPos.y(), DegenerateMeshPositionChannelValueMax);
 					const float z_mesh = std::min(worldPos.z(), DegenerateMeshPositionChannelValueMax);
 
-					const float x_mesh_local = pData[i].position.x();
-					const float y_mesh_local = pData[i].position.y();
-					const float z_mesh_local = pData[i].position.z();
 
 					// scene bounding box - world space
 					mins = vec3
@@ -557,6 +581,8 @@ void Scene::CalculateSceneBoundingBox()
 						std::max(z_mesh_local, maxs_obj.z())
 					);
 				}
+
+				pObj->mMeshBoundingBoxes.push_back(BoundingBox({ mins_mesh, maxs_mesh }));
 			}
 			else
 			{
@@ -667,13 +693,40 @@ static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 }
 
 
-static size_t CullMeshes(const FrustumPlaneset& frustumPlanes, std::vector<MeshID> todo)
+static size_t CullMeshes(
+	const FrustumPlaneset& frustumPlanes,
+	const GameObject* pObj,
+	MeshDrawData& meshDrawData
+)
 {
 	// We currently cull based on game object bounding boxes, meaning that we
 	// cull meshes in 'gameobject-sized-batches'. Culling can be refined to mesh
 	// level by letting each game object have a culled list of meshes to draw.
 	//
-	return 0;
+	meshDrawData.matWorld = pObj->GetTransform().WorldTransformationMatrix();
+
+	//assert();
+
+	size_t numCulled = 0;
+	const std::vector<MeshID>& objMeshIDs = pObj->GetModelData().mMeshIDs;
+	for (MeshID meshIDIndex = 0; meshIDIndex < objMeshIDs.size(); ++meshIDIndex)
+	{
+		const MeshID meshID = objMeshIDs[meshIDIndex];
+		const BoundingBox localBB = pObj->GetMeshBBs()[meshIDIndex];
+		const BoundingBox worldBB = BoundingBox
+		({
+			XMVector4Transform(vec4(localBB.low, 1.0f), meshDrawData.matWorld),
+			XMVector4Transform(vec4(localBB.hi, 1.0f), meshDrawData.matWorld)
+		});
+
+		if (IsVisible(frustumPlanes, worldBB))
+		{
+			meshDrawData.meshIDs.push_back(meshID);
+		}
+		else
+			++numCulled;
+	}
+	return numCulled;
 }
 
 static size_t CullGameObjects(
@@ -837,7 +890,6 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	//
 	std::vector<const GameObject*> casterList;
 	std::vector<const GameObject*> mainViewRenderList;
-	static std::vector<const GameObject*> mainViewRenderListNonTextured;
 
 	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = mShadowView.RenderListsPerMeshType;
 	// gather game objects that are to be rendered in the scene
@@ -853,7 +905,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 
 			if (!bMeshListEmpty)            { mSceneView.opaqueList.push_back(&obj); }
 			if (!bTransparentMeshListEmpty) { mSceneView.alphaList.push_back(&obj); }
-			if (mbCastingShadows)            { casterList.push_back(&obj); }
+			if (mbCastingShadows)           { casterList.push_back(&obj); }
 
 #if _DEBUG
 			if (bMeshListEmpty && bTransparentMeshListEmpty)
@@ -913,12 +965,11 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 
 	// SHADOW FRUSTA
 	//
-	//pCPUProfiler->BeginEntry("Spots");
-
-	using GameObjectVector = std::vector<const GameObject*>;
-	GameObjectVector objList;
-	std::array< GameObjectVector, 6 > objListForPoints;
-
+	//using GameObjectVector = std::vector<const GameObject*>;
+	//using MeshDrawDataVector = std::vector<MeshDrawData>;
+	RenderList objList;
+	std::array< RenderList, 6 > objListForPoints;
+	std::array< MeshDrawList, 6> meshListForPoints;
 	for (const Light& l : mLights)
 	{
 		if (!l.mbCastingShadows) continue;
@@ -927,6 +978,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		{
 		case Light::ELightType::SPOT:
 		{
+			//pCPUProfiler->BeginEntry("Spots");
 			++stats.scene.numSpots;
 			if (bCullLightView)
 			{
@@ -939,6 +991,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 			}
 
 			mShadowView.shadowMapRenderListLookUp[&l] = objList;
+			//pCPUProfiler->EndEntry();
 			break;
 		}
 		case Light::ELightType::POINT:
@@ -949,32 +1002,53 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 			{
 				for (int face = 0; face < 6; ++face)
 				{
+#if 0
 					stats.scene.numPointsCulledObjects += static_cast<int>(CullGameObjects
 					(
 						l.GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face))
 						, casterList
-						, objListForPoints[face])
-					);
+						, objListForPoints[face]
+					));
+#else
+
+					for (const GameObject* pObj : casterList)
+					{
+						MeshDrawData meshDrawData;
+						stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
+						(
+							l.GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face)),
+							pObj,
+							meshDrawData
+						));
+						meshListForPoints[face].push_back(meshDrawData);
+					}
+#endif
 				}
 			}
 			else 
 			{ 
-				for (int i = 0; i < 6; ++i)
+				for (int face = 0; face < 6; ++face)
 				{
-					objListForPoints[i].resize(casterList.size());
-					std::copy(RANGE(casterList), objListForPoints[i].begin());
+					objListForPoints[face].resize(casterList.size());
+					std::copy(RANGE(casterList), objListForPoints[face].begin());
+
+					for (const GameObject* pObj : objListForPoints[face])
+					{
+						meshListForPoints[face].push_back(pObj);
+					}
 				}
 			}
 
 			mShadowView.shadowCubeMapRenderListLookup[&l] = objListForPoints;
+			mShadowView.shadowCubeMapMeshDrawListLookup[&l] = meshListForPoints;
 			break;
 		}
 
 		
 		objList.clear();
-		for(int i=0; i<6; ++i) objListForPoints[i].clear();
+		for (int i = 0; i < 6; ++i) objListForPoints[i].clear();
+		for (int i = 0; i < 6; ++i) meshListForPoints[i].clear();
 	}
-	//pCPUProfiler->EndEntry();
 #endif
 	
 

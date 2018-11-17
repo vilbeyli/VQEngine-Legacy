@@ -73,7 +73,17 @@ struct RenderPass
 
 
 
+struct MeshDrawData
+{
+	MeshDrawData(const GameObject* pObj);
+	MeshDrawData();
 
+	std::vector<MeshID> meshIDs;
+	XMMATRIX matWorld;
+#ifdef _DEBUG
+	const GameObject* pObj;
+#endif
+};
 
 
 

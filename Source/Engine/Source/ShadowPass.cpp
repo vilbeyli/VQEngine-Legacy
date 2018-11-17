@@ -29,6 +29,27 @@
 #include "Utilities/Log.h"
 #endif
 
+
+
+MeshDrawData::MeshDrawData(const GameObject* pObj_)
+	: meshIDs(pObj_->GetModelData().mMeshIDs)
+	, matWorld(pObj_->GetTransform().WorldTransformationMatrix())
+
+#ifdef _DEBUG
+	, pObj(pObj_)
+#endif
+{}
+
+
+MeshDrawData::MeshDrawData()
+	: meshIDs()
+	, matWorld(XMMatrixIdentity())
+#ifdef _DEBUG
+	, pObj(nullptr)
+#endif
+{}
+
+
 constexpr int DRAW_INSTANCED_COUNT_DEPTH_PASS = 256;
 
 
@@ -175,6 +196,7 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(const Settings::ShadowMa
 
 
 #define INSTANCED_DRAW 1
+
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const
 {
 	//-----------------------------------------------------------------------------------------------
@@ -201,6 +223,31 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			pRenderer->SetConstantStruct("ObjMats", &objMats);
 		}
 		std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
+		{
+			const RasterizerStateID rasterizerState = Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, id);
+
+			pRenderer->SetRasterizerState(rasterizerState);
+			pRenderer->SetVertexBuffer(IABuffer.first);
+			pRenderer->SetIndexBuffer(IABuffer.second);
+			pRenderer->Apply();
+			pRenderer->DrawIndexed();
+		});
+	};
+	auto RenderDepthMeshes = [&](const MeshDrawData& drawData, const XMMATRIX& viewProj, bool bIsCubemap = false)
+	{
+		const XMMATRIX& matWorld = drawData.matWorld;
+		if (bIsCubemap)
+		{
+			const PerObjectMatricesCubemap objMats = PerObjectMatricesCubemap({ matWorld, matWorld * viewProj });
+			pRenderer->SetConstantStruct("ObjMats", &objMats);
+		}
+		else
+		{
+			const PerObjectMatrices objMats = PerObjectMatrices({ drawData.matWorld * viewProj });
+			pRenderer->SetConstantStruct("ObjMats", &objMats);
+		}
+		std::for_each(drawData.meshIDs.begin(), drawData.meshIDs.end(), [&](MeshID id)
 		{
 			const RasterizerStateID rasterizerState = Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, id);
@@ -376,10 +423,17 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			pRenderer->SetConstantStruct("cbLight", &_cbLight);
 			pRenderer->Apply();
 	
+#if 0
 			for (const GameObject* pObj : shadowView.shadowCubeMapRenderListLookup.at(shadowView.points[i])[face])
 			{
 				RenderDepth(pObj, viewProj, true);
 			}
+#else
+			for (const MeshDrawData& drawData : shadowView.shadowCubeMapMeshDrawListLookup.at(shadowView.points[i])[face])
+			{
+				RenderDepthMeshes(drawData, viewProj, true);
+			}
+#endif
 		}
 		pRenderer->EndEvent();
 	}

@@ -144,4 +144,3 @@ void DebugPass::Initialize(Renderer * pRenderer)
 {
 	_scissorsRasterizer = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, false, true);
 }
-

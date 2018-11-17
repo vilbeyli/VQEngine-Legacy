@@ -106,7 +106,7 @@ const char* FrameStats::statNames[FrameStats::numStat] =
 	"[Cull] DirectionalView : ",
 };
 constexpr size_t RENDER_ORDER_FRAME_STATS_ROW_1[] = { 0, 3, 4, 1, 2};
-constexpr size_t RENDER_ORDER_FRAME_STATS_ROW_2[] = { 5, 6, 7, 8, 9, /*10, 11*/ };
+constexpr size_t RENDER_ORDER_FRAME_STATS_ROW_2[] = { 5, 6, 7, 8, 9, 10, /*11*/ };
 
 auto GetFPSColor = [](int FPS) -> LinearColor
 {

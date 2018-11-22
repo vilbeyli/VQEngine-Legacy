@@ -30,12 +30,18 @@ class GameObject;
 
 // TODO: consistent & clear naming...
 using RenderList = std::vector<const GameObject*>;
+#if !SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 using MeshDrawList = std::vector<MeshDrawData>;
+#endif
 
 using RenderListLookup = std::unordered_map<MeshID, RenderList>;
 using LightRenderListLookup = std::unordered_map<const Light*, RenderList>;
 using PointLightRenderListLookup = std::unordered_map<const Light*, std::array<RenderList, 6>>;
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+using PointLightMeshDrawListLookup = std::unordered_map < const Light*, std::array<MeshDrawData, 6>>;
+#else
 using PointLightMeshDrawListLookup = std::unordered_map<const Light*, std::array<MeshDrawList, 6>>;
+#endif
 using LightInstancedRenderListLookup = std::unordered_map<const Light*, RenderListLookup>;
 
 using RenderListLookupEntry = std::pair<MeshID, RenderList>;
@@ -50,13 +56,13 @@ struct ShadowView
 
 	// game obj casting shadows (=render list of directional light)
 	RenderList casters;
-	MeshDrawList casterMeshDrawData;
 	RenderListLookup RenderListsPerMeshType;
 
 	// culled render lists per shadowing light
 	LightRenderListLookup shadowMapRenderListLookUp;
 	LightInstancedRenderListLookup shadowMapInstancedRenderListLookUp;
-	PointLightRenderListLookup shadowCubeMapRenderListLookup;
+
+	// mesh render list (to replace other render lists which are in object-level)
 	PointLightMeshDrawListLookup shadowCubeMapMeshDrawListLookup;
 
 	void Clear()

@@ -151,6 +151,17 @@ struct SceneStats
 	int numSpotsCulledObjects;
 	int numPointsCulledObjects;
 	int numDirectionalCulledObjects;
+
+	// a few more meaningful stats to keep:
+	//
+	// - numCulledTrianglesMainView
+	// - numCulledTrianglesShadowCubemapView
+	// - numCulledTrianglesDiractionalView
+	// - numRenderedTrianglesMainView
+	// - numRenderedTrianglesShadowCubemapView
+	// - numRenderedTrianglesDirectionalView
+	// - ...
+
 };
 struct FrameStats
 {

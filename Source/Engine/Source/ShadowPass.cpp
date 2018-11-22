@@ -29,8 +29,7 @@
 #include "Utilities/Log.h"
 #endif
 
-
-
+#if !SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 MeshDrawData::MeshDrawData(const GameObject* pObj_)
 	: meshIDs(pObj_->GetModelData().mMeshIDs)
 	, matWorld(pObj_->GetTransform().WorldTransformationMatrix())
@@ -48,7 +47,7 @@ MeshDrawData::MeshDrawData()
 	, pObj(nullptr)
 #endif
 {}
-
+#endif
 
 constexpr int DRAW_INSTANCED_COUNT_DEPTH_PASS = 256;
 
@@ -79,9 +78,9 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, const Settings::ShadowMap& s
 
 	const ShaderDesc cubemapDepthShaderDesc = { "ShadowCubeMapShader",
 		ShaderStageDesc{"ShadowCubeMapShader_vs.hlsl", {
-		//	ShaderMacro{ "INSTANCED"     , "1" },
-		//	ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) }
-			{}
+			ShaderMacro{ "INSTANCED"     , "1" },
+			ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) }
+			//{}
 		}},
 		ShaderStageDesc{"ShadowCubeMapShader_ps.hlsl" , {} }
 	};
@@ -203,6 +202,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	struct PerObjectMatrices { XMMATRIX wvp; };
 	struct PerObjectMatricesCubemap { XMMATRIX matWorld; XMMATRIX wvp; };
 	struct InstancedObjectCBuffer { PerObjectMatrices objMatrices[DRAW_INSTANCED_COUNT_DEPTH_PASS]; };
+	struct InstancedObjectCubemapCBuffer { PerObjectMatricesCubemap objMatrices[DRAW_INSTANCED_COUNT_DEPTH_PASS]; };
 	auto Is2DGeometry = [](MeshID mesh)
 	{
 		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
@@ -234,6 +234,9 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			pRenderer->DrawIndexed();
 		});
 	};
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+
+#else
 	auto RenderDepthMeshes = [&](const MeshDrawData& drawData, const XMMATRIX& viewProj, bool bIsCubemap = false)
 	{
 		const XMMATRIX& matWorld = drawData.matWorld;
@@ -259,6 +262,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			pRenderer->DrawIndexed();
 		});
 	};
+#endif
 	//-----------------------------------------------------------------------------------------------
 	D3D11_VIEWPORT viewPort = {};
 	viewPort.MinDepth = 0.f;
@@ -400,7 +404,11 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		} _cbLight;
 
 #if _DEBUG
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+		if (shadowView.shadowCubeMapMeshDrawListLookup.find(shadowView.points[i]) == shadowView.shadowCubeMapMeshDrawListLookup.end())
+#else
 		if (shadowView.shadowCubeMapRenderListLookup.find(shadowView.points[i]) == shadowView.shadowCubeMapRenderListLookup.end())
+#endif
 		{
 			Log::Error("Point light not found in shadowmap render list lookup");
 			continue;;
@@ -422,18 +430,53 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 			pRenderer->SetConstantStruct("cbLight", &_cbLight);
 			pRenderer->Apply();
-	
-#if 0
-			for (const GameObject* pObj : shadowView.shadowCubeMapRenderListLookup.at(shadowView.points[i])[face])
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+
+
+			InstancedObjectCubemapCBuffer cbuffer;
+			for (const std::pair<MeshID, std::vector<XMMATRIX>>& f : shadowView.shadowCubeMapMeshDrawListLookup.at(shadowView.points[i])[face].meshTransformListLookup)
 			{
-				RenderDepth(pObj, viewProj, true);
+				const int meshInstanceCount = static_cast<int>(f.second.size());
+				const MeshID& meshID = f.first;
+				assert(meshInstanceCount > 0); // make sure no empty meshID transformation list
+
+				const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+				const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, meshID);
+				pRenderer->SetVertexBuffer(IABuffer.first);
+				pRenderer->SetIndexBuffer(IABuffer.second);
+				pRenderer->SetRasterizerState(rasterizerState);
+
+				int batchCount = 0;
+				do
+				{
+					int instanceID = 0;
+					for (; instanceID < DRAW_INSTANCED_COUNT_DEPTH_PASS; ++instanceID)
+					{
+						const int renderListIndex = DRAW_INSTANCED_COUNT_DEPTH_PASS * batchCount + instanceID;
+						if (renderListIndex == meshInstanceCount)
+							break;
+
+						cbuffer.objMatrices[instanceID] = PerObjectMatricesCubemap
+						{
+							f.second[renderListIndex],
+							f.second[renderListIndex] * viewProj
+						};
+					}
+
+					pRenderer->SetConstantStruct("ObjMats", &cbuffer);
+					pRenderer->Apply();
+					pRenderer->DrawIndexedInstanced(instanceID);
+				} while (batchCount++ < meshInstanceCount / DRAW_INSTANCED_COUNT_DEPTH_PASS);
 			}
+			
 #else
 			for (const MeshDrawData& drawData : shadowView.shadowCubeMapMeshDrawListLookup.at(shadowView.points[i])[face])
 			{
 				RenderDepthMeshes(drawData, viewProj, true);
 			}
 #endif
+
 		}
 		pRenderer->EndEvent();
 	}

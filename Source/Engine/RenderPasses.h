@@ -72,7 +72,25 @@ struct RenderPass
 };
 
 
+#define SHADOW_PASS_USE_INSTANCED_DRAW_DATA 1
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 
+struct MeshDrawData
+{
+	void AddMeshTransformation(MeshID meshID, const XMMATRIX& matTransform)
+	{
+		if (meshTransformListLookup.find(meshID) != meshTransformListLookup.end())
+		{
+			meshTransformListLookup.at(meshID).push_back(matTransform);
+		}
+		else
+		{
+			meshTransformListLookup[meshID].push_back(matTransform);
+		}
+	}
+	std::unordered_map<MeshID, std::vector<XMMATRIX>> meshTransformListLookup;
+};
+#else
 struct MeshDrawData
 {
 	MeshDrawData(const GameObject* pObj);
@@ -84,8 +102,7 @@ struct MeshDrawData
 	const GameObject* pObj;
 #endif
 };
-
-
+#endif
 
 using DepthTargetIDArray = std::vector<DepthTargetID>;
 struct ShadowMapPass : public RenderPass

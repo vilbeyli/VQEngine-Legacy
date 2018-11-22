@@ -18,18 +18,17 @@
 
 struct ObjectMatrices
 {
-#ifdef INSTANCED
-	matrix matWorld[INSTANCE_COUNT];
-	matrix wvp[INSTANCE_COUNT];
-#else
 	matrix matWorld;
 	matrix wvp;
-#endif
 };
 
 cbuffer perObjec
 {
+#ifdef INSTANCED
+	ObjectMatrices ObjMats[INSTANCE_COUNT];
+#else
 	ObjectMatrices ObjMats;
+#endif
 };
 
 struct VSIn
@@ -53,8 +52,8 @@ PSIn VSMain(VSIn In)
 	PSIn vsOut;
 
 #ifdef INSTANCED
-	const matrix mWorld = ObjMats.matWorld[instanceID];
-	const matrix mWVP = ObjMats.wvp[instanceID];
+	const matrix mWorld = ObjMats[In.instanceID].matWorld;
+	const matrix mWVP = ObjMats[In.instanceID].wvp;
 #else
 	const matrix mWorld = ObjMats.matWorld;
 	const matrix mWVP = ObjMats.wvp;

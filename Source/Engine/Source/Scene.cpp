@@ -699,15 +699,15 @@ static size_t CullMeshes(
 	MeshDrawData& meshDrawData
 )
 {
-	// We currently cull based on game object bounding boxes, meaning that we
-	// cull meshes in 'gameobject-sized-batches'. Culling can be refined to mesh
-	// level by letting each game object have a culled list of meshes to draw.
-	//
-	meshDrawData.matWorld = pObj->GetTransform().WorldTransformationMatrix();
-
-	//assert();
-
 	size_t numCulled = 0;
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+	const XMMATRIX  matWorld = pObj->GetTransform().WorldTransformationMatrix();
+#else
+	meshDrawData.matWorld = pObj->GetTransform().WorldTransformationMatrix();
+	const XMMATRIX& matWorld = meshDrawData.matWorld;
+#endif
+
 	const std::vector<MeshID>& objMeshIDs = pObj->GetModelData().mMeshIDs;
 	for (MeshID meshIDIndex = 0; meshIDIndex < objMeshIDs.size(); ++meshIDIndex)
 	{
@@ -715,13 +715,18 @@ static size_t CullMeshes(
 		const BoundingBox localBB = pObj->GetMeshBBs()[meshIDIndex];
 		const BoundingBox worldBB = BoundingBox
 		({
-			XMVector4Transform(vec4(localBB.low, 1.0f), meshDrawData.matWorld),
-			XMVector4Transform(vec4(localBB.hi, 1.0f), meshDrawData.matWorld)
+			XMVector4Transform(vec4(localBB.low, 1.0f), matWorld),
+			XMVector4Transform(vec4(localBB.hi, 1.0f),  matWorld)
 		});
 
 		if (IsVisible(frustumPlanes, worldBB))
 		{
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+			meshDrawData.AddMeshTransformation(meshID, matWorld);
+#else
 			meshDrawData.meshIDs.push_back(meshID);
+#endif
 		}
 		else
 			++numCulled;
@@ -965,11 +970,13 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 
 	// SHADOW FRUSTA
 	//
-	//using GameObjectVector = std::vector<const GameObject*>;
-	//using MeshDrawDataVector = std::vector<MeshDrawData>;
 	RenderList objList;
-	std::array< RenderList, 6 > objListForPoints;
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+	std::array< MeshDrawData, 6> meshDrawDataPerFace;
+#else
 	std::array< MeshDrawList, 6> meshListForPoints;
+#endif
+
 	for (const Light& l : mLights)
 	{
 		if (!l.mbCastingShadows) continue;
@@ -997,58 +1004,64 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		case Light::ELightType::POINT:
 			++stats.scene.numPoints;
 			
-
-			if (bCullLightView) 
+			
+			if (bCullLightView && false) 
 			{
 				for (int face = 0; face < 6; ++face)
 				{
-#if 0
-					stats.scene.numPointsCulledObjects += static_cast<int>(CullGameObjects
-					(
-						l.GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face))
-						, casterList
-						, objListForPoints[face]
-					));
-#else
-
+					const Texture::CubemapUtility::ECubeMapLookDirections CubemapFaceDirectionEnum = static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face);
 					for (const GameObject* pObj : casterList)
 					{
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+						stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
+						(
+							l.GetViewFrustumPlanes(CubemapFaceDirectionEnum),
+							pObj,
+							meshDrawDataPerFace[face]
+						));
+#else
 						MeshDrawData meshDrawData;
 						stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
 						(
-							l.GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face)),
+							l.GetViewFrustumPlanes(CubemapFaceDirectionEnum),
 							pObj,
 							meshDrawData
 						));
 						meshListForPoints[face].push_back(meshDrawData);
-					}
 #endif
+					}
 				}
 			}
 			else 
 			{ 
 				for (int face = 0; face < 6; ++face)
 				{
-					objListForPoints[face].resize(casterList.size());
-					std::copy(RANGE(casterList), objListForPoints[face].begin());
-
-					for (const GameObject* pObj : objListForPoints[face])
+					for (const GameObject* pObj : casterList)
 					{
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+						const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+						for (MeshID meshID : pObj->GetModelData().mMeshIDs)
+							meshDrawDataPerFace[face].AddMeshTransformation(meshID, matWorld);
+#else
 						meshListForPoints[face].push_back(pObj);
+#endif
 					}
 				}
 			}
 
-			mShadowView.shadowCubeMapRenderListLookup[&l] = objListForPoints;
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+			mShadowView.shadowCubeMapMeshDrawListLookup[&l] = meshDrawDataPerFace;
+			for (int i = 0; i < 6; ++i) meshDrawDataPerFace[i].meshTransformListLookup.clear();
+#else
 			mShadowView.shadowCubeMapMeshDrawListLookup[&l] = meshListForPoints;
+			for (int i = 0; i < 6; ++i) meshListForPoints[i].clear();
+#endif
 			break;
-		}
+		} // light type
 
 		
 		objList.clear();
-		for (int i = 0; i < 6; ++i) objListForPoints[i].clear();
-		for (int i = 0; i < 6; ++i) meshListForPoints[i].clear();
-	}
+	} // for each light
 #endif
 	
 
@@ -1084,8 +1097,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 			{
 				for(int i=0; i<6; ++i)
 				{
-					RenderList& lightRenderList = mShadowView.shadowCubeMapRenderListLookup.at(&l)[i];
-					std::sort(RANGE(lightRenderList), SortByMeshType);
+					;
 				}
 				break;
 			}
@@ -1184,7 +1196,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		});
 		bReportedList = true;
 	}
-#endif
+#endif // THREADED_FRUSTUM_CULL
 
 	//return numFrustumCulledObjs + numShadowFrustumCullObjs;
 }

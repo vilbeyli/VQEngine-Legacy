@@ -72,7 +72,13 @@ struct RenderPass
 };
 
 
-#define SHADOW_PASS_USE_INSTANCED_DRAW_DATA 1
+// current implementation employs the same logic for the
+// game-object level object batching. however, we're using
+// mesh-level instancing: this results in a very large number
+// of transformation matrix constant buffer updates per mesh.
+//
+#define SHADOW_PASS_USE_INSTANCED_DRAW_DATA 0
+
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 
 struct MeshDrawData

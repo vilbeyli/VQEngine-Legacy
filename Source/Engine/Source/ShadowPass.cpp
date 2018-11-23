@@ -78,9 +78,12 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, const Settings::ShadowMap& s
 
 	const ShaderDesc cubemapDepthShaderDesc = { "ShadowCubeMapShader",
 		ShaderStageDesc{"ShadowCubeMapShader_vs.hlsl", {
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 			ShaderMacro{ "INSTANCED"     , "1" },
 			ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) }
-			//{}
+#else
+			{}
+#endif
 		}},
 		ShaderStageDesc{"ShadowCubeMapShader_ps.hlsl" , {} }
 	};
@@ -407,7 +410,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 		if (shadowView.shadowCubeMapMeshDrawListLookup.find(shadowView.points[i]) == shadowView.shadowCubeMapMeshDrawListLookup.end())
 #else
-		if (shadowView.shadowCubeMapRenderListLookup.find(shadowView.points[i]) == shadowView.shadowCubeMapRenderListLookup.end())
+		if (shadowView.shadowCubeMapMeshDrawListLookup.find(shadowView.points[i]) == shadowView.shadowCubeMapMeshDrawListLookup.end())
 #endif
 		{
 			Log::Error("Point light not found in shadowmap render list lookup");
@@ -419,6 +422,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		
 		_cbLight.lightPosition_farPlane = vec4(shadowView.points[i]->mTransform._position, shadowView.points[i]->mRange);
 
+		InstancedObjectCubemapCBuffer cbuffer;
 		for (int face = 0; face < 6; ++face)
 		{
 			const XMMATRIX viewProj =
@@ -434,7 +438,6 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 
 
-			InstancedObjectCubemapCBuffer cbuffer;
 			for (const std::pair<MeshID, std::vector<XMMATRIX>>& f : shadowView.shadowCubeMapMeshDrawListLookup.at(shadowView.points[i])[face].meshTransformListLookup)
 			{
 				const int meshInstanceCount = static_cast<int>(f.second.size());

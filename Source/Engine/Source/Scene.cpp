@@ -1005,7 +1005,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 			++stats.scene.numPoints;
 			
 			
-			if (bCullLightView && false) 
+			if (bCullLightView) 
 			{
 				for (int face = 0; face < 6; ++face)
 				{

@@ -29,7 +29,7 @@
 
 
 camera 0.1 2500 75   -70 25 50  112 11 
-ao true 0.070 28.0 2.70
+ao true 0.005 28.0 2.70
 skylight false
 bloom true 0.35 6
 

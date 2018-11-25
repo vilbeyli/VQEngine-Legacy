@@ -71,7 +71,7 @@ SamplerState sLinearSampler;
 
 // SHADOW TEST
 //
-float OmnidirectionalShadowTestPCF(
+float OmnidirectionalShadowTest(
 	in ShadowTestPCFData pcfTestLightData
 	, TextureCubeArray shadowCubeMapArr
 	, SamplerState shadowSampler
@@ -88,6 +88,40 @@ float OmnidirectionalShadowTestPCF(
 	const float closestDepthInWorldSpace = closestDepthInLSpace * range;
 	shadow += (length(lightVectorWorldSpace) > closestDepthInWorldSpace + pcfTestLightData.depthBias) ? 1.0f : 0.0f;
 
+	return 1.0f - shadow;
+}
+float OmnidirectionalShadowTestPCF(
+	in ShadowTestPCFData pcfTestLightData
+	, TextureCubeArray shadowCubeMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, float3 lightVectorWorldSpace
+	, float range
+)
+{
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+
+	float shadow = 0.0f;
+
+	const float bias = 0.05f;
+	const float samples = 4.0f;
+	const float samplesHalf = samples * 0.5f;
+	const float offset = 0.1f;
+
+	for (float x = -offset; x < offset; x += offset / samplesHalf)
+	{
+		for (float y = -offset; y < offset; y += offset / samplesHalf)
+		{
+			for (float z = -offset; z < offset; z += offset / samplesHalf)
+			{				
+				const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, float4(-(lightVectorWorldSpace + float3(x,y,z)), shadowMapIndex)).x;
+				const float closestDepthInWorldSpace = closestDepthInLSpace * range;
+				shadow += (length(lightVectorWorldSpace) > closestDepthInWorldSpace + pcfTestLightData.depthBias) ? 1.0f : 0.0f;
+			}
+		}
+	}
+	shadow /= (samples *samples *samples);
 	return 1.0f - shadow;
 }
 
@@ -206,8 +240,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 Lw		  = Lights.point_lights[l].position;
 		const float3 Lv       = mul(matView, float4(Lw, 1));
 		const float3 Wi       = normalize(Lv - P);
+		const float  D        = length(Lights.point_lights[l].position - Pw);
 		const float3 radiance = 
-			AttenuationBRDF(Lights.point_lights[l].attenuation, length(Lights.point_lights[l].position - Pw))
+			AttenuationBRDF(Lights.point_lights[l].attenuation, D)
 			* Lights.point_lights[l].color 
 			* Lights.point_lights[l].brightness;
 

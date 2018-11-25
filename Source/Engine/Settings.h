@@ -28,7 +28,9 @@ namespace Settings
 	//------------------------------------------------------------
 	struct ShadowMap
 	{
-		size_t	dimension;
+		size_t	spotShadowMapDimensions;
+		size_t	pointShadowMapDimensions;
+		size_t	directionalShadowMapDimensions;
 	};
 
 	struct Bloom

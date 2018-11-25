@@ -100,7 +100,7 @@ void Light::GetGPUData(DirectionalLightGPU& l) const
 	l.brightness = this->mBrightness;
 	l.color = this->mColor;
 	l.lightDirection = direction;
-	l.shadowFactor = this->mbEnabled ? 1.0f : 0.0f;
+	l.shadowFactor = (this->mbEnabled && this->mbCastingShadows) ? 1.0f : 0.0f;
 }
 void Light::GetGPUData(SpotLightGPU& l) const
 {
@@ -133,7 +133,7 @@ void Light::GetGPUData(PointLightGPU& l) const
 Settings::ShadowMap Light::GetSettings() const
 {
 	Settings::ShadowMap settings;
-	settings.dimension = static_cast<size_t>(mViewportX);
+	settings.directionalShadowMapDimensions = static_cast<size_t>(mViewportX);
 	return settings;
 }
 
@@ -161,7 +161,7 @@ DirectionalLightGPU DirectionalLight::GetGPUData() const
 Settings::ShadowMap DirectionalLight::GetSettings() const
 {
 	Settings::ShadowMap settings;
-	settings.dimension = static_cast<size_t>(mViewportX);
+	settings.spotShadowMapDimensions = static_cast<size_t>(mViewportX);
 	return settings;
 }
 XMMATRIX DirectionalLight::GetProjectionMatrix() const

@@ -707,7 +707,7 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 
 	const std::string path = fileRoot + texFileName;
 #if _DEBUG
-	Log::Info("Loading Texture\t\t%s", path.c_str());
+	Log::Info("\tLoading Texture: %s", path.c_str());
 #endif
 
 	Texture tex;
@@ -1157,7 +1157,7 @@ TextureID Renderer::CreateCubemapFromFaceTextures(const std::vector<std::string>
 	}
 
 #if _DEBUG
-	Log::Info("Loading Cubemap Texture\t\t%s", textureFiles.back().c_str());
+	Log::Info("\tLoading Cubemap Texture: %s", textureFiles.back().c_str());
 #endif
 
 	// initialize the destination texture desc

@@ -113,7 +113,9 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		//---------------------------------------------------------------
 		// | Shadow Map dimension
 		//---------------------------------------------------------------
-		settings.rendering.shadowMap.dimension = stoi(line[1]);
+		settings.rendering.shadowMap.spotShadowMapDimensions = stoi(line[1]);
+		settings.rendering.shadowMap.directionalShadowMapDimensions = stoi(line[2]);
+		settings.rendering.shadowMap.pointShadowMapDimensions = stoi(line[3]);
 	}
 	else if (cmd == "lightingModel")
 	{

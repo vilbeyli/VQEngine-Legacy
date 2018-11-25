@@ -168,6 +168,7 @@ struct ShadowTestPCFData
 	//-------------------------
 	float  depthBias;
 	float  NdotL;
+	float  viewDistanceOfPixel; // of the shaded pixel
 	//...
 	//-------------------------
 };

@@ -240,9 +240,11 @@ int Scene::RenderAlpha(const SceneView & sceneView) const
 
 int Scene::RenderDebug(const XMMATRIX& viewProj) const
 {
-	const auto IABuffers = mMeshes[EGeometry::CUBE].GetIABuffers();
+	const auto IABuffersCube = mMeshes[EGeometry::CUBE].GetIABuffers();
+	const auto IABuffersSphere = mMeshes[EGeometry::SPHERE].GetIABuffers();
+	// const auto IABuffersCone = mMeshes[EGeometry::CONE].GetIABuffers(); // TODO
 
-	// set debug render state
+	// set debug render states
 	mpRenderer->SetShader(EShaders::UNLIT);
 	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
 	mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
@@ -250,13 +252,20 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::WIREFRAME);
-	mpRenderer->SetVertexBuffer(IABuffers.first);
-	mpRenderer->SetIndexBuffer(IABuffers.second);
+	mpRenderer->SetVertexBuffer(IABuffersCube.first);
+	mpRenderer->SetIndexBuffer(IABuffersCube.second);
 
-	// scene bounding box
-	mBoundingBox.Render(mpRenderer, viewProj);
+
+	// SCENE BOUNDING BOX
+	//
+	XMMATRIX wvp = mBoundingBox.GetWorldTransformationMatrix() * viewProj;
+	mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+	mpRenderer->Apply();
+	mpRenderer->DrawIndexed();
 	
-	// game object bounding boxes
+
+	// GAME OBJECT OBB & MESH BOUNDING BOXES
+	//
 	std::vector<const GameObject*> pObjects(
 		mSceneView.opaqueList.size() + mSceneView.alphaList.size()
 		, nullptr
@@ -265,18 +274,72 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	std::copy(RANGE(mSceneView.alphaList), pObjects.begin() + mSceneView.opaqueList.size());
 	for(const GameObject* pObj : pObjects)
 	{
+		const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+		wvp = pObj->mBoundingBox.GetWorldTransformationMatrix() * matWorld * viewProj;
+#if 1
 		mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
-		pObj->mBoundingBox.Render(mpRenderer, pObj->GetTransform().WorldTransformationMatrix() * viewProj);
+		mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+		mpRenderer->Apply();
+		mpRenderer->DrawIndexed();
+#endif
 
+		// mesh bounding boxes (currently broken...)
 		mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
+#if 0
 		for (const MeshID meshID : pObj->mModel.mData.mMeshIDs)
 		{
-			pObj->mMeshBoundingBoxes[meshID].Render(mpRenderer, pObj->GetTransform().WorldTransformationMatrix() * viewProj);
+			wvp = pObj->mMeshBoundingBoxes[meshID].GetWorldTransformationMatrix() * matWorld * viewProj;
+			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+			mpRenderer->Apply();
+			mpRenderer->DrawIndexed();
 		}
+#endif
 	};
 
 
-	// TODO: camera frustum
+	// LIGHT VOLUMES
+	//
+	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
+
+	// light's transform hold Translation and Rotation data,
+	// Scale is used for rendering. Hence, we use another transform
+	// here to use mRange as the lights render scale signifying its 
+	// radius of influence.
+	Transform tf;
+
+	// point lights
+	mpRenderer->SetVertexBuffer(IABuffersSphere.first);
+	mpRenderer->SetIndexBuffer(IABuffersSphere.second);
+	for (const Light& l : mLights)
+	{
+		if (l.mType == Light::ELightType::POINT)
+		{
+			mpRenderer->SetConstant3f("diffuse", l.mColor);
+
+			tf.SetPosition(l.mTransform._position);
+			tf.SetScale(l.mRange * 0.5f); // Mesh's model space R = 2.0f, hence scale it by 0.5f...
+			wvp = tf.WorldTransformationMatrix() * viewProj;
+			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+			mpRenderer->Apply();
+			mpRenderer->DrawIndexed();
+		}
+	}
+
+	// TODO: spot lights 
+	// mpRenderer->SetVertexBuffer(IABuffersCone.first);
+	// mpRenderer->SetIndexBuffer(IABuffersCone.second);
+	// for (const Light& l : mLights)
+	// {
+	// 	if (l.mType == Light::ELightType::SPOT)
+	// 	{
+	// 
+	// 	}
+	// }
+
+
+
+	// TODO: CAMERA FRUSTUM
+	//
 	if (mCameras.size() > 1 && mSelectedCamera != 0 && false)
 	{
 		// render camera[0]'s frustum
@@ -304,6 +367,7 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	mpRenderer->UnbindDepthTarget();
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 	mpRenderer->Apply();
+
 
 	return 1 + (int)pObjects.size(); // objects rendered
 }

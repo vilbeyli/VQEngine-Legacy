@@ -238,7 +238,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 			AttenuationBRDF(Lights.point_lights[i].attenuation, D)
 			* Lights.point_lights[i].color 
 			* Lights.point_lights[i].brightness;
-		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
+		if( D < Lights.point_lights[i].range )
+			IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
 #endif
 #if ENABLE_POINT_LIGHTS_SHADOW

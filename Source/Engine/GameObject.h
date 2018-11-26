@@ -39,7 +39,7 @@ struct BoundingBox
 {
 	vec3 low = vec3::Zero;
 	vec3 hi = vec3::Zero;
-	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
+	DirectX::XMMATRIX GetWorldTransformationMatrix() const;
 };
 
 class GameObject

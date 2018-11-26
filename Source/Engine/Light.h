@@ -196,9 +196,9 @@ struct Light
 		//
 		struct // Point
 		{
-			float mAttenuationConstant ;
-			float mAttenuationLinear   ;
-			float mAttenuationQuadratic;
+			float mAttenuationConstant ; // Currently Unused: attenuation = 1/distance^2 in the shaders
+			float mAttenuationLinear   ; // Currently Unused: attenuation = 1/distance^2 in the shaders
+			float mAttenuationQuadratic; // Currently Unused: attenuation = 1/distance^2 in the shaders
 		};
 
 

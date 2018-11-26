@@ -56,7 +56,7 @@ light begin
 	color orange
 	brightness 1800
 	shadows true 0.000091 0.001 200
-//	range 30
+	range 125
 light end
 light begin
 	type point
@@ -64,7 +64,7 @@ light begin
 	color purple
 	brightness 1800
 	shadows true 0.005
-	range 1000
+	range 125
 light end
 light begin
 	type point
@@ -72,7 +72,7 @@ light begin
 	color green
 	brightness 1800
 	shadows true 0.00000005
-	range 1000
+	range 125
 light end
 light begin
 	type point
@@ -80,7 +80,7 @@ light begin
 	color cyan
 	brightness 1800
 	shadows true 0.005
-	range 1000
+	range 125
 light end
 
 light begin

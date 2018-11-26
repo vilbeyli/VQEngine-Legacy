@@ -174,7 +174,7 @@ light begin
 	brightness 1700
 	shadows true 0.005
 //	attenuation 1 1 1 // currently unused
-	range 1000
+	range 150
 light end
 
 light begin
@@ -211,7 +211,7 @@ light begin
 	brightness 1700
 	shadows true 0.005
 //	attenuation 1 1 1 // currently unused
-	range 1000
+	range 150
 light end
 
 

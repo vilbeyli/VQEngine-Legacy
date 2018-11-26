@@ -25,10 +25,15 @@
 // directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
-ao true 0.005   3.00 2.40
 bloom true 0.005
-skylight false
 
+skylight false
+ao true 0.005   3.00 2.40
+
+//skylight true
+//ao true 0.025   3.00 2.40
+
+camera 0.1 1500 50   -2.01 98.59 -150.48    0 10
 camera 0.1 1500 50   -75.09  24.55  39.26    90 10
 camera 0.1 1500 50   -107.01 29.59 -50.48    90 10
 
@@ -48,7 +53,7 @@ object begin
 	brdf
 		diffuse 1 1 1
 	brdf
-	transform 0 50 0 90 0 0 130 130 0.9
+	transform 0 50 0 90 0 0 130 130 1.9
 object end
 
 object begin
@@ -56,7 +61,7 @@ object begin
 	brdf
 		diffuse 1 1 1
 	brdf
-	transform -130 25 0 0 0 0 0.9 25 130
+	transform -130 65 0 0 0 0 1.9 65 130
 object end
 object begin
 	mesh cube
@@ -70,7 +75,7 @@ object begin
 	brdf
 		diffuse 0.3 0.3 0.3
 	brdf
-	transform 0 25 -10 0 0 0 130 25 4
+	transform 0 65 -10 0 0 0 130 65 4
 object end
 
 
@@ -156,25 +161,43 @@ object begin
 	transform -20 6 55 0 0 0 3
 object end
 
-
-//------------------------------------
-// LIGHTS
+// UPSTAIRS
 //
+object begin
+	mesh sphere
+	brdf
+		//diffuse 1.0 1.0 1.0
+		diffuse 0.01 0.01 0.01
+		roughness 0.54
+		//metalness 1.0
+	brdf
+	transform 0 65 -60 0 0 0 7
+object end
+
+//object begin
+//	transform 30 67 -60 0 0 0 1
+//	model egemenilbeyli/zen_orb.obj
+//object end
+
+
+// LIGHTS
+//------------------------------------------------------------------------
 // shadows     : true/false, depthBias, nearPlane, farPlane
 // range       : == farPlane;
 // spot        : spot angle, fall-off angle
 // directional :
-//------------------------------------
+//------------------------------------------------------------------------
+
 //directional sun 7.8   40 -100 15    4096 1024 600
 
 light begin
 	type point
 	transform 5  9.36  -50    0 0 0   0.1
 	color white
-	brightness 1700
+	brightness 1000
 	shadows true 0.005
 //	attenuation 1 1 1 // currently unused
-	range 150
+	range 160
 light end
 
 light begin
@@ -182,18 +205,19 @@ light begin
 	transform -71.68  10.36  -48.41   0 90 0    0.3
 	color white
 	brightness 1000
-	shadows true 0.00000009 0.01
+	shadows true 0.00000009 0.1
 	spot 80 1
-	range 500
+	range 800
 light end
 
 light begin
 	type directional
-	transform 0 0 0    9 35 0    1
-	color sun
-	brightness 1.2
-	shadows false 0.001  1 2000 
-	directional 512 100
+	transform 0 0 0    70 0 40    1
+	color white
+	brightness 4.2
+	//shadows true 0.000030  10 4000 
+	shadows true 0.0005  10 4000 
+	directional 384 1500
 light end
 
 // TODO: LINEAR LIGHTS
@@ -208,7 +232,7 @@ light begin
 	type point
 	transform 5  19.36  35    0 0 0   0.1
 	color white
-	brightness 1700
+	brightness 500
 	shadows true 0.005
 //	attenuation 1 1 1 // currently unused
 	range 150

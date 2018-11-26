@@ -29,36 +29,30 @@
 
 
 camera 0.8 12000 80   0 30 -100  0 25 
-camera 0.1 1500 75   0 30 100  180 25 
-ao true 0.2 8.0 2.90
+camera 0.8 12000 80   464.37  56.70  -522.55  -65 25 
+camera 0.1 1500 65   0 30 100  180 25 
+ao true 0.15 8.0 2.90
 skylight true
 bloom true 1.05
 
 
 //directional sun 2.2   -20   -25   35  4096 2700 2800 0.00006
-//light begin
-//	type directional
-//	transform 0 0 0    9 35 0    1
-//	color sun
-//	brightness 1.2
-//	shadows true 0.001  1 300 
-//	directional 4096 100
-//	// 256?
-//light end
+light begin
+	type directional
+	transform 0 0 0    9 -35 0    1
+	color sun
+	brightness 1.2
+	shadows true 0.0005   10.1 2800 
+	directional 2850 3000
+light end
 
 // room lights
-//  light       p         white		false      5800      814.54  115.85  197.38    900	  0.3  
-//  light       p         white		false      7800      761.51  143.17  256.48    900	  0.3
-//  light       p         white		false      8800      776.38  128.57  136.94    3200	  0.3
-//  light		s		  orange     true       6000      794.38  88.06  183.54    78.14    -125 0 0   1  1500  0.0000005
-//  light		s		  red        true       6000      774.38  88.06  183.54    85    -90 -10  0   1  1500
-//  light		s		  yellow     true       6000      814.38  88.06  183.54    85    -90 20 0   1  1500
 light begin
 	type point
 	transform  814.54  115.85  197.38    0 0 0   0.2
 	color white
 	brightness 5800
-	shadows true 0.05 0.01
+	shadows false 0.05 0.01
 	range 700
 light end
 light begin
@@ -66,7 +60,7 @@ light begin
 	transform  761.51  143.17  256.48    0 0 0   0.1
 	color white
 	brightness 7800
-	shadows true 0.005
+	shadows false 0.005
 	range 700
 light end
 light begin
@@ -74,7 +68,7 @@ light begin
 	transform 776.38  128.57  136.94    0 0 0   0.1
 	color white
 	brightness 8800
-	shadows true 0.005
+	shadows false 0.005
 	range 700
 light end
 

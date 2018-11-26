@@ -388,7 +388,6 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vect
 	SceneLightingData::cb& cbuffer = outLightingData._cb;
 
 	outLightingData.ResetCounts();
-	mShadowView.Clear();
 
 	cbuffer.directionalLight.depthBias = 0.0f;
 	cbuffer.directionalLight.enabled = 0;
@@ -995,6 +994,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightin
 	mSceneView.alphaList.clear();
 	
 	// shadow views
+	mShadowView.Clear();
 	mShadowView.RenderListsPerMeshType.clear();
 	mShadowView.casters.clear();
 	mShadowView.shadowMapRenderListLookUp.clear();

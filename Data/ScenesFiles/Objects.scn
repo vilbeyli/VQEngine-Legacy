@@ -36,11 +36,11 @@ bloom true 1.22 8
 
 light begin
 	type directional
-	transform 0 0 0    9 35 0    1
+	transform 0 0 0    10 10 0    1
 	color sun
-	brightness 1.2
-	shadows true 0.001  1 300 
-	directional 2048 100
+	brightness 2.2
+	shadows true 0.001  0.05 600 
+	directional 300 300
 	// 256?
 light end
 

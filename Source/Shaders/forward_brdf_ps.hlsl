@@ -180,12 +180,12 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float  D = length(Lw - P);
 		const float3 radiance =
 			AttenuationBRDF(Lights.point_casters[l].attenuation, D)
-			* Lights.point_lights[l].color
-			* Lights.point_lights[l].brightness;
+			* Lights.point_casters[l].color
+			* Lights.point_casters[l].brightness;
 
 		pcfTest.NdotL = saturate(dot(s.N, Wi));
 		pcfTest.depthBias = Lights.point_casters[l].depthBias;
-		if (D < Lights.point_lights[l].range)
+		if (D < Lights.point_casters[l].range)
 		{
 			const float3 shadowing = OmnidirectionalShadowTestPCF(
 				pcfTest,

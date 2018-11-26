@@ -99,8 +99,12 @@ void Light::GetGPUData(DirectionalLightGPU& l) const
 
 	l.brightness = this->mBrightness;
 	l.color = this->mColor;
+
 	l.lightDirection = direction;
-	l.shadowFactor = (this->mbEnabled && this->mbCastingShadows) ? 1.0f : 0.0f;
+	l.depthBias = this->mDepthBias;
+
+	l.shadowing = this->mbCastingShadows;
+	l.enabled = this->mbEnabled;
 }
 void Light::GetGPUData(SpotLightGPU& l) const
 {

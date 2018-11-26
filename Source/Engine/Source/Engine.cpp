@@ -1145,6 +1145,8 @@ void Engine::Render()
 
 void Engine::RenderDebug(const XMMATRIX& viewProj)
 {
+	mpGPUProfiler->BeginEntry("Debug Pass");
+	mpCPUProfiler->BeginEntry("Debug Pass");
 	if (mEngineConfig.bBoundingBoxes)	// BOUNDING BOXES
 	{
 		mpActiveScene->RenderDebug(viewProj);
@@ -1276,6 +1278,8 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		mpRenderer->EndEvent();
 	}
 #endif
+	mpCPUProfiler->EndEntry();	// UI
+	mpGPUProfiler->EndEntry();
 }
 
 

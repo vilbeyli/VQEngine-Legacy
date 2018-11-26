@@ -61,8 +61,10 @@ struct DirectionalLightGPU
 	float  brightness;
 	//-----------------------
 	vec3 color;
-	float shadowFactor;	// todo: use as depthBias
+	float depthBias;
 	//-----------------------
+	int shadowing;
+	int enabled;
 };
 
 //struct ShadowView

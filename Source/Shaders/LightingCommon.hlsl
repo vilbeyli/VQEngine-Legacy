@@ -52,11 +52,13 @@ struct SpotLight
 };
 
 struct DirectionalLight
-{	// 32 bytes
+{	// 40 bytes
 	float3 lightDirection;
 	float  brightness;
 	float3 color;
-	float shadowFactor;
+	float depthBias;
+	int shadowing;
+	int enabled;
 };
 
 // defines maximum number of dynamic lights  todo: shader defines
@@ -160,7 +162,9 @@ float SpotlightIntensity(SpotLight l, float3 worldPos)
 	return clamp((theta - softAngle) / softRegion, 0.0f, 1.0f);
 }
 
-// todo: ESM - http://www.cad.zju.edu.cn/home/jqfeng/papers/Exponential%20Soft%20Shadow%20Mapping.pdf
+
+// SHADOW TESTS
+//
 struct ShadowTestPCFData
 {
 	//-------------------------
@@ -172,6 +176,67 @@ struct ShadowTestPCFData
 	//...
 	//-------------------------
 };
+
+float OmnidirectionalShadowTest(
+	in ShadowTestPCFData pcfTestLightData
+	, TextureCubeArray shadowCubeMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, float3 lightVectorWorldSpace
+	, float range
+)
+{
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	float shadow = 0.0f;
+
+	const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, float4(-lightVectorWorldSpace, shadowMapIndex)).x;
+	const float closestDepthInWorldSpace = closestDepthInLSpace * range;
+	shadow += (length(lightVectorWorldSpace) > closestDepthInWorldSpace + pcfTestLightData.depthBias) ? 1.0f : 0.0f;
+
+	return 1.0f - shadow;
+}
+float OmnidirectionalShadowTestPCF(
+	in ShadowTestPCFData pcfTestLightData
+	, TextureCubeArray shadowCubeMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, float3 lightVectorWorldSpace
+	, float range
+)
+{
+#define NUM_PCF_TAPS 20
+	const float3 sampleOffsetDirections[NUM_PCF_TAPS] =
+	{
+	   float3(1,  1,  1), float3(1, -1,  1), float3(-1, -1,  1), float3(-1,  1,  1),
+	   float3(1,  1, -1), float3(1, -1, -1), float3(-1, -1, -1), float3(-1,  1, -1),
+	   float3(1,  1,  0), float3(1, -1,  0), float3(-1, -1,  0), float3(-1,  1,  0),
+	   float3(1,  0,  1), float3(-1,  0,  1), float3(1,  0, -1), float3(-1,  0, -1),
+	   float3(0,  1,  1), float3(0, -1,  1), float3(0, -1, -1), float3(0,  1, -1)
+	};
+
+	// const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	// const float bias = 0.001f;
+
+	float shadow = 0.0f;
+
+	// parameters for determining shadow softness based on view distance to the pixel
+	const float diskRadiusScaleFactor = 1.0f / 8.0f;
+	const float diskRadius = (1.0f + (pcfTestLightData.viewDistanceOfPixel / range)) * diskRadiusScaleFactor;
+
+	for (int i = 0; i < NUM_PCF_TAPS; ++i)
+	{
+		const float4 cubemapSampleVec = float4(-(lightVectorWorldSpace + normalize(sampleOffsetDirections[i]) * diskRadius), shadowMapIndex);
+		const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, cubemapSampleVec).x;
+		const float closestDepthInWorldSpace = closestDepthInLSpace * range;
+		shadow += (length(lightVectorWorldSpace) > closestDepthInWorldSpace + pcfTestLightData.depthBias) ? 1.0f : 0.0f;
+	}
+	shadow /= NUM_PCF_TAPS;
+	return 1.0f - shadow;
+}
+
+// todo: ESM - http://www.cad.zju.edu.cn/home/jqfeng/papers/Exponential%20Soft%20Shadow%20Mapping.pdf
 float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadowMapArr, SamplerState shadowSampler, float2 shadowMapDimensions, int shadowMapIndex)
 //float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
 {

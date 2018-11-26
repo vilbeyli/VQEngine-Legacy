@@ -390,7 +390,9 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vect
 	outLightingData.ResetCounts();
 	mShadowView.Clear();
 
-	cbuffer.directionalLight.shadowFactor = 0.0f;
+	cbuffer.directionalLight.depthBias = 0.0f;
+	cbuffer.directionalLight.enabled = 0;
+	cbuffer.directionalLight.shadowing = 0;
 	cbuffer.directionalLight.brightness = 0.0f;
 
 	pNumArray lightCounts
@@ -406,51 +408,59 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vect
 
 	unsigned numShdSpot = 0;
 	unsigned numPtSpot = 0;
+
 	for (const Light* l : pLightList)
 	{
 		//if (!l->_bEnabled) continue;	// #BreaksRelease
 
-		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
-		//const size_t shadowIndex = l->_mbCastingShadows ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
-
-		// add to the count of the current light type & whether its shadow casting or not
-		pNumArray& refLightCounts = l->mbCastingShadows ? casterCounts : lightCounts;
-
+		pNumArray& refLightCounts = casterCounts;
+		const size_t lightIndex = (*refLightCounts[l->mType])++;
 		switch (l->mType)
 		{
 		case Light::ELightType::POINT:
 		{
-			const size_t lightIndex = (*refLightCounts[l->mType])++;
-
 			PointLightGPU plData;
 			l->GetGPUData(plData);
-			cbuffer.pointLights[lightIndex] = plData;
-			cbuffer.pointLightsShadowing[lightIndex] = plData;
 
-			if (l->mbCastingShadows)
-			{
-				mShadowView.points.push_back(l);
-			}
-		}
-		break;
+			cbuffer.pointLightsShadowing[lightIndex] = plData;
+			mShadowView.points.push_back(l);
+		} break;
 		case Light::ELightType::SPOT:
 		{
-			const size_t lightIndex = (*refLightCounts[l->mType])++;
-			//const SpotLight& sl = static_cast<const SpotLight&>(l);
-			//cbuffer.spotLights[lightIndex] = sl->GetGPUData();
-			//cbuffer.spotLightsShadowing[lightIndex] = sl->GetGPUData();
 			SpotLightGPU slData;
 			l->GetGPUData(slData);
-			cbuffer.spotLights[lightIndex] = slData;
-			cbuffer.spotLightsShadowing[lightIndex] = slData;
 
-			if (l->mbCastingShadows)
-			{
-				cbuffer.shadowViews[numShdSpot++] = l->GetLightSpaceMatrix();
-				mShadowView.spots.push_back(l);
-			}
+			cbuffer.spotLightsShadowing[lightIndex] = slData;
+			cbuffer.shadowViews[numShdSpot++] = l->GetLightSpaceMatrix();
+			mShadowView.spots.push_back(l);
+		} break;
+		default:
+			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
+			continue;
 		}
-		break;
+	}
+
+	// iterate for non-shadowing lights (they won't be in pLightList)
+	for (const Light& l : mLights)
+	{
+		if (l.mbCastingShadows) continue;
+		pNumArray& refLightCounts = lightCounts;
+
+		const size_t lightIndex = (*refLightCounts[l.mType])++;
+		switch (l.mType)
+		{
+		case Light::ELightType::POINT:
+		{
+			PointLightGPU plData;
+			l.GetGPUData(plData);
+			cbuffer.pointLights[lightIndex] = plData;
+		} break;
+		case Light::ELightType::SPOT:
+		{
+			SpotLightGPU slData;
+			l.GetGPUData(slData);
+			cbuffer.spotLights[lightIndex] = slData;
+		} break;
 		default:
 			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
 			continue;
@@ -1086,7 +1096,63 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightin
 #if THREADED_FRUSTUM_CULL
 	// TODO: utilize thread pool for each render list
 
+	pCPUProfiler->BeginEntry("Cull Views");
+	// MAIN VIEW
+	//
+	if (bCullMainView)
+	{
+		stats.scene.numMainViewCulledObjects = static_cast<int>(CullGameObjects(
+			FrustumPlaneset::ExtractFromMatrix(mSceneView.viewProj)
+			, mSceneView.opaqueList
+			, mainViewRenderList));
+	}
+	else
+	{
+		mainViewRenderList.resize(mSceneView.opaqueList.size());
+		std::copy(RANGE(mSceneView.opaqueList), mainViewRenderList.begin());
+		stats.scene.numMainViewCulledObjects = 0;
+	}
+
+
+	// SHADOW FRUSTA
+	//
+
+	RenderList objList;
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+	std::array< MeshDrawData, 6> meshDrawDataPerFace;
 #else
+	std::array< MeshDrawList, 6> meshListForPoints;
+#endif
+
+	for (const Light* l : pLights)
+	{
+		switch (l->mType)
+		{
+		case Light::ELightType::SPOT:
+		{
+			
+		
+		}	break;
+		case Light::ELightType::POINT:
+		{
+
+		}	break;
+
+		} // light type switch
+
+		
+	} // for each light
+
+
+	// CULL DIRECTIONAL SHADOW VIEW 
+	//
+
+
+	// TODO: sync point
+	pCPUProfiler->EndEntry(); // Cull Views
+#else
+
 	// MAIN VIEW
 	//
 	pCPUProfiler->BeginEntry("Cull Views");
@@ -1202,7 +1268,8 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightin
 		
 		objList.clear();
 	} // for each light
-#endif
+
+#endif // THREADED_FRUSTUM_CULL
 	
 
 	// CULL DIRECTIONAL SHADOW VIEW 

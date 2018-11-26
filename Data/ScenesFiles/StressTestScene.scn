@@ -58,7 +58,7 @@ light begin
 	transform  814.54  115.85  197.38    0 0 0   0.2
 	color white
 	brightness 5800
-	shadows false 0.05 0.01
+	shadows true 0.05 0.01
 	range 700
 light end
 light begin
@@ -66,7 +66,7 @@ light begin
 	transform  761.51  143.17  256.48    0 0 0   0.1
 	color white
 	brightness 7800
-	shadows false 0.005
+	shadows true 0.005
 	range 700
 light end
 light begin
@@ -74,7 +74,7 @@ light begin
 	transform 776.38  128.57  136.94    0 0 0   0.1
 	color white
 	brightness 8800
-	shadows false 0.005
+	shadows true 0.005
 	range 700
 light end
 

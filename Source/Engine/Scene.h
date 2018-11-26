@@ -133,10 +133,9 @@ public:
 	//
 	void UpdateScene(float dt);
 
-	// Prepares the scene and shadow views for culling, sorting, instanced draw lists etc.
+	// Prepares the scene and shadow views for culling, sorting, instanced draw lists, lights, etc.
 	//
-	void PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats);
-	void GatherLightData(SceneLightingData& outLightingData);
+	void PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightingData & outLightingData);
 
 
 	// Renders the meshes in the scene which have materials with alpha=1.0f
@@ -219,6 +218,7 @@ private:
 	void StartLoadingModels();
 	void EndLoadingModels();
 	void CalculateSceneBoundingBox();
+	void GatherLightData(SceneLightingData& outLightingData, const std::vector<const Light*>& pLightList);
 };
 
 

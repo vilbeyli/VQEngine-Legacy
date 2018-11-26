@@ -383,7 +383,7 @@ using pSpotLightDataArray = std::array<SpotLightDataArray*, 2>;
 
 // stores the number of lights per light type (2 types : point and spot)
 using pNumArray = std::array<int*, 2>;
-void Scene::GatherLightData(SceneLightingData & outLightingData)
+void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vector<const Light*>& pLightList)
 {
 	SceneLightingData::cb& cbuffer = outLightingData._cb;
 
@@ -406,48 +406,48 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 
 	unsigned numShdSpot = 0;
 	unsigned numPtSpot = 0;
-	for (const Light& l : mLights)
+	for (const Light* l : pLightList)
 	{
-		//if (!l._bEnabled) continue;	// #BreaksRelease
+		//if (!l->_bEnabled) continue;	// #BreaksRelease
 
 		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
-		//const size_t shadowIndex = l._mbCastingShadows ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
+		//const size_t shadowIndex = l->_mbCastingShadows ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
 
 		// add to the count of the current light type & whether its shadow casting or not
-		pNumArray& refLightCounts = l.mbCastingShadows ? casterCounts : lightCounts;
+		pNumArray& refLightCounts = l->mbCastingShadows ? casterCounts : lightCounts;
 
-		switch (l.mType)
+		switch (l->mType)
 		{
 		case Light::ELightType::POINT:
 		{
-			const size_t lightIndex = (*refLightCounts[l.mType])++;
+			const size_t lightIndex = (*refLightCounts[l->mType])++;
 
 			PointLightGPU plData;
-			l.GetGPUData(plData);
+			l->GetGPUData(plData);
 			cbuffer.pointLights[lightIndex] = plData;
 			cbuffer.pointLightsShadowing[lightIndex] = plData;
 
-			if (l.mbCastingShadows)
+			if (l->mbCastingShadows)
 			{
-				mShadowView.points.push_back(&l);
+				mShadowView.points.push_back(l);
 			}
 		}
 		break;
 		case Light::ELightType::SPOT:
 		{
-			const size_t lightIndex = (*refLightCounts[l.mType])++;
+			const size_t lightIndex = (*refLightCounts[l->mType])++;
 			//const SpotLight& sl = static_cast<const SpotLight&>(l);
-			//cbuffer.spotLights[lightIndex] = sl.GetGPUData();
-			//cbuffer.spotLightsShadowing[lightIndex] = sl.GetGPUData();
+			//cbuffer.spotLights[lightIndex] = sl->GetGPUData();
+			//cbuffer.spotLightsShadowing[lightIndex] = sl->GetGPUData();
 			SpotLightGPU slData;
-			l.GetGPUData(slData);
+			l->GetGPUData(slData);
 			cbuffer.spotLights[lightIndex] = slData;
 			cbuffer.spotLightsShadowing[lightIndex] = slData;
 
-			if (l.mbCastingShadows)
+			if (l->mbCastingShadows)
 			{
-				cbuffer.shadowViews[numShdSpot++] = l.GetLightSpaceMatrix();
-				mShadowView.spots.push_back(&l);
+				cbuffer.shadowViews[numShdSpot++] = l->GetLightSpaceMatrix();
+				mShadowView.spots.push_back(l);
 			}
 		}
 		break;
@@ -721,6 +721,42 @@ void Scene::UpdateScene(float dt)
 	Update(dt);
 }
 
+static bool IsSphereInFrustum(const FrustumPlaneset& frustum, const vec3& sphereCenter, const float sphereRadius)
+{
+	bool bInside = true;
+	for (int plane = 0; plane < 6; ++plane)
+	{
+		vec3 N = vec3( 
+			  frustum.abcd[plane].x
+			, frustum.abcd[plane].y
+			, frustum.abcd[plane].z
+		);
+		const vec3 planeNormal = N.normalized();
+		const float D = XMVector3Dot(N, sphereCenter).m128_f32[0] + frustum.abcd[plane].w;
+		//const float D = XMVector3Dot(planeNormal, sphereCenter).m128_f32[0] + frustum.abcd[plane].w;
+		//const float D = XMVector3Dot(planeNormal, sphereCenter).m128_f32[0];
+		
+#if 0
+		if (D < -sphereRadius) // outside
+			return false;
+
+		else if(D < sphereRadius) // intersect
+		{
+			bInside = true;
+		}
+#else
+		//if (fabsf(D) > sphereRadius)
+		//	return
+		if (D < 0.0f)
+		{
+			//if ( (-D -frustum.abcd[plane].w) > sphereRadius)
+			if (-D  > sphereRadius)
+				return false;
+		}
+#endif
+	}
+	return bInside;
+}
 
 static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 {
@@ -858,7 +894,7 @@ static size_t CullGameObjects(
 	return pObjs.size() - currIdx;
 }
 
-void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
+void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightingData& outLightingData)
 {
 	// LAMBDA DEFINITIONS
 	//---------------------------------------------------------------------------------------------
@@ -990,6 +1026,46 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	stats.scene.numObjects = numObjects;
 	pCPUProfiler->EndEntry();
 
+	//----------------------------------------------------------------------------
+	// CULL LIGHTS
+	//----------------------------------------------------------------------------
+	stats.scene.numCulledShadowingPointLights = 0;
+	stats.scene.numCulledShadowingSpotLights = 0;
+	std::vector<const Light*> pLights;
+	pCPUProfiler->BeginEntry("Cull Lights");
+	for (const Light& l : mLights)
+	{
+		if (!l.mbCastingShadows) continue;
+		switch (l.mType)
+		{
+		case Light::ELightType::SPOT:
+		{
+			// TODO: frustum - cone check
+			const bool bCullLight = false;
+			//if (IsVisible())
+			if (!bCullLight)
+				pLights.push_back(&l);
+			else 
+				++stats.scene.numCulledShadowingSpotLights;
+		}	break;
+
+		case Light::ELightType::POINT:
+		{	
+			vec3 vecCamera = GetActiveCamera().GetPositionF() - l.mTransform._position;
+			const float dstSqrCameraToLight = XMVector3Dot(vecCamera, vecCamera).m128_f32[0];
+			const float rangeSqr = l.mRange * l.mRange;
+			bool bIsCameraInPointLightSphereOfIncluence = dstSqrCameraToLight < rangeSqr;
+			if (bIsCameraInPointLightSphereOfIncluence || IsSphereInFrustum(GetActiveCamera().GetViewFrustumPlanes(), l.mTransform._position, l.mRange))
+				pLights.push_back(&l);
+			else 
+				++stats.scene.numCulledShadowingPointLights;
+		} break;
+		} // light type
+
+	}
+	pCPUProfiler->EndEntry();
+
+
 
 	//----------------------------------------------------------------------------
 	// CULL RENDER LISTS
@@ -1003,7 +1079,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	// start counting these
 	stats.scene.numSpots = 0;
 	stats.scene.numPoints = 0;
-	stats.scene.numDirectionalCulledObjects = 0;
+	//stats.scene.numDirectionalCulledObjects = 0;
 	stats.scene.numPointsCulledObjects = 0;
 	stats.scene.numSpotsCulledObjects = 0;
 	
@@ -1014,7 +1090,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	// MAIN VIEW
 	//
 	pCPUProfiler->BeginEntry("Cull Views");
-	//pCPUProfiler->BeginEntry("Main View");
+	//pCPUProfiler->BeginEntry("[Cull Main View]");
 	if (bCullMainView)
 	{
 		stats.scene.numMainViewCulledObjects = static_cast<int>(CullGameObjects(
@@ -1041,11 +1117,9 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	std::array< MeshDrawList, 6> meshListForPoints;
 #endif
 
-	for (const Light& l : mLights)
+	for (const Light* l : pLights)
 	{
-		if (!l.mbCastingShadows) continue;
-
-		switch (l.mType)
+		switch (l->mType)
 		{
 		case Light::ELightType::SPOT:
 		{
@@ -1053,7 +1127,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 			++stats.scene.numSpots;
 			if (bCullLightView)
 			{
-				stats.scene.numSpotsCulledObjects += static_cast<int>(CullGameObjects(l.GetViewFrustumPlanes(), casterList, objList));
+				stats.scene.numSpotsCulledObjects += static_cast<int>(CullGameObjects(l->GetViewFrustumPlanes(), casterList, objList));
 			}
 			else
 			{
@@ -1061,14 +1135,15 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 				std::copy(RANGE(casterList), objList.begin());
 			}
 
-			mShadowView.shadowMapRenderListLookUp[&l] = objList;
+			mShadowView.shadowMapRenderListLookUp[l] = objList;
 			//pCPUProfiler->EndEntry();
 			break;
 		}
 		case Light::ELightType::POINT:
+			//pCPUProfiler->BeginEntry("[Cull Point View]");
 			++stats.scene.numPoints;
-			
-			
+
+			MeshDrawData meshDrawData;
 			if (bCullLightView) 
 			{
 				for (int face = 0; face < 6; ++face)
@@ -1084,10 +1159,10 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 							meshDrawDataPerFace[face]
 						));
 #else
-						MeshDrawData meshDrawData;
+						meshDrawData.meshIDs.clear();
 						stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
 						(
-							l.GetViewFrustumPlanes(CubemapFaceDirectionEnum),
+							l->GetViewFrustumPlanes(CubemapFaceDirectionEnum),
 							pObj,
 							meshDrawData
 						));
@@ -1114,12 +1189,13 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 			}
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-			mShadowView.shadowCubeMapMeshDrawListLookup[&l] = meshDrawDataPerFace;
+			mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshDrawDataPerFace;
 			for (int i = 0; i < 6; ++i) meshDrawDataPerFace[i].meshTransformListLookup.clear();
 #else
-			mShadowView.shadowCubeMapMeshDrawListLookup[&l] = meshListForPoints;
+			mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshListForPoints;
 			for (int i = 0; i < 6; ++i) meshListForPoints[i].clear();
 #endif
+			//pCPUProfiler->EndEntry();
 			break;
 		} // light type
 
@@ -1261,6 +1337,8 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		bReportedList = true;
 	}
 #endif // THREADED_FRUSTUM_CULL
+
+	GatherLightData(outLightingData, pLights);
 
 	//return numFrustumCulledObjs + numShadowFrustumCullObjs;
 }

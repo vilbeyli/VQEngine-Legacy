@@ -871,11 +871,6 @@ void Engine::PreRender()
 	mpActiveScene->mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mpActiveScene->mSceneView.bIsDeferredRendering = mEngineConfig.bDeferredOrForward;
 
-	// gather scene lights
-	//mpCPUProfiler->BeginEntry("Gather Lights");
-	mpActiveScene->GatherLightData(mSceneLightData);
-	//mpCPUProfiler->EndEntry();
-
 	// TODO: #RenderPass or Scene should manage this.
 	// mTBNDrawObjects.clear();
 	// std::vector<const GameObject*> objects;
@@ -886,8 +881,7 @@ void Engine::PreRender()
 	// 		mTBNDrawObjects.push_back(obj);
 	// }
 
-
-	mpActiveScene->PreRender(mpCPUProfiler, mFrameStats);
+	mpActiveScene->PreRender(mpCPUProfiler, mFrameStats, mSceneLightData);
 	mFrameStats.rstats = mpRenderer->GetRenderStats();
 	mFrameStats.fps = static_cast<int>(1.0f / mpGPUProfiler->GetRootEntryAvg());
 

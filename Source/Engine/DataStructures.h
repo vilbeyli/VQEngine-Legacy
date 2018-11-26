@@ -150,7 +150,11 @@ struct SceneStats
 	int numMainViewCulledObjects;
 	int numSpotsCulledObjects;
 	int numPointsCulledObjects;
-	int numDirectionalCulledObjects;
+	//int numDirectionalCulledObjects;
+
+	int numCulledShadowingPointLights;
+	int numCulledShadowingSpotLights;
+	//int numCulledAreaLights;
 
 	// a few more meaningful stats to keep:
 	//

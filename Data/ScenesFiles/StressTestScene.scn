@@ -59,7 +59,7 @@ light begin
 	color white
 	brightness 5800
 	shadows false 0.05 0.01
-	range 1000
+	range 700
 light end
 light begin
 	type point
@@ -67,7 +67,7 @@ light begin
 	color white
 	brightness 7800
 	shadows false 0.005
-	range 1000
+	range 700
 light end
 light begin
 	type point
@@ -75,7 +75,7 @@ light begin
 	color white
 	brightness 8800
 	shadows false 0.005
-	range 1000
+	range 700
 light end
 
 light begin
@@ -119,7 +119,7 @@ light begin
 	color cyan
 	brightness 1800
 	shadows false 0.005
-	range 1000
+	range 175
 light end
 light begin
 	type point
@@ -127,7 +127,7 @@ light begin
 	color green
 	brightness 1800
 	shadows false 0.005
-	range 1000
+	range 150
 light end
 light begin
 	type point
@@ -135,7 +135,7 @@ light begin
 	color orange
 	brightness 1800
 	shadows false 0.005
-	range 1000
+	range 150
 light end
 light begin
 	type point
@@ -143,7 +143,7 @@ light begin
 	color purple
 	brightness 1800
 	shadows true 0.005
-	range 10000
+	range 150
 light end
 light begin
 	type spot

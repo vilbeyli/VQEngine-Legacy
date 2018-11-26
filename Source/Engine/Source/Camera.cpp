@@ -242,6 +242,11 @@ XMMATRIX Camera::GetProjectionMatrix() const
 	return  XMLoadFloat4x4(&mMatProj);
 }
 
+FrustumPlaneset Camera::GetViewFrustumPlanes() const
+{
+	return FrustumPlaneset::ExtractFromMatrix(GetViewMatrix() * GetProjectionMatrix());
+}
+
 XMMATRIX Camera::RotMatrix() const
 {
 	return XMMatrixRotationRollPitchYaw(mPitch, mYaw, 0.0f);

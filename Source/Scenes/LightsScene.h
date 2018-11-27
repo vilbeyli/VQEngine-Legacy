@@ -32,5 +32,6 @@ public:
 private:
 	// custom scene stuff here
 	GameObject * pHelloObject;	// example
+	GameObject * pHelloObject2;	// example
 };
 

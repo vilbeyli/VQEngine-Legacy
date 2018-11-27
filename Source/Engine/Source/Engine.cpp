@@ -193,6 +193,10 @@ bool Engine::Initialize(HWND hwnd)
 		const float sphRadius = 2.0f;
 		const unsigned sphRingCount = 25;	const unsigned sphSliceCount = 25;
 
+		// cone parameters
+		const float coneHeight = 3.0f;
+		const float coneRadius = 1.0f;
+
 		mBuiltinMeshes =	// this should match enum declaration order
 		{
 			GeometryGenerator::Triangle(1.0f),
@@ -202,7 +206,8 @@ bool Engine::Initialize(HWND hwnd)
 			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
 			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
 			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
-			GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
+			GeometryGenerator::Cone(coneRadius, coneHeight),
+			//GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
 		};
 	}
 

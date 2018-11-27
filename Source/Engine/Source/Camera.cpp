@@ -188,7 +188,8 @@ void Camera::Update(float dt)
 	if(ENGINE->INP()->IsKeyTriggered("T"))
 	{
 		Log::Info("Camera: ");
-		Log::Info("Position:\t %.2f  %.2f  %.2f", mPosition.x(), mPosition.y(), mPosition.z());
+		Log::Info("Position | (Yaw,Pitch) :\t %.2f  %.2f  %.2f \t %.2f %.2f", mPosition.x(), mPosition.y(), mPosition.z(), mYaw * RAD2DEG, mPitch * RAD2DEG);
+		
 		//Log::Info("Rotation:\t (%.2f, %.2f, %.2f, %.2f)", );
 	}
 #endif

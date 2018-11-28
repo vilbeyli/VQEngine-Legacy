@@ -31,7 +31,7 @@ namespace GeometryGenerator
 	Mesh Sphere(float radius, unsigned ringCount, unsigned sliceCount);
 	Mesh Grid(float width, float depth, unsigned m, unsigned n);
 	Mesh Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount);
-	Mesh Cone(float height, float radius);
+	Mesh Cone(float height, float radius, unsigned sliceCount);
 
 	void CalculateTangentsAndBitangents(std::vector<DefaultVertexBufferData>& vertices, const std::vector<unsigned> indices);	// Only Tangents
 

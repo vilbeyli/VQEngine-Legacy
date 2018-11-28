@@ -742,18 +742,8 @@ Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadi
 	return Mesh(Vertices, Indices, "Builtin_Cylinder");
 }
 
-Mesh GeometryGenerator::Cone(float height, float radius)
+Mesh GeometryGenerator::Cone(float height, float radius, unsigned sliceCount)
 {
-	const float	 cylHeight = 3.1415f;		const float	 topRadius = 1.0f;
-	const float	 bottomRadius = 1.0f;	const unsigned sliceCount = 120;
-	const unsigned stackCount = 100;
-
-	// slice count	: horizontal resolution
-	// stack count	: height resolution
-	float stackHeight = height / stackCount;
-	float radiusStep = (topRadius - bottomRadius) / stackCount;
-	unsigned ringCount = stackCount + 1;
-
 	const bool bAddBackFaceForBase = true;
 	std::vector<DefaultVertexBufferData> Vertices;
 	std::vector<unsigned> Indices;
@@ -769,8 +759,8 @@ Mesh GeometryGenerator::Cone(float height, float radius)
 		// Duplicate cap ring vertices because the texture coordinates and normals differ.
 		for (unsigned i = 0; i <= sliceCount; ++i)
 		{
-			float x = bottomRadius * cosf(i*dTheta);
-			float z = bottomRadius * sinf(i*dTheta);
+			float x = radius * cosf(i*dTheta);
+			float z = radius * sinf(i*dTheta);
 
 			// Scale down by the height to try and make top cap texture coord area proportional to base.
 			float u = x / height + 0.5f;
@@ -808,8 +798,8 @@ Mesh GeometryGenerator::Cone(float height, float radius)
 			const float offsetInNormalDirection = 0.0f;//-1.100001f;
 			for (unsigned i = 0; i <= sliceCount; ++i)
 			{
-				const float x = bottomRadius * cosf(i*dTheta);
-				const float z = bottomRadius * sinf(i*dTheta);
+				const float x = radius * cosf(i*dTheta);
+				const float z = radius * sinf(i*dTheta);
 				const float u = x / height + 0.5f;
 				const float v = z / height + 0.5f;
 
@@ -840,7 +830,7 @@ Mesh GeometryGenerator::Cone(float height, float radius)
 
 
 	// CONE
-	//-----------------------------------------------------------//if (false)
+	//-----------------------------------------------------------
 	{
 		// add the tip vertex
 		DefaultVertexBufferData tipVertex;

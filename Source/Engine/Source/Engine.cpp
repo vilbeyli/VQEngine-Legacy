@@ -206,7 +206,8 @@ bool Engine::Initialize(HWND hwnd)
 			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
 			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
 			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
-			GeometryGenerator::Cone(coneRadius, coneHeight),
+			GeometryGenerator::Cone(coneHeight, coneRadius, 120),
+			GeometryGenerator::Cone(1.0f, 1.0f, 30),
 			//GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
 		};
 	}

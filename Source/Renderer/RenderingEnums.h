@@ -174,6 +174,7 @@ enum EGeometry
 	SPHERE,
 	GRID,
 	CONE,
+	LIGHT_CUE_CONE,
 	//BONE,
 
 	MESH_TYPE_COUNT

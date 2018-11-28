@@ -28,9 +28,9 @@
 // ---------------------------------------------------------------------------------------------------------------
 
 
-camera 0.8 12000 80   0 30 -100  0 25 
-camera 0.8 12000 80   464.37  56.70  -522.55  -65 25 
-camera 0.1 1500 65   0 30 100  180 25 
+camera 0.8 12000 80   23.04  451.67  -1330.64 	 -1.07 18.91
+camera 0.8 12000 80    -481.06  221.41  -105.94 	 -116.00 18.70
+camera 0.1 1500 65   721.05  126.21  91.51 	 150.70 22.49
 ao true 0.15 8.0 2.90
 skylight true
 bloom true 1.05
@@ -78,7 +78,7 @@ light begin
 	color orange
 	brightness 6000
 	shadows true 0.00000009 0.1
-	spot 80 1
+	spot 30 1
 	range 1000
 light end
 light begin
@@ -87,7 +87,7 @@ light begin
 	color red
 	brightness 6000
 	shadows true 0.00000009 0.01
-	spot 80 1
+	spot 30 1
 	range 1000
 light end
 light begin
@@ -96,17 +96,12 @@ light begin
 	color yellow
 	brightness 6000
 	shadows true 0.00000009 0.01
-	spot 80 1
+	spot 30 1
 	range 1000
 light end
 
 
 // sponza lights
-//  light       p         cyan		false      1800      -681.67  85.89   359.20    60	  0.3
-//  light       p         green		false      1800      -676.52  100.49  -330.15    60	  0.3
-//  light       p         orange	false      1800      -429.20  85.81  359.21     60	  0.3
-//  light       p         purple	false      1800      -428.95  92.26  -339.49    60	  0.3
-//  light		s		  white     true       6000      -475.77  218.57  -175.73    80    90 -80 0   1 1000
 light begin
 	type point
 	transform -681.67  85.89   359.20    0 0 0   0.1
@@ -145,7 +140,7 @@ light begin
 	color white
 	brightness 6000
 	shadows true 0.00000009 0.01
-	spot 80 1
+	spot 45 1
 	range 500
 light end
 

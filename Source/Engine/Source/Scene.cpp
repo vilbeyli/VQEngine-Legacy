@@ -240,7 +240,7 @@ int Scene::RenderAlpha(const SceneView & sceneView) const
 
 int Scene::RenderDebug(const XMMATRIX& viewProj) const
 {
-	const bool bRenderPointLightCues = false;
+	const bool bRenderPointLightCues = true;
 	const bool bRenderSpotLightCues = true;
 	const bool bRenderObjectBoundingBoxes = false;
 	const bool bRenderMeshBoundingBoxes = false;
@@ -248,7 +248,7 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 
 	const auto IABuffersCube = mMeshes[EGeometry::CUBE].GetIABuffers();
 	const auto IABuffersSphere = mMeshes[EGeometry::SPHERE].GetIABuffers();
-	const auto IABuffersCone = mMeshes[EGeometry::CONE].GetIABuffers();
+	const auto IABuffersCone = mMeshes[EGeometry::LIGHT_CUE_CONE].GetIABuffers();
 	
 	XMMATRIX wvp;
 

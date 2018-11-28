@@ -240,9 +240,17 @@ int Scene::RenderAlpha(const SceneView & sceneView) const
 
 int Scene::RenderDebug(const XMMATRIX& viewProj) const
 {
+	const bool bRenderPointLightCues = false;
+	const bool bRenderSpotLightCues = true;
+	const bool bRenderObjectBoundingBoxes = false;
+	const bool bRenderMeshBoundingBoxes = false;
+	const bool bRenderSceneBoundingBox = true;
+
 	const auto IABuffersCube = mMeshes[EGeometry::CUBE].GetIABuffers();
 	const auto IABuffersSphere = mMeshes[EGeometry::SPHERE].GetIABuffers();
-	// const auto IABuffersCone = mMeshes[EGeometry::CONE].GetIABuffers(); // TODO
+	const auto IABuffersCone = mMeshes[EGeometry::CONE].GetIABuffers();
+	
+	XMMATRIX wvp;
 
 	// set debug render states
 	mpRenderer->SetShader(EShaders::UNLIT);
@@ -258,44 +266,53 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 
 	// SCENE BOUNDING BOX
 	//
-	XMMATRIX wvp = mBoundingBox.GetWorldTransformationMatrix() * viewProj;
-	mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-	mpRenderer->Apply();
-	mpRenderer->DrawIndexed();
-	
-
-	// GAME OBJECT OBB & MESH BOUNDING BOXES
-	//
-	std::vector<const GameObject*> pObjects(
-		mSceneView.opaqueList.size() + mSceneView.alphaList.size()
-		, nullptr
-	);
-	std::copy(RANGE(mSceneView.opaqueList), pObjects.begin());
-	std::copy(RANGE(mSceneView.alphaList), pObjects.begin() + mSceneView.opaqueList.size());
-	for(const GameObject* pObj : pObjects)
+	if (bRenderSceneBoundingBox)
 	{
-		const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
-		wvp = pObj->mBoundingBox.GetWorldTransformationMatrix() * matWorld * viewProj;
-#if 1
-		mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
+		wvp = mBoundingBox.GetWorldTransformationMatrix() * viewProj;
 		mpRenderer->SetConstant4x4f("worldViewProj", wvp);
 		mpRenderer->Apply();
 		mpRenderer->DrawIndexed();
-#endif
+	}
 
-		// mesh bounding boxes (currently broken...)
-		mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
-#if 0
-		for (const MeshID meshID : pObj->mModel.mData.mMeshIDs)
+	// GAME OBJECT OBB & MESH BOUNDING BOXES
+	//
+	int numRenderedObjects = 0;
+	if (bRenderObjectBoundingBoxes)
+	{
+		std::vector<const GameObject*> pObjects(
+			mSceneView.opaqueList.size() + mSceneView.alphaList.size()
+			, nullptr
+		);
+		std::copy(RANGE(mSceneView.opaqueList), pObjects.begin());
+		std::copy(RANGE(mSceneView.alphaList), pObjects.begin() + mSceneView.opaqueList.size());
+		for (const GameObject* pObj : pObjects)
 		{
-			wvp = pObj->mMeshBoundingBoxes[meshID].GetWorldTransformationMatrix() * matWorld * viewProj;
+			const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+			wvp = pObj->mBoundingBox.GetWorldTransformationMatrix() * matWorld * viewProj;
+#if 1
+			mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
 			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
 			mpRenderer->Apply();
 			mpRenderer->DrawIndexed();
-		}
 #endif
-	};
 
+			// mesh bounding boxes (currently broken...)
+			if (bRenderMeshBoundingBoxes)
+			{
+				mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
+#if 0
+				for (const MeshID meshID : pObj->mModel.mData.mMeshIDs)
+				{
+					wvp = pObj->mMeshBoundingBoxes[meshID].GetWorldTransformationMatrix() * matWorld * viewProj;
+					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+					mpRenderer->Apply();
+					mpRenderer->DrawIndexed();
+				}
+#endif
+			}
+		}
+		numRenderedObjects = (int)pObjects.size();
+	}
 
 	// LIGHT VOLUMES
 	//
@@ -308,34 +325,66 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	Transform tf;
 
 	// point lights
-	mpRenderer->SetVertexBuffer(IABuffersSphere.first);
-	mpRenderer->SetIndexBuffer(IABuffersSphere.second);
-	for (const Light& l : mLights)
+	if (bRenderPointLightCues)
 	{
-		if (l.mType == Light::ELightType::POINT)
+		mpRenderer->SetVertexBuffer(IABuffersSphere.first);
+		mpRenderer->SetIndexBuffer(IABuffersSphere.second);
+		for (const Light& l : mLights)
 		{
-			mpRenderer->SetConstant3f("diffuse", l.mColor);
+			if (l.mType == Light::ELightType::POINT)
+			{
+				mpRenderer->SetConstant3f("diffuse", l.mColor);
 
-			tf.SetPosition(l.mTransform._position);
-			tf.SetScale(l.mRange * 0.5f); // Mesh's model space R = 2.0f, hence scale it by 0.5f...
-			wvp = tf.WorldTransformationMatrix() * viewProj;
-			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-			mpRenderer->Apply();
-			mpRenderer->DrawIndexed();
+				tf.SetPosition(l.mTransform._position);
+				tf.SetScale(l.mRange * 0.5f); // Mesh's model space R = 2.0f, hence scale it by 0.5f...
+				wvp = tf.WorldTransformationMatrix() * viewProj;
+				mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+				mpRenderer->Apply();
+				mpRenderer->DrawIndexed();
+			}
 		}
 	}
 
-	// TODO: spot lights 
-	// mpRenderer->SetVertexBuffer(IABuffersCone.first);
-	// mpRenderer->SetIndexBuffer(IABuffersCone.second);
-	// for (const Light& l : mLights)
-	// {
-	// 	if (l.mType == Light::ELightType::SPOT)
-	// 	{
-	// 
-	// 	}
-	// }
+	// spot lights 
+	if (bRenderSpotLightCues)
+	{
+		mpRenderer->SetVertexBuffer(IABuffersCone.first);
+		mpRenderer->SetIndexBuffer(IABuffersCone.second);
+		for (const Light& l : mLights)
+		{
+			if (l.mType == Light::ELightType::SPOT)
+			{
+				mpRenderer->SetConstant3f("diffuse", l.mColor);
 
+				tf = l.mTransform;
+				
+				// reset scale as it holds the scale value for light's render mesh
+				tf.SetScale(1, 1, 1); 
+				
+				 // align with spot light's local space
+				tf.RotateAroundLocalXAxisDegrees(-90.0f); 
+
+
+				XMMATRIX alignConeToSpotLightTransformation = XMMatrixIdentity();
+				alignConeToSpotLightTransformation.r[3].m128_f32[0] = 0.0f;
+				alignConeToSpotLightTransformation.r[3].m128_f32[1] = -l.mRange;
+				alignConeToSpotLightTransformation.r[3].m128_f32[2] = 0.0f;
+				//tf.SetScale(1, 20, 1);
+
+				const float coneBaseRadius = std::tanf(l.mSpotOuterConeAngleDegrees * DEG2RAD) * l.mRange;
+				XMMATRIX scaleConeToRange = XMMatrixIdentity();
+				scaleConeToRange.r[0].m128_f32[0] = coneBaseRadius;
+				scaleConeToRange.r[1].m128_f32[1] = l.mRange;
+				scaleConeToRange.r[2].m128_f32[2] = coneBaseRadius;
+
+				//wvp = alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
+				wvp = scaleConeToRange * alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
+				mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+				mpRenderer->Apply();
+				mpRenderer->DrawIndexed();
+			}
+		}
+	}
 
 
 	// TODO: CAMERA FRUSTUM
@@ -369,7 +418,7 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	mpRenderer->Apply();
 
 
-	return 1 + (int)pObjects.size(); // objects rendered
+	return numRenderedObjects; // objects rendered
 }
 
 

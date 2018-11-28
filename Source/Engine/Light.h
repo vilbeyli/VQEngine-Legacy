@@ -212,8 +212,8 @@ struct Light
 		//
 		struct // Spot
 		{
-			float mSpotAngleDegrees;
-			float mSpotFalloffAngleDegrees;
+			float mSpotOuterConeAngleDegrees;
+			float mSpotInnerConeAngleDegrees;
 			float dummy1;
 		};
 
@@ -337,15 +337,15 @@ struct SpotLight : public Light
 	SpotLight()
 #if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
 	{
-		mSpotAngleDegrees        = (60.0f);
-		mSpotFalloffAngleDegrees = (50.0f);
+		mSpotOuterConeAngleDegrees        = (60.0f);
+		mSpotInnerConeAngleDegrees = (50.0f);
 	}
 #else
-		: mSpotAngleDegrees(60.0f)
-		, mSpotFalloffAngleDegrees(50.0f)
+		: mSpotOuterConeAngleDegrees(60.0f)
+		, mSpotInnerConeAngleDegrees(50.0f)
 	{}
-	float mSpotAngleDegrees;
-	float mSpotFalloffAngleDegrees;
+	float mSpotOuterConeAngleDegrees;
+	float mSpotInnerConeAngleDegrees;
 #endif
 };
 

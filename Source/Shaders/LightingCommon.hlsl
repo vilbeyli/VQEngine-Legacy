@@ -44,11 +44,15 @@ struct PointLight
 struct SpotLight
 {	// 48 bytes
 	float3 position;
-	float  halfAngle;
+	float  outerConeAngle;
 	float3 color;
 	float  brightness;
 	float3 spotDir;
 	float  depthBias;
+	float innerConeAngle;
+	float dummy;
+	float dummy1;
+	float dummy2;
 };
 
 struct DirectionalLight
@@ -151,17 +155,16 @@ inline float Attenuation(float3 coeffs, float dist)
 }
 
 
-// spotlight intensity calculataion
 float SpotlightIntensity(SpotLight l, float3 worldPos)
-{   
-	const float3 L         = normalize(l.position - worldPos);
-	const float3 spotDir   = normalize(-l.spotDir);
-	const float theta      = dot(L, spotDir);
-	const float softAngle  = l.halfAngle * 1.25f;
-	const float softRegion = softAngle - l.halfAngle;
-	return clamp((theta - softAngle) / softRegion, 0.0f, 1.0f);
+{
+	const float3 L = normalize(l.position - worldPos);
+	const float3 spotDir = normalize(-l.spotDir);
+	const float theta = dot(L, spotDir);
+	//return clamp((theta - l.innerConeAngle) / (l.outerConeAngle - l.innerConeAngle), 0.0f, 1.0f);
+	if (theta > l.outerConeAngle)
+		return 1;
+	else return 0.0f;
 }
-
 
 // SHADOW TESTS
 //

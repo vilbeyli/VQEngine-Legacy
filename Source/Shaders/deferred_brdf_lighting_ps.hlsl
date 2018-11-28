@@ -130,6 +130,30 @@ float _ShadowTestPCF(
 }
 
 
+float _SpotlightIntensity(SpotLight l, float3 worldPos)
+{
+	const float3 pixelDirectionInWorldSpace = normalize(worldPos - l.position);
+	const float3 spotDir = normalize(l.spotDir);
+#if 1
+	const float theta = acos(dot(pixelDirectionInWorldSpace, spotDir));
+	//return clamp((theta - l.innerConeAngle) / (l.outerConeAngle - l.innerConeAngle), 0.0f, 1.0f);
+	
+	if (theta > l.outerConeAngle)
+		return 0.0f;
+	//return 1.0f - cos((theta - l.innerConeAngle) / l.outerConeAngle);
+	if (theta <= l.innerConeAngle)
+		return 1.0f;
+
+	return 1.0f -  (theta - l.innerConeAngle) / (l.outerConeAngle - l.innerConeAngle);
+#else
+	if(dot(spotDir, pixelDirectionInWorldSpace) < cos(l.outerConeAngle))
+		return 0.0f;
+	else
+		return 1.0f;
+#endif
+}
+
+
 // ENTRY POINT
 //
 float4 PSMain(PSIn In) : SV_TARGET
@@ -234,7 +258,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		pcfTest.lightSpacePos  = mul(matShadowView, float4(Pw, 1));
 		const float3 Lv        = mul(matView, float4(Lights.spot_casters[k].position, 1));
 		const float3 Wi        = normalize(Lv - P);
-		const float3 radiance  = SpotlightIntensity(Lights.spot_casters[k], Pw) * Lights.spot_casters[k].color * Lights.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
+		const float3 radiance  = _SpotlightIntensity(Lights.spot_casters[k], Pw) * Lights.spot_casters[k].color * Lights.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		pcfTest.NdotL          = saturate(dot(s.N, Wi));
 		pcfTest.depthBias      = Lights.spot_casters[k].depthBias;
 		const float3 shadowing = ShadowTestPCF(pcfTest, texSpotShadowMaps, sShadowSampler, spotShadowMapDimensions, k);

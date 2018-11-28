@@ -25,8 +25,6 @@
 
 using std::string;
 
-#if 1 // NEW UNIFIED INTERFACE
-
 #if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
 
 DirectX::XMMATRIX Light::GetProjectionMatrix() const
@@ -41,7 +39,8 @@ DirectX::XMMATRIX Light::GetProjectionMatrix() const
 	case Light::SPOT:
 	{
 		constexpr float ASPECT_RATIO = 1.0f;
-		return XMMatrixPerspectiveFovLH(mSpotAngleDegrees * mSpotFalloffAngleDegrees * DEG2RAD, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
+		//return XMMatrixPerspectiveFovLH(mSpotOuterConeAngleDegrees * DEG2RAD, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
+		return XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
 	}
 	case Light::DIRECTIONAL:
 	{
@@ -112,13 +111,15 @@ void Light::GetGPUData(SpotLightGPU& l) const
 	const vec3 spotDirection = XMVector3TransformCoord(vec3::Forward, mTransform.RotationMatrix());
 
 	l.position = mTransform._position;
-	l.halfAngle = mSpotAngleDegrees * DEG2RAD * 0.5f;
+	l.halfAngle = mSpotOuterConeAngleDegrees * DEG2RAD;
 
 	l.color = mColor.Value();
 	l.brightness = mBrightness;
 
 	l.spotDir = spotDirection;
 	l.depthBias = mDepthBias;
+
+	l.innerConeAngle = mSpotInnerConeAngleDegrees * DEG2RAD;
 }
 void Light::GetGPUData(PointLightGPU& l) const
 {
@@ -239,7 +240,7 @@ SpotLightGPU SpotLight::GetGPUData() const
 XMMATRIX SpotLight::GetProjectionMatrix() const
 {
 	constexpr float ASPECT_RATIO = 1.0f;
-	return XMMatrixPerspectiveFovLH(mSpotAngleDegrees * mSpotFalloffAngleDegrees * DEG2RAD, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
+	return XMMatrixPerspectiveFovLH(mSpotOuterConeAngleDegrees * mSpotInnerConeAngleDegrees * DEG2RAD, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
 }
 XMMATRIX SpotLight::GetViewMatrix() const
 {
@@ -254,136 +255,3 @@ XMMATRIX SpotLight::GetViewMatrix() const
 
 #endif // USE_UNION
 
-
-
-
-#else // OLD_IMPL
-
-// For Phong Lighting
-// range(distance)   -   (Linear, Quadratic) attenuation factor map
-// source: http://www.ogre3d.org/tikiwiki/tiki-index.php?page=-Point+Light+Attenuation
-const std::map<unsigned, std::pair<float, float>> rangeAttenuationMap_ = 
-{
-	{ 7   , std::make_pair(0.7000f, 1.8f)    },
-	{ 13  , std::make_pair(0.3500f, 0.44f)   },
-	{ 20  , std::make_pair(0.2200f, 0.20f)   },
-	{ 32  , std::make_pair(0.1400f, 0.07f)   },
-	{ 50  , std::make_pair(0.0900f, 0.032f)  },
-	{ 65  , std::make_pair(0.0700f, 0.017f)  },
-	{ 100 , std::make_pair(0.0450f, 0.0075f) },
-	{ 160 , std::make_pair(0.0270f, 0.0028f) },
-	{ 200 , std::make_pair(0.0220f, 0.0019f) },
-	{ 325 , std::make_pair(0.0140f, 0.0007f) },
-	{ 600 , std::make_pair(0.0070f, 0.0002f) },
-	{ 3250, std::make_pair(0.0014f, 0.00007f)},
-};
-
-static const std::unordered_map<Light::ELightType, EGeometry>		sLightTypeMeshLookup
-{
-	{ Light::ELightType::SPOT       , EGeometry::CYLINDER },
-	{ Light::ELightType::POINT      , EGeometry::SPHERE },
-	{ Light::ELightType::DIRECTIONAL, EGeometry::SPHERE }
-};
-
-Light::Light()
-	:
-	type(ELightType::POINT),
-	color(LinearColor::white),
-	range(50),	// phong
-	brightness(300.0f),
-	castsShadow(false),
-	spotAngle_spotFallOff(vec2()),
-	attenuation(vec2()),
-	renderMeshID(sLightTypeMeshLookup.at(ELightType::POINT)),
-	depthBias(0.0000005f),
-	farPlaneDistance(500)
-{
-	SetLightRange(range);
-}
-
-Light::Light(const Light& l)
-	:
-	type(l.type),
-	color(l.color),
-	range(l.range),
-	brightness(l.brightness),
-	castsShadow(l.castsShadow),
-	spotAngle_spotFallOff(l.spotAngle_spotFallOff),
-	transform(l.transform),
-	renderMeshID(l.renderMeshID),
-	depthBias(l.depthBias),
-	farPlaneDistance(l.farPlaneDistance)
-{}
-
-Light::Light(const Light && l)
-	:
-	type(l.type),
-	color(std::move(l.color)),
-	range(l.range),
-	brightness(l.brightness),
-	castsShadow(l.castsShadow),
-	spotAngle_spotFallOff(l.spotAngle_spotFallOff),
-	transform(std::move(l.transform)),
-	renderMeshID(l.renderMeshID),
-	depthBias(l.depthBias),
-	farPlaneDistance(l.farPlaneDistance)
-{}
-
-Light::Light(
-	  ELightType type
-	, LinearColor color
-	, float range
-	, float brightness
-	, float spotAngle
-	, bool castsShadows
-	, float farPlaneDistance
-	, float depthBias
-	//, bool bEnabled = true // #BreaksRelease
-)
-	: type(type)
-	, color(color)
-	, range(range)
-	, brightness(brightness)
-	, castsShadow(castsShadows)
-	, farPlaneDistance(farPlaneDistance)
-	, depthBias(depthBias)
-	// , _bEnabled(bEnabled)
-{
-	switch (type)
-	{
-	case ELightType::POINT: SetLightRange(range);			break;
-	case ELightType::SPOT:	this->spotAngle_spotFallOff.x() = spotAngle;break;
-	case ELightType::DIRECTIONAL:  /* nothing to do */		break;
-	}
-
-	renderMeshID = sLightTypeMeshLookup.at(type);
-}
-
-
-
-Light::~Light()
-{}
-
-void Light::SetLightRange(float range)
-{
-	range = range;
-	// ATTENUATION LOOKUP FOR POINT LIGHTS
-	// find the first greater or equal range value (rangeIndex) 
-	// to look up with in the attenuation map
-	constexpr float ranges[] = { 7, 13, 20, 32, 50, 65, 100, 160, 200, 325, 600, 3250 };
-	unsigned rangeIndex = static_cast<unsigned>(ranges[rangeAttenuationMap_.size() - 1]);	// default case = largest range
-	for (size_t i = 0; i < rangeAttenuationMap_.size(); i++)
-	{
-		if (ranges[i] >= range)
-		{
-			rangeIndex = static_cast<unsigned>(ranges[i]);
-			break;
-		}
-	}
-
-	std::pair<float, float> attn = rangeAttenuationMap_.at(rangeIndex);
-	attenuation = vec2(attn.first, attn.second);
-}
-
-
-#endif // OLD_IMPL

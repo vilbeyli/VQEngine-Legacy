@@ -717,8 +717,8 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	}
 	else if (cmd == "spot")
 	{
-		sLight.mSpotAngleDegrees = stof(command[1]);
-		sLight.mSpotFalloffAngleDegrees= stof(command[2]);
+		sLight.mSpotOuterConeAngleDegrees = stof(command[1]);
+		sLight.mSpotInnerConeAngleDegrees= stof(command[2]);
 	}
 	else if (cmd == "directional")
 	{

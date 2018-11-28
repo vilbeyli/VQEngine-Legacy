@@ -51,6 +51,10 @@ struct SpotLightGPU
 	vec3 spotDir;
 	float depthBias;
 	//-----------------------
+	float innerConeAngle;
+	float dummy;
+	float dummy1;
+	float dummy2;
 };
 
 struct DirectionalLightGPU

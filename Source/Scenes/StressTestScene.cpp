@@ -439,6 +439,8 @@ void StressTestScene::AddObjects()
 	}
 
 	++sObjectLayer;
+
+	CalculateSceneBoundingBox();
 	//return initialPositions;
 }
 

@@ -162,6 +162,7 @@ public:
 	inline void							RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
 	inline EEnvironmentMapPresets		GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
 
+	void CalculateSceneBoundingBox();
 	void SetEnvironmentMap(EEnvironmentMapPresets preset);
 	void ResetActiveCamera();
 
@@ -217,7 +218,6 @@ private:
 private:
 	void StartLoadingModels();
 	void EndLoadingModels();
-	void CalculateSceneBoundingBox();
 	void GatherLightData(SceneLightingData& outLightingData, const std::vector<const Light*>& pLightList);
 };
 

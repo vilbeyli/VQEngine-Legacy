@@ -527,7 +527,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vect
 	}
 }
 
-bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
+static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
 
 void Scene::ResetActiveCamera()
 {

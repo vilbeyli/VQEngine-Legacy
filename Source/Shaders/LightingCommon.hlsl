@@ -157,13 +157,25 @@ inline float Attenuation(float3 coeffs, float dist)
 
 float SpotlightIntensity(SpotLight l, float3 worldPos)
 {
-	const float3 L = normalize(l.position - worldPos);
-	const float3 spotDir = normalize(-l.spotDir);
-	const float theta = dot(L, spotDir);
+	const float3 pixelDirectionInWorldSpace = normalize(worldPos - l.position);
+	const float3 spotDir = normalize(l.spotDir);
+#if 1
+	const float theta = acos(dot(pixelDirectionInWorldSpace, spotDir));
 	//return clamp((theta - l.innerConeAngle) / (l.outerConeAngle - l.innerConeAngle), 0.0f, 1.0f);
+
 	if (theta > l.outerConeAngle)
-		return 1;
-	else return 0.0f;
+		return 0.0f;
+	//return 1.0f - cos((theta - l.innerConeAngle) / l.outerConeAngle);
+	if (theta <= l.innerConeAngle)
+		return 1.0f;
+
+	return 1.0f - (theta - l.innerConeAngle) / (l.outerConeAngle - l.innerConeAngle);
+#else
+	if (dot(spotDir, pixelDirectionInWorldSpace) < cos(l.outerConeAngle))
+		return 0.0f;
+	else
+		return 1.0f;
+#endif
 }
 
 // SHADOW TESTS
@@ -228,6 +240,7 @@ float OmnidirectionalShadowTestPCF(
 	const float diskRadiusScaleFactor = 1.0f / 8.0f;
 	const float diskRadius = (1.0f + (pcfTestLightData.viewDistanceOfPixel / range)) * diskRadiusScaleFactor;
 
+	[unroll]
 	for (int i = 0; i < NUM_PCF_TAPS; ++i)
 	{
 		const float4 cubemapSampleVec = float4(-(lightVectorWorldSpace + normalize(sampleOffsetDirections[i]) * diskRadius), shadowMapIndex);

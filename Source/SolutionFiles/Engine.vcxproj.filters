@@ -30,9 +30,6 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\GameObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Engine\RenderPasses.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="$(SolutionDir)Source\Engine\Scene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -112,24 +109,6 @@
     </ClCompile>
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Camera.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Engine\Source\RenderPasses.cpp">
-      <Filter>RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Engine\Source\DeferredPasses.cpp">
-      <Filter>RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Engine\Source\ForwardPasses.cpp">
-      <Filter>RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Engine\Source\AmbientOcclusionPass.cpp">
-      <Filter>RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Engine\Source\BloomPass.cpp">
-      <Filter>RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Engine\Source\ShadowPass.cpp">
-      <Filter>RenderPasses</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

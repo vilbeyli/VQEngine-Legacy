@@ -18,7 +18,7 @@
 
 #include "GameObject.h"
 #include "Renderer/Renderer.h"
-#include "RenderPasses.h"
+#include "RenderPasses/RenderPasses.h"
 #include "SceneResources.h"
 #include "SceneView.h"
 

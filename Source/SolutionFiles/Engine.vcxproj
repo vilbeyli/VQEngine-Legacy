@@ -176,7 +176,6 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\Transform.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Engine.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\GameObject.h" />
-    <ClInclude Include="$(SolutionDir)Source\Engine\RenderPasses.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Scene.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Settings.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Skybox.h" />
@@ -196,7 +195,6 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Transform.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Engine.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\GameObject.cpp" />
-    <ClCompile Include="$(SolutionDir)Source\Engine\Source\RenderPasses.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Scene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Skybox.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\GameObjectPool.cpp" />
@@ -206,11 +204,6 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Model.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\UI.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Camera.cpp" />
-    <ClCompile Include="..\Engine\Source\AmbientOcclusionPass.cpp" />
-    <ClCompile Include="..\Engine\Source\BloomPass.cpp" />
-    <ClCompile Include="..\Engine\Source\DeferredPasses.cpp" />
-    <ClCompile Include="..\Engine\Source\ForwardPasses.cpp" />
-    <ClCompile Include="..\Engine\Source\ShadowPass.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

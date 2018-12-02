@@ -17,13 +17,15 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "RenderPasses.h"
-#include "SceneResources.h"
-#include "Engine.h"
-#include "GameObject.h"
-#include "Light.h"
-#include "SceneView.h"
+
+#include "Engine/SceneResources.h"
+#include "Engine/Engine.h"
+#include "Engine/GameObject.h"
+#include "Engine/Light.h"
+#include "Engine/SceneView.h"
 
 #include "Renderer/Renderer.h"
+#include "Utilities/vectormath.h"
 
 // temp
 #define ENABLE_COMPUTE_PASS_UNIT_TEST   0

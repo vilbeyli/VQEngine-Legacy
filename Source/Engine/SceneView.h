@@ -26,7 +26,7 @@ struct PointLight;
 struct DirectionalLight;
 class GameObject;
 
-#include "RenderPasses.h"
+#include "RenderPasses/RenderPasses.h"
 
 // TODO: consistent & clear naming...
 using RenderList = std::vector<const GameObject*>;

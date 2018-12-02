@@ -40,7 +40,7 @@ light begin
 	transform 0 0 0    10 10 0    1
 	color sun
 	brightness 2.2
-	shadows true 0.001  0.05 600 
+	shadows true 0.006  0.05 600 
 	directional 300 300
 	// 256?
 light end

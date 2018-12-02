@@ -849,9 +849,9 @@ void Engine::SendLightData() const
 	const vec2 directionalShadowMapDimensions = mShadowMapPass.GetDirectionalShadowMapDimensions(mpRenderer);
 	mpRenderer->SetConstantStruct("Lights", &mSceneLightData._cb);
 	mpRenderer->SetConstant2f("spotShadowMapDimensions", vec2(shadowDimension, shadowDimension));
-	//mpRenderer->SetConstant2f("directionalShadowMapDimensions", directionalShadowMapDimensions);
 	mpRenderer->SetConstant1f("directionalShadowMapDimension", directionalShadowMapDimensions.x());
-	mpRenderer->SetConstant1f("directionalDepthBias", mpActiveScene->mDirectionalLight.mDepthBias);
+	//mpRenderer->SetConstant2f("directionalShadowMapDimensions", directionalShadowMapDimensions);
+	
 
 	// SHADOW MAPS
 	//

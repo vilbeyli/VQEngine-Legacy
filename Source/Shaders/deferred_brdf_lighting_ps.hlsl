@@ -44,8 +44,8 @@ cbuffer SceneVariables	// frame constants
 	
 	//float2 pointShadowMapDimensions;
 	float2 spotShadowMapDimensions;
-	float directionalShadowMapDimension;
-	float directionalDepthBias;
+	float  directionalShadowMapDimension;
+    float dummy;
 	matrix directionalProj;
 	
 	SceneLighting Lights;
@@ -190,14 +190,14 @@ float4 PSMain(PSIn In) : SV_TARGET
 			= Lights.directional.color
 			* Lights.directional.brightness;
 		pcfTest.NdotL = saturate(dot(s.N, Wi));
-		pcfTest.depthBias = directionalDepthBias; // TODO
+		pcfTest.depthBias = Lights.directional.depthBias;
 		const float shadowing = (Lights.directional.shadowing == 0)
 			? 1.0f 
 			: ShadowTestPCF_Directional(
 				pcfTest
 				, texDirectionalShadowMaps
 				, sShadowSampler
-				, dirShadowMapDimensions
+				, directionalShadowMapDimension
 				, 0
 				, directionalProj
 			);

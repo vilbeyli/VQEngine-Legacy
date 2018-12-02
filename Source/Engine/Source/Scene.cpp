@@ -952,6 +952,16 @@ static size_t CullGameObjects(
 	return pObjs.size() - currIdx;
 }
 
+struct CullMeshWorkerData
+{
+	// in
+	const Light* pLight;
+	const std::vector<const GameObject*>& renderableList;
+
+	// out
+	std::array< MeshDrawList, 6> meshListForPoints;
+};
+
 void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightingData& outLightingData)
 {
 	// LAMBDA DEFINITIONS

@@ -43,7 +43,7 @@ DirectX::XMMATRIX Light::GetProjectionMatrix() const
 	case Light::DIRECTIONAL:
 	{
 		if (mViewportX < 1.0f) return XMMatrixIdentity();
-		return XMMatrixOrthographicLH(mViewportX, mViewportY, mNearPlaneDistance, /*mFarPlaneDistance*/ mDistanceFromOrigin * 2.5f);
+		return XMMatrixOrthographicLH(mViewportX, mViewportY, mNearPlaneDistance, mFarPlaneDistance);
 	}
 	default:
 		Log::Warning("GetProjectionMatrix() called on invalid light type!");

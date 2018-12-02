@@ -239,13 +239,12 @@ float OmnidirectionalShadowTestPCF(
 		const float closestDepthInWorldSpace = closestDepthInLSpace * range;
 		shadow += (length(lightVectorWorldSpace) > closestDepthInWorldSpace + pcfTestLightData.depthBias) ? 1.0f : 0.0f;
 	}
-	shadow /= NUM_PCF_TAPS;
+	shadow /= NUM_OMNIDIRECTIONAL_PCF_TAPS;
 	return 1.0f - shadow;
 }
 
 // todo: ESM - http://www.cad.zju.edu.cn/home/jqfeng/papers/Exponential%20Soft%20Shadow%20Mapping.pdf
 float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadowMapArr, SamplerState shadowSampler, float2 shadowMapDimensions, int shadowMapIndex)
-//float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
 {
 	// homogeneous position after interpolation
 	const float3 projLSpaceCoords = pcfTestLightData.lightSpacePos.xyz / pcfTestLightData.lightSpacePos.w;
@@ -256,7 +255,7 @@ float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadow
 		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
 		)
 	{
-		return 1.0f;
+		return 0.0f;
 	}
 
 
@@ -309,7 +308,7 @@ float ShadowTestPCF_Directional(
 		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
 		)
 	{
-		return 1.0f;
+		return 0.0f;
 	}
 
 

@@ -191,8 +191,8 @@ object end
 //------------------------------------------------------------------------
 // shadows     : true/false, depthBias, nearPlane, farPlane
 // range       : == farPlane;
-// spot        : spot angle, fall-off angle
-// directional :
+// spot        : spot outer cone angle, inner cone angle
+// directional : viewPortXY, distanceFromOrigin
 //------------------------------------------------------------------------
 
 // POINT LIGHT
@@ -243,8 +243,8 @@ light begin
 	color white
 	brightness 4.2
 	//shadows true 0.000030  10 4000 
-	shadows true 0.0005  10 4000 
-	directional 384 1500
+	shadows true 0.0005  0.01 5000 
+	directional 384 1000
 light end
 
 // TODO: LINEAR LIGHTS

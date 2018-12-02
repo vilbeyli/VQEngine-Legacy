@@ -28,25 +28,141 @@
 // ---------------------------------------------------------------------------------------------------------------
 
 
-camera 0.1 2500 75   -70 25 50  112 11 
-ao true 0.070 28.0 2.70
+camera 0.1 2500 50   -70 25 50  112 11 
+camera 0.1 2500 65   23.37  20.33  52.45 	 179.92 -16.43
+camera 0.1 2500 65   26.30  28.94  43.02 	 143.67 7.58
+camera 0.1 2500 30   39.06  28.60  -28.72 	 301.97 -1.97
+
+ 
+
+ao true 0.015 28.0 2.70
 skylight true
-bloom true 0.35 6
+bloom true 0.022 6
 
-directional sun 7.8   40 -100 15    4096 1024 600
+// LIGHTS
+// -----------------------------------------------
+//  directional sun 7.8   40 -100 15    4096 1024 600
+//  
 
-light       p         orange	false      1800      -239.88  31.97  88.63   60	  0.3
-light       p         purple	false      1200      -240.91  31.97  -82.25    60	  0.3
-light       p         green		false      1800      224.36  31.97  -77.28   60	  0.3
-light       p         cyan		false      1800      222.78  31.97  89.55   60	  0.3
-light		s		  white     true       2850      -138.39  150.60  2.75   80    90 -90 50   1
+//TODO
+//light begin
+//	type directional
+//	transform 0 0 0    35 -65 0    1
+//	color sun
+//	brightness 1.2
+//	shadows true 0.001  1 2000 
+//	directional 4096 100
+//light end
 
+// POINT LIGHTS
+//
+//light begin
+//	type point
+//	transform -239.88  19.97  88.63    0 0 0   0.2
+//	color orange
+//	brightness 1800
+//	shadows true 0.000091 0.001 200
+//	range 125
+//light end
+//light begin
+//	type point
+//	transform -240.91  21.97  -82.25    0 0 0   0.1
+//	color purple
+//	brightness 1800
+//	shadows true 0.005
+//	range 125
+//light end
+//light begin
+//	type point
+//	transform 224.36  21.97  -77.28    0 0 0   0.1
+//	color green
+//	brightness 1800
+//	shadows true 0.00000005
+//	range 125
+//light end
+//light begin
+//	type point
+//	transform 222.78  21.97  89.55    0 0 0   0.1
+//	color cyan
+//	brightness 1800
+//	shadows true 0.005
+//	range 125
+//light end
+
+light begin
+	type point
+//	transform 115.43  114.62  5.28    0 0 0   0.1
+	transform -124.63  30.66  40.12    0 0 0   0.1
+
+	color white
+	brightness 2800
+	shadows true 0.0005
+	range 350
+light end
+
+light begin
+	type point
+	transform -123.74  29.19  -27.54      0 0 0   0.2
+	
+	color white
+	brightness 3800
+	shadows true 0.0005
+	range 350
+light end
+ 
+ 
+light begin
+	type point
+	transform 94.62  29.57  -25.91     0 0 0   0.2
+	
+	color sun
+	brightness 3800
+	shadows true 0.0005
+	range 350
+light end
+
+light begin
+	type point
+//	transform 128.39  90.60  2.75    0 0 0   0.1
+	transform 96.06  30.27  40.88   0 0 0   0.2
+	
+	color sun
+	brightness 3800
+	shadows true 0.0005
+	range 350
+light end
+
+  
+
+//light begin
+//	type spot
+//	transform -138.39  150.60  2.75    0 -90 50    0
+//	color white
+//	brightness 2850
+//	shadows true 0.00000009 0.01
+//	spot 80 1
+//	range 500
+//light end
+
+light begin
+	type spot
+	transform -254.46  61.44  8.37    31.21 -90 0    0.2
+	color sun
+	brightness 2850
+	shadows true 0.00000009 0.01
+	spot 50 1
+	range 100
+light end
+
+
+// OBJECTS
+// -----------------------------------------------
 object begin
 	transform 0 0 0 0 0 0 0.2
 	model sponza/sponza.obj
 object end
 
-object begin
-	transform -189.90  0  8.14 0 -90 0 5
-	model nanosuit/nanosuit.obj
-object end
+//object begin
+//	transform -189.90  0  8.14 0 -90 0 5
+//	model nanosuit/nanosuit.obj
+//object end

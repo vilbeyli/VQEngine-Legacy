@@ -51,14 +51,14 @@ class PerfTimer;
 class Scene;
 
 
-#if _WIN64
-#define ALIGNMENT
-#elif defined(_WIN32)
+#ifndef _WIN64
 // usage of XMMATRIX in Engine class causes alignment warning: 
 // > Engine might not be on 16-byte boundary. 
 // To fix this, we declare that we want to align the Engine class to 16-byte boundary.
 // We also override new/delete functions to allocate and free aligned memory
 #define ALIGNMENT __declspec(align(16))
+#else
+#define ALIGNMENT
 #endif
 
 ALIGNMENT class Engine
@@ -77,9 +77,9 @@ public:
 
 	~Engine();
 
-#ifdef _WIN32
-	void* operator new(size_t size) { return _mm_malloc(size, 16); }
-	void  operator delete(void* p)  { _mm_free(p); }
+#ifndef _WIN64
+	void*					operator new(size_t size) { return _mm_malloc(size, 16); }
+	void					operator delete(void* p)  { _mm_free(p); }
 #endif
 	//----------------------------------------------------------------------------------------------------------------
 	// CORE INTERFACE

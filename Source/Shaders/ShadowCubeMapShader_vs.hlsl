@@ -16,24 +16,53 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#pragma once
-
-#include "Engine/Mesh.h"
-
-#include "Renderer.h"
-
-namespace GeometryGenerator
+struct ObjectMatrices
 {
-	Mesh Triangle(float scale);
-	Mesh Quad(float scale);
-	Mesh FullScreenQuad();
-	Mesh Cube();
-	Mesh Sphere(float radius, unsigned ringCount, unsigned sliceCount);
-	Mesh Grid(float width, float depth, unsigned m, unsigned n);
-	Mesh Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount);
-	Mesh Cone(float height, float radius, unsigned sliceCount);
-
-	void CalculateTangentsAndBitangents(std::vector<DefaultVertexBufferData>& vertices, const std::vector<unsigned> indices);	// Only Tangents
-
+	matrix matWorld;
+	matrix wvp;
 };
 
+cbuffer perObjec
+{
+#ifdef INSTANCED
+	ObjectMatrices ObjMats[INSTANCE_COUNT];
+#else
+	ObjectMatrices ObjMats;
+#endif
+};
+
+struct VSIn
+{
+	float3 position : POSITION;
+
+#ifdef INSTANCED
+	uint instanceID : SV_InstanceID;
+#endif
+};
+
+struct PSIn
+{
+	float4 svPosition     : SV_POSITION;
+	float4 worldPosition  : POSITION0;
+};
+
+
+PSIn VSMain(VSIn In)
+{
+	PSIn vsOut;
+
+#ifdef INSTANCED
+	const matrix mWorld = ObjMats[In.instanceID].matWorld;
+	const matrix mWVP = ObjMats[In.instanceID].wvp;
+#else
+	const matrix mWorld = ObjMats.matWorld;
+	const matrix mWVP = ObjMats.wvp;
+#endif
+
+	const float4 vPos = float4(In.position, 1.0f);
+
+	vsOut.worldPosition = mul(mWorld, vPos);
+	vsOut.svPosition    = mul(mWVP  , vPos);
+
+	return vsOut;
+}

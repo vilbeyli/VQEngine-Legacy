@@ -173,6 +173,8 @@ enum EGeometry
 	CYLINDER,
 	SPHERE,
 	GRID,
+	CONE,
+	LIGHT_CUE_CONE,
 	//BONE,
 
 	MESH_TYPE_COUNT
@@ -195,7 +197,7 @@ enum EShaders : unsigned	// built-in shaders
 	SKYBOX_EQUIRECTANGULAR,
 	FORWARD_BRDF,
 	SHADOWMAP_DEPTH,
-	DEFERRED_GEOMETRY = SHADOWMAP_DEPTH +7,	// zzz... this NEEDS to change. TODO URGENT.
+	DEFERRED_GEOMETRY = SHADOWMAP_DEPTH +8,	// zzz... this NEEDS to change. TODO URGENT.
 
 	SHADER_COUNT
 };

@@ -99,17 +99,16 @@ bool Application::Init()
 	//
 	if (!ENGINE->Initialize(m_hwnd))
 	{
-		Log::Error("cannot initialize engine. Exiting..");
+		Log::Error("Could not initialize VQEngine. Exiting...");
 		return false;
 	}
 	
 	if (!ENGINE->Load(&m_threadPool))
 	{
-		Log::Error("Exiting..");
+		Log::Error("Could not load VQEngine. Exiting...");
 		return false;
 	}
 
-	Log::Info("Engine initialization and asset loading successful.\n");
 	return true;
 }	
 

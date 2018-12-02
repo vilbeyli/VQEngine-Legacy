@@ -18,24 +18,40 @@
 
 #pragma once
 
-
 #include "Transform.h"
 #include "DataStructures.h"
 #include "Settings.h"
 
 #include "Renderer/RenderingEnums.h"
+#include "Renderer/Texture.h"
 
 #include "Utilities/Color.h"
 
 #include <DirectXMath.h>
 
-// this needs refactoring. design is pretty old and convoluted.
+
+// Only used for point lights when querying LightSpaceMatrix, ViewMatrix and ViewFrustumPlanes.
 //
+#define DEFAULT_POINT_LIGHT_LOOK_DIRECTION Texture::CubemapUtility::ECubeMapLookDirections::CUBEMAP_LOOK_FRONT
+
+
+// Design consideration here:
+//
+// INHERITANCE
+// - if we were to use inheritance for different types of lights, then we can utilize pure virtual functions
+//   to enforce class-specific behavior. However, now, we cannot store a vector<Light> due to pure virtuality.
+//   most likely solution is the store pointers to derived types, which now requires a memory manager for lights
+//   if we want to iterate over lights in a linear-memory-access fashion.
+//
+// C-STYLE 
+// - instead, we can collect the light-specific data under a union and enforce light-specific behavior
+//   through the ELightType enum. Currently favoring this approach over inheritance to avoid maintaining the memory
+//   of the derived types and simply making use of a vector to hold all light data.
+//
+
 struct Light
 {
-	friend class Graphics;
-
-	enum ELightType : size_t
+	enum ELightType : int
 	{
 		POINT = 0,
 		SPOT,
@@ -44,112 +60,165 @@ struct Light
 		LIGHT_TYPE_COUNT
 	};
 
-	Light();
-	Light(ELightType type
-		, LinearColor color
-		, float range
+	//--------------------------------------------------------------------------------------------------------------
+	// INTERFACE
+	//--------------------------------------------------------------------------------------------------------------
+	Light() // DEFAULTS
+		: mColor(LinearColor::white)
+		, mbEnabled(true)
+		, mType(LIGHT_TYPE_COUNT)
+		, mBrightness(300.0f)
+		, mbCastingShadows(false)
+		, mDepthBias(0.0f)
+		, mNearPlaneDistance(0.0f)
+		, mFarPlaneDistance(0.0f)
+		, mRange(100.0f)
+		, mTransform()
+		, mMeshID(EGeometry::SPHERE)
+	{}
+	Light
+	(
+		LinearColor color
+		, ELightType type
 		, float brightness
-		, float spotAngle
-		, bool castsShadows = false
-		, float farPlaneDistance = 500.0f
-		, float depthBias = 0.0000005f
-		//, bool bEnabled = true // #BreaksRelease
-	);
-	Light(const Light& l);
-	Light(const Light&& l);
-	~Light();
-
-	void SetLightRange(float range);
-
-	XMMATRIX		GetLightSpaceMatrix() const;
-	XMMATRIX		GetViewMatrix() const;
-	XMMATRIX		GetProjectionMatrix() const;
-	PointLightGPU	GetPointLightData() const;
-	SpotLightGPU	GetSpotLightData() const;
-	FrustumPlaneset GetViewFrustumPlanes() const;
-	//---------------------------------------------------------------------------------
-	
-	ELightType	type;
-	LinearColor	color;
-	float		range;
-	float		brightness;	// 300.0f is a good default value for points/spots
-	bool		castsShadow;
-	float		depthBias;
-	float		farPlaneDistance;
-
-	union // each light uses this vec2 for light-specific data
-	{	
-		vec2	attenuation;	// point light attenuation
-		vec2	spotAngle;		// spot light angle (_spotAngle.x() and _spotAngle.y() are the same thing)
-	};	
-
-	Transform	transform;
-	EGeometry	renderMesh;	// todo: rename to _builtinMeshID;
-	//bool		_bEnabled; 
-};
+		, bool bCastShadows
+		, float depthBias
+		, float nearPlaneDistance
+		, float range
+		, Transform transform
+		, EGeometry mesh
+	)
+		: mColor(color)
+		, mType(type)
+		, mBrightness(brightness)
+		, mbCastingShadows(bCastShadows)
+		, mDepthBias(depthBias)
+		, mNearPlaneDistance(nearPlaneDistance)
+		, mRange(range)
+		, mTransform(transform)
+		, mMeshID(mesh)
+	{}
 
 
-// One Directional light is allowed per scene
-//
-struct DirectionalLight
-{
-	LinearColor color;
-	float brightness;
-
-	vec3 direction;
-	int enabled = 0;
-
-	float shadowMapDistance;	// view matrix position - distance from scene center 
-	float depthBias;
-	vec2 shadowMapAndViewportSize;
-
-
-	DirectionalLightGPU GetGPUData() const;
-	XMMATRIX GetLightSpaceMatrix() const;
-	XMMATRIX GetViewMatrix() const;
-	XMMATRIX GetProjectionMatrix() const;
-	Settings::ShadowMap GetSettings() const;
-};
-
-
-
-
-// TODO #Refactoring 
-#if 0
-class Light
-{
-public:
-
-	XMMATRIX GetLightSpaceMatrix() const;
-	XMMATRIX GetViewMatrix() const;
+	// returns the projection matrix for the light space transformation. 
+	//
 	XMMATRIX GetProjectionMatrix() const;
 
-private:
-	vec3 mPosition;
-	float mRange;
+	// returns the view matrix for Directional/Spot lights. 
+	// Use 'Texture::CubemapUtility::ECubeMapLookDirections' to get view matrices for cubemap faces for PointLight.
+	//
+	XMMATRIX GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const;
+
+	// returns the frustum plane data for the light.
+	// Use 'Texture::CubemapUtility::ECubeMapLookDirections' to get frustum planes for each direction for PointLight.
+	//
+	inline FrustumPlaneset GetViewFrustumPlanes(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const
+	{ 
+		return FrustumPlaneset::ExtractFromMatrix(GetViewMatrix(lookDir) * GetProjectionMatrix());
+	}
+
+	// Returns the View*Projection matrix that describes the light-space transformation of a world space position.
+	// Use 'Texture::CubemapUtility::ECubeMapLookDirections' to get the light space matrix for each direction for PointLight.
+	//
+	inline XMMATRIX GetLightSpaceMatrix(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const 
+	{ 
+		return GetViewMatrix(lookDir) * GetProjectionMatrix(); 
+	}
+
+
+	void GetGPUData(PointLightGPU& refData) const;
+	void GetGPUData(SpotLightGPU& refData) const;
+	void GetGPUData(DirectionalLightGPU& refData) const;
+
+	// TODO: remove this arbitrary function for directional lights
+	Settings::ShadowMap GetSettings() const; // ?
+
+
+
+	//--------------------------------------------------------------------------------------------------------------
+	// DATA
+	//--------------------------------------------------------------------------------------------------------------
+	ELightType mType;
+	LinearColor	mColor;
 	float mBrightness;
-	bool mCastingShadows;
+
+	bool mbCastingShadows;
+	float mDepthBias;
+	float mNearPlaneDistance;
+	union 
+	{
+		float mFarPlaneDistance;
+		float mRange;
+	};
+
+	Transform mTransform;
+	EGeometry mMeshID;
+	bool mbEnabled;
+
+
+	union // LIGHT-SPECIFIC DATA
+	{
+		// DIRECTIONAL LIGHT ----------------------------------------
+		//  
+		//   |  |  |  |  |
+		//   |  |  |  |  |
+		//   v  v  v  v  v
+		//    
+		struct  
+		{
+			float mViewportX;
+			float mViewportY;
+			float mDistanceFromOrigin;
+		};
+		
+
+
+		// POINT LIGHT -----------------------------------------------
+		//
+		//   \|/ 
+		//  --*--
+		//   /|\
+		//
+		struct // Point
+		{
+			float mAttenuationConstant ; // Currently Unused: attenuation = 1/distance^2 in the shaders
+			float mAttenuationLinear   ; // Currently Unused: attenuation = 1/distance^2 in the shaders
+			float mAttenuationQuadratic; // Currently Unused: attenuation = 1/distance^2 in the shaders
+		};
+
+
+
+		// SPOT LIGHT --------------------------------------------------
+		//     
+		//       *
+		//     /   \
+		//    /_____\
+		//   ' ' ' ' ' 
+		//
+		struct // Spot
+		{
+			float mSpotOuterConeAngleDegrees;
+			float mSpotInnerConeAngleDegrees;
+			float dummy1;
+		};
+
+
+
+		// TODO: v0.6.0 linear lights from GPU Zen
+		// Eric Heitz Slides: https://drive.google.com/file/d/0BzvWIdpUpRx_Z2pZWWFtam5xTFE/view
+		// LINEAR LIGHT  ------------------------------------------------
+		//
+		//
+		//
+		//
+		//
+		//
+		struct // Area
+		{
+			float dummy2;
+			float dummy3;
+			float dummy4;
+		};
+	};
 };
 
-class PointLight : public Light
-{
-
-};
-
-class DirectionalLight : public Light
-{
-
-};
-
-class SpotLight : public Light
-{
-
-};
-
-
-// TODO: v0.6.0 linear lights from GPU Zen
-class AreaLight : public Light
-{
-
-};
-#endif

@@ -25,262 +25,118 @@
 
 using std::string;
 
-// For Phong Lighting
-// range(distance)   -   (Linear, Quadratic) attenuation factor map
-// source: http://www.ogre3d.org/tikiwiki/tiki-index.php?page=-Point+Light+Attenuation
-const std::map<unsigned, std::pair<float, float>> rangeAttenuationMap_ = 
+DirectX::XMMATRIX Light::GetProjectionMatrix() const
 {
-	{ 7   , std::make_pair(0.7000f, 1.8f)    },
-	{ 13  , std::make_pair(0.3500f, 0.44f)   },
-	{ 20  , std::make_pair(0.2200f, 0.20f)   },
-	{ 32  , std::make_pair(0.1400f, 0.07f)   },
-	{ 50  , std::make_pair(0.0900f, 0.032f)  },
-	{ 65  , std::make_pair(0.0700f, 0.017f)  },
-	{ 100 , std::make_pair(0.0450f, 0.0075f) },
-	{ 160 , std::make_pair(0.0270f, 0.0028f) },
-	{ 200 , std::make_pair(0.0220f, 0.0019f) },
-	{ 325 , std::make_pair(0.0140f, 0.0007f) },
-	{ 600 , std::make_pair(0.0070f, 0.0002f) },
-	{ 3250, std::make_pair(0.0014f, 0.00007f)},
-};
-
-static const std::unordered_map<Light::ELightType, EGeometry>		sLightTypeMeshLookup
-{
-	{ Light::ELightType::SPOT       , EGeometry::CYLINDER },
-	{ Light::ELightType::POINT      , EGeometry::SPHERE },
-	{ Light::ELightType::DIRECTIONAL, EGeometry::SPHERE }
-};
-
-Light::Light()
-	:
-	type(ELightType::POINT),
-	color(LinearColor::white),
-	range(50),	// phong
-	brightness(300.0f),
-	castsShadow(false),
-	spotAngle(vec2()),
-	attenuation(vec2()),
-	renderMesh(sLightTypeMeshLookup.at(ELightType::POINT)),
-	depthBias(0.0000005f),
-	farPlaneDistance(500)
-{
-	SetLightRange(range);
-}
-
-Light::Light(const Light& l)
-	:
-	type(l.type),
-	color(l.color),
-	range(l.range),
-	brightness(l.brightness),
-	castsShadow(l.castsShadow),
-	spotAngle(l.spotAngle),
-	transform(l.transform),
-	renderMesh(l.renderMesh),
-	depthBias(l.depthBias),
-	farPlaneDistance(l.farPlaneDistance)
-{}
-
-Light::Light(const Light && l)
-	:
-	type(l.type),
-	color(std::move(l.color)),
-	range(l.range),
-	brightness(l.brightness),
-	castsShadow(l.castsShadow),
-	spotAngle(l.spotAngle),
-	transform(std::move(l.transform)),
-	renderMesh(l.renderMesh),
-	depthBias(l.depthBias),
-	farPlaneDistance(l.farPlaneDistance)
-{}
-
-Light::Light(
-	  ELightType type
-	, LinearColor color
-	, float range
-	, float brightness
-	, float spotAngle
-	, bool castsShadows
-	, float farPlaneDistance
-	, float depthBias
-	//, bool bEnabled = true // #BreaksRelease
-)
-	: type(type)
-	, color(color)
-	, range(range)
-	, brightness(brightness)
-	, castsShadow(castsShadows)
-	, farPlaneDistance(farPlaneDistance)
-	, depthBias(depthBias)
-	// , _bEnabled(bEnabled)
-{
-	switch (type)
+	switch (mType)
 	{
-	case ELightType::POINT: SetLightRange(range);			break;
-	case ELightType::SPOT:	this->spotAngle.x() = spotAngle;break;
-	case ELightType::DIRECTIONAL:  /* nothing to do */		break;
-	}
-
-	renderMesh = sLightTypeMeshLookup.at(type);
-}
-
-Light::~Light()
-{}
-
-void Light::SetLightRange(float range)
-{
-	range = range;
-	// ATTENUATION LOOKUP FOR POINT LIGHTS
-	// find the first greater or equal range value (rangeIndex) 
-	// to look up with in the attenuation map
-	constexpr float ranges[] = { 7, 13, 20, 32, 50, 65, 100, 160, 200, 325, 600, 3250 };
-	unsigned rangeIndex = static_cast<unsigned>(ranges[rangeAttenuationMap_.size() - 1]);	// default case = largest range
-	for (size_t i = 0; i < rangeAttenuationMap_.size(); i++)
+	case Light::POINT:
 	{
-		if (ranges[i] >= range)
-		{
-			rangeIndex = static_cast<unsigned>(ranges[i]);
-			break;
-		}
+		constexpr float ASPECT_RATIO = 1.0f; // cubemap aspect ratio
+		return XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
 	}
-
-	std::pair<float, float> attn = rangeAttenuationMap_.at(rangeIndex);
-	attenuation = vec2(attn.first, attn.second);
+	case Light::SPOT:
+	{
+		constexpr float ASPECT_RATIO = 1.0f;
+		//return XMMatrixPerspectiveFovLH(mSpotOuterConeAngleDegrees * DEG2RAD, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
+		return XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
+	}
+	case Light::DIRECTIONAL:
+	{
+		if (mViewportX < 1.0f) return XMMatrixIdentity();
+		return XMMatrixOrthographicLH(mViewportX, mViewportY, mNearPlaneDistance, mFarPlaneDistance);
+	}
+	default:
+		Log::Warning("GetProjectionMatrix() called on invalid light type!");
+		return XMMatrixIdentity();
+	}
 }
 
-XMMATRIX Light::GetLightSpaceMatrix() const
+DirectX::XMMATRIX Light::GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections lookDir /*= DEFAULT_POINT_LIGHT_LOOK_DIRECTION*/) const
 {
-	// remember:
-	//	when we're sending	 world * view * projection
-	//		in shader		 projection * view * world;
-	return GetViewMatrix() * GetProjectionMatrix();
-}
+	switch (mType)
+	{
+	case Light::POINT:
+	{
+		return Texture::CubemapUtility::GetViewMatrix(lookDir, mTransform._position);
+	}
+	case Light::SPOT:
+	{
+		XMVECTOR up = vec3::Up;
+		XMVECTOR lookAt = vec3::Forward;	// spot light default orientation looks up
+		lookAt = XMVector3TransformCoord(lookAt, mTransform.RotationMatrix());
+		up = XMVector3TransformCoord(up, mTransform.RotationMatrix());
+		XMVECTOR pos = mTransform._position;
+		XMVECTOR taraget = pos + lookAt;
+		return XMMatrixLookAtLH(pos, taraget, up);
+	}
+	case Light::DIRECTIONAL:
+	{
+		if (mViewportX < 1.0f) return XMMatrixIdentity();
 
-XMMATRIX Light::GetViewMatrix() const
-{
-	const XMMATRIX ViewMatarix = [&]() -> XMMATRIX {
-		switch (type)
-		{
-		case ELightType::POINT:
-		{
-			return XMMatrixIdentity();
-		}
-		
-		case ELightType::SPOT:
-		{
-			XMVECTOR up		= vec3::Back;
-			XMVECTOR lookAt = vec3::Up;	// spot light default orientation looks up
-			lookAt	= XMVector3TransformCoord(lookAt, transform.RotationMatrix());
-			up		= XMVector3TransformCoord(up,	  transform.RotationMatrix());
-			XMVECTOR pos = transform._position;
-			XMVECTOR taraget = pos + lookAt;
-			return XMMatrixLookAtLH(pos, taraget, up);
-		}
-		default:
-			Log::Warning("INVALID LIGHT TYPE for GetViewMatrix()");
-			return XMMatrixIdentity();
-		}
-	}();
-	return ViewMatarix;
-}
-
-XMMATRIX Light::GetProjectionMatrix() const
-{
-	const XMMATRIX proj = [&]() -> const XMMATRIX{
-		switch (type)
-		{
-		case ELightType::POINT:
-		{
-			return XMMatrixIdentity();
-		}
-		case ELightType::SPOT:
-		{
-			return XMMatrixPerspectiveFovLH((spotAngle.x() * 1.25f) * DEG2RAD, 1.0f, 0.1f, farPlaneDistance);
-		}
-		default:
-			Log::Warning("INVALID LIGHT TYPE for GetProjectionMatrix()");
-			return XMMatrixIdentity();
-		}
-	}();
-	return proj;
+		const XMVECTOR up = vec3::Up;
+		const XMVECTOR lookAt = vec3::Zero;
+		const XMMATRIX mRot = mTransform.RotationMatrix();
+		const vec3 direction = XMVector3Transform(vec3::Forward, mRot);
+		const XMVECTOR lightPos = direction * -mDistanceFromOrigin;	// away from the origin along the direction vector 
+		return XMMatrixLookAtLH(lightPos, lookAt, up);
+	}
+	default:
+		Log::Warning("GetViewMatrix() called on invalid light type!");
+		return XMMatrixIdentity();
+	}
 }
 
 
-PointLightGPU Light::GetPointLightData() const
+
+void Light::GetGPUData(DirectionalLightGPU& l) const
 {
-	PointLightGPU l;
-	l.position = transform._position;
-	l.color = color.Value();
-	l.brightness = brightness;
-	l.attenuation = attenuation;
-	l.range = range;
-	return l;
+	assert(mType == ELightType::DIRECTIONAL);
+	const XMMATRIX mRot = mTransform.RotationMatrix();
+	const vec3 direction = XMVector3Transform(vec3::Forward, mRot);
+
+	l.brightness = this->mBrightness;
+	l.color = this->mColor;
+
+	l.lightDirection = direction;
+	l.depthBias = this->mDepthBias;
+
+	l.shadowing = this->mbCastingShadows;
+	l.enabled = this->mbEnabled;
 }
-
-SpotLightGPU Light::GetSpotLightData() const
+void Light::GetGPUData(SpotLightGPU& l) const
 {
-	const vec3 spotDirection = [&]() -> const vec3{
-		if (type == ELightType::SPOT)
-		{
-			return XMVector3TransformCoord(vec3::Up, transform.RotationMatrix());
-		}
-		return vec3();
-	}();
+	assert(mType == ELightType::SPOT);
+	const vec3 spotDirection = XMVector3TransformCoord(vec3::Forward, mTransform.RotationMatrix());
 
-	SpotLightGPU l;
-	l.position = transform._position;
-	l.color = color.Value();
-	l.brightness = brightness;
-	l.halfAngle = spotAngle.x() * DEG2RAD / 2;
+	l.position = mTransform._position;
+	l.halfAngle = mSpotOuterConeAngleDegrees * DEG2RAD;
+
+	l.color = mColor.Value();
+	l.brightness = mBrightness;
+
 	l.spotDir = spotDirection;
-	return l;
-}
+	l.depthBias = mDepthBias;
 
-FrustumPlaneset Light::GetViewFrustumPlanes() const
+	l.innerConeAngle = mSpotInnerConeAngleDegrees * DEG2RAD;
+}
+void Light::GetGPUData(PointLightGPU& l) const
 {
-	return FrustumPlaneset::ExtractFromMatrix(GetViewMatrix() * GetProjectionMatrix());
+	assert(mType == ELightType::POINT);
+
+	l.position = mTransform._position;
+	l.range = mRange;
+
+	l.color = mColor.Value();
+	l.brightness = mBrightness;
+	
+	l.attenuation = vec3(mAttenuationConstant, mAttenuationLinear, mAttenuationQuadratic);
+	l.depthBias = mDepthBias;
 }
 
-
-DirectionalLightGPU DirectionalLight::GetGPUData() const
-{
-	DirectionalLightGPU l;
-	l.brightness = this->brightness;
-	l.color = this->color;
-	l.lightDirection = this->direction;
-	l.shadowFactor = this->enabled > 0 ? 1.0f : 0.0f;
-	return l;
-}
-
-XMMATRIX DirectionalLight::GetLightSpaceMatrix() const
-{	// remember:
-	//	when we're sending	 world * view * projection
-	//		in shader		 projection * view * world;
-	return GetViewMatrix() * GetProjectionMatrix();
-}
-
-XMMATRIX DirectionalLight::GetViewMatrix() const
-{
-	if (shadowMapAndViewportSize.y() < 1.0f) return XMMatrixIdentity();
-	XMVECTOR up = vec3::Up;
-	XMVECTOR lookAt = vec3::Zero;
-	XMVECTOR lightPos = direction * -shadowMapDistance;	// away from the origin along the direction vector 
-	return XMMatrixLookAtLH(lightPos, lookAt, up);
-}
-
-XMMATRIX DirectionalLight::GetProjectionMatrix() const
-{
-	const float sz = shadowMapAndViewportSize.y();
-	if (sz < 1.0f) return XMMatrixIdentity();
-	return XMMatrixOrthographicLH(sz, sz, 0.05f, shadowMapDistance * 1.5f);
-	//return XMMatrixOrthographicLH(4096, 4096, 0.5f, shadowMapDistance * 1.5f);
-	//return XMMatrixOrthographicLH(sz, sz, 0.1f, 1200.0f);
-}
-
-Settings::ShadowMap DirectionalLight::GetSettings() const
+Settings::ShadowMap Light::GetSettings() const
 {
 	Settings::ShadowMap settings;
-	settings.dimension = static_cast<size_t>(shadowMapAndViewportSize.x());
+	settings.directionalShadowMapDimensions = static_cast<size_t>(mViewportX);
 	return settings;
 }
+

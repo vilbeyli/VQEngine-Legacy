@@ -16,6 +16,9 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#ifndef _SHADING_MATH_H
+#define _SHADING_MATH_H
+
 // Method for Hammersley Sequence creation
 #define USE_BIT_MANIPULATION	
 #define PI 3.14159265359f
@@ -109,7 +112,7 @@ inline float LinearDepth(in float zBufferSample, in float A, in float B)
 	// http://www.humus.name/index.php?ID=255
     return A / (zBufferSample - B);
 }
-inline float LinearDepth(in float zBufferSample, in matrix matPorjInverse) { return LinearDepth(zBufferSample, matPorjInverse[2][3], matPorjInverse[2][2]); }
+inline float LinearDepth(in float zBufferSample, in matrix matProjInverse) { return LinearDepth(zBufferSample, matProjInverse[2][3], matProjInverse[2][2]); }
 
 float3 ViewSpacePosition(in const float nonLinearDepth, const in float2 uv, const in matrix invProjection)
 {
@@ -125,3 +128,5 @@ float3 ViewSpacePosition(in const float nonLinearDepth, const in float2 uv, cons
 	float4 viewSpacePosition = mul(invProjection, projectedPosition);
 	return viewSpacePosition.xyz / viewSpacePosition.w;
 }
+
+#endif

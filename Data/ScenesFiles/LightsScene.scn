@@ -1,0 +1,291 @@
+// Object initializations
+// ---------------------------------------------------------------------------------------------------------------
+// Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
+// Camera		: near far vfov  pos(3:xyz)  yaw pitch
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
+// Object		: transform, brdf/phong, mesh
+// example: 
+//     object begin
+//      transform 85 5 -30 30 120 0 20
+//      mesh triangle
+//      brdf begin
+//     		textures "" openart/190_norm.JPG
+//     		diffuse 0.24 0.74 0.74
+//     		roughness 0.4
+//     		metalness 0.9
+//     	brdf end
+//     object end
+// ---------------------------------------------------------------------------------------------------------------
+    
+// Scene Render Settings initializations
+// ---------------------------------------------------------------------------------------------------------------
+// ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
+// bloom	    : enabled?, brighness threshold
+// skylight	    : enabled?
+// directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
+// ---------------------------------------------------------------------------------------------------------------
+
+bloom true 0.005
+
+skylight false
+ao true 0.005   3.00 2.40
+
+//skylight true
+//ao true 0.025   3.00 2.40
+
+camera 0.1 1500 50     109.06  79.08  93.66 	 -109.32 3.66
+camera 0.1 1500 50   45.69  18.32  -114.39 	 -49.05 -3.81
+camera 0.1 1500 50   -2.01 98.59 -150.48    0 10
+camera 0.1 1500 50   -75.09  24.55  39.26    90 10
+
+
+//------------------------------------
+// ROOM
+//------------------------------------
+object begin
+	mesh cube
+	brdf
+		diffuse 0.12 0.12 0.12
+	brdf
+	transform 0 0 0 90 0 0 130 130 0.9
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 1 1 1
+	brdf
+	transform 0 50 0 90 0 0 130 130 1.9
+object end
+
+object begin
+	mesh cube
+	brdf
+		diffuse 1 1 1
+	brdf
+	transform -130 65 0 0 0 0 1.9 65 130
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 1 1 1
+	brdf
+	transform 130 25 0 0 0 0 0.9 25 130
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.3 0.3 0.3
+	brdf
+	transform 0 65 -10 0 0 0 130 65 4
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.12 0.12 0.12
+	brdf
+	transform 0 130 55 0 0 0 130 1.9 65
+object end
+
+// SPHERES
+//
+object begin
+	mesh sphere
+	brdf
+		//diffuse 1.0 1.0 1.0
+		diffuse 0.01 0.01 0.01
+		roughness 0.54
+		//metalness 1.0
+	brdf
+	transform 0 14 -30 0 0 0 7
+object end
+
+object begin
+	mesh sphere
+	brdf
+		diffuse 0.05 0.1 0.8
+		//metalness 1.0
+		roughness 0.08
+	brdf
+	transform 20 6 -55 0 0 0 3
+object end
+object begin
+	mesh sphere
+	brdf
+		diffuse 0.1 0.8 0.1
+		metalness 0.8
+		roughness 0.04
+	brdf
+	transform 0 6 -60 0 0 0 3
+object end
+object begin
+	mesh sphere
+	brdf
+		diffuse 0.8 0.1 0.05
+		//metalness 1.0
+		roughness 0.08
+	brdf
+	transform -20 6 -55 0 0 0 3
+object end
+
+// CUBES
+//
+object begin
+	mesh cube
+	brdf
+		diffuse 1.0 1.0 1.0
+		//diffuse 0.01 0.01 0.01
+		roughness 0.32
+		//metalness 1.0
+	brdf
+	transform 3.5 14 20 0 0 0 7
+object end
+
+object begin
+	mesh cube
+	brdf
+		diffuse 0.05 0.05 0.8
+		//metalness 1.0
+		roughness 0.08
+	brdf
+	transform 20 6 55 0 0 0 3
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.85 0.3 0.06
+		//metalness 0.8
+		roughness 0.94
+	brdf
+	transform 0 6 60 0 0 0 3
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.79 0.1 0.85
+		//metalness 1.0
+		roughness 0.98
+	brdf
+	transform -20 6 55 0 0 0 3
+object end
+
+// UPSTAIRS
+//
+object begin
+	mesh sphere
+	brdf
+		//diffuse 1.0 1.0 1.0
+		diffuse 0.01 0.01 0.01
+		roughness 0.54
+		//metalness 1.0
+	brdf
+	transform 0 65 -60 0 0 0 7
+object end
+
+//object begin
+//	transform 30 67 -60 0 0 0 1
+//	model egemenilbeyli/zen_orb.obj
+//object end
+
+
+// LIGHTS
+//------------------------------------------------------------------------
+// shadows     : true/false, depthBias, nearPlane, farPlane
+// range       : == farPlane;
+// spot        : spot outer cone angle, inner cone angle
+// directional : viewPortXY, distanceFromOrigin
+//------------------------------------------------------------------------
+
+// POINT LIGHT
+//
+//   \|/ 
+//  --*--
+//   /|\
+//
+light begin
+	type point
+	transform 5  9.36  -50    0 0 0   0.1
+	color white
+	brightness 1000
+	shadows true 0.005
+//	attenuation 1 1 1 // currently unused
+	range 160
+light end
+
+
+
+// SPOT LIGHT 
+//     
+//       *
+//     /   \
+//    /_____\
+//   ' ' ' ' ' 
+//
+light begin
+	type spot
+	transform 71.68  60.36  48.41   0 -90 0    0.05
+	color green
+	brightness 500
+	shadows true 0.00000009 0.1
+	spot 25 22
+	range 330
+light end
+
+
+// DIRECTIONAL LIGHT 
+//  
+//   |  |  |  |  |
+//   |  |  |  |  |
+//   v  v  v  v  v
+//    
+light begin
+	type directional
+	transform 0 0 0    70 0 40    1
+	color white
+	brightness 4.2
+	//shadows true 0.000030  10 4000 
+	shadows true 0.0005  0.01 5000 
+	directional 384 1000
+light end
+
+// TODO: LINEAR LIGHTS
+//light begin
+//	type linear //area?
+//	transform 1.68  70.36  -48.41
+//
+//light end
+
+
+
+// POINT LIGHT
+//
+//   \|/ 
+//  --*--
+//   /|\
+//
+light begin
+	type point
+	transform 5  19.36  35    0 0 0   0.1
+	color white
+	brightness 500
+	shadows true 0.005
+//	attenuation 1 1 1 // currently unused
+	range 150
+light end
+
+
+// SPOT LIGHT 
+//     
+//       *
+//     /   \
+//    /_____\
+//   ' ' ' ' ' 
+//
+light begin
+	type spot
+	transform 1.10  34.58  58.68   90 75 0    0.3
+	color orange
+	brightness 5000
+	shadows true 0.000000001 0.1
+	spot 15 0
+	range 50
+light end

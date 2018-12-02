@@ -109,15 +109,13 @@ void GameObject::Clear()
 
 
 
-void BoundingBox::Render(Renderer * pRenderer, const XMMATRIX& viewProj) const
+DirectX::XMMATRIX BoundingBox::GetWorldTransformationMatrix() const
 {
 	Transform tf;
 	const vec3 diag = this->hi - this->low;
 	const vec3 pos = (this->hi + this->low) * 0.5f;
 	tf.SetScale(diag * 0.5f);
 	tf.SetPosition(pos);
-	XMMATRIX wvp = tf.WorldTransformationMatrix() * viewProj;
-	pRenderer->SetConstant4x4f("worldViewProj", wvp);
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
+	return tf.WorldTransformationMatrix();
 }
+

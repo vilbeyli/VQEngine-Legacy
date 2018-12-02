@@ -250,8 +250,8 @@ void StressTestScene::RenderUI() const
 	if (ENGINE->GetSettingShowControls())
 	{
 		const int NumObj = std::accumulate(RANGE(mpObjects), 0, [](int val, const GameObject* o) { return val + (o->mRenderSettings.bRender ? 1 : 0); });
-		const int NumPointLights = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.type == Light::POINT) ? 1 : 0); });
-		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.type == Light::ELightType::SPOT) ? 1 : 0); });
+		const int NumPointLights = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.mType == Light::POINT) ? 1 : 0); });
+		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.mType == Light::ELightType::SPOT) ? 1 : 0); });
 
 		TextDrawDescription drawDesc;
 		drawDesc.color = vec3(1, 1, 0.3f);
@@ -439,6 +439,8 @@ void StressTestScene::AddObjects()
 	}
 
 	++sObjectLayer;
+
+	CalculateSceneBoundingBox();
 	//return initialPositions;
 }
 
@@ -469,9 +471,16 @@ Light CreateRandomPointLight()
 	const float range = RandF(300, 1500.f);
 	const float bright = RandF(100, 300);
 
-	Light l = Light(type, color, range, bright, 0.0f, false);
-	l.transform.SetPosition(RandF(-50, 50), RandF(30, 90), RandF(-40, -90));
-	l.transform.SetUniformScale(0.1f);
+	Light l = Light();
+//	Light(color, type, bright, false, 0.001f, 0.01f, range, tf, mesh)
+//	Light l = Light(type, color, range, bright, 0.0f, false);
+	l.mType = type;
+	l.mColor = color;
+	l.mRange = range;
+	l.mBrightness = bright;
+	l.mbCastingShadows = false;
+	l.mTransform.SetPosition(RandF(-50, 50), RandF(30, 90), RandF(-40, -90));
+	l.mTransform.SetUniformScale(0.1f);
 
 	return l;
 }
@@ -519,9 +528,16 @@ void AddLights(std::vector<Light>& mLights)
 		const float range = RandF(800, 1500.f);
 		const float bright = RandF(2500, 5500);
 
-		Light l = Light(type, color, range, bright, 0.0f, false);
-		l.transform.SetPosition(RandF(-70, 40), RandF(30, 90), RandF(-40, -90));
-		l.transform.SetUniformScale(0.3f);
+		Light l = Light();
+		//	Light(color, type, bright, false, 0.001f, 0.01f, range, tf, mesh)
+		//	Light l = Light(type, color, range, bright, 0.0f, false);
+		l.mType = type;
+		l.mColor = color;
+		l.mRange = range;
+		l.mBrightness = bright;
+		l.mbCastingShadows = false;
+		l.mTransform.SetPosition(RandF(-70, 40), RandF(30, 90), RandF(-40, -90));
+		l.mTransform.SetUniformScale(0.3f);
 		mLights.push_back(l);
 	}
 }

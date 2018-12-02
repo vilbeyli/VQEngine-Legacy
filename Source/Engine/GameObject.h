@@ -39,7 +39,7 @@ struct BoundingBox
 {
 	vec3 low = vec3::Zero;
 	vec3 hi = vec3::Zero;
-	void Render(Renderer* pRenderer, const XMMATRIX& viewProj) const;
+	DirectX::XMMATRIX GetWorldTransformationMatrix() const;
 };
 
 class GameObject
@@ -69,6 +69,7 @@ public:
 	
 	inline void SetModel(Model model) { mModel = model; } // i don't like this setter...
 	inline const BoundingBox& GetAABB() const { return mBoundingBox; }
+	inline const std::vector<BoundingBox>& GetMeshBBs() const { return mMeshBoundingBoxes; }
 
 
 //---------------------------------------------------------------------------------------------------
@@ -98,7 +99,7 @@ private:
 	Transform			mTransform;
 	Model				mModel;
 	BoundingBox			mBoundingBox;
-
+	std::vector<BoundingBox> mMeshBoundingBoxes;
 
 };
 

@@ -48,6 +48,10 @@ public:
 	XMMATRIX GetViewMatrix() const;
 	XMMATRIX GetViewInverseMatrix() const;
 	XMMATRIX GetProjectionMatrix() const;
+
+	// returns World Space frustum plane set 
+	//
+	FrustumPlaneset GetViewFrustumPlanes() const;
 	
 	void SetPosition(float x, float y, float z);
 	void Rotate(float yaw, float pitch, const float dt);

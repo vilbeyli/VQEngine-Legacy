@@ -624,7 +624,7 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer, const Texture
 	pRenderer->SetTexture("texNormals", texNormals);
 	pRenderer->SetTexture("texDepth", texDepth);
 	pRenderer->SetConstantStruct("cParameters", &bilateralBlurParameters);
-	pRenderer->SetConstantStruct("matPorjInverse", &sceneView.projInverse);
+	pRenderer->SetConstantStruct("matProjInverse", &sceneView.projInverse);
 	pRenderer->SetRWTexture("texBlurredOcclusionOut", this->bilateralBlurUAVs[0]);
 	pRenderer->Apply();
 	pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);
@@ -651,7 +651,7 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer, const Texture
 	pRenderer->SetTexture("texNormals", texNormals);
 	pRenderer->SetTexture("texDepth", texDepth);
 	pRenderer->SetConstantStruct("cParameters", &bilateralBlurParameters);
-	pRenderer->SetConstantStruct("matPorjInverse", &sceneView.projInverse);
+	pRenderer->SetConstantStruct("matProjInverse", &sceneView.projInverse);
 	pRenderer->SetRWTexture("texBlurredOcclusionOut", this->bilateralBlurUAVs[1]);
 	pRenderer->Apply();
 	pRenderer->Dispatch(DISPATCH_GROUP_X, DISPATCH_GROUP_Y, DISPATCH_GROUP_Z);

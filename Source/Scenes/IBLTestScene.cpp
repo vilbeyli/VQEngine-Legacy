@@ -172,7 +172,7 @@ void IBLTestScene::Load(SerializedScene& scene)
 	}
 
 	if(!mLights.empty())
-		mLights.back().color = vec3(255, 244, 221) / 255.0f;
+		mLights.back().mColor = vec3(255, 244, 221) / 255.0f;
 	
 	SetEnvironmentMap(EEnvironmentMapPresets::BARCELONA);
 }
@@ -196,7 +196,7 @@ void IBLTestScene::Update(float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad2")) tr += vec3::Back;
 	if (ENGINE->INP()->IsKeyDown("Numpad9")) tr += vec3::Up;
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
-	if(!mLights.empty()) mLights[0].transform.Translate(dt * tr * moveSpeed);
+	if(!mLights.empty()) mLights[0].mTransform.Translate(dt * tr * moveSpeed);
 
 	for (GameObject* sphere : spheres)
 	{

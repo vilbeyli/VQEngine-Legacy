@@ -240,9 +240,19 @@ int Scene::RenderAlpha(const SceneView & sceneView) const
 
 int Scene::RenderDebug(const XMMATRIX& viewProj) const
 {
-	const auto IABuffers = mMeshes[EGeometry::CUBE].GetIABuffers();
+	const bool bRenderPointLightCues = true;
+	const bool bRenderSpotLightCues = true;
+	const bool bRenderObjectBoundingBoxes = false;
+	const bool bRenderMeshBoundingBoxes = false;
+	const bool bRenderSceneBoundingBox = true;
 
-	// set debug render state
+	const auto IABuffersCube = mMeshes[EGeometry::CUBE].GetIABuffers();
+	const auto IABuffersSphere = mMeshes[EGeometry::SPHERE].GetIABuffers();
+	const auto IABuffersCone = mMeshes[EGeometry::LIGHT_CUE_CONE].GetIABuffers();
+	
+	XMMATRIX wvp;
+
+	// set debug render states
 	mpRenderer->SetShader(EShaders::UNLIT);
 	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
 	mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
@@ -250,27 +260,135 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::WIREFRAME);
-	mpRenderer->SetVertexBuffer(IABuffers.first);
-	mpRenderer->SetIndexBuffer(IABuffers.second);
+	mpRenderer->SetVertexBuffer(IABuffersCube.first);
+	mpRenderer->SetIndexBuffer(IABuffersCube.second);
 
-	// scene bounding box
-	mBoundingBox.Render(mpRenderer, viewProj);
-	
-	// game object bounding boxes
-	std::vector<const GameObject*> pObjects(
-		mSceneView.opaqueList.size() + mSceneView.alphaList.size()
-		, nullptr
-	);
-	std::copy(RANGE(mSceneView.opaqueList), pObjects.begin());
-	std::copy(RANGE(mSceneView.alphaList), pObjects.begin() + mSceneView.opaqueList.size());
-	mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
-	for(const GameObject* pObj : pObjects)
+
+	// SCENE BOUNDING BOX
+	//
+	if (bRenderSceneBoundingBox)
 	{
-		pObj->mBoundingBox.Render(mpRenderer, pObj->GetTransform().WorldTransformationMatrix() * viewProj);
-	};
+		wvp = mBoundingBox.GetWorldTransformationMatrix() * viewProj;
+		mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+		mpRenderer->Apply();
+		mpRenderer->DrawIndexed();
+	}
+
+	// GAME OBJECT OBB & MESH BOUNDING BOXES
+	//
+	int numRenderedObjects = 0;
+	if (bRenderObjectBoundingBoxes)
+	{
+		std::vector<const GameObject*> pObjects(
+			mSceneView.opaqueList.size() + mSceneView.alphaList.size()
+			, nullptr
+		);
+		std::copy(RANGE(mSceneView.opaqueList), pObjects.begin());
+		std::copy(RANGE(mSceneView.alphaList), pObjects.begin() + mSceneView.opaqueList.size());
+		for (const GameObject* pObj : pObjects)
+		{
+			const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+			wvp = pObj->mBoundingBox.GetWorldTransformationMatrix() * matWorld * viewProj;
+#if 1
+			mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
+			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+			mpRenderer->Apply();
+			mpRenderer->DrawIndexed();
+#endif
+
+			// mesh bounding boxes (currently broken...)
+			if (bRenderMeshBoundingBoxes)
+			{
+				mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
+#if 0
+				for (const MeshID meshID : pObj->mModel.mData.mMeshIDs)
+				{
+					wvp = pObj->mMeshBoundingBoxes[meshID].GetWorldTransformationMatrix() * matWorld * viewProj;
+					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+					mpRenderer->Apply();
+					mpRenderer->DrawIndexed();
+				}
+#endif
+			}
+		}
+		numRenderedObjects = (int)pObjects.size();
+	}
+
+	// LIGHT VOLUMES
+	//
+	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
+
+	// light's transform hold Translation and Rotation data,
+	// Scale is used for rendering. Hence, we use another transform
+	// here to use mRange as the lights render scale signifying its 
+	// radius of influence.
+	Transform tf;
+
+	// point lights
+	if (bRenderPointLightCues)
+	{
+		mpRenderer->SetVertexBuffer(IABuffersSphere.first);
+		mpRenderer->SetIndexBuffer(IABuffersSphere.second);
+		for (const Light& l : mLights)
+		{
+			if (l.mType == Light::ELightType::POINT)
+			{
+				mpRenderer->SetConstant3f("diffuse", l.mColor);
+
+				tf.SetPosition(l.mTransform._position);
+				tf.SetScale(l.mRange * 0.5f); // Mesh's model space R = 2.0f, hence scale it by 0.5f...
+				wvp = tf.WorldTransformationMatrix() * viewProj;
+				mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+				mpRenderer->Apply();
+				mpRenderer->DrawIndexed();
+			}
+		}
+	}
+
+	// spot lights 
+	if (bRenderSpotLightCues)
+	{
+		mpRenderer->SetVertexBuffer(IABuffersCone.first);
+		mpRenderer->SetIndexBuffer(IABuffersCone.second);
+		for (const Light& l : mLights)
+		{
+			if (l.mType == Light::ELightType::SPOT)
+			{
+				mpRenderer->SetConstant3f("diffuse", l.mColor);
+
+				tf = l.mTransform;
+				
+				// reset scale as it holds the scale value for light's render mesh
+				tf.SetScale(1, 1, 1); 
+				
+				 // align with spot light's local space
+				tf.RotateAroundLocalXAxisDegrees(-90.0f); 
 
 
-	// TODO: camera frustum
+				XMMATRIX alignConeToSpotLightTransformation = XMMatrixIdentity();
+				alignConeToSpotLightTransformation.r[3].m128_f32[0] = 0.0f;
+				alignConeToSpotLightTransformation.r[3].m128_f32[1] = -l.mRange;
+				alignConeToSpotLightTransformation.r[3].m128_f32[2] = 0.0f;
+				//tf.SetScale(1, 20, 1);
+
+				const float coneBaseRadius = std::tanf(l.mSpotOuterConeAngleDegrees * DEG2RAD) * l.mRange;
+				XMMATRIX scaleConeToRange = XMMatrixIdentity();
+				scaleConeToRange.r[0].m128_f32[0] = coneBaseRadius;
+				scaleConeToRange.r[1].m128_f32[1] = l.mRange;
+				scaleConeToRange.r[2].m128_f32[2] = coneBaseRadius;
+
+				//wvp = alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
+				wvp = scaleConeToRange * alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
+				mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+				mpRenderer->Apply();
+				mpRenderer->DrawIndexed();
+			}
+		}
+	}
+
+
+	// TODO: CAMERA FRUSTUM
+	//
 	if (mCameras.size() > 1 && mSelectedCamera != 0 && false)
 	{
 		// render camera[0]'s frustum
@@ -299,7 +417,8 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 	mpRenderer->Apply();
 
-	return 1 + (int)pObjects.size(); // objects rendered
+
+	return numRenderedObjects; // objects rendered
 }
 
 
@@ -313,14 +432,15 @@ using pSpotLightDataArray = std::array<SpotLightDataArray*, 2>;
 
 // stores the number of lights per light type (2 types : point and spot)
 using pNumArray = std::array<int*, 2>;
-void Scene::GatherLightData(SceneLightingData & outLightingData)
+void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vector<const Light*>& pLightList)
 {
 	SceneLightingData::cb& cbuffer = outLightingData._cb;
 
 	outLightingData.ResetCounts();
-	mShadowView.Clear();
 
-	cbuffer.directionalLight.shadowFactor = 0.0f;
+	cbuffer.directionalLight.depthBias = 0.0f;
+	cbuffer.directionalLight.enabled = 0;
+	cbuffer.directionalLight.shadowing = 0;
 	cbuffer.directionalLight.brightness = 0.0f;
 
 	pNumArray lightCounts
@@ -335,56 +455,79 @@ void Scene::GatherLightData(SceneLightingData & outLightingData)
 	};
 
 	unsigned numShdSpot = 0;
-	for (const Light& l : mLights)
+	unsigned numPtSpot = 0;
+
+	for (const Light* l : pLightList)
 	{
-		//if (!l._bEnabled) continue;	// #BreaksRelease
+		//if (!l->_bEnabled) continue;	// #BreaksRelease
 
-		// index in p*LightDataArray to differentiate between shadow casters and non-shadow casters
-		//const size_t shadowIndex = l._castsShadow ? SHADOWING_LIGHT_INDEX : NON_SHADOWING_LIGHT_INDEX;
-
-		// add to the count of the current light type & whether its shadow casting or not
-		pNumArray& refLightCounts = l.castsShadow ? casterCounts : lightCounts;
-
-		switch (l.type)
+		pNumArray& refLightCounts = casterCounts;
+		const size_t lightIndex = (*refLightCounts[l->mType])++;
+		switch (l->mType)
 		{
 		case Light::ELightType::POINT:
 		{
-			const size_t lightIndex = (*refLightCounts[l.type])++;
-			cbuffer.pointLights[lightIndex] = l.GetPointLightData();
-			//outLightingData._cb.pointLightsShadowing[lightIndex] = l.GetPointLightData();
-			if (l.castsShadow)
-			{
-				mShadowView.points.push_back(&l);
-			}
-		}
-		break;
+			PointLightGPU plData;
+			l->GetGPUData(plData);
+
+			cbuffer.pointLightsShadowing[lightIndex] = plData;
+			mShadowView.points.push_back(l);
+		} break;
 		case Light::ELightType::SPOT:
 		{
-			const size_t lightIndex = (*refLightCounts[l.type])++;
-			cbuffer.spotLights[lightIndex] = l.GetSpotLightData();
-			cbuffer.spotLightsShadowing[lightIndex] = l.GetSpotLightData();
-			if (l.castsShadow)
-			{
-				cbuffer.shadowViews[numShdSpot++] = l.GetLightSpaceMatrix();
-				mShadowView.spots.push_back(&l);
-			}
-		}
-		break;
+			SpotLightGPU slData;
+			l->GetGPUData(slData);
+
+			cbuffer.spotLightsShadowing[lightIndex] = slData;
+			cbuffer.shadowViews[numShdSpot++] = l->GetLightSpaceMatrix();
+			mShadowView.spots.push_back(l);
+		} break;
 		default:
 			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
 			continue;
 		}
 	}
 
-	cbuffer.directionalLight = mDirectionalLight.GetGPUData();
-	cbuffer.shadowViewDirectional = mDirectionalLight.GetLightSpaceMatrix();
-	if (mDirectionalLight.enabled)
+	// iterate for non-shadowing lights (they won't be in pLightList)
+	for (const Light& l : mLights)
 	{
+		if (l.mbCastingShadows) continue;
+		pNumArray& refLightCounts = lightCounts;
+
+		const size_t lightIndex = (*refLightCounts[l.mType])++;
+		switch (l.mType)
+		{
+		case Light::ELightType::POINT:
+		{
+			PointLightGPU plData;
+			l.GetGPUData(plData);
+			cbuffer.pointLights[lightIndex] = plData;
+		} break;
+		case Light::ELightType::SPOT:
+		{
+			SpotLightGPU slData;
+			l.GetGPUData(slData);
+			cbuffer.spotLights[lightIndex] = slData;
+		} break;
+		default:
+			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
+			continue;
+		}
+	}
+
+	if (mDirectionalLight.mbEnabled)
+	{
+		mDirectionalLight.GetGPUData(cbuffer.directionalLight);
+		cbuffer.shadowViewDirectional = mDirectionalLight.GetLightSpaceMatrix();
 		mShadowView.pDirectional = &mDirectionalLight;
+	}
+	else
+	{
+		cbuffer.directionalLight = {};
 	}
 }
 
-bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
+static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
 
 void Scene::ResetActiveCamera()
 {
@@ -473,6 +616,7 @@ void Scene::CalculateSceneBoundingBox()
 		vec3 maxs_obj(-(max_f - 1.0f));
 
 		const ModelData& modelData = pObj->GetModelData();
+		pObj->mMeshBoundingBoxes.clear();
 		std::for_each(RANGE(modelData.mMeshIDs), [&](const MeshID& meshID)
 		{
 			const BufferID VertexBufferID = mMeshes[meshID].GetIABuffers().first;
@@ -503,16 +647,33 @@ void Scene::CalculateSceneBoundingBox()
 					return;
 				}
 
+				vec3 mins_mesh(max_f);
+				vec3 maxs_mesh(-(max_f - 1.0f));
 				for (int i = 0; i < numVerts; ++i)
 				{
+					const float x_mesh_local = pData[i].position.x();
+					const float y_mesh_local = pData[i].position.y();
+					const float z_mesh_local = pData[i].position.z();
+
+					mins_mesh = vec3
+					(
+						std::min(x_mesh_local, mins_mesh.x()),
+						std::min(y_mesh_local, mins_mesh.y()),
+						std::min(z_mesh_local, mins_mesh.z())
+					);
+					maxs_mesh = vec3
+					(
+						std::max(x_mesh_local, maxs_mesh.x()),
+						std::max(y_mesh_local, maxs_mesh.y()),
+						std::max(z_mesh_local, maxs_mesh.z())
+					);
+
+
 					const vec3 worldPos = vec3(XMVector4Transform(vec4(pData[i].position, 1.0f), worldMatrix));
 					const float x_mesh = std::min(worldPos.x(), DegenerateMeshPositionChannelValueMax);
 					const float y_mesh = std::min(worldPos.y(), DegenerateMeshPositionChannelValueMax);
 					const float z_mesh = std::min(worldPos.z(), DegenerateMeshPositionChannelValueMax);
 
-					const float x_mesh_local = pData[i].position.x();
-					const float y_mesh_local = pData[i].position.y();
-					const float z_mesh_local = pData[i].position.z();
 
 					// scene bounding box - world space
 					mins = vec3
@@ -542,6 +703,8 @@ void Scene::CalculateSceneBoundingBox()
 						std::max(z_mesh_local, maxs_obj.z())
 					);
 				}
+
+				pObj->mMeshBoundingBoxes.push_back(BoundingBox({ mins_mesh, maxs_mesh }));
 			}
 			else
 			{
@@ -580,7 +743,8 @@ void Scene::UpdateScene(float dt)
 
 	// OPTIMIZATION SETTINGS TOGGLES
 	//
-#if _DEBUG
+//#if _DEBUG
+#if 1
 	if (ENGINE->INP()->IsKeyTriggered("F7"))
 	{
 		bool& toggle = ENGINE->INP()->IsKeyDown("Shift")
@@ -596,14 +760,14 @@ void Scene::UpdateScene(float dt)
 	if (ENGINE->INP()->IsKeyTriggered("F9"))
 	{
 
-		if (ENGINE->INP()->IsKeyDown("Shift"))
-		{
-			bReportedList = false;
-		}
-		else
-		{
-			mSceneRenderSettings.optimization.bSortRenderLists = !mSceneRenderSettings.optimization.bSortRenderLists;
-		}
+		//if (ENGINE->INP()->IsKeyDown("Shift"))
+		//{
+		//	bReportedList = false;
+		//}
+		//else
+		//{
+		//	mSceneRenderSettings.optimization.bSortRenderLists = !mSceneRenderSettings.optimization.bSortRenderLists;
+		//}
 	}
 #endif
 
@@ -615,6 +779,42 @@ void Scene::UpdateScene(float dt)
 	Update(dt);
 }
 
+static bool IsSphereInFrustum(const FrustumPlaneset& frustum, const vec3& sphereCenter, const float sphereRadius)
+{
+	bool bInside = true;
+	for (int plane = 0; plane < 6; ++plane)
+	{
+		vec3 N = vec3( 
+			  frustum.abcd[plane].x
+			, frustum.abcd[plane].y
+			, frustum.abcd[plane].z
+		);
+		const vec3 planeNormal = N.normalized();
+		const float D = XMVector3Dot(N, sphereCenter).m128_f32[0] + frustum.abcd[plane].w;
+		//const float D = XMVector3Dot(planeNormal, sphereCenter).m128_f32[0] + frustum.abcd[plane].w;
+		//const float D = XMVector3Dot(planeNormal, sphereCenter).m128_f32[0];
+		
+#if 0
+		if (D < -sphereRadius) // outside
+			return false;
+
+		else if(D < sphereRadius) // intersect
+		{
+			bInside = true;
+		}
+#else
+		//if (fabsf(D) > sphereRadius)
+		//	return
+		if (D < 0.0f)
+		{
+			//if ( (-D -frustum.abcd[plane].w) > sphereRadius)
+			if (-D  > sphereRadius)
+				return false;
+		}
+#endif
+	}
+	return bInside;
+}
 
 static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 {
@@ -651,13 +851,45 @@ static bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 }
 
 
-static size_t CullMeshes(const FrustumPlaneset& frustumPlanes, std::vector<MeshID> todo)
+static size_t CullMeshes(
+	const FrustumPlaneset& frustumPlanes,
+	const GameObject* pObj,
+	MeshDrawData& meshDrawData
+)
 {
-	// We currently cull based on game object bounding boxes, meaning that we
-	// cull meshes in 'gameobject-sized-batches'. Culling can be refined to mesh
-	// level by letting each game object have a culled list of meshes to draw.
-	//
-	return 0;
+	size_t numCulled = 0;
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+	const XMMATRIX  matWorld = pObj->GetTransform().WorldTransformationMatrix();
+#else
+	meshDrawData.matWorld = pObj->GetTransform().WorldTransformationMatrix();
+	const XMMATRIX& matWorld = meshDrawData.matWorld;
+#endif
+
+	const std::vector<MeshID>& objMeshIDs = pObj->GetModelData().mMeshIDs;
+	for (MeshID meshIDIndex = 0; meshIDIndex < objMeshIDs.size(); ++meshIDIndex)
+	{
+		const MeshID meshID = objMeshIDs[meshIDIndex];
+		const BoundingBox localBB = pObj->GetMeshBBs()[meshIDIndex];
+		const BoundingBox worldBB = BoundingBox
+		({
+			XMVector4Transform(vec4(localBB.low, 1.0f), matWorld),
+			XMVector4Transform(vec4(localBB.hi, 1.0f),  matWorld)
+		});
+
+		if (IsVisible(frustumPlanes, worldBB))
+		{
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+			meshDrawData.AddMeshTransformation(meshID, matWorld);
+#else
+			meshDrawData.meshIDs.push_back(meshID);
+#endif
+		}
+		else
+			++numCulled;
+	}
+	return numCulled;
 }
 
 static size_t CullGameObjects(
@@ -720,89 +952,20 @@ static size_t CullGameObjects(
 	return pObjs.size() - currIdx;
 }
 
-void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
+struct CullMeshWorkerData
 {
-	// set scene view
-	const Camera& viewCamera = GetActiveCamera();
-	const XMMATRIX view = viewCamera.GetViewMatrix();
-	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
-	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
-	XMVECTOR det = XMMatrixDeterminant(proj);
-	const XMMATRIX projInv = XMMatrixInverse(&det, proj);
+	// in
+	const Light* pLight;
+	const std::vector<const GameObject*>& renderableList;
 
-	// scene veiw matrices
-	mSceneView.viewProj = view * proj;
-	mSceneView.view = view;
-	mSceneView.viewInverse = viewInverse;
-	mSceneView.proj = proj;
-	mSceneView.projInverse = projInv;
+	// out
+	std::array< MeshDrawList, 6> meshListForPoints;
+};
 
-	// render/scene settings
-	mSceneView.sceneRenderSettings = GetSceneRenderSettings();
-	mSceneView.environmentMap = GetEnvironmentMap();
-	mSceneView.cameraPosition = viewCamera.GetPositionF();
-	mSceneView.bIsIBLEnabled = mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
-
-	
-	// CLEAN UP RENDER LISTS
-	//
-	//pCPUProfiler->BeginEntry("CleanUp");
-	// scene view
-	mSceneView.opaqueList.clear();
-	mSceneView.culledOpaqueList.clear();
-	mSceneView.culluedOpaqueInstancedRenderListLookup.clear();
-	mSceneView.alphaList.clear();
-	
-	// shadow views
-	mShadowView.RenderListsPerMeshType.clear();
-	mShadowView.casters.clear();
-	mShadowView.shadowMapRenderListLookUp.clear();
-	mShadowView.shadowMapInstancedRenderListLookUp.clear();
-	//pCPUProfiler->EndEntry();
-
-	// POPULATE RENDER LISTS WITH SCENE OBJECTS
-	//
-	std::vector<const GameObject*> casterList;
-	std::vector<const GameObject*> mainViewRenderList;
-	static std::vector<const GameObject*> mainViewRenderListNonTextured;
-
-	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = mShadowView.RenderListsPerMeshType;
-	// gather game objects that are to be rendered in the scene
-	pCPUProfiler->BeginEntry("Non-Instanced Lists");
-	int numObjects = 0;
-	for (GameObject& obj : mObjectPool.mObjects)
-	{
-		if (obj.mpScene == this && obj.mRenderSettings.bRender)
-		{
-			const bool bMeshListEmpty = obj.mModel.mData.mMeshIDs.empty();
-			const bool bTransparentMeshListEmpty = obj.mModel.mData.mTransparentMeshIDs.empty();
-			const bool bCastingShadows = obj.mRenderSettings.bCastShadow && !bMeshListEmpty;
-
-			if (!bMeshListEmpty)            { mSceneView.opaqueList.push_back(&obj); }
-			if (!bTransparentMeshListEmpty) { mSceneView.alphaList.push_back(&obj); }
-			if (bCastingShadows)            { casterList.push_back(&obj); }
-
-#if _DEBUG
-			if (bMeshListEmpty && bTransparentMeshListEmpty)
-			{
-				Log::Warning("GameObject with no Mesh Data, turning bRender off");
-				obj.mRenderSettings.bRender = false;
-			}
-#endif
-			++numObjects;
-		}
-	}
-
-	stats.scene.numObjects = numObjects;
-	pCPUProfiler->EndEntry();
-
-	// CULL MAIN & SHADOW VIEWS
-	//
-	const bool& bSortRenderLists = mSceneRenderSettings.optimization.bSortRenderLists;
-	const bool& bCullMainView = mSceneRenderSettings.optimization.bViewFrustumCull_MainView;
-	const bool& bCullLightView = mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights;
-	const bool& bShadowViewCull = mSceneRenderSettings.optimization.bShadowViewCull;
-
+void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightingData& outLightingData)
+{
+	// LAMBDA DEFINITIONS
+	//---------------------------------------------------------------------------------------------
 	// Meshes are sorted according to BUILT_IN_TYPE < CUSTOM, 
 	// and BUILT_IN_TYPEs are sorted in themselves
 	auto SortByMeshType = [&](const GameObject* pObj0, const GameObject* pObj1)
@@ -812,7 +975,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 
 		const MeshID mID0 = model0.mMeshIDs.empty() ? -1 : model0.mMeshIDs.back();
 		const MeshID mID1 = model1.mMeshIDs.empty() ? -1 : model1.mMeshIDs.back();
-		
+
 		assert(mID0 != -1 && mID1 != -1);
 
 		// case: one of the objects have a custom mesh
@@ -820,7 +983,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		{
 			if (mID0 < EGeometry::MESH_TYPE_COUNT)
 				return true;
-				
+
 			if (mID1 < EGeometry::MESH_TYPE_COUNT)
 				return false;
 
@@ -843,22 +1006,216 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		// TODO:
 		return true;
 	};
+	//---------------------------------------------------------------------------------------------
+
+
+
+	// set scene view
+	const Camera& viewCamera = GetActiveCamera();
+	const XMMATRIX view = viewCamera.GetViewMatrix();
+	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
+	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
+	XMVECTOR det = XMMatrixDeterminant(proj);
+	const XMMATRIX projInv = XMMatrixInverse(&det, proj); 
+	det = mDirectionalLight.mbEnabled 
+		? XMMatrixDeterminant(mDirectionalLight.GetProjectionMatrix()) 
+		: XMVECTOR();
+	const XMMATRIX directionalLightProjection = mDirectionalLight.mbEnabled
+		? mDirectionalLight.GetProjectionMatrix()
+		: XMMatrixIdentity();
+
+	// scene view matrices
+	mSceneView.viewProj = view * proj;
+	mSceneView.view = view;
+	mSceneView.viewInverse = viewInverse;
+	mSceneView.proj = proj;
+	mSceneView.projInverse = projInv;
+	mSceneView.directionalLightProjection = directionalLightProjection;
+
+	// render/scene settings
+	mSceneView.sceneRenderSettings = GetSceneRenderSettings();
+	mSceneView.environmentMap = GetEnvironmentMap();
+	mSceneView.cameraPosition = viewCamera.GetPositionF();
+	mSceneView.bIsIBLEnabled = mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
+
+
+
+	//----------------------------------------------------------------------------
+	// PREPARE RENDER LISTS
+	//----------------------------------------------------------------------------
+	// CLEAN UP RENDER LISTS
+	//
+	//pCPUProfiler->BeginEntry("CleanUp");
+	// scene view
+	mSceneView.opaqueList.clear();
+	mSceneView.culledOpaqueList.clear();
+	mSceneView.culluedOpaqueInstancedRenderListLookup.clear();
+	mSceneView.alphaList.clear();
+	
+	// shadow views
+	mShadowView.Clear();
+	mShadowView.RenderListsPerMeshType.clear();
+	mShadowView.casters.clear();
+	mShadowView.shadowMapRenderListLookUp.clear();
+	mShadowView.shadowMapInstancedRenderListLookUp.clear();
+	//pCPUProfiler->EndEntry();
+
+	// POPULATE RENDER LISTS WITH SCENE OBJECTS
+	//
+	std::vector<const GameObject*> casterList;
+	std::vector<const GameObject*> mainViewRenderList;
+
+	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = mShadowView.RenderListsPerMeshType;
+	// gather game objects that are to be rendered in the scene
+	pCPUProfiler->BeginEntry("Non-Instanced Lists");
+	int numObjects = 0;
+	for (GameObject& obj : mObjectPool.mObjects)
+	{
+		if (obj.mpScene == this && obj.mRenderSettings.bRender)
+		{
+			const bool bMeshListEmpty = obj.mModel.mData.mMeshIDs.empty();
+			const bool bTransparentMeshListEmpty = obj.mModel.mData.mTransparentMeshIDs.empty();
+			const bool mbCastingShadows = obj.mRenderSettings.bCastShadow && !bMeshListEmpty;
+
+			if (!bMeshListEmpty)            { mSceneView.opaqueList.push_back(&obj); }
+			if (!bTransparentMeshListEmpty) { mSceneView.alphaList.push_back(&obj); }
+			if (mbCastingShadows)           { casterList.push_back(&obj); }
+
+#if _DEBUG
+			if (bMeshListEmpty && bTransparentMeshListEmpty)
+			{
+				Log::Warning("GameObject with no Mesh Data, turning bRender off");
+				obj.mRenderSettings.bRender = false;
+			}
+#endif
+			++numObjects;
+		}
+	}
+
+	stats.scene.numObjects = numObjects;
+	pCPUProfiler->EndEntry();
+
+	//----------------------------------------------------------------------------
+	// CULL LIGHTS
+	//----------------------------------------------------------------------------
+	stats.scene.numCulledShadowingPointLights = 0;
+	stats.scene.numCulledShadowingSpotLights = 0;
+	std::vector<const Light*> pLights;
+	pCPUProfiler->BeginEntry("Cull Lights");
+	for (const Light& l : mLights)
+	{
+		if (!l.mbCastingShadows) continue;
+		switch (l.mType)
+		{
+		case Light::ELightType::SPOT:
+		{
+			// TODO: frustum - cone check
+			const bool bCullLight = false;
+			//if (IsVisible())
+			if (!bCullLight)
+				pLights.push_back(&l);
+			else 
+				++stats.scene.numCulledShadowingSpotLights;
+		}	break;
+
+		case Light::ELightType::POINT:
+		{	
+			vec3 vecCamera = GetActiveCamera().GetPositionF() - l.mTransform._position;
+			const float dstSqrCameraToLight = XMVector3Dot(vecCamera, vecCamera).m128_f32[0];
+			const float rangeSqr = l.mRange * l.mRange;
+			bool bIsCameraInPointLightSphereOfIncluence = dstSqrCameraToLight < rangeSqr;
+			if (bIsCameraInPointLightSphereOfIncluence || IsSphereInFrustum(GetActiveCamera().GetViewFrustumPlanes(), l.mTransform._position, l.mRange))
+				pLights.push_back(&l);
+			else 
+				++stats.scene.numCulledShadowingPointLights;
+		} break;
+		} // light type
+
+	}
+	pCPUProfiler->EndEntry();
+
+
+
+	//----------------------------------------------------------------------------
+	// CULL RENDER LISTS
+	//----------------------------------------------------------------------------
+	const bool& bSortRenderLists = mSceneRenderSettings.optimization.bSortRenderLists;
+	const bool& bCullMainView = mSceneRenderSettings.optimization.bViewFrustumCull_MainView;
+	const bool& bCullLightView = mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights;
+	const bool& bShadowViewCull = mSceneRenderSettings.optimization.bShadowViewCull;
 
 
 	// start counting these
 	stats.scene.numSpots = 0;
 	stats.scene.numPoints = 0;
-	stats.scene.numDirectionalCulledObjects = 0;
+	//stats.scene.numDirectionalCulledObjects = 0;
 	stats.scene.numPointsCulledObjects = 0;
 	stats.scene.numSpotsCulledObjects = 0;
 	
 #if THREADED_FRUSTUM_CULL
 	// TODO: utilize thread pool for each render list
 
-#else
-	// main view
 	pCPUProfiler->BeginEntry("Cull Views");
-	//pCPUProfiler->BeginEntry("Main View");
+	// MAIN VIEW
+	//
+	if (bCullMainView)
+	{
+		stats.scene.numMainViewCulledObjects = static_cast<int>(CullGameObjects(
+			FrustumPlaneset::ExtractFromMatrix(mSceneView.viewProj)
+			, mSceneView.opaqueList
+			, mainViewRenderList));
+	}
+	else
+	{
+		mainViewRenderList.resize(mSceneView.opaqueList.size());
+		std::copy(RANGE(mSceneView.opaqueList), mainViewRenderList.begin());
+		stats.scene.numMainViewCulledObjects = 0;
+	}
+
+
+	// SHADOW FRUSTA
+	//
+
+	RenderList objList;
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+	std::array< MeshDrawData, 6> meshDrawDataPerFace;
+#else
+	std::array< MeshDrawList, 6> meshListForPoints;
+#endif
+
+	for (const Light* l : pLights)
+	{
+		switch (l->mType)
+		{
+		case Light::ELightType::SPOT:
+		{
+			
+		
+		}	break;
+		case Light::ELightType::POINT:
+		{
+
+		}	break;
+
+		} // light type switch
+
+		
+	} // for each light
+
+
+	// CULL DIRECTIONAL SHADOW VIEW 
+	//
+
+
+	// TODO: sync point
+	pCPUProfiler->EndEntry(); // Cull Views
+#else
+
+	// MAIN VIEW
+	//
+	pCPUProfiler->BeginEntry("Cull Views");
+	//pCPUProfiler->BeginEntry("[Cull Main View]");
 	if (bCullMainView)
 	{
 		stats.scene.numMainViewCulledObjects = static_cast<int>(CullGameObjects(
@@ -874,43 +1231,106 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	}
 	//pCPUProfiler->EndEntry();
 
-	// shadow frusta
-	//pCPUProfiler->BeginEntry("Spots");
-	for (const Light& l : mLights)
-	{
-		if (!l.castsShadow) continue;
 
-		std::vector<const GameObject*> objList;
-		switch (l.type)
+
+	// SHADOW FRUSTA
+	//
+	RenderList objList;
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+	std::array< MeshDrawData, 6> meshDrawDataPerFace;
+#else
+	std::array< MeshDrawList, 6> meshListForPoints;
+#endif
+
+	for (const Light* l : pLights)
+	{
+		switch (l->mType)
 		{
 		case Light::ELightType::SPOT:
 		{
+			//pCPUProfiler->BeginEntry("Spots");
 			++stats.scene.numSpots;
 			if (bCullLightView)
 			{
-				stats.scene.numSpotsCulledObjects += static_cast<int>(CullGameObjects(l.GetViewFrustumPlanes(), casterList, objList));
+				stats.scene.numSpotsCulledObjects += static_cast<int>(CullGameObjects(l->GetViewFrustumPlanes(), casterList, objList));
 			}
 			else
 			{
 				objList.resize(casterList.size());
 				std::copy(RANGE(casterList), objList.begin());
-				stats.scene.numSpotsCulledObjects += 0;
 			}
-		}
-		break;
-		case Light::ELightType::POINT:
-			++stats.scene.numPoints;
-			// TODO: cull against 6 frustums
-			if (bCullLightView) { }
-			else { }
+
+			mShadowView.shadowMapRenderListLookUp[l] = objList;
+			//pCPUProfiler->EndEntry();
 			break;
 		}
+		case Light::ELightType::POINT:
+			//pCPUProfiler->BeginEntry("[Cull Point View]");
+			++stats.scene.numPoints;
 
-		mShadowView.shadowMapRenderListLookUp[&l] = objList;
-	}
-	//pCPUProfiler->EndEntry();
+			MeshDrawData meshDrawData;
+			if (bCullLightView) 
+			{
+				for (int face = 0; face < 6; ++face)
+				{
+					const Texture::CubemapUtility::ECubeMapLookDirections CubemapFaceDirectionEnum = static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face);
+					for (const GameObject* pObj : casterList)
+					{
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+						stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
+						(
+							l.GetViewFrustumPlanes(CubemapFaceDirectionEnum),
+							pObj,
+							meshDrawDataPerFace[face]
+						));
+#else
+						meshDrawData.meshIDs.clear();
+						stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
+						(
+							l->GetViewFrustumPlanes(CubemapFaceDirectionEnum),
+							pObj,
+							meshDrawData
+						));
+						meshListForPoints[face].push_back(meshDrawData);
 #endif
+					}
+				}
+			}
+			else 
+			{ 
+				for (int face = 0; face < 6; ++face)
+				{
+					for (const GameObject* pObj : casterList)
+					{
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+						const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+						for (MeshID meshID : pObj->GetModelData().mMeshIDs)
+							meshDrawDataPerFace[face].AddMeshTransformation(meshID, matWorld);
+#else
+						meshListForPoints[face].push_back(pObj);
+#endif
+					}
+				}
+			}
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+			mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshDrawDataPerFace;
+			for (int i = 0; i < 6; ++i) meshDrawDataPerFace[i].meshTransformListLookup.clear();
+#else
+			mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshListForPoints;
+			for (int i = 0; i < 6; ++i) meshListForPoints[i].clear();
+#endif
+			//pCPUProfiler->EndEntry();
+			break;
+		} // light type
+
+		
+		objList.clear();
+	} // for each light
+
+#endif // THREADED_FRUSTUM_CULL
 	
+
 	// CULL DIRECTIONAL SHADOW VIEW 
 	//
 	if (bShadowViewCull)
@@ -922,7 +1342,10 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	pCPUProfiler->EndEntry(); // Cull Views
 
 
-	// SORT OBJECTS PER MESH TYPE, ETC...
+	//----------------------------------------------------------------------------
+	// SORT & BATCH RENDER LISTS
+	//----------------------------------------------------------------------------
+	// SORT
 	//
 	pCPUProfiler->BeginEntry("Sort");
 	if (bSortRenderLists) 
@@ -931,10 +1354,27 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		std::sort(RANGE(casterList), SortByMeshType);
 		for (const Light& l : mLights)
 		{
-			if (!l.castsShadow) continue;
-			RenderList& lightRenderList = mShadowView.shadowMapRenderListLookUp.at(&l);
+			if (!l.mbCastingShadows) continue;
 
-			std::sort(RANGE(lightRenderList), SortByMeshType);
+			switch (l.mType)
+			{
+
+			case Light::ELightType::POINT:
+			{
+				for(int i=0; i<6; ++i)
+				{
+					;
+				}
+				break;
+			}
+			case Light::ELightType::SPOT:
+			{
+				RenderList& lightRenderList = mShadowView.shadowMapRenderListLookUp.at(&l);
+				std::sort(RANGE(lightRenderList), SortByMeshType);
+				break;
+			}
+			}
+			
 		}
 	}
 	pCPUProfiler->EndEntry();
@@ -943,8 +1383,6 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 	// PREPARE INSTANCED DRAW BATCHES
 	//
 	// Shadow Caster Render Lists
-
-	
 	//pCPUProfiler->BeginEntry("Lists");
 	pCPUProfiler->BeginEntry("[Instanced] Directional");
 	for(int i=0; i<casterList.size(); ++i)
@@ -1024,7 +1462,9 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats)
 		});
 		bReportedList = true;
 	}
-#endif
+#endif // THREADED_FRUSTUM_CULL
+
+	GatherLightData(outLightingData, pLights);
 
 	//return numFrustumCulledObjs + numShadowFrustumCullObjs;
 }
@@ -1036,6 +1476,7 @@ void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
 }
 
 GameObject* Scene::CreateNewGameObject(){ mpObjects.push_back(mObjectPool.Create(this)); return mpObjects.back(); }
+
 Material* Scene::CreateNewMaterial(EMaterialType type){ return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type)); }
 Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type)); }
 

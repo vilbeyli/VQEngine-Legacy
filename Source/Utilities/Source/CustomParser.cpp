@@ -113,7 +113,9 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		//---------------------------------------------------------------
 		// | Shadow Map dimension
 		//---------------------------------------------------------------
-		settings.rendering.shadowMap.dimension = stoi(line[1]);
+		settings.rendering.shadowMap.spotShadowMapDimensions = stoi(line[1]);
+		settings.rendering.shadowMap.directionalShadowMapDimensions = stoi(line[2]);
+		settings.rendering.shadowMap.pointShadowMapDimensions = stoi(line[3]);
 	}
 	else if (cmd == "lightingModel")
 	{
@@ -199,6 +201,7 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 
 	scene.materials.Clear();
 	scene.materials.Initialize(4096);
+	scene.directionalLight.mbEnabled = false;
 
 	if (sceneFile.is_open())
 	{
@@ -241,12 +244,15 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 
 // state tracking
 static bool bIsReadingGameObject = false;
+static bool bIsReadingLight = false;
 static bool bIsReadingMaterial = false;
 
 enum MaterialType { UNKNOWN, BRDF, PHONG };
 static MaterialType materialType = MaterialType::UNKNOWN;
 static Material* pMaterial = nullptr;
 static GameObject* pObject = nullptr;
+
+Light sLight = Light();
 
 using ParseFunctionType = void(__cdecl *)(const std::vector<std::string>&);
 using ParseFunctionLookup = std::unordered_map<std::string, ParseFunctionType>;
@@ -255,7 +261,11 @@ static const std::unordered_map<std::string, Light::ELightType>	sLightTypeLookup
 { 
 	{"s", Light::ELightType::SPOT },
 	{"p", Light::ELightType::POINT},
-	{"d", Light::ELightType::DIRECTIONAL}
+	{"d", Light::ELightType::DIRECTIONAL},
+
+	{"spot", Light::ELightType::SPOT },
+	{"point", Light::ELightType::POINT},
+	{"directional", Light::ELightType::DIRECTIONAL},
 };
 
 static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
@@ -295,7 +305,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 {
 	if (command.empty()){return;}
 	const std::string& cmd = command[0];	// shorthand
-	if (cmd == "camera")
+	if (cmd == "camera") // there's a lot of else's... :( (todo: use a map of function pointers...)
 	{
 		if (command.size() != 9)
 		{
@@ -317,80 +327,40 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		camSettings.pitch       = stof(command[8]);
 		scene.cameras.push_back(camSettings);
 	}
-	else if (cmd == "directional")
-	{
-		const std::string colorValue = GetLowercased(command[1]);
-		const float brightness		 = stof(command[2]);
-		const vec3 direction		 = vec3(stof(command[3]), stof(command[4]), stof(command[5])).normalized();
-		const int shadowMapDimension = command.size() > 6 ? stoi(command[6]) : 1024;
-		const int shadowViewportDimension = command.size() > 7 ? stoi(command[7]) : shadowMapDimension;
-		const float range			 = command.size() > 8 ? stof(command[8]) : 1.0f;
-		const float depthBias		 = command.size() > 9 ? stof(command[9]) : 0.00000001f;
-
-		DirectionalLight l{
-			sColorLookup.at(colorValue),
-			brightness,
-			direction,
-			1,
-			range,
-			depthBias,
-			vec2(shadowMapDimension, shadowViewportDimension)
-		};
-
-		scene.directionalLight = l;
-	}
 	else if (cmd == "light")
 	{
-		// #Parameters: 11
+		// #Parameters: 2
 		//--------------------------------------------------------------
-		// | Light Type	| Color	| Shadowing? |  Brightness | Spot.Angle OR Point.Range | Position3 | Rotation3
+		// begin/end
 		//--------------------------------------------------------------
-
-		const bool bCommandHasRange = command.size() >= 9;
-		const bool bCommandHasRotationEntry = command.size() > 10;
-		const bool bCommandHasScaleEntry = command.size() >= 12 || (command.size() == 10);
-		const bool bCommandHasFarPlaneEntry = command.size() > 13;
-		const bool bCommandHasDepthBiasEntry = command.size() > 14;
-		const size_t IdxScale = command.size() >= 12 ? 12 : 9;
-
-		const std::string lightType	 = GetLowercased(command[1]);	// lookups have lowercase keys
-		if (lightType != "s" && lightType != "p")
-		{	// check light types
-			Log::Error("light type unknown: %s", command[1]);
-			return;
+		const std::string objCmd = GetLowercased(command[1]);
+		if (objCmd == "begin")
+		{
+			if (bIsReadingLight)
+			{
+				Log::Error(" expecting \"light end\" before starting a new light definition");
+				return;
+			}
+			bIsReadingLight = true; 
+			sLight = Light();
 		}
 
-		const std::string colorValue = GetLowercased(command[2]);
-		const std::string shadowing	 = GetLowercased(command[3]);
-		const float brightness = stof(command[4]);
-
-		const float range = bCommandHasRange ? stof(command[8]) : 1.0f;
-		const float& spotAngle = range;
-		const float rotX = bCommandHasRotationEntry ? stof(command[9])  : 0.0f;
-		const float rotY = bCommandHasRotationEntry ? stof(command[10]) : 0.0f;
-		const float rotZ = bCommandHasRotationEntry ? stof(command[11]) : 0.0f;
-		const float scl  = bCommandHasScaleEntry ? stof(command[IdxScale]) : 1.0f;
-		const bool  bCastsShadows = sBoolTypeReflection.at(shadowing);
-		const float farPlaneDistance = bCommandHasFarPlaneEntry ? stof(command[13]) : 500;
-		const float depthBias = bCommandHasDepthBiasEntry ? stof(command[14]) : 0.0000005f;
-
-		Light l(	// let there be light
-			sLightTypeLookup.at(lightType),
-			sColorLookup.at(colorValue),
-			range,
-			brightness,
-			spotAngle,
-			bCastsShadows,
-			farPlaneDistance,
-			depthBias
-		);
-		l.transform.SetPosition(stof(command[5]), stof(command[6]), stof(command[7]));
-		l.transform.RotateAroundGlobalXAxisDegrees(rotX);
-		l.transform.RotateAroundGlobalYAxisDegrees(rotY);
-		l.transform.RotateAroundGlobalZAxisDegrees(rotZ);
-		l.transform.SetUniformScale(scl);
-		scene.lights.push_back(l);
+		if (objCmd == "end")
+		{
+			if (!bIsReadingLight)
+			{
+				Log::Error(" expecting \"light begin\" before ending a light definition");
+				return;
+			}
+			bIsReadingLight = false;
+			
+			if (sLight.mType == Light::ELightType::DIRECTIONAL)
+				scene.directionalLight = sLight;
+			else
+				scene.lights.push_back(sLight);
+		}
 	}
+
 	else if (cmd == "object")
 	{
 		// #Parameters: 2
@@ -420,6 +390,9 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			pObject = nullptr;
 		}
 	}
+
+
+	// material
 	else if (cmd == "mesh")
 	{
 		// #Parameters: 1
@@ -626,15 +599,73 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		}
 	}
 
+	// light
+	else if (cmd == "type")
+	{
+		std::string lowercaseTypeValue = command[1];
+		std::transform(RANGE(lowercaseTypeValue), lowercaseTypeValue.begin(), ::tolower);
+		if (sLightTypeLookup.find(lowercaseTypeValue) == sLightTypeLookup.end())
+		{
+			Log::Warning("Invalid light type: %s", command[1]);
+		}
+		else
+		{
+			sLight.mType = sLightTypeLookup.at(lowercaseTypeValue);
+		}
+	}
+	else if (cmd == "color")
+	{
+		std::string lowercaseTypeValue = command[1];
+		std::transform(RANGE(lowercaseTypeValue), lowercaseTypeValue.begin(), ::tolower);
+		if (sColorLookup.find(lowercaseTypeValue) == sColorLookup.end())
+		{
+			Log::Warning("Unknown color: %s", command[1]);
+		}
+		else
+		{
+			sLight.mColor = sColorLookup.at(lowercaseTypeValue);
+		}
+	}
+	else if (cmd == "brightness")
+	{
+		sLight.mBrightness = stof(command[1]);
+	}
+	else if (cmd == "shadows")
+	{
+		sLight.mbCastingShadows = sBoolTypeReflection.at(command[1]);
+		sLight.mDepthBias = command.size() > 2 ? stof(command[2]) : 0.15f;
+		sLight.mNearPlaneDistance = command.size() > 3 ? stof(command[3]) : 0.01f;
+		sLight.mFarPlaneDistance  = command.size() > 4 ? stof(command[4]) : 1000.0f;
+	}
+	else if (cmd == "range")
+	{
+		sLight.mRange = stof(command[1]);
+	}
+	else if (cmd == "spot")
+	{
+		sLight.mSpotOuterConeAngleDegrees = stof(command[1]);
+		sLight.mSpotInnerConeAngleDegrees= stof(command[2]);
+	}
+	else if (cmd == "directional")
+	{
+		sLight.mViewportX = sLight.mViewportY = stof(command[1]);
+		sLight.mDistanceFromOrigin = stof(command[2]);
+	}
+	else if (cmd == "attenuation")
+	{
+		sLight.mAttenuationConstant = stof(command[1]);
+		if (command.size() > 2) sLight.mAttenuationLinear = stof(command[2]);
+		if (command.size() > 3) sLight.mAttenuationQuadratic = stof(command[3]);
+	}
 	else if (cmd == "transform")
 	{
 		// #Parameters: 7-9
 		//--------------------------------------------------------------
 		// Position(3), Rotation(3), UniformScale(1)/Scale(3)
 		//--------------------------------------------------------------
-		if (!bIsReadingGameObject)
+		if (!bIsReadingGameObject && !bIsReadingLight)
 		{
-			Log::Error(" Creating Transform without defining a game object (missing cmd: \"%s\"", "object begin");
+			Log::Error(" Creating Transform without defining a game object (missing cmd: \"%s\"), or a light (missing cmd: \"light begin\")", "object begin");
 			return;
 		}
 		
@@ -662,7 +693,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			float sclZ = stof(command[9]);
 			tf.SetScale(sclX, sclY, sclZ);
 		}
-		pObject->SetTransform(tf);
+
+		if(bIsReadingGameObject)
+			pObject->SetTransform(tf);
+
+		if (bIsReadingLight)
+			sLight.mTransform = tf;
 	}
 	else if (cmd == "model")
 	{
@@ -690,13 +726,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	{
 		scene.settings.bSkylightEnabled= sBoolTypeReflection.at(command[1]);
 	}
-
-	// Parameters
-	//---------------------------------------------------------------
-	// | Bloom Threshold | BlurPassCount
-	//---------------------------------------------------------------
 	else if (cmd == "bloom")
 	{
+		// Parameters
+		//---------------------------------------------------------------
+		// | Bloom Threshold | BlurPassCount
+		//---------------------------------------------------------------
 		Settings::Bloom& bloom = scene.settings.bloom;
 	
 		bloom.bEnabled = sBoolTypeReflection.at(GetLowercased(command[1]));
@@ -706,6 +741,11 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	}
 	else
 	{
-		Log::Error("Parser: Unknown command \"%s\"", cmd.c_str());
+		auto tokens = StrUtil::split(cmd, ' ', '\t');
+		std::string strCmd = std::string(cmd);
+		if (strCmd.find("//") == 0)
+			;
+		else
+			Log::Error("Parser: Unknown command \"%s\"", cmd.c_str());
 	}
 }

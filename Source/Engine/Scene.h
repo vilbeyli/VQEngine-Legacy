@@ -182,11 +182,7 @@ protected:
 	std::vector<Light>			mLights;
 	std::vector<GameObject*>	mpObjects;
 
-#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
 	Light						mDirectionalLight;
-#else
-	DirectionalLight			mDirectionalLight;
-#endif
 	Skybox						mSkybox;
 
 	EEnvironmentMapPresets		mActiveSkyboxPreset;
@@ -233,11 +229,7 @@ struct SerializedScene
 
 	std::vector<Settings::Camera>	cameras;
 	std::vector<Light>				lights;
-#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
 	Light							directionalLight;
-#else
-	DirectionalLight				directionalLight;
-#endif
 	MaterialPool					materials;
 	std::vector<GameObject>			objects;
 	Settings::SceneRender			settings;

@@ -16,6 +16,9 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#ifndef _SHADING_MATH_H
+#define _SHADING_MATH_H
+
 // Method for Hammersley Sequence creation
 #define USE_BIT_MANIPULATION	
 #define PI 3.14159265359f
@@ -125,3 +128,5 @@ float3 ViewSpacePosition(in const float nonLinearDepth, const in float2 uv, cons
 	float4 viewSpacePosition = mul(invProjection, projectedPosition);
 	return viewSpacePosition.xyz / viewSpacePosition.w;
 }
+
+#endif

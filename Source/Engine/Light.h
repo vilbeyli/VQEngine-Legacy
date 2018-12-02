@@ -30,6 +30,11 @@
 #include <DirectXMath.h>
 
 
+// Only used for point lights when querying LightSpaceMatrix, ViewMatrix and ViewFrustumPlanes.
+//
+#define DEFAULT_POINT_LIGHT_LOOK_DIRECTION Texture::CubemapUtility::ECubeMapLookDirections::CUBEMAP_LOOK_FRONT
+
+
 // Design consideration here:
 //
 // INHERITANCE
@@ -43,15 +48,6 @@
 //   through the ELightType enum. Currently favoring this approach over inheritance to avoid maintaining the memory
 //   of the derived types and simply making use of a vector to hold all light data.
 //
-#define USE_UNION_FOR_LIGHT_SPECIFIC_DATA 1 // temporary, switching off might spot the project from compiling successfully
-
-
-// Only used for point lights when querying LightSpaceMatrix, ViewMatrix and ViewFrustumPlanes.
-//
-#define DEFAULT_POINT_LIGHT_LOOK_DIRECTION Texture::CubemapUtility::ECubeMapLookDirections::CUBEMAP_LOOK_FRONT
-
-
-
 
 struct Light
 {
@@ -67,52 +63,6 @@ struct Light
 	//--------------------------------------------------------------------------------------------------------------
 	// INTERFACE
 	//--------------------------------------------------------------------------------------------------------------
-
-	// returns the projection matrix for the light space transformation. 
-	//
-#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
-	XMMATRIX GetProjectionMatrix() const;
-#else
-	virtual XMMATRIX GetProjectionMatrix() const = 0;
-#endif
-
-	// returns the view matrix for Directional/Spot lights. 
-	// Use 'Texture::CubemapUtility::ECubeMapLookDirections' to get view matrices for cubemap faces for PointLight.
-	//
-#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
-	XMMATRIX GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const;
-#else
-	virtual XMMATRIX GetViewMatrix() const = 0;
-#endif
-
-	// returns the frustum plane data for the light.
-	// Use 'Texture::CubemapUtility::ECubeMapLookDirections' to get frustum planes for each direction for PointLight.
-	//
-	inline FrustumPlaneset GetViewFrustumPlanes(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const
-	{ 
-		return FrustumPlaneset::ExtractFromMatrix(GetViewMatrix(lookDir) * GetProjectionMatrix());
-	}
-
-	// Returns the View*Projection matrix that describes the light-space transformation of a world space position.
-	// Use 'Texture::CubemapUtility::ECubeMapLookDirections' to get the light space matrix for each direction for PointLight.
-	//
-	inline XMMATRIX GetLightSpaceMatrix(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const 
-	{ 
-		return GetViewMatrix(lookDir) * GetProjectionMatrix(); 
-	}
-
-
-#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
-	void GetGPUData(PointLightGPU& refData) const;
-	void GetGPUData(SpotLightGPU& refData) const;
-	void GetGPUData(DirectionalLightGPU& refData) const;
-
-	// TODO: remove this arbitrary function for directional lights
-	Settings::ShadowMap GetSettings() const; // ?
-#endif
-
-	// Constructors
-	//
 	Light() // DEFAULTS
 		: mColor(LinearColor::white)
 		, mbEnabled(true)
@@ -128,7 +78,7 @@ struct Light
 	{}
 	Light
 	(
-		  LinearColor color
+		LinearColor color
 		, ELightType type
 		, float brightness
 		, bool bCastShadows
@@ -148,6 +98,41 @@ struct Light
 		, mTransform(transform)
 		, mMeshID(mesh)
 	{}
+
+
+	// returns the projection matrix for the light space transformation. 
+	//
+	XMMATRIX GetProjectionMatrix() const;
+
+	// returns the view matrix for Directional/Spot lights. 
+	// Use 'Texture::CubemapUtility::ECubeMapLookDirections' to get view matrices for cubemap faces for PointLight.
+	//
+	XMMATRIX GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const;
+
+	// returns the frustum plane data for the light.
+	// Use 'Texture::CubemapUtility::ECubeMapLookDirections' to get frustum planes for each direction for PointLight.
+	//
+	inline FrustumPlaneset GetViewFrustumPlanes(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const
+	{ 
+		return FrustumPlaneset::ExtractFromMatrix(GetViewMatrix(lookDir) * GetProjectionMatrix());
+	}
+
+	// Returns the View*Projection matrix that describes the light-space transformation of a world space position.
+	// Use 'Texture::CubemapUtility::ECubeMapLookDirections' to get the light space matrix for each direction for PointLight.
+	//
+	inline XMMATRIX GetLightSpaceMatrix(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const 
+	{ 
+		return GetViewMatrix(lookDir) * GetProjectionMatrix(); 
+	}
+
+
+	void GetGPUData(PointLightGPU& refData) const;
+	void GetGPUData(SpotLightGPU& refData) const;
+	void GetGPUData(DirectionalLightGPU& refData) const;
+
+	// TODO: remove this arbitrary function for directional lights
+	Settings::ShadowMap GetSettings() const; // ?
+
 
 
 	//--------------------------------------------------------------------------------------------------------------
@@ -170,7 +155,7 @@ struct Light
 	EGeometry mMeshID;
 	bool mbEnabled;
 
-#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
+
 	union // LIGHT-SPECIFIC DATA
 	{
 		// DIRECTIONAL LIGHT ----------------------------------------
@@ -235,140 +220,5 @@ struct Light
 			float dummy4;
 		};
 	};
-#endif
 };
 
-
-
-
-
-#if !USE_UNION_FOR_LIGHT_SPECIFIC_DATA
-
-// DIRECTIONAL LIGHT ----------------------------------------
-//  
-//   |  |  |  |  |
-//   |  |  |  |  |
-//   v  v  v  v  v
-//    
-struct DirectionalLight : public Light
-{
-public:
-	XMMATRIX GetProjectionMatrix() const override;
-	XMMATRIX GetViewMatrix() const override;
-	DirectionalLightGPU GetGPUData() const;
-
-	Settings::ShadowMap GetSettings() const; // ?
-
-	DirectionalLight() 
-#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
-	{ 
-		mbEnabled = false; 
-		mViewportX = mViewportY = 0.0f;
-	}
-#else
-		: mViewportX(0.0f)
-		, mViewportY(0.0f)
-	{
-		mbEnabled = false;
-	}
-	float mViewportX;
-	float mViewportY;
-#endif
-};
-
-
-
-// POINT LIGHT -----------------------------------------------
-//
-//   \|/ 
-//  --*--
-//   /|\
-//
-#define DEFAULT_POINT_LIGHT_LOOK_DIRECTION Texture::CubemapUtility::ECubeMapLookDirections::CUBEMAP_LOOK_FRONT
-struct PointLight : public Light
-{
-public:
-	XMMATRIX GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections direction) const;
-	inline XMMATRIX GetLightSpaceMatrix(Texture::CubemapUtility::ECubeMapLookDirections direction) const { return GetViewMatrix(direction); }
-	inline FrustumPlaneset GetViewFrustumPlanes(Texture::CubemapUtility::ECubeMapLookDirections direction) const { return FrustumPlaneset::ExtractFromMatrix(GetViewMatrix(direction) * GetProjectionMatrix()); }
-
-	XMMATRIX GetProjectionMatrix() const override;
-	inline XMMATRIX GetViewMatrix() const override       { return GetViewMatrix       (DEFAULT_POINT_LIGHT_LOOK_DIRECTION); }
-	inline FrustumPlaneset GetViewFrustumPlanes() const  { return GetViewFrustumPlanes(DEFAULT_POINT_LIGHT_LOOK_DIRECTION); };
-
-
-	PointLightGPU GetGPUData() const;
-
-	PointLight()
-#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
-	{
-		mAttenuationConstant  = (1.0f);
-		mAttenuationLinear    = (0.0f);
-		mAttenuationQuadratic = (0.0f);
-	}
-#else
-		: mAttenuationConstant(1.0f)
-		, mAttenuationLinear(0.0f)
-		, mAttenuationQuadratic(0.0f)
-	{}
-
-	float mAttenuationConstant;
-	float mAttenuationLinear;
-	float mAttenuationQuadratic;
-#endif
-};
-
-
-
-// SPOT LIGHT --------------------------------------------------
-//     
-//       *
-//     /   \
-//    /_____\
-//   ' ' ' ' ' 
-//
-struct SpotLight : public Light
-{
-	XMMATRIX GetProjectionMatrix() const override;
-	XMMATRIX GetViewMatrix() const override;
-
-	SpotLightGPU GetGPUData() const;
-
-	SpotLight()
-#if USE_UNION_FOR_LIGHT_SPECIFIC_DATA
-	{
-		mSpotOuterConeAngleDegrees        = (60.0f);
-		mSpotInnerConeAngleDegrees = (50.0f);
-	}
-#else
-		: mSpotOuterConeAngleDegrees(60.0f)
-		, mSpotInnerConeAngleDegrees(50.0f)
-	{}
-	float mSpotOuterConeAngleDegrees;
-	float mSpotInnerConeAngleDegrees;
-#endif
-};
-
-
-
-#if 0
-// TODO: v0.6.0 linear lights from GPU Zen
-// LINEAR LIGHT  ------------------------------------------------
-//
-//
-//
-//
-//
-//
-struct AreaLight : public Light
-{
-	// Eric Heitz Slides: https://drive.google.com/file/d/0BzvWIdpUpRx_Z2pZWWFtam5xTFE/view
-	XMMATRIX GetProjectionMatrix() const override;
-	XMMATRIX GetViewMatrix() const override;
-	XMMATRIX GetLightSpaceMatrix() const override;
-
-	AreaLight()
-};
-#endif
-
-#endif

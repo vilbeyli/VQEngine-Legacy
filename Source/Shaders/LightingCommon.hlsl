@@ -16,16 +16,12 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define SHADOW_BIAS 0.0000005f
+#include "ShadingMath.hlsl"
 
-#if 0	// debug shortcut to cancel spot lights
-#define SPOTLIGHT_BRIGHTNESS_SCALAR 0
-#define SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG 0
-#else
+
 // some manual tuning...
 #define SPOTLIGHT_BRIGHTNESS_SCALAR 0.001f
 #define SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG 0.00028f
-#endif
 #define POINTLIGHT_BRIGHTNESS_SCALAR_PHONG 0.002f
 
 //----------------------------------------------------------
@@ -161,14 +157,9 @@ float SpotlightIntensity(SpotLight l, float3 worldPos)
 	const float3 spotDir = normalize(l.spotDir);
 #if 1
 	const float theta = acos(dot(pixelDirectionInWorldSpace, spotDir));
-	//return clamp((theta - l.innerConeAngle) / (l.outerConeAngle - l.innerConeAngle), 0.0f, 1.0f);
 
-	if (theta > l.outerConeAngle)
-		return 0.0f;
-	//return 1.0f - cos((theta - l.innerConeAngle) / l.outerConeAngle);
-	if (theta <= l.innerConeAngle)
-		return 1.0f;
-
+	if (theta >  l.outerConeAngle)	return 0.0f;
+	if (theta <= l.innerConeAngle)	return 1.0f;
 	return 1.0f - (theta - l.innerConeAngle) / (l.outerConeAngle - l.innerConeAngle);
 #else
 	if (dot(spotDir, pixelDirectionInWorldSpace) < cos(l.outerConeAngle))
@@ -221,8 +212,8 @@ float OmnidirectionalShadowTestPCF(
 	, float range
 )
 {
-#define NUM_PCF_TAPS 20
-	const float3 sampleOffsetDirections[NUM_PCF_TAPS] =
+#define NUM_OMNIDIRECTIONAL_PCF_TAPS 20
+	const float3 sampleOffsetDirections[NUM_OMNIDIRECTIONAL_PCF_TAPS] =
 	{
 	   float3(1,  1,  1), float3(1, -1,  1), float3(-1, -1,  1), float3(-1,  1,  1),
 	   float3(1,  1, -1), float3(1, -1, -1), float3(-1, -1, -1), float3(-1,  1, -1),
@@ -241,7 +232,7 @@ float OmnidirectionalShadowTestPCF(
 	const float diskRadius = (1.0f + (pcfTestLightData.viewDistanceOfPixel / range)) * diskRadiusScaleFactor;
 
 	[unroll]
-	for (int i = 0; i < NUM_PCF_TAPS; ++i)
+	for (int i = 0; i < NUM_OMNIDIRECTIONAL_PCF_TAPS; ++i)
 	{
 		const float4 cubemapSampleVec = float4(-(lightVectorWorldSpace + normalize(sampleOffsetDirections[i]) * diskRadius), shadowMapIndex);
 		const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, cubemapSampleVec).x;
@@ -300,10 +291,17 @@ float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadow
 
 
 
-float ShadowTestPCF_Directional(float3 worldPos, float4 lightSpacePos, Texture2D shadowMap, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
+float ShadowTestPCF_Directional(
+	in ShadowTestPCFData pcfTestLightData
+	, Texture2DArray shadowMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, in matrix lightProj
+)
 {
 	// homogeneous position after interpolation
-	const float3 projLSpaceCoords = lightSpacePos.xyz / lightSpacePos.w;
+	const float3 projLSpaceCoords = pcfTestLightData.lightSpacePos.xyz / pcfTestLightData.lightSpacePos.w;
 
 	// frustum check
 	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
@@ -314,62 +312,44 @@ float ShadowTestPCF_Directional(float3 worldPos, float4 lightSpacePos, Texture2D
 		return 1.0f;
 	}
 
+
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	float shadow = 0.0f;
+
 	const float2 texelSize = 1.0f / (shadowMapDimensions);
 
 	// clip space [-1, 1] --> texture space [0, 1]
 	const float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
-
-	const float BIAS = SHADOW_BIAS * tan(acos(NdotL));
 	const float pxDepthInLSpace = projLSpaceCoords.z;
 
-	float shadow = 0.0f;
-	const int rowHalfSize = 2;
 
 	// PCF
+	const int rowHalfSize = 2;
 	for (int x = -rowHalfSize; x <= rowHalfSize; ++x)
 	{
 		for (int y = -rowHalfSize; y <= rowHalfSize; ++y)
 		{
 			float2 texelOffset = float2(x, y) * texelSize;
-			float closestDepthInLSpace = shadowMap.Sample(shadowSampler, shadowTexCoords + texelOffset).x;
+			float closestDepthInLSpace = shadowMapArr.Sample(shadowSampler, float3(shadowTexCoords + texelOffset, shadowMapIndex)).x;
 
 			// depth check
-			shadow += (pxDepthInLSpace - BIAS> closestDepthInLSpace) ? 1.0f : 0.0f;
+			const float linearCurrentPx = LinearDepth(pxDepthInLSpace, lightProj);
+			const float linearClosestPx = LinearDepth(closestDepthInLSpace, lightProj);
+#if 1
+			//shadow += (pxDepthInLSpace - 0.000035 > closestDepthInLSpace) ? 1.0f : 0.0f;
+			shadow += (pxDepthInLSpace - pcfTestLightData.depthBias > closestDepthInLSpace) ? 1.0f : 0.0f;
+			//shadow += (pxDepthInLSpace - BIAS > closestDepthInLSpace) ? 1.0f : 0.0f;
+#else
+			shadow += (linearCurrentPx - 0.00050f > linearClosestPx) ? 1.0f : 0.0f;
+#endif
 		}
 	}
 
 	shadow /= (rowHalfSize * 2 + 1) * (rowHalfSize * 2 + 1);
-	return 1.0 - shadow;
+
+	return 1.0f - shadow;
 }
 
-float ShadowTest(float3 worldPos, float4 lightSpacePos, Texture2D shadowMap, SamplerState shadowSampler)
-{
-	// homogeneous position after interpolation
-	float3 projLSpaceCoords = lightSpacePos.xyz / lightSpacePos.w;
-
-	// clip space [-1, 1] --> texture space [0, 1]
-	float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
-
-	float pxDepthInLSpace = projLSpaceCoords.z;
-    float closestDepthInLSpace = shadowMap.Sample(shadowSampler, shadowTexCoords).x;
-
-	// frustum check
-	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
-		projLSpaceCoords.y < -1.0f || projLSpaceCoords.y > 1.0f ||
-		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
-		)
-	{
-		return 0.0f;
-	}
-
-	// depth check
-	if (pxDepthInLSpace - SHADOW_BIAS > closestDepthInLSpace)
-	{
-		return 0.0f;
-	}
-
-	return 1.0f;
-}
 
 float3 ShadowTestDebug(float3 worldPos, float4 lightSpacePos, float3 illumination, Texture2D shadowMap, SamplerState shadowSampler)
 {

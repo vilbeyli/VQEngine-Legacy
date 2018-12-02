@@ -20,7 +20,7 @@
 #define ENABLE_TRANSPARENCY 0
 
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
-#define OVERRIDE_LEVEL_VALUE 0	// which level to load
+#define OVERRIDE_LEVEL_VALUE 5	// which level to load
 #define FULLSCREEN_DEBUG_TEXTURE 1
 
 // ASYNC / THREADED LOADING SWITCHES
@@ -51,6 +51,7 @@
 #include "Scenes/IBLTestScene.h"
 #include "Scenes/StressTestScene.h"
 #include "Scenes/SponzaScene.h"
+#include "Scenes/LightsScene.h"
 
 #include <sstream>
 #include <DirectXMath.h>
@@ -144,23 +145,26 @@ Engine::Engine()
 	, mForwardLightingPass(mpCPUProfiler, mpGPUProfiler)
 {}
 
+
 Engine::~Engine(){}
 
 
 bool Engine::Initialize(HWND hwnd)
 {
-	StartRenderThread();
-	mpTimer->Start();
+	Log::Info("[ENGINE]: Initializing --------------------");
 	if (!mpRenderer || !mpInput || !mpTimer)
 	{
 		Log::Error("Nullptr Engine::Init()\n");
 		return false;
 	}
 
+	mpTimer->Start();
+	StartRenderThread();
+
+
 	// INITIALIZE SYSTEMS
 	//--------------------------------------------------------------
 	const bool bEnableLogging = true;	// todo: read from settings
-	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 	const Settings::Window& windowSettings = sEngineSettings.window;
 
 	mpInput->Initialize();
@@ -189,6 +193,10 @@ bool Engine::Initialize(HWND hwnd)
 		const float sphRadius = 2.0f;
 		const unsigned sphRingCount = 25;	const unsigned sphSliceCount = 25;
 
+		// cone parameters
+		const float coneHeight = 3.0f;
+		const float coneRadius = 1.0f;
+
 		mBuiltinMeshes =	// this should match enum declaration order
 		{
 			GeometryGenerator::Triangle(1.0f),
@@ -198,24 +206,25 @@ bool Engine::Initialize(HWND hwnd)
 			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
 			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
 			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
-			GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
+			GeometryGenerator::Cone(coneHeight, coneRadius, 120),
+			GeometryGenerator::Cone(1.0f, 1.0f, 30),
+			//GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
 		};
 	}
 
 	if (!mpTextRenderer->Initialize(mpRenderer))
 	{
 		Log::Error("Cannot initialize Text Renderer.\n");
-		return false;
+		//return false;
 	}
+
 	mUI.Initialize(mpRenderer, mpTextRenderer, UI::ProfilerStack{mpCPUProfiler, mpGPUProfiler});
 	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
 
-	// INITIALIZE RENDERING
+	// INITIALIZE RENDER PASSES & SCENES
 	//--------------------------------------------------------------
-	// render passes
-
-	mEngineConfig.bDeferredOrForward = rendererSettings.bUseDeferredRendering;
-	mEngineConfig.bSSAO = rendererSettings.bAmbientOcclusion;
+	mEngineConfig.bDeferredOrForward = sEngineSettings.rendering.bUseDeferredRendering;
+	mEngineConfig.bSSAO = sEngineSettings.rendering.bAmbientOcclusion;
 	mEngineConfig.bBloom = true;	// currently not deserialized
 	mEngineConfig.bRenderTargets = false;
 	mEngineConfig.bBoundingBoxes = false;
@@ -228,9 +237,10 @@ bool Engine::Initialize(HWND hwnd)
 	mpScenes.push_back(new IBLTestScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new StressTestScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new SponzaScene(mpRenderer, mpTextRenderer));
+	mpScenes.push_back(new LightsScene(mpRenderer, mpTextRenderer));
 
 	mpTimer->Stop();
-	Log::Info("Engine initialized in %.2fs", mpTimer->DeltaTime());
+	Log::Info("[ENGINE]: Initialized in %.2fs --------------", mpTimer->DeltaTime());
 	mbLoading = false;
 	return true;
 }
@@ -238,15 +248,17 @@ bool Engine::Initialize(HWND hwnd)
 
 bool Engine::Load(ThreadPool* pThreadPool)
 {
+	Log::Info("[ENGINE]: Loading -------------------------");
 	mpCPUProfiler->BeginProfile();
 	mpThreadPool = pThreadPool;
-	const Settings::Rendering& rendererSettings = sEngineSettings.rendering;
 	
+	// prepare loading screen resources
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/0.png"));
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/1.png"));
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/2.png"));
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/3.png"));
 	mActiveLoadingScreen = mLoadingScreenTextures[RandU(0, mLoadingScreenTextures.size())];
+
 #if LOAD_ASYNC
 
 	// quickly render one frame of loading screen
@@ -257,34 +269,34 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	// set up a parallel task to load everything.
 	auto AsyncEngineLoad = [&]() -> bool
 	{
+		PerfTimer timer;
+		timer.Start();
 		// LOAD ENVIRONMENT MAPS
 		//
-		// mpCPUProfiler->BeginProfile();
-		// mpCPUProfiler->BeginEntry("EngineLoad");
-		Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
-		//mpTimer->Start();
+		Log::Info("\tLOADING ENVIRONMENT MAPS ===");
 #if 1
-		Skybox::InitializePresets_Async(mpRenderer, rendererSettings);
+		Skybox::InitializePresets_Async(mpRenderer, sEngineSettings.rendering);
 #else
 		{
 			std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-			Skybox::InitializePresets(mpRenderer, rendererSettings);
+			Skybox::InitializePresets(mpRenderer, sEngineSettings.rendering);
 		}
 #endif
-		//mpTimer->Stop();
-		//Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->DeltaTime());
-		//mpTimer->Reset();
+
 
 		// SCENE INITIALIZATION
 		//
-		Log::Info("-------------------- LOADING SCENE --------------------- ");
+		Log::Info("\tLOADING SCENE ===");
 		//mpTimer->Start();
 		const size_t numScenes = sEngineSettings.sceneNames.size();
 		assert(sEngineSettings.levelToLoad < numScenes);
 #if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
 		sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
 #endif
-		
+		{
+			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+			mShadowMapPass.Initialize(mpRenderer, sEngineSettings.rendering.shadowMap);
+		}
 		if (!LoadSceneFromFile())
 		{
 			Log::Error("Engine couldn't load scene.");
@@ -297,13 +309,10 @@ bool Engine::Load(ThreadPool* pThreadPool)
 
 		// RENDER PASS INITIALIZATION
 		//
+		Log::Info("\tINITIALIZE RENDER PASSES ===");
 		//mpTimer->Start();
 		{	// #AsyncLoad: Mutex DEVICE
 			//Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
-			{
-				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-				mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
-			}
 			//renderer->m_Direct3D->ReportLiveObjects();
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
@@ -311,7 +320,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			}
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-				mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
+				mPostProcessPass.Initialize(mpRenderer, sEngineSettings.rendering.postProcess);
 			}
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
@@ -336,12 +345,12 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//mpCPUProfiler->EndProfile();
 
 		mbLoading = false;
+		const float loadTime = timer.StopGetDeltaTimeAndReset();
+		Log::Info("[ENGINE]: Loaded (Async)  in %.2fs ---------", loadTime);
 		return true;
 	};
 
 	mpThreadPool->AddTask(AsyncEngineLoad);
-	return true;
-
 #else
 
 	RenderLoadingScreen(true); // quickly render one frame of loading screen
@@ -351,7 +360,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpTimer->Start();
 	mpCPUProfiler->BeginEntry("EngineLoad");
 	Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
-	Skybox::InitializePresets(mpRenderer, rendererSettings);
+	Skybox::InitializePresets(mpRenderer, sEngineSettings.rendering);
 	Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->StopGetDeltaTimeAndReset());
 
 	// SCENE INITIALIZATION
@@ -375,11 +384,11 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpTimer->Start();
 	{	
 		Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
-		mShadowMapPass.InitializeSpotLightShadowMaps(mpRenderer, rendererSettings.shadowMap);
+		mShadowMapPass.Initialize(mpRenderer, sEngineSettings.rendering.shadowMap);
 		//renderer->m_Direct3D->ReportLiveObjects();
 		
 		mDeferredRenderingPasses.Initialize(mpRenderer);
-		mPostProcessPass.Initialize(mpRenderer, rendererSettings.postProcess);
+		mPostProcessPass.Initialize(mpRenderer, sEngineSettings.rendering.postProcess);
 		mDebugPass.Initialize(mpRenderer);
 		mAOPass.Initialize(mpRenderer);
 	}
@@ -387,10 +396,12 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpCPUProfiler->EndEntry();
 	mpCPUProfiler->EndProfile();
 	mpCPUProfiler->BeginProfile();
+	Log::Info("[ENGINE]: Loaded (Async) ------------------");
+#endif
 
 	return true;
-#endif
 }
+
 
 
 bool Engine::LoadSceneFromFile()
@@ -417,11 +428,12 @@ bool Engine::LoadSceneFromFile()
 	// todo: multiple data - inconsistent state -> sort out ownership
 	sEngineSettings.rendering.postProcess.bloom = mSerializedScene.settings.bloom;
 	mPostProcessPass._settings = sEngineSettings.rendering.postProcess;
-	if (mpActiveScene->mDirectionalLight.enabled)
+	//sEngineSettings.rendering.shadowMap.directionalShadowMapDimensions = mpActiveScene->mDirectionalLight.GetSettings().directionalShadowMapDimensions;
+	if (mpActiveScene->mDirectionalLight.mbEnabled)
 	{
 		// #AsyncLoad: Mutex DEVICE
 		std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-		mShadowMapPass.InitializeDirectionalLightShadowMap(mpRenderer, mpActiveScene->mDirectionalLight.GetSettings());
+		mShadowMapPass.InitializeDirectionalLightShadowMap(sEngineSettings.rendering.shadowMap);
 	}
 	return true;
 }
@@ -463,52 +475,50 @@ bool Engine::LoadScene(int level)
 
 bool Engine::LoadShaders()
 {
+	
+	// create the ShaderCache folder if it doesn't exist
+	Application::s_ShaderCacheDirectory = Application::s_WorkspaceDirectory + "\\ShaderCache";
+	DirectoryUtil::CreateFolderIfItDoesntExist(Application::s_ShaderCacheDirectory);
+
+	PerfTimer timer;
+	timer.Start();
+
+	constexpr unsigned VS_PS = SHADER_STAGE_VS | SHADER_STAGE_PS;
+	const std::vector<ShaderDesc> shaderDescs =
 	{
-		// create the ShaderCache folder if it doesn't exist
-		Application::s_ShaderCacheDirectory = Application::s_WorkspaceDirectory + "\\ShaderCache";
-		DirectoryUtil::CreateFolderIfItDoesntExist(Application::s_ShaderCacheDirectory);
-
-		PerfTimer timer;
-		timer.Start();
-
-		Log::Info("------------------------ COMPILING SHADERS ------------------------");
-
-		constexpr unsigned VS_PS = SHADER_STAGE_VS | SHADER_STAGE_PS;
-		const std::vector<ShaderDesc> shaderDescs =
-		{
-			ShaderDesc{ "PhongLighting<forward>",{
-				ShaderStageDesc{ "Forward_Phong_vs.hlsl", {} },
-				ShaderStageDesc{ "Forward_Phong_ps.hlsl", {} }
-			}},
-			ShaderDesc{ "UnlitTextureColor" , ShaderDesc::CreateStageDescsFromShaderName("UnlitTextureColor", VS_PS) },
-			ShaderDesc{ "TextureCoordinates", {
-				ShaderStageDesc{"MVPTransformationWithUVs_vs.hlsl", {} },
-				ShaderStageDesc{"TextureCoordinates_ps.hlsl"      , {} }
-			}},
-			ShaderDesc{ "Normal"            , ShaderDesc::CreateStageDescsFromShaderName("Normal", VS_PS)},
-			ShaderDesc{ "Tangent"           , ShaderDesc::CreateStageDescsFromShaderName("Tangent", VS_PS)},
-			ShaderDesc{ "Binormal"          , ShaderDesc::CreateStageDescsFromShaderName("Binormal", VS_PS)},
-			ShaderDesc{ "Line"              , ShaderDesc::CreateStageDescsFromShaderName("Line", VS_PS)},
-			ShaderDesc{ "TNB"               , ShaderDesc::CreateStageDescsFromShaderName("TNB", VS_PS)},
-			ShaderDesc{ "Debug"             , ShaderDesc::CreateStageDescsFromShaderName("Debug", VS_PS)},
-			ShaderDesc{ "Skybox"            , ShaderDesc::CreateStageDescsFromShaderName("Skybox", VS_PS)},
-			ShaderDesc{ "SkyboxEquirectangular", {
-				ShaderStageDesc{"Skybox_vs.hlsl"               , {} },
-				ShaderStageDesc{"SkyboxEquirectangular_ps.hlsl", {} }
-			}},
-			ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Forward_BRDF", VS_PS)},
-			ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
-		};
+		ShaderDesc{ "PhongLighting<forward>",{
+			ShaderStageDesc{ "Forward_Phong_vs.hlsl", {} },
+			ShaderStageDesc{ "Forward_Phong_ps.hlsl", {} }
+		}},
+		ShaderDesc{ "UnlitTextureColor" , ShaderDesc::CreateStageDescsFromShaderName("UnlitTextureColor", VS_PS) },
+		ShaderDesc{ "TextureCoordinates", {
+			ShaderStageDesc{"MVPTransformationWithUVs_vs.hlsl", {} },
+			ShaderStageDesc{"TextureCoordinates_ps.hlsl"      , {} }
+		}},
+		ShaderDesc{ "Normal"            , ShaderDesc::CreateStageDescsFromShaderName("Normal", VS_PS)},
+		ShaderDesc{ "Tangent"           , ShaderDesc::CreateStageDescsFromShaderName("Tangent", VS_PS)},
+		ShaderDesc{ "Binormal"          , ShaderDesc::CreateStageDescsFromShaderName("Binormal", VS_PS)},
+		ShaderDesc{ "Line"              , ShaderDesc::CreateStageDescsFromShaderName("Line", VS_PS)},
+		ShaderDesc{ "TNB"               , ShaderDesc::CreateStageDescsFromShaderName("TNB", VS_PS)},
+		ShaderDesc{ "Debug"             , ShaderDesc::CreateStageDescsFromShaderName("Debug", VS_PS)},
+		ShaderDesc{ "Skybox"            , ShaderDesc::CreateStageDescsFromShaderName("Skybox", VS_PS)},
+		ShaderDesc{ "SkyboxEquirectangular", {
+			ShaderStageDesc{"Skybox_vs.hlsl"               , {} },
+			ShaderStageDesc{"SkyboxEquirectangular_ps.hlsl", {} }
+		}},
+		ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Forward_BRDF", VS_PS)},
+		ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
+	};
 		
-		// todo: do not depend on array index, use a lookup, remove s_shaders[]
-		for (int i = 0; i < shaderDescs.size(); ++i)
-		{
-			mBuiltinShaders.push_back(mpRenderer->CreateShader(shaderDescs[i]));
-		}
-		RenderPass::InitializeCommonSaders(mpRenderer);
-		timer.Stop();
-		Log::Info("---------------------- COMPILING SHADERS DONE IN %.2fs ---------------------", timer.DeltaTime());
+	// todo: do not depend on array index, use a lookup, remove s_shaders[]
+	for (int i = 0; i < shaderDescs.size(); ++i)
+	{
+		mBuiltinShaders.push_back(mpRenderer->CreateShader(shaderDescs[i]));
 	}
+	RenderPass::InitializeCommonSaders(mpRenderer);
+	timer.Stop();
+	//Log::Info("[ENGINE]: Shaders loaded in %.2fs", timer.DeltaTime());
+	
 	return true;
 }
 
@@ -752,11 +762,13 @@ void Engine::HandleInput()
 			else							 mpActiveScene->ResetActiveCamera();
 		}
 
+
 		if (mpInput->IsKeyTriggered("1"))	mLevelLoadQueue.push(0);
 		if (mpInput->IsKeyTriggered("2"))	mLevelLoadQueue.push(1);
 		if (mpInput->IsKeyTriggered("3"))	mLevelLoadQueue.push(2);
 		if (mpInput->IsKeyTriggered("4"))	mLevelLoadQueue.push(3);
 		if (mpInput->IsKeyTriggered("5"))	mLevelLoadQueue.push(4);
+		if (mpInput->IsKeyTriggered("6"))	mLevelLoadQueue.push(5);
 
 
 		// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
@@ -834,17 +846,17 @@ void Engine::SendLightData() const
 
 	// LIGHTS ( POINT | SPOT | DIRECTIONAL )
 	//
-	const vec2 directionalShadowMapDimensions
-		= vec2(mShadowMapPass.mShadowViewPort_Directional.Width, mShadowMapPass.mShadowViewPort_Directional.Height);
+	const vec2 directionalShadowMapDimensions = mShadowMapPass.GetDirectionalShadowMapDimensions(mpRenderer);
 	mpRenderer->SetConstantStruct("Lights", &mSceneLightData._cb);
 	mpRenderer->SetConstant2f("spotShadowMapDimensions", vec2(shadowDimension, shadowDimension));
-	//mpRenderer->SetConstant2f("directionalShadowMapDimensions", directionalShadowMapDimensions);
 	mpRenderer->SetConstant1f("directionalShadowMapDimension", directionalShadowMapDimensions.x());
-	mpRenderer->SetConstant1f("directionalDepthBias", mpActiveScene->mDirectionalLight.depthBias);
+	//mpRenderer->SetConstant2f("directionalShadowMapDimensions", directionalShadowMapDimensions);
+	
 
 	// SHADOW MAPS
 	//
 	mpRenderer->SetTextureArray("texSpotShadowMaps", mShadowMapPass.mShadowMapTextures_Spot);
+	mpRenderer->SetTextureArray("texPointShadowMaps", mShadowMapPass.mShadowMapTextures_Point);
 	if (mShadowMapPass.mShadowMapTexture_Directional != -1)
 		mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass.mShadowMapTexture_Directional);
 
@@ -865,11 +877,6 @@ void Engine::PreRender()
 	mpActiveScene->mSceneView.bIsPBRLightingUsed = IsLightingModelPBR();
 	mpActiveScene->mSceneView.bIsDeferredRendering = mEngineConfig.bDeferredOrForward;
 
-	// gather scene lights
-	//mpCPUProfiler->BeginEntry("Gather Lights");
-	mpActiveScene->GatherLightData(mSceneLightData);
-	//mpCPUProfiler->EndEntry();
-
 	// TODO: #RenderPass or Scene should manage this.
 	// mTBNDrawObjects.clear();
 	// std::vector<const GameObject*> objects;
@@ -880,8 +887,7 @@ void Engine::PreRender()
 	// 		mTBNDrawObjects.push_back(obj);
 	// }
 
-
-	mpActiveScene->PreRender(mpCPUProfiler, mFrameStats);
+	mpActiveScene->PreRender(mpCPUProfiler, mFrameStats, mSceneLightData);
 	mFrameStats.rstats = mpRenderer->GetRenderStats();
 	mFrameStats.fps = static_cast<int>(1.0f / mpGPUProfiler->GetRootEntryAvg());
 
@@ -1024,6 +1030,7 @@ void Engine::Render()
 		mpGPUProfiler->EndEntry();
 
 		mpCPUProfiler->BeginEntry("Skybox & Lights");
+		
 		// LIGHT SOURCES
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		
@@ -1144,6 +1151,8 @@ void Engine::Render()
 
 void Engine::RenderDebug(const XMMATRIX& viewProj)
 {
+	mpGPUProfiler->BeginEntry("Debug Pass");
+	mpCPUProfiler->BeginEntry("Debug Pass");
 	if (mEngineConfig.bBoundingBoxes)	// BOUNDING BOXES
 	{
 		mpActiveScene->RenderDebug(viewProj);
@@ -1175,7 +1184,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		const TextureID tBRDF = EnvironmentMap::sBRDFIntegrationLUTTexture;
 		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;
 		preFilteredEnvMap = preFilteredEnvMap < 0 ? white4x4 : preFilteredEnvMap;
-		TextureID tDirectionalShadowMap = (mShadowMapPass.mDepthTarget_Directional == -1 || mpActiveScene->mDirectionalLight.enabled == 0)
+		TextureID tDirectionalShadowMap = (mShadowMapPass.mDepthTarget_Directional == -1 || mpActiveScene->mDirectionalLight.mbEnabled == 0)
 			? white4x4 
 			: mpRenderer->GetDepthTargetTexture(mShadowMapPass.mDepthTarget_Directional);
 
@@ -1275,6 +1284,8 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		mpRenderer->EndEvent();
 	}
 #endif
+	mpCPUProfiler->EndEntry();	// UI
+	mpGPUProfiler->EndEntry();
 }
 
 
@@ -1312,13 +1323,13 @@ void Engine::RenderLights() const
 	{
 		//if (!light._bEnabled) continue; // #BreaksRelease
 		
-		if (light.type == Light::ELightType::DIRECTIONAL)
+		if (light.mType == Light::ELightType::DIRECTIONAL)
 			continue;	// do not render directional lights
 
-		const auto IABuffers = mBuiltinMeshes[light.renderMesh].GetIABuffers();
-		const XMMATRIX world = light.transform.WorldTransformationMatrix();
+		const auto IABuffers = mBuiltinMeshes[light.mMeshID].GetIABuffers();
+		const XMMATRIX world = light.mTransform.WorldTransformationMatrix();
 		const XMMATRIX worldViewProj = world * mpActiveScene->mSceneView.viewProj;
-		const vec3 color = light.color.Value() * 2.5f;
+		const vec3 color = light.mColor.Value() * light.mBrightness;
 
 		mpRenderer->SetVertexBuffer(IABuffers.first);
 		mpRenderer->SetIndexBuffer(IABuffers.second);

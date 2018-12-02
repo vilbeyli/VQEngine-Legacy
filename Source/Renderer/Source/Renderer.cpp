@@ -707,7 +707,7 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 
 	const std::string path = fileRoot + texFileName;
 #if _DEBUG
-	Log::Info("Loading Texture\t\t%s", path.c_str());
+	Log::Info("\tLoading Texture: %s", path.c_str());
 #endif
 
 	Texture tex;
@@ -728,17 +728,19 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 			if (tex._srv) tex._srv->Release();
 			if (tex._tex2D) tex._tex2D->Release();
 
-			meta.mipLevels = min(std::log2(meta.width), std::log2(meta.height));
+			meta.mipLevels = min(
+				  static_cast<size_t>(std::log2(meta.width)	 )
+				, static_cast<size_t>(std::log2(meta.height)));
 
 			TextureDesc texDesc = {};
-			texDesc.arraySize = meta.arraySize;
 			texDesc.bGenerateMips = true;
 			texDesc.bIsCubeMap = meta.depth != 1; // false?
+			texDesc.arraySize = static_cast<int>(meta.arraySize);
 			texDesc.format = static_cast<EImageFormat>(meta.format);
-			texDesc.width = meta.width;
-			texDesc.height = meta.height;
+			texDesc.width = static_cast<int>(meta.width );
+			texDesc.height = static_cast<int>(meta.height);
+			texDesc.mipCount = static_cast<int>(meta.mipLevels);
 			texDesc.usage = ETextureUsage::RENDER_TARGET_RW;
-			texDesc.mipCount = meta.mipLevels;
 			texDesc.texFileName = texFileName;
 			
 			//texDesc.pData = img->GetPixels();
@@ -808,12 +810,12 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 	UINT arrSize = texDesc.arraySize;
 	const bool bIsTextureArray = texDesc.arraySize > 1;
-	arrSize = texDesc.bIsCubeMap ? 6 : arrSize;
+	arrSize = texDesc.bIsCubeMap ? 6 * arrSize : arrSize;
 
 	D3D11_TEXTURE2D_DESC desc = {};
 	desc.Format = (DXGI_FORMAT)texDesc.format;
-	desc.Height = texDesc.height;
-	desc.Width = texDesc.width;
+	desc.Height = max(texDesc.height, 1);
+	desc.Width =  max(texDesc.width, 1);
 	desc.ArraySize = arrSize;
 	desc.MipLevels = texDesc.mipCount;
 	desc.SampleDesc = { 1, 0 };
@@ -843,12 +845,37 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 	// Shader Resource View
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Format = (DXGI_FORMAT)texDesc.format;
+	switch (texDesc.format)
+	{
+		// caution: if initializing for depth texture, and the depth texture
+		//			has stencil defined (d24s8), we have to check for 
+		//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+	case EImageFormat::R24G8:
+		srvDesc.Format = (DXGI_FORMAT)EImageFormat::R24_UNORM_X8_TYPELESS;
+		break;
+	case EImageFormat::R32:
+		srvDesc.Format = (DXGI_FORMAT)EImageFormat::R32F;
+		break;
+	}
+
 	if (texDesc.bIsCubeMap)
 	{
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
-		srvDesc.TextureCube.MipLevels = texDesc.mipCount;
-		srvDesc.TextureCube.MostDetailedMip = 0;
-		m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+		if (bIsTextureArray)
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+			srvDesc.TextureCubeArray.NumCubes = arrSize / 6;
+			srvDesc.TextureCubeArray.MipLevels = texDesc.mipCount;
+			srvDesc.TextureCubeArray.MostDetailedMip = 0;
+			srvDesc.TextureCubeArray.First2DArrayFace = 0;
+			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+		}
+		else
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+			srvDesc.TextureCube.MipLevels = texDesc.mipCount;
+			srvDesc.TextureCube.MostDetailedMip = 0;
+			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+		}
 	}
 	else
 	{
@@ -857,17 +884,6 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
 			srvDesc.Texture2DArray.MipLevels = texDesc.mipCount;
 			srvDesc.Texture2DArray.MostDetailedMip = 0;
-			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
-
-			switch (texDesc.format)
-			{
-				// caution: if initializing for depth texture, and the depth texture
-				//			has stencil defined (d24s8), we have to check for 
-				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
-			case EImageFormat::R32:
-				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R32F;
-				break;
-			}
 
 			tex._srvArray.resize(desc.ArraySize, nullptr);
 			tex._depth = desc.ArraySize;
@@ -904,20 +920,6 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 			srvDesc.Texture2D.MipLevels = texDesc.mipCount;
 			srvDesc.Texture2D.MostDetailedMip = 0;
-
-			srvDesc.Format = (DXGI_FORMAT)texDesc.format;
-			switch (texDesc.format)
-			{
-				// caution: if initializing for depth texture, and the depth texture
-				//			has stencil defined (d24s8), we have to check for 
-				//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
-			case EImageFormat::R24G8:
-				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R24_UNORM_X8_TYPELESS;
-				break;
-			case EImageFormat::R32:
-				srvDesc.Format = (DXGI_FORMAT)EImageFormat::R32F;
-				break;
-			}
 			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
 
 			if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
@@ -1155,7 +1157,7 @@ TextureID Renderer::CreateCubemapFromFaceTextures(const std::vector<std::string>
 	}
 
 #if _DEBUG
-	Log::Info("Loading Cubemap Texture\t\t%s", textureFiles.back().c_str());
+	Log::Info("\tLoading Cubemap Texture: %s", textureFiles.back().c_str());
 #endif
 
 	// initialize the destination texture desc
@@ -1404,7 +1406,9 @@ RenderTargetID Renderer::AddRenderTarget(const RenderTargetDesc& renderTargetDes
 
 std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depthTargetDesc)
 {
-	const int numTextures = depthTargetDesc.textureDesc.arraySize;
+	const bool bIsDepthTargetCubemap = depthTargetDesc.textureDesc.bIsCubeMap;
+	const int numTextures = depthTargetDesc.textureDesc.arraySize * (bIsDepthTargetCubemap ? 6 : 1);
+	const bool bIsDepthTargetArray = numTextures > 1;
 
 	// allocate new depth target
 	std::vector<DepthTargetID> newDepthTargetIDs(numTextures, -1);
@@ -1422,25 +1426,32 @@ std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depth
 	// create depth stencil view
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
 	dsvDesc.Format = static_cast<DXGI_FORMAT>(depthTargetDesc.format);
-	dsvDesc.ViewDimension = numTextures == 1 ? D3D11_DSV_DIMENSION_TEXTURE2D : D3D11_DSV_DIMENSION_TEXTURE2DARRAY;
+	dsvDesc.ViewDimension = bIsDepthTargetArray ? D3D11_DSV_DIMENSION_TEXTURE2DARRAY : D3D11_DSV_DIMENSION_TEXTURE2D;
 	dsvDesc.Texture2DArray.MipSlice = 0;
 
-	for (int i = 0; i < numTextures; ++i)
+	const int faceCount = (bIsDepthTargetCubemap ? 6 : 1);
+	const int cubemapCount = bIsDepthTargetCubemap ? (numTextures / faceCount) : numTextures;
+	for (int i = 0; i < cubemapCount; ++i)
 	{
-		DepthTarget& newDepthTarget = newDepthTargets[i];
-		dsvDesc.Texture2DArray.ArraySize = numTextures - i;
-		dsvDesc.Texture2DArray.FirstArraySlice = i;
-		HRESULT hr = m_device->CreateDepthStencilView(textureObj._tex2D, &dsvDesc, &newDepthTarget.pDepthStencilView);
-		if (FAILED(hr))
+		for (int face = 0; face < faceCount; ++face)
 		{
-			Log::Error("Depth Stencil Target View");
-			continue;
-		}
+			const int depthTargetIndex = i * faceCount + face;
+			DepthTarget& newDepthTarget = newDepthTargets[depthTargetIndex];
+			dsvDesc.Texture2DArray.ArraySize = numTextures - (face + i * faceCount);
+			dsvDesc.Texture2DArray.FirstArraySlice = face + i * faceCount;
 
-		// register
-		newDepthTarget.texture = textureObj;
-		mDepthTargets.push_back(newDepthTarget);
-		newDepthTargetIDs[i] = static_cast<DepthTargetID>(mDepthTargets.size() - 1);
+			HRESULT hr = m_device->CreateDepthStencilView(textureObj._tex2D, &dsvDesc, &newDepthTarget.pDepthStencilView);
+			if (FAILED(hr))
+			{
+				Log::Error("Depth Stencil Target View");
+				continue;
+			}
+
+			// register
+			newDepthTarget.texture = textureObj;
+			mDepthTargets.push_back(newDepthTarget);
+			newDepthTargetIDs[depthTargetIndex] = static_cast<DepthTargetID>(mDepthTargets.size() - 1);
+		}
 	}
 
 	return newDepthTargetIDs;

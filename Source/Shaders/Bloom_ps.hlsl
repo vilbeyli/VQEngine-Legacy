@@ -47,7 +47,7 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	
 	// clamp values that is made very large by NDF in BRDF
 	// this reduces bloom flickering
-	const float BrightnessUpperThreshold = 3.0f;	
+	const float BrightnessUpperThreshold = 6.0f;	
 	const float brightness = dot(float3(0.2126, 0.7152, 0.0722), color.xyz); // luma conversion
 
 	// source: https://learnopengl.com/#!Advanced-Lighting/Bloom

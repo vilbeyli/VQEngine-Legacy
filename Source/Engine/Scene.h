@@ -96,6 +96,11 @@ protected:
 	//	Use this function to programmatically create new objects in the scene.
 	//
 	GameObject* CreateNewGameObject();
+
+	// Use this function to programmatically create new lights in the scene.
+	// TODO: finalize design after light refactor
+	//
+	//Light* CreateNewLight();
 	
 	//	Loads an assimp model - blocks the thread until the model loads
 	//
@@ -128,10 +133,9 @@ public:
 	//
 	void UpdateScene(float dt);
 
-	// Prepares the scene and shadow views for culling, sorting, instanced draw lists etc.
+	// Prepares the scene and shadow views for culling, sorting, instanced draw lists, lights, etc.
 	//
-	void PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats);
-	void GatherLightData(SceneLightingData& outLightingData);
+	void PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightingData & outLightingData);
 
 
 	// Renders the meshes in the scene which have materials with alpha=1.0f
@@ -158,6 +162,7 @@ public:
 	inline void							RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
 	inline EEnvironmentMapPresets		GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
 
+	void CalculateSceneBoundingBox();
 	void SetEnvironmentMap(EEnvironmentMapPresets preset);
 	void ResetActiveCamera();
 
@@ -177,7 +182,7 @@ protected:
 	std::vector<Light>			mLights;
 	std::vector<GameObject*>	mpObjects;
 
-	DirectionalLight			mDirectionalLight;
+	Light						mDirectionalLight;
 	Skybox						mSkybox;
 
 	EEnvironmentMapPresets		mActiveSkyboxPreset;
@@ -209,7 +214,7 @@ private:
 private:
 	void StartLoadingModels();
 	void EndLoadingModels();
-	void CalculateSceneBoundingBox();
+	void GatherLightData(SceneLightingData& outLightingData, const std::vector<const Light*>& pLightList);
 };
 
 
@@ -224,7 +229,7 @@ struct SerializedScene
 
 	std::vector<Settings::Camera>	cameras;
 	std::vector<Light>				lights;
-	DirectionalLight				directionalLight;
+	Light							directionalLight;
 	MaterialPool					materials;
 	std::vector<GameObject>			objects;
 	Settings::SceneRender			settings;

@@ -18,9 +18,31 @@
 
 #include "Texture.h"
 #include "Renderer.h"
+
 #include "Utilities/Log.h"
 
 #include <d3d11.h>
+
+DirectX::XMMATRIX Texture::CubemapUtility::GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections cubeFace, const vec3& position)
+{
+// cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
+//------------------------------------------------------------------------------------------------------
+// 0: RIGHT		1: LEFT
+// 2: UP		3: DOWN
+// 4: FRONT		5: BACK
+//------------------------------------------------------------------------------------------------------
+	switch (cubeFace)
+	{
+	case Texture::CubemapUtility::CUBEMAP_LOOK_RIGHT:	return XMMatrixLookAtLH(position, position + vec3::Right  , vec3::Up);
+	case Texture::CubemapUtility::CUBEMAP_LOOK_LEFT:	return XMMatrixLookAtLH(position, position + vec3::Left   , vec3::Up);
+	case Texture::CubemapUtility::CUBEMAP_LOOK_UP:		return XMMatrixLookAtLH(position, position + vec3::Up     , vec3::Back);
+	case Texture::CubemapUtility::CUBEMAP_LOOK_DOWN:	return XMMatrixLookAtLH(position, position + vec3::Down   , vec3::Forward);
+	case Texture::CubemapUtility::CUBEMAP_LOOK_FRONT:	return XMMatrixLookAtLH(position, position + vec3::Forward, vec3::Up);
+	case Texture::CubemapUtility::CUBEMAP_LOOK_BACK:	return XMMatrixLookAtLH(position, position + vec3::Back   , vec3::Up);
+	default: return XMMatrixIdentity(); 
+	}
+}
+
 
 Texture::Texture()
 	:

@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{BA3EDE91-C0BE-4B6B-A6CB-95A1C06C43C9}</ProjectGuid>
     <RootNamespace>Scenes</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -144,6 +144,7 @@
     <ClInclude Include="$(SolutionDir)Source\Scenes\SSAOTestScene.h" />
     <ClInclude Include="$(SolutionDir)Source\Scenes\StressTestScene.h" />
     <ClInclude Include="..\Scenes\SponzaScene.h" />
+    <ClInclude Include="$(SolutionDir)Source\Scenes\LightsScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Scenes\IBLTestScene.cpp" />
@@ -151,6 +152,7 @@
     <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Scenes\StressTestScene.cpp" />
     <ClCompile Include="..\Scenes\SponzaScene.cpp" />
+    <ClCompile Include="$(SolutionDir)Source\Scenes\LightsScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="..\Scenes\SceneTemplate.cpp">

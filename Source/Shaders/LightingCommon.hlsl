@@ -16,16 +16,12 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define SHADOW_BIAS 0.0000005f
+#include "ShadingMath.hlsl"
 
-#if 0	// debug shortcut to cancel spot lights
-#define SPOTLIGHT_BRIGHTNESS_SCALAR 0
-#define SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG 0
-#else
+
 // some manual tuning...
 #define SPOTLIGHT_BRIGHTNESS_SCALAR 0.001f
 #define SPOTLIGHT_BRIGHTNESS_SCALAR_PHONG 0.00028f
-#endif
 #define POINTLIGHT_BRIGHTNESS_SCALAR_PHONG 0.002f
 
 //----------------------------------------------------------
@@ -37,24 +33,32 @@ struct PointLight
 	float  range;
 	float3 color;
 	float  brightness;
-	float2 attenuation;
+	float3 attenuation;
+	float  depthBias;
 };
 
 struct SpotLight
 {	// 48 bytes
 	float3 position;
-	float  halfAngle;
+	float  outerConeAngle;
 	float3 color;
 	float  brightness;
 	float3 spotDir;
+	float  depthBias;
+	float innerConeAngle;
+	float dummy;
+	float dummy1;
+	float dummy2;
 };
 
 struct DirectionalLight
-{	// 32 bytes
+{	// 40 bytes
 	float3 lightDirection;
 	float  brightness;
 	float3 color;
-	float shadowFactor;
+	float depthBias;
+	int shadowing;
+	int enabled;
 };
 
 // defines maximum number of dynamic lights  todo: shader defines
@@ -124,26 +128,49 @@ inline float AttenuationBRDF(float2 coeffs, float dist)
 
 inline float AttenuationPhong(float2 coeffs, float dist)
 {
+	return 1.0f / (
+		1.0f
+		+ coeffs[0] * dist
+		+ coeffs[1] * dist * dist
+		);
+}
+
+
+
+// LearnOpenGL: PBR Lighting
+//
+// You may still want to use the constant, linear, quadratic attenuation equation that(while not physically correct) 
+// can offer you significantly more control over the light's energy falloff.
+inline float Attenuation(float3 coeffs, float dist)
+{
     return 1.0f / (
-			1.0f
-			+ coeffs[0] * dist
-			+ coeffs[1] * dist * dist
+		coeffs[0]
+		+ coeffs[1] * dist
+		+ coeffs[2] * dist * dist
 	);
 }
 
 
-// spotlight intensity calculataion
 float SpotlightIntensity(SpotLight l, float3 worldPos)
-{   
-	const float3 L         = normalize(l.position - worldPos);
-	const float3 spotDir   = normalize(-l.spotDir);
-	const float theta      = dot(L, spotDir);
-	const float softAngle  = l.halfAngle * 1.25f;
-	const float softRegion = softAngle - l.halfAngle;
-	return clamp((theta - softAngle) / softRegion, 0.0f, 1.0f);
+{
+	const float3 pixelDirectionInWorldSpace = normalize(worldPos - l.position);
+	const float3 spotDir = normalize(l.spotDir);
+#if 1
+	const float theta = acos(dot(pixelDirectionInWorldSpace, spotDir));
+
+	if (theta >  l.outerConeAngle)	return 0.0f;
+	if (theta <= l.innerConeAngle)	return 1.0f;
+	return 1.0f - (theta - l.innerConeAngle) / (l.outerConeAngle - l.innerConeAngle);
+#else
+	if (dot(spotDir, pixelDirectionInWorldSpace) < cos(l.outerConeAngle))
+		return 0.0f;
+	else
+		return 1.0f;
+#endif
 }
 
-// todo: ESM - http://www.cad.zju.edu.cn/home/jqfeng/papers/Exponential%20Soft%20Shadow%20Mapping.pdf
+// SHADOW TESTS
+//
 struct ShadowTestPCFData
 {
 	//-------------------------
@@ -151,11 +178,73 @@ struct ShadowTestPCFData
 	//-------------------------
 	float  depthBias;
 	float  NdotL;
+	float  viewDistanceOfPixel; // of the shaded pixel
 	//...
 	//-------------------------
 };
+
+float OmnidirectionalShadowTest(
+	in ShadowTestPCFData pcfTestLightData
+	, TextureCubeArray shadowCubeMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, float3 lightVectorWorldSpace
+	, float range
+)
+{
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	float shadow = 0.0f;
+
+	const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, float4(-lightVectorWorldSpace, shadowMapIndex)).x;
+	const float closestDepthInWorldSpace = closestDepthInLSpace * range;
+	shadow += (length(lightVectorWorldSpace) > closestDepthInWorldSpace + pcfTestLightData.depthBias) ? 1.0f : 0.0f;
+
+	return 1.0f - shadow;
+}
+float OmnidirectionalShadowTestPCF(
+	in ShadowTestPCFData pcfTestLightData
+	, TextureCubeArray shadowCubeMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, float3 lightVectorWorldSpace
+	, float range
+)
+{
+#define NUM_OMNIDIRECTIONAL_PCF_TAPS 20
+	const float3 sampleOffsetDirections[NUM_OMNIDIRECTIONAL_PCF_TAPS] =
+	{
+	   float3(1,  1,  1), float3(1, -1,  1), float3(-1, -1,  1), float3(-1,  1,  1),
+	   float3(1,  1, -1), float3(1, -1, -1), float3(-1, -1, -1), float3(-1,  1, -1),
+	   float3(1,  1,  0), float3(1, -1,  0), float3(-1, -1,  0), float3(-1,  1,  0),
+	   float3(1,  0,  1), float3(-1,  0,  1), float3(1,  0, -1), float3(-1,  0, -1),
+	   float3(0,  1,  1), float3(0, -1,  1), float3(0, -1, -1), float3(0,  1, -1)
+	};
+
+	// const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	// const float bias = 0.001f;
+
+	float shadow = 0.0f;
+
+	// parameters for determining shadow softness based on view distance to the pixel
+	const float diskRadiusScaleFactor = 1.0f / 8.0f;
+	const float diskRadius = (1.0f + (pcfTestLightData.viewDistanceOfPixel / range)) * diskRadiusScaleFactor;
+
+	[unroll]
+	for (int i = 0; i < NUM_OMNIDIRECTIONAL_PCF_TAPS; ++i)
+	{
+		const float4 cubemapSampleVec = float4(-(lightVectorWorldSpace + normalize(sampleOffsetDirections[i]) * diskRadius), shadowMapIndex);
+		const float closestDepthInLSpace = shadowCubeMapArr.Sample(shadowSampler, cubemapSampleVec).x;
+		const float closestDepthInWorldSpace = closestDepthInLSpace * range;
+		shadow += (length(lightVectorWorldSpace) > closestDepthInWorldSpace + pcfTestLightData.depthBias) ? 1.0f : 0.0f;
+	}
+	shadow /= NUM_OMNIDIRECTIONAL_PCF_TAPS;
+	return 1.0f - shadow;
+}
+
+// todo: ESM - http://www.cad.zju.edu.cn/home/jqfeng/papers/Exponential%20Soft%20Shadow%20Mapping.pdf
 float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadowMapArr, SamplerState shadowSampler, float2 shadowMapDimensions, int shadowMapIndex)
-//float ShadowTestPCF(float3 worldPos, float4 lightSpacePos, Texture2DArray shadowMapArr, int shadowMapIndex, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
 {
 	// homogeneous position after interpolation
 	const float3 projLSpaceCoords = pcfTestLightData.lightSpacePos.xyz / pcfTestLightData.lightSpacePos.w;
@@ -166,21 +255,22 @@ float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadow
 		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
 		)
 	{
-		return 1.0f;
+		return 0.0f;
 	}
+
+
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	float shadow = 0.0f;
 
     const float2 texelSize = 1.0f / (shadowMapDimensions);
 	
 	// clip space [-1, 1] --> texture space [0, 1]
 	const float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
-	
-    const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
 	const float pxDepthInLSpace = projLSpaceCoords.z;
 
-	float shadow = 0.0f;
-	const int rowHalfSize = 2;
 
 	// PCF
+	const int rowHalfSize = 2;
     for (int x = -rowHalfSize; x <= rowHalfSize; ++x)
     {
 		for (int y = -rowHalfSize; y <= rowHalfSize; ++y)
@@ -194,13 +284,23 @@ float ShadowTestPCF(in ShadowTestPCFData pcfTestLightData, Texture2DArray shadow
     }
 
     shadow /= (rowHalfSize * 2 + 1) * (rowHalfSize * 2 + 1);
+
 	return 1.0 - shadow;
 }
 
-float ShadowTestPCF_Directional(float3 worldPos, float4 lightSpacePos, Texture2D shadowMap, SamplerState shadowSampler, float NdotL, float2 shadowMapDimensions)
+
+
+float ShadowTestPCF_Directional(
+	in ShadowTestPCFData pcfTestLightData
+	, Texture2DArray shadowMapArr
+	, SamplerState shadowSampler
+	, float2 shadowMapDimensions
+	, int shadowMapIndex
+	, in matrix lightProj
+)
 {
 	// homogeneous position after interpolation
-	const float3 projLSpaceCoords = lightSpacePos.xyz / lightSpacePos.w;
+	const float3 projLSpaceCoords = pcfTestLightData.lightSpacePos.xyz / pcfTestLightData.lightSpacePos.w;
 
 	// frustum check
 	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
@@ -208,65 +308,47 @@ float ShadowTestPCF_Directional(float3 worldPos, float4 lightSpacePos, Texture2D
 		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
 		)
 	{
-		return 1.0f;
+		return 0.0f;
 	}
+
+
+	const float BIAS = pcfTestLightData.depthBias * tan(acos(pcfTestLightData.NdotL));
+	float shadow = 0.0f;
 
 	const float2 texelSize = 1.0f / (shadowMapDimensions);
 
 	// clip space [-1, 1] --> texture space [0, 1]
 	const float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
-
-	const float BIAS = SHADOW_BIAS * tan(acos(NdotL));
 	const float pxDepthInLSpace = projLSpaceCoords.z;
 
-	float shadow = 0.0f;
-	const int rowHalfSize = 2;
 
 	// PCF
+	const int rowHalfSize = 2;
 	for (int x = -rowHalfSize; x <= rowHalfSize; ++x)
 	{
 		for (int y = -rowHalfSize; y <= rowHalfSize; ++y)
 		{
 			float2 texelOffset = float2(x, y) * texelSize;
-			float closestDepthInLSpace = shadowMap.Sample(shadowSampler, shadowTexCoords + texelOffset).x;
+			float closestDepthInLSpace = shadowMapArr.Sample(shadowSampler, float3(shadowTexCoords + texelOffset, shadowMapIndex)).x;
 
 			// depth check
-			shadow += (pxDepthInLSpace - BIAS> closestDepthInLSpace) ? 1.0f : 0.0f;
+			const float linearCurrentPx = LinearDepth(pxDepthInLSpace, lightProj);
+			const float linearClosestPx = LinearDepth(closestDepthInLSpace, lightProj);
+#if 1
+			//shadow += (pxDepthInLSpace - 0.000035 > closestDepthInLSpace) ? 1.0f : 0.0f;
+			shadow += (pxDepthInLSpace - pcfTestLightData.depthBias > closestDepthInLSpace) ? 1.0f : 0.0f;
+			//shadow += (pxDepthInLSpace - BIAS > closestDepthInLSpace) ? 1.0f : 0.0f;
+#else
+			shadow += (linearCurrentPx - 0.00050f > linearClosestPx) ? 1.0f : 0.0f;
+#endif
 		}
 	}
 
 	shadow /= (rowHalfSize * 2 + 1) * (rowHalfSize * 2 + 1);
-	return 1.0 - shadow;
+
+	return 1.0f - shadow;
 }
 
-float ShadowTest(float3 worldPos, float4 lightSpacePos, Texture2D shadowMap, SamplerState shadowSampler)
-{
-	// homogeneous position after interpolation
-	float3 projLSpaceCoords = lightSpacePos.xyz / lightSpacePos.w;
-
-	// clip space [-1, 1] --> texture space [0, 1]
-	float2 shadowTexCoords = float2(0.5f, 0.5f) + projLSpaceCoords.xy * float2(0.5f, -0.5f);	// invert Y
-
-	float pxDepthInLSpace = projLSpaceCoords.z;
-    float closestDepthInLSpace = shadowMap.Sample(shadowSampler, shadowTexCoords).x;
-
-	// frustum check
-	if (projLSpaceCoords.x < -1.0f || projLSpaceCoords.x > 1.0f ||
-		projLSpaceCoords.y < -1.0f || projLSpaceCoords.y > 1.0f ||
-		projLSpaceCoords.z <  0.0f || projLSpaceCoords.z > 1.0f
-		)
-	{
-		return 0.0f;
-	}
-
-	// depth check
-	if (pxDepthInLSpace - SHADOW_BIAS > closestDepthInLSpace)
-	{
-		return 0.0f;
-	}
-
-	return 1.0f;
-}
 
 float3 ShadowTestDebug(float3 worldPos, float4 lightSpacePos, float3 illumination, Texture2D shadowMap, SamplerState shadowSampler)
 {

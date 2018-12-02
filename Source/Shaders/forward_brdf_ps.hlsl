@@ -22,7 +22,7 @@
 #include "LightingCommon.hlsl"
 
 #define ENABLE_POINT_LIGHTS 1
-#define ENABLE_POINT_LIGHTS_SHADOW 0
+#define ENABLE_POINT_LIGHTS_SHADOW 1
 
 #define ENABLE_SPOT_LIGHTS 1
 #define ENABLE_SPOT_LIGHTS_SHADOW 1
@@ -113,6 +113,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 V = normalize(cameraPos - P);
 	const float2 screenSpaceUV = In.position.xy / screenDimensions;
 
+	pcfTest.viewDistanceOfPixel = length(P - cameraPos);
+
 	BRDF_Surface s;
 #ifdef INSTANCED
 	s.N = N;
@@ -151,10 +153,10 @@ float4 PSMain(PSIn In) : SV_TARGET
     const float3 Ia = s.diffuseColor * ao;	// ambient
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
 	float3 IEnv = 0.0f.xxx;					// environment lighting
-	
-	// POINT Lights
-	// brightness default: 300
-	//---------------------------------
+
+
+	//-- POINT LIGHTS --------------------------------------------------------------------------------------------------------------------------
+#if ENABLE_POINT_LIGHTS
 	for (int i = 0; i < Lights.numPointLights; ++i)		
 	{
 		const float3 Lw       = Lights.point_lights[i].position;
@@ -165,12 +167,45 @@ float4 PSMain(PSIn In) : SV_TARGET
 			AttenuationBRDF(Lights.point_lights[i].attenuation, D)
 			* Lights.point_lights[i].color 
 			* Lights.point_lights[i].brightness;
-		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
-	}
 
-	// SPOT Lights - Shadowing
-	//---------------------------------
-	pcfTest.depthBias = 0.0000005f;
+		if (D < Lights.point_lights[i].range)
+			IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
+	}
+#endif
+#if ENABLE_POINT_LIGHTS_SHADOW
+	for (int l = 0; l < Lights.numPointCasters; ++l)
+	{
+		const float3 Lw = Lights.point_casters[l].position;
+		const float3 Wi = normalize(Lw - P);
+		const float  D = length(Lw - P);
+		const float3 radiance =
+			AttenuationBRDF(Lights.point_casters[l].attenuation, D)
+			* Lights.point_casters[l].color
+			* Lights.point_casters[l].brightness;
+
+		pcfTest.NdotL = saturate(dot(s.N, Wi));
+		pcfTest.depthBias = Lights.point_casters[l].depthBias;
+		if (D < Lights.point_casters[l].range)
+		{
+			const float3 shadowing = OmnidirectionalShadowTestPCF(
+				pcfTest,
+				texPointShadowMaps,
+				sShadowSampler,
+				spotShadowMapDimensions,
+				l,
+				(Lw - P),
+				Lights.point_casters[l].range
+			);
+			IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
+		}
+	}
+#endif
+
+
+	
+	//-- SPOT LIGHTS ---------------------------------------------------------------------------------------------------------------------------
+#if ENABLE_SPOT_LIGHTS_SHADOW
+	pcfTest.depthBias = 0.0000005f; // TODO
 	for (int k = 0; k < Lights.numSpotCasters; ++k)
 	{
 		const matrix matShadowView = Lights.shadowViews[spotShadowsBaseIndex + k];
@@ -182,9 +217,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 shadowing = ShadowTestPCF(pcfTest, texSpotShadowMaps, sShadowSampler, spotShadowMapDimensions, k);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
-	
-	// SPOT Lights - Non-shadowing
-	//---------------------------------
+#endif
+#if ENABLE_SPOT_LIGHTS
 	for (int j = 0; j < Lights.numSpots; ++j)
 	{
 		const float3 Lw        = Lights.spots[j].position;
@@ -193,11 +227,14 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float NdotL	   = saturate(dot(s.N, Wi));
 		IdIs += BRDF(Wi, s, V, P) * radiance * NdotL;
 	}
+#endif
+
+
 
 
 	//-- DIRECTIONAL LIGHT --------------------------------------------------------------------------------------------------------------------------
 #if ENABLE_DIRECTIONAL_LIGHTS
-	if (Lights.directional.shadowFactor > 0.0f)
+	if (Lights.directional.enabled != 0)
 	{
 		pcfTest.lightSpacePos = mul(Lights.shadowViewDirectional, float4(P, 1));
 		const float3 Wi = -Lights.directional.lightDirection;
@@ -205,8 +242,10 @@ float4 PSMain(PSIn In) : SV_TARGET
 			= Lights.directional.color
 			* Lights.directional.brightness;
 		pcfTest.NdotL = saturate(dot(s.N, Wi));
-		pcfTest.depthBias = directionalDepthBias;
-		const float3 shadowing = ShadowTestPCF(
+		pcfTest.depthBias = directionalDepthBias; // TODO
+		const float shadowing = (Lights.directional.shadowing == 0)
+			? 1.0f
+			: ShadowTestPCF(
 			  pcfTest
 			, texDirectionalShadowMaps
 			, sShadowSampler

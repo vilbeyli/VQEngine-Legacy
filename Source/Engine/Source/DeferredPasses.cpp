@@ -87,8 +87,10 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 	_ambientIBLShader = pRenderer->CreateShader(ambientIBLShaderDesc);
 	_BRDFLightingShader = pRenderer->CreateShader(BRDFLightingShaderDesc);
 	_phongLightingShader = pRenderer->CreateShader(phongLighintShaderDesc);
+#if 0
 	_spotLightShader = pRenderer->CreateShader(BRDF_PointLightShaderDesc);
 	_pointLightShader = pRenderer->CreateShader(BRDF_SpotLightShaderDesc);
+#endif
 
 	// deferred geometry is accessed from elsewhere, needs to be globally defined
 	assert(EShaders::DEFERRED_GEOMETRY == _geometryShader);	// this assumption may break, make sure it doesn't...
@@ -381,6 +383,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 
 	// DIFFUSE & SPECULAR LIGHTING
 	//-----------------------------------------------------------------------------------------
+	pRenderer->BeginEvent("Lighting Pass");
 	pRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
 
 	// draw fullscreen quad for lighting for now. Will add light volumes
@@ -443,10 +446,11 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 
 	pRenderer->SetConstant4x4f("matView", args.sceneView.view);
 	pRenderer->SetConstant4x4f("matViewToWorld", args.sceneView.viewInverse);
-	pRenderer->SetConstant4x4f("matPorjInverse", args.sceneView.projInverse);
+	pRenderer->SetConstant4x4f("directionalProj", args.sceneView.directionalLightProjection);
+	pRenderer->SetConstant4x4f("matProjInverse", args.sceneView.projInverse);
 	//pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
-	pRenderer->SetSamplerState("sShadowSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+	pRenderer->SetSamplerState("sShadowSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);
@@ -456,6 +460,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 #endif	// light volumes
-
+	pRenderer->EndEvent(); // Lighting Pass
 	pRenderer->SetBlendState(EDefaultBlendState::DISABLED);
+
 }

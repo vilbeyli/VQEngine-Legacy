@@ -49,7 +49,8 @@ struct ShadowView;
 struct SceneView;
 struct RenderTargetDesc;
 
-
+// BASE CLASS
+//
 struct RenderPass
 {
 	enum ECommonShaders
@@ -71,21 +72,65 @@ struct RenderPass
 };
 
 
+// current implementation employs the same logic for the
+// game-object level object batching. however, we're using
+// mesh-level instancing: this results in a very large number
+// of transformation matrix constant buffer updates per mesh.
+//
+#define SHADOW_PASS_USE_INSTANCED_DRAW_DATA 0
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+
+struct MeshDrawData
+{
+	void AddMeshTransformation(MeshID meshID, const XMMATRIX& matTransform)
+	{
+		if (meshTransformListLookup.find(meshID) != meshTransformListLookup.end())
+		{
+			meshTransformListLookup.at(meshID).push_back(matTransform);
+		}
+		else
+		{
+			meshTransformListLookup[meshID].push_back(matTransform);
+		}
+	}
+	std::unordered_map<MeshID, std::vector<XMMATRIX>> meshTransformListLookup;
+};
+#else
+struct MeshDrawData
+{
+	MeshDrawData(const GameObject* pObj);
+	MeshDrawData();
+
+	std::vector<MeshID> meshIDs;
+	XMMATRIX matWorld;
+#ifdef _DEBUG
+	const GameObject* pObj;
+#endif
+};
+#endif
+
 using DepthTargetIDArray = std::vector<DepthTargetID>;
 struct ShadowMapPass : public RenderPass
 {
 	ShadowMapPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
-	void InitializeSpotLightShadowMaps(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
-	void InitializeDirectionalLightShadowMap(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
+	void Initialize(Renderer* pRenderer, const Settings::ShadowMap& shadowMapSettings);
 	void RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const;
 	
+	vec2 GetDirectionalShadowMapDimensions(Renderer* pRenderer) const;
+
+
+	void InitializeSpotLightShadowMaps(const Settings::ShadowMap& shadowMapSettings);
+	void InitializePointLightShadowMaps(const Settings::ShadowMap& shadowMapSettings);
+	void InitializeDirectionalLightShadowMap(const Settings::ShadowMap& shadowMapSettings);
+
 	Renderer*			mpRenderer = nullptr;
 	ShaderID			mShadowMapShader = -1;
 	ShaderID			mShadowMapShaderInstanced = -1;
+	ShaderID			mShadowCubeMapShader = -1;
 
 	unsigned			mShadowMapDimension_Spot = 0;
-	D3D11_VIEWPORT		mShadowViewPort_Spot;	// spot light viewport
-	D3D11_VIEWPORT		mShadowViewPort_Directional;
+	unsigned			mShadowMapDimension_Point = 0;
 	
 	TextureID			mShadowMapTextures_Spot = -1;		// tex2D array
 	TextureID			mShadowMapTexture_Directional = -1;	// tex2D array
@@ -93,7 +138,7 @@ struct ShadowMapPass : public RenderPass
 
 	DepthTargetIDArray	mDepthTargets_Spot;
 	DepthTargetID		mDepthTarget_Directional = -1;
-	DepthTargetID		mDepthTargets_Point = -1;
+	DepthTargetIDArray	mDepthTargets_Point;
 };
 
 struct BloomPass : public RenderPass

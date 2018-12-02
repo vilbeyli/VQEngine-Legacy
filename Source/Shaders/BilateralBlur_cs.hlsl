@@ -33,7 +33,7 @@ struct BlurConstants
 cbuffer BlurConstantsBuffer
 {
 	BlurConstants cParameters;
-	matrix matPorjInverse;
+	matrix matProjInverse;
 };
 
 // These are defined by the application compiling the shader
@@ -177,7 +177,7 @@ void CSMain(
 #else
 			const float centerTapDepth = texDepth.SampleLevel(sSampler, uv, 0).r; //gDepth[outTexel.x];
 #endif
-			const float centerTapDepthLinear = LinearDepth(centerTapDepth, matPorjInverse);
+			const float centerTapDepthLinear = LinearDepth(centerTapDepth, matProjInverse);
 
 			// no need to blur if there's no surface
 			if (dot(centerTapNormal, centerTapNormal) < 0.00001)
@@ -200,7 +200,7 @@ void CSMain(
 #else
 				const float kernelTapDepth = texDepth.SampleLevel(sSampler, uv, 0).r;
 #endif
-				const float kernelTapDepthLinear = LinearDepth(kernelTapDepth, matPorjInverse);
+				const float kernelTapDepthLinear = LinearDepth(kernelTapDepth, matProjInverse);
 
 				const uint kernelImageIndex = outTexel.x + kernelOffset + KERNEL_RANGE_EXCLUDING_MIDDLE;
 				const float3 kernelNormal = gNormals[kernelImageIndex];

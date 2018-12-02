@@ -51,11 +51,12 @@ void InitLogFile()
 	{	// AppData/VQEngine might not exist, 
 		if (CreateDirectory(LogFileDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
-			std::string fileName = GetCurrentTimeAsString() + "_VQEngineLog.txt";
-			sOutFile.open(LogFileDir + "\\" + fileName);
+			const std::string fileName = GetCurrentTimeAsString() + "_VQEngineLog.txt";
+			const std::string filePath = LogFileDir + "\\" + fileName;
+			sOutFile.open(filePath);
 			if (sOutFile)
 			{
-				std::string msg = GetCurrentTimeAsStringWithBrackets() + "[Log] " + "Initialize() Done.";
+				std::string msg = GetCurrentTimeAsStringWithBrackets() + "[Log] " + "Logging initialized: " + filePath;
 				sOutFile << msg;
 				cout << msg << endl;
 			}

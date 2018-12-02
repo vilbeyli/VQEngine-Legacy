@@ -21,7 +21,10 @@
 
 #undef min
 #undef max
+
 constexpr int MODEL_COUNT = 10;
+#define LOAD_MODELS 0
+#define LOAD_CUBE_GRID 0
 
 #if DO_NOT_LOAD_SCENES
 void SSAOTestScene::Load(SerializedScene& scene) {}
@@ -34,6 +37,7 @@ void SSAOTestScene::Load(SerializedScene& scene)
 	//SetEnvironmentMap(EEnvironmentMapPresets::MILKYWAY);
 	mSkybox = Skybox::s_Presets[MILKYWAY];
 
+#if LOAD_CUBE_GRID
 	// grid arrangement ( (row * col) cubes that are 'CUBE_DISTANCE' apart from each other )
 	constexpr size_t	CUBE_ROW_COUNT = 6;
 	constexpr size_t	CUBE_COLUMN_COUNT = 4;
@@ -110,7 +114,9 @@ void SSAOTestScene::Load(SerializedScene& scene)
 			}
 		}
 	}
+#endif
 
+#if LOAD_MODELS
 	// load nanosuit models
 	for (int i = 0; i < MODEL_COUNT; ++i)
 	{
@@ -137,21 +143,29 @@ void SSAOTestScene::Load(SerializedScene& scene)
 		pModel->GetTransform().RotateAroundGlobalYAxisDegrees(90.0f * (i % 4));
 		pModels.push_back(pModel);
 	}
+#endif
 }
 
 void SSAOTestScene::Unload()
 {
+#if LOAD_CUBE_GRID
 	pCubes.clear();
+#endif
+
+#if LOAD_MODELS
 	pModels.clear();
+#endif
 }
 
 void SSAOTestScene::Update(float dt)
 {
 	constexpr float ROTATION_SPEED_DEG_PER_SEC = 12.0f;
+#if LOAD_MODELS
 	for (GameObject* pModel : pModels)
 	{
 		//pModel->GetTransform().RotateAroundGlobalYAxisDegrees(dt * ROTATION_SPEED_DEG_PER_SEC);
 	}
+#endif
 }
 void SSAOTestScene::RenderUI() const {}
 #endif

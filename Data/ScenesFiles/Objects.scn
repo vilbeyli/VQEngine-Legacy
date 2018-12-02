@@ -31,12 +31,25 @@
 ao true 0.23 17.0 3.40
 skylight true
 bloom true 1.22 8
+//bloom true 0.02 8
 
-directional sun 4.5   3   -5   15  2048 256 300 0.001f
+//directional sun 4.5   3   -5   15  2048 256 300 0.001f
+
+light begin
+	type directional
+	transform 0 0 0    10 10 0    1
+	color sun
+	brightness 2.2
+	shadows true 0.006  0.05 600 
+	directional 300 300
+	// 256?
+light end
 
 camera 0.1 1500 60   -186.23 32.21 5.10  90 -5 
 camera 0.1 1500 75   0 50 -190  0 15 
-
+camera 0.1 1500 20   168.36  21.66  -95.82 	 -55.48 -5.89
+camera 0.1 1500 50   168.36  21.66  -95.82 	 -55.48 -5.89
+ 
 
 
 object begin

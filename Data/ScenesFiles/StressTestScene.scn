@@ -28,30 +28,122 @@
 // ---------------------------------------------------------------------------------------------------------------
 
 
-camera 0.8 12000 80   0 30 -100  0 25 
-camera 0.1 1500 75   0 30 100  180 25 
-ao true 0.2 8.0 2.90
+camera 0.8 12000 80   23.04  451.67  -1330.64 	 -1.07 18.91
+camera 0.8 12000 80    -481.06  221.41  -105.94 	 -116.00 18.70
+camera 0.1 1500 65   721.05  126.21  91.51 	 150.70 22.49
+ao true 0.15 8.0 2.90
 skylight true
 bloom true 1.05
 
 
-directional sun 2.2   -20   -25   35  4096 2700 2800 0.00006
+//directional sun 2.2   -20   -25   35  4096 2700 2800 0.00006
+light begin
+	type directional
+	transform 0 0 0    9 -35 0    1
+	color sun
+	brightness 1.2
+	shadows true 0.0005   10.001 15800 
+	directional 2850 3000
+light end
 
 // room lights
-light       p         white		false      5800      814.54  115.85  197.38    900	  0.3  
-light       p         white		false      7800      761.51  143.17  256.48    900	  0.3
-light       p         white		false      8800      776.38  128.57  136.94    3200	  0.3
-light		s		  orange     true       6000      794.38  88.06  183.54    78.14    -125 0 0   1  1500  0.0000005
-light		s		  red        true       6000      774.38  88.06  183.54    85    -90 -10  0   1  1500
-light		s		  yellow     true       6000      814.38  88.06  183.54    85    -90 20 0   1  1500
+light begin
+	type point
+	transform  814.54  115.85  197.38    0 0 0   0.2
+	color white
+	brightness 5800
+	shadows false 0.05 0.01
+	range 700
+light end
+light begin
+	type point
+	transform  761.51  143.17  256.48    0 0 0   0.1
+	color white
+	brightness 7800
+	shadows false 0.005
+	range 700
+light end
+light begin
+	type point
+	transform 776.38  128.57  136.94    0 0 0   0.1
+	color white
+	brightness 8800
+	shadows false 0.005
+	range 700
+light end
+
+light begin
+	type spot
+	transform 794.38  88.06  183.54    0 180 50    0
+	color orange
+	brightness 6000
+	shadows true 0.00000009 0.1
+	spot 30 1
+	range 1000
+light end
+light begin
+	type spot
+	transform 774.38  88.06  183.54    0 180 50    0
+	color red
+	brightness 6000
+	shadows true 0.00000009 0.01
+	spot 30 1
+	range 1000
+light end
+light begin
+	type spot
+	transform 814.38  68.06  183.54     0 180 50    0
+	color yellow
+	brightness 6000
+	shadows true 0.00000009 0.01
+	spot 30 1
+	range 1000
+light end
 
 
 // sponza lights
-light       p         cyan		false      1800      -681.67  85.89   359.20    60	  0.3
-light       p         green		false      1800      -676.52  100.49  -330.15    60	  0.3
-light       p         orange	false      1800      -429.20  85.81  359.21     60	  0.3
-light       p         purple	false      1800      -428.95  92.26  -339.49    60	  0.3
-light		s		  white     true       6000      -475.77  218.57  -175.73    80    90 -80 0   1 1000
+light begin
+	type point
+	transform -681.67  85.89   359.20    0 0 0   0.1
+	color cyan
+	brightness 1800
+	shadows false 0.005
+	range 175
+light end
+light begin
+	type point
+	transform -676.52  100.49  -330.15    0 0 0   0.1
+	color green
+	brightness 1800
+	shadows false 0.005
+	range 150
+light end
+light begin
+	type point
+	transform -429.20  85.81  359.21   0 0 0   0.1
+	color orange
+	brightness 1800
+	shadows false 0.005
+	range 150
+light end
+light begin
+	type point
+	transform -428.95  92.26  -339.49    0 0 0   0.1
+	color purple
+	brightness 1800
+	shadows true 0.005
+	range 150
+light end
+light begin
+	type spot
+	transform -475.77  218.57  -175.73    0 -90 50    0.5
+	color white
+	brightness 6000
+	shadows true 0.00000009 0.01
+	spot 45 1
+	range 500
+light end
+
 
 
 object begin
@@ -66,6 +158,14 @@ object begin
 object end
 
 
-//light       s         white      	true       9000         80	     -100    45     0	   180  0  	65  0.8	 
-//light       s         white      	true       500         70	     0    65     40	   190  0 	0  0.8	 
 
+// PERF TEST for culling. this is the point light of death (30ms)
+//light begin
+//	type point
+//	//transform -428.95  92.26  -339.49    0 0 0   0.1
+//	transform 60 250 0    0 0 0   0.1
+//	color purple
+//	brightness 17800
+//	shadows true 0.005
+//	range 10000
+//light end

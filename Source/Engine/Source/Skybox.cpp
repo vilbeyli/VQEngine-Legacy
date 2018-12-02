@@ -478,18 +478,15 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 	const float fovy = 90.0f * DEG2RAD;
 	const XMMATRIX proj = XMMatrixPerspectiveFovLH(fovy, screenAspect, screenNear, screenFar);
 
+	// render cubemap version of the environment map, generate mips, and then bind to pre-filter stage 
+	// cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
+	//------------------------------------------------------------------------------------------------------
+	// 0: RIGHT		1: LEFT
+	// 2: UP		3: DOWN
+	// 4: FRONT		5: BACK
+	//------------------------------------------------------------------------------------------------------
 	// cubemap look and up directions for left-handed view
-	const XMVECTOR lookDirs[6] = {
-		vec3::Right, vec3::Left,
-		vec3::Up, vec3::Down,
-		vec3::Forward, vec3::Back
-	};
 
-	const XMVECTOR upDirs[6] = {
-		vec3::Up, vec3::Up,
-		vec3::Back, vec3::Forward,
-		vec3::Up, vec3::Up
-	};
 
 	// create environment map cubemap texture
 	const unsigned cubemapDimension = specularMap._height / 2;
@@ -549,13 +546,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 	};
 
 	// RENDER INTO CUBEMAP PASS
-	// render cubemap version of the environment map, generate mips, and then bind to pre-filter stage 
-	// cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
-	//------------------------------------------------------------------------------------------------------
-	// 0: RIGHT		1: LEFT
-	// 2: UP		3: DOWN
-	// 4: FRONT		5: BACK
-	//------------------------------------------------------------------------------------------------------
+
 	// TODO: Compute shader in single pass.
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
@@ -570,8 +561,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 			rtDesc.Texture2DArray.FirstArraySlice = cubeFace;
 
 			const RenderTargetID mipTarget = pRenderer->AddRenderTarget(mippedEnvironmentCubemapTex, rtDesc);	// todo: pool RTs.
-
-			const XMMATRIX view = XMMatrixLookAtLH(vec3::Zero, lookDirs[cubeFace], upDirs[cubeFace]);
+			const XMMATRIX view = Texture::CubemapUtility::GetViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(cubeFace)); 
 			const XMMATRIX viewProj = view * proj;
 
 			pRenderer->BindRenderTarget(mipTarget);
@@ -602,12 +592,6 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 			pRenderer->SetConstant1f("roughness", static_cast<float>(mipLevel) / (PREFILTER_MIP_LEVEL_COUNT - 1));
 			pRenderer->SetConstant1f("resolution", viewPort.Width);
 
-			// cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
-			//------------------------------------------------------------------------------------------------------
-			// 0: RIGHT		1: LEFT
-			// 2: UP		3: DOWN
-			// 4: FRONT		5: BACK
-			//------------------------------------------------------------------------------------------------------
 			for (unsigned cubeFace = 0; cubeFace < 6; ++cubeFace)
 			{
 				D3D11_RENDER_TARGET_VIEW_DESC rtDesc = {};
@@ -618,8 +602,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 				rtDesc.Texture2DArray.FirstArraySlice = cubeFace;
 
 				const RenderTargetID mipTarget = pRenderer->AddRenderTarget(prefilteredEnvMapTex, rtDesc);	// todo: pool RTs.
-
-				const XMMATRIX view = XMMatrixLookAtLH(vec3::Zero, lookDirs[cubeFace], upDirs[cubeFace]);
+				const XMMATRIX view = Texture::CubemapUtility::GetViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(cubeFace));
 				const XMMATRIX viewProj = view * proj;
 
 				pRenderer->BindRenderTarget(mipTarget);

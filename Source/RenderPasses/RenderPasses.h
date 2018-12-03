@@ -21,7 +21,7 @@
 #pragma once
 
 #include "Engine/Settings.h"
-#include "Skybox.h"
+#include "Engine/Skybox.h"
 
 #include "Renderer/RenderingEnums.h"
 

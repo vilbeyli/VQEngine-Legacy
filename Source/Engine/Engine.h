@@ -21,12 +21,13 @@
 #include "Utilities/PerfTimer.h"
 #include "Utilities/Profiler.h"
 
+#include "RenderPasses/RenderPasses.h"
+
 #include "Light.h"
 #include "Mesh.h"
 #include "DataStructures.h"
 #include "Skybox.h"
 #include "Settings.h"
-#include "RenderPasses.h"
 #include "HUD.h"
 
 #include <memory>

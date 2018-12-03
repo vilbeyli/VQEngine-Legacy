@@ -198,6 +198,9 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
     <ProjectReference Include="Renderer.vcxproj">
       <Project>{eaf3c9db-a325-40fc-bdb4-7ee2e0756b00}</Project>
     </ProjectReference>
+    <ProjectReference Include="RenderPasses.vcxproj">
+      <Project>{cb8638b6-f87e-45ee-8359-a92af7c172c9}</Project>
+    </ProjectReference>
     <ProjectReference Include="Scenes.vcxproj">
       <Project>{ba3ede91-c0be-4b6b-a6cb-95a1c06c43c9}</Project>
     </ProjectReference>

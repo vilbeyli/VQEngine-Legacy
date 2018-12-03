@@ -17,12 +17,12 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "RenderPasses.h"
-#include "Engine.h"
-#include "GameObject.h"
-#include "Light.h"
-#include "SceneResources.h"
-#include "Camera.h"
-#include "SceneView.h"
+#include "Engine/Engine.h"
+#include "Engine/GameObject.h"
+#include "Engine/Light.h"
+#include "Engine/SceneResources.h"
+#include "Engine/Camera.h"
+#include "Engine/SceneView.h"
 
 #include "Renderer/Renderer.h"
 #include "Renderer/D3DManager.h"

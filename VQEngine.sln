@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 15.0.27004.2010
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VQEngine", "Source\SolutionFiles\VQEngine.vcxproj", "{54C90DA7-E2C5-4042-BFA0-2699F3403C77}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9} = {CB8638B6-F87E-45EE-8359-A92AF7C172C9}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Application", "Source\SolutionFiles\Application.vcxproj", "{AB5BC0CC-A11F-4EDC-9338-9BA351C624A8}"
 EndProject
@@ -98,6 +101,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Scenes", "Source\SolutionFi
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Engine", "Source\SolutionFiles\Engine.vcxproj", "{9780D393-8EF6-43C8-B821-6B6A6661831C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RenderPasses", "Source\SolutionFiles\RenderPasses.vcxproj", "{CB8638B6-F87E-45EE-8359-A92AF7C172C9}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VQUI", "Source\VQUI\VQUI.csproj", "{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}"
 EndProject
 Global
@@ -182,13 +187,25 @@ Global
 		{9780D393-8EF6-43C8-B821-6B6A6661831C}.Release|x64.Build.0 = Release|x64
 		{9780D393-8EF6-43C8-B821-6B6A6661831C}.Release|x86.ActiveCfg = Release|Win32
 		{9780D393-8EF6-43C8-B821-6B6A6661831C}.Release|x86.Build.0 = Release|Win32
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Debug|x64.ActiveCfg = Debug|x64
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Debug|x64.Build.0 = Debug|x64
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Debug|x86.ActiveCfg = Debug|Win32
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Debug|x86.Build.0 = Debug|Win32
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Profile|x64.ActiveCfg = Release|x64
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Profile|x64.Build.0 = Release|x64
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Profile|x86.ActiveCfg = Release|Win32
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Profile|x86.Build.0 = Release|Win32
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Release|x64.ActiveCfg = Release|x64
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Release|x64.Build.0 = Release|x64
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Release|x86.ActiveCfg = Release|Win32
+		{CB8638B6-F87E-45EE-8359-A92AF7C172C9}.Release|x86.Build.0 = Release|Win32
 		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Debug|x64.ActiveCfg = Debug|x64
 		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Debug|x64.Build.0 = Debug|x64
 		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Debug|x86.ActiveCfg = Debug|x64
-		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Profile|x64.ActiveCfg = Debug|x64
-		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Profile|x64.Build.0 = Debug|x64
-		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Profile|x86.ActiveCfg = Debug|x64
-		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Profile|x86.Build.0 = Debug|x64
+		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Profile|x64.ActiveCfg = Release|x64
+		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Profile|x64.Build.0 = Release|x64
+		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Profile|x86.ActiveCfg = Release|x64
+		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Profile|x86.Build.0 = Release|x64
 		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Release|x64.ActiveCfg = Release|x64
 		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Release|x64.Build.0 = Release|x64
 		{63AA6F95-D7CB-47F6-8D87-1B33609C48A6}.Release|x86.ActiveCfg = Release|x64

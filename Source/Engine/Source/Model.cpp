@@ -29,25 +29,41 @@
 #define MAKE_IRONMAN_METALLIC 1
 #define MAKE_ZENBALL_METALLIC 1
 
-void Model::AddMaterialToMesh(MeshID meshID, MaterialID materialID, bool bTransparent)
+
+bool ModelData::AddMaterial(MeshID meshID, MaterialID matID, bool bTransparent)
 {
-	MeshToMaterialLookup& mMaterialLookupPerMesh = mData.mMaterialLookupPerMesh;
 	auto it = mMaterialLookupPerMesh.find(meshID);
 	if (it == mMaterialLookupPerMesh.end())
 	{
-		mMaterialLookupPerMesh[meshID] = materialID;
+		mMaterialLookupPerMesh[meshID] = matID;
 	}
 	else
 	{
 #if _DEBUG
 		Log::Warning("Overriding Material");
 #endif
-		mMaterialLookupPerMesh[meshID] = materialID;
+		mMaterialLookupPerMesh[meshID] = matID;
 
 		if (bTransparent)
 		{
-			mData.mTransparentMeshIDs.push_back(meshID);
+			mTransparentMeshIDs.push_back(meshID);
 		}
+	}
+
+	return true;
+}
+
+
+void Model::AddMaterialToMesh(MeshID meshID, MaterialID materialID, bool bTransparent)
+{
+	mData.AddMaterial(meshID, materialID);
+}
+
+void Model::OverrideMaterials(MaterialID materialID)
+{
+	for (MeshID mesh : mData.mMeshIDs)
+	{
+		mData.AddMaterial(mesh, materialID);
 	}
 }
 

@@ -89,9 +89,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Utilities", "Source\Solutio
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SceneFiles", "SceneFiles", "{2C145C7D-4AE8-44FD-8933-0649D7918E13}"
 	ProjectSection(SolutionItems) = preProject
-		Data\ScenesFiles\IBLTest.scn = Data\ScenesFiles\IBLTest.scn
 		Data\ScenesFiles\LightsScene.scn = Data\ScenesFiles\LightsScene.scn
 		Data\ScenesFiles\Objects.scn = Data\ScenesFiles\Objects.scn
+		Data\ScenesFiles\PBRScene.scn = Data\ScenesFiles\PBRScene.scn
 		Data\ScenesFiles\Sponza.scn = Data\ScenesFiles\Sponza.scn
 		Data\ScenesFiles\SSAOTest.scn = Data\ScenesFiles\SSAOTest.scn
 		Data\ScenesFiles\StressTestScene.scn = Data\ScenesFiles\StressTestScene.scn

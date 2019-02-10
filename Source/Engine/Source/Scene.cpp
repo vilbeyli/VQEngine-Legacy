@@ -581,6 +581,14 @@ void Scene::EndLoadingModels()
 		if (loadedModels.find(modelPath) == loadedModels.end())
 		{
 			Model m = mModelLoadQueue.asyncModelResults.at(modelPath).get();
+			
+			if (!pObj->mModel.mMaterialAssignmentQueue.empty())
+			{
+				MaterialID matID = pObj->mModel.mMaterialAssignmentQueue.front();
+				pObj->mModel.mMaterialAssignmentQueue.pop(); // we only use the first material for now...
+				m.OverrideMaterials(matID);
+			}
+
 			pObj->SetModel(m);
 			loadedModels[modelPath] = m;
 		}

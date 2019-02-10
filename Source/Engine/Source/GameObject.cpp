@@ -34,7 +34,10 @@ void GameObject::AddMesh(MeshID meshID)
 
 void GameObject::AddMaterial(Material * pMat)
 {
-	mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), pMat->ID, pMat->IsTransparent());
+	if (mModel.mbLoaded)
+		mModel.AddMaterialToMesh(mModel.mData.mMeshIDs.back(), pMat->ID, pMat->IsTransparent());
+	else
+		mModel.mMaterialAssignmentQueue.push(pMat->ID);
 }
 
 

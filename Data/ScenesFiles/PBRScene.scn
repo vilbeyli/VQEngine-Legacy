@@ -1,0 +1,82 @@
+// Object initializations
+// ---------------------------------------------------------------------------------------------------------------
+// Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
+// Camera		: near far vfov  pos(3:xyz)  yaw pitch
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
+// BRDF		:
+// Phong		:
+// Object		: transform, brdf/phong, mesh
+// example: 
+//     object begin
+//      transform 85 5 -30 30 120 0 20
+//      mesh triangle
+//      brdf begin
+//     		textures "" openart/190_norm.JPG
+//     		diffuse 0.24 0.74 0.74
+//     		roughness 0.4
+//     		metalness 0.9
+//     	brdf end
+//     object end
+// ---------------------------------------------------------------------------------------------------------------
+    
+// Scene Render Settings initializations
+// ---------------------------------------------------------------------------------------------------------------
+// ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
+// bloom	    : enabled?, brighness threshold
+// skylight	    : enabled?
+// directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
+// ---------------------------------------------------------------------------------------------------------------
+
+ao true 0.001 19.0 4.10
+bloom false 1.60
+skylight false
+
+camera 0.1 1000 40    -126.52  121.45  -193.67 	 28.81 15.93
+camera 0.1 1000 40   1.68  219.12  -365.25 	 0.02 16.23
+camera 0.1 1000 40   215.88  127.46  -151.30 	 -55.89 15.04
+camera 0.1 1000 40   -0.99  122.51  -219.44 	 -0.13 15.60
+
+
+object begin
+	transform 0 0 0 0 0 0 500 1 250
+	mesh cube
+	brdf begin
+		roughness 0.77
+		metalness 0.00
+	brdf end
+object end
+
+
+object begin
+	transform 0 1 0 0 0 0 0.5
+	model shaderBall.obj
+	brdf begin
+		//albedo 0.4 0.05 0.8
+		roughness 0.17
+		metalness 0.00
+	brdf end
+object end
+
+
+
+
+
+
+
+//light begin
+//	type directional
+//	transform 0 0 0    9 -35 0    1
+//	color sun
+//	brightness 1.2
+//	shadows true 0.0005   10.001 15800 
+//	directional 2850 3000
+//light end
+
+light begin
+	type point
+	transform  -111.74  131.40  -97.21    0 0 0   0.2
+	color white
+	brightness 15800
+	shadows true 0.05 0.01
+	range 12500
+light end

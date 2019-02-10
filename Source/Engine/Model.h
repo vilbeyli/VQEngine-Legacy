@@ -23,6 +23,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <queue>
 
 #include <mutex>
 
@@ -41,12 +42,14 @@ struct ModelData
 	std::vector<MeshID>		mMeshIDs;
 	std::vector<MeshID>		mTransparentMeshIDs;
 	MeshToMaterialLookup	mMaterialLookupPerMesh;
+	bool AddMaterial(MeshID meshID, MaterialID matID, bool bTransparent = false);
 	inline bool HasMaterial() const { return !mMaterialLookupPerMesh.empty(); }
 };
 
 struct Model
 {
 	void AddMaterialToMesh(MeshID meshID, MaterialID materialID, bool bTransparent);
+	void OverrideMaterials(MaterialID materialID);
 
 	Model() = default;
 	Model(const std::string&	directoryFullPath
@@ -56,10 +59,18 @@ struct Model
 
 	ModelData		mData;
 	
-	// cold data (wasting cache line if Model[]s or anything that contains a model in an array are iterated over)
+	//----------------------------------------------------------
+	// NOTE:
+	//
+	// cold data (wasting cache line if Model[]s or anything 
+	// that contains  a model in an array are iterated over)
+	//----------------------------------------------------------
 	std::string		mModelName;
 	std::string		mModelDirectory;
 	bool			mbLoaded = false;
+
+	// queue of materials to be assigned in case the model has not been loaded yet.
+	std::queue<MaterialID> mMaterialAssignmentQueue;
 };
 
 class ModelLoader

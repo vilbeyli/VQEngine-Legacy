@@ -418,6 +418,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 
 		
 		pObject->AddMesh(sMeshLookup.at(mesh));
+		pObject->mModel.mbLoaded = true; // assume model is already loaded as we're using a builtin mesh.
 		//obj.mModel.mMeshID = sMeshLookup.at(mesh);
 	}
 	else if (cmd == "brdf")

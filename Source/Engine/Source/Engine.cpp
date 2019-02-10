@@ -20,7 +20,7 @@
 #define ENABLE_TRANSPARENCY 0
 
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
-#define OVERRIDE_LEVEL_VALUE 5	// which level to load
+#define OVERRIDE_LEVEL_VALUE 2	// which level to load
 #define FULLSCREEN_DEBUG_TEXTURE 1
 
 // ASYNC / THREADED LOADING SWITCHES
@@ -48,7 +48,7 @@
 
 #include "Scenes/ObjectsScene.h"
 #include "Scenes/SSAOTestScene.h"
-#include "Scenes/IBLTestScene.h"
+#include "Scenes/PBRScene.h"
 #include "Scenes/StressTestScene.h"
 #include "Scenes/SponzaScene.h"
 #include "Scenes/LightsScene.h"
@@ -234,7 +234,7 @@ bool Engine::Initialize(HWND hwnd)
 	// this is bad... every scene needs to be pushed back.
 	mpScenes.push_back(new ObjectsScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new SSAOTestScene(mpRenderer, mpTextRenderer));
-	mpScenes.push_back(new IBLTestScene(mpRenderer, mpTextRenderer));
+	mpScenes.push_back(new PBRScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new StressTestScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new SponzaScene(mpRenderer, mpTextRenderer));
 	mpScenes.push_back(new LightsScene(mpRenderer, mpTextRenderer));

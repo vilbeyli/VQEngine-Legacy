@@ -42,9 +42,45 @@
 std::string Application::s_WorkspaceDirectory = "";
 std::string Application::s_ShaderCacheDirectory = "";
 
-Application::Application()
+// TODO:
+static Application::WorkspaceDirectories DefaultWorkspaceDirectorie = 
+{
+	//mAppData
+	  DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine"
+
+	//mResources
+	, "./Data"
+
+	//mShaderCache;
+	, DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine/ShaderCache"
+
+	//mShaderSource;
+	, "./Source/Shaders"
+
+	//mFonts
+	, "./Data/Fonts"
+
+	//mTextures;
+	, "./Data/Textures"
+
+	//mMeshes;
+	, "./Data/Meshes"
+
+	//mModels;
+	, "./"
+
+	//mScenes;
+	, "./"
+
+	//mEnvironmentMaps
+	, "./Data/Textures/EnvironmentMaps"
+};
+
+Application::WorkspaceDirectories Application::s_WorkspaceDirectories = Application::WorkspaceDirectories();
+
+Application::Application(const char* psAppName)
 	:
-	m_appName("VQEngine Demo"),
+	m_appName(psAppName),
 	m_bMouseCaptured(false),
 	m_bAppWantsExit(false),
 	m_threadPool(VQEngine::ThreadPool::sHardwareThreadCount - 2)
@@ -65,7 +101,7 @@ bool Application::Init()
 {
 	// SETTINGS
 	//
-	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::APPDATA) + "/VQEngine";
+	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine";
 	Settings::Engine& settings = const_cast<Settings::Engine&>(Engine::ReadSettingsFromFile());	// namespace doesn't make sense.
 
 	// LOG

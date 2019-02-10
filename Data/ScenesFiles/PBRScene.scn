@@ -27,14 +27,15 @@
 // directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
-ao true 0.001 19.0 4.10
+ao true 0.10 19.0 4.10
+//ao true 0.001 19.0 4.10
 bloom false 1.60
-skylight false
+skylight true
 
-camera 0.1 1000 40    -126.52  121.45  -193.67 	 28.81 15.93
-camera 0.1 1000 40   1.68  219.12  -365.25 	 0.02 16.23
-camera 0.1 1000 40   215.88  127.46  -151.30 	 -55.89 15.04
-camera 0.1 1000 40   -0.99  122.51  -219.44 	 -0.13 15.60
+camera 0.1 5000 40   17.18  189.60  -469.03 	 -2.57 12.77
+camera 0.1 5000 40   1.68  219.12  -365.25 	 0.02 16.23
+camera 0.1 5000 40   215.88  127.46  -151.30 	 -55.89 15.04
+camera 0.1 5000 40   -0.99  122.51  -219.44 	 -0.13 15.60
 
 
 object begin
@@ -50,15 +51,27 @@ object end
 object begin
 	transform 0 1 0 0 0 0 0.5
 	model shaderBall.obj
-	brdf begin
-		//albedo 0.4 0.05 0.8
-		roughness 0.17
-		metalness 0.00
-	brdf end
+	pbr begin
+		colorMap     cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Base_Color.png
+		normalMap    cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Normal.png
+//		aoMap        cgbookcase/blue-tiles-01/
+		heightMap    cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Height.png
+//		metallicMap  cgbookcase/blue-tiles-01/
+		roughnessMap cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Roughness.png
+	pbr end
 object end
 
+object begin
+	transform -200 1 0 0 0 0 0.5
+	model shaderBall.obj
+	pbr cgbookcase/copper-tiles-01
+object end
 
-
+object begin
+	transform 200 1 0 0 0 0 0.5
+	model shaderBall.obj
+	pbr cgbookcase/painted-metal-02
+object end
 
 
 
@@ -77,6 +90,6 @@ light begin
 	transform  -111.74  131.40  -97.21    0 0 0   0.2
 	color white
 	brightness 15800
-	shadows true 0.05 0.01
-	range 12500
+	shadows true 0.0001 0.01 
+	range 1000
 light end

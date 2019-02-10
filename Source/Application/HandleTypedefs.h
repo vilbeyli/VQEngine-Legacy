@@ -29,3 +29,5 @@ using DepthStencilStateID = int;
 using RenderTargetID = int;
 using DepthTargetID = int;
 
+constexpr TextureID INVALID_TEXTURE_ID = -1;
+constexpr TextureID INVALID_MATERIAL_ID = -1;

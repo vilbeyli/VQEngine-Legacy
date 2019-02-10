@@ -578,24 +578,27 @@ void Scene::EndLoadingModels()
 		GameObject* pObj = kvp.first;
 		
 		// this will wait on the longest item.
+		Model m;
 		if (loadedModels.find(modelPath) == loadedModels.end())
 		{
-			Model m = mModelLoadQueue.asyncModelResults.at(modelPath).get();
-			
-			if (!pObj->mModel.mMaterialAssignmentQueue.empty())
-			{
-				MaterialID matID = pObj->mModel.mMaterialAssignmentQueue.front();
-				pObj->mModel.mMaterialAssignmentQueue.pop(); // we only use the first material for now...
-				m.OverrideMaterials(matID);
-			}
-
-			pObj->SetModel(m);
+			m = mModelLoadQueue.asyncModelResults.at(modelPath).get();
 			loadedModels[modelPath] = m;
 		}
 		else
 		{
-			pObj->SetModel(loadedModels.at(modelPath));
+			m = loadedModels.at(modelPath);
 		}
+
+		// override material if any.
+		if (!pObj->mModel.mMaterialAssignmentQueue.empty())
+		{
+			MaterialID matID = pObj->mModel.mMaterialAssignmentQueue.front();
+			pObj->mModel.mMaterialAssignmentQueue.pop(); // we only use the first material for now...
+			m.OverrideMaterials(matID);
+		}
+
+		// assign the model ot object
+		pObj->SetModel(m);
 	});
 }
 

@@ -57,7 +57,13 @@ cbuffer cbSurfaceMaterial
 Texture2D texDiffuseMap;
 Texture2D texNormalMap;
 Texture2D texSpecularMap;
+//Texture2D texAOMap;        // ?
+Texture2D texHeightMap;    // ?
+Texture2D texMetallicMap;
+Texture2D texRoughnessMap;
+
 Texture2D texAlphaMask;
+
 
 SamplerState sNormalSampler;
 
@@ -88,18 +94,26 @@ PSOut PSMain(PSIn In) : SV_TARGET
 #else
 	const float3 sampledDiffuse = texDiffuseMap.Sample(sNormalSampler, uv).xyz;
 	const float3 surfaceDiffuse = surfaceMaterial.diffuse;
+
 	const float3 finalDiffuse   = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 
 		? sampledDiffuse 
 		: surfaceDiffuse;
+
 	const float3 finalNormal    = HasNormalMap (surfaceMaterial.textureConfig) > 0 
 		? UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) 
 		: N;
-	const float3 finalSpecular  = HasSpecularMap(surfaceMaterial.textureConfig)> 0 
+
+	const float3 finalSpecular  = HasSpecularMap(surfaceMaterial.textureConfig) > 0 
 		? texSpecularMap.Sample(sNormalSampler, uv).xxx 
 		: surfaceMaterial.specular;
 
-	const float roughnessORshininess = surfaceMaterial.roughness * BRDFOrPhong + surfaceMaterial.shininess * (1.0f - BRDFOrPhong);
-	const float metalness            = surfaceMaterial.metalness;
+	const float roughnessORshininess = HasRoughnessMap(surfaceMaterial.textureConfig) > 0
+		? texRoughnessMap.Sample(sNormalSampler, uv)
+		: surfaceMaterial.roughness * BRDFOrPhong + surfaceMaterial.shininess * (1.0f - BRDFOrPhong);
+
+	const float metalness = HasMetallicMap(surfaceMaterial.textureConfig) > 0
+		? texMetallicMap.Sample(sNormalSampler, uv)
+		: surfaceMaterial.metalness;
 #endif
 
 	GBuffer.diffuseRoughness	= float4(finalDiffuse, roughnessORshininess);

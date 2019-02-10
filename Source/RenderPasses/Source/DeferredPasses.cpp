@@ -205,10 +205,12 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 				material = pMat->GetShaderFriendlyStruct();
 				pRenderer->SetConstantStruct("surfaceMaterial", &material);
 				pRenderer->SetConstantStruct("ObjMatrices", &mats);
-				if (pMat->diffuseMap >= 0)	pRenderer->SetTexture("texDiffuseMap", pMat->diffuseMap);
-				if (pMat->normalMap >= 0)	pRenderer->SetTexture("texNormalMap", pMat->normalMap);
-				if (pMat->specularMap >= 0)	pRenderer->SetTexture("texSpecularMap", pMat->specularMap);
-				if (pMat->mask >= 0)		pRenderer->SetTexture("texAlphaMask", pMat->mask);
+				if (pMat->diffuseMap >= 0)		pRenderer->SetTexture("texDiffuseMap", pMat->diffuseMap);
+				if (pMat->normalMap >= 0)		pRenderer->SetTexture("texNormalMap", pMat->normalMap);
+				if (pMat->specularMap >= 0)		pRenderer->SetTexture("texSpecularMap", pMat->specularMap);
+				if (pMat->mask >= 0)			pRenderer->SetTexture("texAlphaMask", pMat->mask);
+				if (pMat->metallicMap >= 0)		pRenderer->SetTexture("texMetallicMap", pMat->metallicMap);
+				if (pMat->roughnessMap >= 0)	pRenderer->SetTexture("texRoughnessMap", pMat->roughnessMap);
 				pRenderer->SetConstant1f("BRDFOrPhong", 1.0f);	// assume brdf for now
 
 			}

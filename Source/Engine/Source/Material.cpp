@@ -157,14 +157,14 @@ Material* Create(T*& pNext)
 	Material* pReturn = pNext;
 	pNext = static_cast<T*>(pReturn->pNextAvailable);
 	assert(pNext);
-	assert(pNext->ID.ID > -1);
+	assert(pNext->ID.ID > INVALID_MATERIAL_ID);
 	return pReturn;
 }
 
 MaterialID MaterialPool::CreateMaterial(EMaterialType type)
 {
 	std::unique_lock<std::mutex> lock(mBufferMutex);
-	MaterialID returnID = { -1 };
+	MaterialID returnID = { INVALID_MATERIAL_ID };
 	switch (type)
 	{
 	case GGX_BRDF:
@@ -274,18 +274,21 @@ BlinnPhong_Material::BlinnPhong_Material(MaterialID _ID, const vec3 & diffuse_in
 
 
 Material::Material(MaterialID _ID)
-	:
-	diffuse(LinearColor::white),
-	alpha(1.0f),
-	specular(LinearColor::white.Value()),
-	tiling(1, 1),
-	diffuseMap(-1),
-	normalMap(-1),
-	heightMap(-1),
-	specularMap(-1),
-	mask(-1),
-	roughnessMap(-1),
-	ID(_ID)
+	
+	: diffuse(LinearColor::white)
+	, alpha(1.0f)
+	, specular(LinearColor::white.Value())
+	, tiling(1, 1)
+
+	, diffuseMap(INVALID_TEXTURE_ID)
+	, normalMap(INVALID_TEXTURE_ID)
+	, heightMap(INVALID_TEXTURE_ID)
+	, specularMap(INVALID_TEXTURE_ID)
+	, mask(INVALID_TEXTURE_ID)
+	, roughnessMap(INVALID_TEXTURE_ID)
+	, metallicMap(INVALID_TEXTURE_ID)
+	
+	, ID(_ID)
 {}
 
 Material::~Material() {}
@@ -313,6 +316,8 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 		if (normalMap >= 0)		renderer->SetTexture("texNormalMap", normalMap);
 		if (specularMap >= 0)	renderer->SetTexture("texSpecularMap", specularMap);
 		if (mask >= 0)			renderer->SetTexture("texAlphaMask", mask);
+		if (metallicMap >= 0)	renderer->SetTexture("texMetallicMap", metallicMap);
+		if (roughnessMap >= 0)	renderer->SetTexture("texRoughnessMap", roughnessMap);
 		break;
 	}
 
@@ -354,6 +359,8 @@ int Material::GetTextureConfig() const
 	textureConfig |= normalMap == -1	? 0 : (1 << 1);
 	textureConfig |= specularMap == -1	? 0 : (1 << 2);
 	textureConfig |= mask == -1			? 0 : (1 << 3);
+	textureConfig |= roughnessMap == -1 ? 0 : (1 << 4);
+	textureConfig |= metallicMap == -1  ? 0 : (1 << 5);
 	return textureConfig;
 }
 

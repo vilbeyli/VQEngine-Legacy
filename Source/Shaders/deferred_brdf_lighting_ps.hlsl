@@ -57,6 +57,7 @@ Texture2D texDiffuseRoughnessMap;
 Texture2D texSpecularMetalnessMap;
 Texture2D texNormals;
 Texture2D texDepth;
+
 TextureCubeArray texPointShadowMaps;
 Texture2DArray   texSpotShadowMaps;
 Texture2DArray   texDirectionalShadowMaps;

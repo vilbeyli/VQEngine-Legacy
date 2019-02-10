@@ -32,11 +32,30 @@ namespace Settings { struct Window; }
 class Application
 {
 public: 
+	struct WorkspaceDirectories
+	{
+		std::string mAppData;
+		std::string mResources;
+		std::string mShaderCache;
+		std::string mShaderSource;
+		std::string mFonts;
+
+
+		std::string mTextures;
+		std::string mMeshes;
+		std::string mModels;
+		std::string mScenes;
+		std::string mEnvironmentMaps;
+	};
+
+	// TODO: replace static strings with this struct
+	static WorkspaceDirectories s_WorkspaceDirectories;
+
 	static std::string s_WorkspaceDirectory;
 	static std::string s_ShaderCacheDirectory;
 
 public:
-	Application();
+	Application(const char* psAppName);
 	~Application();
 
 	bool Init();

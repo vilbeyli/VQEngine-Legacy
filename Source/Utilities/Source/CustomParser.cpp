@@ -254,6 +254,32 @@ static GameObject* pObject = nullptr;
 
 Light sLight = Light();
 
+enum EPBRTextures
+{
+	COLOR_MAP = 0,
+	ALBEDO_MAP = COLOR_MAP,
+	DIFFUSE_MAP = COLOR_MAP,
+
+	NORMAL_MAP,
+
+	//AO_MAP,
+
+	HEIGHT_MAP,
+
+	METALLIC_MAP,
+
+	ROUGHNESS_MAP,
+
+	NUM_PBR_TEXTURE_INPUTS = 5
+};
+// 0: colorMap
+// 1: normalMap
+// 2: heightMap
+// 3: metallicMap
+// 4: roughnessMap
+/// 2: aoMap
+static std::array<TextureID, NUM_PBR_TEXTURE_INPUTS> sTextureSet;
+
 using ParseFunctionType = void(__cdecl *)(const std::vector<std::string>&);
 using ParseFunctionLookup = std::unordered_map<std::string, ParseFunctionType>;
 
@@ -300,6 +326,111 @@ static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
 //	}
 //	}
 //};
+
+
+
+
+static std::unordered_map<std::string, int> TEXTURE_MAP_CMD_INDEX_LOOKUP =
+{
+	  { "colorMap", 0 }
+	, { "normalMap", 1 }
+	, { "heightMap", 2 }
+	, { "metallicMap", 3 }
+	, { "roughnessMap", 4 }
+};
+
+static std::array<TextureID, NUM_PBR_TEXTURE_INPUTS> LoadPBRPreset(Renderer* pRenderer, const std::string& presetPath)
+{
+	std::array<TextureID, NUM_PBR_TEXTURE_INPUTS> textureSet;
+	for (int i = 0; i < NUM_PBR_TEXTURE_INPUTS; ++i) textureSet[i] = INVALID_TEXTURE_ID;
+
+	static std::unordered_map<std::string, int> CG_BOOKCASE_TEXTURE_TYPE_LOOKUP = 
+	{
+		// Color Map Keys
+		  { "_Base_Color", 0 }
+		, { "Color", 0 }
+
+		// Normal Map Keys
+		, { "_Normal", 1 } 
+		, { "Normal", 1 }
+
+		// AO Map Keys
+		//, { "_AO", 2 }
+		//, { "AO", 2 }
+
+		// Height Map Keys
+		, { "_Height", 2 }
+		, { "Height", 2 }
+
+		// Metallic Map Keys
+		, { "_Metallic", 3 }
+		, { "Metallic" , 3 }
+
+		// Roughness Map Keys
+		, { "_Roughness", 4 }
+		, { "Roughness" , 4 }
+	};
+
+
+#if _MSVC_LANG >= 201703L	// CPP17
+	namespace filesys = std::experimental::filesystem;
+
+	const std::string PBR_ROOT = Renderer::sTextureRoot + std::string("PBR/");
+	const bool bGenerateMips = true;
+	const std::string _presetPath = PBR_ROOT + presetPath;
+
+	if (!filesys::exists(_presetPath))
+	{
+		Log::Error("LoadPBRPreset(): Path doesn't exist: %s", _presetPath.c_str());
+		return textureSet;
+	}
+
+	std::vector<std::string> existingTextureMaps;
+	for (auto& p : filesys::directory_iterator(_presetPath))
+		existingTextureMaps.push_back(p.path().generic_string());
+	
+	for (const auto& strTexMapPath : existingTextureMaps)
+	{
+		std::vector<std::string> tokens = StrUtil::split(strTexMapPath, { '/', '\\' });
+		std::string presetFolderName = tokens[tokens.size() - 2] + "/";
+		std::string presetLibraryName = tokens[tokens.size() - 3] + "/";
+		std::string fileName = tokens.back();
+		std::string fileNameNoExtension = StrUtil::split(fileName, '.').front();
+		std::string textureTypeToken = StrUtil::split(fileNameNoExtension, '_').back();
+		
+		// filter out AO textures
+		if (textureTypeToken == "AO")
+			continue;
+
+		int textureSetIndex = CG_BOOKCASE_TEXTURE_TYPE_LOOKUP.at(textureTypeToken);
+		textureSet[textureSetIndex] = pRenderer->CreateTextureFromFile(fileName, PBR_ROOT + presetLibraryName + presetFolderName, bGenerateMips);
+	}
+	
+
+#else
+//#pragma error("CPP17 not supported, directory functionality doesn't have implementation for LoadPBRPreset()");
+	Log::Warning("CPP17 not supported, directory functionality doesn't have implementation for LoadPBRPreset()");
+#endif
+
+	return textureSet;
+}
+
+static void ResetPresets(std::array<TextureID, NUM_PBR_TEXTURE_INPUTS>& textureSet) { for (int i = 0; i < NUM_PBR_TEXTURE_INPUTS; ++i) textureSet[i] = -1; }
+static void AssignPresets(BRDF_Material*& pMat, const std::array<TextureID, NUM_PBR_TEXTURE_INPUTS>& textureSet)
+{
+	pMat->diffuseMap = textureSet[COLOR_MAP];
+	pMat->normalMap = textureSet[NORMAL_MAP];
+	//pMat-> /* No AO map */ = textureSet[AO_MAP];
+	pMat->heightMap = textureSet[HEIGHT_MAP];
+	pMat->metallicMap = textureSet[METALLIC_MAP];
+	pMat->roughnessMap = textureSet[ROUGHNESS_MAP];
+}
+
+static void LoadPBRPreset(Renderer* pRenderer, const std::string& presetPath, BRDF_Material*& pMaterial)
+{
+	std::array<TextureID, NUM_PBR_TEXTURE_INPUTS> textureSet = LoadPBRPreset(pRenderer, presetPath);
+	AssignPresets(pMaterial, textureSet);
+}
 
 void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& command, SerializedScene& scene)
 {
@@ -393,6 +524,62 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 
 
 	// material
+	else if (cmd == "pbr")
+	{
+		if (!bIsReadingGameObject)
+		{
+			Log::Error(" Creating BRDF Material without defining a game object (missing cmd: \"%s\"", "object begin");
+			return;
+		}
+
+		const std::string pbrCmd = GetLowercased(command[1]);
+
+		// PBR BEGIN/END BLOCK 
+		// for custom texture specification per PBR input
+		//
+		if (pbrCmd == "begin")
+		{
+			bIsReadingMaterial = true;
+			materialType = BRDF;
+			pMaterial = scene.materials.CreateAndGetMaterial(GGX_BRDF);
+			pObject->AddMaterial(pMaterial);
+			ResetPresets(sTextureSet);
+			return;
+		}
+
+
+		if (pbrCmd == "end")
+		{
+			materialType = UNKNOWN;
+			bIsReadingMaterial = false;
+			BRDF_Material* pMat = static_cast<BRDF_Material*>(pMaterial);
+			AssignPresets(pMat, sTextureSet);
+			ResetPresets(sTextureSet);
+			return;
+		}
+
+		// PBR PRESET LOADING
+		// pbrCmd := path to preset folder
+		//
+		pMaterial = scene.materials.CreateAndGetMaterial(GGX_BRDF);
+		pObject->AddMaterial(pMaterial);
+		BRDF_Material* pMat = static_cast<BRDF_Material*>(pMaterial);
+		LoadPBRPreset(pRenderer, pbrCmd, pMat);
+		return;
+
+	}
+	else if (std::string(cmd).find("Map") != std::string::npos && cmd.size() >= 5)
+	{	
+		BRDF_Material* pMat = static_cast<BRDF_Material*>(pMaterial);
+		int textureMapIndex = TEXTURE_MAP_CMD_INDEX_LOOKUP.at(cmd);
+
+		const std::vector<std::string> tokens = StrUtil::split(command[1], '/');
+		const std::string fileName = tokens.back();
+		const std::string folderPath = tokens[tokens.size() - 3] + "/" + tokens[tokens.size() - 2] + "/";
+		const std::string PBR_ROOT = Renderer::sTextureRoot + std::string("PBR/");
+		const bool bGenerateMips = true;
+		sTextureSet[textureMapIndex] = pRenderer->CreateTextureFromFile(fileName, PBR_ROOT + folderPath, bGenerateMips);
+	}
 	else if (cmd == "mesh")
 	{
 		// #Parameters: 1

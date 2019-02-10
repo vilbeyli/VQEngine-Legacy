@@ -58,9 +58,19 @@ struct SurfaceMaterial
 
 };
 
+struct TextureEntry
+{
+	TextureID tID = INVALID_TEXTURE_ID;
+	vec2 tiling = vec2(1, 1);
+	vec2 bias = vec2(0, 0); 
+	// filtering
+
+};
 
 struct Material				// 56 Bytes
 {
+	//-----------------------------------
+	// GPU REGISTERS
 	//-----------------------------------
 	MaterialID	ID;			// 4  Bytes
 	LinearColor	diffuse;	// 12 Bytes
@@ -69,15 +79,22 @@ struct Material				// 56 Bytes
 	vec3		specular;	// 12 Bytes
 	//-----------------------------------
 	vec2		tiling;	// default=(1,1)
+	
+	//-----------------------------------
+
+	//-----------------------------------
+	// TEXTURES
+	//-----------------------------------
 	TextureID	diffuseMap;
 	TextureID	normalMap;
-	//-----------------------------------
 	TextureID	heightMap;
-	TextureID	specularMap;
+	TextureID	specularMap;  // phong
 	TextureID	roughnessMap;
+	TextureID	metallicMap;
 	TextureID	mask;
 	//-----------------------------------
 
+	
 	Material* pNextAvailable = nullptr;	// making this class a pool object
 
 	//=========================================================================

@@ -27,10 +27,11 @@
 // directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
-ao true 0.70 19.0 4.10
+//ao true 1.00 19.0 4.10
+ao true 0.250 19.0 4.10
 //ao true 0.10 19.0 4.10
 //ao true 0.001 19.0 4.10
-bloom false 1.60
+bloom true 1.60
 skylight true
 
 camera 0.1 5000 40   17.18  189.60  -469.03 	 -2.57 12.77
@@ -40,41 +41,80 @@ camera 0.1 5000 40   -0.99  122.51  -219.44 	 -0.13 15.60
 
 
 object begin
-	transform 0 0 0 0 0 0 500 1 250
+	transform 0 0 0 0 0 0 500 1 500
 	mesh cube
-	brdf begin
-		roughness 0.77
-		metalness 0.00
-	brdf end
+	//brdf begin
+	//	roughness 0.77
+	//	metalness 0.00
+	//brdf end
+	pbr cgbookcase/blue-green-hexagonal-tiles-01
+	//pbr cgbookcase/black-herringbone-tiles-01
 object end
+
+// UNIT TEST
+//---------------------------------------------------------------------------------
+//object begin
+//	transform 0 1 -150 0 0 0 0.5
+//	model shaderBall.obj
+////	mesh sphere
+//	pbr begin
+//		colorMap     cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Base_Color.png
+//		normalMap    cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Normal.png
+////		aoMap        cgbookcase/blue-tiles-01/
+//		heightMap    cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Height.png
+////		metallicMap  cgbookcase/blue-tiles-01/
+//		roughnessMap cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Roughness.png
+//	pbr end
+//object end
+//---------------------------------------------------------------------------------
 
 
 object begin
-	transform 0 1 0 0 0 0 0.5
+	transform 0 1 -150 0 0 0 0.5
 	model shaderBall.obj
-//	mesh sphere
-	pbr begin
-		colorMap     cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Base_Color.png
-		normalMap    cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Normal.png
-//		aoMap        cgbookcase/blue-tiles-01/
-		heightMap    cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Height.png
-//		metallicMap  cgbookcase/blue-tiles-01/
-		roughnessMap cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Roughness.png
-	pbr end
+	pbr cgbookcase/black-herringbone-tiles-01
 object end
 
 object begin
-	transform -200 1 0 0 0 0 0.5
+	transform -150 1 0 0 0 0 0.5
 	model shaderBall.obj
 	pbr cgbookcase/copper-tiles-01
 object end
 
 object begin
-	transform 200 1 0 0 0 0 0.5
+	transform 150 1 0 0 0 0 0.5
 	model shaderBall.obj
-	pbr cgbookcase/painted-metal-02
+	pbr cgbookcase/wooden-planks-04
+	//brdf begin
+	//	metalness 1.0f
+	//	roughness 0.04f
+	//brdf end
 object end
 
+
+
+object begin
+	transform 250 1 150 0 0 0 0.5
+	model shaderBall.obj
+	pbr cgbookcase/blue-tiles-01
+	//pbr cgbookcase/blue-green-hexagonal-tiles-01
+object end
+
+object begin
+	transform 0 1 150 0 0 0 0.5
+	model shaderBall.obj
+	pbr cgbookcase/painted-metal-02
+	//pbr cgbookcase/wood-07
+object end
+
+object begin
+	transform -250 1 150 0 0 0 0.5
+	model shaderBall.obj
+	brdf begin
+		metalness 0.95f
+		roughness 0.14f
+	brdf end
+object end
 
 
 
@@ -87,11 +127,20 @@ object end
 //	directional 2850 3000
 //light end
 
-//light begin
-//	type point
-//	transform  -111.74  131.40  -97.21    0 0 0   0.2
-//	color white
-//	brightness 15800
-//	shadows true 0.0001 0.01 
-//	range 1000
-//light end
+light begin
+	type point
+	transform  -111.74  181.40  -97.21    0 0 0   0.6
+	color white
+	brightness 110800
+	shadows true 0.0001 0.01 
+	range 1000
+light end
+
+light begin
+	type point
+	transform  111.74  181.40  -197.21    0 0 0   0.6
+	color white
+	brightness 110800
+	shadows true 0.0001 0.01 
+	range 1000
+light end

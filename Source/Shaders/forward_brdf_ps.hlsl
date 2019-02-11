@@ -138,7 +138,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		? UnpackNormals(texNormalMap, sLinearSampler, uv, N, T)
 		: N;
 	s.diffuseColor = HasDiffuseMap(surfaceMaterial.textureConfig) > 0
-		? texDiffuseMap.Sample(sLinearSampler, uv).xyz
+		? pow(texDiffuseMap.Sample(sLinearSampler, uv).xyz, 2.2f)
 		: surfaceMaterial.diffuse;
 	s.specularColor = HasSpecularMap(surfaceMaterial.textureConfig) > 0 
 		? texSpecularMap.Sample(sLinearSampler, uv) 

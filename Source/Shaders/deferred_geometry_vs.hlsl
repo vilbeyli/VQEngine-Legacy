@@ -94,7 +94,7 @@ PSIn VSMain(VSIn In)
 	Out.viewNormal	 = normalize(mul(ObjMatrices.normalViewMatrix, float4(In.normal , 0))).rgb;
 	Out.viewTangent	 = normalize(mul(ObjMatrices.normalViewMatrix, float4(In.tangent, 0))).rgb;
 
-	const float fHeightIntensity = 1.0f;
+	const float fHeightIntensity = 0.90f;
 #if ENABLE_HEIGHTMAPPING
     if(HasHeightMap(surfaceMaterial.textureConfig) != 0)
     {

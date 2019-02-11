@@ -155,8 +155,8 @@ inline float3 F_LambertDiffuse(float3 kd)
 float3 BRDF(float3 Wi, BRDF_Surface s, float3 V, float3 worldPos)
 {
 	// vectors
-	const float3 Wo = V;
-	const float3 N  = s.N;
+	const float3 Wo = normalize(V);
+	const float3 N  = normalize(s.N);
 	const float3 H = normalize(Wo + Wi);
 
 	// surface

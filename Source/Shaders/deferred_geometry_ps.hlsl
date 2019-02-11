@@ -91,7 +91,7 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	                                  + surfaceMaterial[In.instanceID].shininess * (1.0f - BRDFOrPhong);
 	const float3 finalNormal = N;
 #else
-	const float3 sampledDiffuse = texDiffuseMap.Sample(sNormalSampler, uv).xyz;
+	const float3 sampledDiffuse = pow(texDiffuseMap.Sample(sNormalSampler, uv).xyz, 2.2f);
 	const float3 surfaceDiffuse = surfaceMaterial.diffuse;
 
 	const float3 finalDiffuse   = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 

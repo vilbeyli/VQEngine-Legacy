@@ -578,7 +578,7 @@ void Scene::EndLoadingModels()
 		GameObject* pObj = kvp.first;
 		
 		// this will wait on the longest item.
-		Model m;
+		Model m = {};
 		if (loadedModels.find(modelPath) == loadedModels.end())
 		{
 			m = mModelLoadQueue.asyncModelResults.at(modelPath).get();
@@ -597,7 +597,7 @@ void Scene::EndLoadingModels()
 			m.OverrideMaterials(matID);
 		}
 
-		// assign the model ot object
+		// assign the model to object
 		pObj->SetModel(m);
 	});
 }

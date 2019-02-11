@@ -28,6 +28,9 @@ GameObject::GameObject(Scene* pScene) : mpScene(pScene) {};
 
 void GameObject::AddMesh(MeshID meshID)
 {
+	if (meshID >= 0 && meshID < EGeometry::MESH_TYPE_COUNT)
+		mModel.mbLoaded = true;
+
 	mModel.mData.mMeshIDs.push_back(meshID);
 }
 

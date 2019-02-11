@@ -375,6 +375,7 @@ void BRDF_Material::Clear()
 	specularMap = -1;
 	mask = -1;
 	roughnessMap = -1;
+	metallicMap = -1;
 	alpha = 1.0f;
 }
 
@@ -388,6 +389,7 @@ void BlinnPhong_Material::Clear()
 	mask = -1;
 	roughnessMap = -1;
 	specularMap = -1;
+	metallicMap = -1;
 	alpha = 1.0f;
 }
 

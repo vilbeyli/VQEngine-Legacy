@@ -27,7 +27,8 @@
 // directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
-ao true 0.10 19.0 4.10
+ao true 0.70 19.0 4.10
+//ao true 0.10 19.0 4.10
 //ao true 0.001 19.0 4.10
 bloom false 1.60
 skylight true
@@ -51,6 +52,7 @@ object end
 object begin
 	transform 0 1 0 0 0 0 0.5
 	model shaderBall.obj
+//	mesh sphere
 	pbr begin
 		colorMap     cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Base_Color.png
 		normalMap    cgbookcase/blue-tiles-01/Blue_tiles_01_2K_Normal.png
@@ -85,11 +87,11 @@ object end
 //	directional 2850 3000
 //light end
 
-light begin
-	type point
-	transform  -111.74  131.40  -97.21    0 0 0   0.2
-	color white
-	brightness 15800
-	shadows true 0.0001 0.01 
-	range 1000
-light end
+//light begin
+//	type point
+//	transform  -111.74  131.40  -97.21    0 0 0   0.2
+//	color white
+//	brightness 15800
+//	shadows true 0.0001 0.01 
+//	range 1000
+//light end

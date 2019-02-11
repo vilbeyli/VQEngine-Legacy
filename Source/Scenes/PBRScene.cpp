@@ -35,6 +35,7 @@ void PBRScene::Load(SerializedScene& scene)
 {
 	mTimeAccumulator = 0.0f;
 
+	SetEnvironmentMap(EEnvironmentMapPresets::TROPICAL_RUINS);
 }
 
 void PBRScene::Unload()

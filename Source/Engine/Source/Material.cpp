@@ -361,6 +361,7 @@ int Material::GetTextureConfig() const
 	textureConfig |= mask == -1			? 0 : (1 << 3);
 	textureConfig |= roughnessMap == -1 ? 0 : (1 << 4);
 	textureConfig |= metallicMap == -1  ? 0 : (1 << 5);
+	textureConfig |= heightMap == -1    ? 0 : (1 << 6);
 	return textureConfig;
 }
 

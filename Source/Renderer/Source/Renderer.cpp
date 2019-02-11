@@ -1681,7 +1681,7 @@ void Renderer::SetConstant(const char * cName, const void * data)
 			found = true;
 			memcpy(c._data, data, c._size);
 			shader->mConstantBuffers[GPUcBufferSlot].dirty = true;
-			break;	// ensures write on first occurrence
+			//break;	// ensures write on first occurrence
 		}
 	}
 	if (!found)

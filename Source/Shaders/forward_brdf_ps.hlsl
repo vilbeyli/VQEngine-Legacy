@@ -75,6 +75,8 @@ Texture2D texDiffuseMap;
 Texture2D texNormalMap;
 Texture2D texSpecularMap;
 Texture2D texAlphaMask;
+Texture2D texMetallicMap;
+Texture2D texRoughnessMap;
 
 Texture2D texAmbientOcclusion;
 
@@ -141,8 +143,12 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.specularColor = HasSpecularMap(surfaceMaterial.textureConfig) > 0 
 		? texSpecularMap.Sample(sLinearSampler, uv) 
 		: surfaceMaterial.specular;
-	s.roughness = surfaceMaterial.roughness;
-	s.metalness = surfaceMaterial.metalness;
+	s.roughness = HasRoughnessMap(surfaceMaterial.textureConfig) > 0
+		? texRoughnessMap.Sample(sLinearSampler, uv)
+		: surfaceMaterial.roughness;
+	s.metalness = HasMetallicMap(surfaceMaterial.textureConfig) > 0
+		? texMetallicMap.Sample(sLinearSampler, uv)
+		: surfaceMaterial.metalness;
 #endif
 	const float3 R = reflect(-V, s.N);
 

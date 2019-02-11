@@ -58,7 +58,6 @@ Texture2D texDiffuseMap;
 Texture2D texNormalMap;
 Texture2D texSpecularMap;
 //Texture2D texAOMap;        // ?
-Texture2D texHeightMap;    // ?
 Texture2D texMetallicMap;
 Texture2D texRoughnessMap;
 

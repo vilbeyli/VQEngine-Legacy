@@ -47,6 +47,25 @@ struct ObjectMatrices
 	matrix worldViewProj;
 };
 
+
+#define ENABLE_HEIGHTMAPPING 0
+
+#if ENABLE_HEIGHTMAPPING
+#include "LightingCommon.hlsl"
+cbuffer cbSurfaceMaterial
+{
+#ifdef INSTANCED
+    SurfaceMaterial surfaceMaterial[INSTANCE_COUNT];
+#else
+	SurfaceMaterial surfaceMaterial;
+#endif
+    float BRDFOrPhong;
+};
+
+Texture2D texHeightMap;
+SamplerState sNormalSampler;
+#endif
+
 cbuffer perModel
 {
 #ifdef INSTANCED
@@ -56,11 +75,12 @@ cbuffer perModel
 #endif
 };
 
+
 PSIn VSMain(VSIn In)
 {
 	const float4 pos = float4(In.position, 1);
 
-	PSIn Out;
+	PSIn Out = (PSIn)0;
 #ifdef INSTANCED
 	Out.position	 = mul(ObjMatrices[In.instanceID].worldViewProj, pos);
 	Out.viewPosition = mul(ObjMatrices[In.instanceID].worldView, pos).xyz;
@@ -68,10 +88,28 @@ PSIn VSMain(VSIn In)
 	Out.viewTangent	 = normalize(mul(ObjMatrices[In.instanceID].normalViewMatrix, In.tangent));
 	Out.instanceID	 = In.instanceID;
 #else
-	Out.position	 = mul(ObjMatrices.worldViewProj, pos);
+	//Out.position	 = mul(ObjMatrices.worldViewProj, pos);
+	float4 clipPos   = mul(ObjMatrices.worldViewProj, pos);
 	Out.viewPosition = mul(ObjMatrices.worldView, pos).xyz;
-	Out.viewNormal	 = normalize(mul(ObjMatrices.normalViewMatrix, In.normal));
-	Out.viewTangent	 = normalize(mul(ObjMatrices.normalViewMatrix, In.tangent));
+	Out.viewNormal	 = normalize(mul(ObjMatrices.normalViewMatrix, float4(In.normal , 0))).rgb;
+	Out.viewTangent	 = normalize(mul(ObjMatrices.normalViewMatrix, float4(In.tangent, 0))).rgb;
+
+	const float fHeightIntensity = 1.0f;
+#if ENABLE_HEIGHTMAPPING
+    if(HasHeightMap(surfaceMaterial.textureConfig) != 0)
+    {
+        float Height = texHeightMap.SampleLevel(sNormalSampler, In.uv, 0).r;
+		float4 bumpedPos = float4(pos + normalize(In.normal) * Height * fHeightIntensity, 1.0f);
+		Out.position = mul(ObjMatrices.worldViewProj, bumpedPos);
+		Out.viewPosition = mul(ObjMatrices.worldView, bumpedPos).xyz;
+		//Out.position.xyz = clipPos.xyz;
+		//Out.position.w = clipPos.w;
+    }
+	else
+#endif
+	{
+		Out.position = clipPos;
+	}
 #endif
 	Out.uv				= In.uv;
 	return Out;

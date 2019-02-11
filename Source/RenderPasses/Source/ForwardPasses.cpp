@@ -261,10 +261,15 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 				material = pMat->GetShaderFriendlyStruct();
 				pRenderer->SetConstantStruct("surfaceMaterial", &material);
 				pRenderer->SetConstantStruct("ObjMatrices", &mats);
+
+				// #TODO: this is duplicate code, see Deferred.
 				if (pMat->diffuseMap >= 0)	pRenderer->SetTexture("texDiffuseMap", pMat->diffuseMap);
 				if (pMat->normalMap >= 0)	pRenderer->SetTexture("texNormalMap", pMat->normalMap);
 				if (pMat->specularMap >= 0)	pRenderer->SetTexture("texSpecularMap", pMat->specularMap);
 				if (pMat->mask >= 0)		pRenderer->SetTexture("texAlphaMask", pMat->mask);
+				if (pMat->roughnessMap >= 0)	pRenderer->SetTexture("texRoughnessMap", pMat->roughnessMap);
+				if (pMat->metallicMap >= 0)		pRenderer->SetTexture("texMetallicMap", pMat->metallicMap);
+				if (pMat->heightMap >= 0)		pRenderer->SetTexture("texHeightMap", pMat->heightMap);
 			}
 			else
 			{

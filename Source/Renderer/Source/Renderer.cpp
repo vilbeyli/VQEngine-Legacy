@@ -407,6 +407,32 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 		samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
 		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::LINEAR_FILTER_SAMPLER]._samplerState));
+
+
+		samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+		samplerDesc.MaxAnisotropy = 1;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::ANISOTROPIC_1_CLAMPED_SAMPLER]._samplerState));
+		samplerDesc.MaxAnisotropy = 2;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::ANISOTROPIC_2_CLAMPED_SAMPLER]._samplerState));
+		samplerDesc.MaxAnisotropy = 4;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::ANISOTROPIC_4_CLAMPED_SAMPLER]._samplerState));
+		samplerDesc.MaxAnisotropy = 16;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::ANISOTROPIC_16_CLAMPED_SAMPLER]._samplerState));
+		
+		samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		samplerDesc.MaxAnisotropy = 1;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::ANISOTROPIC_1_WRAPPED_SAMPLER]._samplerState));
+		samplerDesc.MaxAnisotropy = 2;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::ANISOTROPIC_2_WRAPPED_SAMPLER]._samplerState));
+		samplerDesc.MaxAnisotropy = 4;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::ANISOTROPIC_4_WRAPPED_SAMPLER]._samplerState));
+		samplerDesc.MaxAnisotropy = 16;
+		m_device->CreateSamplerState(&samplerDesc, &(mSamplers[EDefaultSamplerState::ANISOTROPIC_16_WRAPPED_SAMPLER]._samplerState));
 	}
 
 	// DEFAULT DEPTHSTENCIL SATATES

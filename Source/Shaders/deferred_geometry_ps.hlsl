@@ -65,6 +65,7 @@ Texture2D texAlphaMask;
 
 
 SamplerState sNormalSampler;
+SamplerState sAnisoSampler;
 
 PSOut PSMain(PSIn In) : SV_TARGET
 {
@@ -91,7 +92,7 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	                                  + surfaceMaterial[In.instanceID].shininess * (1.0f - BRDFOrPhong);
 	const float3 finalNormal = N;
 #else
-	const float3 sampledDiffuse = pow(texDiffuseMap.Sample(sNormalSampler, uv).xyz, 2.2f);
+    const float3 sampledDiffuse = pow(texDiffuseMap.Sample(sAnisoSampler, uv).xyz, 2.2f);
 	const float3 surfaceDiffuse = surfaceMaterial.diffuse;
 
 	const float3 finalDiffuse   = HasDiffuseMap(surfaceMaterial.textureConfig) > 0 
@@ -99,7 +100,7 @@ PSOut PSMain(PSIn In) : SV_TARGET
 		: surfaceDiffuse;
 
 	const float3 finalNormal    = HasNormalMap (surfaceMaterial.textureConfig) > 0 
-		? UnpackNormals(texNormalMap, sNormalSampler, uv, N, T) 
+		? UnpackNormals(texNormalMap, sAnisoSampler, uv, N, T)
 		: N;
 
 	const float3 finalSpecular  = HasSpecularMap(surfaceMaterial.textureConfig) > 0 

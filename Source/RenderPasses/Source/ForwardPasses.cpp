@@ -263,6 +263,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 				pRenderer->SetConstantStruct("ObjMatrices", &mats);
 
 				// #TODO: this is duplicate code, see Deferred.
+				pRenderer->SetSamplerState("sAnisoSampler", EDefaultSamplerState::ANISOTROPIC_4_WRAPPED_SAMPLER);
 				if (pMat->diffuseMap >= 0)	pRenderer->SetTexture("texDiffuseMap", pMat->diffuseMap);
 				if (pMat->normalMap >= 0)	pRenderer->SetTexture("texNormalMap", pMat->normalMap);
 				if (pMat->specularMap >= 0)	pRenderer->SetTexture("texSpecularMap", pMat->specularMap);

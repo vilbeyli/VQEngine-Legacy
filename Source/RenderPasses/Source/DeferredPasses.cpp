@@ -206,6 +206,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 				pRenderer->SetConstantStruct("surfaceMaterial", &material);
 				pRenderer->SetConstantStruct("ObjMatrices", &mats);
 				// #TODO: this is duplicate code, see Forward.
+				pRenderer->SetSamplerState("sAnisoSampler", EDefaultSamplerState::ANISOTROPIC_4_WRAPPED_SAMPLER);
 				if (pMat->diffuseMap >= 0)		pRenderer->SetTexture("texDiffuseMap", pMat->diffuseMap);
 				if (pMat->normalMap >= 0)		pRenderer->SetTexture("texNormalMap", pMat->normalMap);
 				if (pMat->specularMap >= 0)		pRenderer->SetTexture("texSpecularMap", pMat->specularMap);

@@ -90,6 +90,8 @@ SamplerState sEnvMapSampler;
 SamplerState sNearestSampler;
 SamplerState sWrapSampler;
 
+SamplerState sAnisoSampler;
+
 float4 PSMain(PSIn In) : SV_TARGET
 {
 	// TODO: instanced alpha discard
@@ -135,10 +137,10 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.metalness = surfaceMaterial[In.instanceID].metalness;
 #else
 	s.N = HasNormalMap(surfaceMaterial.textureConfig) > 0
-		? UnpackNormals(texNormalMap, sLinearSampler, uv, N, T)
+		? UnpackNormals(texNormalMap, sAnisoSampler, uv, N, T)
 		: N;
 	s.diffuseColor = HasDiffuseMap(surfaceMaterial.textureConfig) > 0
-		? pow(texDiffuseMap.Sample(sLinearSampler, uv).xyz, 2.2f)
+		? pow(texDiffuseMap.Sample(sAnisoSampler, uv).xyz, 2.2f)
 		: surfaceMaterial.diffuse;
 	s.specularColor = HasSpecularMap(surfaceMaterial.textureConfig) > 0 
 		? texSpecularMap.Sample(sLinearSampler, uv) 

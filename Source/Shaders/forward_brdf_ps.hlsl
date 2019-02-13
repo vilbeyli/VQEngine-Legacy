@@ -77,6 +77,7 @@ Texture2D texSpecularMap;
 Texture2D texAlphaMask;
 Texture2D texMetallicMap;
 Texture2D texRoughnessMap;
+Texture2D texEmissiveMap;
 
 Texture2D texAmbientOcclusion;
 
@@ -119,7 +120,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	pcfTest.viewDistanceOfPixel = length(P - cameraPos);
 
-	BRDF_Surface s;
+	BRDF_Surface s = (BRDF_Surface)0;
 #ifdef INSTANCED
 	s.N = N;
 		// HasNormalMap(surfaceMaterial.textureConfig) > 0
@@ -151,6 +152,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.metalness = HasMetallicMap(surfaceMaterial.textureConfig) > 0
 		? texMetallicMap.Sample(sLinearSampler, uv)
 		: surfaceMaterial.metalness;
+    s.emissiveColor = (HasEmissiveMap(surfaceMaterial.textureConfig) > 0
+		? texEmissiveMap.Sample(sLinearSampler, uv).rgb
+		: surfaceMaterial.emissiveColor) * surfaceMaterial.emissiveIntensity;
 #endif
 	const float3 R = reflect(-V, s.N);
 
@@ -161,6 +165,7 @@ float4 PSMain(PSIn In) : SV_TARGET
     const float3 Ia = s.diffuseColor * ao;	// ambient
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);	// diffuse & specular
 	float3 IEnv = 0.0f.xxx;					// environment lighting
+    float3 Ie = s.emissiveColor;
 
 
 	//-- POINT LIGHTS --------------------------------------------------------------------------------------------------------------------------
@@ -276,7 +281,7 @@ float4 PSMain(PSIn In) : SV_TARGET
         IEnv = EnvironmentBRDF(s, V, ao, environmentIrradience, environmentSpecular, F0ScaleBias);
 		IEnv -= Ia; // cancel ambient lighting
     }
-	const float3 illumination = Ia + IdIs + IEnv;
-
+    const float3 illumination = Ie + Ia + IdIs + IEnv;
+    
 	return float4(illumination, 1.0f);
 }

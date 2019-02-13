@@ -1119,6 +1119,7 @@ void Engine::Render()
 			, mSceneLightData
 			, tSSAO
 			, renderTarget
+			, mAOPass.blackTexture4x4
 		};
 
 		mpGPUProfiler->BeginEntry("Lighting<Forward> Pass");
@@ -1126,7 +1127,9 @@ void Engine::Render()
 		mpGPUProfiler->EndEntry();
 	}
 
-	RenderLights();
+	if(mpActiveScene->mSceneView.bIsIBLEnabled)
+		RenderLights(); // when skymaps are disabled, there's an error here that needs fixing.
+
 	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 
 	// POST PROCESS PASS | DEBUG PASS | UI PASS

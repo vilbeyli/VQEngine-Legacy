@@ -271,6 +271,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 				if (pMat->roughnessMap >= 0)	pRenderer->SetTexture("texRoughnessMap", pMat->roughnessMap);
 				if (pMat->metallicMap >= 0)		pRenderer->SetTexture("texMetallicMap", pMat->metallicMap);
 				if (pMat->heightMap >= 0)		pRenderer->SetTexture("texHeightMap", pMat->heightMap);
+				if (pMat->emissiveMap >= 0)		pRenderer->SetTexture("texEmissiveMap", pMat->emissiveMap);
 			}
 			else
 			{
@@ -291,12 +292,13 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 	pRenderer->Apply();
 
 	//if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
+	const bool bSkylight = args.sceneView.bIsIBLEnabled && args.sceneView.environmentMap.irradianceMap != -1;
 	{
 		pRenderer->SetTexture("texAmbientOcclusion", args.tSSAO);
 
 		// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
 		//pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
-		const bool bSkylight = args.sceneView.sceneRenderSettings.bSkylightEnabled;
+		
 		if (bSkylight)
 		{
 			pRenderer->SetTexture("tIrradianceMap", args.sceneView.environmentMap.irradianceMap);
@@ -305,6 +307,16 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 			pRenderer->SetSamplerState("sEnvMapSampler", args.sceneView.environmentMap.envMapSampler);
 		}
 
+		else
+		{
+			// even though SetShader() sets null SRVs, somehow when we dont have skylight on
+			// the next pass, which is RenderLights(), fails with 'TextureCube bound to Texture Slot 0'
+			// debug layer error...
+			// hence, set texture here
+			//pRenderer->SetTexture("tIrradianceMap", args.tEmptyTex);
+			//pRenderer->SetTexture("tPreFilteredEnvironmentMap", args.tEmptyTex);
+			//pRenderer->SetTexture("tBRDFIntegrationLUT", args.tEmptyTex);
+		}
 		//if (mSelectedShader == EShaders::FORWARD_BRDF)
 		{
 			pRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
@@ -345,7 +357,6 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 
 	// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
 	//pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
-	const bool bSkylight = args.sceneView.sceneRenderSettings.bSkylightEnabled;
 	if (bSkylight)
 	{
 		pRenderer->SetTexture("tIrradianceMap", args.sceneView.environmentMap.irradianceMap);
@@ -353,7 +364,16 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 		pRenderer->SetTexture("tBRDFIntegrationLUT", EnvironmentMap::sBRDFIntegrationLUTTexture);
 		pRenderer->SetSamplerState("sEnvMapSampler", args.sceneView.environmentMap.envMapSampler);
 	}
-
+	else
+	{
+		// even though SetShader() sets null SRVs, somehow when we dont have skylight on
+		// the next pass, which is RenderLights(), fails with 'TextureCube bound to Texture Slot 0'
+		// debug layer error...
+		// hence, set texture here
+		//pRenderer->SetTexture("tIrradianceMap"            , args.tEmptyTex);
+		//pRenderer->SetTexture("tPreFilteredEnvironmentMap", args.tEmptyTex);
+		//pRenderer->SetTexture("tBRDFIntegrationLUT"       , args.tEmptyTex);
+	}
 	//if (mSelectedShader == EShaders::FORWARD_BRDF)
 	{
 		pRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);

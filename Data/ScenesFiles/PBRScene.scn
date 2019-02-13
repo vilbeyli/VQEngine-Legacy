@@ -86,9 +86,11 @@ object begin
 	model shaderBall.obj
 	pbr cgbookcase/wooden-planks-04
 	//brdf begin
-	//	metalness 1.0f
-	//	roughness 0.04f
-	//brdf end
+	//	metalness 0.0f
+	//	roughness 0.64f
+	//	emissive 0 0 0.95 10
+	//// emissiveIntensity 100
+	brdf end
 object end
 
 
@@ -113,6 +115,8 @@ object begin
 	brdf begin
 		metalness 0.95f
 		roughness 0.14f
+		emissiveMap cgbookcase/Black_herringbone_tiles_01_2K_Emissive.png
+		emissiveIntensity 2
 	brdf end
 object end
 

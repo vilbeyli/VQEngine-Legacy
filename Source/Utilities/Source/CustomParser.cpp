@@ -270,7 +270,9 @@ enum EPBRTextures
 
 	ROUGHNESS_MAP,
 
-	NUM_PBR_TEXTURE_INPUTS = 5
+	EMISSIVE_MAP,
+
+	NUM_PBR_TEXTURE_INPUTS = 6
 };
 // 0: colorMap
 // 1: normalMap
@@ -337,6 +339,7 @@ static std::unordered_map<std::string, int> TEXTURE_MAP_CMD_INDEX_LOOKUP =
 	, { "heightMap", 2 }
 	, { "metallicMap", 3 }
 	, { "roughnessMap", 4 }
+	, { "emissiveMap", 5 }
 };
 
 static std::array<TextureID, NUM_PBR_TEXTURE_INPUTS> LoadPBRPreset(Renderer* pRenderer, const std::string& presetPath)
@@ -369,6 +372,11 @@ static std::array<TextureID, NUM_PBR_TEXTURE_INPUTS> LoadPBRPreset(Renderer* pRe
 		// Roughness Map Keys
 		, { "_Roughness", 4 }
 		, { "Roughness" , 4 }
+
+
+		// Emissive Map Keys
+		, { "_Emissive", 5 }
+		, { "Emissive" , 5 }
 	};
 
 
@@ -424,6 +432,7 @@ static void AssignPresets(BRDF_Material*& pMat, const std::array<TextureID, NUM_
 	pMat->heightMap = textureSet[HEIGHT_MAP];
 	pMat->metallicMap = textureSet[METALLIC_MAP];
 	pMat->roughnessMap = textureSet[ROUGHNESS_MAP];
+	pMat->emissiveMap = textureSet[EMISSIVE_MAP];
 }
 
 static void LoadPBRPreset(Renderer* pRenderer, const std::string& presetPath, BRDF_Material*& pMaterial)
@@ -565,8 +574,9 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		pObject->AddMaterial(pMaterial);
 		BRDF_Material* pMat = static_cast<BRDF_Material*>(pMaterial);
 		LoadPBRPreset(pRenderer, pbrCmd, pMat);
+		bIsReadingMaterial = false;
+		ResetPresets(sTextureSet);
 		return;
-
 	}
 	else if (std::string(cmd).find("Map") != std::string::npos && cmd.size() >= 5)
 	{	
@@ -575,7 +585,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 
 		const std::vector<std::string> tokens = StrUtil::split(command[1], '/');
 		const std::string fileName = tokens.back();
-		const std::string folderPath = tokens[tokens.size() - 3] + "/" + tokens[tokens.size() - 2] + "/";
+
+		const bool bHasFolder = tokens.size() > 3;
+		const std::string folderPath = bHasFolder
+			? tokens[tokens.size() - 3] + "/" + tokens[tokens.size() - 2] + "/"
+			: tokens[tokens.size() - 2] + "/";
+		
 		const std::string PBR_ROOT = Renderer::sTextureRoot + std::string("PBR/");
 		const bool bGenerateMips = true;
 		sTextureSet[textureMapIndex] = pRenderer->CreateTextureFromFile(fileName, PBR_ROOT + folderPath, bGenerateMips);
@@ -627,6 +642,9 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 
 			materialType = UNKNOWN;
 			bIsReadingMaterial = false;
+			BRDF_Material* pMat = static_cast<BRDF_Material*>(pMaterial);
+			AssignPresets(pMat, sTextureSet);
+			ResetPresets(sTextureSet);
 			return;
 		}
 
@@ -743,6 +761,34 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		// metalness [0.0f, 1.0f]
 		//--------------------------------------------------------------
 		static_cast<BRDF_Material*>(pMaterial)->metalness = stof(command[1]);
+	}
+	else if (cmd == "emissive" || cmd == "emissiveColor")
+	{
+		if (!bIsReadingMaterial)
+		{
+			Log::Error(" Cannot define Material Property: emissive color ");
+			return;
+		}
+
+		assert(command.size() >= 4); // albedo r g b a(optional)
+		const float r = stof(command[1]);
+		const float g = stof(command[2]);
+		const float b = stof(command[3]);
+		pMaterial->emissiveColor = vec3(r, g, b);
+		if (command.size() > 4)
+		{
+			pMaterial->emissiveIntensity = stof(command[4]);
+		}
+ 	}
+	else if (cmd == "emissiveIntensity" || cmd == "emissiveColorIntensity")
+	{
+		if (!bIsReadingMaterial)
+		{
+			Log::Error(" Cannot define Material Property: emissiveIntensity ");
+			return;
+		}
+		pMaterial->emissiveIntensity = stof(command[1]);
+
 	}
 	else if (cmd == "shininess")
 	{

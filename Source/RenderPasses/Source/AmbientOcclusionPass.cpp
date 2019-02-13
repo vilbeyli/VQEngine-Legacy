@@ -40,6 +40,7 @@
 
 
 TextureID AmbientOcclusionPass::whiteTexture4x4 = -1;
+TextureID AmbientOcclusionPass::blackTexture4x4 = -1;
 
 constexpr size_t sAOQualityKernelSizeLookup[] = 
 {
@@ -121,12 +122,22 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	texDesc.dataPitch = sizeof(this->noiseKernel.back()) * NOISE_KERNEL_SIZE;
 	this->noiseTexture = pRenderer->CreateTexture2D(texDesc);
 
-	const float whiteValue = 1.0f;
-	texDesc.width = texDesc.height = 4;
-	std::vector<vec4> white4x4 = std::vector<vec4>(texDesc.height * texDesc.width, vec4(whiteValue, whiteValue, whiteValue, 1));
-	texDesc.texFileName = "white4x4";
-	texDesc.pData = white4x4.data();
-	this->whiteTexture4x4 = pRenderer->CreateTexture2D(texDesc);
+	{
+		const float whiteValue = 1.0f;
+		texDesc.width = texDesc.height = 4;
+		std::vector<vec4> white4x4 = std::vector<vec4>(texDesc.height * texDesc.width, vec4(whiteValue, whiteValue, whiteValue, 1));
+		texDesc.texFileName = "white4x4";
+		texDesc.pData = white4x4.data();
+		this->whiteTexture4x4 = pRenderer->CreateTexture2D(texDesc);
+	}
+	{
+		const float blackValue = 0.0f;
+		texDesc.width = texDesc.height = 4;
+		std::vector<vec4> black4x4 = std::vector<vec4>(texDesc.height * texDesc.width, vec4(blackValue, blackValue, blackValue, 1));
+		texDesc.texFileName = "black4x4";
+		texDesc.pData = black4x4.data();
+		this->blackTexture4x4 = pRenderer->CreateTexture2D(texDesc);
+	}
 
 	// The tiling of the texture causes the orientation of the kernel to be repeated and 
 	// introduces regularity into the result. By keeping the texture size small we can make 

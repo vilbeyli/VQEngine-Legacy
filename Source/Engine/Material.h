@@ -38,24 +38,26 @@ struct BRDF_Material;
 // GPU - constant buffer struct for materials
 struct SurfaceMaterial
 {
-	vec3  diffuse;
-	float alpha;
+	vec3  diffuse = vec3(1);
+	float alpha = 1.0f;
 
-	vec3  specular;
-	float roughness;
+	vec3  specular = vec3(0.5f);
+	float roughness = 0.5f;
 
-	float metalness;
-	float shininess;
-	vec2 tiling;
+	float metalness = 0.0f;
+	float shininess = 40.0f;
+	vec2 tiling = vec2(1, 1);
 
 
 	// bit 0: hasDiffuseMap
 	// bit 1: hasNormalMap
 	// bit 2: hasSpecularMap
 	// bit 3: hasAlphaMask
-	int textureConfig;
+	int textureConfig = 0;
 	int pad0, pad1, pad2;
-
+	
+	vec3 emissive = vec3(0);
+	float emissiveIntensity = 0.0f;
 };
 
 struct TextureEntry
@@ -63,9 +65,11 @@ struct TextureEntry
 	TextureID tID = INVALID_TEXTURE_ID;
 	vec2 tiling = vec2(1, 1);
 	vec2 bias = vec2(0, 0); 
-	// filtering
+	// filtering ?
 
 };
+
+#define TEXTRURE_ENTRY_REFACTORING 0
 
 struct Material				// 56 Bytes
 {
@@ -78,13 +82,23 @@ struct Material				// 56 Bytes
 	float		alpha;		// 4  Bytes
 	vec3		specular;	// 12 Bytes
 	//-----------------------------------
-	vec2		tiling;	// default=(1,1)
-	
+#if !TEXTRURE_ENTRY_REFACTORING
+	vec2		tiling;	    // default=(1,1)
+	vec2 		uv_bias;	// default=(0,0)
+#endif
+	//-----------------------------------
+	vec3  emissiveColor;	 
+	float emissiveIntensity;
+	//-----------------------------------
+
 	//-----------------------------------
 
 	//-----------------------------------
 	// TEXTURES
 	//-----------------------------------
+#if TEXTRURE_ENTRY_REFACTORING
+	std::vector<TextureEntry> textures;
+#else
 	TextureID	diffuseMap;
 	TextureID	normalMap;
 	TextureID	heightMap;
@@ -92,6 +106,8 @@ struct Material				// 56 Bytes
 	TextureID	roughnessMap;
 	TextureID	metallicMap;
 	TextureID	mask;
+	TextureID	emissiveMap;
+#endif
 	//-----------------------------------
 
 	

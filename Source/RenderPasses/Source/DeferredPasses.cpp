@@ -214,6 +214,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 				if (pMat->metallicMap >= 0)		pRenderer->SetTexture("texMetallicMap", pMat->metallicMap);
 				if (pMat->roughnessMap >= 0)	pRenderer->SetTexture("texRoughnessMap", pMat->roughnessMap);
 				if (pMat->heightMap >= 0)		pRenderer->SetTexture("texHeightMap", pMat->heightMap);
+				//if (pMat->emissiveMap >= 0)		pRenderer->SetTexture("texEmissiveMap", pMat->emissiveMap);
 				pRenderer->SetConstant1f("BRDFOrPhong", 1.0f);	// assume brdf for now
 
 			}

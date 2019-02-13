@@ -289,6 +289,7 @@ struct ForwardLightingPass : public RenderPass
 		const SceneLightingData& lights;
 		const TextureID tSSAO;
 		const RenderTargetID targetRT;
+		const TextureID tEmptyTex;
 	};
 
 	void Initialize(Renderer* pRenderer);
@@ -359,6 +360,7 @@ struct AmbientOcclusionPass : public RenderPass
 
 	AmbientOcclusionPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	static TextureID whiteTexture4x4;
+	static TextureID blackTexture4x4;
 	
 	// Pass interface
 	void Initialize(Renderer* pRenderer);

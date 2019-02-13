@@ -53,6 +53,8 @@ struct BRDF_Surface
 	float3 diffuseColor;
 	float metalness;
 	float3 specularColor;
+	float3 emissiveColor;
+	float emissiveIntensity;
 };
 
 // Trowbridge-Reitz GGX Distribution

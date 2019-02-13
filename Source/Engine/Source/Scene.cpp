@@ -1047,7 +1047,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightin
 	mSceneView.sceneRenderSettings = GetSceneRenderSettings();
 	mSceneView.environmentMap = GetEnvironmentMap();
 	mSceneView.cameraPosition = viewCamera.GetPositionF();
-	mSceneView.bIsIBLEnabled = mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed;
+	mSceneView.bIsIBLEnabled = mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed && mSceneView.environmentMap.environmentMap != -1;
 
 
 

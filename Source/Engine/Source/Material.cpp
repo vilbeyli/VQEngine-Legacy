@@ -279,6 +279,8 @@ Material::Material(MaterialID _ID)
 	, alpha(1.0f)
 	, specular(LinearColor::white.Value())
 	, tiling(1, 1)
+	, emissiveColor(LinearColor::black)
+	, emissiveIntensity(1.0f)
 
 	, diffuseMap(INVALID_TEXTURE_ID)
 	, normalMap(INVALID_TEXTURE_ID)
@@ -287,6 +289,7 @@ Material::Material(MaterialID _ID)
 	, mask(INVALID_TEXTURE_ID)
 	, roughnessMap(INVALID_TEXTURE_ID)
 	, metallicMap(INVALID_TEXTURE_ID)
+	, emissiveMap(INVALID_TEXTURE_ID)
 	
 	, ID(_ID)
 {}
@@ -362,6 +365,7 @@ int Material::GetTextureConfig() const
 	textureConfig |= roughnessMap == -1 ? 0 : (1 << 4);
 	textureConfig |= metallicMap == -1  ? 0 : (1 << 5);
 	textureConfig |= heightMap == -1    ? 0 : (1 << 6);
+	textureConfig |= emissiveMap == -1  ? 0 : (1 << 7);
 	return textureConfig;
 }
 
@@ -371,6 +375,8 @@ void BRDF_Material::Clear()
 	metalness = 0.0f;
 	specular = vec3(1,1,1);
 	roughness = 0.04f;
+	emissiveColor = vec3(0,0,0);
+	emissiveIntensity = 0.0f;
 	diffuseMap = -1;
 	normalMap = -1;
 	specularMap = -1;
@@ -378,20 +384,26 @@ void BRDF_Material::Clear()
 	roughnessMap = -1;
 	metallicMap = -1;
 	alpha = 1.0f;
+	emissiveMap = -1;
+	emissiveIntensity = 1.0f;
 }
 
 void BlinnPhong_Material::Clear()
 {
 	diffuse = vec3(1,1,1);
-	shininess = 0.0f;
+	alpha = 1.0f;
 	specular = vec3(1,1,1);
+	shininess = 0.0f;
+	emissiveColor = vec3(0, 0, 0);
+	emissiveIntensity = 0.0f;
 	diffuseMap = -1;
 	normalMap = -1;
 	mask = -1;
 	roughnessMap = -1;
 	specularMap = -1;
 	metallicMap = -1;
-	alpha = 1.0f;
+	emissiveMap = -1;
+	emissiveIntensity = 1.0f;
 }
 
 SurfaceMaterial BRDF_Material::GetShaderFriendlyStruct() const
@@ -410,6 +422,9 @@ SurfaceMaterial BRDF_Material::GetShaderFriendlyStruct() const
 
 			GetTextureConfig(),
 			(int)0xDEADBEEF,(int)0xDEADBEEF,(int)0xDEADBEEF,
+
+			emissiveColor,
+			emissiveIntensity
 	};
 }
 
@@ -431,5 +446,7 @@ SurfaceMaterial BlinnPhong_Material::GetShaderFriendlyStruct() const
 		GetTextureConfig(),
 		(int)0xDEADBEEF,(int)0xDEADBEEF,(int)0xDEADBEEF,
 
+		emissiveColor,
+		emissiveIntensity
 	};
 }

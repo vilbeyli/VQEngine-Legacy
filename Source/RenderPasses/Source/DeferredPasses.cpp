@@ -113,9 +113,10 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	}
 
 	constexpr size_t Float3TypeIndex = 0;		constexpr size_t Float4TypeIndex = 1;
-	this->_GBuffer._normalRT = pRenderer->AddRenderTarget(rtDesc[Float3TypeIndex]);
-	this->_GBuffer._diffuseRoughnessRT = pRenderer->AddRenderTarget(rtDesc[Float4TypeIndex]);
-	this->_GBuffer._specularMetallicRT = pRenderer->AddRenderTarget(rtDesc[Float4TypeIndex]);
+	this->_GBuffer.mRTNormals = pRenderer->AddRenderTarget(rtDesc[Float3TypeIndex]);
+	this->_GBuffer.mRTDiffuseRoughness = pRenderer->AddRenderTarget(rtDesc[Float4TypeIndex]);
+	this->_GBuffer.mRTSpecularMetallic = pRenderer->AddRenderTarget(rtDesc[Float4TypeIndex]);
+	this->_GBuffer.mRTEmissive = pRenderer->AddRenderTarget(rtDesc[Float3TypeIndex]);
 	this->_GBuffer.bInitialized = true;
 
 	// http://download.nvidia.com/developer/presentations/2004/6800_Leagues/6800_Leagues_Deferred_Shading.pdf
@@ -156,7 +157,7 @@ void DeferredRenderingPasses::ClearGBuffer(Renderer* pRenderer)
 		bDoClearColor, bDoClearDepth, bDoClearStencil,
 		{ 0, 0, 0, 0 }, 0, 0
 	);
-	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT);
+	pRenderer->BindRenderTargets(_GBuffer.mRTDiffuseRoughness, _GBuffer.mRTSpecularMetallic, _GBuffer.mRTNormals);
 	pRenderer->BeginRender(clearCmd);
 }
 
@@ -214,7 +215,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 				if (pMat->metallicMap >= 0)		pRenderer->SetTexture("texMetallicMap", pMat->metallicMap);
 				if (pMat->roughnessMap >= 0)	pRenderer->SetTexture("texRoughnessMap", pMat->roughnessMap);
 				if (pMat->heightMap >= 0)		pRenderer->SetTexture("texHeightMap", pMat->heightMap);
-				//if (pMat->emissiveMap >= 0)		pRenderer->SetTexture("texEmissiveMap", pMat->emissiveMap);
+				if (pMat->emissiveMap >= 0)		pRenderer->SetTexture("texEmissiveMap", pMat->emissiveMap);
 				pRenderer->SetConstant1f("BRDFOrPhong", 1.0f);	// assume brdf for now
 
 			}
@@ -240,7 +241,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 	);
 
 	pRenderer->SetShader(_geometryShader);
-	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT);
+	pRenderer->BindRenderTargets(_GBuffer.mRTDiffuseRoughness, _GBuffer.mRTSpecularMetallic, _GBuffer.mRTNormals, _GBuffer.mRTEmissive);
 	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
 	pRenderer->SetDepthStencilState(_geometryStencilState);
 	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
@@ -262,7 +263,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 	// RENDER INSTANCED SCENE OBJECTS
 	//
 	pRenderer->SetShader(_geometryInstancedShader);
-	pRenderer->BindRenderTargets(_GBuffer._diffuseRoughnessRT, _GBuffer._specularMetallicRT, _GBuffer._normalRT);
+	pRenderer->BindRenderTargets(_GBuffer.mRTDiffuseRoughness, _GBuffer.mRTSpecularMetallic, _GBuffer.mRTNormals);
 	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
 	pRenderer->Apply();
 
@@ -330,9 +331,10 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	Renderer* pRenderer = args.pRenderer;
 
 	const vec2 screenSize = pRenderer->GetWindowDimensionsAsFloat2();
-	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer._normalRT);
-	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer._diffuseRoughnessRT);
-	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer._specularMetallicRT);
+	const TextureID texNormal = pRenderer->GetRenderTargetTexture(_GBuffer.mRTNormals);
+	const TextureID texDiffuseRoughness = pRenderer->GetRenderTargetTexture(_GBuffer.mRTDiffuseRoughness);
+	const TextureID texSpecularMetallic = pRenderer->GetRenderTargetTexture(_GBuffer.mRTSpecularMetallic);
+	const TextureID texEmissive = pRenderer->GetRenderTargetTexture(_GBuffer.mRTEmissive);
 	const ShaderID lightingShader = args.bUseBRDFLighting ? _BRDFLightingShader : _phongLightingShader;
 	const TextureID texIrradianceMap = args.sceneView.environmentMap.irradianceMap;
 	const SamplerID smpEnvMap = args.sceneView.environmentMap.envMapSampler;
@@ -461,6 +463,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	pRenderer->SetTexture("texDiffuseRoughnessMap", texDiffuseRoughness);
 	pRenderer->SetTexture("texSpecularMetalnessMap", texSpecularMetallic);
 	pRenderer->SetTexture("texNormals", texNormal);
+	pRenderer->SetTexture("texEmissiveMap", texEmissive);
 	pRenderer->SetTexture("texDepth", depthTexture);
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);

@@ -41,6 +41,7 @@ struct PSOut	// G-BUFFER
 	float4 diffuseRoughness  : SV_TARGET0;
 	float4 specularMetalness : SV_TARGET1;
 	float3 normals			 : SV_TARGET2;
+	float3 emissiveColor	 : SV_TARGET3;
 };
 
 
@@ -60,6 +61,7 @@ Texture2D texSpecularMap;
 //Texture2D texAOMap;        // ?
 Texture2D texMetallicMap;
 Texture2D texRoughnessMap;
+Texture2D texEmissiveMap;
 
 Texture2D texAlphaMask;
 
@@ -90,6 +92,7 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float3 finalSpecular        = surfaceMaterial[In.instanceID].specular;
 	const float  roughnessORshininess = surfaceMaterial[In.instanceID].roughness * BRDFOrPhong 
 	                                  + surfaceMaterial[In.instanceID].shininess * (1.0f - BRDFOrPhong);
+	const float3 emissive             = surfaceMaterial[In.instanceID].emissiveColor * surfaceMaterial[In.instanceID].emissiveIntensity;
 	const float3 finalNormal = N;
 #else
     const float3 sampledDiffuse = pow(texDiffuseMap.Sample(sAnisoSampler, uv).xyz, 2.2f);
@@ -114,10 +117,15 @@ PSOut PSMain(PSIn In) : SV_TARGET
 	const float metalness = HasMetallicMap(surfaceMaterial.textureConfig) > 0
 		? texMetallicMap.Sample(sNormalSampler, uv)
 		: surfaceMaterial.metalness;
+
+    const float3 emissive = (HasEmissiveMap(surfaceMaterial.textureConfig) > 0
+		? texEmissiveMap.Sample(sNormalSampler, uv)
+		: surfaceMaterial.emissiveColor) * surfaceMaterial.emissiveIntensity;
 #endif
 
 	GBuffer.diffuseRoughness	= float4(finalDiffuse, roughnessORshininess);
 	GBuffer.specularMetalness	= float4(finalSpecular, metalness);
 	GBuffer.normals				= finalNormal;
+    GBuffer.emissiveColor		= emissive;
 	return GBuffer;
 }

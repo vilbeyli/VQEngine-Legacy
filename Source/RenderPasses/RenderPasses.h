@@ -212,9 +212,10 @@ struct PostProcessPass : public RenderPass
 struct GBuffer
 {
 	bool			bInitialized = false;
-	RenderTargetID	_diffuseRoughnessRT;
-	RenderTargetID	_specularMetallicRT;
-	RenderTargetID	_normalRT;
+	RenderTargetID	mRTDiffuseRoughness;
+	RenderTargetID	mRTSpecularMetallic;
+	RenderTargetID	mRTNormals;
+	RenderTargetID  mRTEmissive;;
 };
 struct ObjectMatrices
 {

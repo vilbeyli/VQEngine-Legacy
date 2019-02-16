@@ -56,6 +56,7 @@ cbuffer SceneVariables	// frame constants
 Texture2D texDiffuseRoughnessMap;
 Texture2D texSpecularMetalnessMap;
 Texture2D texNormals;
+Texture2D texEmissiveMap;
 Texture2D texDepth;
 
 TextureCubeArray texPointShadowMaps;
@@ -101,6 +102,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	
 
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
+    float3 Ie = texEmissiveMap.Sample(sLinearSampler, In.uv);
 
 //-- POINT LIGHTS --------------------------------------------------------------------------------------------------------------------------
 #if ENABLE_POINT_LIGHTS
@@ -210,6 +212,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 
 
-	const float3 illumination = IdIs;
+	const float3 illumination = Ie + IdIs;
 	return float4(illumination, 1);
 }

@@ -934,9 +934,9 @@ void Engine::Render()
 	if (mEngineConfig.bDeferredOrForward)
 	{
 		const GBuffer& gBuffer = mDeferredRenderingPasses._GBuffer;
-		const TextureID texNormal = mpRenderer->GetRenderTargetTexture(gBuffer._normalRT);
-		const TextureID texDiffuseRoughness = mpRenderer->GetRenderTargetTexture(gBuffer._diffuseRoughnessRT);
-		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer._specularMetallicRT);
+		const TextureID texNormal = mpRenderer->GetRenderTargetTexture(gBuffer.mRTNormals);
+		const TextureID texDiffuseRoughness = mpRenderer->GetRenderTargetTexture(gBuffer.mRTDiffuseRoughness);
+		const TextureID texSpecularMetallic = mpRenderer->GetRenderTargetTexture(gBuffer.mRTSpecularMetallic);
 		const TextureID texDepthTexture = mpRenderer->mDefaultDepthBufferTexture;
 		const TextureID tSSAO = mEngineConfig.bSSAO && bSceneSSAO
 			? mAOPass.GetBlurredAOTexture(mpRenderer)
@@ -1064,7 +1064,7 @@ void Engine::Render()
 		// AMBIENT OCCLUSION - Z-PREPASS
 		if (bZPrePass)
 		{
-			const RenderTargetID normals = mDeferredRenderingPasses._GBuffer._normalRT;
+			const RenderTargetID normals = mDeferredRenderingPasses._GBuffer.mRTNormals;
 			const TextureID texNormal = mpRenderer->GetRenderTargetTexture(normals);
 			const ZPrePass::RenderParams zPrePassParams =
 			{
@@ -1179,10 +1179,10 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		const TextureID white4x4 = mAOPass.whiteTexture4x4;
 		//const TextureID tShadowMap		 = mpRenderer->GetDepthTargetTexture(mShadowMapPass._spotShadowDepthTargets);
 		const TextureID tBlurredBloom = mPostProcessPass._bloomPass.GetBloomTexture(mpRenderer);
-		const TextureID tDiffuseRoughness = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._diffuseRoughnessRT);
+		const TextureID tDiffuseRoughness = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer.mRTDiffuseRoughness);
 		//const TextureID tSceneDepth		 = m_pRenderer->m_state._depthBufferTexture._id;
 		const TextureID tSceneDepth = mpRenderer->GetDepthTargetTexture(0);
-		const TextureID tNormals = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer._normalRT);
+		const TextureID tNormals = mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._GBuffer.mRTNormals);
 		const TextureID tAO = mEngineConfig.bSSAO ? mAOPass.GetBlurredAOTexture(mpRenderer) : mAOPass.whiteTexture4x4;
 		const TextureID tBRDF = EnvironmentMap::sBRDFIntegrationLUTTexture;
 		TextureID preFilteredEnvMap = mpActiveScene->GetEnvironmentMap().prefilteredEnvironmentMap;

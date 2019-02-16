@@ -114,9 +114,9 @@ object begin
 	model shaderBall.obj
 	brdf begin
 		metalness 0.95f
-		roughness 0.14f
-		emissiveMap cgbookcase/Black_herringbone_tiles_01_2K_Emissive.png
-		emissiveIntensity 2
+		roughness 0.04f
+		emissiveMap cgbookcase/Black_herringbone_tiles_01_2K_Emissive2.png
+		emissiveIntensity 1.50
 	brdf end
 object end
 
@@ -134,7 +134,7 @@ object end
 light begin
 	type point
 	transform  -111.74  181.40  -97.21    0 0 0   0.6
-	color white
+	color sun
 	brightness 110800
 	shadows true 0.0001 0.01 
 	range 1000
@@ -143,7 +143,7 @@ light end
 light begin
 	type point
 	transform  111.74  181.40  -197.21    0 0 0   0.6
-	color white
+	color sun
 	brightness 110800
 	shadows true 0.0001 0.01 
 	range 1000

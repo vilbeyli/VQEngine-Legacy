@@ -29,4 +29,6 @@ SamplerState samWrap;
 float4 PSMain(PSIn In) : SV_TARGET
 {
     return texSkybox.SampleLevel(samWrap, In.LPos, 0);
+    //return pow(texSkybox.SampleLevel(samWrap, In.LPos, 0), 2.2f);
+
 }

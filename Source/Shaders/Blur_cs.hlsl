@@ -38,6 +38,9 @@ cbuffer BlurParametersBuffer
 //#define THREAD_GROUP_SIZE_Z 1
 //#define PASS_COUNT 6
 //#define KERNEL_SIZE 5
+//#define IMAGE_SIZE_X 1920
+//#define IMAGE_SIZE_Y 1080
+//#define KERNEL_DIMENSION 15
 
 #if VERTICAL
 #define PIXEL_CACHE_SIZE    IMAGE_SIZE_Y

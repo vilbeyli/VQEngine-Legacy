@@ -44,7 +44,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 {
 	const float3 color = ColorTexture.Sample(Sampler, In.texCoord);
 	const float gamma = 1.0f / 2.2f;
-
+// TODO: use pre-processor and don't calculate both
 #ifdef DO_TONEMAPPING
 	const float3 HDRToneMapped = float3(1, 1, 1) - exp(-color * exposure);
 	const float3 LDRToneMapped = color / (color + float3(1, 1, 1));

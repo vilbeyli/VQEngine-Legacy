@@ -232,6 +232,10 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 		const ModelData& model = pObj->GetModelData();
 
 		const XMMATRIX world = tf.WorldTransformationMatrix();
+#if 0
+		XMVECTOR detWorld = XMMatrixDeterminant(world);
+		XMMATRIX worldInverse = XMMatrixInverse(&detWorld, world);
+#endif
 		const ObjectMatrices mats =
 		{
 			world * sceneView.viewProj,

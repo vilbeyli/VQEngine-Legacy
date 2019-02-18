@@ -42,7 +42,9 @@ enum class WALLS
 #undef max
 #endif
 
-#define TEST_EGEMEN 0
+#define TEST_EGEMEN  0
+#define LOAD_FLOOR   1
+#define LOAD_SPHERES 1
 
 void ObjectsScene::Load(SerializedScene& scene)
 {
@@ -61,6 +63,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 		const float thickness = 3.7f;
 
 		// FLOOR
+#if LOAD_FLOOR
 		{
 			// Transform
 			Transform tf;
@@ -86,6 +89,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 			//floor->AddMesh(EGeometry::SPHERE);
 			//floor->AddMaterial(pBRDF);
 		}
+#endif
 
 		const float ratio = floorWidth / wallHieght;
 		const vec2 wallTiling = vec2(ratio, 1.3f) * 1.7f;
@@ -127,6 +131,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 	//---------------------------------------------------------------
 	// SPHERES
 	//---------------------------------------------------------------
+#if LOAD_SPHERES
 	const float sphHeight[2] = { 10.0f, 40.0f };
 	{	// sphere grid
 		constexpr float r = 25.0f;
@@ -229,6 +234,7 @@ void ObjectsScene::Load(SerializedScene& scene)
 		mpGlass->SetTransform(Transform(vec3::Up * 15 + vec3::Forward * 50, Quaternion::Identity(), vec3(1)));
 #endif
 	}
+#endif // LOAD_SPHERES
 }
 
 void ObjectsScene::Unload()

@@ -34,6 +34,7 @@ ao true 0.250 19.0 4.10
 bloom true 1.60
 skylight true
 
+camera 0.1 5000 40  -78.73  -221.24  -192.03 	 -88.71 0.19
 camera 0.1 5000 40   17.18  189.60  -469.03 	 -2.57 12.77
 camera 0.1 5000 40   1.68  219.12  -365.25 	 0.02 16.23
 camera 0.1 5000 40   215.88  127.46  -151.30 	 -55.89 15.04
@@ -51,6 +52,25 @@ object begin
 	//pbr cgbookcase/black-herringbone-tiles-01
 object end
 
+object begin
+	transform -500 -200 0 90 90 0 200 5 200
+	mesh cube
+	brdf begin
+		//diffuse 1 0 0
+		roughness 0.74
+		metalness 0.00
+		normalMap bricks2_normal.jpg
+		diffuseMap bricks2.jpg
+		heightMap bricks2_disp.jpg
+		//tiling 5 2
+		
+	brdf end
+	//pbr cgbookcase/blue-green-hexagonal-tiles-01
+	//pbr cgbookcase/black-herringbone-tiles-01
+object end
+
+
+//---------------------------------------------------------------------------------
 // UNIT TEST
 //---------------------------------------------------------------------------------
 //object begin
@@ -112,6 +132,12 @@ object end
 object begin
 	transform -250 1 150 0 0 0 0.5
 	model shaderBall.obj
+	
+	//brdf begin
+	//	diffuse 1 0 0
+	//	roughness 0.04
+	//	metalness 0.00
+	//brdf end
 	brdf begin
 		metalness 0.95f
 		roughness 0.04f
@@ -137,7 +163,7 @@ light begin
 	color sun
 	brightness 110800
 	shadows true 0.0001 0.01 
-	range 1000
+	range 1500
 light end
 
 light begin
@@ -146,5 +172,16 @@ light begin
 	color sun
 	brightness 110800
 	shadows true 0.0001 0.01 
-	range 1000
+	range 1500
 light end
+
+
+light begin
+	type point
+	transform   -348.75  -40.73  -144.65     0 0 0   0.6
+	color white
+	brightness 110800
+	shadows true 0.0001 0.01 
+	range 1500
+light end
+ 

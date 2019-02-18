@@ -16,6 +16,110 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+// PARALLAX_MAPPING
+//
+// src: https://learnopengl.com/Advanced-Lighting/Parallax-Mapping
+#define ENABLE_PARALLAX_MAPPING 0
+
+//#define PARALLAX_HEIGHT_INTENSITY 1.00f
+#define PARALLAX_HEIGHT_INTENSITY 0.05f
+
+float2 ParallaxUVs_Crude(float2 uv, float3 ViewVectorInTangentSpace, Texture2D HeightMap, SamplerState Sampler)
+{
+	// initial implementation: the hacky approach and first results for parallax mapping
+
+    //const float height = 0.5f - HeightMap.Sample(Sampler, uv).r;
+    //const float height = 1.0f - HeightMap.Sample(Sampler, uv).r;
+    const float height = HeightMap.Sample(Sampler, uv).r;
+
+    float2 uv_offset = ViewVectorInTangentSpace.xy / ViewVectorInTangentSpace.z * (height * PARALLAX_HEIGHT_INTENSITY);
+    return uv - uv_offset;
+}
+
+
+float2 ParallaxUVs_Steep(float2 uv, float3 ViewVectorInTangentSpace, Texture2D HeightMap, SamplerState Sampler)
+{
+	
+	// first iteration: Steep Parallax Mapping
+#if 0
+    const float numLayers = 10.0f;
+#else
+    const float minLayers = 8;
+    const float maxLayers = 32;
+    const float numLayers = lerp(maxLayers, minLayers, dot(float3(0, 0, 1), ViewVectorInTangentSpace));
+#endif
+
+    float layerDepthIncrement = 1.0f / numLayers;
+    float currLayerDepth = 0.0f;
+
+	// the amount to shift the texture coordinates per layer (from vector P)
+    //float2 P = normalize(ViewVectorInTangentSpace.xy) * heightIntensity;
+    float2 P = ViewVectorInTangentSpace.xy / ViewVectorInTangentSpace.z * PARALLAX_HEIGHT_INTENSITY;
+    float2 uv_delta = P / numLayers;
+
+    float2 currUVs = uv;
+    float currHeightMapValue = HeightMap.Sample(Sampler, uv).r;
+
+	[loop]
+    while (currLayerDepth < currHeightMapValue)
+    {
+        currUVs -= uv_delta; // shift uv's along the direction of P
+        currHeightMapValue = HeightMap.Sample(Sampler, currUVs).r;
+        currLayerDepth += layerDepthIncrement;
+    }
+
+    return currUVs;
+}
+
+float2 ParallaxUVs_Occl(float2 uv, float3 ViewVectorInTangentSpace, Texture2D HeightMap, SamplerState Sampler)
+{
+	// second iteration: Parallax Occlusion Mapping
+
+    const int INVERSE_HEIGHT_MAP = 1;
+
+    const float minLayers = 8;
+    const float maxLayers = 32;
+    const float numLayers = lerp(maxLayers, minLayers, dot(float3(0, 0, 1), ViewVectorInTangentSpace));
+
+    float layerDepthIncrement = 1.0f / numLayers;
+    float currLayerDepth = 0.0f;
+
+	// the amount to shift the texture coordinates per layer (from vector P)
+    //float2 P = normalize(ViewVectorInTangentSpace.xy) * heightIntensity;
+    float2 P = ViewVectorInTangentSpace.xy / ViewVectorInTangentSpace.z * PARALLAX_HEIGHT_INTENSITY;
+    float2 uv_delta = P / numLayers;
+
+    float2 currUVs = uv;
+    float currHeightMapValue = INVERSE_HEIGHT_MAP > 0
+		? HeightMap.Sample(Sampler, uv).r
+		: (1.0f - HeightMap.Sample(Sampler, uv).r);
+
+	[loop]
+    while (currLayerDepth < currHeightMapValue)
+    {
+        currUVs -= uv_delta; // shift uv's along the direction of P
+        currHeightMapValue = INVERSE_HEIGHT_MAP > 0
+			? HeightMap.Sample(Sampler, uv).r
+			: (1.0f - HeightMap.Sample(Sampler, uv).r);
+        currLayerDepth += layerDepthIncrement;
+    }
+
+	// get texture coordinates before collision (reverse operations)
+    float2 prevUVs = currUVs + uv_delta;
+
+	// get depth after and before collision for linear interpolation
+    float afterDepth = currHeightMapValue - currLayerDepth;
+    float beforeDepth = (INVERSE_HEIGHT_MAP > 0
+		? HeightMap.Sample(Sampler, uv).r
+		: (1.0f - HeightMap.Sample(Sampler, uv).r)) - currLayerDepth + layerDepthIncrement;
+ 
+	// interpolation of texture coordinates
+    float weight = afterDepth / (afterDepth - beforeDepth);
+    float2 finalTexCoords = prevUVs * weight + currUVs * (1.0 - weight);
+
+    return finalTexCoords;
+}
+
 #define _DEBUG
 
 #include "BRDF.hlsl"
@@ -42,6 +146,23 @@ struct PSIn
 #endif
 };
 
+struct ObjectMatrices
+{
+    matrix worldViewProj;
+    matrix world;
+    matrix normal;
+    matrix worldInverse;
+};
+cbuffer perModel
+{
+#ifdef INSTANCED
+	ObjectMatrices ObjMatrices[INSTANCE_COUNT];
+#else
+    ObjectMatrices ObjMatrices;
+#endif
+};
+
+
 cbuffer SceneVariables
 {
 	float  isEnvironmentLightingOn;
@@ -58,6 +179,7 @@ cbuffer SceneVariables
 
 	float ambientFactor;
 };
+
 TextureCubeArray texPointShadowMaps;
 Texture2DArray   texSpotShadowMaps;
 Texture2DArray   texDirectionalShadowMaps;
@@ -78,6 +200,7 @@ Texture2D texAlphaMask;
 Texture2D texMetallicMap;
 Texture2D texRoughnessMap;
 Texture2D texEmissiveMap;
+Texture2D texHeightMap;
 
 Texture2D texAmbientOcclusion;
 
@@ -95,10 +218,37 @@ SamplerState sAnisoSampler;
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
+	// lighting & surface parameters (World Space)
+    const float3 P = In.worldPos;
+    const float3 N = normalize(In.normal);
+    float3 T = normalize(In.tangent);
+    const float3 V = normalize(cameraPos - P);
+    const float2 screenSpaceUV = In.position.xy / screenDimensions;
+	
+	
+    T = normalize(T - dot(N, T) * N);
+    float3 B = normalize(cross(T, N));
+    float3x3 TBN = float3x3(T, B, N);
+
+
 	// TODO: instanced alpha discard
+    float3 ViewVectorInTangentSpace = 0.0f.xxx;
 #ifndef INSTANCED
-	const float2 uv = In.texCoord * surfaceMaterial.uvScale;
-	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 ? texAlphaMask.Sample(sLinearSampler, uv).r : 1.0f;
+    ViewVectorInTangentSpace = mul(V, TBN);
+
+    const float2 sclaeBiasedUV = In.texCoord * surfaceMaterial.uvScale;
+#if ENABLE_PARALLAX_MAPPING
+    const float2 uv = HasHeightMap(surfaceMaterial.textureConfig)
+		? ParallaxUVs_Occl(sclaeBiasedUV, ViewVectorInTangentSpace, texHeightMap, sLinearSampler)
+		: sclaeBiasedUV;
+#else
+    const float2 uv = sclaeBiasedUV;
+#endif //ENABLE_PARALLAX_MAPPING
+
+	const float alpha = HasAlphaMask(surfaceMaterial.textureConfig) > 0 
+		? texAlphaMask.Sample(sLinearSampler, uv).r 
+		: 1.0f;
+
 	if (alpha < 0.01f)
 		discard;
 #endif
@@ -109,15 +259,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const int pointShadowsBaseIndex = 0;	// omnidirectional cubemaps are sampled based on light dir, texture is its own array
 	const int spotShadowsBaseIndex = 0;		
 	const int directionalShadowBaseIndex = spotShadowsBaseIndex + Lights.numSpotCasters;	// currently unused
-
-
-	// lighting & surface parameters (World Space)
-	const float3 P = In.worldPos;
-	const float3 N = normalize(In.normal);
-	const float3 T = normalize(In.tangent);
-	const float3 V = normalize(cameraPos - P);
-	const float2 screenSpaceUV = In.position.xy / screenDimensions;
-
+	
 	pcfTest.viewDistanceOfPixel = length(P - cameraPos);
 
 	BRDF_Surface s = (BRDF_Surface)0;
@@ -136,6 +278,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		// : surfaceMaterial.specular;
 	s.roughness = surfaceMaterial[In.instanceID].roughness;
 	s.metalness = surfaceMaterial[In.instanceID].metalness;
+	s.emissiveColor = surfaceMaterial[In.instanceID].emissiveColor * surfaceMaterial[In.instanceID].emissiveIntensity;
 #else
 	s.N = HasNormalMap(surfaceMaterial.textureConfig) > 0
 		? UnpackNormals(texNormalMap, sAnisoSampler, uv, N, T)
@@ -282,6 +425,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		IEnv -= Ia; // cancel ambient lighting
     }
     const float3 illumination = Ie + Ia + IdIs + IEnv;
+    return float4(illumination, 1.0f);// * 0.000001f + float4(ViewVectorInTangentSpace, 1.0f);
     
-	return float4(illumination, 1.0f);
+
 }

@@ -210,8 +210,11 @@ SerializedScene Parser::ReadScene(Renderer* pRenderer, const std::string& sceneF
 		{
 			if (line[0] == '/' || line[0] == '#' || line[0] == '\0')	// skip comments
 				continue;
-
+			
 			std::vector<std::string> command = StrUtil::split(line, ' ', '\t');	// ignore whitespace
+			if (command.size() > 0 && (command.front()[0] == command.front()[1]) && command.front()[0] == '/')
+				continue;
+
 			ParseScene(pRenderer, command, scene);						// process command
 		}
 		scene.loadSuccess = '1';
@@ -335,6 +338,8 @@ static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
 static std::unordered_map<std::string, int> TEXTURE_MAP_CMD_INDEX_LOOKUP =
 {
 	  { "colorMap", 0 }
+	, { "diffuseMap", 0 }
+	, { "albedoMap", 0 }
 	, { "normalMap", 1 }
 	, { "heightMap", 2 }
 	, { "metallicMap", 3 }
@@ -581,6 +586,12 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 	else if (std::string(cmd).find("Map") != std::string::npos && cmd.size() >= 5)
 	{	
 		BRDF_Material* pMat = static_cast<BRDF_Material*>(pMaterial);
+		if (TEXTURE_MAP_CMD_INDEX_LOOKUP.find(cmd) == TEXTURE_MAP_CMD_INDEX_LOOKUP.end())
+		{
+			Log::Error("CustomParser: Texture command not found: %s", cmd.c_str());
+			return;
+		}
+
 		int textureMapIndex = TEXTURE_MAP_CMD_INDEX_LOOKUP.at(cmd);
 
 		const std::vector<std::string> tokens = StrUtil::split(command[1], '/');
@@ -589,7 +600,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		const bool bHasFolder = tokens.size() > 3;
 		const std::string folderPath = bHasFolder
 			? tokens[tokens.size() - 3] + "/" + tokens[tokens.size() - 2] + "/"
-			: tokens[tokens.size() - 2] + "/";
+			: (tokens.size() >= 2 ? tokens[tokens.size() - 2] + "/" : "");
 		
 		const std::string PBR_ROOT = Renderer::sTextureRoot + std::string("PBR/");
 		const bool bGenerateMips = true;
@@ -652,6 +663,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		materialType = BRDF;
 		pMaterial = scene.materials.CreateAndGetMaterial(GGX_BRDF);
 		pObject->AddMaterial(pMaterial);
+		ResetPresets(sTextureSet);
 	}
 	else if (cmd == "blinnphong" || cmd == "phong")
 	{
@@ -818,13 +830,15 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		if (command[1] != "\"\"")
 		{
 			const TextureID texDiffuse = pRenderer->CreateTextureFromFile(command[1]);
-			pMaterial->diffuseMap = texDiffuse;
+			//pMaterial->diffuseMap = texDiffuse;// assigned when material is finalized
+			sTextureSet[DIFFUSE_MAP] = texDiffuse;
 		}
 
 		if (command.size() > 2)
 		{
 			const TextureID texNormal = pRenderer->CreateTextureFromFile(command[2]);
-			pMaterial->normalMap= texNormal;
+			//pMaterial->normalMap= texNormal; // assigned when material is finalized
+			sTextureSet[NORMAL_MAP] = texNormal;
 		}
 
 		if (command.size() > 3)

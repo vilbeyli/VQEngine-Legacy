@@ -102,5 +102,12 @@ PSIn VSMain(VSIn In)
 #endif
 	Out.texCoord = In.texCoord;
 	Out.lightSpacePos = mul(lightSpaceMat, float4(Out.worldPos, 1));
+
+    //float3 B = normalize(cross(Out.normal, Out.tangent));
+    //float3x3 TBN = float3x3(Out.tangent, B, Out.normal);
+    //Out.PTextureSpace = mul(TBN, Out.worldPos);
+    //Out.VTextureSpace = mul(TBN, Out.worldPos);
+
+
 	return Out;
 }

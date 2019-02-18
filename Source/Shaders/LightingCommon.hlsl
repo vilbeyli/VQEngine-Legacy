@@ -389,3 +389,11 @@ float3 ShadowTestDebug(float3 worldPos, float4 lightSpacePos, float3 illuminatio
 
 	return noShadows;
 }
+
+//float2 ParallaxUVs(float2 uv, float3 ViewVectorInTangentSpace, Texture2D HeightMap, SamplerState Sampler)
+//{
+//    const float height = 1.0f - HeightMap.Sample(Sampler, uv).r;
+//    const float heightIntensity = 1.0f;
+//    float2 uv_offset = ViewVectorInTangentSpace.xy / ViewVectorInTangentSpace.z * (height * heightIntensity);
+//    return uv - uv_offset;
+//}

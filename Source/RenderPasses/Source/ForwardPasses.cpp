@@ -274,7 +274,9 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 				if (pMat->mask >= 0)		pRenderer->SetTexture("texAlphaMask", pMat->mask);
 				if (pMat->roughnessMap >= 0)	pRenderer->SetTexture("texRoughnessMap", pMat->roughnessMap);
 				if (pMat->metallicMap >= 0)		pRenderer->SetTexture("texMetallicMap", pMat->metallicMap);
+#if ENABLE_PARALLAX_MAPPING
 				if (pMat->heightMap >= 0)		pRenderer->SetTexture("texHeightMap", pMat->heightMap);
+#endif
 				if (pMat->emissiveMap >= 0)		pRenderer->SetTexture("texEmissiveMap", pMat->emissiveMap);
 			}
 			else

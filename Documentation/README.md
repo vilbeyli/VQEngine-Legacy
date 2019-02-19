@@ -109,6 +109,12 @@ Below is the collection of resources used for building the VQEngine. Items marke
    - Iteration of previous [Intel: Software Occlusion Culling](https://software.intel.com/en-us/articles/software-occlusion-culling)
   - [Nick Darnell: DirectX11 Hi-Z Occlusion Culling](https://www.nickdarnell.com/hierarchical-z-buffer-occlusion-culling/)
 
+## Parallax Mapping
+
+- [**Joe DeVayo: LearnOpenGL - Parallax Mapping**](https://learnopengl.com/Advanced-Lighting/Parallax-Mapping)
+- [Jason Zink (gamedev.net) - A Closer Look At Parallax Occlusion Mapping](https://www.gamedev.net/articles/programming/graphics/a-closer-look-at-parallax-occlusion-mapping-r3262/)
+- [Natalya Tatarchuk (ATI) - Practical Parallax Occlusion Mapping For Highly Detailed Mapping For Highly Detailed Surface Rendering](http://web.engr.oregonstate.edu/~mjb/cs519/Projects/Papers/Parallax_Occlusion_Mapping.pdf)
+
 ## Performance
 
  - [The Peak-Performance Analysis Method for Optimizing Any GPU Workload](https://devblogs.nvidia.com/the-peak-performance-analysis-method-for-optimizing-any-gpu-workload/)

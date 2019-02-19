@@ -18,6 +18,13 @@
 
 #pragma once
 
+
+// Currently only forward_brdf shader has the implementation. The output
+// requires more tweaking and has artifacts. Switching this off until
+// its fixed.
+//
+#define ENABLE_PARALLAX_MAPPING 0
+
 #include "Utilities/PerfTimer.h"
 #include "Utilities/Profiler.h"
 

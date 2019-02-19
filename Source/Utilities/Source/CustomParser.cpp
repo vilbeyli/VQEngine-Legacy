@@ -416,6 +416,10 @@ static std::array<TextureID, NUM_PBR_TEXTURE_INPUTS> LoadPBRPreset(Renderer* pRe
 			continue;
 
 		int textureSetIndex = CG_BOOKCASE_TEXTURE_TYPE_LOOKUP.at(textureTypeToken);
+#if !ENABLE_PARALLAX_MAPPING
+		if (textureSetIndex == HEIGHT_MAP)
+			continue;
+#endif
 		textureSet[textureSetIndex] = pRenderer->CreateTextureFromFile(fileName, PBR_ROOT + presetLibraryName + presetFolderName, bGenerateMips);
 	}
 	
@@ -593,6 +597,10 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		}
 
 		int textureMapIndex = TEXTURE_MAP_CMD_INDEX_LOOKUP.at(cmd);
+#if !ENABLE_PARALLAX_MAPPING
+		if(textureMapIndex == HEIGHT_MAP)
+			return;
+#endif
 
 		const std::vector<std::string> tokens = StrUtil::split(command[1], '/');
 		const std::string fileName = tokens.back();

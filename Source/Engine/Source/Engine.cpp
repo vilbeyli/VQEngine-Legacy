@@ -19,6 +19,7 @@
 // disable it for now.
 #define ENABLE_TRANSPARENCY 0
 
+
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
 #define OVERRIDE_LEVEL_VALUE 2	// which level to load
 #define FULLSCREEN_DEBUG_TEXTURE 1
@@ -506,7 +507,15 @@ bool Engine::LoadShaders()
 			ShaderStageDesc{"Skybox_vs.hlsl"               , {} },
 			ShaderStageDesc{"SkyboxEquirectangular_ps.hlsl", {} }
 		}},
-		ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Forward_BRDF", VS_PS)},
+		//ShaderDesc{ "Forward_BRDF"      , ShaderDesc::CreateStageDescsFromShaderName("Forward_BRDF", VS_PS)},
+		ShaderDesc{ "Forward_BRDF"      , {
+		ShaderStageDesc{"Forward_BRDF_vs.hlsl", {}},
+		ShaderStageDesc{"Forward_BRDF_ps.hlsl", {
+#if ENABLE_PARALLAX_MAPPING
+		ShaderMacro{"ENABLE_PARALLAX_MAPPING", "1"}
+#endif
+	}}
+	}},
 		ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
 	};
 		

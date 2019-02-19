@@ -19,7 +19,6 @@
 // PARALLAX_MAPPING
 //
 // src: https://learnopengl.com/Advanced-Lighting/Parallax-Mapping
-#define ENABLE_PARALLAX_MAPPING 0
 
 //#define PARALLAX_HEIGHT_INTENSITY 1.00f
 #define PARALLAX_HEIGHT_INTENSITY 0.05f
@@ -118,6 +117,66 @@ float2 ParallaxUVs_Occl(float2 uv, float3 ViewVectorInTangentSpace, Texture2D He
     float2 finalTexCoords = prevUVs * weight + currUVs * (1.0 - weight);
 
     return finalTexCoords;
+}
+
+float2 ParallaxUVs_Occl2(float2 uv, float3 ViewVectorInTangentSpace, Texture2D HeightMap, SamplerState Sampler, float NdotV)
+{
+	//src: https://www.gamedev.net/articles/programming/graphics/a-closer-look-at-parallax-occlusion-mapping-r3262/
+
+    const float fHeigtMapScale = 0.005f;
+    const float nMaxSamples = 32.0f;
+    const float nMinSamples = 8.0f;
+
+    float fParallaxLimit = -length(ViewVectorInTangentSpace.xy) / ViewVectorInTangentSpace.z;
+    fParallaxLimit *= fHeigtMapScale;
+
+    float2 vOffsetDir = normalize(ViewVectorInTangentSpace.xy);
+    float2 vMaxOffset = vOffsetDir * fParallaxLimit;
+
+    int nNumSamples = (int) lerp(nMaxSamples, nMinSamples, NdotV);
+
+    float fStepSize = 1.0 / (float) nNumSamples;
+
+    float2 dx = ddx(uv);
+    float2 dy = ddy(uv);
+
+    float fCurrRayHeight = 1.0;
+    float2 vCurrOffset = float2(0, 0);
+    float2 vLastOffset = float2(0, 0);
+
+    float fLastSampledHeight = 1;
+    float fCurrSampledHeight = 1;
+
+    int nCurrSample = 0;
+
+    while (nCurrSample < nNumSamples)
+    {
+        fCurrSampledHeight = HeightMap.SampleGrad(Sampler, uv + vCurrOffset, dx, dy).r;
+        if (fCurrSampledHeight > fCurrRayHeight)
+        {
+            float delta1 = fCurrSampledHeight - fCurrRayHeight;
+            float delta2 = (fCurrRayHeight + fStepSize) - fLastSampledHeight;
+
+            float ratio = delta1 / (delta1 + delta2);
+
+            vCurrOffset = (ratio) * vLastOffset + (1.0 - ratio) * vCurrOffset;
+
+            nCurrSample = nNumSamples + 1;
+        }
+        else
+        {
+            nCurrSample++;
+
+            fCurrRayHeight -= fStepSize;
+
+            vLastOffset = vCurrOffset;
+            vCurrOffset += fStepSize * vMaxOffset;
+
+            fLastSampledHeight = fCurrSampledHeight;
+        }
+    }
+
+    return uv + vCurrOffset;;
 }
 
 #define _DEBUG
@@ -226,7 +285,7 @@ float4 PSMain(PSIn In) : SV_TARGET
     const float2 screenSpaceUV = In.position.xy / screenDimensions;
 	
 	
-    T = normalize(T - dot(N, T) * N);
+    //T = normalize(T - dot(N, T) * N);
     float3 B = normalize(cross(T, N));
     float3x3 TBN = float3x3(T, B, N);
 
@@ -238,8 +297,11 @@ float4 PSMain(PSIn In) : SV_TARGET
 
     const float2 sclaeBiasedUV = In.texCoord * surfaceMaterial.uvScale;
 #if ENABLE_PARALLAX_MAPPING
+    const float NdotV = max(0, dot(N, V));
+
     const float2 uv = HasHeightMap(surfaceMaterial.textureConfig)
-		? ParallaxUVs_Occl(sclaeBiasedUV, ViewVectorInTangentSpace, texHeightMap, sLinearSampler)
+		//? ParallaxUVs_Occl(sclaeBiasedUV, ViewVectorInTangentSpace, texHeightMap, sLinearSampler)
+		? ParallaxUVs_Occl2(sclaeBiasedUV, ViewVectorInTangentSpace, texHeightMap, sLinearSampler, NdotV)
 		: sclaeBiasedUV;
 #else
     const float2 uv = sclaeBiasedUV;

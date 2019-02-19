@@ -25,7 +25,7 @@
 // directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
 // ---------------------------------------------------------------------------------------------------------------
 
-bloom true 0.005
+bloom false 0.005
 
 skylight false
 ao true 0.005   3.00 2.40
@@ -33,6 +33,7 @@ ao true 0.005   3.00 2.40
 //skylight true
 //ao true 0.025   3.00 2.40
 
+camera 0.1 1500 50	   81.47  -37.45  84.46 	 -180.11 31.66
 camera 0.1 1500 50     109.06  79.08  93.66 	 -109.32 3.66
 camera 0.1 1500 50   45.69  18.32  -114.39 	 -49.05 -3.81
 camera 0.1 1500 50   -2.01 98.59 -150.48    0 10
@@ -289,3 +290,67 @@ light begin
 	spot 15 0
 	range 50
 light end
+
+
+// linear light
+
+
+
+// LINEAR LIGHT
+//
+//   \|/\|/\|/ 
+//  --********--
+//   /|\/|\/|\
+//
+light begin
+	type point
+	transform 80 -50 43    0 0 0   0.1
+	color white
+	brightness 500
+	shadows false 0.005
+//	attenuation 1 1 1 // currently unused
+	range 150
+light end
+
+
+// reference scene groudn setup
+object begin
+	mesh cube
+	brdf
+		diffuse 0.12 0.12 0.12
+		roughness 0.88
+		metalness 0.0
+	brdf
+	transform 80 -60 55 0 0 0 130 1.9 65
+object end
+
+object begin
+	mesh cube
+	brdf
+		diffuse 0.02 0.02 0.02
+		roughness 0.28
+		metalness 0.0
+	brdf
+	transform 80 -58 53 0 0 0 15 0.5 4.5
+object end
+
+object begin
+	mesh cube
+	brdf
+		diffuse 0.02 0.02 0.02
+		roughness 0.48
+		metalness 0.0
+	brdf
+	transform 80 -58 63 0 0 0 15 0.5 4.5
+object end
+
+
+object begin
+	mesh cube
+	brdf
+		diffuse 0.02 0.02 0.02
+		roughness 0.08
+		metalness 0.0
+	brdf
+	transform 80 -56 43 20 0 0 15 0.5 4.5
+object end

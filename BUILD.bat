@@ -90,7 +90,7 @@ cd ..
 set root_dir=%cd%
 :: get all .dll and .exe files from build
 for /r "%proj_dir%" %%f in (*.exe *.dll) do (
-    :: skip _artifacts folder itself
+    :: skip _artifacts folder itselfpb
     if not "%%~df%%~pf" == "%artifacts_dir%\" ( 
         xcopy "%%f" "%artifacts_dir%" /Y > nul
     )
@@ -98,17 +98,6 @@ for /r "%proj_dir%" %%f in (*.exe *.dll) do (
 :: copy data and shaders
 robocopy ./Data "%artifacts_dir%/Data" /E /MT:8 > nul
 robocopy ./Source/Shaders "%artifacts_dir%/Source/Shaders" /E /MT:8 > nul
-
-:: EngineSettings.ini ends up in repo root after Build.
-if exist EngineSettings.ini (
-    xcopy "EngineSettings.ini" "./Build/_artifacts/"\ /Y /Q /F /MOV
-) else (
-    xcopy "./Data/EngineSettings.ini" "./Build/_artifacts/"\ /Y /Q /F
-)
-
-if %errorlevel% NEQ 0 (
-    xcopy "./Data/EngineSettings.ini" "./Build/_artifacts/"\ /Y /Q /F
-)
 
 
 EXIT /B 0

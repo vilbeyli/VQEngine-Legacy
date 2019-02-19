@@ -6,7 +6,6 @@
 Data/Models/free3D/*/
 Data/Models/free3D/*
 !Data/Models/free3D/README.md
-EngineSettings.ini
 
 # User-specific files
 *.suo

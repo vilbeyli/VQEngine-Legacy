@@ -44,6 +44,8 @@ namespace VQEngine
 		void ShowWindow2() const; // unused
 		void ShowWindow3() const; // unused
 
+		void HideWindow0() const;
+
 		// UI STRUCTS
 		//
 		
@@ -74,9 +76,10 @@ namespace VQEngine
 		int mHControlPanel3;
 
 		// imported functions from C#
-		void (*pFnShowWindow)(int);
 		int  (*pFnCreateWindow)(int data);
-		void (*pFnShutdownWindows)();
+		void (*pFnShowWindow)(int);
+		void  (*pFnHideWindow)(int data);
+		void (*pFnShutdownAllWindows)();
 		void (*pFnAddSliderFToControlPanel)(int hPanel, SliderDescData pDesc);
 	};
 }

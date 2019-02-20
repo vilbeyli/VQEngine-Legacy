@@ -27,18 +27,49 @@ namespace VQUI
 
 		static int GetFormIndex(int VQHandle) { return VQHandle-1024; }
 
-		[DllExport("CreateControlPanel", CallingConvention = CallingConvention.Cdecl)]
-		static public int CreateControlPanel(int val)
+		[DllExport("CreateWindow", CallingConvention = CallingConvention.Cdecl)]
+		static public int CreateWindow(int val)
 		{
 			ControlPanelFormList.Add(new ControlPanelForm());
-			return ControlPanelFormList.Count - 1 + 1024;
+			int retHandle = ControlPanelFormList.Count - 1 + 1024;
+
+			//Application.Run(ControlPanelFormList[ControlPanelFormList.Count - 1]);
+			return retHandle;
 		}
 
 		[STAThread]
-		[DllExport("ShowControlPanel", CallingConvention = CallingConvention.Cdecl)]
-		static public void ShowControlPanel(int windowHandle)
+		[DllExport("HideWindow", CallingConvention = CallingConvention.Cdecl)]
+		static public void HideWindow(int VQHandle)
 		{
-			Application.Run(ControlPanelFormList[GetFormIndex(windowHandle)]);
+			int i = GetFormIndex(VQHandle);
+
+			// Note:
+			// This actually disposes the form and clears the containers. Hence,
+			// it can't be used. The design should be an MVC where the UI can be 
+			// destroyed but data should remain and can be used to re-initialize 
+			// or create a new UI form.
+#if false
+			ControlPanelFormList[i].Hide();
+#endif
+			ControlPanelFormList[i].Visible = false;
+		}
+
+		[STAThread]
+		[DllExport("ShowWindow", CallingConvention = CallingConvention.Cdecl)]
+		static public void ShowWindow(int windowHandle)
+		{
+			var panel = ControlPanelFormList[GetFormIndex(windowHandle)];
+			if (!panel.HasRun)
+			{
+				panel.HasRun = true;
+				panel.Show();
+				//Application.Run(panel);
+			}
+			else
+			{
+				panel.Visible = true;
+				//panel.Show();
+			}
 		}
 
 		[DllExport("ShutdownWindows", CallingConvention = CallingConvention.Cdecl)]
@@ -68,6 +99,9 @@ namespace VQUI
 			public IntPtr pData;
 			public unsafe fixed char name[CHAR_BUFFER_SIZE];
 		};
+
+
+
 
 		[DllExport("AddSliderFToControlPanel", CallingConvention = CallingConvention.Cdecl)]
 		public static unsafe void AddSliderFToControlPanel(int hPanel, SliderDescData desc)

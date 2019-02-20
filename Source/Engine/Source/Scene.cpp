@@ -731,6 +731,7 @@ void Scene::CalculateSceneBoundingBox()
 static bool bReportedList = true;
 #endif
 
+#include "VQUI.h"
 void Scene::UpdateScene(float dt)
 {
 	// CYCLE THROUGH CAMERAS
@@ -771,7 +772,22 @@ void Scene::UpdateScene(float dt)
 	}
 #endif
 
+	// test code
+	float t = ENGINE->GetTotalTime();
 
+	static PerfTimer stimer;
+	static bool bInit = false;
+	if (!bInit) {
+		bInit = true;
+		stimer.Start();
+	}
+	
+	if (stimer.TotalTime() > 3)
+		ENGINE->mpUI->HideWindow0();
+	if (stimer.TotalTime() > 5)
+		ENGINE->mpUI->ShowWindow1();
+
+	stimer.Tick();
 
 	// UPDATE CAMERA & WORLD
 	//

@@ -570,6 +570,9 @@ void Engine::SimulateAndRenderFrame()
 	HandleInput();
 
 #if LOAD_ASYNC
+
+	// LOADING LEVEL
+	//---------------------
 	if (mbLoading)
 	{
 		CalcFrameStats(dt);
@@ -583,6 +586,10 @@ void Engine::SimulateAndRenderFrame()
 			mSignalRender.notify_all();
 		}
 	}
+
+
+	// SCENE SIMULATION
+	//---------------------
 	else
 	{
 		if (mRenderThread.joinable())

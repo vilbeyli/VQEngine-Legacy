@@ -37,6 +37,9 @@ void VQEngine::VQUI::ShowWindow1() const { auto fnLaunchWnd = [&]() { pFnShowWin
 void VQEngine::VQUI::ShowWindow2() const { auto fnLaunchWnd = [&]() { pFnShowWindow(mHControlPanel2); }; mpThreadPool->AddTask(fnLaunchWnd); }
 void VQEngine::VQUI::ShowWindow3() const { auto fnLaunchWnd = [&]() { pFnShowWindow(mHControlPanel3); }; mpThreadPool->AddTask(fnLaunchWnd); }
 
+
+void VQEngine::VQUI::HideWindow0() const { auto fnAction = [&]() { pFnHideWindow(mHControlPanel0); }; mpThreadPool->AddTask(fnAction); }
+
 bool VQUI::Initialize(std::string& errMsg)
 {
 	mpThreadPool = new ThreadPool(4);
@@ -76,15 +79,18 @@ bool VQUI::Initialize(std::string& errMsg)
 #else
 #if 1
 	// test launching windows with separate data using handles
-	pFnCreateWindow = (int(*)(int))  GetProcAddress(mHModule, "CreateControlPanel");
-	pFnShowWindow = (void(*)(int)) GetProcAddress(mHModule, "ShowControlPanel");
-	pFnShutdownWindows = (void(*)(void)) GetProcAddress(mHModule, "ShutdownWindows");
+	pFnCreateWindow = (int(*)(int))  GetProcAddress(mHModule, "CreateWindow");
+	pFnShowWindow = (void(*)(int)) GetProcAddress(mHModule, "ShowWindow");
+	pFnHideWindow = (void(*)(int)) GetProcAddress(mHModule, "HideWindow");
+	pFnShutdownAllWindows = (void(*)(void)) GetProcAddress(mHModule, "ShutdownWindows");
 	pFnAddSliderFToControlPanel = (void(*)(int, SliderDescData)) GetProcAddress(mHModule, "AddSliderFToControlPanel");
 
-	if (pFnCreateWindow == NULL || pFnShowWindow == NULL || pFnShutdownWindows == NULL || pFnAddSliderFToControlPanel == NULL)
+	if (pFnCreateWindow == NULL || pFnShowWindow == NULL || pFnShutdownAllWindows == NULL || pFnAddSliderFToControlPanel == NULL || pFnHideWindow == NULL)
 	{
 		assert(false);
 	}
+
+
 
 	// test w/ random numbers
 	mHControlPanel0 = pFnCreateWindow(42);
@@ -115,7 +121,7 @@ bool VQUI::Initialize(std::string& errMsg)
 
 void VQUI::Exit()
 {
-	pFnShutdownWindows();
+	pFnShutdownAllWindows();
 	delete mpThreadPool;
 	FreeLibrary(mHModule);
 }

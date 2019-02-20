@@ -70,7 +70,7 @@ class Scene
 {
 protected:
 	//----------------------------------------------------------------------------------------------------------------
-	// SCENE INTERFACE FOR DERIVED SCENES
+	// INTERFACE FOR SCENE INSTANCES
 	//----------------------------------------------------------------------------------------------------------------
 
 	// Update() is called each frame before Engine::Render(). Scene-specific update logic goes here.

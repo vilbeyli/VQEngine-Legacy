@@ -14,10 +14,11 @@ namespace VQUI
 {
 	public partial class ControlPanelForm : Form
 	{
+		public bool HasRun { get; set; } = false;
 #if TEST_SLIDER
 		Launcher.SliderDescData mDesc = new Launcher.SliderDescData();
 #endif
-
+		int count = 0;
 		public ControlPanelForm()
 		{
 			InitializeComponent();
@@ -32,11 +33,15 @@ namespace VQUI
 
 			AddSliderF(mDesc);
 #endif
+			label1.Text = String.Format("{0}", count);
 		}
 
 		public void AddSliderF(Launcher.SliderDescData desc)
 		{
 			this.tabPageTest.Controls.Add(new Slider(desc));
+			++count;
+
+			label1.Text = String.Format("{0}", count);
 		}
 	}
 }

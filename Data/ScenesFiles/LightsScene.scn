@@ -324,25 +324,7 @@ object begin
 	transform 80 -60 55 0 0 0 130 1.9 65
 object end
 
-object begin
-	mesh cube
-	brdf
-		diffuse 0.02 0.02 0.02
-		roughness 0.28
-		metalness 0.0
-	brdf
-	transform 80 -58 53 0 0 0 15 0.5 4.5
-object end
 
-object begin
-	mesh cube
-	brdf
-		diffuse 0.02 0.02 0.02
-		roughness 0.48
-		metalness 0.0
-	brdf
-	transform 80 -58 63 0 0 0 15 0.5 4.5
-object end
 
 
 object begin
@@ -352,5 +334,34 @@ object begin
 		roughness 0.08
 		metalness 0.0
 	brdf
-	transform 80 -56 43 20 0 0 15 0.5 4.5
+	transform 80 -56 44 20 0 0 15 0.5 3.5
+object end
+object begin
+	mesh cube
+	brdf
+		diffuse 0.02 0.02 0.02
+		roughness 0.28
+		metalness 0.0
+	brdf
+	transform 80 -57.8 51 5 0 0 15 0.5 3.5
+object end
+
+object begin
+	mesh cube
+	brdf
+		diffuse 0.02 0.02 0.02
+		roughness 0.48
+		metalness 0.0
+	brdf
+	transform 80 -58 59 0 0 0 15 0.5 3.5
+object end
+
+object begin
+	mesh cube
+	brdf
+		diffuse 0.02 0.02 0.02
+		roughness 0.68
+		metalness 0.0
+	brdf
+	transform 80 -58 67 0 0 0 15 0.5 3.5
 object end

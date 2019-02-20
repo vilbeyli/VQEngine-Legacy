@@ -103,8 +103,16 @@ struct ShaderDesc
 
 struct ShaderLoadDesc
 {
+	ShaderLoadDesc() = default;
+	ShaderLoadDesc(const std::string& path, const std::string& cachePath_) : fullPath(path), cachePath(cachePath_)
+	{
+		this->lastWriteTime = std::experimental::filesystem::last_write_time(fullPath);
+		this->cacheLastWriteTime = std::experimental::filesystem::last_write_time(cachePath);
+	}
 	std::string fullPath;
+	std::string cachePath;
 	FileTimeStamp lastWriteTime;
+	FileTimeStamp cacheLastWriteTime;
 };
 
 

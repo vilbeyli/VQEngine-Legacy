@@ -113,59 +113,60 @@ std::string GetCompileError(ID3D10Blob*& errorMessage, const std::string& shdPat
 	}
 }
 
+static std::string GetIncludeFileName(const std::string& line)
+{
+	const std::string str_search = "#include \"";
+	const size_t foundPos = line.find(str_search);
+	if (foundPos != std::string::npos)
+	{
+		std::string quotedFileName = line.substr(foundPos + strlen("#include "), line.size() - foundPos);// +str_search.size() - 1);
+		return quotedFileName.substr(1, quotedFileName.size() - 2);
+	}
+	return std::string();
+}
+
+static bool AreIncludesDirty(const std::string& srcPath, const std::string& cachePath)
+{
+
+	const std::string ShaderSourceDir = DirectoryUtil::GetFolderPath(srcPath);
+	const std::string ShaderCacheDir = DirectoryUtil::GetFolderPath(cachePath);
+
+	std::stack<std::string> includeStack;
+	includeStack.push(srcPath);
+	while (!includeStack.empty())
+	{
+		const std::string includeFilePath = includeStack.top();
+		includeStack.pop();
+		std::ifstream src = std::ifstream(includeFilePath.c_str());
+		if (!src.good())
+		{
+			Log::Error("[ShaderCompile] Cannot open source file: %s", includeFilePath.c_str());
+			continue;
+		}
+
+		std::string line;
+		while (getline(src, line))
+		{
+			const std::string includeFileName = GetIncludeFileName(line);
+			if (includeFileName.empty()) continue;
+
+			const std::string includeSourcePath = ShaderSourceDir + includeFileName;
+			const std::string includeCachePath = ShaderCacheDir + includeFileName;
+
+			if (DirectoryUtil::IsFileNewer(includeSourcePath, cachePath))
+				return true;
+			includeStack.push(includeSourcePath);
+		}
+		src.close();
+	}
+	return false;
+}
+
 bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
 {
 	if (!DirectoryUtil::FileExists(cachePath)) return true;
 
-	auto GetIncludeFileName = [](const std::string& line)
-	{
-		const std::string str_search = "#include \"";
-		const size_t foundPos = line.find(str_search);
-		if (foundPos != std::string::npos)
-		{
-			std::string quotedFileName = line.substr(foundPos + strlen("#include "), line.size() - foundPos);// +str_search.size() - 1);
-			return quotedFileName.substr(1, quotedFileName.size() - 2);
-		}
-		return std::string();
-	};
-
-	const std::string ShaderSourceDir = DirectoryUtil::GetFolderPath(sourcePath);
-	const std::string ShaderCacheDir = DirectoryUtil::GetFolderPath(cachePath);
-
-	auto AreIncludesDirty = [&](const std::string& srcPath)
-	{
-		std::stack<std::string> includeStack;
-		includeStack.push(srcPath);
-		while (!includeStack.empty())
-		{
-			const std::string includeFilePath = includeStack.top();
-			includeStack.pop();
-			std::ifstream src = std::ifstream(includeFilePath.c_str());
-			if (!src.good())
-			{
-				Log::Error("[ShaderCompile] Cannot open source file: %s", includeFilePath.c_str());
-				continue;
-			}
-
-			std::string line;
-			while (getline(src, line))
-			{
-				const std::string includeFileName = GetIncludeFileName(line);
-				if (includeFileName.empty()) continue;
-
-				const std::string includeSourcePath = ShaderSourceDir + includeFileName;
-				const std::string includeCachePath = ShaderCacheDir + includeFileName;
-
-				if (DirectoryUtil::IsFileNewer(includeSourcePath, cachePath))
-					return true;
-				includeStack.push(includeSourcePath);
-			}
-			src.close();
-		}
-		return false;
-	};
-
-	return DirectoryUtil::IsFileNewer(sourcePath, cachePath) || AreIncludesDirty(sourcePath);
+	return DirectoryUtil::IsFileNewer(sourcePath, cachePath) || AreIncludesDirty(sourcePath, cachePath);
 }
 
 
@@ -367,7 +368,13 @@ bool Shader::HasSourceFileBeenUpdated() const
 		if (mDirectories.find(stage) != mDirectories.end())
 		{
 			const std::string& path = mDirectories.at(stage).fullPath;
+			const std::string& cachePath = mDirectories.at(stage).cachePath;
 			bUpdated |= mDirectories.at(stage).lastWriteTime < std::experimental::filesystem::last_write_time(path);
+			
+			if (!bUpdated) // check include files only when source is not updated
+			{
+				bUpdated |= AreIncludesDirty(path, cachePath);
+			}
 		}
 	}
 	return bUpdated;
@@ -490,10 +497,7 @@ bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 		SetReflections(blobs);
 		//CheckSignatures();
 
-		ShaderLoadDesc loadDesc = {};
-		loadDesc.fullPath = sourceFilePath;
-		loadDesc.lastWriteTime = std::experimental::filesystem::last_write_time(sourceFilePath);
-		mDirectories[stage] = loadDesc;
+		mDirectories[stage] = ShaderLoadDesc(sourceFilePath, cacheFilePath);
 	}
 
 	// INPUT LAYOUT (VS)

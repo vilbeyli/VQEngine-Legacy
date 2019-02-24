@@ -712,6 +712,23 @@ RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERa
 // example params: "openart/185.png", "Data/Textures/"
 TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/, bool bGenerateMips /*= false*/)
 {
+#if 0
+	typedef TextureID(*pfnLoadImage)(const char* path, unsigned flag, void* pData, void* pImg);
+	auto pfnLoadDDS = [](const char* path, unsigned flag, void* pData, void* pImg)
+	{
+
+	};
+	auto pfnLoadPNG = [](const char* path, unsigned flag, void* pData, void* pImg)
+	{
+
+	};
+	static std::unordered_map<std::string, pfnLoadImage> sLoaderFunctions = 
+	{
+		  { "dds", pfnLoadDDS }
+		, { "png", pfnLoadPNG }
+	};
+#endif
+
 	// renderer is single threaded in general, therefore finer granularity is not currently provided
 	// and instead, a mutex lcok is employed for the entire duration of creating a texture from file.
 	// this will require refactoring if its decided to go for a truely multi-threaded renderer.
@@ -741,76 +758,158 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 	tex._name = texFileName;
 	std::wstring wpath(path.begin(), path.end());
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
-	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
+
+	const std::string fileExtension = DirectoryUtil::GetFileExtension(texFileName);
+	bool bFileLoadSucceeded = false;
+	std::string errMsg = "";
+
+	if (fileExtension == "dds")
 	{
-		auto meta = img->GetMetadata();
-		
-		CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), meta, &tex._srv);
-		if (bGenerateMips)
+		if (SUCCEEDED(LoadFromDDSFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
 		{
+			auto meta = img->GetMetadata();
 
-			ID3D11Resource* resource = nullptr;
-			tex._srv->GetResource(&resource);
-			if (tex._srv) tex._srv->Release();
-			if (tex._tex2D) tex._tex2D->Release();
+			CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), meta, &tex._srv);
+			if (bGenerateMips)
+			{
 
-			meta.mipLevels = min(
-				  static_cast<size_t>(std::log2(meta.width)	 )
-				, static_cast<size_t>(std::log2(meta.height)));
+				ID3D11Resource* resource = nullptr;
+				tex._srv->GetResource(&resource);
+				if (tex._srv) tex._srv->Release();
+				if (tex._tex2D) tex._tex2D->Release();
 
-			TextureDesc texDesc = {};
-			texDesc.bGenerateMips = true;
-			texDesc.bIsCubeMap = meta.depth != 1; // false?
-			texDesc.arraySize = static_cast<int>(meta.arraySize);
-			texDesc.format = static_cast<EImageFormat>(meta.format);
-			texDesc.width = static_cast<int>(meta.width );
-			texDesc.height = static_cast<int>(meta.height);
-			texDesc.mipCount = static_cast<int>(meta.mipLevels);
-			texDesc.usage = ETextureUsage::RENDER_TARGET_RW;
-			texDesc.texFileName = texFileName;
-			
-			//texDesc.pData = img->GetPixels();
-			//texDesc.dataPitch = img->GetImages()->rowPitch;
-			//texDesc.dataSlicePitch = img->GetImages()->slicePitch;
+				meta.mipLevels = min(
+					static_cast<size_t>(std::log2(meta.width))
+					, static_cast<size_t>(std::log2(meta.height)));
 
-			tex = GetTextureObject(CreateTexture2D(texDesc));
+				TextureDesc texDesc = {};
+				texDesc.bGenerateMips = true;
+				texDesc.bIsCubeMap = meta.depth != 1; // false?
+				texDesc.arraySize = static_cast<int>(meta.arraySize);
+				texDesc.format = static_cast<EImageFormat>(meta.format);
+				texDesc.width = static_cast<int>(meta.width);
+				texDesc.height = static_cast<int>(meta.height);
+				texDesc.mipCount = static_cast<int>(meta.mipLevels);
+				texDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+				texDesc.texFileName = texFileName;
 
-			m_deviceContext->CopySubresourceRegion(tex._tex2D, 0, 0, 0, 0, resource, 0, NULL);
-			m_deviceContext->GenerateMips(tex._srv);
-			m_deviceContext->Flush();
-//#if _DEBUG
-//			SaveTextureToDisk(tex._id, Application::s_WorkspaceDirectory + "/DEBUG.png", false);
-//#endif
-			resource->Release();
+				//texDesc.pData = img->GetPixels();
+				//texDesc.dataPitch = img->GetImages()->rowPitch;
+				//texDesc.dataSlicePitch = img->GetImages()->slicePitch;
+
+				tex = GetTextureObject(CreateTexture2D(texDesc));
+
+				m_deviceContext->CopySubresourceRegion(tex._tex2D, 0, 0, 0, 0, resource, 0, NULL);
+				m_deviceContext->GenerateMips(tex._srv);
+				m_deviceContext->Flush();
+				//#if _DEBUG
+				//			SaveTextureToDisk(tex._id, Application::s_WorkspaceDirectory + "/DEBUG.png", false);
+				//#endif
+				resource->Release();
+			}
+			else
+			{
+
+				// get srv from img
+				D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+				tex._srv->GetDesc(&srvDesc);
+
+				// read width & height
+				ID3D11Resource* resource = nullptr;
+				tex._srv->GetResource(&resource);
+				if (SUCCEEDED(resource->QueryInterface(&tex._tex2D)))
+				{
+					D3D11_TEXTURE2D_DESC desc;
+					tex._tex2D->GetDesc(&desc);
+					tex._width = desc.Width;
+					tex._height = desc.Height;
+				}
+				resource->Release();
+
+				tex._id = static_cast<int>(mTextures.size());
+				mTextures.emplace_back(std::move(tex));
+			}
+			return mTextures.back()._id;
+		}
+
+		errMsg = "Cannot load texture file: " + texFileName + "\n";
+		Log::Error(errMsg);
+		return mTextures[0]._id;
+	}
+	else// if (fileExtension == "png")
+	{
+		if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
+		{
+			auto meta = img->GetMetadata();
+
+			CreateShaderResourceView(m_device, img->GetImages(), img->GetImageCount(), meta, &tex._srv);
+			if (bGenerateMips)
+			{
+
+				ID3D11Resource* resource = nullptr;
+				tex._srv->GetResource(&resource);
+				if (tex._srv) tex._srv->Release();
+				if (tex._tex2D) tex._tex2D->Release();
+
+				meta.mipLevels = min(
+					static_cast<size_t>(std::log2(meta.width))
+					, static_cast<size_t>(std::log2(meta.height)));
+
+				TextureDesc texDesc = {};
+				texDesc.bGenerateMips = true;
+				texDesc.bIsCubeMap = meta.depth != 1; // false?
+				texDesc.arraySize = static_cast<int>(meta.arraySize);
+				texDesc.format = static_cast<EImageFormat>(meta.format);
+				texDesc.width = static_cast<int>(meta.width);
+				texDesc.height = static_cast<int>(meta.height);
+				texDesc.mipCount = static_cast<int>(meta.mipLevels);
+				texDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+				texDesc.texFileName = texFileName;
+
+				//texDesc.pData = img->GetPixels();
+				//texDesc.dataPitch = img->GetImages()->rowPitch;
+				//texDesc.dataSlicePitch = img->GetImages()->slicePitch;
+
+				tex = GetTextureObject(CreateTexture2D(texDesc));
+
+				m_deviceContext->CopySubresourceRegion(tex._tex2D, 0, 0, 0, 0, resource, 0, NULL);
+				m_deviceContext->GenerateMips(tex._srv);
+				m_deviceContext->Flush();
+				//#if _DEBUG
+				//			SaveTextureToDisk(tex._id, Application::s_WorkspaceDirectory + "/DEBUG.png", false);
+				//#endif
+				resource->Release();
+			}
+			else
+			{
+
+				// get srv from img
+				D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+				tex._srv->GetDesc(&srvDesc);
+
+				// read width & height
+				ID3D11Resource* resource = nullptr;
+				tex._srv->GetResource(&resource);
+				if (SUCCEEDED(resource->QueryInterface(&tex._tex2D)))
+				{
+					D3D11_TEXTURE2D_DESC desc;
+					tex._tex2D->GetDesc(&desc);
+					tex._width = desc.Width;
+					tex._height = desc.Height;
+				}
+				resource->Release();
+
+				tex._id = static_cast<int>(mTextures.size());
+				mTextures.emplace_back(std::move(tex));
+			}
+			return mTextures.back()._id;
 		}
 		else
 		{
-
-			// get srv from img
-			D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-			tex._srv->GetDesc(&srvDesc);
-
-			// read width & height
-			ID3D11Resource* resource = nullptr;
-			tex._srv->GetResource(&resource);
-			if (SUCCEEDED(resource->QueryInterface(&tex._tex2D)))
-			{
-				D3D11_TEXTURE2D_DESC desc;
-				tex._tex2D->GetDesc(&desc);
-				tex._width = desc.Width;
-				tex._height = desc.Height;
-			}
-			resource->Release();
-
-			tex._id = static_cast<int>(mTextures.size());
-			mTextures.emplace_back(std::move(tex));
+			errMsg = "Cannot load texture file: " + texFileName + "\n";
+			Log::Error(errMsg);
+			return mTextures[0]._id;
 		}
-		return mTextures.back()._id;
-	}
-	else
-	{
-		Log::Error("Cannot load texture file: %s\n", texFileName.c_str());
-		return mTextures[0]._id;
 	}
 }
 

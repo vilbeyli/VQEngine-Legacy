@@ -467,6 +467,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	pRenderer->SetTexture("texNormals", texNormal);
 	pRenderer->SetTexture("texEmissiveMap", texEmissive);
 	pRenderer->SetTexture("texDepth", depthTexture);
+	pRenderer->SetTexture("texLTC_LUT", args.tLTC_LUT);
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();

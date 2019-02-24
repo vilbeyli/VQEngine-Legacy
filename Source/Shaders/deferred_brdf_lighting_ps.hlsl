@@ -18,6 +18,7 @@
 
 #include "BRDF.hlsl"
 #include "LightingCommon.hlsl"
+#include "LTC.hlsl"
 
 #define ENABLE_POINT_LIGHTS 1
 #define ENABLE_POINT_LIGHTS_SHADOW 1
@@ -63,6 +64,8 @@ TextureCubeArray texPointShadowMaps;
 Texture2DArray   texSpotShadowMaps;
 Texture2DArray   texDirectionalShadowMaps;
 
+Texture2D texLTC_LUT;
+
 SamplerState sShadowSampler;
 SamplerState sLinearSampler;
 
@@ -99,7 +102,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	s.specularColor = specularMetalness.rgb;
 	s.roughness = diffuseRoughness.a;
 	s.metalness = specularMetalness.a;
-	
+    s.P = P;
 
 	float3 IdIs = float3(0.0f, 0.0f, 0.0f);		// diffuse & specular
     float3 Ie = texEmissiveMap.Sample(sLinearSampler, In.uv);
@@ -209,7 +212,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	}
 #endif
 
-
+	
+//-- AREA LIGHTS ----------------------------------------------------------------------------------------------------------------------
+    IdIs += EvalCylinder(s, V, Lights.cylinderLight, texLTC_LUT, sLinearSampler);
 
 
 	const float3 illumination = Ie + IdIs;

@@ -49,6 +49,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Source\Shaders\Line_gs.hlsl = Source\Shaders\Line_gs.hlsl
 		Source\Shaders\Line_ps.hlsl = Source\Shaders\Line_ps.hlsl
 		Source\Shaders\Line_vs.hlsl = Source\Shaders\Line_vs.hlsl
+		Source\Shaders\LTC.hlsl = Source\Shaders\LTC.hlsl
 		Source\Shaders\MVPTransformationWithUVs_vs.hlsl = Source\Shaders\MVPTransformationWithUVs_vs.hlsl
 		Source\Shaders\Normal_ps.hlsl = Source\Shaders\Normal_ps.hlsl
 		Source\Shaders\Normal_vs.hlsl = Source\Shaders\Normal_vs.hlsl

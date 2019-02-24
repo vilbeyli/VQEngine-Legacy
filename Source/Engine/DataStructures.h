@@ -71,6 +71,25 @@ struct DirectionalLightGPU
 	int enabled;
 };
 
+struct CylinderLightGPU
+{
+	vec3 position;
+	float brightness;
+	vec3 color;
+	float radius;
+	float height;
+};
+
+struct RectangleLightGPU
+{
+	vec3 position;
+	float brightness;
+	vec3 color;
+	float width;
+	float height;
+};
+
+
 //struct ShadowView
 //{
 //	TextureID shadowMap = -1;
@@ -115,6 +134,9 @@ struct SceneLightingData
 		ShadowingSpotLightDataArray spotLightsShadowing;
 
 		SpotShadowViewArray shadowViews;
+		
+		CylinderLightGPU cylinderLight;
+		RectangleLightGPU rectangleLight;
 	} _cb;
 
 

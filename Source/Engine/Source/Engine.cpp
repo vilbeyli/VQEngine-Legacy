@@ -345,6 +345,11 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//mpCPUProfiler->EndEntry();
 		//mpCPUProfiler->EndProfile();
 
+		{
+			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+			mLTC_LUT_Texture = mpRenderer->CreateTextureFromFile("DebugTextures/ltc_mat.dds");
+		}
+
 		mbLoading = false;
 		const float loadTime = timer.StopGetDeltaTimeAndReset();
 		Log::Info("[ENGINE]: Loaded (Async)  in %.2fs ---------", loadTime);
@@ -957,6 +962,7 @@ void Engine::Render()
 			, mpActiveScene->mSceneView
 			, mSceneLightData
 			, tSSAO
+			, mLTC_LUT_Texture
 			, sEngineSettings.rendering.bUseBRDFLighting
 		};
 
@@ -1136,8 +1142,9 @@ void Engine::Render()
 		mpGPUProfiler->EndEntry();
 	}
 
-	if(mpActiveScene->mSceneView.bIsIBLEnabled)
-		RenderLights(); // when skymaps are disabled, there's an error here that needs fixing.
+	//if(mpActiveScene->mSceneView.bIsIBLEnabled)
+		
+	RenderLights(); // when skymaps are disabled, there's an error here that needs fixing.
 
 	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 

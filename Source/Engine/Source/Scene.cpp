@@ -462,11 +462,11 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vect
 		//if (!l->_bEnabled) continue;	// #BreaksRelease
 
 		pNumArray& refLightCounts = casterCounts;
-		const size_t lightIndex = (*refLightCounts[l->mType])++;
 		switch (l->mType)
 		{
 		case Light::ELightType::POINT:
 		{
+			const size_t lightIndex = (*refLightCounts[l->mType])++;
 			PointLightGPU plData;
 			l->GetGPUData(plData);
 
@@ -475,6 +475,7 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vect
 		} break;
 		case Light::ELightType::SPOT:
 		{
+			const size_t lightIndex = (*refLightCounts[l->mType])++;
 			SpotLightGPU slData;
 			l->GetGPUData(slData);
 
@@ -482,6 +483,12 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vect
 			cbuffer.shadowViews[numShdSpot++] = l->GetLightSpaceMatrix();
 			mShadowView.spots.push_back(l);
 		} break;
+		case Light::ELightType::CYLINDER:
+			l->GetGPUData(cbuffer.cylinderLight);
+			break;
+		case Light::ELightType::RECTANGLE:
+			l->GetGPUData(cbuffer.rectangleLight);
+			break;
 		default:
 			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
 			continue;
@@ -492,6 +499,9 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vect
 	for (const Light& l : mLights)
 	{
 		if (l.mbCastingShadows) continue;
+		if (l.mType != Light::ELightType::SPOT && l.mType != Light::ELightType::POINT)
+			continue;
+
 		pNumArray& refLightCounts = lightCounts;
 
 		const size_t lightIndex = (*refLightCounts[l.mType])++;
@@ -1115,11 +1125,12 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightin
 	pCPUProfiler->BeginEntry("Cull Lights");
 	for (const Light& l : mLights)
 	{
-		if (!l.mbCastingShadows) continue;
+		//if (!l.mbCastingShadows) continue;
 		switch (l.mType)
 		{
 		case Light::ELightType::SPOT:
 		{
+			if (!l.mbCastingShadows) continue;
 			// TODO: frustum - cone check
 			const bool bCullLight = false;
 			//if (IsVisible())
@@ -1130,7 +1141,8 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightin
 		}	break;
 
 		case Light::ELightType::POINT:
-		{	
+		{
+			if (!l.mbCastingShadows) continue;
 			vec3 vecCamera = GetActiveCamera().GetPositionF() - l.mTransform._position;
 			const float dstSqrCameraToLight = XMVector3Dot(vecCamera, vecCamera).m128_f32[0];
 			const float rangeSqr = l.mRange * l.mRange;
@@ -1140,6 +1152,15 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightin
 			else 
 				++stats.scene.numCulledShadowingPointLights;
 		} break;
+		case Light::ELightType::CYLINDER:
+			pLights.push_back(&l);
+			break;
+		case Light::ELightType::RECTANGLE:
+			pLights.push_back(&l);
+			break;
+		default:
+			Log::Warning("Unhandled light type.");
+			break;
 		} // light type
 
 	}

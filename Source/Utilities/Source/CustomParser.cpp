@@ -294,9 +294,21 @@ static const std::unordered_map<std::string, Light::ELightType>	sLightTypeLookup
 	{"p", Light::ELightType::POINT},
 	{"d", Light::ELightType::DIRECTIONAL},
 
+	{"cyl", Light::ELightType::CYLINDER},
+	{"rect", Light::ELightType::RECTANGLE},
+	{"dsk", Light::ELightType::DISK},
+	{"ln", Light::ELightType::LINE},
+
+
 	{"spot", Light::ELightType::SPOT },
 	{"point", Light::ELightType::POINT},
 	{"directional", Light::ELightType::DIRECTIONAL},
+
+	{"cylinder", Light::ELightType::CYLINDER},
+	{"rectangle", Light::ELightType::RECTANGLE},
+	{"line", Light::ELightType::LINE},
+	{"linear", Light::ELightType::LINE},
+	{"disk", Light::ELightType::DISK},
 };
 
 static const std::unordered_map<std::string, const LinearColor&>		sColorLookup
@@ -907,12 +919,65 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 		sLight.mViewportX = sLight.mViewportY = stof(command[1]);
 		sLight.mDistanceFromOrigin = stof(command[2]);
 	}
-	else if (cmd == "attenuation")
+	else if (cmd == "attenuation") // point
 	{
 		sLight.mAttenuationConstant = stof(command[1]);
 		if (command.size() > 2) sLight.mAttenuationLinear = stof(command[2]);
 		if (command.size() > 3) sLight.mAttenuationQuadratic = stof(command[3]);
 	}
+	else if (cmd == "cylinder")
+	{
+		if (bIsReadingLight)
+		{
+			sLight.mRadius = stof(command[1]);
+			sLight.mHeight = stof(command[2]);
+			sLight.mMeshID = EGeometry::CYLINDER;
+			sLight.mTransform.RotateAroundLocalZAxisDegrees(90.0f);
+			sLight.mTransform.SetScale(sLight.mRadius, sLight.mHeight, sLight.mRadius);
+		}
+		else
+		{
+			Log::Warning("cmd == %s when not reading a light.", cmd.c_str());
+		}
+	}
+	else if (cmd == "line" || cmd == "linear")
+	{
+		if (bIsReadingLight)
+		{
+			sLight.mLength = stof(command[1]);
+		}
+		else
+		{
+			Log::Warning("cmd == %s when not reading a light.", cmd.c_str());
+		}
+	}
+	else if (cmd == "rectangle")
+	{
+		if (bIsReadingLight)
+		{
+			sLight.mWidth = stof(command[1]);
+			sLight.mHeight = stof(command[2]);
+
+			sLight.mMeshID = EGeometry::CUBE;
+			sLight.mTransform.SetScale(sLight.mWidth, sLight.mHeight, 0.01f);
+		}
+		else
+		{
+			Log::Warning("cmd == %s when not reading a light.", cmd.c_str());
+		}
+	}
+	else if (cmd == "disk")
+	{
+		if (bIsReadingLight)
+		{
+			sLight.mRadius = stof(command[1]);
+		}
+		else
+		{
+			Log::Warning("cmd == %s when not reading a light.", cmd.c_str());
+		}
+	}
+
 	else if (cmd == "transform")
 	{
 		// #Parameters: 7-9

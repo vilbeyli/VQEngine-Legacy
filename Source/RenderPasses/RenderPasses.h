@@ -254,6 +254,7 @@ struct DeferredRenderingPasses : public RenderPass
 		const SceneView& sceneView;
 		const SceneLightingData& lights;
 		const TextureID tSSAO;
+		const TextureID tLTC_LUT;
 		bool bUseBRDFLighting;
 	};
 	void Initialize(Renderer* pRenderer);
@@ -266,6 +267,7 @@ struct DeferredRenderingPasses : public RenderPass
 
 	GBuffer _GBuffer;
 	DepthStencilStateID _geometryStencilState;
+
 	ShaderID			_geometryShader;
 	ShaderID			_geometryInstancedShader;
 	ShaderID			_ambientShader;

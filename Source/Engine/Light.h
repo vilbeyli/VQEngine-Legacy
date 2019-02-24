@@ -57,6 +57,12 @@ struct Light
 		SPOT,
 		DIRECTIONAL,
 
+		CYLINDER,
+		LINE,
+		RECTANGLE,
+		DISK,
+
+
 		LIGHT_TYPE_COUNT
 	};
 
@@ -129,6 +135,8 @@ struct Light
 	void GetGPUData(PointLightGPU& refData) const;
 	void GetGPUData(SpotLightGPU& refData) const;
 	void GetGPUData(DirectionalLightGPU& refData) const;
+	void GetGPUData(CylinderLightGPU& refData) const;
+	void GetGPUData(RectangleLightGPU& refData) const;
 
 	// TODO: remove this arbitrary function for directional lights
 	Settings::ShadowMap GetSettings() const; // ?
@@ -199,26 +207,62 @@ struct Light
 		{
 			float mSpotOuterConeAngleDegrees;
 			float mSpotInnerConeAngleDegrees;
-			float dummy1;
 		};
 
 
 
-		// TODO: v0.6.0 linear lights from GPU Zen
-		// Eric Heitz Slides: https://drive.google.com/file/d/0BzvWIdpUpRx_Z2pZWWFtam5xTFE/view
-		// LINEAR LIGHT  ------------------------------------------------
+		// Eric Heitz LTC Slides: https://drive.google.com/file/d/0BzvWIdpUpRx_Z2pZWWFtam5xTFE/view
+		// CYLINDER LIGHT  ------------------------------------------------
 		//
 		//
 		//
 		//
 		//
 		//
-		struct // Area
+		struct // Cylinder
 		{
-			float dummy2;
-			float dummy3;
-			float dummy4;
+			float mRadius;
+			float mHeight;
 		};
+
+		// LINEAR/LINE LIGHT  ------------------------------------------------
+		//
+		//
+		//
+		//
+		//
+		//
+		struct // Linear
+		{
+			float mLength;
+		};
+
+		// REACTANGLE LIGHT  ------------------------------------------------
+		//
+		//
+		//
+		//
+		//
+		//
+		struct // Rectangle
+		{
+			float mWidth;
+			float mHeight;
+		};
+
+		// DISK LIGHT  ------------------------------------------------
+		//
+		//
+		//
+		//
+		//
+		//
+		struct // Disk
+		{
+			float mRadius;
+		};
+
+
 	};
 };
 

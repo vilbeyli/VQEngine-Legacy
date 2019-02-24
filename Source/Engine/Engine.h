@@ -206,6 +206,8 @@ private:
 	ZPrePass						mZPrePass;
 	ForwardLightingPass				mForwardLightingPass;
 
+	TextureID						mLTC_LUT_Texture;
+
 	std::vector<const GameObject*>	mTBNDrawObjects;
 	
 	VQEngine::UI					mUI;

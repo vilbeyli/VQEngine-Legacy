@@ -296,20 +296,20 @@ light end
 
 
 
-// LINEAR LIGHT
+// CYLINDER LIGHT
 //
 //   \|/\|/\|/ 
 //  --********--
 //   /|\/|\/|\
 //
 light begin
-	type point
+	type cylinder 
 	transform 80 -50 43    0 0 0   0.1
 	color white
 	brightness 500
 	shadows false 0.005
-//	attenuation 1 1 1 // currently unused
 	range 150
+	cylinder 0.3 4
 light end
 
 
@@ -365,3 +365,78 @@ object begin
 	brdf
 	transform 80 -58 67 0 0 0 15 0.5 3.5
 object end
+
+
+
+
+// RECTANGLE LIGHT
+//
+//   \|/\|/\|/ 
+//  --********--
+//  --********--
+//  --********--
+//   /|\/|\/|\
+//
+//light begin
+//	type rectangle
+//	transform 120 -50 43    0 0 0   0.1
+//	color white
+//	brightness 500
+//	shadows false 0.005
+//	range 150
+//	rectangle 3 4
+//light end
+//
+//
+//// reference scene groudn setup
+//object begin
+//	mesh cube
+//	brdf
+//		diffuse 0.12 0.12 0.12
+//		roughness 0.88
+//		metalness 0.0
+//	brdf
+//	transform 120 -60 55 0 0 0 130 1.9 65
+//object end
+//
+//
+//
+//
+//object begin
+//	mesh cube
+//	brdf
+//		diffuse 0.02 0.02 0.02
+//		roughness 0.08
+//		metalness 0.0
+//	brdf
+//	transform 120 -56 44 20 0 0 15 0.5 3.5
+//object end
+//object begin
+//	mesh cube
+//	brdf
+//		diffuse 0.02 0.02 0.02
+//		roughness 0.28
+//		metalness 0.0
+//	brdf
+//	transform 120 -57.8 51 5 0 0 15 0.5 3.5
+//object end
+//
+//object begin
+//	mesh cube
+//	brdf
+//		diffuse 0.02 0.02 0.02
+//		roughness 0.48
+//		metalness 0.0
+//	brdf
+//	transform 120 -58 59 0 0 0 15 0.5 3.5
+//object end
+//
+//object begin
+//	mesh cube
+//	brdf
+//		diffuse 0.02 0.02 0.02
+//		roughness 0.68
+//		metalness 0.0
+//	brdf
+//	transform 120 -58 67 0 0 0 15 0.5 3.5
+//object end

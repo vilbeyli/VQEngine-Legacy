@@ -61,6 +61,24 @@ struct DirectionalLight
 	int enabled;
 };
 
+struct CylinderLight
+{
+    float3 position;
+    float brightness;
+    float3 color;
+    float radius;
+    float height;
+};
+
+struct RectangleLight
+{
+    float3 position;
+    float brightness;
+    float3 color;
+    float width;
+    float height;
+};
+
 // defines maximum number of dynamic lights  todo: shader defines
 // don't forget to update CPU define too (RenderPasses.h)
 #define NUM_POINT_LIGHT	100
@@ -90,7 +108,10 @@ struct SceneLighting
 	SpotLight spots[NUM_SPOT_LIGHT];
 	SpotLight spot_casters[NUM_SPOT_LIGHT_SHADOW];
 	//----------------------------------------------
-	matrix shadowViews[NUM_SPOT_LIGHT_SHADOW];
+    matrix shadowViews[NUM_SPOT_LIGHT_SHADOW];
+	//----------------------------------------------
+    CylinderLight cylinderLight;
+    RectangleLight rectangleLight;
 };
 
 

@@ -133,6 +133,28 @@ void Light::GetGPUData(PointLightGPU& l) const
 	l.depthBias = mDepthBias;
 }
 
+void Light::GetGPUData(CylinderLightGPU& l) const
+{
+	assert(mType == ELightType::CYLINDER);
+
+	l.position = mTransform._position;
+	l.color = mColor.Value();
+	l.brightness = mBrightness;
+	l.radius = mRadius;
+	l.height = mHeight;
+}
+
+void Light::GetGPUData(RectangleLightGPU& l) const
+{
+	assert(mType == ELightType::RECTANGLE);
+
+	l.position = mTransform._position;
+	l.color = mColor.Value();
+	l.brightness = mBrightness;
+	l.width = mWidth;
+	l.height = mHeight;
+}
+
 Settings::ShadowMap Light::GetSettings() const
 {
 	Settings::ShadowMap settings;

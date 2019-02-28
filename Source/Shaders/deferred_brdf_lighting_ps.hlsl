@@ -217,16 +217,18 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	
 //-- AREA LIGHTS ----------------------------------------------------------------------------------------------------------------------
+    if (length(Lights.cylinderLight.position - Pw) < Lights.cylinderLight.range)
+    {
 #if !LTC_USE_VIEW_SPACE
-    s.N = normalize(Nw);
-	s.P = Pw;
-	IdIs += EvalCylinder(s, Vw, Lights.cylinderLight, texLTC_LUT, sLinearSampler, matView);
+        s.N = normalize(Nw);
+        s.P = Pw;
+        IdIs += EvalCylinder(s, Vw, Lights.cylinderLight, texLTC_LUT, sLinearSampler, matView);
 #else
     s.N = N;
     s.P = P;
     IdIs += EvalCylinder(s, V, Lights.cylinderLight, texLTC_LUT, sLinearSampler, matView);
 #endif
-
+    }
 	const float3 illumination = Ie + IdIs;
 	return float4(illumination, 1);
 }

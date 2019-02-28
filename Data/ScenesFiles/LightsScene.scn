@@ -308,7 +308,7 @@ light begin
 	color white
 	brightness 40
 	shadows false 0.005
-	range 150
+	range 90
 	cylinder 0.3 4
 light end
 

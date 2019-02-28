@@ -142,6 +142,7 @@ void Light::GetGPUData(CylinderLightGPU& l) const
 	l.brightness = mBrightness;
 	l.radius = mRadius;
 	l.height = mHeight;
+	l.range = mRange;
 }
 
 void Light::GetGPUData(RectangleLightGPU& l) const

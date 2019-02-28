@@ -68,6 +68,7 @@ struct CylinderLight
     float3 color;
     float radius;
     float height;
+    float range;
 };
 
 struct RectangleLight

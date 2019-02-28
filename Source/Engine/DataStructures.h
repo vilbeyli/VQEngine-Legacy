@@ -78,6 +78,7 @@ struct CylinderLightGPU
 	vec3 color;
 	float radius;
 	float height;
+	float range;
 };
 
 struct RectangleLightGPU

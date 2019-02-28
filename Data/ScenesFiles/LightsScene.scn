@@ -304,7 +304,7 @@ light end
 //
 light begin
 	type cylinder 
-	transform 80 -50 43    0 0 0   0.1
+	transform 0 -50 0    0 0 0   0.1
 	color white
 	brightness 40
 	shadows false 0.005
@@ -332,7 +332,7 @@ object begin
 		roughness 0.88
 		metalness 0.0
 	brdf
-	transform 80 -60 55 0 0 0 130 1.9 65
+	transform 0 -60 0 0 0 0 130 1.9 65
 object end
 
 

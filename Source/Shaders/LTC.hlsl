@@ -97,7 +97,7 @@ float3x3 GetLTC_Matrix(Texture2D texLUT, SamplerState linearSampler, float2 uv)
 //--------------------------------------------------------------------------------
 // NUMERICAL INTEGRATIONS
 //--------------------------------------------------------------------------------
-float I_cylinder_numerical(float3 p1, float3 p2, float R)
+float I_cylinder_numerical(float3 p1, float3 p2, float R, in float3x3 matTBN)
 {
 	// Initialize the orthonormal basis vectors
     float L = length(p2 - p1);
@@ -126,8 +126,15 @@ float I_cylinder_numerical(float3 p1, float3 p2, float R)
 			// normalize the direction
             float3 wp = normalize(p);
 
+            //wp = mul(matTBN, wp);
+            //wn = mul(matTBN, wn);
+            //wp = mul(wp, matTBN);
+            //wn = mul(wn, matTBN);
+
 			// integrate
-            I += D(wp) * saturate(dot(-wp, wn) / dot(p, p));
+            I += D(wp) * saturate(dot(-wp, wn)) / dot(p, p);
+            //I += D(wp, matTBN) * saturate(dot(-wp, wn)) / dot(p, p);
+            //I += D(wp, transpose(matTBN)) * saturate(dot(-wp, wn)) / dot(p, p);
         }
     }
 
@@ -309,19 +316,58 @@ float f(float NdotV, float roughness)
 
 }
 
-float3 EvalCylinder(BRDF_Surface s, float3 V, CylinderLight l, Texture2D texLUT, SamplerState smpLinear)
+// determines if the space of @s.N and @V vectors 
+// will be in view space or world space.
+#define LTC_USE_VIEW_SPACE 1
+float3 EvalCylinder(BRDF_Surface s, float3 V, CylinderLight l, Texture2D texLUT, SamplerState smpLinear, in matrix matView)
 {
+	// get inverse transform matrix
     const float NdotV = saturate(dot(s.N, V));
     const float2 ltc_uvs = GetLTC_UVs(NdotV, s.roughness);
     const float3x3 Minv = GetLTC_Matrix(texLUT, smpLinear, ltc_uvs);
 
-    float3 halfHeightVec = float3(0, 0, l.height / 2);
-    float3 p1 = l.position + halfHeightVec;
-    float3 p2 = l.position - halfHeightVec;
-    
-    //const float NdotL = saturate(dot(s.N, s.P));
+	// generate cylidner points
+    float3 halfHeightVec = float3(l.height * 0.5f, 0, 0);
+    //float3 halfHeightVec = float3(0, l.height * 0.5f, 0);
+    //float3 halfHeightVec = float3(0, 0, l.height * 0.5f);
 
-	float3 I = l.brightness * l.color * I_cylinder_numerical(p1, p2, l.radius);
-    return 0.0f; // temp
+    float4 p1W = float4(l.position + halfHeightVec, 1.0f);
+    float4 p2W = float4(l.position - halfHeightVec, 1.0f);
+    
+    float3 T1 = normalize(V - dot(s.N, V) * s.N);
+    float3 T2 = cross(s.N, T1);
+    float3x3 matTBN = float3x3(T1, T2, s.N);
+
+	
+#if LTC_USE_VIEW_SPACE
+    float3 p1V = mul(matView, p1W);
+    float3 p2V = mul(matView, p2W);
+    float3 p1 = mul(float3(p1V.xyz - s.P.xyz), matTBN);
+    float3 p2 = mul(float3(p2V.xyz - s.P.xyz), matTBN);
+#else
+    float3 p1 = mul(float3(p1W.xyz - s.P.xyz), matTBN);
+    float3 p2 = mul(float3(p2W.xyz - s.P.xyz), matTBN);
+#endif
+	
+    float3 wp1 = normalize(p1);
+    float3 wp2 = normalize(p2);
+    
+    //return -normalize(p1W - s.P);
+    //return NdotV;
+    //return V / 10;
+	//return s.P/ 1000;
+	
+    //return NdotV.xxx;
+
+#if 0
+    float3 I = l.brightness * l.color * I_ltc_line(p1, p2, Minv);
+#else
+    float3 I = l.brightness * l.color * I_cylinder_numerical(p1, p2, l.radius, matTBN);
+#endif
+
+    //return 0.0f; // temp
+    //return max(0.0f, min(1.0f, I));
     return max(0.0f, I);
+    //return I;
+    //return abs(I);
 }

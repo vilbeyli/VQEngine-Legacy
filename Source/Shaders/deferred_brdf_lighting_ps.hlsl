@@ -92,6 +92,9 @@ float4 PSMain(PSIn In) : SV_TARGET
 	const float3 Pw = mul(matViewToWorld, float4(P, 1)).xyz;	// world position of the shaded pixel
 	const float3 Pcam = float3(matViewToWorld._14, matViewToWorld._24, matViewToWorld._34);// world position of the camera
 	pcfTest.viewDistanceOfPixel = length(Pw - Pcam);
+    
+	const float3 Vw = normalize(Pcam - Pw);
+    const float3 Nw = mul(matViewToWorld, float4(N, 0));
 
 	const float4 diffuseRoughness  = texDiffuseRoughnessMap.Sample(sLinearSampler, In.uv);
 	const float4 specularMetalness = texSpecularMetalnessMap.Sample(sLinearSampler, In.uv);
@@ -214,8 +217,15 @@ float4 PSMain(PSIn In) : SV_TARGET
 
 	
 //-- AREA LIGHTS ----------------------------------------------------------------------------------------------------------------------
-    IdIs += EvalCylinder(s, V, Lights.cylinderLight, texLTC_LUT, sLinearSampler);
-
+#if !LTC_USE_VIEW_SPACE
+    s.N = normalize(Nw);
+	s.P = Pw;
+	IdIs += EvalCylinder(s, Vw, Lights.cylinderLight, texLTC_LUT, sLinearSampler, matView);
+#else
+    s.N = N;
+    s.P = P;
+    IdIs += EvalCylinder(s, V, Lights.cylinderLight, texLTC_LUT, sLinearSampler, matView);
+#endif
 
 	const float3 illumination = Ie + IdIs;
 	return float4(illumination, 1);

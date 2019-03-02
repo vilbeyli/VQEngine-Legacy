@@ -963,6 +963,7 @@ static size_t CullGameObjects(
 	return pObjs.size() - currIdx;
 }
 
+#if THREADED_FRUSTUM_CULL
 struct CullMeshWorkerData
 {
 	// in
@@ -972,6 +973,7 @@ struct CullMeshWorkerData
 	// out
 	std::array< MeshDrawList, 6> meshListForPoints;
 };
+#endif
 
 void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightingData& outLightingData)
 {
@@ -1290,7 +1292,7 @@ void Scene::PreRender(CPUProfiler* pCPUProfiler, FrameStats& stats, SceneLightin
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 						stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
 						(
-							l.GetViewFrustumPlanes(CubemapFaceDirectionEnum),
+							l->GetViewFrustumPlanes(CubemapFaceDirectionEnum),
 							pObj,
 							meshDrawDataPerFace[face]
 						));

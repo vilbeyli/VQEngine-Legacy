@@ -422,7 +422,16 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 		InstancedObjectCubemapCBuffer cbuffer;
-#endif
+#endif		
+		// clear the depth targets for each face
+		for (int face = 0; face < 6; ++face)
+		{
+			const size_t depthTargetIndex = i * 6 + face;
+			pRenderer->BindDepthTarget(mDepthTargets_Point[depthTargetIndex]);	// only depth stencil buffer
+			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
+		}
+
+		// render objects for each face
 		for (int face = 0; face < 6; ++face)
 		{
 			const XMMATRIX viewProj =
@@ -431,7 +440,6 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 
 			const size_t depthTargetIndex = i * 6 + face;
 			pRenderer->BindDepthTarget(mDepthTargets_Point[depthTargetIndex]);	// only depth stencil buffer
-			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 			pRenderer->SetConstantStruct("cbLight", &_cbLight);
 			pRenderer->Apply();
 

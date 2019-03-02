@@ -77,7 +77,7 @@ struct RenderPass
 // mesh-level instancing: this results in a very large number
 // of transformation matrix constant buffer updates per mesh.
 //
-#define SHADOW_PASS_USE_INSTANCED_DRAW_DATA 0
+#define SHADOW_PASS_USE_INSTANCED_DRAW_DATA 1
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 

@@ -279,6 +279,24 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
 	pRenderer->SetShader(mShadowMapShader);					// shader for rendering z buffer
 
+	// CLEAR SHADOW MAPS
+	//
+	for (size_t i = 0; i < shadowView.spots.size(); i++)
+	{
+		pRenderer->BindDepthTarget(mDepthTargets_Spot[i]);	// only depth stencil buffer
+		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
+	}
+	for (size_t i = 0; i < shadowView.points.size(); i++)
+	{
+		for (int face = 0; face < 6; ++face)
+		{
+			const size_t depthTargetIndex = i * 6 + face;
+			pRenderer->BindDepthTarget(mDepthTargets_Point[depthTargetIndex]);	// only depth stencil buffer
+			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
+		}
+	}
+
+
 	//-----------------------------------------------------------------------------------------------
 	// SPOT LIGHT SHADOW MAPS
 	//-----------------------------------------------------------------------------------------------
@@ -309,8 +327,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		}
 		
 		pRenderer->BindDepthTarget(mDepthTargets_Spot[i]);	// only depth stencil buffer
-		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
-		pRenderer->Apply();
+		//pRenderer->Apply();
 
 		for (const GameObject* pObj : shadowView.shadowMapRenderListLookUp.at(shadowView.spots[i]))
 		{
@@ -401,6 +418,8 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	pRenderer->SetShader(this->mShadowCubeMapShader);
 	pRenderer->SetViewport(viewPort);
 	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
+
+
 	for (size_t i = 0; i < shadowView.points.size(); i++)
 	{
 		struct PointLightCBuffer
@@ -423,13 +442,6 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 		InstancedObjectCubemapCBuffer cbuffer;
 #endif		
-		// clear the depth targets for each face
-		for (int face = 0; face < 6; ++face)
-		{
-			const size_t depthTargetIndex = i * 6 + face;
-			pRenderer->BindDepthTarget(mDepthTargets_Point[depthTargetIndex]);	// only depth stencil buffer
-			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
-		}
 
 		// render objects for each face
 		for (int face = 0; face < 6; ++face)

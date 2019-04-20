@@ -31,7 +31,8 @@
 // - Slides: https://drive.google.com/file/d/0BzvWIdpUpRx_Z2pZWWFtam5xTFE/view
 //
 
-
+#include "LTC_Utils.hlsl"
+#include "LTC_Numerical.hlsl"
 #include "ShadingMath.hlsl"
 
 #define SAFE_DIV_EPSILON 0.00001f
@@ -378,10 +379,10 @@ float3 EvalCylinder(BRDF_Surface s, float3 V, CylinderLight l, Texture2D texLUT,
     float3 I = l.brightness * l.color * I_ltc_line(p1, p2, Minv);
 #else
     float3 I = l.brightness * l.color 
-	* I_cylinder_numerical(p1, p2, l.radius, matTBN, Minv);
+	//* I_cylinder_numerical(p1, p2, l.radius, matTBN, Minv);
 	//* I_line_numerical(p1, p2, matTBN, Minv);
 	//* I_ltc_line(p1, p2, matTBN);
-	//* I_ltc_line(p1, p2, Minv, transpose(matTBN));
+	* I_ltc_line(p1, p2, Minv, transpose(matTBN));
 	//* I_cylinder_approx(p1, p2, l.radius, matTBN, Minv);
 #endif
 

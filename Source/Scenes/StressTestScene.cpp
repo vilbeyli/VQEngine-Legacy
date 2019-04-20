@@ -79,6 +79,9 @@ constexpr int TEXTURED_OBJECT_PERCENTAGE = 45;
 #define USE_SAI_MODELS 0
 #pragma endregion
 
+// UPDATE
+#define DISABLE_OBJECT_ANIMATIONS 1
+
 #pragma region GLOBALS
 //----------------------------------------------------------------------------------------------
 // GLOBALS & PROTOTYPES
@@ -225,7 +228,8 @@ void StressTestScene::Update(float dt)
 			RemoveObjects();
 	}
 
-	// old, inactive code
+	#if !DISABLE_OBJECT_ANIMATIONS
+	// old code
 	//
 	//if (rotationSpeeds.size() > 0)
 	//{
@@ -241,6 +245,7 @@ void StressTestScene::Update(float dt)
 		o->GetTransform().RotateAroundPointAndAxis(vec3::Up, dt * 10.0f * DEG2RAD, vec3::Zero);
 		o->GetTransform().RotateAroundGlobalYAxisDegrees(dt * 5);
 	});
+	#endif
 }
 
 

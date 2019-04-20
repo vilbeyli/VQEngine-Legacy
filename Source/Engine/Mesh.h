@@ -24,10 +24,13 @@
 
 #include <vector>
 
-class Mesh
+class Mesh // TODO: struct
 {
+
 	friend class Renderer;
 	static Renderer* spRenderer;
+
+
 public:
 	template<class VertexBufferType> 
 	Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices, const std::string& name);
@@ -36,11 +39,14 @@ public:
 	inline std::pair<BufferID, BufferID> GetIABuffers() const { return std::make_pair(mVertexBufferID, mIndexBufferID); }
 
 	Mesh() = default;
+
 private:
 	BufferID  mVertexBufferID = -1;
 	BufferID  mIndexBufferID = -1;
 
-	std::string mMeshName;
+	// TODO: LOD
+
+	std::string mMeshName; // TODO: move to scene manager
 };
 
 

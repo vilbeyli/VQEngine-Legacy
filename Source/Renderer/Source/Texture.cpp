@@ -23,7 +23,7 @@
 
 #include <d3d11.h>
 
-DirectX::XMMATRIX Texture::CubemapUtility::GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections cubeFace, const vec3& position)
+DirectX::XMMATRIX Texture::CubemapUtility::CalculateViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections cubeFace, const vec3& position)
 {
 // cube face order: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476906(v=vs.85).aspx
 //------------------------------------------------------------------------------------------------------

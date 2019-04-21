@@ -91,8 +91,8 @@ public:
 
 			NUM_CUBEMAP_LOOK_DIRECTIONS
 		};
-		static XMMATRIX GetViewMatrix(ECubeMapLookDirections cubeFace, const vec3& position = vec3::Zero);
-		inline static XMMATRIX GetViewMatrix(int face, const vec3& position = vec3::Zero) { return GetViewMatrix(static_cast<ECubeMapLookDirections>(face), position); }
+		static XMMATRIX CalculateViewMatrix(ECubeMapLookDirections cubeFace, const vec3& position = vec3::Zero);
+		inline static XMMATRIX CalculateViewMatrix(int face, const vec3& position = vec3::Zero) { return CalculateViewMatrix(static_cast<ECubeMapLookDirections>(face), position); }
 	};
 public:
 	Texture();

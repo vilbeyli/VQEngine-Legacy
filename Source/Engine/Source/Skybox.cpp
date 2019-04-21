@@ -561,7 +561,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 			rtDesc.Texture2DArray.FirstArraySlice = cubeFace;
 
 			const RenderTargetID mipTarget = pRenderer->AddRenderTarget(mippedEnvironmentCubemapTex, rtDesc);	// todo: pool RTs.
-			const XMMATRIX view = Texture::CubemapUtility::GetViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(cubeFace)); 
+			const XMMATRIX view = Texture::CubemapUtility::CalculateViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(cubeFace)); 
 			const XMMATRIX viewProj = view * proj;
 
 			pRenderer->BindRenderTarget(mipTarget);
@@ -602,7 +602,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 				rtDesc.Texture2DArray.FirstArraySlice = cubeFace;
 
 				const RenderTargetID mipTarget = pRenderer->AddRenderTarget(prefilteredEnvMapTex, rtDesc);	// todo: pool RTs.
-				const XMMATRIX view = Texture::CubemapUtility::GetViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(cubeFace));
+				const XMMATRIX view = Texture::CubemapUtility::CalculateViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(cubeFace));
 				const XMMATRIX viewProj = view * proj;
 
 				pRenderer->BindRenderTarget(mipTarget);

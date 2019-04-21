@@ -60,6 +60,17 @@ struct Light
 		LIGHT_TYPE_COUNT
 	};
 
+	// returns a view matrix for each light type that supports shadow mapping
+	// 
+	static XMMATRIX CalculateDirectionalLightViewMatrix(const Light& mDirLight);
+	static XMMATRIX CalculateSpotLightViewMatrix(const Transform& mTransform);
+	static XMMATRIX CalculatePointLightViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections lookDir, const vec3& position);
+	
+	// returns a projection matrix based on @lightType, @near, @far and in the directional light case, @viewPortSize as well.
+	//
+	static XMMATRIX CalculateProjectionMatrix(Light::ELightType lightType, float near, float far, vec2 viewPortSize = vec2(0, 0));
+
+
 	//--------------------------------------------------------------------------------------------------------------
 	// INTERFACE
 	//--------------------------------------------------------------------------------------------------------------
@@ -75,9 +86,7 @@ struct Light
 		, mRange(100.0f)
 		, mTransform()
 		, mMeshID(EGeometry::SPHERE)
-	{
-		//SetMatrices();
-	}
+	{}
 	Light
 	(
 		LinearColor color
@@ -99,9 +108,7 @@ struct Light
 		, mRange(range)
 		, mTransform(transform)
 		, mMeshID(mesh)
-	{
-		//SetMatrices();
-	}
+	{}
 
 
 	// returns the projection matrix for the light space transformation. 
@@ -143,7 +150,7 @@ private:
 	// as computing a lot of them is quite expensive (many 
 	// point lights) during frustum culling.
 	XMMATRIX mProjectionMatrix;
-	XMMATRIX mViewMatrix[6];
+	std::array<XMMATRIX, 6> mViewMatrix;
 	
 public:
 	void SetMatrices();

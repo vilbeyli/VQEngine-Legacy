@@ -25,35 +25,90 @@
 
 using std::string;
 
-#define CACHE_LIGHT_MATRICES 0
+// [OPTIMIZATION]
+//
+// caching light matrices will make the Scene calculate matrices once and 
+// store them in the mViewMatrix[6] and mProjectionMatrix. This way, we avoid
+// matrix creation function calls during point light shadow view culling phase
+// and just return the cached float16. Saves ~25% from point light culling CPU time.
+//
+#define CACHE_LIGHT_MATRICES 1
+
+
+// I want my parameter names Windows...
+#ifdef near
+#undef near
+#endif
+#ifdef far
+#undef far
+#endif
+
+
+DirectX::XMMATRIX Light::CalculateSpotLightViewMatrix(const Transform& mTransform)
+{
+	XMVECTOR up = vec3::Up;
+	XMVECTOR lookAt = vec3::Forward;	// spot light default orientation looks up
+	lookAt = XMVector3TransformCoord(lookAt, mTransform.RotationMatrix());
+	up = XMVector3TransformCoord(up, mTransform.RotationMatrix());
+	XMVECTOR pos = mTransform._position;
+	XMVECTOR taraget = pos + lookAt;
+	return XMMatrixLookAtLH(pos, taraget, up);
+}
+
+DirectX::XMMATRIX Light::CalculatePointLightViewMatrix(Texture::CubemapUtility::ECubeMapLookDirections lookDir, const vec3& position)
+{
+	return Texture::CubemapUtility::CalculateViewMatrix(lookDir, position);
+}
+
+DirectX::XMMATRIX Light::CalculateDirectionalLightViewMatrix(const Light& mDirLight)
+{
+	if (mDirLight.mViewportX < 1.0f)
+	{
+		return XMMatrixIdentity();
+	}
+
+	const XMVECTOR up = vec3::Up;
+	const XMVECTOR lookAt = vec3::Zero;
+	const XMMATRIX mRot = mDirLight.mTransform.RotationMatrix();
+	const vec3 direction = XMVector3Transform(vec3::Forward, mRot);
+	const XMVECTOR lightPos = direction * -mDirLight.mDistanceFromOrigin;	// away from the origin along the direction vector 
+	return XMMatrixLookAtLH(lightPos, lookAt, up);
+}
+
+DirectX::XMMATRIX Light::CalculateProjectionMatrix(ELightType lightType, float near, float far, vec2 viewPortSize /*= vec2(0, 0)*/)
+{
+	switch (lightType)
+	{
+	case Light::POINT:
+	{
+		constexpr float ASPECT_RATIO = 1.0f; // cubemap aspect ratio
+		return XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, near, far);
+	}
+	case Light::SPOT:
+	{
+		constexpr float ASPECT_RATIO = 1.0f;
+		//return XMMatrixPerspectiveFovLH(mSpotOuterConeAngleDegrees * DEG2RAD, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
+		return XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, near, far);
+	}
+	case Light::DIRECTIONAL:
+	{
+		if (viewPortSize.x() < 1.0f) return XMMatrixIdentity();
+		return XMMatrixOrthographicLH(viewPortSize.x(), viewPortSize.y(), near, far);
+	}
+	default:
+		Log::Warning("GetProjectionMatrix() called on invalid light type!");
+		return XMMatrixIdentity();
+	}
+}
+
+
 
 DirectX::XMMATRIX Light::GetProjectionMatrix() const
 {
 #if CACHE_LIGHT_MATRICES
 	return mProjectionMatrix;
 #else
-	switch (mType)
-	{
-	case Light::POINT:
-	{
-		constexpr float ASPECT_RATIO = 1.0f; // cubemap aspect ratio
-		return XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
-	}
-	case Light::SPOT:
-	{
-		constexpr float ASPECT_RATIO = 1.0f;
-		//return XMMatrixPerspectiveFovLH(mSpotOuterConeAngleDegrees * DEG2RAD, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
-		return XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
-	}
-	case Light::DIRECTIONAL:
-	{
-		if (mViewportX < 1.0f) return XMMatrixIdentity();
-		return XMMatrixOrthographicLH(mViewportX, mViewportY, mNearPlaneDistance, mFarPlaneDistance);
-	}
-	default:
-		Log::Warning("GetProjectionMatrix() called on invalid light type!");
-		return XMMatrixIdentity();
-	}
+	return CalculateProjectionMatrix(mType, mNearPlaneDistance, mFarPlaneDistance, vec2(mViewportX, mViewportY));
 #endif
 }
 
@@ -62,18 +117,9 @@ DirectX::XMMATRIX Light::GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDire
 #if CACHE_LIGHT_MATRICES
 	switch (mType)
 	{
-	case Light::POINT:
-	{
-		return mViewMatrix[lookDir];
-	}
-	case Light::SPOT:
-	{
-		return mViewMatrix[0];
-	}
-	case Light::DIRECTIONAL:
-	{
-		return mViewMatrix[0];
-	}
+	case Light::POINT:       return mViewMatrix[lookDir]; 
+	case Light::SPOT:        return mViewMatrix[0];
+	case Light::DIRECTIONAL: return mViewMatrix[0];
 	default:
 		Log::Warning("GetViewMatrix() called on invalid light type!");
 		return mViewMatrix[0];
@@ -81,31 +127,9 @@ DirectX::XMMATRIX Light::GetViewMatrix(Texture::CubemapUtility::ECubeMapLookDire
 #else
 	switch (mType)
 	{
-	case Light::POINT:
-	{
-		return Texture::CubemapUtility::GetViewMatrix(lookDir, mTransform._position);
-	}
-	case Light::SPOT:
-	{
-		XMVECTOR up = vec3::Up;
-		XMVECTOR lookAt = vec3::Forward;	// spot light default orientation looks up
-		lookAt = XMVector3TransformCoord(lookAt, mTransform.RotationMatrix());
-		up = XMVector3TransformCoord(up, mTransform.RotationMatrix());
-		XMVECTOR pos = mTransform._position;
-		XMVECTOR taraget = pos + lookAt;
-		return XMMatrixLookAtLH(pos, taraget, up);
-	}
-	case Light::DIRECTIONAL:
-	{
-		if (mViewportX < 1.0f) return XMMatrixIdentity();
-
-		const XMVECTOR up = vec3::Up;
-		const XMVECTOR lookAt = vec3::Zero;
-		const XMMATRIX mRot = mTransform.RotationMatrix();
-		const vec3 direction = XMVector3Transform(vec3::Forward, mRot);
-		const XMVECTOR lightPos = direction * -mDistanceFromOrigin;	// away from the origin along the direction vector 
-		return XMMatrixLookAtLH(lightPos, lookAt, up);
-	}
+	case Light::POINT:       return CalculatePointLightViewMatrix(lookDir, mTransform._position);
+	case Light::SPOT:        return CalculateSpotLightViewMatrix(mTransform);
+	case Light::DIRECTIONAL: return CalculateDirectionalLightViewMatrix(*this); 
 	default:
 		Log::Warning("GetViewMatrix() called on invalid light type!");
 		return XMMatrixIdentity();
@@ -160,12 +184,16 @@ void Light::GetGPUData(PointLightGPU& l) const
 	l.depthBias = mDepthBias;
 }
 
+
+
 Settings::ShadowMap Light::GetSettings() const
 {
 	Settings::ShadowMap settings;
 	settings.directionalShadowMapDimensions = static_cast<size_t>(mViewportX);
 	return settings;
 }
+
+
 
 void Light::SetMatrices()
 {
@@ -179,36 +207,11 @@ void Light::SetMatrices()
 	case Light::POINT:
 	{
 		for(int i=0; i<6; ++i)
-			mViewMatrix[i] = Texture::CubemapUtility::GetViewMatrix(i, mTransform._position);
+			mViewMatrix[i] = CalculatePointLightViewMatrix(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(i), mTransform._position);
 		break;
 	}
-	case Light::SPOT:
-	{
-		XMVECTOR up = vec3::Up;
-		XMVECTOR lookAt = vec3::Forward;	// spot light default orientation looks up
-		lookAt = XMVector3TransformCoord(lookAt, mTransform.RotationMatrix());
-		up = XMVector3TransformCoord(up, mTransform.RotationMatrix());
-		XMVECTOR pos = mTransform._position;
-		XMVECTOR taraget = pos + lookAt;
-		mViewMatrix[0] = XMMatrixLookAtLH(pos, taraget, up);
-		break;
-	}
-	case Light::DIRECTIONAL:
-	{
-		if (mViewportX < 1.0f)
-		{
-			mViewMatrix[0] = XMMatrixIdentity();
-			break;
-		}
-
-		const XMVECTOR up = vec3::Up;
-		const XMVECTOR lookAt = vec3::Zero;
-		const XMMATRIX mRot = mTransform.RotationMatrix();
-		const vec3 direction = XMVector3Transform(vec3::Forward, mRot);
-		const XMVECTOR lightPos = direction * -mDistanceFromOrigin;	// away from the origin along the direction vector 
-		mViewMatrix[0] = XMMatrixLookAtLH(lightPos, lookAt, up);
-		break;
-	}
+	case Light::SPOT:         mViewMatrix[0] = CalculateSpotLightViewMatrix(mTransform);   break; 
+	case Light::DIRECTIONAL:  mViewMatrix[0] = CalculateDirectionalLightViewMatrix(*this); break;
 	default:
 		Log::Warning("SetViewMatrix() called on invalid light type!");
 		mViewMatrix[0] = XMMatrixIdentity();
@@ -216,32 +219,6 @@ void Light::SetMatrices()
 	}
 
 	// PROJ
-	switch (mType)
-	{
-	case Light::POINT:
-	{
-		constexpr float ASPECT_RATIO = 1.0f; // cubemap aspect ratio
-		mProjectionMatrix = XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
-		break;
-	}
-	case Light::SPOT:
-	{
-		constexpr float ASPECT_RATIO = 1.0f;
-		//mProjectionMatrix = XMMatrixPerspectiveFovLH(mSpotOuterConeAngleDegrees * DEG2RAD, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
-		mProjectionMatrix = XMMatrixPerspectiveFovLH(PI_DIV2, ASPECT_RATIO, mNearPlaneDistance, mFarPlaneDistance);
-		break;
-	}
-	case Light::DIRECTIONAL:
-	{
-		mProjectionMatrix = mViewportX < 1.0f 
-			? XMMatrixIdentity()
-			: XMMatrixOrthographicLH(mViewportX, mViewportY, mNearPlaneDistance, mFarPlaneDistance);
-		break;
-	}
-	default:
-		Log::Warning("SetProjectionMatrix() called on invalid light type!");
-		mProjectionMatrix = XMMatrixIdentity();
-		break;
-	}
+	mProjectionMatrix = CalculateProjectionMatrix(mType, mNearPlaneDistance, mFarPlaneDistance, vec2(mViewportX, mViewportY));
 }
 

@@ -96,7 +96,7 @@ using SpotShadowViewArray = std::array<XMMATRIX, NUM_SPOT_LIGHT_SHADOW>;
 using PointShadowProjMatArray = std::array<XMMATRIX, NUM_POINT_LIGHT_SHADOW>;
 
 //#pragma pack(push, 1)
-struct SceneLightingData
+struct SceneLightingConstantBuffer
 {
 	struct cb	// shader constant buffer
 	{	

@@ -172,7 +172,7 @@ private:
 	std::vector<Scene*>				mpScenes;
 	Scene*							mpActiveScene;
 
-	SceneLightingData				mSceneLightData;	// more memory than required?
+	SceneLightingConstantBuffer				mSceneLightData;	// more memory than required?
 
 	// #SceneRefactoring
 	// current design for adding new scenes is as follows (and is horrible...):

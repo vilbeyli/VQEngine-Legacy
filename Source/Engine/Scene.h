@@ -141,7 +141,7 @@ public:
 
 	// Prepares the scene and shadow views for culling, sorting, instanced draw lists, lights, etc.
 	//
-	void PreRender(FrameStats& stats, SceneLightingData & outLightingData);
+	void PreRender(FrameStats& stats, SceneLightingConstantBuffer & outLightingData);
 
 
 	// Renders the meshes in the scene which have materials with alpha=1.0f
@@ -223,23 +223,24 @@ private:
 	void StartLoadingModels();
 	void EndLoadingModels();
 
-	void GatherLightData(SceneLightingData& outLightingData, const std::vector<const Light*>& pLightList);
-
 
 	//-------------------------------
 	// PreRender() ROUTINES
 	//-------------------------------
-	void PopulateMainViewRenderListsAndCountSceneObjects(std::vector <const GameObject*>& mainViewShadowCasterRenderList, int& outNumSceneObjects);
+	void SetSceneViewData();
+
+	void GatherSceneObjects(std::vector <const GameObject*>& mainViewShadowCasterRenderList, int& outNumSceneObjects);
+	void GatherLightData(SceneLightingConstantBuffer& outLightingData, const std::vector<const Light*>& pLightList);
+
 	void SortRenderLists(std::vector <const GameObject*>& mainViewShadowCasterRenderList, std::vector<const Light*>& pShadowingLights);
 
-	// gets a list of shadow casting Lights from mLights that fall into the main camera view
-	//
-	std::vector<const Light*> CullLights(int& outNumCulledPoints, int& outNumCulledSpots);
-
-
+	std::vector<const Light*> CullLights(int& outNumCulledPoints, int& outNumCulledSpots); // culls lights against main view
 	std::vector<const GameObject*> FrustumCullMainView(int& outNumCulledObjects);
-	void FrustumCullPointAndSpotLightViews(const std::vector <const GameObject*>& mainViewShadowCasterRenderList, std::vector<const Light*>& pShadowingLights, FrameStats& stats);
+	void FrustumCullPointAndSpotShadowViews(const std::vector <const GameObject*>& mainViewShadowCasterRenderList, std::vector<const Light*>& pShadowingLights, FrameStats& stats);
 	void OcclusionCullDirectionalLightView();
+
+	void BatchMainViewRenderList(const std::vector<const GameObject*> mainViewRenderList);
+	void BatchShadowViewRenderLists(const std::vector <const GameObject*>& mainViewShadowCasterRenderList);
 	//-------------------------------
 };
 

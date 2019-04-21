@@ -44,7 +44,7 @@ class CPUProfiler;
 struct Light;
 struct DirectionalLight;
 struct ID3D11Device;
-struct SceneLightingData;
+struct SceneLightingConstantBuffer;
 struct ShadowView;
 struct SceneView;
 struct RenderTargetDesc;
@@ -252,7 +252,7 @@ struct DeferredRenderingPasses : public RenderPass
 		Renderer* pRenderer;
 		const RenderTargetID target;
 		const SceneView& sceneView;
-		const SceneLightingData& lights;
+		const SceneLightingConstantBuffer& lights;
 		const TextureID tSSAO;
 		bool bUseBRDFLighting;
 	};
@@ -287,7 +287,7 @@ struct ForwardLightingPass : public RenderPass
 		Renderer* pRenderer;
 		const Scene* pScene;
 		const SceneView& sceneView;
-		const SceneLightingData& lights;
+		const SceneLightingConstantBuffer& lights;
 		const TextureID tSSAO;
 		const RenderTargetID targetRT;
 		const TextureID tEmptyTex;

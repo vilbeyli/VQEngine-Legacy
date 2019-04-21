@@ -555,188 +555,97 @@ void Scene::UpdateScene(float dt)
 	Update(dt);
 }
 
+static void ResetSceneStatCounters(SceneStats& stats)
+{
+	stats.numSpots = 0;
+	stats.numPoints = 0;
+	//stats.numDirectionalCulledObjects = 0;
+	stats.numPointsCulledObjects = 0; 
+	stats.numSpotsCulledObjects = 0;
+}
 
-void Scene::PreRender(FrameStats& stats, SceneLightingData& outLightingData)
+void Scene::PreRender(FrameStats& stats, SceneLightingConstantBuffer& outLightingData)
 {
 	using namespace VQEngine;
-
-
 
 	// containers we'll work on for preparing draw lists
 	std::vector<const GameObject*> mainViewRenderList; // Shadow casters + non-shadow casters
 	std::vector<const GameObject*> mainViewShadowCasterRenderList;
 	std::vector<const Light*> pShadowingLights;
 
-	// shorthands
-	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = mShadowView.RenderListsPerMeshType;
 
 	//----------------------------------------------------------------------------
 	// SET SCENE VIEW / SETTINGS
 	//----------------------------------------------------------------------------
-
-	const Camera& viewCamera = GetActiveCamera();
-	const XMMATRIX view = viewCamera.GetViewMatrix();
-	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
-	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
-	XMVECTOR det = XMMatrixDeterminant(proj);
-	const XMMATRIX projInv = XMMatrixInverse(&det, proj);
-	det = mDirectionalLight.mbEnabled
-		? XMMatrixDeterminant(mDirectionalLight.GetProjectionMatrix())
-		: XMVECTOR();
-	const XMMATRIX directionalLightProjection = mDirectionalLight.mbEnabled
-		? mDirectionalLight.GetProjectionMatrix()
-		: XMMatrixIdentity();
-
-	// scene view matrices
-	mSceneView.viewProj = view * proj;
-	mSceneView.view = view;
-	mSceneView.viewInverse = viewInverse;
-	mSceneView.proj = proj;
-	mSceneView.projInverse = projInv;
-	mSceneView.directionalLightProjection = directionalLightProjection;
-
-	// render/scene settings
-	mSceneView.sceneRenderSettings = GetSceneRenderSettings();
-	mSceneView.environmentMap = GetEnvironmentMap();
-	mSceneView.cameraPosition = viewCamera.GetPositionF();
-	mSceneView.bIsIBLEnabled = mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed && mSceneView.environmentMap.environmentMap != -1;
-
-
+	SetSceneViewData();
+	ResetSceneStatCounters(stats.scene);
+	
 
 	//----------------------------------------------------------------------------
 	// PREPARE RENDER LISTS
 	//----------------------------------------------------------------------------
-	PopulateMainViewRenderListsAndCountSceneObjects(mainViewShadowCasterRenderList, stats.scene.numObjects);
+	mpCPUProfiler->BeginEntry("GatherSceneObjects");
+	GatherSceneObjects(mainViewShadowCasterRenderList, stats.scene.numObjects);
+	mpCPUProfiler->EndEntry();
 
 	//----------------------------------------------------------------------------
 	// CULL LIGHTS
 	//----------------------------------------------------------------------------
+	mpCPUProfiler->BeginEntry("Cull_Lights");
 	pShadowingLights = CullLights(stats.scene.numCulledShadowingPointLights, stats.scene.numCulledShadowingSpotLights);
-
+	mpCPUProfiler->EndEntry(); 
 
 	//----------------------------------------------------------------------------
-	// CULL RENDER LISTS
+	// CULL MAIN VIEW RENDER LISTS
 	//----------------------------------------------------------------------------
-
-
-	// start counting light stats
-	stats.scene.numSpots = 0;
-	stats.scene.numPoints = 0;
-	//stats.scene.numDirectionalCulledObjects = 0;
-	stats.scene.numPointsCulledObjects = 0;
-	stats.scene.numSpotsCulledObjects = 0;
-
-#if THREADED_FRUSTUM_CULL
-	// TODO: utilize thread pool for each render list
-
-	mpCPUProfiler->BeginEntry("Cull Views");
-	// MAIN VIEW
-	//
-
-
-	// CULL DIRECTIONAL SHADOW VIEW 
-	//
-
-
-	// TODO: sync point
-	mpCPUProfiler->EndEntry(); // Cull Views
-#else
-
-	// MAIN VIEW
-	//
-	mpCPUProfiler->BeginEntry("Cull Views");
+	mpCPUProfiler->BeginEntry("Cull_MainView");
 	mainViewRenderList = FrustumCullMainView(stats.scene.numMainViewCulledObjects);
-	FrustumCullPointAndSpotLightViews(mainViewShadowCasterRenderList, pShadowingLights, stats);
+	mpCPUProfiler->EndEntry(); 
+
+
+	//----------------------------------------------------------------------------
+	// CULL SHADOWI VIEW RENDER LISTS
+	//----------------------------------------------------------------------------
+	mpCPUProfiler->BeginEntry("Cull_ShadowViews");
+	FrustumCullPointAndSpotShadowViews(mainViewShadowCasterRenderList, pShadowingLights, stats);
+	mpCPUProfiler->EndEntry(); 
+
+
+	//----------------------------------------------------------------------------
+	// OCCLUSION CULL DIRECTIONAL SHADOW VIEW RENDER LISTS (not implemented yet)
+	//----------------------------------------------------------------------------
 	if (mSceneRenderSettings.optimization.bShadowViewCull)
 	{
-		mpCPUProfiler->BeginEntry("Directional_Occl");
+		mpCPUProfiler->BeginEntry("Cull_Directional_Occl");
 		OcclusionCullDirectionalLightView();
-		mpCPUProfiler->EndEntry(); // Directional_Occl
+		mpCPUProfiler->EndEntry();
 	}
-	mpCPUProfiler->EndEntry(); // Cull Views
-
-#endif // THREADED_FRUSTUM_CULL
-
-
 
 
 	//----------------------------------------------------------------------------
 	// SORT RENDER LISTS
 	//----------------------------------------------------------------------------
-	mpCPUProfiler->BeginEntry("Sort");
 	if (mSceneRenderSettings.optimization.bSortRenderLists)
 	{
+		mpCPUProfiler->BeginEntry("Sort");
 		SortRenderLists(mainViewShadowCasterRenderList, pShadowingLights);
+		mpCPUProfiler->EndEntry();
 	}
-	mpCPUProfiler->EndEntry();
 
 
 	//----------------------------------------------------------------------------
-	// BATCH RENDER LISTS
+	// BATCH SHADOW VIEW RENDER LISTS
 	//----------------------------------------------------------------------------
-	// PREPARE INSTANCED DRAW BATCHES
-	//
-	// Shadow Caster Render Lists
-	//mpCPUProfiler->BeginEntry("Lists");
-	mpCPUProfiler->BeginEntry("[Instanced] Directional");
-	for (int i = 0; i < mainViewShadowCasterRenderList.size(); ++i)
-	{
-		const GameObject* pCaster = mainViewShadowCasterRenderList[i];
-		const ModelData& model = pCaster->GetModelData();
-		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
-		if (meshID >= EGeometry::MESH_TYPE_COUNT)
-		{
-			mShadowView.casters.push_back(std::move(mainViewShadowCasterRenderList[i]));
-			continue;
-		}
-
-		if (instancedCasterLists.find(meshID) == instancedCasterLists.end())
-		{
-			instancedCasterLists[meshID] = std::vector<const GameObject*>();
-		}
-		std::vector<const GameObject*>& renderList = instancedCasterLists.at(meshID);
-		renderList.push_back(std::move(mainViewShadowCasterRenderList[i]));
-	}
+	BatchShadowViewRenderLists(mainViewShadowCasterRenderList);
+	
+	
+	//----------------------------------------------------------------------------
+	// BATCH MAIN VIEW RENDER LISTS
+	//----------------------------------------------------------------------------
+	mpCPUProfiler->BeginEntry("Batch_MainView");
+	BatchMainViewRenderList(mainViewRenderList);
 	mpCPUProfiler->EndEntry();
 
-
-	// Main View Render Lists
-	mpCPUProfiler->BeginEntry("[Instanced] Main View");
-	for (int i = 0; i < mainViewRenderList.size(); ++i)
-	{
-		const GameObject* pObj = mainViewRenderList[i];
-		const ModelData& model = pObj->GetModelData();
-		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
-
-		// instanced is only for built-in meshes (for now)
-		if (meshID >= EGeometry::MESH_TYPE_COUNT)
-		{
-			mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
-			continue;
-		}
-
-		const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(meshID) != model.mMaterialLookupPerMesh.end();
-		if (bMeshHasMaterial)
-		{
-			const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
-			const Material* pMat = mMaterials.GetMaterial_const(materialID);
-			if (pMat->HasTexture())
-			{
-				mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
-				continue;
-			}
-		}
-
-		RenderListLookup& instancedRenderLists = mSceneView.culluedOpaqueInstancedRenderListLookup;
-		if (instancedRenderLists.find(meshID) == instancedRenderLists.end())
-		{
-			instancedRenderLists[meshID] = std::vector<const GameObject*>();
-		}
-
-		std::vector<const GameObject*>& renderList = instancedRenderLists.at(meshID);
-		renderList.push_back(std::move(mainViewRenderList[i]));
-	}
-	mpCPUProfiler->EndEntry();
 
 #if _DEBUG
 	if (!bReportedList)
@@ -758,7 +667,10 @@ void Scene::PreRender(FrameStats& stats, SceneLightingData& outLightingData)
 	}
 #endif // THREADED_FRUSTUM_CULL
 
+
+	mpCPUProfiler->BeginEntry("GatherLightData");
 	GatherLightData(outLightingData, pShadowingLights);
+	mpCPUProfiler->EndEntry();
 
 	//return numFrustumCulledObjs + numShadowFrustumCullObjs;
 }
@@ -789,9 +701,9 @@ using pSpotLightDataArray = std::array<SpotLightDataArray*, 2>;
 
 // stores the number of lights per light type (2 types : point and spot)
 using pNumArray = std::array<int*, 2>;
-void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vector<const Light*>& pLightList)
+void Scene::GatherLightData(SceneLightingConstantBuffer & outLightingData, const std::vector<const Light*>& pLightList)
 {
-	SceneLightingData::cb& cbuffer = outLightingData._cb;
+	SceneLightingConstantBuffer::cb& cbuffer = outLightingData._cb;
 
 	outLightingData.ResetCounts();
 
@@ -884,7 +796,37 @@ void Scene::GatherLightData(SceneLightingData & outLightingData, const std::vect
 	}
 }
 
-void Scene::PopulateMainViewRenderListsAndCountSceneObjects(std::vector <const GameObject*>& mainViewShadowCasterRenderList, int& outNumSceneObjects)
+void Scene::SetSceneViewData()
+{
+	const Camera& viewCamera = GetActiveCamera();
+	const XMMATRIX view = viewCamera.GetViewMatrix();
+	const XMMATRIX viewInverse = viewCamera.GetViewInverseMatrix();
+	const XMMATRIX proj = viewCamera.GetProjectionMatrix();
+	XMVECTOR det = XMMatrixDeterminant(proj);
+	const XMMATRIX projInv = XMMatrixInverse(&det, proj);
+	det = mDirectionalLight.mbEnabled
+		? XMMatrixDeterminant(mDirectionalLight.GetProjectionMatrix())
+		: XMVECTOR();
+	const XMMATRIX directionalLightProjection = mDirectionalLight.mbEnabled
+		? mDirectionalLight.GetProjectionMatrix()
+		: XMMatrixIdentity();
+
+	// scene view matrices
+	mSceneView.viewProj = view * proj;
+	mSceneView.view = view;
+	mSceneView.viewInverse = viewInverse;
+	mSceneView.proj = proj;
+	mSceneView.projInverse = projInv;
+	mSceneView.directionalLightProjection = directionalLightProjection;
+
+	// render/scene settings
+	mSceneView.sceneRenderSettings = GetSceneRenderSettings();
+	mSceneView.environmentMap = GetEnvironmentMap();
+	mSceneView.cameraPosition = viewCamera.GetPositionF();
+	mSceneView.bIsIBLEnabled = mSceneRenderSettings.bSkylightEnabled && mSceneView.bIsPBRLightingUsed && mSceneView.environmentMap.environmentMap != -1;
+}
+
+void Scene::GatherSceneObjects(std::vector <const GameObject*>& mainViewShadowCasterRenderList, int& outNumSceneObjects)
 {
 	// CLEAN UP RENDER LISTS
 	//
@@ -905,7 +847,6 @@ void Scene::PopulateMainViewRenderListsAndCountSceneObjects(std::vector <const G
 
 	// POPULATE RENDER LISTS WITH SCENE OBJECTS
 	//
-	mpCPUProfiler->BeginEntry("Non-Instanced Lists");
 	outNumSceneObjects = 0;
 	for (GameObject& obj : mObjectPool.mObjects) 
 	{
@@ -940,8 +881,6 @@ void Scene::PopulateMainViewRenderListsAndCountSceneObjects(std::vector <const G
 			++outNumSceneObjects;
 		}
 	}
-
-	mpCPUProfiler->EndEntry();
 }
 
 
@@ -1026,7 +965,6 @@ std::vector<const Light*> Scene::CullLights(int& outNumCulledPoints, int& outNum
 	outNumCulledPoints = 0;
 	outNumCulledSpots = 0;
 
-	mpCPUProfiler->BeginEntry("Cull Lights");
 	for (const Light& l : mLights)
 	{
 		if (!l.mbCastingShadows) continue;
@@ -1061,7 +999,6 @@ std::vector<const Light*> Scene::CullLights(int& outNumCulledPoints, int& outNum
 		} // light type
 
 	}
-	mpCPUProfiler->EndEntry();
 
 	return pLights;
 }
@@ -1094,7 +1031,7 @@ std::vector<const GameObject*> Scene::FrustumCullMainView(int& outNumCulledObjec
 }
 
 
-void Scene::FrustumCullPointAndSpotLightViews(const std::vector <const GameObject*>& mainViewShadowCasterRenderList, std::vector<const Light*>& pShadowingLights, FrameStats& stats)
+void Scene::FrustumCullPointAndSpotShadowViews(const std::vector <const GameObject*>& mainViewShadowCasterRenderList, std::vector<const Light*>& pShadowingLights, FrameStats& stats)
 {
 	using namespace VQEngine;
 
@@ -1197,6 +1134,71 @@ void Scene::FrustumCullPointAndSpotLightViews(const std::vector <const GameObjec
 void Scene::OcclusionCullDirectionalLightView()
 {
 	// TODO: consider this for directionals: http://stefan-s.net/?p=92 or umbra paper
+}
+
+void Scene::BatchMainViewRenderList(const std::vector<const GameObject*> mainViewRenderList)
+{
+	for (int i = 0; i < mainViewRenderList.size(); ++i)
+	{
+		const GameObject* pObj = mainViewRenderList[i];
+		const ModelData& model = pObj->GetModelData();
+		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
+
+		// instanced is only for built-in meshes (for now)
+		if (meshID >= EGeometry::MESH_TYPE_COUNT)
+		{
+			mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
+			continue;
+		}
+
+		const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(meshID) != model.mMaterialLookupPerMesh.end();
+		if (bMeshHasMaterial)
+		{
+			const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
+			const Material* pMat = mMaterials.GetMaterial_const(materialID);
+			if (pMat->HasTexture())
+			{
+				mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
+				continue;
+			}
+		}
+
+		RenderListLookup& instancedRenderLists = mSceneView.culluedOpaqueInstancedRenderListLookup;
+		if (instancedRenderLists.find(meshID) == instancedRenderLists.end())
+		{
+			instancedRenderLists[meshID] = std::vector<const GameObject*>();
+		}
+
+		std::vector<const GameObject*>& renderList = instancedRenderLists.at(meshID);
+		renderList.push_back(std::move(mainViewRenderList[i]));
+	}
+}
+
+void Scene::BatchShadowViewRenderLists(const std::vector <const GameObject*>& mainViewShadowCasterRenderList)
+{
+	std::unordered_map<MeshID, std::vector<const GameObject*>>& instancedCasterLists = mShadowView.RenderListsPerMeshType;
+
+	mpCPUProfiler->BeginEntry("Batch_DirectionalView");
+	for (int i = 0; i < mainViewShadowCasterRenderList.size(); ++i)
+	{
+		const GameObject* pCaster = mainViewShadowCasterRenderList[i];
+		const ModelData& model = pCaster->GetModelData();
+		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
+		if (meshID >= EGeometry::MESH_TYPE_COUNT)
+		{
+			mShadowView.casters.push_back(std::move(mainViewShadowCasterRenderList[i]));
+			continue;
+		}
+
+		if (instancedCasterLists.find(meshID) == instancedCasterLists.end())
+		{
+			instancedCasterLists[meshID] = std::vector<const GameObject*>();
+		}
+		std::vector<const GameObject*>& renderList = instancedCasterLists.at(meshID);
+		renderList.push_back(std::move(mainViewShadowCasterRenderList[i]));
+	}
+	mpCPUProfiler->EndEntry();
+
 }
 
 //static void CalculateSceneBoundingBox(Scene* pScene, )
@@ -1331,9 +1333,11 @@ void Scene::CalculateSceneBoundingBox()
 		, maxs.x() , maxs.y() , maxs.z()
 		, timer.DeltaTime()
 	);
-	mBoundingBox.hi = maxs;
-	mBoundingBox.low = mins;
+	this->mBoundingBox.hi = maxs;
+	this->mBoundingBox.low = mins;
 }
+
+
 
 //----------------------------------------------------------------------------------------------------------------
 // RESOURCE MANAGEMENT FUNCTIONS

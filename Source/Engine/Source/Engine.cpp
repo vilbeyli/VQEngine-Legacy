@@ -874,7 +874,7 @@ void Engine::SendLightData() const
 		mpRenderer->SetTextureArray("texDirectionalShadowMaps", mShadowMapPass.mShadowMapTexture_Directional);
 
 #ifdef _DEBUG
-	const SceneLightingData::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
+	const SceneLightingConstantBuffer::cb& cb = mSceneLightData._cb;	// constant buffer shorthand
 	if (cb.pointLightCount > cb.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
 	if (cb.spotLightCount > cb.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif

@@ -46,6 +46,9 @@ struct ModelData
 	inline bool HasMaterial() const { return !mMaterialLookupPerMesh.empty(); }
 };
 
+
+// Model struct encapsulates ... 
+//
 struct Model
 {
 	void AddMaterialToMesh(MeshID meshID, MaterialID materialID, bool bTransparent);

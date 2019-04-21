@@ -116,6 +116,7 @@
       <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <ShowIncludes>false</ShowIncludes>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -191,6 +192,7 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\SceneResources.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\UI.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Camera.h" />
+    <ClInclude Include="..\Engine\ObjectCullingSystem.h" />
     <ClInclude Include="..\Engine\SceneView.h" />
   </ItemGroup>
   <ItemGroup>
@@ -206,6 +208,7 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Model.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\UI.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Camera.cpp" />
+    <ClCompile Include="..\Engine\Source\ObjectCullingSystem.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

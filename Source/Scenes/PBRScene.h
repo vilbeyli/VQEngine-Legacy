@@ -25,7 +25,7 @@ public:
 	void Update(float dt) override;
 	void RenderUI() const override;
 	
-	PBRScene(Renderer* pRenderer, TextRenderer* pTextRenderer) : Scene(pRenderer, pTextRenderer) {}
+	PBRScene(const BaseSceneParams& params) : Scene(params) {}
 	~PBRScene() = default;
 	
 private:

@@ -19,4 +19,23 @@
 #include "Mesh.h"
 #include "Utilities/Log.h"
 
+#if !MESH_LOD_SYSTEM
+
 Renderer* Mesh::spRenderer = nullptr;
+
+#else
+
+std::pair<BufferID, BufferID> Mesh::GetIABuffers(int lod /*= 0*/)
+{
+	assert(mLODs.size() > 0); // maybe no assert and return <-1, -1> ?
+
+	if (lod < mLODs.size())
+	{
+		return mLODs[lod].GetIABufferPair();
+	}
+
+	Log::Warning("Requested LOD level (%d) doesn't exist (LOD levels = %d). Returning LOD=0", lod, static_cast<int>(mLODs.size()));
+	return mLODs[0].GetIABufferPair();
+}
+
+#endif

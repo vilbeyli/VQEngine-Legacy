@@ -29,7 +29,7 @@ public:
 	void Update(float dt) override;
 	void RenderUI() const override;
 
-	ObjectsScene(Renderer* pRenderer, TextRenderer* pTextRenderer) : Scene(pRenderer, pTextRenderer) {}
+	ObjectsScene(const BaseSceneParams& params) : Scene(params) {}
 	~ObjectsScene() = default;
 
 private:

@@ -26,7 +26,7 @@ public:
 	void Update(float dt) override;
 	void RenderUI() const override;
 	
-	SSAOTestScene(Renderer* pRenderer, TextRenderer* pTextRenderer) : Scene(pRenderer, pTextRenderer) {}
+	SSAOTestScene(const BaseSceneParams& params) : Scene(params) {}
 	~SSAOTestScene() = default;
 
 	std::vector<GameObject*> pCubes;

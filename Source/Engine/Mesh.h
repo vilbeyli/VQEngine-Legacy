@@ -24,6 +24,9 @@
 
 #include <vector>
 
+#define MESH_LOD_SYSTEM 0
+
+#if !MESH_LOD_SYSTEM
 class Mesh // TODO: struct
 {
 
@@ -45,6 +48,7 @@ private:
 	BufferID  mIndexBufferID = -1;
 
 	// TODO: LOD
+	//std::vector<> mLOD
 
 	std::string mMeshName; // TODO: move to scene manager
 };
@@ -73,3 +77,29 @@ Mesh::Mesh(
 
 	mMeshName = name;
 }
+
+#else
+
+
+
+struct LODLevel
+{
+	int LODValue = 0;
+	BufferID  mVertexBufferID = -1;
+	BufferID  mIndexBufferID = -1;
+
+	inline std::pair<BufferID, BufferID> GetIABufferPair() const { return std::make_pair(mVertexBufferID, mIndexBufferID); }
+};
+
+struct Mesh
+{
+public:
+	std::pair<BufferID, BufferID> GetIABuffers(int lod = 0);
+	
+private:
+	std::vector<LODLevel> mLODs;
+};
+
+
+
+#endif

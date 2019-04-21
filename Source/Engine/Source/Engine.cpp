@@ -233,12 +233,16 @@ bool Engine::Initialize(HWND hwnd)
 	mWorldDepthTarget = 0;	// assumes first index in renderer->m_depthTargets[]
 
 	// this is bad... every scene needs to be pushed back.
-	mpScenes.push_back(new ObjectsScene(mpRenderer, mpTextRenderer));
-	mpScenes.push_back(new SSAOTestScene(mpRenderer, mpTextRenderer));
-	mpScenes.push_back(new PBRScene(mpRenderer, mpTextRenderer));
-	mpScenes.push_back(new StressTestScene(mpRenderer, mpTextRenderer));
-	mpScenes.push_back(new SponzaScene(mpRenderer, mpTextRenderer));
-	mpScenes.push_back(new LightsScene(mpRenderer, mpTextRenderer));
+	Scene::BaseSceneParams baseSceneParams;
+	baseSceneParams.pRenderer = mpRenderer;
+	baseSceneParams.pCPUProfiler = mpCPUProfiler;
+	baseSceneParams.pTextRenderer = mpTextRenderer;
+	mpScenes.push_back(new ObjectsScene    (baseSceneParams));
+	mpScenes.push_back(new SSAOTestScene   (baseSceneParams));
+	mpScenes.push_back(new PBRScene        (baseSceneParams));
+	mpScenes.push_back(new StressTestScene (baseSceneParams));
+	mpScenes.push_back(new SponzaScene     (baseSceneParams));
+	mpScenes.push_back(new LightsScene     (baseSceneParams));
 
 	mpTimer->Stop();
 	Log::Info("[ENGINE]: Initialized in %.2fs --------------", mpTimer->DeltaTime());
@@ -896,7 +900,7 @@ void Engine::PreRender()
 	// 		mTBNDrawObjects.push_back(obj);
 	// }
 
-	mpActiveScene->PreRender(mpCPUProfiler, mFrameStats, mSceneLightData);
+	mpActiveScene->PreRender(mFrameStats, mSceneLightData);
 	mFrameStats.rstats = mpRenderer->GetRenderStats();
 	mFrameStats.fps = static_cast<int>(1.0f / mpGPUProfiler->GetRootEntryAvg());
 

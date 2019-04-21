@@ -16,21 +16,28 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
-#include "Engine/Scene.h"
-class SponzaScene : public Scene
+
+#include <vector>
+
+struct BoundingBox;
+struct FrustumPlaneset;
+struct vec3;
+struct MeshDrawData;
+
+class GameObject;
+
+namespace VQEngine
 {
-public:
+	bool IsSphereInFrustum(const FrustumPlaneset& frustum, const vec3& sphereCenter, const float sphereRadius);
 
-	void Load(SerializedScene& scene) override;
-	void Unload() override;
-	void Update(float dt) override;
-	void RenderUI() const override;
+	bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
 
-	SponzaScene(const BaseSceneParams& params) : Scene(params) {}
-	~SponzaScene() = default;
+	size_t CullMeshes(const FrustumPlaneset& frustumPlanes, const GameObject* pObj, MeshDrawData& meshDrawData);
 
-private:
-	// custom scene stuff here
-	GameObject * pNanosuitObj;
-};
-
+	size_t CullGameObjects
+	(
+		const FrustumPlaneset&                  frustumPlanes
+		, const std::vector<const GameObject*>& pObjs
+		, std::vector<const GameObject*>&       pCulledObjs
+	);
+}

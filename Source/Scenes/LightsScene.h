@@ -26,7 +26,7 @@ public:
 	void Update(float dt) override;
 	void RenderUI() const override;
 
-	LightsScene(Renderer* pRenderer, TextRenderer* pTextRenderer) : Scene(pRenderer, pTextRenderer) {}
+	LightsScene(const BaseSceneParams& params) : Scene(params) {}
 	~LightsScene() = default;
 
 private:

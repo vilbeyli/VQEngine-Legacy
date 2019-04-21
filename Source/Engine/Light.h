@@ -147,6 +147,7 @@ struct Light
 	float mNearPlaneDistance;
 	union 
 	{
+		// well, they're not essentially the same but good enough for saving space for now
 		float mFarPlaneDistance;
 		float mRange;
 	};
@@ -221,4 +222,4 @@ struct Light
 		};
 	};
 };
-
+constexpr size_t SZ_LIGHT_STRUCT = sizeof(Light);

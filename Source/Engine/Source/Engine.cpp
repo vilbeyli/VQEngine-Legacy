@@ -21,7 +21,7 @@
 
 
 #define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
-#define OVERRIDE_LEVEL_VALUE 5	// which level to load
+#define OVERRIDE_LEVEL_VALUE 3	// which level to load
 #define FULLSCREEN_DEBUG_TEXTURE 1
 
 // ASYNC / THREADED LOADING SWITCHES
@@ -117,6 +117,13 @@ void Engine::ToggleBloom()
 {
 	mEngineConfig.bBloom = !mEngineConfig.bBloom;
 	Log::Info("Toggle Bloom: %s", mEngineConfig.bBloom ? "On" : "Off");
+}
+
+int Engine::GetFPS() const
+{
+	const float frametimeCPU = mpCPUProfiler->GetRootEntryAvg();
+	const float frameTimeGPU = mpGPUProfiler->GetEntryAvg("GPU");
+	return static_cast<int>(1.0f / std::max(frameTimeGPU, frametimeCPU));
 }
 
 float Engine::GetTotalTime() const { return mpTimer->TotalTime(); }
@@ -295,7 +302,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		//mpTimer->Start();
 		const size_t numScenes = sEngineSettings.sceneNames.size();
 		assert(sEngineSettings.levelToLoad < numScenes);
-#if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
+#if /*defined(_DEBUG) &&*/ (OVERRIDE_LEVEL_LOAD > 0)
 		sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
 #endif
 		{
@@ -374,7 +381,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mpTimer->Start();
 	const size_t numScenes = sEngineSettings.sceneNames.size();
 	assert(sEngineSettings.levelToLoad < numScenes);
-#if defined(_DEBUG) && (OVERRIDE_LEVEL_LOAD > 0)
+#if /*defined(_DEBUG) &&*/ (OVERRIDE_LEVEL_LOAD > 0)
 	sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
 #endif
 	if (!LoadSceneFromFile())
@@ -811,20 +818,19 @@ void Engine::CalcFrameStats(float dt)
 	float dtSampleSum = 0.0f;
 	std::for_each(dtSamples.begin(), dtSamples.end(), [&dtSampleSum](float dt) { dtSampleSum += dt; });
 	const float frameTime = dtSampleSum / SampleCount;
-	const int fps = static_cast<int>(1.0f / frameTime);
 
 
 	if (frameCount % RefreshRate == 0)
 	{
 		mCurrentFrameTime = frameTime;
-		float frameTimeGPU = mpGPUProfiler->GetEntryAvg("GPU");
-
+		const float frameTimeGPU = mpGPUProfiler->GetEntryAvg("GPU");
+		
 		std::ostringstream stats;
 		stats.precision(2);
 		stats << std::fixed;
 		stats << "VQEngine | " << "CPU: " << frameTime * 1000.0f << " ms  GPU: " << frameTimeGPU * 1000.f << " ms | FPS: ";
 		stats.precision(4);
-		stats << fps;
+		stats << GetFPS();
 		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
 	}
 
@@ -902,7 +908,7 @@ void Engine::PreRender()
 
 	mpActiveScene->PreRender(mFrameStats, mSceneLightData);
 	mFrameStats.rstats = mpRenderer->GetRenderStats();
-	mFrameStats.fps = static_cast<int>(1.0f / mpGPUProfiler->GetRootEntryAvg());
+	mFrameStats.fps = GetFPS();
 
 	mpCPUProfiler->EndEntry();
 }

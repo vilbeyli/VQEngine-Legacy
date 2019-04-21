@@ -106,14 +106,17 @@ public:
 	// GETTERS
 	//----------------------------------------------------------------------------------------------------------------
 	inline const Input*		INP() const { return mpInput; }
+	
+	int						GetFPS() const;
 	float					GetTotalTime() const;
 	inline ShaderID			GetSelectedShader() const { return mSelectedShader; }
 	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
 	inline bool				GetSettingShowControls() const { return mEngineConfig.mbShowControls; }
+	std::pair<BufferID, BufferID> GetGeometryVertexAndIndexBuffers(EGeometry GeomEnum) const { return mBuiltinMeshes[GeomEnum].GetIABuffers(); }
+
 	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
 	bool inline				IsProfileRenderingOn() const { return mEngineConfig.mbShowProfiler; }
 	bool inline				IsLoading() const { return mbLoading; }
-	std::pair<BufferID, BufferID> GetGeometryVertexAndIndexBuffers(EGeometry GeomEnum) const { return mBuiltinMeshes[GeomEnum].GetIABuffers(); }
 	
 	//----------------------------------------------------------------------------------------------------------------
 	// TOGGLES

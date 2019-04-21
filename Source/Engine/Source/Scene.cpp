@@ -90,6 +90,11 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 	EndLoadingModels();
 
 	CalculateSceneBoundingBox();	// needs to happen after models are loaded
+
+	// cache light matrices (assumes all static)
+	for (Light& l : mLights)
+		l.SetMatrices();
+	mDirectionalLight.SetMatrices();
 }
 
 void Scene::UnloadScene()
@@ -604,11 +609,11 @@ void Scene::PreRender(FrameStats& stats, SceneLightingConstantBuffer& outLightin
 
 
 	//----------------------------------------------------------------------------
-	// CULL SHADOWI VIEW RENDER LISTS
+	// CULL SHADOW VIEW RENDER LISTS
 	//----------------------------------------------------------------------------
-	mpCPUProfiler->BeginEntry("Cull_ShadowViews");
+	//mpCPUProfiler->BeginEntry("Cull_ShadowViews"); 
 	FrustumCullPointAndSpotShadowViews(mainViewShadowCasterRenderList, pShadowingLights, stats);
-	mpCPUProfiler->EndEntry(); 
+	//mpCPUProfiler->EndEntry(); 
 
 
 	//----------------------------------------------------------------------------
@@ -648,6 +653,7 @@ void Scene::PreRender(FrameStats& stats, SceneLightingConstantBuffer& outLightin
 
 
 #if _DEBUG
+	static bool bReportedList = false;
 	if (!bReportedList)
 	{
 		Log::Info("Mesh Render List (%s): ", mSceneRenderSettings.optimization.bSortRenderLists ? "Sorted" : "Unsorted");
@@ -1044,91 +1050,107 @@ void Scene::FrustumCullPointAndSpotShadowViews(const std::vector <const GameObje
 	std::array< MeshDrawList, 6> meshListForPoints;
 #endif
 
-	for (const Light* l : pShadowingLights)
+	// filter out light indices
+	std::vector<int> spotLightIndices;
+	std::vector<int> pointLightIndices;
+	for (int i = 0; i < pShadowingLights.size(); ++i)
 	{
+		const Light* l = pShadowingLights[i];
 		switch (l->mType)
 		{
 		case Light::ELightType::SPOT:
-		{
-			//mpCPUProfiler->BeginEntry("Spots");
-			++stats.scene.numSpots;
-			if (bCullLightView)
-			{
-				stats.scene.numSpotsCulledObjects += static_cast<int>(CullGameObjects(l->GetViewFrustumPlanes(), mainViewShadowCasterRenderList, objList));
-			}
-			else
-			{
-				objList.resize(mainViewShadowCasterRenderList.size());
-				std::copy(RANGE(mainViewShadowCasterRenderList), objList.begin());
-			}
-
-			mShadowView.shadowMapRenderListLookUp[l] = objList;
-			//mpCPUProfiler->EndEntry();
+			spotLightIndices.push_back(i);
+			break;
+		case Light::ELightType::POINT:
+			pointLightIndices.push_back(i);
 			break;
 		}
-		case Light::ELightType::POINT:
-			//mpCPUProfiler->BeginEntry("[Cull Point View]");
-			++stats.scene.numPoints;
+	}
 
-			MeshDrawData meshDrawData;
-			if (bCullLightView)
-			{
-				for (int face = 0; face < 6; ++face)
-				{
-					const Texture::CubemapUtility::ECubeMapLookDirections CubemapFaceDirectionEnum = static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face);
-					for (const GameObject* pObj : mainViewShadowCasterRenderList)
-					{
-#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-						stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
-						(
-							l->GetViewFrustumPlanes(CubemapFaceDirectionEnum),
-							pObj,
-							meshDrawDataPerFace[face]
-						));
-#else
-						meshDrawData.meshIDs.clear();
-						stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
-						(
-							l->GetViewFrustumPlanes(CubemapFaceDirectionEnum),
-							pObj,
-							meshDrawData
-						));
-						meshListForPoints[face].push_back(meshDrawData);
-#endif
-					}
-				}
-			}
-			else
-			{
-				for (int face = 0; face < 6; ++face)
-				{
-					for (const GameObject* pObj : mainViewShadowCasterRenderList)
-					{
-#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-						const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
-						for (MeshID meshID : pObj->GetModelData().mMeshIDs)
-							meshDrawDataPerFace[face].AddMeshTransformation(meshID, matWorld);
-#else
-						meshListForPoints[face].push_back(pObj);
-#endif
-					}
-				}
-			}
+	// record the light stats
+	stats.scene.numSpots = static_cast<int>(spotLightIndices.size());
+	stats.scene.numPoints = static_cast<int>(pointLightIndices.size());
 
-#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-			mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshDrawDataPerFace;
-			for (int i = 0; i < 6; ++i) meshDrawDataPerFace[i].meshTransformListLookup.clear();
-#else
-			mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshListForPoints;
-			for (int i = 0; i < 6; ++i) meshListForPoints[i].clear();
-#endif
-			//mpCPUProfiler->EndEntry();
-			break;
-		} // light type
+	// cull per light view
+	mpCPUProfiler->BeginEntry("Cull_ShadowView_Spot");
+	for (int i = 0; i < spotLightIndices.size(); ++i)
+	{
+		const Light* l = pShadowingLights[spotLightIndices[i]];
+		if (bCullLightView)
+		{
+			stats.scene.numSpotsCulledObjects += static_cast<int>(CullGameObjects(l->GetViewFrustumPlanes(), mainViewShadowCasterRenderList, objList));
+		}
+		else
+		{
+			objList.resize(mainViewShadowCasterRenderList.size());
+			std::copy(RANGE(mainViewShadowCasterRenderList), objList.begin());
+		}
 
-
+		mShadowView.shadowMapRenderListLookUp[l] = objList;
 		objList.clear();
-	} // for each light
+	}
+	mpCPUProfiler->EndEntry();
+
+	mpCPUProfiler->BeginEntry("Cull_ShadowViews_Points");
+	for (int i = 0; i < pointLightIndices.size(); ++i)
+	{
+		const Light* l = pShadowingLights[pointLightIndices[i]];
+
+		MeshDrawData meshDrawData;
+		if (bCullLightView)
+		{
+			for (int face = 0; face < 6; ++face)
+			{
+				const Texture::CubemapUtility::ECubeMapLookDirections CubemapFaceDirectionEnum = static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face);
+				for (const GameObject* pObj : mainViewShadowCasterRenderList)
+				{
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+					stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
+					(
+						l->GetViewFrustumPlanes(CubemapFaceDirectionEnum),
+						pObj,
+						meshDrawDataPerFace[face]
+					));
+#else
+					meshDrawData.meshIDs.clear();
+					stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
+					(
+						l->GetViewFrustumPlanes(CubemapFaceDirectionEnum),
+						pObj,
+						meshDrawData
+					));
+					meshListForPoints[face].push_back(meshDrawData);
+#endif
+				}
+			}
+		}
+		else
+		{
+			for (int face = 0; face < 6; ++face)
+			{
+				for (const GameObject* pObj : mainViewShadowCasterRenderList)
+				{
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+					const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+					for (MeshID meshID : pObj->GetModelData().mMeshIDs)
+						meshDrawDataPerFace[face].AddMeshTransformation(meshID, matWorld);
+#else
+					meshListForPoints[face].push_back(pObj);
+#endif
+				}
+			}
+		}
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+		mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshDrawDataPerFace;
+		for (int i = 0; i < 6; ++i) meshDrawDataPerFace[i].meshTransformListLookup.clear();
+#else
+		mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshListForPoints;
+		for (int i = 0; i < 6; ++i) meshListForPoints[i].clear();
+#endif
+
+	}
+	mpCPUProfiler->EndEntry();
 }
 
 void Scene::OcclusionCullDirectionalLightView()

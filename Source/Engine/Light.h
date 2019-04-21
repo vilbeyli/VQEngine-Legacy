@@ -75,7 +75,9 @@ struct Light
 		, mRange(100.0f)
 		, mTransform()
 		, mMeshID(EGeometry::SPHERE)
-	{}
+	{
+		//SetMatrices();
+	}
 	Light
 	(
 		LinearColor color
@@ -97,7 +99,9 @@ struct Light
 		, mRange(range)
 		, mTransform(transform)
 		, mMeshID(mesh)
-	{}
+	{
+		//SetMatrices();
+	}
 
 
 	// returns the projection matrix for the light space transformation. 
@@ -133,8 +137,24 @@ struct Light
 	// TODO: remove this arbitrary function for directional lights
 	Settings::ShadowMap GetSettings() const; // ?
 
+private:
 
+	// cache the View and Projection matrices in the struct
+	// as computing a lot of them is quite expensive (many 
+	// point lights) during frustum culling.
+	XMMATRIX mProjectionMatrix;
+	XMMATRIX mViewMatrix[6];
+	
+public:
+	void SetMatrices();
 
+	// this means we have to update these matrices as soon as
+	// a variable that affects this matrix changes value.
+	
+	inline const Transform& GetTransform() const { return mTransform; }
+	const void SetTransform(const Transform& transform);
+
+public:
 	//--------------------------------------------------------------------------------------------------------------
 	// DATA
 	//--------------------------------------------------------------------------------------------------------------

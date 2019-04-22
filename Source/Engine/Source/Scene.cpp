@@ -1104,6 +1104,8 @@ void Scene::FrustumCullPointAndSpotShadowViews(const std::vector <const GameObje
 	}
 	mpCPUProfiler->EndEntry();
 
+
+
 	mpCPUProfiler->BeginEntry("Cull_ShadowViews_Points");
 	for (int i = 0; i < pointLightIndices.size(); ++i)
 	{

@@ -78,12 +78,21 @@ namespace VQEngine
 		{ aabb.low.x(), aabb.hi.y() , aabb.hi.z() , 1.0f},
 		};
 
+		constexpr float EPSILON = 0.000002f;
+		constexpr XMFLOAT4 F4_EPSILON = XMFLOAT4(EPSILON, EPSILON, EPSILON, EPSILON);
+		const XMVECTOR V_EPSILON = XMLoadFloat4(&F4_EPSILON);
+
 		for (int i = 0; i < 6; ++i)	// for each plane
 		{
 			bool bInside = false;
 			for (int j = 0; j < 8; ++j)	// for each point
 			{
-				if (XMVector4Dot(points[j], frustum.abcd[i]).m128_f32[0] > 0.000002f)
+#if 1
+				if (XMVector4Dot(points[j], frustum.abcd[i]).m128_f32[0] > EPSILON)
+#else
+				const XMVECTOR DOT = XMVector4Dot(points[j], frustum.abcd[i]);
+				if(XMVector4Greater(DOT, V_EPSILON))
+#endif
 				{
 					bInside = true;
 					break;
@@ -115,17 +124,15 @@ namespace VQEngine
 #endif
 
 		const std::vector<MeshID>& objMeshIDs = pObj->GetModelData().mMeshIDs;
+
 		for (MeshID meshIDIndex = 0; meshIDIndex < objMeshIDs.size(); ++meshIDIndex)
 		{
 			const MeshID meshID = objMeshIDs[meshIDIndex];
-			const BoundingBox localBB = pObj->GetMeshBBs()[meshIDIndex];
-			const BoundingBox worldBB = BoundingBox
-			({
-				XMVector4Transform(vec4(localBB.low, 1.0f), matWorld),
-				XMVector4Transform(vec4(localBB.hi, 1.0f),  matWorld)
-				});
 
-			if (IsVisible(frustumPlanes, worldBB))
+			BoundingBox BB = pObj->GetMeshBBs()[meshIDIndex]; // local space BB
+			BB.low = XMVector4Transform(vec4(BB.low, 1.0f), matWorld);
+			BB.hi  = XMVector4Transform(vec4(BB.hi , 1.0f), matWorld); // world space BB
+			if (IsVisible(frustumPlanes, BB))
 			{
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
@@ -143,6 +150,11 @@ namespace VQEngine
 
 
 
+	//size_t CullMeshes(const FrustumPlaneset& frustumPlanes, const VQEngine::GameObjectCullData& param, MeshDrawData& meshDrawData)
+	//{
+	//
+	//}
+
 	size_t CullGameObjects(
 		const FrustumPlaneset&                  frustumPlanes
 		, const std::vector<const GameObject*>& pObjs
@@ -157,7 +169,6 @@ namespace VQEngine
 			const BoundingBox aabb_world = [&]()
 			{
 				const XMMATRIX world = pObj->GetTransform().WorldTransformationMatrix();
-				const XMMATRIX worldRotation = pObj->GetTransform().RotationMatrix();
 				const BoundingBox& aabb_local = pObj->GetAABB();
 #if 1
 				// transform low and high points of the bounding box: model->world
@@ -173,6 +184,7 @@ namespace VQEngine
 				//----------------------------------------------------------------------------------
 				// transform center and extent and construct high and low later
 				// we can use XMVector3Transform() for the extent vector to save some instructions
+				const XMMATRIX worldRotation = pObj->GetTransform().RotationMatrix();
 				const vec3 extent = aabb_local.hi - aabb_local.low;
 				const vec4 center = vec4((aabb_local.hi + aabb_local.low) * 0.5f, 1.0f);
 				const vec3 tfC = XMVector4Transform(center, world);

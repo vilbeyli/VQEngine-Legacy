@@ -105,8 +105,7 @@ namespace DirectoryUtil
 std::string GetCurrentTimeAsString();
 std::string GetCurrentTimeAsStringWithBrackets();
 
-
-float inline lerp(float low, float high, float t) { return low + (high - low) * t; }
+template<class T> T inline lerp(T low, T high, float t) { return low + static_cast<T>((high - low) * t); }
 
 
 /// RANDOM

@@ -47,6 +47,7 @@ const Input::KeyMapping Input::sKeyMap = []()
 	m["K"] = 'K';		m["k"] = 'K';
 
 
+	m["["] = 219; m["]"] = 221;
 	m["\\"] = 220;		m[";"] = 186;
 	m["'"] = 222;
 	m["Shift"] = 16;	m["shift"] = 16;

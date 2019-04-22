@@ -70,7 +70,7 @@ class Scene
 {
 protected:
 	//----------------------------------------------------------------------------------------------------------------
-	// SCENE INTERFACE FOR DERIVED SCENES
+	// INTERFACE FOR SCENE INSTANCES
 	//----------------------------------------------------------------------------------------------------------------
 
 	// Update() is called each frame before Engine::Render(). Scene-specific update logic goes here.
@@ -111,7 +111,6 @@ protected:
 	//   after Load() and before Render(), it won't be immediately available.
 	//
 	void LoadModel_Async(GameObject* pObject, const std::string& modelPath);
-
 
 public:
 	//----------------------------------------------------------------------------------------------------------------
@@ -183,17 +182,19 @@ protected:
 	friend class SceneResourceView; // using attorney method, alternatively can use friend function
 	friend class ModelLoader;
 
+	// scene resource containers
 	std::vector<Mesh>			mMeshes;
 	std::vector<Camera>			mCameras;
 	std::vector<Light>			mLights;
 	std::vector<GameObject*>	mpObjects;
-
+	
+	// scene state
 	Light						mDirectionalLight;
 	Skybox						mSkybox;
-
 	EEnvironmentMapPresets		mActiveSkyboxPreset;
 	int							mSelectedCamera;
 
+	// systems
 	Settings::SceneRender		mSceneRenderSettings;
 	Renderer*					mpRenderer;
 	TextRenderer*				mpTextRenderer;
@@ -242,6 +243,8 @@ private:
 	void BatchMainViewRenderList(const std::vector<const GameObject*> mainViewRenderList);
 	void BatchShadowViewRenderLists(const std::vector <const GameObject*>& mainViewShadowCasterRenderList);
 	//-------------------------------
+
+	int mForceLODLevel = 0;
 };
 
 

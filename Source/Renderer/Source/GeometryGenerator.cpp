@@ -381,96 +381,154 @@ Mesh GeometryGenerator::Cube()
 }
 
 
-Mesh GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceCount)
+Mesh GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceCount, int numLODLevels /*= 1*/)
 {
-	// CYLINDER BODY
-	//--------------------------------------------------------------------------------
-	// Compute vertices for each stack ring starting at the bottom and moving up.
-	vector<DefaultVertexBufferData> Vertices;
-	float dPhi = XM_PI / (ringCount - 1);
-	for (float phi = -XM_PIDIV2; phi <= XM_PIDIV2 + 0.00001f; phi += dPhi)
-	{
-		float y = radius * sinf(phi);	// horizontal slice center height
-		float r = radius * cosf(phi);	// horizontal slice radius
+	// Vertex & Index buffer per LOD level
+	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "Builtin_Sphere");
 
-		// vertices of ring
-		float dTheta = 2.0f*XM_PI / sliceCount;
-		for (unsigned j = 0; j <= sliceCount; ++j)	// for each pice(slice) in horizontal slice
+	// shorthands
+	std::vector < vector<DefaultVertexBufferData>>& LODVertices = meshData.LODVertices;
+	std::vector < std::vector<unsigned>>& LODIndices = meshData.LODIndices;
+
+	// parameters for each LOD level
+	std::vector<unsigned> LODRingCounts(numLODLevels);
+	std::vector<unsigned> LODSliceCounts(numLODLevels);
+
+	const unsigned MIN_RING_COUNT = 5;
+	const unsigned MIN_SLICE_COUNT = 5;
+
+	// using a simple lerp between min levels and given parameters 
+	// so that:
+	// - LOD level 0 represents the mesh defined with the function
+	//   parameters @radius, @ringCount and @sliceCount
+	// - the last LOD level is represented by MIN_RING_COUNT
+	//   and MIN_SLICE_COUNT
+	// 
+	for (int LOD = 0; LOD < numLODLevels; ++LOD)
+	{
+		const float t = static_cast<float>(LOD) / (numLODLevels - 1);
+		LODRingCounts[LOD]  = lerp(MIN_RING_COUNT , ringCount , 1.0f - t);
+		LODSliceCounts[LOD] = lerp(MIN_SLICE_COUNT, sliceCount, 1.0f - t);
+	}
+
+
+	// SPHERE
+	for (int LOD = 0; LOD < numLODLevels; ++LOD)
+	{
+		vector<DefaultVertexBufferData>& Vertices = LODVertices[LOD];
+		std::vector<unsigned>& Indices = LODIndices[LOD];
+
+		// Compute vertices for each stack ring starting at the bottom and moving up.
+		float dPhi = XM_PI / (LODRingCounts[LOD] - 1);
+		for (float phi = -XM_PIDIV2; phi <= XM_PIDIV2 + 0.00001f; phi += dPhi)
 		{
-			DefaultVertexBufferData vertex;
-			float theta = j*dTheta;
-			float x = r * cosf(theta);
-			float z = r * sinf(theta);
-			vertex.position = vec3(x, y, z);
+			float y = radius * sinf(phi);	// horizontal slice center height
+			float r = radius * cosf(phi);	// horizontal slice radius
+
+			// vertices of ring
+			float dTheta = 2.0f*XM_PI / LODSliceCounts[LOD];
+			for (unsigned j = 0; j <= LODSliceCounts[LOD]; ++j)	// for each pice(slice) in horizontal slice
 			{
-				float u = (float)j / sliceCount;
-				float v = (y + radius) / (2 * radius);
-				//fmod(2 * v, 1.0f);
-				vertex.uv = vec2(u, v);
+				DefaultVertexBufferData vertex;
+				float theta = j * dTheta;
+				float x = r * cosf(theta);
+				float z = r * sinf(theta);
+				vertex.position = vec3(x, y, z);
+				{
+					float u = (float)j / LODSliceCounts[LOD];
+					float v = (y + radius) / (2 * radius);
+					//fmod(2 * v, 1.0f);
+					vertex.uv = vec2(u, v);
+				}
+				// Cylinder can be parameterized as follows, where we
+				// introduce v parameter that goes in the same direction
+				// as the v tex-coord so that the bitangent goes in the
+				// same direction as the v tex-coord.
+				// Let r0 be the bottom radius and let r1 be the
+				// top radius.
+				// y(v) = h - hv for v in [0,1].
+				// r(v) = r1 + (r0-r1)v
+				//
+				// x(t, v) = r(v)*cos(t)
+				// y(t, v) = h - hv
+				// z(t, v) = r(v)*sin(t)
+				//
+				// dx/dt = -r(v)*sin(t)
+				// dy/dt = 0
+				// dz/dt = +r(v)*cos(t)
+				//
+				// dx/dv = (r0-r1)*cos(t)
+				// dy/dv = -h
+				// dz/dv = (r0-r1)*sin(t)
+
+				// TangentU us unit length.
+				vertex.tangent = vec3(-z, 0.0f, x).normalized();
+				//float dr = bottomRadius - topRadius;
+				//vec3 bitangent(dr*x, -, dr*z);
+				//XMVECTOR T = XMLoadFloat3(&vertex.tangent);
+				//XMVECTOR B = XMLoadFloat3(&bitangent);
+				//XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
+				//XMStoreFloat3(&vertex.normal, N);
+				XMVECTOR N = XMVectorSet(0, 1, 0, 1);
+				XMVECTOR ROT = XMQuaternionRotationRollPitchYaw(0.0f, -XM_PI - theta, XM_PIDIV2 - phi);
+				N = XMVector3Rotate(N, ROT);
+
+				vertex.normal = N;
+				Vertices.push_back(vertex);
 			}
-			// Cylinder can be parameterized as follows, where we
-			// introduce v parameter that goes in the same direction
-			// as the v tex-coord so that the bitangent goes in the
-			// same direction as the v tex-coord.
-			// Let r0 be the bottom radius and let r1 be the
-			// top radius.
-			// y(v) = h - hv for v in [0,1].
-			// r(v) = r1 + (r0-r1)v
-			//
-			// x(t, v) = r(v)*cos(t)
-			// y(t, v) = h - hv
-			// z(t, v) = r(v)*sin(t)
-			//
-			// dx/dt = -r(v)*sin(t)
-			// dy/dt = 0
-			// dz/dt = +r(v)*cos(t)
-			//
-			// dx/dv = (r0-r1)*cos(t)
-			// dy/dv = -h
-			// dz/dv = (r0-r1)*sin(t)
-
-			// TangentU us unit length.
-			vertex.tangent = vec3(-z, 0.0f, x).normalized();
-			//float dr = bottomRadius - topRadius;
-			//vec3 bitangent(dr*x, -, dr*z);
-			//XMVECTOR T = XMLoadFloat3(&vertex.tangent);
-			//XMVECTOR B = XMLoadFloat3(&bitangent);
-			//XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
-			//XMStoreFloat3(&vertex.normal, N);
-			XMVECTOR N = XMVectorSet(0, 1, 0, 1);
-			XMVECTOR ROT = XMQuaternionRotationRollPitchYaw(0.0f, -XM_PI-theta, XM_PIDIV2-phi);
-			N = XMVector3Rotate(N, ROT);
-
-			vertex.normal = N;
-			Vertices.push_back(vertex);
 		}
-	}
 
-	std::vector<unsigned> Indices;
-	// Add one because we duplicate the first and last vertex per ring
-	// since the texture coordinates are different.
-	unsigned ringVertexCount = sliceCount + 1;
-	// Compute indices for each stack.
-	for (unsigned i = 0; i < ringCount; ++i)
-	{
-		for (unsigned j = 0; j < sliceCount; ++j)
+		// Add one because we duplicate the first and last vertex per ring
+		// since the texture coordinates are different.
+		unsigned ringVertexCount = LODSliceCounts[LOD] + 1;
+		// Compute indices for each stack.
+		for (unsigned i = 0; i < LODRingCounts[LOD]; ++i)
 		{
-			Indices.push_back(i*ringVertexCount + j);
-			Indices.push_back((i + 1)*ringVertexCount + j);
-			Indices.push_back((i + 1)*ringVertexCount + j + 1);
-			Indices.push_back(i*ringVertexCount + j);
-			Indices.push_back((i + 1)*ringVertexCount + j + 1);
-			Indices.push_back(i*ringVertexCount + j + 1);
+			for (unsigned j = 0; j < LODSliceCounts[LOD]; ++j)
+			{
+				Indices.push_back(i*ringVertexCount + j);
+				Indices.push_back((i + 1)*ringVertexCount + j);
+				Indices.push_back((i + 1)*ringVertexCount + j + 1);
+				Indices.push_back(i*ringVertexCount + j);
+				Indices.push_back((i + 1)*ringVertexCount + j + 1);
+				Indices.push_back(i*ringVertexCount + j + 1);
+			}
 		}
 	}
-
 	//------------------------------------------------
 
-	return Mesh(Vertices, Indices, "Builtin_Sphere");
+	return Mesh(meshData);
 }
 
-Mesh GeometryGenerator::Grid(float width, float depth, unsigned m, unsigned n)
+Mesh GeometryGenerator::Grid(float width, float depth, unsigned horizontalTessellation, unsigned verticalTessellation, int numLODLevels /*= 1*/)
 {
+	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "Builtin_Grid");
+
+	// shorthands
+	std::vector < vector<DefaultVertexBufferData>>& LODVertices = meshData.LODVertices;
+	std::vector < std::vector<unsigned>>& LODIndices = meshData.LODIndices;
+
+	// parameters for each LOD level
+	std::vector<unsigned> LODNumHorizontalSlices(numLODLevels);
+	std::vector<unsigned> LODNumVerticalSlices(numLODLevels);
+
+	const unsigned MIN_HSLICE_COUNT = 2;
+	const unsigned MIN_VSLICE_COUNT = 2;
+
+	// using a simple lerp between min levels and given parameters 
+	// so that:
+	// - LOD level 0 represents the mesh defined with the function
+	//   parameters @radius, @ringCount and @sliceCount
+	// - the last LOD level is represented by MIN_RING_COUNT
+	//   and MIN_SLICE_COUNT
+	// 
+	for (int LOD = 0; LOD < numLODLevels; ++LOD)
+	{
+		const float t = static_cast<float>(LOD) / (numLODLevels - 1);
+		LODNumHorizontalSlices[LOD] = lerp(MIN_HSLICE_COUNT, horizontalTessellation, 1.0f - t);
+		LODNumVerticalSlices[LOD]   = lerp(MIN_VSLICE_COUNT, verticalTessellation  , 1.0f - t);
+	}
+
 	//		Grid of m x n vertices
 	//		-----------------------------------------------------------
 	//		+	: Vertex
@@ -492,293 +550,237 @@ Mesh GeometryGenerator::Grid(float width, float depth, unsigned m, unsigned n)
 	//			<--dx--->		  V(m-1, n-1)
 	//			<------ w ------>
 
-	unsigned numQuads  = (m - 1) * (n - 1);
-	unsigned faceCount = numQuads * 2; // 2 faces per quad = triangle count
-	unsigned vertCount = m * n;
-	float dx = width / (n - 1);
-	float dz = depth / (m - 1);	// m & n mixed up??
-
-	// offsets for centering the grid : V(0,0) = (-halfWidth, halfDepth)
-	float halfDepth = depth / 2;
-	float halfWidth = width / 2;
-
-	// texture coord increments
-	float du = 1.0f / (n - 1);
-	float dv = 1.0f / (m - 1);
-
-	vector<DefaultVertexBufferData> vertices(vertCount);
-	vector<unsigned> indices(faceCount * 3);
-	
-	// position the vertices
-	for (unsigned i = 0; i < m; ++i)
+	for (int LOD = 0; LOD < numLODLevels; ++LOD)
 	{
-		float z = halfDepth - i * dz;
-		for (unsigned j = 0; j < n; ++j)
+		const unsigned m = LODNumHorizontalSlices[LOD];
+		const unsigned n = LODNumVerticalSlices[LOD];
+
+		unsigned numQuads = (m - 1) * (n - 1);
+		unsigned faceCount = numQuads * 2; // 2 faces per quad = triangle count
+		unsigned vertCount = m * n;
+		float dx = width / (n - 1);
+		float dz = depth / (m - 1);	// m & n mixed up??
+
+		// offsets for centering the grid : V(0,0) = (-halfWidth, halfDepth)
+		float halfDepth = depth / 2;
+		float halfWidth = width / 2;
+
+		// texture coord increments
+		float du = 1.0f / (n - 1);
+		float dv = 1.0f / (m - 1);
+
+		vector<DefaultVertexBufferData>& Vertices = LODVertices[LOD];
+		std::vector<unsigned>& Indices = LODIndices[LOD];
+
+		Vertices.resize(vertCount);
+		Indices.resize(faceCount * 3);
+
+		// position the Vertices
+		for (unsigned i = 0; i < m; ++i)
 		{
-			float x = -halfWidth + j * dx;
-			float u = j * du;
-			float v = i * dv;
-			vertices[i*n + j].position		= vec3( x  , 0.0f,  z  );
-			vertices[i*n + j].normal		= vec3(0.0f, 0.0f, 0.0f);
-			vertices[i*n + j].uv			= vec2( u  ,  v  );
-			vertices[i*n + j].tangent		= vec3(1.0f, 0.0f, 0.0f);
-		}
-	}
-
-	//	generate indices
-	//
-	//	  A	+------+ B
-	//		|	 / |
-	//		|	/  |
-	//		|  /   |
-	//		| /	   |
-	//		|/	   |
-	//	  C	+------+ D
-	//
-	//	A	: V(i  , j  )
-	//	B	: V(i  , j+1)
-	//	C	: V(i+1, j  )
-	//	D	: V(i+1, j+1)
-	//
-	//	ABC	: (i*n +j    , i*n + j+1, (i+1)*n + j  )
-	//	CBD : ((i+1)*n +j, i*n + j+1, (i+1)*n + j+1)
-
-	unsigned k = 0;
-	for (unsigned i = 0; i < m-1; ++i)
-	{
-		for (unsigned j = 0; j < n-1; ++j)
-		{
-			indices[k  ] = i*n + j;
-			indices[k+1] = i*n + j + 1;
-			indices[k+2] = (i + 1)*n + j;
-			indices[k+3] = (i + 1)*n + j;
-			indices[k+4] = i*n + j + 1;
-			indices[k+5] = (i + 1)*n + j + 1;
-			k += 6;
-		}
-	}
-
-	// apply height function
-	for (size_t i = 0; i < vertices.size(); ++i)
-	{
-		vec3& pos = vertices[i].position;
-		pos.y() = 0.2f * (pos.z() * sinf(20.0f * pos.x()) + pos.x() * cosf(10.0f * pos.z()));
-	}
-
-	CalculateTangentsAndBitangents(vertices, indices);
-	return Mesh(vertices, indices, "Builtin_Grid");
-}
-
-Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount)
-{
-	// slice count	: horizontal resolution
-	// stack count	: height resolution
-	float stackHeight = height / stackCount;
-	float radiusStep  = (topRadius - bottomRadius) / stackCount;
-	unsigned ringCount = stackCount + 1;
-	
-	// CYLINDER BODY
-	//-----------------------------------------------------------
-	// Compute vertices for each stack ring starting at the bottom and moving up.
-	std::vector<DefaultVertexBufferData> Vertices;
-	for (unsigned i = 0; i < ringCount; ++i)
-	{
-		float y = -0.5f*height + i*stackHeight;
-		float r = bottomRadius + i*radiusStep;
-
-		// vertices of ring
-		float dTheta = 2.0f*XM_PI / sliceCount;
-		for (unsigned j = 0; j <= sliceCount; ++j)
-		{
-			DefaultVertexBufferData vertex;
-			float c = cosf(j*dTheta);
-			float s = sinf(j*dTheta);
-			vertex.position = vec3(r*c, y, r*s);
+			float z = halfDepth - i * dz;
+			for (unsigned j = 0; j < n; ++j)
 			{
-				float u = (float)j / sliceCount;
-				float v = 1.0f - (float)i / stackCount;
-				vertex.uv = vec2(u, v);
+				float x = -halfWidth + j * dx;
+				float u = j * du;
+				float v = i * dv;
+				Vertices[i*n + j].position = vec3(x, 0.0f, z);
+				Vertices[i*n + j].normal = vec3(0.0f, 0.0f, 0.0f);
+				Vertices[i*n + j].uv = vec2(u, v);
+				Vertices[i*n + j].tangent = vec3(1.0f, 0.0f, 0.0f);
 			}
-			// Cylinder can be parameterized as follows, where we
-			// introduce v parameter that goes in the same direction
-			// as the v tex-coord so that the bitangent goes in the
-			// same direction as the v tex-coord.
-			// Let r0 be the bottom radius and let r1 be the
-			// top radius.
-			// y(v) = h - hv for v in [0,1].
-			// r(v) = r1 + (r0-r1)v
-			//
-			// x(t, v) = r(v)*cos(t)
-			// y(t, v) = h - hv
-			// z(t, v) = r(v)*sin(t)
-			//
-			// dx/dt = -r(v)*sin(t)
-			// dy/dt = 0
-			// dz/dt = +r(v)*cos(t)
-			//
-			// dx/dv = (r0-r1)*cos(t)
-			// dy/dv = -h
-			// dz/dv = (r0-r1)*sin(t)
-
-			// TangentU us unit length.
-			vertex.tangent = vec3(-s, 0.0f, c);
-			float dr = bottomRadius - topRadius;
-			vec3 bitangent(dr*c, -height, dr*s);
-			XMVECTOR T = vertex.tangent;
-			XMVECTOR B = bitangent;
-			XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
-			vertex.normal = N;
-			Vertices.push_back(vertex);
 		}
+
+		//	generate Indices
+		//
+		//	  A	+------+ B
+		//		|	 / |
+		//		|	/  |
+		//		|  /   |
+		//		| /	   |
+		//		|/	   |
+		//	  C	+------+ D
+		//
+		//	A	: V(i  , j  )
+		//	B	: V(i  , j+1)
+		//	C	: V(i+1, j  )
+		//	D	: V(i+1, j+1)
+		//
+		//	ABC	: (i*n +j    , i*n + j+1, (i+1)*n + j  )
+		//	CBD : ((i+1)*n +j, i*n + j+1, (i+1)*n + j+1)
+
+		unsigned k = 0;
+		for (unsigned i = 0; i < m - 1; ++i)
+		{
+			for (unsigned j = 0; j < n - 1; ++j)
+			{
+				Indices[k] = i * n + j;
+				Indices[k + 1] = i * n + j + 1;
+				Indices[k + 2] = (i + 1)*n + j;
+				Indices[k + 3] = (i + 1)*n + j;
+				Indices[k + 4] = i * n + j + 1;
+				Indices[k + 5] = (i + 1)*n + j + 1;
+				k += 6;
+			}
+		}
+
+		// apply height function
+		for (size_t i = 0; i < Vertices.size(); ++i)
+		{
+			vec3& pos = Vertices[i].position;
+			pos.y() = 0.2f * (pos.z() * sinf(20.0f * pos.x()) + pos.x() * cosf(10.0f * pos.z()));
+		}
+
+		CalculateTangentsAndBitangents(Vertices, Indices);
 	}
 
-	std::vector<unsigned> Indices;
-	
-	// Add one because we duplicate the first and last vertex per ring since the texture coordinates are different.
-	unsigned ringVertexCount = sliceCount + 1;
-	
-	// Compute indices for each stack.
-	for (unsigned i = 0; i < stackCount; ++i)
-	{
-		for (unsigned j = 0; j < sliceCount; ++j)
-		{
-			Indices.push_back(i*ringVertexCount + j);
-			Indices.push_back((i + 1)*ringVertexCount + j);
-			Indices.push_back((i + 1)*ringVertexCount + j + 1);
-			Indices.push_back(i*ringVertexCount + j);
-			Indices.push_back((i + 1)*ringVertexCount + j + 1);
-			Indices.push_back(i*ringVertexCount + j + 1);
-		}
-	}
-
-	// CYLINDER TOP
-	//-----------------------------------------------------------
-	{
-		unsigned baseIndex = (unsigned)Vertices.size();
-		float y = 0.5f*height;
-		float dTheta = 2.0f*XM_PI / sliceCount;
-		
-		// Duplicate cap ring vertices because the texture coordinates and normals differ.
-		for (unsigned i = 0; i <= sliceCount; ++i)
-		{
-			float x = topRadius*cosf(i*dTheta);
-			float z = topRadius*sinf(i*dTheta);
-			
-			// Scale down by the height to try and make top cap texture coord area proportional to base.
-			float u = x / height + 0.5f;
-			float v = z / height + 0.5f;
-
-			DefaultVertexBufferData Vert;
-			Vert.position	= vec3(x, y, z);
-			Vert.normal		= vec3(0.0f, 1.0f, 0.0f);
-			Vert.tangent	= vec3(1.0f, 0.0f, 0.0f);	// ?
-			Vert.uv  = vec2(u, v);
-			Vertices.push_back(Vert);
-		}
-
-		// Cap center vertex.
-		DefaultVertexBufferData capCenter;
-		capCenter.position	= vec3(0.0f, y, 0.0f);
-		capCenter.normal	= vec3(0.0f, 1.0f, 0.0f);
-		capCenter.tangent	= vec3(1.0f, 0.0f, 0.0f);
-		capCenter.uv = vec2(0.5f, 0.5f);
-		Vertices.push_back(capCenter);
-
-		// Index of center vertex.
-		unsigned centerIndex = (unsigned)Vertices.size() - 1;
-		for (unsigned i = 0; i < sliceCount; ++i)
-		{
-			Indices.push_back(centerIndex);
-			Indices.push_back(baseIndex + i + 1);
-			Indices.push_back(baseIndex + i);
-		}
-	}
-
-
-	// CYLINDER BOTTOM
-	//-----------------------------------------------------------
-	{
-		unsigned baseIndex = (unsigned)Vertices.size();
-		float y = -0.5f*height;
-		float dTheta = 2.0f*XM_PI / sliceCount;
-		
-		// Duplicate cap ring vertices because the texture coordinates and normals differ.
-		for (unsigned i = 0; i <= sliceCount; ++i)
-		{
-			float x = bottomRadius*cosf(i*dTheta);
-			float z = bottomRadius*sinf(i*dTheta);
-			
-			// Scale down by the height to try and make top cap texture coord area proportional to base.
-			float u = x / height + 0.5f;
-			float v = z / height + 0.5f;
-
-			DefaultVertexBufferData Vert;
-			Vert.position	= vec3(x, y, z);
-			Vert.normal		= vec3(0.0f, -1.0f, 0.0f);
-			Vert.tangent	= vec3(-1.0f, 0.0f, 0.0f);	// ?
-			Vert.uv	= vec2(u, v);
-			Vertices.push_back(Vert);
-		}
-		// Cap center vertex.
-		DefaultVertexBufferData capCenter;
-		capCenter.position	= vec3(0.0f, y, 0.0f);
-		capCenter.normal	= vec3(0.0f, -1.0f, 0.0f);
-		capCenter.tangent	= vec3(-1.0f, 0.0f, 0.0f);
-		capCenter.uv = vec2(0.5f, 0.5f);
-		Vertices.push_back(capCenter);
-
-		// Index of center vertex.
-		unsigned centerIndex = (unsigned)Vertices.size() - 1;
-		for (unsigned i = 0; i < sliceCount; ++i)
-		{
-			Indices.push_back(centerIndex);
-			Indices.push_back(baseIndex + i);
-			Indices.push_back(baseIndex + i + 1);
-		}
-	}
-
-	//------------------------------------------------
-
-	return Mesh(Vertices, Indices, "Builtin_Cylinder");
+	return Mesh(meshData);
 }
 
-Mesh GeometryGenerator::Cone(float height, float radius, unsigned sliceCount)
+Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadius, unsigned numSlices, unsigned numStacks, int numLODLevels /*= 1*/)
 {
-	const bool bAddBackFaceForBase = true;
-	std::vector<DefaultVertexBufferData> Vertices;
-	std::vector<unsigned> Indices;
+	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "Builtin_Cylinder");
 
+	// shorthands
+	std::vector < vector<DefaultVertexBufferData>>& LODVertices = meshData.LODVertices;
+	std::vector < std::vector<unsigned>>& LODIndices = meshData.LODIndices;
 
-	// BASE
-	//-----------------------------------------------------------
+	// parameters for each LOD level
+	std::vector<unsigned> LODStackCounts(numLODLevels);
+	std::vector<unsigned> LODSliceCounts(numLODLevels);
+
+	const unsigned MIN_STACK_COUNT = 5;
+	const unsigned MIN_SLICE_COUNT = 5;
+
+	// using a simple lerp between min levels and given parameters 
+	// so that:
+	// - LOD level 0 represents the mesh defined with the function
+	//   parameters @radius, @ringCount and @sliceCount
+	// - the last LOD level is represented by MIN_RING_COUNT
+	//   and MIN_SLICE_COUNT
+	// 
+	for (int LOD = 0; LOD < numLODLevels; ++LOD)
 	{
-		unsigned baseIndex = (unsigned)Vertices.size();
-		float y = 0.0f; // -0.33f*height;
-		float dTheta = 2.0f*XM_PI / sliceCount;
+		const float t = static_cast<float>(LOD) / (numLODLevels - 1);
+		LODStackCounts[LOD] = lerp(MIN_STACK_COUNT, numStacks, 1.0f - t);
+		LODSliceCounts[LOD] = lerp(MIN_SLICE_COUNT, numSlices, 1.0f - t);
+	}
 
-		// Duplicate cap ring vertices because the texture coordinates and normals differ.
-		for (unsigned i = 0; i <= sliceCount; ++i)
+	for (int LOD = 0; LOD < numLODLevels; ++LOD)
+	{
+		const unsigned stackCount = LODStackCounts[LOD];
+		const unsigned sliceCount = LODSliceCounts[LOD];
+
+		// slice count	: horizontal resolution
+		// stack count	: height resolution
+		float stackHeight = height / stackCount;
+		float radiusStep = (topRadius - bottomRadius) / stackCount;
+		unsigned ringCount = stackCount + 1;
+
+		// CYLINDER BODY
+		//-----------------------------------------------------------
+		vector<DefaultVertexBufferData>& Vertices = LODVertices[LOD];
+		std::vector<unsigned>& Indices = LODIndices[LOD];
+
+		// Compute vertices for each stack ring starting at the bottom and moving up.
+		for (unsigned i = 0; i < ringCount; ++i)
 		{
-			float x = radius * cosf(i*dTheta);
-			float z = radius * sinf(i*dTheta);
+			float y = -0.5f*height + i * stackHeight;
+			float r = bottomRadius + i * radiusStep;
 
-			// Scale down by the height to try and make top cap texture coord area proportional to base.
-			float u = x / height + 0.5f;
-			float v = z / height + 0.5f;
+			// vertices of ring
+			float dTheta = 2.0f*XM_PI / sliceCount;
+			for (unsigned j = 0; j <= sliceCount; ++j)
+			{
+				DefaultVertexBufferData vertex;
+				float c = cosf(j*dTheta);
+				float s = sinf(j*dTheta);
+				vertex.position = vec3(r*c, y, r*s);
+				{
+					float u = (float)j / sliceCount;
+					float v = 1.0f - (float)i / stackCount;
+					vertex.uv = vec2(u, v);
+				}
+				// Cylinder can be parameterized as follows, where we
+				// introduce v parameter that goes in the same direction
+				// as the v tex-coord so that the bitangent goes in the
+				// same direction as the v tex-coord.
+				// Let r0 be the bottom radius and let r1 be the
+				// top radius.
+				// y(v) = h - hv for v in [0,1].
+				// r(v) = r1 + (r0-r1)v
+				//
+				// x(t, v) = r(v)*cos(t)
+				// y(t, v) = h - hv
+				// z(t, v) = r(v)*sin(t)
+				//
+				// dx/dt = -r(v)*sin(t)
+				// dy/dt = 0
+				// dz/dt = +r(v)*cos(t)
+				//
+				// dx/dv = (r0-r1)*cos(t)
+				// dy/dv = -h
+				// dz/dv = (r0-r1)*sin(t)
 
-			DefaultVertexBufferData Vert;
-			Vert.position = vec3(x, y, z);
-			Vert.normal = vec3(0.0f, 1.0f, 0.0f);
-			Vert.tangent = vec3(-1.0f, 0.0f, 0.0f);	// ?
-			Vert.uv = vec2(u, v);
-			Vertices.push_back(Vert);
+				// TangentU us unit length.
+				vertex.tangent = vec3(-s, 0.0f, c);
+				float dr = bottomRadius - topRadius;
+				vec3 bitangent(dr*c, -height, dr*s);
+				XMVECTOR T = vertex.tangent;
+				XMVECTOR B = bitangent;
+				XMVECTOR N = XMVector3Normalize(XMVector3Cross(T, B));
+				vertex.normal = N;
+				Vertices.push_back(vertex);
+			}
 		}
+
+		// Add one because we duplicate the first and last vertex per ring since the texture coordinates are different.
+		unsigned ringVertexCount = sliceCount + 1;
+
+		// Compute indices for each stack.
+		for (unsigned i = 0; i < stackCount; ++i)
 		{
+			for (unsigned j = 0; j < sliceCount; ++j)
+			{
+				Indices.push_back(i*ringVertexCount + j);
+				Indices.push_back((i + 1)*ringVertexCount + j);
+				Indices.push_back((i + 1)*ringVertexCount + j + 1);
+				Indices.push_back(i*ringVertexCount + j);
+				Indices.push_back((i + 1)*ringVertexCount + j + 1);
+				Indices.push_back(i*ringVertexCount + j + 1);
+			}
+		}
+
+		// CYLINDER TOP
+		//-----------------------------------------------------------
+		{
+			unsigned baseIndex = (unsigned)Vertices.size();
+			float y = 0.5f*height;
+			float dTheta = 2.0f*XM_PI / sliceCount;
+
+			// Duplicate cap ring vertices because the texture coordinates and normals differ.
+			for (unsigned i = 0; i <= sliceCount; ++i)
+			{
+				float x = topRadius * cosf(i*dTheta);
+				float z = topRadius * sinf(i*dTheta);
+
+				// Scale down by the height to try and make top cap texture coord area proportional to base.
+				float u = x / height + 0.5f;
+				float v = z / height + 0.5f;
+
+				DefaultVertexBufferData Vert;
+				Vert.position = vec3(x, y, z);
+				Vert.normal = vec3(0.0f, 1.0f, 0.0f);
+				Vert.tangent = vec3(1.0f, 0.0f, 0.0f);	// ?
+				Vert.uv = vec2(u, v);
+				Vertices.push_back(Vert);
+			}
+
 			// Cap center vertex.
 			DefaultVertexBufferData capCenter;
 			capCenter.position = vec3(0.0f, y, 0.0f);
 			capCenter.normal = vec3(0.0f, 1.0f, 0.0f);
-			capCenter.tangent = vec3(-1.0f, 0.0f, 0.0f);
+			capCenter.tangent = vec3(1.0f, 0.0f, 0.0f);
 			capCenter.uv = vec2(0.5f, 0.5f);
 			Vertices.push_back(capCenter);
 
@@ -792,32 +794,40 @@ Mesh GeometryGenerator::Cone(float height, float radius, unsigned sliceCount)
 			}
 		}
 
-		if (bAddBackFaceForBase)
+
+		// CYLINDER BOTTOM
+		//-----------------------------------------------------------
 		{
-			baseIndex = (unsigned)Vertices.size();
-			const float offsetInNormalDirection = 0.0f;//-1.100001f;
+			unsigned baseIndex = (unsigned)Vertices.size();
+			float y = -0.5f*height;
+			float dTheta = 2.0f*XM_PI / sliceCount;
+
+			// Duplicate cap ring vertices because the texture coordinates and normals differ.
 			for (unsigned i = 0; i <= sliceCount; ++i)
 			{
-				const float x = radius * cosf(i*dTheta);
-				const float z = radius * sinf(i*dTheta);
-				const float u = x / height + 0.5f;
-				const float v = z / height + 0.5f;
+				float x = bottomRadius * cosf(i*dTheta);
+				float z = bottomRadius * sinf(i*dTheta);
+
+				// Scale down by the height to try and make top cap texture coord area proportional to base.
+				float u = x / height + 0.5f;
+				float v = z / height + 0.5f;
 
 				DefaultVertexBufferData Vert;
-				Vert.position = vec3(x, y+offsetInNormalDirection, z);
+				Vert.position = vec3(x, y, z);
 				Vert.normal = vec3(0.0f, -1.0f, 0.0f);
 				Vert.tangent = vec3(-1.0f, 0.0f, 0.0f);	// ?
 				Vert.uv = vec2(u, v);
 				Vertices.push_back(Vert);
 			}
-
+			// Cap center vertex.
 			DefaultVertexBufferData capCenter;
-			capCenter.position = vec3(0.0f, y+offsetInNormalDirection, 0.0f);
+			capCenter.position = vec3(0.0f, y, 0.0f);
 			capCenter.normal = vec3(0.0f, -1.0f, 0.0f);
 			capCenter.tangent = vec3(-1.0f, 0.0f, 0.0f);
 			capCenter.uv = vec2(0.5f, 0.5f);
 			Vertices.push_back(capCenter);
 
+			// Index of center vertex.
 			unsigned centerIndex = (unsigned)Vertices.size() - 1;
 			for (unsigned i = 0; i < sliceCount; ++i)
 			{
@@ -826,29 +836,147 @@ Mesh GeometryGenerator::Cone(float height, float radius, unsigned sliceCount)
 				Indices.push_back(baseIndex + i + 1);
 			}
 		}
+
+	}
+	//------------------------------------------------
+
+	return Mesh(meshData);
+}
+
+Mesh GeometryGenerator::Cone(float height, float radius, unsigned numSlices, int numLODLevels /*= 1*/)
+{
+	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "Builtin_Cone");
+
+	// shorthands
+	std::vector < vector<DefaultVertexBufferData>>& LODVertices = meshData.LODVertices;
+	std::vector < std::vector<unsigned>>& LODIndices = meshData.LODIndices;
+
+	// parameters for each LOD level
+	std::vector<unsigned> LODSliceCounts(numLODLevels);
+
+	const unsigned MIN_SLICE_COUNT = 5;
+
+	// using a simple lerp between min levels and given parameters 
+	// so that:
+	// - LOD level 0 represents the mesh defined with the function
+	//   parameters @radius, @ringCount and @sliceCount
+	// - the last LOD level is represented by MIN_RING_COUNT
+	//   and MIN_SLICE_COUNT
+	// 
+	for (int LOD = 0; LOD < numLODLevels; ++LOD)
+	{
+		const float t = static_cast<float>(LOD) / (numLODLevels - 1);
+		LODSliceCounts[LOD] = lerp(MIN_SLICE_COUNT, numSlices, 1.0f - t);
 	}
 
-
-	// CONE
-	//-----------------------------------------------------------
+	const bool bAddBackFaceForBase = true;
+	for (int LOD = 0; LOD < numLODLevels; ++LOD)
 	{
-		// add the tip vertex
-		DefaultVertexBufferData tipVertex;
-		tipVertex.position = vec3(0.0f, height, 0.0f);
-		tipVertex.normal = vec3(0.0f, 1.0f, 0.0f);
-		tipVertex.tangent = vec3(1.0f, 0.0f, 0.0f); // 0 0 0 ?
-		tipVertex.uv = vec2(0.5f, 0.5f);            // ?
-		Vertices.push_back(tipVertex);
+		vector<DefaultVertexBufferData>& Vertices = LODVertices[LOD];
+		std::vector<unsigned>& Indices = LODIndices[LOD];
 
-		const unsigned tipVertIndex = (unsigned)Vertices.size() - 1;
-		for (unsigned i = 0; i <= sliceCount; ++i)
+		const unsigned sliceCount = LODSliceCounts[LOD];
+
+		// BASE
+		//-----------------------------------------------------------
 		{
-			Indices.push_back(tipVertIndex);
-			Indices.push_back(i + 1);
-			Indices.push_back(i);
+			unsigned baseIndex = (unsigned)Vertices.size();
+			float y = 0.0f; // -0.33f*height;
+			float dTheta = 2.0f*XM_PI / sliceCount;
+
+			// Duplicate cap ring vertices because the texture coordinates and normals differ.
+			for (unsigned i = 0; i <= sliceCount; ++i)
+			{
+				float x = radius * cosf(i*dTheta);
+				float z = radius * sinf(i*dTheta);
+
+				// Scale down by the height to try and make top cap texture coord area proportional to base.
+				float u = x / height + 0.5f;
+				float v = z / height + 0.5f;
+
+				DefaultVertexBufferData Vert;
+				Vert.position = vec3(x, y, z);
+				Vert.normal = vec3(0.0f, 1.0f, 0.0f);
+				Vert.tangent = vec3(-1.0f, 0.0f, 0.0f);	// ?
+				Vert.uv = vec2(u, v);
+				Vertices.push_back(Vert);
+			}
+			{
+				// Cap center vertex.
+				DefaultVertexBufferData capCenter;
+				capCenter.position = vec3(0.0f, y, 0.0f);
+				capCenter.normal = vec3(0.0f, 1.0f, 0.0f);
+				capCenter.tangent = vec3(-1.0f, 0.0f, 0.0f);
+				capCenter.uv = vec2(0.5f, 0.5f);
+				Vertices.push_back(capCenter);
+
+				// Index of center vertex.
+				unsigned centerIndex = (unsigned)Vertices.size() - 1;
+				for (unsigned i = 0; i < sliceCount; ++i)
+				{
+					Indices.push_back(centerIndex);
+					Indices.push_back(baseIndex + i + 1);
+					Indices.push_back(baseIndex + i);
+				}
+			}
+
+			if (bAddBackFaceForBase)
+			{
+				baseIndex = (unsigned)Vertices.size();
+				const float offsetInNormalDirection = 0.0f;//-1.100001f;
+				for (unsigned i = 0; i <= sliceCount; ++i)
+				{
+					const float x = radius * cosf(i*dTheta);
+					const float z = radius * sinf(i*dTheta);
+					const float u = x / height + 0.5f;
+					const float v = z / height + 0.5f;
+
+					DefaultVertexBufferData Vert;
+					Vert.position = vec3(x, y + offsetInNormalDirection, z);
+					Vert.normal = vec3(0.0f, -1.0f, 0.0f);
+					Vert.tangent = vec3(-1.0f, 0.0f, 0.0f);	// ?
+					Vert.uv = vec2(u, v);
+					Vertices.push_back(Vert);
+				}
+
+				DefaultVertexBufferData capCenter;
+				capCenter.position = vec3(0.0f, y + offsetInNormalDirection, 0.0f);
+				capCenter.normal = vec3(0.0f, -1.0f, 0.0f);
+				capCenter.tangent = vec3(-1.0f, 0.0f, 0.0f);
+				capCenter.uv = vec2(0.5f, 0.5f);
+				Vertices.push_back(capCenter);
+
+				unsigned centerIndex = (unsigned)Vertices.size() - 1;
+				for (unsigned i = 0; i < sliceCount; ++i)
+				{
+					Indices.push_back(centerIndex);
+					Indices.push_back(baseIndex + i);
+					Indices.push_back(baseIndex + i + 1);
+				}
+			}
+		}
+
+
+		// CONE
+		//-----------------------------------------------------------
+		{
+			// add the tip vertex
+			DefaultVertexBufferData tipVertex;
+			tipVertex.position = vec3(0.0f, height, 0.0f);
+			tipVertex.normal = vec3(0.0f, 1.0f, 0.0f);
+			tipVertex.tangent = vec3(1.0f, 0.0f, 0.0f); // 0 0 0 ?
+			tipVertex.uv = vec2(0.5f, 0.5f);            // ?
+			Vertices.push_back(tipVertex);
+
+			const unsigned tipVertIndex = (unsigned)Vertices.size() - 1;
+			for (unsigned i = 0; i <= sliceCount; ++i)
+			{
+				Indices.push_back(tipVertIndex);
+				Indices.push_back(i + 1);
+				Indices.push_back(i);
+			}
 		}
 	}
 
-
-	return Mesh(Vertices, Indices, "Builtin_Cone");
+	return Mesh(meshData);
 }

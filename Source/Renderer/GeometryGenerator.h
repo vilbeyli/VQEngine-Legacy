@@ -28,10 +28,10 @@ namespace GeometryGenerator
 	Mesh Quad(float scale);
 	Mesh FullScreenQuad();
 	Mesh Cube();
-	Mesh Sphere(float radius, unsigned ringCount, unsigned sliceCount);
-	Mesh Grid(float width, float depth, unsigned m, unsigned n);
-	Mesh Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount);
-	Mesh Cone(float height, float radius, unsigned sliceCount);
+	Mesh Sphere(float radius, unsigned ringCount, unsigned sliceCount, int numLODLevels = 1);
+	Mesh Grid(float width, float depth, unsigned m, unsigned n, int numLODLevels = 1);
+	Mesh Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount, int numLODLevels = 1);
+	Mesh Cone(float height, float radius, unsigned sliceCount, int numLODLevels = 1);
 
 	void CalculateTangentsAndBitangents(std::vector<DefaultVertexBufferData>& vertices, const std::vector<unsigned> indices);	// Only Tangents
 

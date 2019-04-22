@@ -32,6 +32,8 @@
 
 #define THREADED_FRUSTUM_CULL 0	// uses workers to cull the render lists (not implemented yet)
 
+#define DEBUG_LOD_LEVELS 1
+
 Scene::Scene(const BaseSceneParams& params)
 	: mpRenderer(params.pRenderer)
 	, mpTextRenderer(params.pTextRenderer)
@@ -91,6 +93,8 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 
 	CalculateSceneBoundingBox();	// needs to happen after models are loaded
 
+
+	// [optimization]
 	// cache light matrices (assumes all static)
 	for (Light& l : mLights)
 		l.SetMatrices();
@@ -270,7 +274,7 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 		mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 		for(MeshID id : model.mMeshIDs)
 		{
-			const auto IABuffer = mMeshes[id].GetIABuffers();
+			const auto IABuffer = mMeshes[id].GetIABuffers(this->mForceLODLevel);
 
 			// SET MATERIAL CONSTANTS
 			if (ShouldSendMaterial(shader))
@@ -546,12 +550,21 @@ void Scene::UpdateScene(float dt)
 	{
 		mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights = !mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights;
 	}
-	if (ENGINE->INP()->IsKeyTriggered("F9"))
-	{
-
-	}
 #endif
 
+
+#if DEBUG_LOD_LEVELS
+	if (ENGINE->INP()->IsKeyTriggered("]"))
+	{
+		mForceLODLevel += 1;
+		Log::Info("Force LOD Level = %d", this->mForceLODLevel);
+	}
+	if (ENGINE->INP()->IsKeyTriggered("["))
+	{
+		mForceLODLevel = std::max(0, mForceLODLevel - 1);
+		Log::Info("Force LOD Level = %d", this->mForceLODLevel);
+	}
+#endif
 
 
 	// UPDATE CAMERA & WORLD
@@ -1377,7 +1390,7 @@ Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_
 #include "SceneResources.h"
 std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID)
 {
-	return pScene->mMeshes[meshID].GetIABuffers();
+	return pScene->mMeshes[meshID].GetIABuffers(pScene->mForceLODLevel);
 }
 
 const Material* SceneResourceView::GetMaterial(const Scene* pScene, MaterialID materialID)

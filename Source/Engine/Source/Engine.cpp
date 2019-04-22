@@ -205,16 +205,18 @@ bool Engine::Initialize(HWND hwnd)
 		const float coneHeight = 3.0f;
 		const float coneRadius = 1.0f;
 
+		const int numDefaultLODLevels = 5;
+
 		mBuiltinMeshes =	// this should match enum declaration order
 		{
 			GeometryGenerator::Triangle(1.0f),
 			GeometryGenerator::Quad(1.0f),
 			GeometryGenerator::FullScreenQuad(),
 			GeometryGenerator::Cube(),
-			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount),
-			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount),
-			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV),
-			GeometryGenerator::Cone(coneHeight, coneRadius, 120),
+			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount, numDefaultLODLevels),
+			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount, numDefaultLODLevels),
+			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV, numDefaultLODLevels),
+			GeometryGenerator::Cone(coneHeight, coneRadius, 120, numDefaultLODLevels),
 			GeometryGenerator::Cone(1.0f, 1.0f, 30),
 			//GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
 		};

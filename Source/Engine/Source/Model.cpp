@@ -194,11 +194,11 @@ Mesh ProcessMesh(aiMesh * mesh, const aiScene * scene)
 
 	// TODO: mesh name
 
-	Mesh newMesh;
+	Mesh newMesh = [&]()
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
-		newMesh = Mesh(Vertices, Indices, "ImportedModelMesh0");	// return a mesh object created from the extracted mesh data
-	}
+		return Mesh(Vertices, Indices, "ImportedModelMesh0");	// return a mesh object created from the extracted mesh data
+	}();
 	return newMesh;
 }
 

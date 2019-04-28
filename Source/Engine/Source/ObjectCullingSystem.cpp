@@ -26,7 +26,7 @@
 
 namespace VQEngine
 {
-	bool IsSphereInFrustum(const FrustumPlaneset& frustum, const vec3& sphereCenter, const float sphereRadius)
+	bool IsSphereInFrustum(const FrustumPlaneset& frustum, const Sphere& sphere)
 	{
 		bool bInside = true;
 		for (int plane = 0; plane < 6; ++plane)
@@ -37,9 +37,9 @@ namespace VQEngine
 				, frustum.abcd[plane].z
 			);
 			const vec3 planeNormal = N.normalized();
-			const float D = XMVector3Dot(N, sphereCenter).m128_f32[0] + frustum.abcd[plane].w;
-			//const float D = XMVector3Dot(planeNormal, sphereCenter).m128_f32[0] + frustum.abcd[plane].w;
-			//const float D = XMVector3Dot(planeNormal, sphereCenter).m128_f32[0];
+			const float D = XMVector3Dot(N, sphere.c).m128_f32[0] + frustum.abcd[plane].w;
+			//const float D = XMVector3Dot(planeNormal, sphere.c).m128_f32[0] + frustum.abcd[plane].w;
+			//const float D = XMVector3Dot(planeNormal, sphere.c).m128_f32[0];
 
 #if 0
 			if (D < -sphereRadius) // outside
@@ -50,12 +50,12 @@ namespace VQEngine
 				bInside = true;
 			}
 #else
-		//if (fabsf(D) > sphereRadius)
+		//if (fabsf(D) > sphere.r)
 		//	return
 			if (D < 0.0f)
 			{
-				//if ( (-D -frustum.abcd[plane].w) > sphereRadius)
-				if (-D > sphereRadius)
+				//if ( (-D -frustum.abcd[plane].w) > sphere.r)
+				if (-D > sphere.r)
 					return false;
 			}
 #endif
@@ -63,21 +63,9 @@ namespace VQEngine
 		return bInside;
 	}
 
-
-	bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb)
+	bool IsBoundingBoxVisibleFromFrustum(const FrustumPlaneset& frustum, const BoundingBox& aabb)
 	{
-		const vec4 points[] =
-		{
-		{ aabb.low.x(), aabb.low.y(), aabb.low.z(), 1.0f },
-		{ aabb.hi.x() , aabb.low.y(), aabb.low.z(), 1.0f },
-		{ aabb.hi.x() , aabb.hi.y() , aabb.low.z(), 1.0f },
-		{ aabb.low.x(), aabb.hi.y() , aabb.low.z(), 1.0f },
-
-		{ aabb.low.x(), aabb.low.y(), aabb.hi.z() , 1.0f},
-		{ aabb.hi.x() , aabb.low.y(), aabb.hi.z() , 1.0f},
-		{ aabb.hi.x() , aabb.hi.y() , aabb.hi.z() , 1.0f},
-		{ aabb.low.x(), aabb.hi.y() , aabb.hi.z() , 1.0f},
-		};
+		std::array<vec4, 8> points = aabb.GetCornerPointsV4();
 
 		constexpr float EPSILON = 0.000002f;
 		constexpr XMFLOAT4 F4_EPSILON = XMFLOAT4(EPSILON, EPSILON, EPSILON, EPSILON);
@@ -109,6 +97,50 @@ namespace VQEngine
 
 
 
+	bool IsBoundingBoxInsideSphere_Approx(const BoundingBox& aabb, const Sphere& sphere)
+	{
+#if 0 
+		// THIS IS INCORRECT
+
+		// test if radius against each corner of the AABB
+		std::array<vec3, 8> aabb_corners = aabb.GetCornerPointsV3();
+		for (int i = 0; i < 8; ++i)
+		{
+			vec3 vDist = aabb_corners[i] - sphereCenter;
+			vDist = XMVector3Dot(vDist, vDist); // sqDist
+			if (vDist.x() < sqRadius)
+				return true;
+		}
+		return false;
+#else
+		// do a rough test here: 
+		// derive a bounding sphere from AABB and then test if spheres intersect
+		//
+		const vec3 diag = (aabb.hi - aabb.low) * 0.5f;  // AABB diagonal vector
+		Sphere BS							// bounding sphere of the AABB
+		(
+			  (aabb.hi + aabb.low) * 0.5f
+			, std::sqrtf(XMVector3Dot(diag, diag).m128_f32[0])
+		);
+
+		return IsIntersecting(sphere, BS);
+#endif
+	}
+
+	bool IsIntersecting(const Sphere& s1, const Sphere& s2)
+	{
+		vec3 vDist = s1.c - s2.c;
+		vDist = XMVector3Dot(vDist, vDist); // sqDist
+		
+		const float centerDistance = std::sqrtf(vDist.x());
+		const float radiusSum = s1.r + s2.r;
+
+		if (centerDistance > radiusSum) // dist > r1 + r2 := no intersection
+			return false;
+
+		return true;
+	}
+
 	size_t CullMeshes(
 		const FrustumPlaneset& frustumPlanes,
 		const GameObject* pObj,
@@ -124,18 +156,24 @@ namespace VQEngine
 		const XMMATRIX& matWorld = meshDrawData.matWorld;
 #endif
 
-		const std::vector<MeshID>& objMeshIDs = pObj->GetModelData().mMeshIDs;
+		// first test at GameObject granularity
+		BoundingBox BB = pObj->GetAABB();
+		if (!IsBoundingBoxVisibleFromFrustum(frustumPlanes, BB))
+		{
+			return numCulled;
+		}
 
+		// if GameObject is visible, then test individual meshes.
+		const std::vector<MeshID>& objMeshIDs = pObj->GetModelData().mMeshIDs;
 		for (MeshID meshIDIndex = 0; meshIDIndex < objMeshIDs.size(); ++meshIDIndex)
 		{
 			const MeshID meshID = objMeshIDs[meshIDIndex];
 
-			BoundingBox BB = pObj->GetMeshBBs()[meshIDIndex]; // local space BB
-			BB.low = XMVector4Transform(vec4(BB.low, 1.0f), matWorld);
-			BB.hi  = XMVector4Transform(vec4(BB.hi , 1.0f), matWorld); // world space BB
-			if (IsVisible(frustumPlanes, BB))
+			BB = pObj->GetMeshBBs()[meshIDIndex]; // local space BB
+			BB.low = XMVector3Transform(BB.low, matWorld);
+			BB.hi  = XMVector3Transform(BB.hi , matWorld); // world space BB
+			if (IsBoundingBoxVisibleFromFrustum(frustumPlanes, BB))
 			{
-
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 				meshDrawData.AddMeshTransformation(meshID, matWorld);
 #else
@@ -247,7 +285,7 @@ namespace VQEngine
 				return;
 			}
 
-			if (IsVisible(frustumPlanes, aabb_world))
+			if (IsBoundingBoxVisibleFromFrustum(frustumPlanes, aabb_world))
 			{
 				pCulledObjs.push_back(pObj);
 				++currIdx;
@@ -270,4 +308,36 @@ namespace VQEngine
 	};
 #endif
 
+}
+
+std::array<vec4, 8> BoundingBox::GetCornerPointsV4() const
+{
+	return std::array<vec4, 8> 
+	{
+		vec4( this->low.x(), this->low.y(), this->low.z(), 1.0f ),
+		vec4( this->hi.x() , this->low.y(), this->low.z(), 1.0f ),
+		vec4( this->hi.x() , this->hi.y() , this->low.z(), 1.0f ),
+		vec4( this->low.x(), this->hi.y() , this->low.z(), 1.0f ),
+
+		vec4( this->low.x(), this->low.y(), this->hi.z() , 1.0f ),
+		vec4( this->hi.x() , this->low.y(), this->hi.z() , 1.0f ),
+		vec4( this->hi.x() , this->hi.y() , this->hi.z() , 1.0f ),
+		vec4( this->low.x(), this->hi.y() , this->hi.z() , 1.0f )
+	};
+}
+
+std::array<vec3, 8> BoundingBox::GetCornerPointsV3() const
+{
+	return std::array<vec3, 8> 
+	{
+		vec3(this->low.x(), this->low.y(), this->low.z()),
+		vec3(this->hi.x() , this->low.y(), this->low.z()),
+		vec3(this->hi.x() , this->hi.y() , this->low.z()),
+		vec3(this->low.x(), this->hi.y() , this->low.z()),
+
+		vec3(this->low.x(), this->low.y(), this->hi.z() ),
+		vec3(this->hi.x() , this->low.y(), this->hi.z() ),
+		vec3(this->hi.x() , this->hi.y() , this->hi.z() ),
+		vec3(this->low.x(), this->hi.y() , this->hi.z() )
+	};
 }

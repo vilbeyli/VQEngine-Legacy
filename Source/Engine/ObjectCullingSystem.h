@@ -35,6 +35,26 @@ struct BoundingBox
 	vec3 low = vec3::Zero;
 	vec3 hi = vec3::Zero;
 	DirectX::XMMATRIX GetWorldTransformationMatrix() const;
+	std::array<vec4, 8> GetCornerPointsV4() const;
+	std::array<vec3, 8> GetCornerPointsV3() const;
+};
+
+struct Sphere
+{
+	Sphere(const vec3& _center, float _radius) : center(_center), radius(_radius) {}
+	union
+	{
+		struct
+		{
+			vec3 center;
+			float radius;
+		};
+		struct
+		{
+			vec3 c;
+			float r;
+		};
+	};
 };
 
 struct CullMeshData
@@ -49,9 +69,13 @@ struct CullMeshData
 
 namespace VQEngine
 {
-	bool IsSphereInFrustum(const FrustumPlaneset& frustum, const vec3& sphereCenter, const float sphereRadius);
+	bool IsSphereInFrustum(const FrustumPlaneset& frustum, const Sphere& sphere);
 
-	bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
+	bool IsBoundingBoxVisibleFromFrustum(const FrustumPlaneset& frustum, const BoundingBox& aabb);
+
+	bool IsBoundingBoxInsideSphere_Approx(const BoundingBox& aabb, const Sphere& sphere);
+
+	bool IsIntersecting(const Sphere& s1, const Sphere& s2);
 
 	// deprecated
 	size_t CullMeshes(const FrustumPlaneset& frustumPlanes, const GameObject* pObj, MeshDrawData& meshDrawData);

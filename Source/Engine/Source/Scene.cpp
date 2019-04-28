@@ -1089,7 +1089,7 @@ Scene::SceneShadowingLightIndexCollection Scene::CullShadowingLights(int& outNum
 				const float rangeSqr = l.mRange * l.mRange;
 
 				const bool bIsCameraInPointLightSphereOfIncluence = dstSqrCameraToLight < rangeSqr;
-				const bool bSphereInFrustum = IsSphereInFrustum(GetActiveCamera().GetViewFrustumPlanes(), l.mTransform._position, l.mRange);
+				const bool bSphereInFrustum = IsSphereInFrustum(GetActiveCamera().GetViewFrustumPlanes(), Sphere(l.mTransform._position, l.mRange));
 
 				if (bIsCameraInPointLightSphereOfIncluence || bSphereInFrustum)
 				{
@@ -1162,14 +1162,31 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 #endif
 
 		// cull for far distance
-		// TODO: cull meshes outside this point lights sphere of influence
+		std::vector<const GameObject*> filteredMainViewShadowCasterList(mainViewShadowCasterRenderList.size(), nullptr);
+		int numObjs = 0;
+		for (const GameObject* pObj : mainViewShadowCasterRenderList)
+		{
+			const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+			BoundingBox BB = pObj->GetAABB(); // local space AABB (this is wrong, AABB should be calculated on update()).
+			BB.low = XMVector3Transform(BB.low, matWorld);
+			BB.hi  = XMVector3Transform(BB.hi , matWorld); // world space BB
+			if (IsBoundingBoxInsideSphere_Approx(BB, Sphere(l->GetTransform()._position, l->mRange)))
+				filteredMainViewShadowCasterList[numObjs++] = pObj;
+		}
+		if (numObjs == 0)
+		{
+			return;
+		}
 
 		// cull for visibility per face
 		for (int face = 0; face < 6; ++face)
 		{
 			const Texture::CubemapUtility::ECubeMapLookDirections CubemapFaceDirectionEnum = static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face);
-			for (const GameObject* pObj : mainViewShadowCasterRenderList)
+			for (const GameObject* pObj : filteredMainViewShadowCasterList)
 			{
+				if (!pObj) // stop at first null game object because we resize @filteredMainViewShadowCasterList when creating it.
+					break;
+
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 				stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
 				(

@@ -294,7 +294,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 
 	pRenderer->BeginEvent("Lighting Pass");
 	pRenderer->SetShader(/*mSelectedShader*/fwdBRDF);
-	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 	pRenderer->Apply();
 
 	//if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)

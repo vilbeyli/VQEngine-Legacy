@@ -491,7 +491,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 
 	depthStencilDesc.DepthEnable = true;
 	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-	depthStencilDesc.StencilEnable = true;
+	depthStencilDesc.StencilEnable = false;
 	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_TEST_ONLY]);
 	if (!checkFailed(hr)) return false;
 

@@ -189,16 +189,40 @@ public:
 
 protected:
 	//----------------------------------------------------------------------------------------------------------------
-	// DATA
+	// SCENE DATA
 	//----------------------------------------------------------------------------------------------------------------
 	friend class SceneResourceView; // using attorney method, alternatively can use friend function
 	friend class ModelLoader;
-
-	// scene resource containers
+	
+	//
+	// SCENE RESOURCE CONTAINERS
+	//
 	std::vector<Mesh>			mMeshes;
 	std::vector<Camera>			mCameras;
+	std::vector<GameObject*>	mpObjects;
+
+
+	//
+	// SCENE STATE
+	//
+	Light						mDirectionalLight;
+	Skybox						mSkybox;
+	EEnvironmentMapPresets		mActiveSkyboxPreset;
+	int							mSelectedCamera;
+	Settings::SceneRender		mSceneRenderSettings;
+
+
+	//
+	// SYSTEMS
+	//
+	Renderer*					mpRenderer;
+	TextRenderer*				mpTextRenderer;
+	VQEngine::ThreadPool*		mpThreadPool;	// initialized by the Engine
 
 private:
+	//
+	// LIGHTS
+	//
 	struct ShadowingLightIndexCollection
 	{
 		inline void Clear() { spotLightIndices.clear(); pointLightIndices.clear(); }
@@ -213,8 +237,8 @@ private:
 			switch (type)
 			{
 			case Light::POINT: return mStaticLights.pointLightIndices.size() + mDynamicLights.pointLightIndices.size(); break;
-			case Light::SPOT : return mStaticLights.spotLightIndices.size()  + mDynamicLights.spotLightIndices.size() ; break;
-			default          : return 0; break;
+			case Light::SPOT: return mStaticLights.spotLightIndices.size() + mDynamicLights.spotLightIndices.size(); break;
+			default: return 0; break;
 			}
 		}
 		inline std::vector<const Light*> GetFlattenedListOfLights(const std::vector<Light>& staticLights, const std::vector<Light>& dynamicLights) const
@@ -230,7 +254,8 @@ private:
 		ShadowingLightIndexCollection mDynamicLights;
 	};
 
-	// Static lights will not change position or orientation.
+	// Static lights will not change position or orientation. Here, we cache
+	// some light data based on this assumption, such as frustum planes.
 	//
 	struct StaticLightCache
 	{
@@ -243,24 +268,12 @@ private:
 	std::vector<Light>			mLightsDynamic; // moving lights
 	StaticLightCache			mStaticLightCache;
 
-	
-protected:
-	std::vector<GameObject*>	mpObjects;
-	
-	// scene state
-	Light						mDirectionalLight;
-	Skybox						mSkybox;
-	EEnvironmentMapPresets		mActiveSkyboxPreset;
-	int							mSelectedCamera;
-
-	// systems
-	Settings::SceneRender		mSceneRenderSettings;
-	Renderer*					mpRenderer;
-	TextRenderer*				mpTextRenderer;
-	VQEngine::ThreadPool*		mpThreadPool;	// initialized by the Engine
 
 
 private:
+	//----------------------------------------------------------------------------------------------------------------
+	// INTERNAL DATA
+	//----------------------------------------------------------------------------------------------------------------
 	friend class Engine;
 
 	GameObjectPool	mObjectPool;
@@ -278,6 +291,9 @@ private:
 	ShadowView	mShadowView;
 
 	CPUProfiler* mpCPUProfiler;
+
+	int mForceLODLevel = 0;
+
 
 private:
 	void StartLoadingModels();
@@ -307,8 +323,6 @@ private:
 
 	void SetLightCache();
 	void ClearLights();
-
-	int mForceLODLevel = 0;
 };
 
 

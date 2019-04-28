@@ -20,8 +20,8 @@
 #define ENABLE_TRANSPARENCY 0
 
 
-#define OVERRIDE_LEVEL_LOAD 1	// Toggle for overriding level loading
-#define OVERRIDE_LEVEL_VALUE 3	// which level to load
+#define OVERRIDE_LEVEL_LOAD      1	// Toggle for overriding level loading
+#define OVERRIDE_LEVEL_VALUE     3	// which level to load
 #define FULLSCREEN_DEBUG_TEXTURE 1
 
 // ASYNC / THREADED LOADING SWITCHES
@@ -529,7 +529,12 @@ bool Engine::LoadShaders()
 #endif
 	}}
 	}},
-		ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", SHADER_STAGE_VS)},
+		ShaderDesc{ "DepthShader"           , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", SHADER_STAGE_VS)},
+		ShaderDesc{ "DepthShader_Instanced" , ShaderStageDesc{"DepthShader_vs.hlsl", {
+			ShaderMacro{ "INSTANCED"     , "1" },
+			ShaderMacro{ "INSTANCE_COUNT", std::to_string(MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS) }
+		}}
+	},
 	};
 		
 	// todo: do not depend on array index, use a lookup, remove s_shaders[]
@@ -710,101 +715,112 @@ void Engine::HandleInput()
 	}
 
 	// The following input will not be handled if the engine is currently loading a level
-	//
-	if (!mbLoading)
-	{
-		if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
+	if (mbLoading)
+		return;
+
+	// ----------------------------------------------------------------------------------------------
+
+	if (mpInput->IsKeyTriggered("\\")) mpRenderer->ReloadShaders();
 
 #if SSAO_DEBUGGING
-		// todo: wire this to some UI text/control
-		if (mEngineConfig.bSSAO)
+	// todo: wire this to some UI text/control
+	if (mEngineConfig.bSSAO)
+	{
+		if (mpInput->IsKeyDown("Shift") && mpInput->IsKeyDown("Ctrl"))
 		{
-			if (mpInput->IsKeyDown("Shift") && mpInput->IsKeyDown("Ctrl"))
-			{
-				if (mpInput->IsScrollUp())		mAOPass.ChangeAOTechnique(+1);
-				if (mpInput->IsScrollDown())	mAOPass.ChangeAOTechnique(-1);
-			}
-			else if (mpInput->IsKeyDown("Shift"))
-			{
-				const float step = 0.1f;
-				if (mpInput->IsScrollUp()) { mAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mAOPass.intensity); }
-				if (mpInput->IsScrollDown()) { mAOPass.intensity -= step; if (mAOPass.intensity < 0.301) mAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mAOPass.intensity); }
-				//if (mpInput->IsMouseDown(Input::EMouseButtons::MOUSE_BUTTON_MIDDLE)) mAOPass.ChangeAOQuality(-1);
-			}
-			else if (mpInput->IsKeyDown("Ctrl"))
-			{
-				if (mpInput->IsScrollUp())		mAOPass.ChangeBlurQualityLevel(+1);
-				if (mpInput->IsScrollDown())	mAOPass.ChangeBlurQualityLevel(-1);
-			}
-			else
-			{
-				const float step = 0.5f;
-				if (mpInput->IsScrollUp()) { mAOPass.radius += step; Log::Info("SSAO Radius: %.2f", mAOPass.radius); }
-				if (mpInput->IsScrollDown()) { mAOPass.radius -= step; if (mAOPass.radius < 0.301) mAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mAOPass.radius); }
-				//if (mpInput->IsMouseDown(Input::EMouseButtons::MOUSE_BUTTON_MIDDLE)) mAOPass.ChangeAOQuality(+1);
-				if (mpInput->IsKeyTriggered("K")) mAOPass.ChangeAOQuality(+1);
-				if (mpInput->IsKeyTriggered("J")) mAOPass.ChangeAOQuality(-1);
-			}
+			if (mpInput->IsWheelUp())		mAOPass.ChangeAOTechnique(+1);
+			if (mpInput->IsWheelDown())	mAOPass.ChangeAOTechnique(-1);
 		}
+		else if (mpInput->IsKeyDown("Shift"))
+		{
+			const float step = 0.1f;
+			if (mpInput->IsWheelUp()) { mAOPass.intensity += step; Log::Info("SSAO Intensity: %.2f", mAOPass.intensity); }
+			if (mpInput->IsWheelDown()) { mAOPass.intensity -= step; if (mAOPass.intensity < 0.301) mAOPass.intensity = 1.0f; Log::Info("SSAO Intensity: %.2f", mAOPass.intensity); }
+			//if (mpInput->IsMouseDown(Input::EMouseButtons::MOUSE_BUTTON_MIDDLE)) mAOPass.ChangeAOQuality(-1);
+		}
+		else if (mpInput->IsKeyDown("Ctrl"))
+		{
+			if (mpInput->IsWheelUp())		mAOPass.ChangeBlurQualityLevel(+1);
+			if (mpInput->IsWheelDown())	mAOPass.ChangeBlurQualityLevel(-1);
+		}
+		else
+		{
+			const float step = 0.5f;
+			if (mpInput->IsWheelUp()) { mAOPass.radius += step; Log::Info("SSAO Radius: %.2f", mAOPass.radius); }
+			if (mpInput->IsWheelDown()) { mAOPass.radius -= step; if (mAOPass.radius < 0.301) mAOPass.radius = 1.0f; Log::Info("SSAO Radius: %.2f", mAOPass.radius); }
+			//if (mpInput->IsMouseDown(Input::EMouseButtons::MOUSE_BUTTON_MIDDLE)) mAOPass.ChangeAOQuality(+1);
+			if (mpInput->IsKeyTriggered("K")) mAOPass.ChangeAOQuality(+1);
+			if (mpInput->IsKeyTriggered("J")) mAOPass.ChangeAOQuality(-1);
+		}
+	}
 #endif
 
 #if BLOOM_DEBUGGING
-		if (mEngineConfig.bBloom)
-		{
-			Settings::Bloom& bloom = mPostProcessPass._settings.bloom;
-			float& threshold = bloom.brightnessThreshold;
-			int& blurStrength = bloom.blurStrength;
-			const float step = 0.05f;
-			const float threshold_hi = 3.0f;
-			const float threshold_lo = 0.05f;
-			if (mpInput->IsScrollUp()   && !mpInput->IsKeyDown("Shift") && !mpInput->IsKeyDown("Ctrl")) { threshold += step; if (threshold > threshold_hi) threshold = threshold_hi; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
-			if (mpInput->IsScrollDown() && !mpInput->IsKeyDown("Shift") && !mpInput->IsKeyDown("Ctrl")) { threshold -= step; if (threshold < threshold_lo) threshold = threshold_lo; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
-			if (mpInput->IsScrollUp()   && mpInput->IsKeyDown("Shift"))  { blurStrength += 1; Log::Info("Bloom Blur Strength = %d", blurStrength);}
-			if (mpInput->IsScrollDown() && mpInput->IsKeyDown("Shift"))  { blurStrength -= 1; if (blurStrength == 0) blurStrength = 1; Log::Info("Bloom Blur Strength = %d", blurStrength); }
-			if ((mpInput->IsScrollDown() || mpInput->IsScrollUp()) && mpInput->IsKeyDown("Ctrl"))   
-			{ 
-				const int direction = mpInput->IsScrollDown() ? -1 : +1;
-				int nextShader = mPostProcessPass._bloomPass.mSelectedBloomShader + direction;
-				if (nextShader < 0)
-					nextShader = BloomPass::BloomShader::NUM_BLOOM_SHADERS - 1;
-				if (nextShader == BloomPass::BloomShader::NUM_BLOOM_SHADERS)
-					nextShader = 0;
-				mPostProcessPass._bloomPass.mSelectedBloomShader = static_cast<BloomPass::BloomShader>(nextShader);
-			}
+	if (mEngineConfig.bBloom)
+	{
+		Settings::Bloom& bloom = mPostProcessPass._settings.bloom;
+		float& threshold = bloom.brightnessThreshold;
+		int& blurStrength = bloom.blurStrength;
+		const float step = 0.05f;
+		const float threshold_hi = 3.0f;
+		const float threshold_lo = 0.05f;
+		if (mpInput->IsWheelUp()   && !mpInput->IsKeyDown("Shift") && !mpInput->IsKeyDown("Ctrl")) { threshold += step; if (threshold > threshold_hi) threshold = threshold_hi; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+		if (mpInput->IsWheelDown() && !mpInput->IsKeyDown("Shift") && !mpInput->IsKeyDown("Ctrl")) { threshold -= step; if (threshold < threshold_lo) threshold = threshold_lo; Log::Info("Bloom Brightness Cutoff Threshold: %.2f", threshold); }
+		if (mpInput->IsWheelUp()   && mpInput->IsKeyDown("Shift"))  { blurStrength += 1; Log::Info("Bloom Blur Strength = %d", blurStrength);}
+		if (mpInput->IsWheelDown() && mpInput->IsKeyDown("Shift"))  { blurStrength -= 1; if (blurStrength == 0) blurStrength = 1; Log::Info("Bloom Blur Strength = %d", blurStrength); }
+		if ((mpInput->IsWheelDown() || mpInput->IsWheelUp()) && mpInput->IsKeyDown("Ctrl"))   
+		{ 
+			const int direction = mpInput->IsWheelDown() ? -1 : +1;
+			int nextShader = mPostProcessPass._bloomPass.mSelectedBloomShader + direction;
+			if (nextShader < 0)
+				nextShader = BloomPass::BloomShader::NUM_BLOOM_SHADERS - 1;
+			if (nextShader == BloomPass::BloomShader::NUM_BLOOM_SHADERS)
+				nextShader = 0;
+			mPostProcessPass._bloomPass.mSelectedBloomShader = static_cast<BloomPass::BloomShader>(nextShader);
 		}
+	}
 #endif
 
 #if FULLSCREEN_DEBUG_TEXTURE
-		if (mpInput->IsKeyTriggered("Space")) mbOutputDebugTexture = !mbOutputDebugTexture;
+	if (mpInput->IsKeyTriggered("Space")) mbOutputDebugTexture = !mbOutputDebugTexture;
 #endif
-		// SCENE -------------------------------------------------------------
-		if (mpInput->IsKeyTriggered("R"))
-		{
-			if (mpInput->IsKeyDown("Shift")) ReloadScene();
-			else							 mpActiveScene->ResetActiveCamera();
-		}
 
-
-		if (mpInput->IsKeyTriggered("1"))	mLevelLoadQueue.push(0);
-		if (mpInput->IsKeyTriggered("2"))	mLevelLoadQueue.push(1);
-		if (mpInput->IsKeyTriggered("3"))	mLevelLoadQueue.push(2);
-		if (mpInput->IsKeyTriggered("4"))	mLevelLoadQueue.push(3);
-		if (mpInput->IsKeyTriggered("5"))	mLevelLoadQueue.push(4);
-		if (mpInput->IsKeyTriggered("6"))	mLevelLoadQueue.push(5);
-
-
-		// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
-		const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
-		const EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
-			static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
-			);
-
-		EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
-		if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
-		if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
-		if (ENGINE->INP()->IsKeyTriggered("PageUp") || ENGINE->INP()->IsKeyTriggered("PageDown"))
-			mpActiveScene->SetEnvironmentMap(selectedEnvironmentMap);
+#if GBUFFER_DEBUGGING
+	if (mpInput->IsWheelPressed())
+	{
+		mDeferredRenderingPasses.mbUseDepthPrepass = !mDeferredRenderingPasses.mbUseDepthPrepass;
+		Log::Info("GBuffer Depth PrePass: ", (mDeferredRenderingPasses.mbUseDepthPrepass ? "Enabled" : "Disabled"));
 	}
+#endif
+
+	// SCENE -------------------------------------------------------------
+	if (mpInput->IsKeyTriggered("R"))
+	{
+		if (mpInput->IsKeyDown("Shift")) ReloadScene();
+		else							 mpActiveScene->ResetActiveCamera();
+	}
+
+
+	if (mpInput->IsKeyTriggered("1"))	mLevelLoadQueue.push(0);
+	if (mpInput->IsKeyTriggered("2"))	mLevelLoadQueue.push(1);
+	if (mpInput->IsKeyTriggered("3"))	mLevelLoadQueue.push(2);
+	if (mpInput->IsKeyTriggered("4"))	mLevelLoadQueue.push(3);
+	if (mpInput->IsKeyTriggered("5"))	mLevelLoadQueue.push(4);
+	if (mpInput->IsKeyTriggered("6"))	mLevelLoadQueue.push(5);
+
+
+	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
+	const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
+	const EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
+		static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
+		);
+
+	EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
+	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
+	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
+	if (ENGINE->INP()->IsKeyTriggered("PageUp") || ENGINE->INP()->IsKeyTriggered("PageDown"))
+		mpActiveScene->SetEnvironmentMap(selectedEnvironmentMap);
+	
 }
 
 void Engine::CalcFrameStats(float dt)

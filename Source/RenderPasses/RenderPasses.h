@@ -32,6 +32,44 @@
 #include <memory>
 #include <unordered_map>
 
+
+// ===========================================================================================
+// DEBUGGING
+// ===========================================================================================
+//
+// Engine will be updating the values during Engine::HandleInput() and output values
+// to the console / file log.
+
+#define SSAO_DEBUGGING 0
+//
+// wheel up/down             : radius +/-
+// shift+ wheel up/down      : intensity +/-
+// ctrl + wheel up/down      : ssao quality
+// ctrl+shift+ wheel up/down : AO Technique selection +/-
+// k/j                       : AO quality (# taps) +/-
+
+#define BLOOM_DEBUGGING 0
+//
+// wheel up/down             : brightness threshold +/-
+// shift+ wheel up/down      : blur strength +/-
+// ctrl + wheel up/down      : shader selection +/-
+
+#define GBUFFER_DEBUGGING 0
+//
+// wheel press               : toggle depth pre-pass
+
+// ===========================================================================================
+
+
+// current implementation employs the same logic for the
+// game-object level object batching. however, we're using
+// mesh-level instancing: this results in a very large number
+// of transformation matrix constant buffer updates per mesh.
+//
+#define SHADOW_PASS_USE_INSTANCED_DRAW_DATA 1
+
+
+
 using std::shared_ptr;
 
 class Camera;
@@ -72,15 +110,8 @@ struct RenderPass
 };
 
 
-// current implementation employs the same logic for the
-// game-object level object batching. however, we're using
-// mesh-level instancing: this results in a very large number
-// of transformation matrix constant buffer updates per mesh.
-//
-#define SHADOW_PASS_USE_INSTANCED_DRAW_DATA 1
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-
 struct MeshDrawData
 {
 	void AddMeshTransformation(MeshID meshID, const XMMATRIX& matTransform)
@@ -94,6 +125,11 @@ struct MeshDrawData
 			meshTransformListLookup[meshID].push_back(matTransform);
 		}
 	}
+
+	// Note:
+	//
+	// may result in a lot of XMMATRIX copies, we can use ID's to keep
+	// track of matrices instead of storing one per mesh.
 	std::unordered_map<MeshID, std::vector<XMMATRIX>> meshTransformListLookup;
 };
 #else
@@ -108,9 +144,15 @@ struct MeshDrawData
 	const GameObject* pObj;
 #endif
 };
-#endif
+#endif // SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 
 using DepthTargetIDArray = std::vector<DepthTargetID>;
+
+constexpr int MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS = 256;
+struct DepthOnlyPass_PerObjectMatrices             { XMMATRIX wvp; };
+struct DepthOnlyPass_PerObjectMatricesCubemap      { XMMATRIX matWorld; XMMATRIX wvp; };
+struct DepthOnlyPass_InstancedObjectCBuffer        { DepthOnlyPass_PerObjectMatrices        objMatrices[MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS]; };
+struct DepthOnlyPass_InstancedObjectCubemapCBuffer { DepthOnlyPass_PerObjectMatricesCubemap objMatrices[MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS]; };
 struct ShadowMapPass : public RenderPass
 {
 	ShadowMapPass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
@@ -266,6 +308,7 @@ struct DeferredRenderingPasses : public RenderPass
 
 	GBuffer _GBuffer;
 	DepthStencilStateID _geometryStencilState;
+	DepthStencilStateID _geometryStencilStatePreZ;
 	ShaderID			_geometryShader;
 	ShaderID			_geometryInstancedShader;
 	ShaderID			_ambientShader;
@@ -277,6 +320,11 @@ struct DeferredRenderingPasses : public RenderPass
 	// todo
 	ShaderID			_spotLightShader;
 	ShaderID			_pointLightShader;
+
+	// implemented depth prepass for testing purposes.
+	// enabling this will make GBuffer pass almost twice as slow as the bottleneck 
+	// is not the PS calculations, but rather the pass looks memory bandwidth-limited.
+	bool mbUseDepthPrepass = false;
 };
 
 struct ForwardLightingPass : public RenderPass
@@ -309,24 +357,6 @@ struct DebugPass : public RenderPass
 	RasterizerStateID _scissorsRasterizer;
 };
 
-// Engine will be updating the values in Engine::HandleInput()
-//--------------------------------------------------------------------------------------------
-#define SSAO_DEBUGGING 0
-//
-// wheel up/down             : radius +/-
-// shift+ wheel up/down      : intensity +/-
-// ctrl + wheel up/down      : ssao quality
-// ctrl+shift+ wheel up/down : AO Technique selection +/-
-// k/j                       : AO quality (# taps) +/-
-//
-//
-#define BLOOM_DEBUGGING 0
-//
-// wheel up/down             : brightness threshold +/-
-// shift+ wheel up/down      : blur strength +/-
-// ctrl + wheel up/down      : shader selection +/-
-
-//--------------------------------------------------------------------------------------------
 
 // learnopengl:			https://learnopengl.com/#!Advanced-Lighting/SSAO
 // Blizzard Dev Paper:	http://developer.amd.com/wordpress/media/2012/10/S2008-Filion-McNaughton-StarCraftII.pdf

@@ -154,17 +154,23 @@ void Input::UpdateMousePos(long x, long y, short scroll)
 		m_mousePos[0], m_mousePos[1],
 		(int)scroll);
 #endif
+
 	m_mouseScroll = scroll;
 }
 
-bool Input::IsScrollUp() const
+bool Input::IsWheelUp() const
 {
 	return m_mouseScroll > 0 && !m_bIgnoreInput;
 }
 
-bool Input::IsScrollDown() const
+bool Input::IsWheelDown() const
 {
 	return m_mouseScroll < 0 && !m_bIgnoreInput;
+}
+
+bool Input::IsWheelPressed() const
+{
+	return m_buttons[16];
 }
 
 bool Input::IsKeyDown(KeyCode key) const

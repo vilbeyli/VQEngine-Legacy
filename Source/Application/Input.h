@@ -67,8 +67,9 @@ public:
 	bool IsKeyTriggered(const std::string&) const;
 	int  MouseDeltaX() const;
 	int  MouseDeltaY() const;
-	bool IsScrollUp() const;
-	bool IsScrollDown() const;
+	bool IsWheelUp() const;
+	bool IsWheelDown() const;
+	bool IsWheelPressed() const;
 
 	void PostUpdate();
 	const long* GetDelta() const;

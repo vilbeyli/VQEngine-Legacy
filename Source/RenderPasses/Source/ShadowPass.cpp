@@ -49,7 +49,6 @@ MeshDrawData::MeshDrawData()
 {}
 #endif
 
-constexpr int DRAW_INSTANCED_COUNT_DEPTH_PASS = 256;
 
 
 vec2 ShadowMapPass::GetDirectionalShadowMapDimensions(Renderer* pRenderer) const
@@ -67,20 +66,13 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, const Settings::ShadowMap& s
 {
 	this->mpRenderer = pRenderer;
 	this->mShadowMapShader = EShaders::SHADOWMAP_DEPTH;
-	const ShaderDesc instancedShaderDesc = { "DepthShader",
-		ShaderStageDesc{"DepthShader_vs.hlsl", {
-			ShaderMacro{ "INSTANCED"     , "1" },
-			ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) }
-		}},
-		//ShaderStageDesc{"DepthShader_ps.hlsl" , {} }
-	};
-	this->mShadowMapShaderInstanced = pRenderer->CreateShader(instancedShaderDesc);
+	this->mShadowMapShaderInstanced = EShaders::SHADOWMAP_DEPTH_INSTANCED;
 
 	const ShaderDesc cubemapDepthShaderDesc = { "ShadowCubeMapShader",
 		ShaderStageDesc{"ShadowCubeMapShader_vs.hlsl", {
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 			ShaderMacro{ "INSTANCED"     , "1" },
-			ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) }
+			ShaderMacro{ "INSTANCE_COUNT", std::to_string(MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS) }
 #else
 			{}
 #endif
@@ -204,10 +196,6 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(const Settings::ShadowMa
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const
 {
 	//-----------------------------------------------------------------------------------------------
-	struct PerObjectMatrices { XMMATRIX wvp; };
-	struct PerObjectMatricesCubemap { XMMATRIX matWorld; XMMATRIX wvp; };
-	struct InstancedObjectCBuffer { PerObjectMatrices objMatrices[DRAW_INSTANCED_COUNT_DEPTH_PASS]; };
-	struct InstancedObjectCubemapCBuffer { PerObjectMatricesCubemap objMatrices[DRAW_INSTANCED_COUNT_DEPTH_PASS]; };
 	auto Is2DGeometry = [](MeshID mesh)
 	{
 		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
@@ -219,12 +207,12 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 
 		if (bIsCubemap)
 		{
-			const PerObjectMatricesCubemap objMats = PerObjectMatricesCubemap({ matWorld, matWorld * viewProj });
+			const DepthOnlyPass_PerObjectMatricesCubemap objMats = DepthOnlyPass_PerObjectMatricesCubemap({ matWorld, matWorld * viewProj });
 			pRenderer->SetConstantStruct("ObjMats", &objMats);
 		}
 		else
 		{
-			const PerObjectMatrices objMats = PerObjectMatrices({ matWorld * viewProj });
+			const DepthOnlyPass_PerObjectMatrices objMats = DepthOnlyPass_PerObjectMatrices({ matWorld * viewProj });
 			pRenderer->SetConstantStruct("ObjMats", &objMats);
 		}
 		std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
@@ -369,7 +357,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		pRenderer->SetShader(mShadowMapShaderInstanced);
 		pRenderer->BindDepthTarget(mDepthTarget_Directional);
 
-		InstancedObjectCBuffer cbuffer;
+		DepthOnlyPass_InstancedObjectCBuffer cbuffer;
 		for (const RenderListLookupEntry& MeshID_RenderList : shadowView.RenderListsPerMeshType)
 		{
 			const MeshID& mesh = MeshID_RenderList.first;
@@ -386,9 +374,9 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			do
 			{
 				int instanceID = 0;
-				for (; instanceID < DRAW_INSTANCED_COUNT_DEPTH_PASS; ++instanceID)
+				for (; instanceID < MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS; ++instanceID)
 				{
-					const int renderListIndex = DRAW_INSTANCED_COUNT_DEPTH_PASS * batchCount + instanceID;
+					const int renderListIndex = MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS * batchCount + instanceID;
 					if (renderListIndex == renderList.size())
 						break;
 
@@ -401,7 +389,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 				pRenderer->SetConstantStruct("ObjMats", &cbuffer);
 				pRenderer->Apply();
 				pRenderer->DrawIndexedInstanced(instanceID);
-			} while (batchCount++ < renderList.size() / DRAW_INSTANCED_COUNT_DEPTH_PASS);
+			} while (batchCount++ < renderList.size() / MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS);
 		}
 
 		pRenderer->EndEvent();
@@ -440,7 +428,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		_cbLight.lightPosition_farPlane = vec4(shadowView.points[i]->mTransform._position, shadowView.points[i]->mRange);
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-		InstancedObjectCubemapCBuffer cbuffer;
+		DepthOnlyPass_InstancedObjectCubemapCBuffer cbuffer;
 #endif		
 
 		// render objects for each face
@@ -472,13 +460,13 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 				do
 				{
 					int instanceID = 0;
-					for (; instanceID < DRAW_INSTANCED_COUNT_DEPTH_PASS; ++instanceID)
+					for (; instanceID < MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS; ++instanceID)
 					{
-						const int renderListIndex = DRAW_INSTANCED_COUNT_DEPTH_PASS * batchCount + instanceID;
+						const int renderListIndex = MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS * batchCount + instanceID;
 						if (renderListIndex == meshInstanceCount)
 							break;
 
-						cbuffer.objMatrices[instanceID] = PerObjectMatricesCubemap
+						cbuffer.objMatrices[instanceID] = DepthOnlyPass_PerObjectMatricesCubemap
 						{
 							f.second[renderListIndex],
 							f.second[renderListIndex] * viewProj
@@ -488,7 +476,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 					pRenderer->SetConstantStruct("ObjMats", &cbuffer);
 					pRenderer->Apply();
 					pRenderer->DrawIndexedInstanced(instanceID);
-				} while (batchCount++ < meshInstanceCount / DRAW_INSTANCED_COUNT_DEPTH_PASS);
+				} while (batchCount++ < meshInstanceCount / MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS);
 			}
 			
 #else

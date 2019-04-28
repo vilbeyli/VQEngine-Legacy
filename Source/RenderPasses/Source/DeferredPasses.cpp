@@ -144,6 +144,12 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 		desc.StencilWriteMask = 0xFF;
 
 		_geometryStencilState = pRenderer->AddDepthStencilState(desc);
+
+		desc.StencilEnable = false;
+		desc.DepthEnable = true;
+		desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+		desc.DepthFunc = D3D11_COMPARISON_EQUAL;
+		_geometryStencilStatePreZ = pRenderer->AddDepthStencilState(desc);
 	}
 
 }
@@ -206,6 +212,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 				material = pMat->GetShaderFriendlyStruct();
 				pRenderer->SetConstantStruct("surfaceMaterial", &material);
 				pRenderer->SetConstantStruct("ObjMatrices", &mats);
+
 				// #TODO: this is duplicate code, see Forward.
 				pRenderer->SetSamplerState("sAnisoSampler", EDefaultSamplerState::ANISOTROPIC_4_WRAPPED_SAMPLER);
 				if (pMat->diffuseMap >= 0)		pRenderer->SetTexture("texDiffuseMap", pMat->diffuseMap);
@@ -230,22 +237,164 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 			pRenderer->SetIndexBuffer(IABuffer.second);
 			pRenderer->Apply();
 			pRenderer->DrawIndexed();
-		};
+		}
+	};
+	auto RenderObject_DepthOnly = [&](const GameObject* pObj)
+	{
+		const Transform& tf = pObj->GetTransform();
+		const ModelData& model = pObj->GetModelData();
+
+		const XMMATRIX wvp = tf.WorldTransformationMatrix() * sceneView.viewProj;
+		const DepthOnlyPass_PerObjectMatrices objMats = DepthOnlyPass_PerObjectMatrices({ wvp });
+
+		pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+
+		SurfaceMaterial material;
+		for (MeshID id : model.mMeshIDs)
+		{
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(pScene, id);
+
+			// SET MATERIAL CONSTANT BUFFER & TEXTURES
+			//
+			const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(id) != model.mMaterialLookupPerMesh.end();
+			if (bMeshHasMaterial)
+			{
+				const MaterialID materialID = model.mMaterialLookupPerMesh.at(id);
+				const Material* pMat = SceneResourceView::GetMaterial(pScene, materialID);
+
+				// #TODO: uncomment below when transparency is implemented.
+				//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
+				//	return;
+#if 0
+				material = pMat->GetShaderFriendlyStruct();
+				pRenderer->SetConstantStruct("surfaceMaterial", &material);
+				pRenderer->SetSamplerState("sAnisoSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+				if (pMat->diffuseMap >= 0)		pRenderer->SetTexture("texDiffuseMap", pMat->diffuseMap);
+				if (pMat->mask >= 0)			pRenderer->SetTexture("texAlphaMask", pMat->mask);
+#if ENABLE_PARALLAX_MAPPING
+				if (pMat->heightMap >= 0)		pRenderer->SetTexture("texHeightMap", pMat->heightMap);
+#endif
+				if (pMat->emissiveMap >= 0)		pRenderer->SetTexture("texEmissiveMap", pMat->emissiveMap);
+				pRenderer->SetConstant1f("BRDFOrPhong", 1.0f);	// assume brdf for now
+#endif
+			}
+
+			pRenderer->SetConstantStruct("ObjMats", &objMats);
+
+			pRenderer->SetVertexBuffer(IABuffer.first);
+			pRenderer->SetIndexBuffer(IABuffer.second);
+			pRenderer->Apply();
+			pRenderer->DrawIndexed();
+		}
 	};
 	//--------------------------------------------------------------------------------------------------------------------
 
-	const bool bDoClearColor = true;
-	const bool bDoClearDepth = true;
-	const bool bDoClearStencil = true;
+	bool bDoClearColor = !this->mbUseDepthPrepass; // do not clear color if depth pre-pass
+	bool bDoClearDepth = true;
+	bool bDoClearStencil = true;
 	ClearCommand clearCmd(
 		bDoClearColor, bDoClearDepth, bDoClearStencil,
 		{ 0, 0, 0, 0 }, 1, 0
 	);
+	
+	if (this->mbUseDepthPrepass)
+	{
+		pRenderer->BeginEvent("GBuffer::DepthPrePass");
+		pRenderer->SetShader(EShaders::SHADOWMAP_DEPTH);
+		pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
+		pRenderer->SetDepthStencilState(_geometryStencilState);
+		pRenderer->BeginRender(clearCmd);
+		pRenderer->Apply();
+
+		// RENDER NON-INSTANCED SCENE OBJECTS
+		//
+		int numObj = 0;
+		for (const auto* obj : sceneView.culledOpaqueList)
+		{
+			RenderObject_DepthOnly(obj);
+			++numObj;
+		}
+
+
+		// RENDER INSTANCED SCENE OBJECTS
+		//
+		pRenderer->SetShader(EShaders::SHADOWMAP_DEPTH_INSTANCED);
+
+		//InstancedObjectMatrices<DRAW_INSTANCED_COUNT_GBUFFER_PASS> cbufferMatrices;
+		//InstancedGbufferObjectMaterials cbufferMaterials;
+
+
+		DepthOnlyPass_InstancedObjectCBuffer cbuffer;
+
+		for (const RenderListLookupEntry& MeshID_RenderList : sceneView.culluedOpaqueInstancedRenderListLookup)
+		{
+			const MeshID& meshID = MeshID_RenderList.first;
+			const RenderList& renderList = MeshID_RenderList.second;
+
+			const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(pScene, meshID);
+
+			pRenderer->SetRasterizerState(rasterizerState);
+			pRenderer->SetVertexBuffer(IABuffer.first);
+			pRenderer->SetIndexBuffer(IABuffer.second);
+
+			int batchCount = 0;
+			do
+			{
+				int instanceID = 0;
+				for (; instanceID < DRAW_INSTANCED_COUNT_GBUFFER_PASS; ++instanceID)
+				{
+					const int renderListIndex = DRAW_INSTANCED_COUNT_GBUFFER_PASS * batchCount + instanceID;
+					if (renderListIndex == renderList.size())
+						break;
+
+					const GameObject* pObj = renderList[renderListIndex];
+					const Transform& tf = pObj->GetTransform();
+					const ModelData& model = pObj->GetModelData();
+
+					const XMMATRIX world = tf.WorldTransformationMatrix();
+					cbuffer.objMatrices[instanceID] =
+					{
+						world * sceneView.viewProj,
+					};
+
+					const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(meshID) != model.mMaterialLookupPerMesh.end();
+					if (bMeshHasMaterial)
+					{
+						const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
+						const Material* pMat = SceneResourceView::GetMaterial(pScene, materialID);
+
+						// TODO: figure out of the object has alpha and use a non-null PS.
+						//       opaque objects are drawn without PS.
+					}
+				}
+				//pRenderer->SetConstantStruct("surfaceMaterial", &cbufferMaterials);
+				//pRenderer->SetConstant1f("BRDFOrPhong", 1.0f);	// assume brdf for now
+
+				pRenderer->SetConstantStruct("ObjMats", &cbuffer);
+				pRenderer->Apply();
+				pRenderer->DrawIndexedInstanced(instanceID);
+			} while (batchCount++ < renderList.size() / DRAW_INSTANCED_COUNT_GBUFFER_PASS);
+		}
+
+		// set the clear command for the main GBuffer pass next
+		bDoClearDepth = false;
+		bDoClearStencil = false;
+		bDoClearColor = true;
+		clearCmd = ClearCommand(
+			bDoClearColor, bDoClearDepth, bDoClearStencil,
+			{ 0, 0, 0, 0 }, 1, 0
+		);
+		pRenderer->EndEvent();
+	}
+
+
 
 	pRenderer->SetShader(_geometryShader);
 	pRenderer->BindRenderTargets(_GBuffer.mRTDiffuseRoughness, _GBuffer.mRTSpecularMetallic, _GBuffer.mRTNormals, _GBuffer.mRTEmissive);
-	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
-	pRenderer->SetDepthStencilState(_geometryStencilState);
+	if(!this->mbUseDepthPrepass)
+		pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
+	pRenderer->SetDepthStencilState(this->mbUseDepthPrepass ? _geometryStencilStatePreZ : _geometryStencilState);
 	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
 	pRenderer->BeginRender(clearCmd);
 	pRenderer->Apply();

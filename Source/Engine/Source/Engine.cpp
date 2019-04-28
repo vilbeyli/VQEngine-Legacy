@@ -529,7 +529,7 @@ bool Engine::LoadShaders()
 #endif
 	}}
 	}},
-		ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", VS_PS)},
+		ShaderDesc{ "DepthShader"       , ShaderDesc::CreateStageDescsFromShaderName("DepthShader", SHADER_STAGE_VS)},
 	};
 		
 	// todo: do not depend on array index, use a lookup, remove s_shaders[]

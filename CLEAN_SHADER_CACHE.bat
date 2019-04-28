@@ -17,7 +17,7 @@
 :: 
 :: 	Contact: volkanilbeyli@gmail.com
 
-set CACHE_DIR="%APPDATA%\VQEngine\ShaderCache\"
+set CACHE_DIR="%LOCALAPPDATA%\VQEngine\ShaderCache\"
 if exist %CACHE_DIR% (
     echo Cleaning up shader cache...
     pushd %CACHE_DIR%

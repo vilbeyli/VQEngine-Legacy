@@ -72,7 +72,7 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, const Settings::ShadowMap& s
 			ShaderMacro{ "INSTANCED"     , "1" },
 			ShaderMacro{ "INSTANCE_COUNT", std::to_string(DRAW_INSTANCED_COUNT_DEPTH_PASS) }
 		}},
-		ShaderStageDesc{"DepthShader_ps.hlsl" , {} }
+		//ShaderStageDesc{"DepthShader_ps.hlsl" , {} }
 	};
 	this->mShadowMapShaderInstanced = pRenderer->CreateShader(instancedShaderDesc);
 
@@ -85,7 +85,6 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, const Settings::ShadowMap& s
 			{}
 #endif
 		}}
-		// TODO: Null PS
 		, ShaderStageDesc{"ShadowCubeMapShader_ps.hlsl" , {} }
 	};
 	this->mShadowCubeMapShader = pRenderer->CreateShader(cubemapDepthShaderDesc);

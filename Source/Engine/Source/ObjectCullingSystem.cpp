@@ -17,6 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 
+#include "ObjectCullingSystem.h"
 #include "GameObject.h"
 //#include "Utilities/vectormath.h"
 
@@ -114,7 +115,7 @@ namespace VQEngine
 		MeshDrawData& meshDrawData
 	)
 	{
-		size_t numCulled = 0;
+		size_t numCulled = pObj->GetModelData().mMeshIDs.size();
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 		const XMMATRIX  matWorld = pObj->GetTransform().WorldTransformationMatrix();
@@ -140,20 +141,60 @@ namespace VQEngine
 #else
 				meshDrawData.meshIDs.push_back(meshID);
 #endif
+				// we initially assumed we culled everything, so we correct 
+				// the assumption here by decrementing the number of culled.
+				--numCulled;
 			}
-			else
-				++numCulled;
 		}
 		return numCulled;
 	}
 
+	static std::vector<int> indicesOfVisibleMeshes(5000, -1);
 
+#if 0
+	size_t CullMeshes(CullMeshData& data)
+	{
+		const size_t numWorkItems = data.pLocalSpaceBoundingBoxes->size();
+		size_t numCulled = numWorkItems;
 
+		// shorthands
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+		const XMMATRIX&  matWorld = data.matWorld;
+#else
+		meshDrawData.matWorld = data.matWorld;
+		const XMMATRIX& matWorld = meshDrawData.matWorld;
+#endif
 
-	//size_t CullMeshes(const FrustumPlaneset& frustumPlanes, const VQEngine::GameObjectCullData& param, MeshDrawData& meshDrawData)
-	//{
-	//
-	//}
+		// container resize if necessary
+		if (indicesOfVisibleMeshes.size() < numWorkItems)
+		{
+			indicesOfVisibleMeshes.resize(numWorkItems, -1);
+		}
+		int currOutputIndex = 0;
+
+		// transform BB and Cull
+		for (int currMeshIDIndex =0; currMeshIDIndex <numWorkItems; ++currMeshIDIndex)
+		{
+			BoundingBox BB = (*data.pLocalSpaceBoundingBoxes)[currMeshIDIndex];
+			BB.low = XMVector4Transform(vec4(BB.low, 1.0f), matWorld);
+			BB.hi = XMVector4Transform(vec4(BB.hi, 1.0f), matWorld); // world space BB
+			if (IsVisible(data.frustumPlanes, BB))
+			{
+				indicesOfVisibleMeshes[currOutputIndex++] = currMeshIDIndex;
+
+				// we initially assumed we culled everything, so we correct 
+				// the assumption here by decrementing the number of culled.
+				--numCulled;
+			}
+		}
+		for (int i = 0; i < currOutputIndex; ++i)
+		{
+			data.pMeshDrawData->AddMeshTransformation((*data.pMeshIDs)[indicesOfVisibleMeshes[i]], matWorld);
+		}
+
+		return numCulled;
+	}
+#endif
 
 	size_t CullGameObjects(
 		const FrustumPlaneset&                  frustumPlanes
@@ -173,10 +214,10 @@ namespace VQEngine
 #if 1
 				// transform low and high points of the bounding box: model->world
 				return BoundingBox(
-					{
-						XMVector4Transform(vec4(aabb_local.low, 1.0f), world),
-						XMVector4Transform(vec4(aabb_local.hi , 1.0f), world)
-					});
+				{
+					XMVector4Transform(vec4(aabb_local.low, 1.0f), world),
+					XMVector4Transform(vec4(aabb_local.hi , 1.0f), world)
+				});
 #else
 				//----------------------------------------------------------------------------------
 				// TODO: there's an error in the code below. 

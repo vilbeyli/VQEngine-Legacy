@@ -34,15 +34,15 @@ using RenderList = std::vector<const GameObject*>;
 using MeshDrawList = std::vector<MeshDrawData>;
 #endif
 
-using RenderListLookup = std::unordered_map<MeshID, RenderList>;
-using LightRenderListLookup = std::unordered_map<const Light*, RenderList>;
-using PointLightRenderListLookup = std::unordered_map<const Light*, std::array<RenderList, 6>>;
+using RenderListLookup                = std::unordered_map<MeshID, RenderList>;
+using LightRenderListLookup           = std::unordered_map<const Light*, RenderList>;
+using PointLightRenderListLookup      = std::unordered_map<const Light*, std::array<RenderList, 6>>;
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-using PointLightMeshDrawListLookup = std::unordered_map < const Light*, std::array<MeshDrawData, 6>>;
+using PointLightMeshDrawListLookup    = std::unordered_map < const Light*, std::array<MeshDrawData, 6>>;
 #else
-using PointLightMeshDrawListLookup = std::unordered_map<const Light*, std::array<MeshDrawList, 6>>;
+using PointLightMeshDrawListLookup    = std::unordered_map<const Light*, std::array<MeshDrawList, 6>>;
 #endif
-using LightInstancedRenderListLookup = std::unordered_map<const Light*, RenderListLookup>;
+using LightInstancedRenderListLookup   = std::unordered_map<const Light*, RenderListLookup>;
 
 using RenderListLookupEntry = std::pair<MeshID, RenderList>;
 

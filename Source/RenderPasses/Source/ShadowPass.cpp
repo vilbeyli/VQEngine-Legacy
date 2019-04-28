@@ -84,8 +84,9 @@ void ShadowMapPass::Initialize(Renderer* pRenderer, const Settings::ShadowMap& s
 #else
 			{}
 #endif
-		}},
-		ShaderStageDesc{"ShadowCubeMapShader_ps.hlsl" , {} }
+		}}
+		// TODO: Null PS
+		, ShaderStageDesc{"ShadowCubeMapShader_ps.hlsl" , {} }
 	};
 	this->mShadowCubeMapShader = pRenderer->CreateShader(cubemapDepthShaderDesc);
 

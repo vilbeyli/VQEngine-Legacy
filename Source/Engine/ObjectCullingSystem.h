@@ -19,12 +19,33 @@
 
 #include <vector>
 
-struct BoundingBox;
+#include "Application/HandleTypedefs.h"
+
+#include "Utilities/vectormath.h"
+
 struct FrustumPlaneset;
 struct vec3;
 struct MeshDrawData;
 
 class GameObject;
+
+
+struct BoundingBox
+{
+	vec3 low = vec3::Zero;
+	vec3 hi = vec3::Zero;
+	DirectX::XMMATRIX GetWorldTransformationMatrix() const;
+};
+
+struct CullMeshData
+{
+	FrustumPlaneset frustumPlanes;
+	XMMATRIX matWorld; // rename to matTransform to be more generic?
+	const std::vector<BoundingBox>* pLocalSpaceBoundingBoxes;
+
+	const std::vector<MeshID>* pMeshIDs;
+	MeshDrawData* pMeshDrawData;
+};
 
 namespace VQEngine
 {
@@ -32,7 +53,13 @@ namespace VQEngine
 
 	bool IsVisible(const FrustumPlaneset& frustum, const BoundingBox& aabb);
 
+	// deprecated
 	size_t CullMeshes(const FrustumPlaneset& frustumPlanes, const GameObject* pObj, MeshDrawData& meshDrawData);
+
+
+	// returns the indices of visible bounding boxes
+	//
+	std::vector<int> CullMeshes(CullMeshData& data);
 
 	size_t CullGameObjects
 	(

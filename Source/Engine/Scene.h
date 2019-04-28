@@ -93,9 +93,18 @@ protected:
 
 	//------------------------------------------------------------------------
 
+	//
+	// SCENE RESOURCE MANAGEMENT
+	//
+
 	//	Use this function to programmatically create new objects in the scene.
 	//
 	GameObject* CreateNewGameObject();
+
+	// Adds a light to the scene resources. Scene manager differentiates between
+	// static and dynamic (moving and non-moving) lights for optimization reasons.
+	//
+	void AddLight(const Light& l);
 
 	// Use this function to programmatically create new lights in the scene.
 	// TODO: finalize design after light refactor
@@ -155,6 +164,8 @@ public:
 	//
 	int RenderDebug(const XMMATRIX& viewProj) const;
 
+	void RenderLights() const;
+
 	//	Use these functions to programmatically create material instances which you can add to game objects in the scene. 
 	//
 	Material* CreateNewMaterial(EMaterialType type); // <Thread safe>
@@ -163,6 +174,7 @@ public:
 	inline const EnvironmentMap&		GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }
 	inline const Camera&				GetActiveCamera() const { return mCameras[mSelectedCamera]; }
 	inline const Settings::SceneRender& GetSceneRenderSettings() const { return mSceneRenderSettings; }
+	inline const std::vector<Light>&	GetDynamicLights() { return mLightsDynamic; }
 	inline bool							HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
 	inline void							RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
 	inline EEnvironmentMapPresets		GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
@@ -185,7 +197,54 @@ protected:
 	// scene resource containers
 	std::vector<Mesh>			mMeshes;
 	std::vector<Camera>			mCameras;
-	std::vector<Light>			mLights;
+
+private:
+	struct ShadowingLightIndexCollection
+	{
+		inline void Clear() { spotLightIndices.clear(); pointLightIndices.clear(); }
+		std::vector<int> spotLightIndices;
+		std::vector<int> pointLightIndices;
+	};
+	struct SceneShadowingLightIndexCollection
+	{
+		inline void Clear() { mStaticLights.Clear(); mDynamicLights.Clear(); }
+		inline size_t GetLightCount(Light::ELightType type) const
+		{
+			switch (type)
+			{
+			case Light::POINT: return mStaticLights.pointLightIndices.size() + mDynamicLights.pointLightIndices.size(); break;
+			case Light::SPOT : return mStaticLights.spotLightIndices.size()  + mDynamicLights.spotLightIndices.size() ; break;
+			default          : return 0; break;
+			}
+		}
+		inline std::vector<const Light*> GetFlattenedListOfLights(const std::vector<Light>& staticLights, const std::vector<Light>& dynamicLights) const
+		{
+			std::vector<const Light*> pLights;
+			for (int i : mStaticLights.spotLightIndices)   pLights.push_back(&staticLights[i]);
+			for (int i : mStaticLights.pointLightIndices)  pLights.push_back(&staticLights[i]);
+			for (int i : mDynamicLights.spotLightIndices)  pLights.push_back(&dynamicLights[i]);
+			for (int i : mDynamicLights.pointLightIndices) pLights.push_back(&dynamicLights[i]);
+			return pLights;
+		}
+		ShadowingLightIndexCollection mStaticLights;
+		ShadowingLightIndexCollection mDynamicLights;
+	};
+
+	// Static lights will not change position or orientation.
+	//
+	struct StaticLightCache
+	{
+		std::unordered_map<const Light*, std::array<FrustumPlaneset, 6>> mStaticPointLightFrustumPlanes;
+		std::unordered_map<const Light*, FrustumPlaneset               > mStaticSpotLightFrustumPlanes;
+		void Clear() { mStaticPointLightFrustumPlanes.clear(); mStaticSpotLightFrustumPlanes.clear(); }
+	};
+
+	std::vector<Light>			mLightsStatic;  // non-moving lights
+	std::vector<Light>			mLightsDynamic; // moving lights
+	StaticLightCache			mStaticLightCache;
+
+	
+protected:
 	std::vector<GameObject*>	mpObjects;
 	
 	// scene state
@@ -224,6 +283,8 @@ private:
 	void StartLoadingModels();
 	void EndLoadingModels();
 
+	void AddStaticLight(const Light& l);
+	void AddDynamicLight(const Light& l);
 
 	//-------------------------------
 	// PreRender() ROUTINES
@@ -235,14 +296,17 @@ private:
 
 	void SortRenderLists(std::vector <const GameObject*>& mainViewShadowCasterRenderList, std::vector<const Light*>& pShadowingLights);
 
-	std::vector<const Light*> CullLights(int& outNumCulledPoints, int& outNumCulledSpots); // culls lights against main view
+	SceneShadowingLightIndexCollection CullShadowingLights(int& outNumCulledPoints, int& outNumCulledSpots); // culls lights against main view
 	std::vector<const GameObject*> FrustumCullMainView(int& outNumCulledObjects);
-	void FrustumCullPointAndSpotShadowViews(const std::vector <const GameObject*>& mainViewShadowCasterRenderList, std::vector<const Light*>& pShadowingLights, FrameStats& stats);
+	void FrustumCullPointAndSpotShadowViews(const std::vector <const GameObject*>& mainViewShadowCasterRenderList, const SceneShadowingLightIndexCollection& shadowingLightIndices, FrameStats& stats);
 	void OcclusionCullDirectionalLightView();
 
 	void BatchMainViewRenderList(const std::vector<const GameObject*> mainViewRenderList);
 	void BatchShadowViewRenderLists(const std::vector <const GameObject*>& mainViewShadowCasterRenderList);
 	//-------------------------------
+
+	void SetLightCache();
+	void ClearLights();
 
 	int mForceLODLevel = 0;
 };

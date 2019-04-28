@@ -114,6 +114,12 @@ void CPUProfiler::EndEntry()
 		return;
 	}
 
+	if (mState.EntryNameStack.empty())
+	{
+		Log::Error("Profiler::EndEntry() called without BeginEntry().");
+		return;
+	}
+
 	std::string entryName = mState.EntryNameStack.top();
 	mState.EntryNameStack.pop();
 

@@ -21,6 +21,8 @@
 #include "Engine/Transform.h"
 #include "Engine/Model.h"
 
+#include "Engine/ObjectCullingSystem.h"
+
 #include <memory>
 
 struct SceneView;
@@ -33,13 +35,6 @@ struct GameObjectRenderSettings
 	bool bRender = true;
 	bool bRenderTBN = false;
 	bool bCastShadow = true;
-};
-
-struct BoundingBox
-{
-	vec3 low = vec3::Zero;
-	vec3 hi = vec3::Zero;
-	DirectX::XMMATRIX GetWorldTransformationMatrix() const;
 };
 
 class GameObject

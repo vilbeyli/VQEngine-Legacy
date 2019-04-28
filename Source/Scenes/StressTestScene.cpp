@@ -73,7 +73,11 @@ constexpr int TEXTURED_OBJECT_PERCENTAGE = 45;
 #define RANDOMIZE_MESH 1
 
 // MODEL
-#define LOAD_MODELS 1			// toggle model loading
+#ifdef _DEBUG
+	#define LOAD_MODELS 0
+#else
+	#define LOAD_MODELS 1			// toggle model loading
+#endif
 #define LOAD_MODELS_ASYNC 1		// 30-40% performance gain with the current test data
 #define LOAD_FREE3D_MODELS 0	// use this flag if you have the assets (Models/free3D/)
 #define USE_SAI_MODELS 0
@@ -119,7 +123,6 @@ void StressTestScene::Load(SerializedScene& scene)
 {
 	pRenderer = mpRenderer;
 
-	AddLights(mLights);
 	SetEnvironmentMap(EEnvironmentMapPresets::BARCELONA);
 
 	AddObjects();
@@ -205,7 +208,6 @@ void StressTestScene::Load(SerializedScene& scene)
 
 void StressTestScene::Unload()
 {
-	mLights.clear();
 	mpTestObjects.clear();
 	objectDisplacements.clear();
 	rotationSpeeds.clear();
@@ -216,14 +218,14 @@ void StressTestScene::Update(float dt)
 	if (ENGINE->INP()->IsKeyTriggered("+"))
 	{
 		if (ENGINE->INP()->IsKeyDown("Shift"))
-			AddLights(mLights);
+			;// AddLights(mLights);
 		else
 			AddObjects();
 	}
 	if (ENGINE->INP()->IsKeyTriggered("-"))
 	{
 		if (ENGINE->INP()->IsKeyDown("Shift"))
-			RemoveLights(mLights);
+			;// RemoveLights(mLights);
 		else
 			RemoveObjects();
 	}
@@ -255,8 +257,10 @@ void StressTestScene::RenderUI() const
 	if (ENGINE->GetSettingShowControls())
 	{
 		const int NumObj = std::accumulate(RANGE(mpObjects), 0, [](int val, const GameObject* o) { return val + (o->mRenderSettings.bRender ? 1 : 0); });
-		const int NumPointLights = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.mType == Light::POINT) ? 1 : 0); });
-		const int NumSpotLights  = std::accumulate(RANGE(mLights), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.mType == Light::ELightType::SPOT) ? 1 : 0); });
+		const int NumPointLightsS = 0;//std::accumulate(RANGE(mLightsStatic) , 0, [](int val, const Light& l) { return val + ((true/*l._bEnabled*/ && l.mType == Light::POINT) ? 1 : 0); });
+		const int NumPointLightsD = 0;//std::accumulate(RANGE(mLightsDynamic), 0, [](int val, const Light& l) { return val + ((true/*l._bEnabled*/ && l.mType == Light::POINT) ? 1 : 0); });
+		const int NumSpotLightsS  = 0;//std::accumulate(RANGE(mLightsStatic) , 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.mType == Light::ELightType::SPOT) ? 1 : 0); });
+		const int NumSpotLightsD  = 0;//std::accumulate(RANGE(mLightsDynamic), 0, [](int val, const Light& l) { return val + ( (true/*l._bEnabled*/ && l.mType == Light::ELightType::SPOT) ? 1 : 0); });
 
 		TextDrawDescription drawDesc;
 		drawDesc.color = vec3(1, 1, 0.3f);
@@ -301,11 +305,11 @@ void StressTestScene::RenderUI() const
 		mpTextRenderer->RenderText(drawDesc);
 
 		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
-		drawDesc.text = std::string("Point Lights: ") + std::to_string(NumPointLights);
+		drawDesc.text = std::string("Point Lights: ") + std::to_string(NumPointLightsS);
 		mpTextRenderer->RenderText(drawDesc);
 
 		drawDesc.screenPosition = vec2(screenPosition.x(), screenPosition.y() + numLine++ * LINE_HEIGHT);
-		drawDesc.text = std::string("Spot Lights: ") + std::to_string(NumSpotLights);
+		drawDesc.text = std::string("Spot Lights: ") + std::to_string(NumSpotLightsS);
 		mpTextRenderer->RenderText(drawDesc);
 	}
 }
@@ -494,6 +498,7 @@ Light CreateRandomPointLight()
 void AddLights(std::vector<Light>& mLights)
 {
 	return;
+#if 0
 	//bool bAllLightsEnabled = std::all_of(RANGE(mLights), [](const Light& l) { return l._bEnabled; });
 	//if (!bAllLightsEnabled)
 	//{
@@ -545,6 +550,7 @@ void AddLights(std::vector<Light>& mLights)
 		l.mTransform.SetUniformScale(0.3f);
 		mLights.push_back(l);
 	}
+#endif
 }
 
 void RemoveLights(std::vector<Light>& mLights)

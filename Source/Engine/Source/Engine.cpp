@@ -1148,8 +1148,7 @@ void Engine::Render()
 		mpGPUProfiler->EndEntry();
 	}
 
-	if(mpActiveScene->mSceneView.bIsIBLEnabled)
-		RenderLights(); // when skymaps are disabled, there's an error here that needs fixing.
+	mpActiveScene->RenderLights(); // when skymaps are disabled, there's an error here that needs fixing.
 
 	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 
@@ -1338,33 +1337,6 @@ void Engine::RenderUI() const
 	mpGPUProfiler->EndEntry();
 }
 
-void Engine::RenderLights() const
-{
-	mpRenderer->BeginEvent("Render Lights Pass");
-	mpRenderer->SetShader(EShaders::UNLIT);
-	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
-	for (const Light& light : mpActiveScene->mLights)
-	{
-		//if (!light._bEnabled) continue; // #BreaksRelease
-		
-		if (light.mType == Light::ELightType::DIRECTIONAL)
-			continue;	// do not render directional lights
-
-		const auto IABuffers = mBuiltinMeshes[light.mMeshID].GetIABuffers();
-		const XMMATRIX world = light.mTransform.WorldTransformationMatrix();
-		const XMMATRIX worldViewProj = world * mpActiveScene->mSceneView.viewProj;
-		const vec3 color = light.mColor.Value() * light.mBrightness;
-
-		mpRenderer->SetVertexBuffer(IABuffers.first);
-		mpRenderer->SetIndexBuffer(IABuffers.second);
-		mpRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
-		mpRenderer->SetConstant3f("diffuse", color);
-		mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
-		mpRenderer->Apply();
-		mpRenderer->DrawIndexed();
-	}
-	mpRenderer->EndEvent();
-}
 
 void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 {

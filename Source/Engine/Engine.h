@@ -92,15 +92,15 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// CORE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
-	bool Initialize(HWND hwnd);
-	void Exit();
+	bool			Initialize(HWND hwnd);
+	void			Exit();
 	
-	bool Load(VQEngine::ThreadPool* pThreadPool);
-	void SimulateAndRenderFrame();
+	bool			Load(VQEngine::ThreadPool* pThreadPool);
+	void			SimulateAndRenderFrame();
 
-	void SendLightData() const;
-	inline void Engine::Pause()  { mbIsPaused = true; }
-	inline void Engine::Unpause(){ mbIsPaused = false; }
+	void			SendLightData() const;
+	inline void		Pause()  { mbIsPaused = true; }
+	inline void		Unpause(){ mbIsPaused = false; }
 	
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
@@ -113,6 +113,7 @@ public:
 	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
 	inline bool				GetSettingShowControls() const { return mEngineConfig.mbShowControls; }
 	std::pair<BufferID, BufferID> GetGeometryVertexAndIndexBuffers(EGeometry GeomEnum) const { return mBuiltinMeshes[GeomEnum].GetIABuffers(); }
+	inline const  std::vector<Mesh>& GetBuiltInMeshes() const { return mBuiltinMeshes; }
 
 	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
 	bool inline				IsProfileRenderingOn() const { return mEngineConfig.mbShowProfiler; }
@@ -121,12 +122,12 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// TOGGLES
 	//----------------------------------------------------------------------------------------------------------------
-	void		ToggleRenderingPath();	// Forward / Deferred
-	void		ToggleAmbientOcclusion();
-	void		ToggleBloom(); 
-	void inline	ToggleProfilerRendering() { mEngineConfig.mbShowProfiler = !mEngineConfig.mbShowProfiler; }
-	void inline	ToggleControlsTextRendering() { mEngineConfig.mbShowControls = !mEngineConfig.mbShowControls; }
-	void inline	TogglePause() { mbIsPaused = !mbIsPaused; }
+	void					ToggleRenderingPath();	// Forward / Deferred
+	void					ToggleAmbientOcclusion();
+	void					ToggleBloom(); 
+	void inline				ToggleProfilerRendering() { mEngineConfig.mbShowProfiler = !mEngineConfig.mbShowProfiler; }
+	void inline				ToggleControlsTextRendering() { mEngineConfig.mbShowControls = !mEngineConfig.mbShowControls; }
+	void inline				TogglePause() { mbIsPaused = !mbIsPaused; }
 
 private:
 	Engine();
@@ -145,7 +146,6 @@ private:
 	void RenderDebug(const XMMATRIX& viewProj);
 	void RenderUI() const;
 	void RenderLoadingScreen(bool bOneTimeRender) const;
-	void RenderLights() const;
 
 //==============================================================================================================
 
@@ -175,7 +175,7 @@ private:
 	std::vector<Scene*>				mpScenes;
 	Scene*							mpActiveScene;
 
-	SceneLightingConstantBuffer				mSceneLightData;	// more memory than required?
+	SceneLightingConstantBuffer		mSceneLightData;	// more memory than required?
 
 	// #SceneRefactoring
 	// current design for adding new scenes is as follows (and is horrible...):

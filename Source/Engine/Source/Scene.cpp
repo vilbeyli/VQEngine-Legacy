@@ -60,7 +60,9 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 	mMeshes.resize(builtinMeshes.size());
 	std::copy(builtinMeshes.begin(), builtinMeshes.end(), mMeshes.begin());
 
-	mLights = std::move(scene.lights);
+	for (Light& l : scene.lights) this->AddLight(std::move(l));
+	//mLights = std::move(scene.lights);
+
 	mMaterials = std::move(scene.materials);
 	mDirectionalLight = std::move(scene.directionalLight);
 	mSceneRenderSettings = scene.settings;
@@ -89,16 +91,10 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 
 	// async model loading
 	StartLoadingModels();
+	SetLightCache();
 	EndLoadingModels();
 
 	CalculateSceneBoundingBox();	// needs to happen after models are loaded
-
-
-	// [optimization]
-	// cache light matrices (assumes all static)
-	for (Light& l : mLights)
-		l.SetMatrices();
-	mDirectionalLight.SetMatrices();
 }
 
 void Scene::UnloadScene()
@@ -112,9 +108,9 @@ void Scene::UnloadScene()
 	//---------------------------------------------------------------------------
 	mCameras.clear();
 	mObjectPool.Cleanup();
-	mLights.clear();
 	mMeshes.clear();
 	mObjectPool.Cleanup();
+	ClearLights();
 	Unload();
 }
 
@@ -185,6 +181,19 @@ void Scene::EndLoadingModels()
 		// assign the model to object
 		pObj->SetModel(m);
 	});
+}
+
+void Scene::AddStaticLight(const Light& l)
+{
+	mLightsStatic.push_back(l);
+
+	// Note: Static light cache is initialized after the loading is done.
+	//       So we just push the light to the static light container here.
+}
+
+void Scene::AddDynamicLight(const Light& l)
+{
+	mLightsDynamic.push_back(l);
 }
 
 Model Scene::LoadModel(const std::string & modelPath)
@@ -422,65 +431,74 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	// here to use mRange as the lights render scale signifying its 
 	// radius of influence.
 	Transform tf;
-
-	// point lights
-	if (bRenderPointLightCues)
+	constexpr size_t NUM_LIGHT_CONTAINERS = 2;
+	std::array<const std::vector<Light>*, NUM_LIGHT_CONTAINERS > lightContainers =
 	{
-		mpRenderer->SetVertexBuffer(IABuffersSphere.first);
-		mpRenderer->SetIndexBuffer(IABuffersSphere.second);
-		for (const Light& l : mLights)
+		  &mLightsStatic
+		, &mLightsDynamic
+	};
+	for (int i = 0; i < NUM_LIGHT_CONTAINERS; ++i)
+	{
+		const std::vector<Light>& mLights = *lightContainers[i];
+		// point lights
+		if (bRenderPointLightCues)
 		{
-			if (l.mType == Light::ELightType::POINT)
+			mpRenderer->SetVertexBuffer(IABuffersSphere.first);
+			mpRenderer->SetIndexBuffer(IABuffersSphere.second);
+			for (const Light& l : mLights)
 			{
-				mpRenderer->SetConstant3f("diffuse", l.mColor);
+				if (l.mType == Light::ELightType::POINT)
+				{
+					mpRenderer->SetConstant3f("diffuse", l.mColor);
 
-				tf.SetPosition(l.mTransform._position);
-				tf.SetScale(l.mRange * 0.5f); // Mesh's model space R = 2.0f, hence scale it by 0.5f...
-				wvp = tf.WorldTransformationMatrix() * viewProj;
-				mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-				mpRenderer->Apply();
-				mpRenderer->DrawIndexed();
+					tf.SetPosition(l.mTransform._position);
+					tf.SetScale(l.mRange * 0.5f); // Mesh's model space R = 2.0f, hence scale it by 0.5f...
+					wvp = tf.WorldTransformationMatrix() * viewProj;
+					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+					mpRenderer->Apply();
+					mpRenderer->DrawIndexed();
+				}
 			}
 		}
-	}
 
-	// spot lights 
-	if (bRenderSpotLightCues)
-	{
-		mpRenderer->SetVertexBuffer(IABuffersCone.first);
-		mpRenderer->SetIndexBuffer(IABuffersCone.second);
-		for (const Light& l : mLights)
+		// spot lights 
+		if (bRenderSpotLightCues)
 		{
-			if (l.mType == Light::ELightType::SPOT)
+			mpRenderer->SetVertexBuffer(IABuffersCone.first);
+			mpRenderer->SetIndexBuffer(IABuffersCone.second);
+			for (const Light& l : mLights)
 			{
-				mpRenderer->SetConstant3f("diffuse", l.mColor);
+				if (l.mType == Light::ELightType::SPOT)
+				{
+					mpRenderer->SetConstant3f("diffuse", l.mColor);
 
-				tf = l.mTransform;
-				
-				// reset scale as it holds the scale value for light's render mesh
-				tf.SetScale(1, 1, 1); 
-				
-				 // align with spot light's local space
-				tf.RotateAroundLocalXAxisDegrees(-90.0f); 
+					tf = l.mTransform;
+
+					// reset scale as it holds the scale value for light's render mesh
+					tf.SetScale(1, 1, 1);
+
+					// align with spot light's local space
+					tf.RotateAroundLocalXAxisDegrees(-90.0f);
 
 
-				XMMATRIX alignConeToSpotLightTransformation = XMMatrixIdentity();
-				alignConeToSpotLightTransformation.r[3].m128_f32[0] = 0.0f;
-				alignConeToSpotLightTransformation.r[3].m128_f32[1] = -l.mRange;
-				alignConeToSpotLightTransformation.r[3].m128_f32[2] = 0.0f;
-				//tf.SetScale(1, 20, 1);
+					XMMATRIX alignConeToSpotLightTransformation = XMMatrixIdentity();
+					alignConeToSpotLightTransformation.r[3].m128_f32[0] = 0.0f;
+					alignConeToSpotLightTransformation.r[3].m128_f32[1] = -l.mRange;
+					alignConeToSpotLightTransformation.r[3].m128_f32[2] = 0.0f;
+					//tf.SetScale(1, 20, 1);
 
-				const float coneBaseRadius = std::tanf(l.mSpotOuterConeAngleDegrees * DEG2RAD) * l.mRange;
-				XMMATRIX scaleConeToRange = XMMatrixIdentity();
-				scaleConeToRange.r[0].m128_f32[0] = coneBaseRadius;
-				scaleConeToRange.r[1].m128_f32[1] = l.mRange;
-				scaleConeToRange.r[2].m128_f32[2] = coneBaseRadius;
+					const float coneBaseRadius = std::tanf(l.mSpotOuterConeAngleDegrees * DEG2RAD) * l.mRange;
+					XMMATRIX scaleConeToRange = XMMatrixIdentity();
+					scaleConeToRange.r[0].m128_f32[0] = coneBaseRadius;
+					scaleConeToRange.r[1].m128_f32[1] = l.mRange;
+					scaleConeToRange.r[2].m128_f32[2] = coneBaseRadius;
 
-				//wvp = alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
-				wvp = scaleConeToRange * alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
-				mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-				mpRenderer->Apply();
-				mpRenderer->DrawIndexed();
+					//wvp = alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
+					wvp = scaleConeToRange * alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
+					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+					mpRenderer->Apply();
+					mpRenderer->DrawIndexed();
+				}
 			}
 		}
 	}
@@ -520,6 +538,48 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	return numRenderedObjects; // objects rendered
 }
 
+
+void Scene::RenderLights() const
+{
+	if (!this->mSceneView.bIsIBLEnabled)
+		return;
+
+	mpRenderer->BeginEvent("Render Lights Pass");
+	mpRenderer->SetShader(EShaders::UNLIT);
+	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+	constexpr size_t NUM_LIGHT_CONTAINERS = 2;
+	std::array<const std::vector<Light>*, NUM_LIGHT_CONTAINERS > lightContainers =
+	{
+		  &mLightsStatic
+		, &mLightsDynamic
+	};
+	const auto BUILT_IN_MESHES = ENGINE->GetBuiltInMeshes();
+	for (int i = 0; i < NUM_LIGHT_CONTAINERS; ++i)
+	{
+		const std::vector<Light>& mLights = *lightContainers[i];
+		for (const Light& light : mLights)
+		{
+			//if (!light._bEnabled) continue; // #BreaksRelease
+
+			if (light.mType == Light::ELightType::DIRECTIONAL)
+				continue;	// do not render directional lights
+
+			const auto IABuffers = BUILT_IN_MESHES[light.mMeshID].GetIABuffers();
+			const XMMATRIX world = light.mTransform.WorldTransformationMatrix();
+			const XMMATRIX worldViewProj = world * this->mSceneView.viewProj;
+			const vec3 color = light.mColor.Value() * light.mBrightness;
+
+			mpRenderer->SetVertexBuffer(IABuffers.first);
+			mpRenderer->SetIndexBuffer(IABuffers.second);
+			mpRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
+			mpRenderer->SetConstant3f("diffuse", color);
+			mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+			mpRenderer->Apply();
+			mpRenderer->DrawIndexed();
+		}
+	}
+	mpRenderer->EndEvent();
+}
 
 //----------------------------------------------------------------------------------------------------------------
 // UPDATE FUNCTIONS
@@ -589,7 +649,7 @@ void Scene::PreRender(FrameStats& stats, SceneLightingConstantBuffer& outLightin
 	// containers we'll work on for preparing draw lists
 	std::vector<const GameObject*> mainViewRenderList; // Shadow casters + non-shadow casters
 	std::vector<const GameObject*> mainViewShadowCasterRenderList;
-	std::vector<const Light*> pShadowingLights;
+	SceneShadowingLightIndexCollection shadowingLightIndexCollection;
 
 
 	//----------------------------------------------------------------------------
@@ -610,7 +670,7 @@ void Scene::PreRender(FrameStats& stats, SceneLightingConstantBuffer& outLightin
 	// CULL LIGHTS
 	//----------------------------------------------------------------------------
 	mpCPUProfiler->BeginEntry("Cull_Lights");
-	pShadowingLights = CullLights(stats.scene.numCulledShadowingPointLights, stats.scene.numCulledShadowingSpotLights);
+	shadowingLightIndexCollection = CullShadowingLights(stats.scene.numCulledShadowingPointLights, stats.scene.numCulledShadowingSpotLights);
 	mpCPUProfiler->EndEntry(); 
 
 	//----------------------------------------------------------------------------
@@ -625,7 +685,7 @@ void Scene::PreRender(FrameStats& stats, SceneLightingConstantBuffer& outLightin
 	// CULL SHADOW VIEW RENDER LISTS
 	//----------------------------------------------------------------------------
 	//mpCPUProfiler->BeginEntry("Cull_ShadowViews"); 
-	FrustumCullPointAndSpotShadowViews(mainViewShadowCasterRenderList, pShadowingLights, stats);
+	FrustumCullPointAndSpotShadowViews(mainViewShadowCasterRenderList, shadowingLightIndexCollection, stats);
 	//mpCPUProfiler->EndEntry(); 
 
 
@@ -639,6 +699,9 @@ void Scene::PreRender(FrameStats& stats, SceneLightingConstantBuffer& outLightin
 		mpCPUProfiler->EndEntry();
 	}
 
+	//mpCPUProfiler->BeginEntry("Gather_FlattenedLightList");
+	std::vector<const Light*> pShadowingLights = shadowingLightIndexCollection.GetFlattenedListOfLights(mLightsStatic, mLightsDynamic);
+	//mpCPUProfiler->EndEntry();
 
 	//----------------------------------------------------------------------------
 	// SORT RENDER LISTS
@@ -777,29 +840,39 @@ void Scene::GatherLightData(SceneLightingConstantBuffer & outLightingData, const
 	}
 
 	// iterate for non-shadowing lights (they won't be in pLightList)
-	for (const Light& l : mLights)
+	constexpr size_t NUM_LIGHT_CONTAINERS = 2;
+	std::array<const std::vector<Light>*, NUM_LIGHT_CONTAINERS > lightContainers =
 	{
-		if (l.mbCastingShadows) continue;
-		pNumArray& refLightCounts = lightCounts;
+		  &mLightsStatic
+		, &mLightsDynamic
+	};
+	for (int i = 0; i < NUM_LIGHT_CONTAINERS; ++i)
+	{
+		const std::vector<Light>& mLights = *lightContainers[i];
+		for (const Light& l : mLights)
+		{
+			if (l.mbCastingShadows) continue;
+			pNumArray& refLightCounts = lightCounts;
 
-		const size_t lightIndex = (*refLightCounts[l.mType])++;
-		switch (l.mType)
-		{
-		case Light::ELightType::POINT:
-		{
-			PointLightGPU plData;
-			l.GetGPUData(plData);
-			cbuffer.pointLights[lightIndex] = plData;
-		} break;
-		case Light::ELightType::SPOT:
-		{
-			SpotLightGPU slData;
-			l.GetGPUData(slData);
-			cbuffer.spotLights[lightIndex] = slData;
-		} break;
-		default:
-			Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
-			continue;
+			const size_t lightIndex = (*refLightCounts[l.mType])++;
+			switch (l.mType)
+			{
+			case Light::ELightType::POINT:
+			{
+				PointLightGPU plData;
+				l.GetGPUData(plData);
+				cbuffer.pointLights[lightIndex] = plData;
+			} break;
+			case Light::ELightType::SPOT:
+			{
+				SpotLightGPU slData;
+				l.GetGPUData(slData);
+				cbuffer.spotLights[lightIndex] = slData;
+			} break;
+			default:
+				Log::Error("Engine::PreRender(): UNKNOWN LIGHT TYPE");
+				continue;
+			}
 		}
 	}
 
@@ -975,51 +1048,68 @@ void Scene::SortRenderLists(std::vector <const GameObject*>& mainViewShadowCaste
 	}
 }
 
-std::vector<const Light*> Scene::CullLights(int& outNumCulledPoints, int& outNumCulledSpots)
+Scene::SceneShadowingLightIndexCollection Scene::CullShadowingLights(int& outNumCulledPoints, int& outNumCulledSpots)
 {
 	using namespace VQEngine;
-
-	std::vector<const Light*> pLights;
+	
+	SceneShadowingLightIndexCollection sceneShadowingLightIndexCollection;
 
 	outNumCulledPoints = 0;
 	outNumCulledSpots = 0;
 
-	for (const Light& l : mLights)
+	auto fnCullLights = [&](const std::vector<Light>& lights) -> ShadowingLightIndexCollection
 	{
-		if (!l.mbCastingShadows) continue;
-		switch (l.mType)
-		{
-		case Light::ELightType::SPOT:
-		{
-			// TODO: frustum - cone check
-			const bool bCullLight = false;
-			//if (IsVisible())
-			if (!bCullLight)
-				pLights.push_back(&l);
-			else
-				++outNumCulledSpots;
-		}	break;
+		ShadowingLightIndexCollection outLightIndices;
 
-		case Light::ELightType::POINT:
+		for (int i = 0; i < lights.size(); ++i)
 		{
-			vec3 vecCamera = GetActiveCamera().GetPositionF() - l.mTransform._position;
-			const float dstSqrCameraToLight = XMVector3Dot(vecCamera, vecCamera).m128_f32[0];
-			const float rangeSqr = l.mRange * l.mRange;
+			if (!lights[i].mbCastingShadows) continue;
 			
-			const bool bIsCameraInPointLightSphereOfIncluence = dstSqrCameraToLight < rangeSqr;
-			const bool bSphereInFrustum = IsSphereInFrustum(GetActiveCamera().GetViewFrustumPlanes(), l.mTransform._position, l.mRange);
+			const Light& l = lights[i];
+			switch (l.mType)
+			{
+			case Light::ELightType::SPOT:
+			{
+				// TODO: frustum - cone check
+				const bool bCullLight = false;
+				if (!bCullLight /* == IsVisible() */)
+				{
+					outLightIndices.spotLightIndices.push_back(i);
+				}
+				else
+				{
+					++outNumCulledSpots;
+				}
+			}	break;
 
-			if (bIsCameraInPointLightSphereOfIncluence || bSphereInFrustum)
-				pLights.push_back(&l);
-			else
-				++outNumCulledPoints;
+			case Light::ELightType::POINT:
+			{
+				vec3 vecCamera = GetActiveCamera().GetPositionF() - l.mTransform._position;
+				const float dstSqrCameraToLight = XMVector3Dot(vecCamera, vecCamera).m128_f32[0];
+				const float rangeSqr = l.mRange * l.mRange;
 
-		} break;
-		} // light type
+				const bool bIsCameraInPointLightSphereOfIncluence = dstSqrCameraToLight < rangeSqr;
+				const bool bSphereInFrustum = IsSphereInFrustum(GetActiveCamera().GetViewFrustumPlanes(), l.mTransform._position, l.mRange);
 
-	}
+				if (bIsCameraInPointLightSphereOfIncluence || bSphereInFrustum)
+				{
+					outLightIndices.pointLightIndices.push_back(i);
+				}
+				else
+				{
+					++outNumCulledPoints;
+				}
+			} break;
+			} // light type
 
-	return pLights;
+		}
+
+		return outLightIndices;
+	};
+
+	sceneShadowingLightIndexCollection.mStaticLights  = fnCullLights(mLightsStatic);
+	sceneShadowingLightIndexCollection.mDynamicLights = fnCullLights(mLightsDynamic);
+	return sceneShadowingLightIndexCollection;
 }
 
 std::vector<const GameObject*> Scene::FrustumCullMainView(int& outNumCulledObjects)
@@ -1050,120 +1140,188 @@ std::vector<const GameObject*> Scene::FrustumCullMainView(int& outNumCulledObjec
 }
 
 
-void Scene::FrustumCullPointAndSpotShadowViews(const std::vector <const GameObject*>& mainViewShadowCasterRenderList, std::vector<const Light*>& pShadowingLights, FrameStats& stats)
+void Scene::FrustumCullPointAndSpotShadowViews(
+	  const std::vector <const GameObject*>&	mainViewShadowCasterRenderList
+	, const SceneShadowingLightIndexCollection& shadowingLightIndices
+	, FrameStats&								stats
+)
 {
 	using namespace VQEngine;
 
-	const bool& bCullLightView = mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights;
 
-	RenderList objList;
+	auto fnCullPointLightView = [&](const Light* l, const std::array<FrustumPlaneset, 6>& frustumPlaneSetPerFace)
+	{
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-	std::array< MeshDrawData, 6> meshDrawDataPerFace;
+		std::array< MeshDrawData, 6>& meshDrawDataPerFace = mShadowView.shadowCubeMapMeshDrawListLookup[l];
+		for (int i = 0; i < 6; ++i)
+			meshDrawDataPerFace[i].meshTransformListLookup.clear();
 #else
-	std::array< MeshDrawList, 6> meshListForPoints;
+		std::array< MeshDrawList, 6>& meshListForPoints = mShadowView.shadowCubeMapMeshDrawListLookup[l];
+		for (int i = 0; i < 6; ++i)
+			meshListForPoints[i].clear();
 #endif
 
-	// filter out light indices
-	std::vector<int> spotLightIndices;
-	std::vector<int> pointLightIndices;
-	for (int i = 0; i < pShadowingLights.size(); ++i)
-	{
-		const Light* l = pShadowingLights[i];
-		switch (l->mType)
+		// cull for far distance
+		// TODO: cull meshes outside this point lights sphere of influence
+
+		// cull for visibility per face
+		for (int face = 0; face < 6; ++face)
 		{
-		case Light::ELightType::SPOT:
-			spotLightIndices.push_back(i);
-			break;
-		case Light::ELightType::POINT:
-			pointLightIndices.push_back(i);
-			break;
+			const Texture::CubemapUtility::ECubeMapLookDirections CubemapFaceDirectionEnum = static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face);
+			for (const GameObject* pObj : mainViewShadowCasterRenderList)
+			{
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+				stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
+				(
+					frustumPlaneSetPerFace[face],
+					pObj,
+					meshDrawDataPerFace[face]
+				));
+#else
+				meshDrawData.meshIDs.clear();
+				stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
+				(
+					frustumPlaneSetPerFace[face],
+					pObj,
+					meshDrawData
+				));
+				meshListForPoints[face].push_back(meshDrawData);
+#endif
+			}
 		}
+	};
+	auto fnCullSpotLightView = [&](const Light* l, const FrustumPlaneset& frustumPlaneSet)
+	{
+		RenderList& renderList = mShadowView.shadowMapRenderListLookUp[l];
+		
+		renderList.clear();
+		stats.scene.numSpotsCulledObjects += static_cast<int>(
+			CullGameObjects(
+				  frustumPlaneSet 
+				, mainViewShadowCasterRenderList
+				, renderList
+			));
+	};
+
+
+	RenderList objList;
+
+	// Culling Disabled: just copy the mainViewShadowCasterRenderList
+	//                   to the render lists of lights without any culling.
+	//
+	if (!mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights)
+	{
+		// spots
+		for (int i = 0; i < shadowingLightIndices.mStaticLights.spotLightIndices.size(); ++i)
+		{
+			const Light* l = &mLightsStatic[shadowingLightIndices.mStaticLights.spotLightIndices[i]];
+
+			RenderList& renderList = mShadowView.shadowMapRenderListLookUp[l];
+			renderList.resize(mainViewShadowCasterRenderList.size());
+			std::copy(RANGE(mainViewShadowCasterRenderList), renderList.begin());
+		}
+		for (int i = 0; i < shadowingLightIndices.mDynamicLights.spotLightIndices.size(); ++i)
+		{
+			const Light* l = &mLightsStatic[shadowingLightIndices.mDynamicLights.spotLightIndices[i]];
+
+			RenderList& renderList = mShadowView.shadowMapRenderListLookUp[l];
+			renderList.resize(mainViewShadowCasterRenderList.size());
+			std::copy(RANGE(mainViewShadowCasterRenderList), renderList.begin());
+		}
+
+
+		// points
+		auto fnCopyPointLightRenderLists = [&](const std::vector<Light>& lightContainer, const std::vector<int>& lightIndices)
+		{
+			for (int i = 0; i < lightIndices.size(); ++i)
+			{
+				const Light* l = &lightContainer[lightIndices[i]];
+
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+				std::array< MeshDrawData, 6>& meshDrawDataPerFace = mShadowView.shadowCubeMapMeshDrawListLookup[l];
+#else
+				std::array< MeshDrawList, 6>& meshListForPoints = mShadowView.shadowCubeMapMeshDrawListLookup[l];
+#endif
+
+				for (int face = 0; face < 6; ++face)
+				{
+					for (const GameObject* pObj : mainViewShadowCasterRenderList)
+					{
+#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+						const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+						for (MeshID meshID : pObj->GetModelData().mMeshIDs)
+							meshDrawDataPerFace[face].AddMeshTransformation(meshID, matWorld);
+#else
+						meshListForPoints[face].push_back(pObj);
+#endif
+					}
+				}
+			}
+		};
+
+		fnCopyPointLightRenderLists(mLightsStatic , shadowingLightIndices.mStaticLights.pointLightIndices);
+		fnCopyPointLightRenderLists(mLightsDynamic, shadowingLightIndices.mDynamicLights.pointLightIndices);
+		return;
 	}
 
+
+
+	// Culling Enabled : cull mainViewShadowCasterRenderList against 
+	//                   light frustums.
+	//
 	// record the light stats
-	stats.scene.numSpots = static_cast<int>(spotLightIndices.size());
-	stats.scene.numPoints = static_cast<int>(pointLightIndices.size());
+	stats.scene.numSpots  = static_cast<int>(shadowingLightIndices.GetLightCount(Light::ELightType::SPOT) );
+	stats.scene.numPoints = static_cast<int>(shadowingLightIndices.GetLightCount(Light::ELightType::POINT));
 
-	// cull per light view
-	mpCPUProfiler->BeginEntry("Cull_ShadowView_Spot");
-	for (int i = 0; i < spotLightIndices.size(); ++i)
+
+	
+	// Cull Static Lights
+	mpCPUProfiler->BeginEntry("Cull_ShadowView_Point_s");
 	{
-		const Light* l = pShadowingLights[spotLightIndices[i]];
-		if (bCullLightView)
+		const std::vector<int>& lightIndexContainer = shadowingLightIndices.mStaticLights.pointLightIndices;
+		for (int i = 0; i < lightIndexContainer.size(); ++i)	// point lights
 		{
-			stats.scene.numSpotsCulledObjects += static_cast<int>(CullGameObjects(l->GetViewFrustumPlanes(), mainViewShadowCasterRenderList, objList));
+			int lightIndex = lightIndexContainer[i];
+			const Light* l = &mLightsStatic[lightIndex];
+			fnCullPointLightView(l, mStaticLightCache.mStaticPointLightFrustumPlanes.at(l));
 		}
-		else
-		{
-			objList.resize(mainViewShadowCasterRenderList.size());
-			std::copy(RANGE(mainViewShadowCasterRenderList), objList.begin());
-		}
-
-		mShadowView.shadowMapRenderListLookUp[l] = objList;
-		objList.clear();
 	}
 	mpCPUProfiler->EndEntry();
 
-
-
-	mpCPUProfiler->BeginEntry("Cull_ShadowViews_Points");
-	for (int i = 0; i < pointLightIndices.size(); ++i)
+	mpCPUProfiler->BeginEntry("Cull_ShadowView_Spot_s");
 	{
-		const Light* l = pShadowingLights[pointLightIndices[i]];
-
-		MeshDrawData meshDrawData;
-		if (bCullLightView)
+		const std::vector<int>& lightIndexContainer = shadowingLightIndices.mStaticLights.spotLightIndices;
+		for (int i = 0; i < lightIndexContainer.size(); ++i) // spot lights
 		{
-			for (int face = 0; face < 6; ++face)
-			{
-				const Texture::CubemapUtility::ECubeMapLookDirections CubemapFaceDirectionEnum = static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(face);
-				for (const GameObject* pObj : mainViewShadowCasterRenderList)
-				{
-#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-					stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
-					(
-						l->GetViewFrustumPlanes(CubemapFaceDirectionEnum),
-						pObj,
-						meshDrawDataPerFace[face]
-					));
-#else
-					meshDrawData.meshIDs.clear();
-					stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
-					(
-						l->GetViewFrustumPlanes(CubemapFaceDirectionEnum),
-						pObj,
-						meshDrawData
-					));
-					meshListForPoints[face].push_back(meshDrawData);
-#endif
-				}
-			}
+			int lightIndex = lightIndexContainer[i];
+			const Light* l = &mLightsStatic[lightIndex];
+			fnCullSpotLightView(&mLightsStatic[lightIndex], mStaticLightCache.mStaticSpotLightFrustumPlanes.at(l));
 		}
-		else
+	}
+	mpCPUProfiler->EndEntry();
+
+	// Cull Dynamic Lights
+	mpCPUProfiler->BeginEntry("Cull_ShadowView_Point_d");
+	for (int lightIndex : shadowingLightIndices.mDynamicLights.pointLightIndices)
+	{
+		std::array<FrustumPlaneset, 6> frustumPlanesPerFace =
 		{
-			for (int face = 0; face < 6; ++face)
-			{
-				for (const GameObject* pObj : mainViewShadowCasterRenderList)
-				{
-#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-					const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
-					for (MeshID meshID : pObj->GetModelData().mMeshIDs)
-						meshDrawDataPerFace[face].AddMeshTransformation(meshID, matWorld);
-#else
-					meshListForPoints[face].push_back(pObj);
-#endif
-				}
-			}
-		}
+			  mLightsDynamic[lightIndex].GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(0))
+			, mLightsDynamic[lightIndex].GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(1))
+			, mLightsDynamic[lightIndex].GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(2))
+			, mLightsDynamic[lightIndex].GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(3))
+			, mLightsDynamic[lightIndex].GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(4))
+			, mLightsDynamic[lightIndex].GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(5))
+		};
+		fnCullPointLightView(&mLightsDynamic[lightIndex], frustumPlanesPerFace);
+	}
+	mpCPUProfiler->EndEntry();
 
-#if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-		mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshDrawDataPerFace;
-		for (int i = 0; i < 6; ++i) meshDrawDataPerFace[i].meshTransformListLookup.clear();
-#else
-		mShadowView.shadowCubeMapMeshDrawListLookup[l] = meshListForPoints;
-		for (int i = 0; i < 6; ++i) meshListForPoints[i].clear();
-#endif
-
+	mpCPUProfiler->BeginEntry("Cull_ShadowView_Spot_d");
+	for (int lightIndex : shadowingLightIndices.mDynamicLights.spotLightIndices)
+	{
+		const Light* l = &mLightsDynamic[lightIndex];
+		fnCullSpotLightView(l, l->GetViewFrustumPlanes());
 	}
 	mpCPUProfiler->EndEntry();
 }
@@ -1219,8 +1377,8 @@ void Scene::BatchShadowViewRenderLists(const std::vector <const GameObject*>& ma
 	for (int i = 0; i < mainViewShadowCasterRenderList.size(); ++i)
 	{
 		const GameObject* pCaster = mainViewShadowCasterRenderList[i];
-		const ModelData& model = pCaster->GetModelData();
-		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
+		const ModelData&  model   = pCaster->GetModelData();
+		const MeshID      meshID  = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
 		if (meshID >= EGeometry::MESH_TYPE_COUNT)
 		{
 			mShadowView.casters.push_back(std::move(mainViewShadowCasterRenderList[i]));
@@ -1236,6 +1394,54 @@ void Scene::BatchShadowViewRenderLists(const std::vector <const GameObject*>& ma
 	}
 	mpCPUProfiler->EndEntry();
 
+}
+
+void Scene::SetLightCache()
+{
+	mStaticLightCache.Clear();
+
+	// cache/set static light data
+	//
+	// static lights are assumed to not change position and rotations,
+	// hence, we can cache their frustum planes which are extracted 
+	// from the light-space matrix. This cache would save us matrix 
+	// multiplication and frustum extraction instructions during 
+	// PreRender() - frustum cull lights phase.
+	//
+	for (Light& l : mLightsStatic)
+	{
+		l.SetMatrices();
+		switch (l.mType)
+		{
+		case Light::ELightType::SPOT:
+			mStaticLightCache.mStaticSpotLightFrustumPlanes[&l] = l.GetViewFrustumPlanes();
+			break;
+		case Light::ELightType::POINT:
+		{
+			std::array< FrustumPlaneset, 6> planesetPerFace;
+			for (int i = 0; i < 6; ++i)
+				planesetPerFace[i] = l.GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(i));
+			mStaticLightCache.mStaticPointLightFrustumPlanes[&l] = planesetPerFace;
+		}	break;
+		} // l.type
+	}
+
+	// cache/set dynamic light data
+	for (Light& l : mLightsDynamic)
+		l.SetMatrices();
+
+
+	// special case for directional lights for now...
+	// this should eventually be processed with the 
+	// containers above, potentially in the static one.
+	mDirectionalLight.SetMatrices();
+}
+
+void Scene::ClearLights()
+{
+	mLightsDynamic.clear();
+	mLightsStatic.clear();
+	mStaticLightCache.Clear();
 }
 
 //static void CalculateSceneBoundingBox(Scene* pScene, )
@@ -1380,6 +1586,15 @@ void Scene::CalculateSceneBoundingBox()
 // RESOURCE MANAGEMENT FUNCTIONS
 //----------------------------------------------------------------------------------------------------------------
 GameObject* Scene::CreateNewGameObject(){ mpObjects.push_back(mObjectPool.Create(this)); return mpObjects.back(); }
+
+void Scene::AddLight(const Light& l)
+{
+	void (Scene::*pfnAddLight)(const Light&) = /* l.mbStatic */ true
+		// TODO: add boolean to Transform for specifying if its static or not
+		? &Scene::AddStaticLight
+		: &Scene::AddDynamicLight;
+	(this->*pfnAddLight)(l);
+}
 
 Material* Scene::CreateNewMaterial(EMaterialType type){ return static_cast<Material*>(mMaterials.CreateAndGetMaterial(type)); }
 Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type)); }

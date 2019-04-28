@@ -35,7 +35,7 @@
 #define DEFAULT_POINT_LIGHT_LOOK_DIRECTION Texture::CubemapUtility::ECubeMapLookDirections::CUBEMAP_LOOK_FRONT
 
 
-// Design consideration here:
+// Design considerations here:
 //
 // INHERITANCE
 // - if we were to use inheritance for different types of lights, then we can utilize pure virtual functions
@@ -125,7 +125,7 @@ struct Light
 	//
 	inline FrustumPlaneset GetViewFrustumPlanes(Texture::CubemapUtility::ECubeMapLookDirections lookDir = DEFAULT_POINT_LIGHT_LOOK_DIRECTION) const
 	{ 
-		return FrustumPlaneset::ExtractFromMatrix(GetViewMatrix(lookDir) * GetProjectionMatrix());
+		return FrustumPlaneset::ExtractFromMatrix(GetLightSpaceMatrix(lookDir));
 	}
 
 	// Returns the View*Projection matrix that describes the light-space transformation of a world space position.
@@ -145,18 +145,13 @@ struct Light
 	Settings::ShadowMap GetSettings() const; // ?
 
 private:
-
-	// cache the View and Projection matrices in the struct
-	// as computing a lot of them is quite expensive (many 
-	// point lights) during frustum culling.
+	// cache the View and Projection matrices in the struct as computing a lot 
+	// of them is quite expensive (many point lights) during frustum culling.
 	XMMATRIX mProjectionMatrix;
 	std::array<XMMATRIX, 6> mViewMatrix;
 	
 public:
 	void SetMatrices();
-
-	// this means we have to update these matrices as soon as
-	// a variable that affects this matrix changes value.
 	
 	inline const Transform& GetTransform() const { return mTransform; }
 	const void SetTransform(const Transform& transform);
@@ -181,8 +176,8 @@ public:
 
 	Transform mTransform;
 	EGeometry mMeshID;
-	bool mbEnabled;
 
+	bool mbEnabled;
 
 	union // LIGHT-SPECIFIC DATA
 	{

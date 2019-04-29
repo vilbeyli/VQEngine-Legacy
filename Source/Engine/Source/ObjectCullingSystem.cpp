@@ -158,6 +158,8 @@ namespace VQEngine
 
 		// first test at GameObject granularity
 		BoundingBox BB = pObj->GetAABB();
+		BB.low = XMVector3Transform(BB.low, matWorld);
+		BB.hi  = XMVector3Transform(BB.hi , matWorld); // world space BB
 		if (!IsBoundingBoxVisibleFromFrustum(frustumPlanes, BB))
 		{
 			return numCulled;

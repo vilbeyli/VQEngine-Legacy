@@ -288,6 +288,14 @@ struct InstancedObjectMatrices
 
 struct DeferredRenderingPasses : public RenderPass
 {
+	enum ENormalMapCompressionLevel
+	{
+		NO_COMPRESSION = 0
+		, FULL_PRECISION = NO_COMPRESSION // RGBA_32F    : 16B / px
+		, HALF_PRECISION                  // RGBA_16F    :  8B / px
+		, LOW_PRECISION                   // R11G11B10_F :  4B / px (buggy, doesn't work well)
+	};
+
 	DeferredRenderingPasses(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
 	struct RenderParams
 	{
@@ -325,6 +333,8 @@ struct DeferredRenderingPasses : public RenderPass
 	// enabling this will make GBuffer pass almost twice as slow as the bottleneck 
 	// is not the PS calculations, but rather the pass looks memory bandwidth-limited.
 	bool mbUseDepthPrepass = false;
+
+	ENormalMapCompressionLevel mNormalRTCompressionLevel = HALF_PRECISION;
 };
 
 struct ForwardLightingPass : public RenderPass

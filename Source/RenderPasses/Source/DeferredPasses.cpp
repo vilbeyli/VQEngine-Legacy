@@ -99,9 +99,10 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 
 void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 {
-	EImageFormat imageFormats[2] = { RGBA32F, RGBA16F };
-	RenderTargetDesc rtDesc[2] = { {}, {} };
-	for (int i = 0; i < 2; ++i)
+	// initialize RT descriptors for each image type
+	EImageFormat imageFormats[3] = { RGBA32F, RGBA16F, R11G11B10F };
+	RenderTargetDesc rtDesc[3] = { {}, {}, {} };
+	for (int i = 0; i < 3; ++i)
 	{
 		rtDesc[i].textureDesc.width = pRenderer->WindowWidth();
 		rtDesc[i].textureDesc.height = pRenderer->WindowHeight();
@@ -113,7 +114,7 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	}
 
 	constexpr size_t Float3TypeIndex = 0;		constexpr size_t Float4TypeIndex = 1;
-	this->_GBuffer.mRTNormals = pRenderer->AddRenderTarget(rtDesc[Float3TypeIndex]);
+	this->_GBuffer.mRTNormals = pRenderer->AddRenderTarget(rtDesc[this->mNormalRTCompressionLevel]);
 	this->_GBuffer.mRTDiffuseRoughness = pRenderer->AddRenderTarget(rtDesc[Float4TypeIndex]);
 	this->_GBuffer.mRTSpecularMetallic = pRenderer->AddRenderTarget(rtDesc[Float4TypeIndex]);
 	this->_GBuffer.mRTEmissive = pRenderer->AddRenderTarget(rtDesc[Float3TypeIndex]);

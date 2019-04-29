@@ -40,7 +40,7 @@ struct PSOut	// G-BUFFER
 {
 	float4 diffuseRoughness  : SV_TARGET0;
 	float4 specularMetalness : SV_TARGET1;
-	float3 normals			 : SV_TARGET2;
+	half3  normals			 : SV_TARGET2;
 	float3 emissiveColor	 : SV_TARGET3;
 };
 

@@ -99,20 +99,6 @@ namespace VQEngine
 
 	bool IsBoundingBoxInsideSphere_Approx(const BoundingBox& aabb, const Sphere& sphere)
 	{
-#if 0 
-		// THIS IS INCORRECT
-
-		// test if radius against each corner of the AABB
-		std::array<vec3, 8> aabb_corners = aabb.GetCornerPointsV3();
-		for (int i = 0; i < 8; ++i)
-		{
-			vec3 vDist = aabb_corners[i] - sphereCenter;
-			vDist = XMVector3Dot(vDist, vDist); // sqDist
-			if (vDist.x() < sqRadius)
-				return true;
-		}
-		return false;
-#else
 		// do a rough test here: 
 		// derive a bounding sphere from AABB and then test if spheres intersect
 		//
@@ -124,7 +110,6 @@ namespace VQEngine
 		);
 
 		return IsIntersecting(sphere, BS);
-#endif
 	}
 
 	bool IsIntersecting(const Sphere& s1, const Sphere& s2)

@@ -111,7 +111,8 @@ constexpr size_t RENDER_ORDER_FRAME_STATS_ROW_2[] = { 5, 6, 7, 8, 9, 10, 11 };
 
 auto GetFPSColor = [](int FPS) -> LinearColor
 {
-	if (FPS > 90)			return LinearColor::cyan;
+	if (FPS > 144)			return LinearColor::medium_pruple;
+	else if (FPS > 90)		return LinearColor::cyan;
 	else if (FPS > 60)		return LinearColor::green;
 	else if (FPS > 33)		return LinearColor::yellow;
 	else if (FPS > 20)		return LinearColor::orange;

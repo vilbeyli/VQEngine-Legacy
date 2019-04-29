@@ -290,7 +290,8 @@ inline size_t Tree<T>::RenderSubTree(
 
 	auto GetFrameTimeColor = [](float ms) -> LinearColor
 	{
-		if (ms < 1000.0f / 90.0f)		return LinearColor::cyan;
+		if (ms < 1000.0f / 144.0f)		return LinearColor::medium_pruple;
+		else if (ms < 1000.0f / 90.0f)	return LinearColor::cyan;
 		else if (ms < 1000.0f / 60.0f)	return LinearColor::green;
 		else if (ms < 1000.0f / 33.0f)	return LinearColor::yellow;
 		else if (ms < 1000.0f / 20.0f)	return LinearColor::orange;

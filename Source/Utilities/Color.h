@@ -38,6 +38,8 @@ enum class EColorValue
 	LIGHT_GRAY,
 	ORANGE,
 	PURPLE,
+	VIOLET,
+	MEDIUM_PUPRLE,
 	GOLD,
 	SUN,
 
@@ -55,6 +57,7 @@ public:
 	LinearColor(float r, float g, float b);
 	LinearColor& operator=(const LinearColor&);
 	LinearColor& operator=(const vec3&);
+	LinearColor(int r, int g, int b);
 
 	vec3 Value() const { return value; }
 	static const ColorPalette Palette();
@@ -68,7 +71,7 @@ public:
 	//static std::string GetNameByColor(Color c);
 
 public:
-	static const LinearColor black, white, red, green, blue, magenta, yellow, cyan, gray, light_gray, orange, purple, sun;
+	static const LinearColor black, white, red, green, blue, magenta, yellow, cyan, gray, light_gray, orange, purple, violet, medium_pruple, sun;
 	static const LinearColor gold, aluminum;
 	static const LinearColor bp_gold, bp_ruby, bp_jade, bp_bronze;
 	static const ColorPalette s_palette;

@@ -34,6 +34,8 @@ const LinearColor LinearColor::gray			= vec3(0.2f, 0.2f, 0.2f);
 const LinearColor LinearColor::light_gray	= vec3(0.45f, 0.45f, 0.45f);
 const LinearColor LinearColor::orange		= vec3(1.0f, 0.5f, 0.0f);
 const LinearColor LinearColor::purple		= vec3(0.31f, 0.149f, 0.513f);
+const LinearColor LinearColor::violet		= LinearColor(138, 43, 226);
+const LinearColor LinearColor::medium_pruple= LinearColor(147, 112, 219);
 const LinearColor LinearColor::sun			= vec3(1.0f, 0.7294f, 0.4156f);
 
 // PBR Metals
@@ -64,6 +66,16 @@ LinearColor::LinearColor()
 	value(white.Value())
 {}
 
+
+LinearColor::LinearColor(int r, int g, int b)
+{
+	this->value = vec3
+	(
+		static_cast<float>(r) / 255.0f,
+		static_cast<float>(g) / 255.0f,
+		static_cast<float>(b) / 255.0f
+	);
+}
 
 //const ColorPalette Color::Palette()
 //{

@@ -194,6 +194,7 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\UI.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Camera.h" />
     <ClInclude Include="..\Engine\ObjectCullingSystem.h" />
+    <ClInclude Include="..\Engine\SceneLODManager.h" />
     <ClInclude Include="..\Engine\SceneView.h" />
   </ItemGroup>
   <ItemGroup>
@@ -210,6 +211,7 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\UI.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Camera.cpp" />
     <ClCompile Include="..\Engine\Source\ObjectCullingSystem.cpp" />
+    <ClCompile Include="..\Engine\Source\SceneLODManager.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

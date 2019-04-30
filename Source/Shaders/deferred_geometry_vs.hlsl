@@ -91,7 +91,7 @@ PSIn VSMain(VSIn In)
 	//Out.position	 = mul(ObjMatrices.worldViewProj, pos);
 	float4 clipPos   = mul(ObjMatrices.worldViewProj, pos);
 	Out.viewPosition = mul(ObjMatrices.worldView, pos).xyz;
-	Out.viewNormal	 = normalize(mul(ObjMatrices.normalViewMatrix, float4(In.normal , 0))).rgb;
+	Out.viewNormal	 = normalize(mul(ObjMatrices.normalViewMatrix, half4(In.normal , 0))).rgb;
 	Out.viewTangent	 = normalize(mul(ObjMatrices.normalViewMatrix, float4(In.tangent, 0))).rgb;
 
 	const float fHeightIntensity = 0.90f;

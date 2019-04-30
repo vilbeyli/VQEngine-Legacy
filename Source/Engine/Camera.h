@@ -70,6 +70,10 @@ private:
 	XMMATRIX RotMatrix() const;
 
 private:
+	// lod manager stores vec3* mPosition and no need
+	// for an interface function to return position pointer.
+	friend class LODManager; 
+
 	vec3		mPosition;
 	vec3		mVelocity;
 	friend class SceneManager;

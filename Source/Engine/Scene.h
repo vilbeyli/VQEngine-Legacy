@@ -23,9 +23,9 @@
 #include "Skybox.h"
 #include "GameObject.h"
 #include "GameObjectPool.h"
-
 #include "Camera.h"
 #include "SceneView.h"
+#include "SceneLODManager.h"
 
 #include <memory>
 #include <mutex>
@@ -200,13 +200,13 @@ protected:
 	std::vector<Mesh>			mMeshes;
 	std::vector<Camera>			mCameras;
 	std::vector<GameObject*>	mpObjects;
+	Light						mDirectionalLight;
+	Skybox						mSkybox;
 
 
 	//
 	// SCENE STATE
 	//
-	Light						mDirectionalLight;
-	Skybox						mSkybox;
 	EEnvironmentMapPresets		mActiveSkyboxPreset;
 	int							mSelectedCamera;
 	Settings::SceneRender		mSceneRenderSettings;
@@ -218,6 +218,7 @@ protected:
 	Renderer*					mpRenderer;
 	TextRenderer*				mpTextRenderer;
 	VQEngine::ThreadPool*		mpThreadPool;	// initialized by the Engine
+	LODManager					mLODManager;
 
 private:
 	//
@@ -291,8 +292,6 @@ private:
 	ShadowView	mShadowView;
 
 	CPUProfiler* mpCPUProfiler;
-
-	int mForceLODLevel = 0;
 
 
 private:

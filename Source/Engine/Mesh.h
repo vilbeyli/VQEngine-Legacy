@@ -24,32 +24,6 @@
 
 #include <vector>
 
-#define MESH_LOD_SYSTEM 1
-
-#if !MESH_LOD_SYSTEM
-class Mesh
-{
-	friend class Renderer;
-	static Renderer* spRenderer;
-
-public:
-	template<class VertexBufferType> 
-	Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices, const std::string& name);
-	//	template<class VertexBufferType> Mesh(const std::vector<VertexBufferType>& vertices, const std::vector<unsigned>& indices, const std::vector<std::string> textureFileNames);	// TODO
-
-	inline std::pair<BufferID, BufferID> GetIABuffers() const { return std::make_pair(mVertexBufferID, mIndexBufferID); }
-
-	Mesh() = default;
-
-private:
-	BufferID  mVertexBufferID = -1;
-	BufferID  mIndexBufferID = -1;
-
-	std::string mMeshName;
-};
-
-#else
-
 
 struct LODLevel
 {
@@ -68,6 +42,7 @@ struct MeshLODData
 		, LODIndices(numLODs)
 		, meshName(pMeshName)
 	{}
+	
 	std::vector<std::vector<VertexBufferType>> LODVertices;
 	std::vector<std::vector<unsigned>> LODIndices ;
 	std::string meshName;
@@ -113,7 +88,6 @@ public:
 	
 private:
 	std::vector<LODLevel> mLODs;
-	std::vector<float> mLODDistances;
 
 	// Note:
 	//
@@ -130,7 +104,7 @@ private:
 	//
 	std::string mMeshName;
 };
-#endif
+
 
 //
 // Template Definitions

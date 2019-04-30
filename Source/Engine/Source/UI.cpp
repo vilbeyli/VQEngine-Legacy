@@ -114,7 +114,7 @@ auto GetFPSColor = [](int FPS) -> LinearColor
 	if (FPS > 144)			return LinearColor::medium_pruple;
 	else if (FPS > 90)		return LinearColor::cyan;
 	else if (FPS > 60)		return LinearColor::green;
-	else if (FPS > 33)		return LinearColor::yellow;
+	else if (FPS > 30)		return LinearColor::yellow;
 	else if (FPS > 20)		return LinearColor::orange;
 	else					return LinearColor::red;
 };
@@ -132,12 +132,12 @@ constexpr float Y_NORMALIZED_POSITION_CONTROLS = 0.009f;
 
 
 constexpr float X_NORMALIZED_POSITION_FRAME_STATS = 0.745f;
-constexpr float Y_NORMALIZED_POSITION_FRAME_STATS = 0.550f;
+constexpr float Y_NORMALIZED_POSITION_FRAME_STATS = 0.450f;
 
 constexpr float X_NORMALIZED_POSITION_PROFILER_CPU = X_NORMALIZED_POSITION_FRAME_STATS;
 constexpr float Y_NORMALIZED_POSITION_PROFILER_CPU = 0.665f;
 
-constexpr float CPU_GPU_GAP = 0.115f;
+constexpr float CPU_GPU_GAP = 0.135f;
 constexpr float X_NORMALIZED_POSITION_PROFILER_GPU = X_NORMALIZED_POSITION_FRAME_STATS + CPU_GPU_GAP;
 constexpr float Y_NORMALIZED_POSITION_PROFILER_GPU = Y_NORMALIZED_POSITION_PROFILER_CPU;
 

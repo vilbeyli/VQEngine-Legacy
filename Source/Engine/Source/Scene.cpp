@@ -32,13 +32,12 @@
 
 #define THREADED_FRUSTUM_CULL 0	// uses workers to cull the render lists (not implemented yet)
 
-#define DEBUG_LOD_LEVELS 1
-
 Scene::Scene(const BaseSceneParams& params)
 	: mpRenderer(params.pRenderer)
 	, mpTextRenderer(params.pTextRenderer)
 	, mSelectedCamera(0)
 	, mpCPUProfiler(params.pCPUProfiler)
+	, mLODManager(this->mMeshes)
 {
 	mModelLoader.Initialize(mpRenderer);
 }
@@ -94,6 +93,19 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 	SetLightCache();
 	EndLoadingModels();
 
+	// initialize LOD manager
+	{
+		std::vector<GameObject*> pSceneObjects;
+		for (GameObject* pObj : mpObjects)
+		{
+			if (pObj->mpScene == this)
+			{
+				pSceneObjects.push_back(pObj);
+			}
+		}
+
+		mLODManager.Initialize(GetActiveCamera(), pSceneObjects);
+	}
 	CalculateSceneBoundingBox();	// needs to happen after models are loaded
 }
 
@@ -111,6 +123,7 @@ void Scene::UnloadScene()
 	mMeshes.clear();
 	mObjectPool.Cleanup();
 	ClearLights();
+	mLODManager.Reset();
 	Unload();
 }
 
@@ -209,379 +222,6 @@ void Scene::LoadModel_Async(GameObject* pObject, const std::string& modelPath)
 
 
 //----------------------------------------------------------------------------------------------------------------
-// RENDER FUNCTIONS
-//----------------------------------------------------------------------------------------------------------------
-int Scene::RenderOpaque(const SceneView& sceneView) const
-{
-	//-----------------------------------------------------------------------------------------------
-
-	struct ObjectMatrices_WorldSpace
-	{
-		XMMATRIX wvp;
-		XMMATRIX w;
-		XMMATRIX n;
-	};
-	auto Is2DGeometry = [](MeshID mesh)
-	{
-		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
-	};
-	auto ShouldSendMaterial = [](EShaders shader)
-	{
-		return (shader == EShaders::FORWARD_PHONG
-			 || shader == EShaders::UNLIT
-			 || shader == EShaders::NORMAL
-			 || shader == EShaders::FORWARD_BRDF
-			 || shader == EShaders::DEFERRED_GEOMETRY);
-	};
-	auto RenderObject = [&](const GameObject* pObj)
-	{
-		const Transform& tf = pObj->GetTransform();
-		const ModelData& model = pObj->GetModelData();
-
-		const EShaders shader = static_cast<EShaders>(mpRenderer->GetActiveShader());
-		const XMMATRIX world = tf.WorldTransformationMatrix();
-		const XMMATRIX wvp = world * sceneView.viewProj;
-
-		switch (shader)
-		{
-		case EShaders::TBN:
-			mpRenderer->SetConstant4x4f("world", world);
-			mpRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
-			mpRenderer->SetConstant4x4f("normalMatrix", tf.NormalMatrix(world));
-			break;
-		case EShaders::DEFERRED_GEOMETRY:
-		{
-			const ObjectMatrices mats =
-			{
-				world * sceneView.view,
-				tf.NormalMatrix(world) * sceneView.view,
-				wvp,
-			};
-			mpRenderer->SetConstantStruct("ObjMatrices", &mats);
-			break;
-		}
-		case EShaders::NORMAL:
-			mpRenderer->SetConstant4x4f("normalMatrix", tf.NormalMatrix(world));
-		case EShaders::UNLIT:
-		case EShaders::TEXTURE_COORDINATES:
-			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-			break;
-		default:	// lighting shaders
-		{
-			const ObjectMatrices_WorldSpace mats =
-			{
-				wvp,
-				world,
-				tf.NormalMatrix(world)
-			};
-			mpRenderer->SetConstantStruct("ObjMatrices", &mats);
-			break;
-		}
-		}
-
-		// SET GEOMETRY & MATERIAL, THEN DRAW
-		mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
-		for(MeshID id : model.mMeshIDs)
-		{
-			const auto IABuffer = mMeshes[id].GetIABuffers(this->mForceLODLevel);
-
-			// SET MATERIAL CONSTANTS
-			if (ShouldSendMaterial(shader))
-			{
-				const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(id) != model.mMaterialLookupPerMesh.end();
-				if (bMeshHasMaterial)
-				{
-					const MaterialID materialID = model.mMaterialLookupPerMesh.at(id);
-					const Material* pMat = mMaterials.GetMaterial_const(materialID);
-					// #TODO: uncomment below when transparency is implemented.
-					//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
-					//	return;
-					pMat->SetMaterialConstants(mpRenderer, shader, sceneView.bIsDeferredRendering);
-				}
-				else
-				{
-					mMaterials.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(mpRenderer, shader, sceneView.bIsDeferredRendering);
-				}
-			}
-
-			mpRenderer->SetVertexBuffer(IABuffer.first);
-			mpRenderer->SetIndexBuffer(IABuffer.second);
-			mpRenderer->Apply();
-			mpRenderer->DrawIndexed();
-		};
-	};
-	//-----------------------------------------------------------------------------------------------
-
-	// RENDER NON-INSTANCED SCENE OBJECTS
-	//
-	int numObj = 0;
-	for (const auto* obj : mSceneView.culledOpaqueList)
-	{
-		RenderObject(obj);
-		++numObj;
-	}
-
-	
-
-	return numObj;
-}
-
-int Scene::RenderAlpha(const SceneView & sceneView) const
-{
-	const ShaderID selectedShader = ENGINE->GetSelectedShader();
-	const bool bSendMaterialData = (
-		selectedShader == EShaders::FORWARD_PHONG
-		|| selectedShader == EShaders::UNLIT
-		|| selectedShader == EShaders::NORMAL
-		|| selectedShader == EShaders::FORWARD_BRDF
-		|| selectedShader == EShaders::DEFERRED_GEOMETRY
-	);
-
-	int numObj = 0;
-	for (const auto* obj : mSceneView.alphaList)
-	{
-		obj->RenderTransparent(mpRenderer, sceneView, bSendMaterialData, mMaterials);
-		++numObj;
-	}
-	return numObj;
-}
-
-int Scene::RenderDebug(const XMMATRIX& viewProj) const
-{
-	const bool bRenderPointLightCues = true;
-	const bool bRenderSpotLightCues = true;
-	const bool bRenderObjectBoundingBoxes = false;
-	const bool bRenderMeshBoundingBoxes = false;
-	const bool bRenderSceneBoundingBox = true;
-
-	const auto IABuffersCube = mMeshes[EGeometry::CUBE].GetIABuffers();
-	const auto IABuffersSphere = mMeshes[EGeometry::SPHERE].GetIABuffers();
-	const auto IABuffersCone = mMeshes[EGeometry::LIGHT_CUE_CONE].GetIABuffers();
-	
-	XMMATRIX wvp;
-
-	// set debug render states
-	mpRenderer->SetShader(EShaders::UNLIT);
-	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
-	mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
-	mpRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
-	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
-	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
-	mpRenderer->SetRasterizerState(EDefaultRasterizerState::WIREFRAME);
-	mpRenderer->SetVertexBuffer(IABuffersCube.first);
-	mpRenderer->SetIndexBuffer(IABuffersCube.second);
-
-
-	// SCENE BOUNDING BOX
-	//
-	if (bRenderSceneBoundingBox)
-	{
-		wvp = mBoundingBox.GetWorldTransformationMatrix() * viewProj;
-		mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-		mpRenderer->Apply();
-		mpRenderer->DrawIndexed();
-	}
-
-	// GAME OBJECT OBB & MESH BOUNDING BOXES
-	//
-	int numRenderedObjects = 0;
-	if (bRenderObjectBoundingBoxes)
-	{
-		std::vector<const GameObject*> pObjects(
-			mSceneView.opaqueList.size() + mSceneView.alphaList.size()
-			, nullptr
-		);
-		std::copy(RANGE(mSceneView.opaqueList), pObjects.begin());
-		std::copy(RANGE(mSceneView.alphaList), pObjects.begin() + mSceneView.opaqueList.size());
-		for (const GameObject* pObj : pObjects)
-		{
-			const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
-			wvp = pObj->mBoundingBox.GetWorldTransformationMatrix() * matWorld * viewProj;
-#if 1
-			mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
-			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-			mpRenderer->Apply();
-			mpRenderer->DrawIndexed();
-#endif
-
-			// mesh bounding boxes (currently broken...)
-			if (bRenderMeshBoundingBoxes)
-			{
-				mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
-#if 0
-				for (const MeshID meshID : pObj->mModel.mData.mMeshIDs)
-				{
-					wvp = pObj->mMeshBoundingBoxes[meshID].GetWorldTransformationMatrix() * matWorld * viewProj;
-					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-					mpRenderer->Apply();
-					mpRenderer->DrawIndexed();
-				}
-#endif
-			}
-		}
-		numRenderedObjects = (int)pObjects.size();
-	}
-
-	// LIGHT VOLUMES
-	//
-	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
-
-	// light's transform hold Translation and Rotation data,
-	// Scale is used for rendering. Hence, we use another transform
-	// here to use mRange as the lights render scale signifying its 
-	// radius of influence.
-	Transform tf;
-	constexpr size_t NUM_LIGHT_CONTAINERS = 2;
-	std::array<const std::vector<Light>*, NUM_LIGHT_CONTAINERS > lightContainers =
-	{
-		  &mLightsStatic
-		, &mLightsDynamic
-	};
-	for (int i = 0; i < NUM_LIGHT_CONTAINERS; ++i)
-	{
-		const std::vector<Light>& mLights = *lightContainers[i];
-		// point lights
-		if (bRenderPointLightCues)
-		{
-			mpRenderer->SetVertexBuffer(IABuffersSphere.first);
-			mpRenderer->SetIndexBuffer(IABuffersSphere.second);
-			for (const Light& l : mLights)
-			{
-				if (l.mType == Light::ELightType::POINT)
-				{
-					mpRenderer->SetConstant3f("diffuse", l.mColor);
-
-					tf.SetPosition(l.mTransform._position);
-					tf.SetScale(l.mRange * 0.5f); // Mesh's model space R = 2.0f, hence scale it by 0.5f...
-					wvp = tf.WorldTransformationMatrix() * viewProj;
-					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-					mpRenderer->Apply();
-					mpRenderer->DrawIndexed();
-				}
-			}
-		}
-
-		// spot lights 
-		if (bRenderSpotLightCues)
-		{
-			mpRenderer->SetVertexBuffer(IABuffersCone.first);
-			mpRenderer->SetIndexBuffer(IABuffersCone.second);
-			for (const Light& l : mLights)
-			{
-				if (l.mType == Light::ELightType::SPOT)
-				{
-					mpRenderer->SetConstant3f("diffuse", l.mColor);
-
-					tf = l.mTransform;
-
-					// reset scale as it holds the scale value for light's render mesh
-					tf.SetScale(1, 1, 1);
-
-					// align with spot light's local space
-					tf.RotateAroundLocalXAxisDegrees(-90.0f);
-
-
-					XMMATRIX alignConeToSpotLightTransformation = XMMatrixIdentity();
-					alignConeToSpotLightTransformation.r[3].m128_f32[0] = 0.0f;
-					alignConeToSpotLightTransformation.r[3].m128_f32[1] = -l.mRange;
-					alignConeToSpotLightTransformation.r[3].m128_f32[2] = 0.0f;
-					//tf.SetScale(1, 20, 1);
-
-					const float coneBaseRadius = std::tanf(l.mSpotOuterConeAngleDegrees * DEG2RAD) * l.mRange;
-					XMMATRIX scaleConeToRange = XMMatrixIdentity();
-					scaleConeToRange.r[0].m128_f32[0] = coneBaseRadius;
-					scaleConeToRange.r[1].m128_f32[1] = l.mRange;
-					scaleConeToRange.r[2].m128_f32[2] = coneBaseRadius;
-
-					//wvp = alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
-					wvp = scaleConeToRange * alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
-					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-					mpRenderer->Apply();
-					mpRenderer->DrawIndexed();
-				}
-			}
-		}
-	}
-
-
-	// TODO: CAMERA FRUSTUM
-	//
-	if (mCameras.size() > 1 && mSelectedCamera != 0 && false)
-	{
-		// render camera[0]'s frustum
-		const XMMATRIX viewProj = mCameras[mSelectedCamera].GetViewMatrix() * mCameras[mSelectedCamera].GetProjectionMatrix();
-		
-		auto a = FrustumPlaneset::ExtractFromMatrix(viewProj); // world space frustum plane equations
-		
-		// IA: model space camera frustum 
-		// world matrix from camera[0] view ray
-		// viewProj from camera[selected]
-		mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
-
-		
-		Transform tf;
-		//const vec3 diag = this->hi - this->low;
-		//const vec3 pos = (this->hi + this->low) * 0.5f;
-		//tf.SetScale(diag * 0.5f);
-		//tf.SetPosition(pos);
-		XMMATRIX wvp = tf.WorldTransformationMatrix() * viewProj;
-		//mpRenderer->SetConstant4x4f("worldViewProj", wvp);
-		mpRenderer->Apply();
-		mpRenderer->DrawIndexed();
-	}
-
-	mpRenderer->UnbindDepthTarget();
-	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
-	mpRenderer->Apply();
-
-
-	return numRenderedObjects; // objects rendered
-}
-
-
-void Scene::RenderLights() const
-{
-	if (!this->mSceneView.bIsIBLEnabled)
-		return;
-
-	mpRenderer->BeginEvent("Render Lights Pass");
-	mpRenderer->SetShader(EShaders::UNLIT);
-	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
-	constexpr size_t NUM_LIGHT_CONTAINERS = 2;
-	std::array<const std::vector<Light>*, NUM_LIGHT_CONTAINERS > lightContainers =
-	{
-		  &mLightsStatic
-		, &mLightsDynamic
-	};
-	const auto BUILT_IN_MESHES = ENGINE->GetBuiltInMeshes();
-	for (int i = 0; i < NUM_LIGHT_CONTAINERS; ++i)
-	{
-		const std::vector<Light>& mLights = *lightContainers[i];
-		for (const Light& light : mLights)
-		{
-			//if (!light._bEnabled) continue; // #BreaksRelease
-
-			if (light.mType == Light::ELightType::DIRECTIONAL)
-				continue;	// do not render directional lights
-
-			const auto IABuffers = BUILT_IN_MESHES[light.mMeshID].GetIABuffers();
-			const XMMATRIX world = light.mTransform.WorldTransformationMatrix();
-			const XMMATRIX worldViewProj = world * this->mSceneView.viewProj;
-			const vec3 color = light.mColor.Value() * light.mBrightness;
-
-			mpRenderer->SetVertexBuffer(IABuffers.first);
-			mpRenderer->SetIndexBuffer(IABuffers.second);
-			mpRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
-			mpRenderer->SetConstant3f("diffuse", color);
-			mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
-			mpRenderer->Apply();
-			mpRenderer->DrawIndexed();
-		}
-	}
-	mpRenderer->EndEvent();
-}
-
-//----------------------------------------------------------------------------------------------------------------
 // UPDATE FUNCTIONS
 //----------------------------------------------------------------------------------------------------------------
 void Scene::UpdateScene(float dt)
@@ -591,6 +231,7 @@ void Scene::UpdateScene(float dt)
 	if (ENGINE->INP()->IsKeyTriggered("C"))
 	{
 		mSelectedCamera = (mSelectedCamera + 1) % mCameras.size();
+		mLODManager.SetViewer(this->GetActiveCamera());
 	}
 
 
@@ -613,24 +254,27 @@ void Scene::UpdateScene(float dt)
 #endif
 
 
-#if DEBUG_LOD_LEVELS
-	if (ENGINE->INP()->IsKeyTriggered("]"))
-	{
-		mForceLODLevel += 1;
-		Log::Info("Force LOD Level = %d", this->mForceLODLevel);
-	}
-	if (ENGINE->INP()->IsKeyTriggered("["))
-	{
-		mForceLODLevel = std::max(0, mForceLODLevel - 1);
-		Log::Info("Force LOD Level = %d", this->mForceLODLevel);
-	}
-#endif
-
 
 	// UPDATE CAMERA & WORLD
 	//
+	mpCPUProfiler->BeginEntry("Scene::Update()");
 	mCameras[mSelectedCamera].Update(dt);
 	Update(dt);
+	mpCPUProfiler->EndEntry();
+
+	// UPDATE LOD MANAGER
+	//
+	mpCPUProfiler->BeginEntry("LODManager::Update()");
+	mLODManager.Update();
+	mpCPUProfiler->EndEntry();
+
+
+	// Note:
+	// this could be moved outside this function to allow for more time 
+	// for concurrency of lod manager update operations (if it takes that long).
+	mpCPUProfiler->BeginEntry("LODManager::LateUpdate()");
+	mLODManager.LateUpdate();
+	mpCPUProfiler->EndEntry();
 }
 
 static void ResetSceneStatCounters(SceneStats& stats)
@@ -1617,6 +1261,379 @@ Material* Scene::CreateNewMaterial(EMaterialType type){ return static_cast<Mater
 Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_cast<Material*>(mMaterials.CreateAndGetRandomMaterial(type)); }
 
 
+//----------------------------------------------------------------------------------------------------------------
+// RENDER FUNCTIONS
+//----------------------------------------------------------------------------------------------------------------
+int Scene::RenderOpaque(const SceneView& sceneView) const
+{
+	//-----------------------------------------------------------------------------------------------
+
+	struct ObjectMatrices_WorldSpace
+	{
+		XMMATRIX wvp;
+		XMMATRIX w;
+		XMMATRIX n;
+	};
+	auto Is2DGeometry = [](MeshID mesh)
+	{
+		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
+	};
+	auto ShouldSendMaterial = [](EShaders shader)
+	{
+		return (shader == EShaders::FORWARD_PHONG
+			|| shader == EShaders::UNLIT
+			|| shader == EShaders::NORMAL
+			|| shader == EShaders::FORWARD_BRDF
+			|| shader == EShaders::DEFERRED_GEOMETRY);
+	};
+	auto RenderObject = [&](const GameObject* pObj)
+	{
+		const Transform& tf = pObj->GetTransform();
+		const ModelData& model = pObj->GetModelData();
+
+		const EShaders shader = static_cast<EShaders>(mpRenderer->GetActiveShader());
+		const XMMATRIX world = tf.WorldTransformationMatrix();
+		const XMMATRIX wvp = world * sceneView.viewProj;
+
+		switch (shader)
+		{
+		case EShaders::TBN:
+			mpRenderer->SetConstant4x4f("world", world);
+			mpRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
+			mpRenderer->SetConstant4x4f("normalMatrix", tf.NormalMatrix(world));
+			break;
+		case EShaders::DEFERRED_GEOMETRY:
+		{
+			const ObjectMatrices mats =
+			{
+				world * sceneView.view,
+				tf.NormalMatrix(world) * sceneView.view,
+				wvp,
+			};
+			mpRenderer->SetConstantStruct("ObjMatrices", &mats);
+			break;
+		}
+		case EShaders::NORMAL:
+			mpRenderer->SetConstant4x4f("normalMatrix", tf.NormalMatrix(world));
+		case EShaders::UNLIT:
+		case EShaders::TEXTURE_COORDINATES:
+			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+			break;
+		default:	// lighting shaders
+		{
+			const ObjectMatrices_WorldSpace mats =
+			{
+				wvp,
+				world,
+				tf.NormalMatrix(world)
+			};
+			mpRenderer->SetConstantStruct("ObjMatrices", &mats);
+			break;
+		}
+		}
+
+		// SET GEOMETRY & MATERIAL, THEN DRAW
+		mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+		for (MeshID id : model.mMeshIDs)
+		{
+			const auto IABuffer = mMeshes[id].GetIABuffers(mLODManager.GetLODValue(id));
+
+			// SET MATERIAL CONSTANTS
+			if (ShouldSendMaterial(shader))
+			{
+				const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(id) != model.mMaterialLookupPerMesh.end();
+				if (bMeshHasMaterial)
+				{
+					const MaterialID materialID = model.mMaterialLookupPerMesh.at(id);
+					const Material* pMat = mMaterials.GetMaterial_const(materialID);
+					// #TODO: uncomment below when transparency is implemented.
+					//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
+					//	return;
+					pMat->SetMaterialConstants(mpRenderer, shader, sceneView.bIsDeferredRendering);
+				}
+				else
+				{
+					mMaterials.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(mpRenderer, shader, sceneView.bIsDeferredRendering);
+				}
+			}
+
+			mpRenderer->SetVertexBuffer(IABuffer.first);
+			mpRenderer->SetIndexBuffer(IABuffer.second);
+			mpRenderer->Apply();
+			mpRenderer->DrawIndexed();
+		};
+	};
+	//-----------------------------------------------------------------------------------------------
+
+	// RENDER NON-INSTANCED SCENE OBJECTS
+	//
+	int numObj = 0;
+	for (const auto* obj : mSceneView.culledOpaqueList)
+	{
+		RenderObject(obj);
+		++numObj;
+	}
+
+
+
+	return numObj;
+}
+
+int Scene::RenderAlpha(const SceneView & sceneView) const
+{
+	const ShaderID selectedShader = ENGINE->GetSelectedShader();
+	const bool bSendMaterialData = (
+		selectedShader == EShaders::FORWARD_PHONG
+		|| selectedShader == EShaders::UNLIT
+		|| selectedShader == EShaders::NORMAL
+		|| selectedShader == EShaders::FORWARD_BRDF
+		|| selectedShader == EShaders::DEFERRED_GEOMETRY
+		);
+
+	int numObj = 0;
+	for (const auto* obj : mSceneView.alphaList)
+	{
+		obj->RenderTransparent(mpRenderer, sceneView, bSendMaterialData, mMaterials);
+		++numObj;
+	}
+	return numObj;
+}
+
+int Scene::RenderDebug(const XMMATRIX& viewProj) const
+{
+	const bool bRenderPointLightCues = true;
+	const bool bRenderSpotLightCues = true;
+	const bool bRenderObjectBoundingBoxes = false;
+	const bool bRenderMeshBoundingBoxes = false;
+	const bool bRenderSceneBoundingBox = true;
+
+	const auto IABuffersCube = mMeshes[EGeometry::CUBE].GetIABuffers();
+	const auto IABuffersSphere = mMeshes[EGeometry::SPHERE].GetIABuffers();
+	const auto IABuffersCone = mMeshes[EGeometry::LIGHT_CUE_CONE].GetIABuffers();
+
+	XMMATRIX wvp;
+
+	// set debug render states
+	mpRenderer->SetShader(EShaders::UNLIT);
+	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
+	mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+	mpRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
+	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
+	mpRenderer->SetRasterizerState(EDefaultRasterizerState::WIREFRAME);
+	mpRenderer->SetVertexBuffer(IABuffersCube.first);
+	mpRenderer->SetIndexBuffer(IABuffersCube.second);
+
+
+	// SCENE BOUNDING BOX
+	//
+	if (bRenderSceneBoundingBox)
+	{
+		wvp = mBoundingBox.GetWorldTransformationMatrix() * viewProj;
+		mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+		mpRenderer->Apply();
+		mpRenderer->DrawIndexed();
+	}
+
+	// GAME OBJECT OBB & MESH BOUNDING BOXES
+	//
+	int numRenderedObjects = 0;
+	if (bRenderObjectBoundingBoxes)
+	{
+		std::vector<const GameObject*> pObjects(
+			mSceneView.opaqueList.size() + mSceneView.alphaList.size()
+			, nullptr
+		);
+		std::copy(RANGE(mSceneView.opaqueList), pObjects.begin());
+		std::copy(RANGE(mSceneView.alphaList), pObjects.begin() + mSceneView.opaqueList.size());
+		for (const GameObject* pObj : pObjects)
+		{
+			const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+			wvp = pObj->mBoundingBox.GetWorldTransformationMatrix() * matWorld * viewProj;
+#if 1
+			mpRenderer->SetConstant3f("diffuse", LinearColor::cyan);
+			mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+			mpRenderer->Apply();
+			mpRenderer->DrawIndexed();
+#endif
+
+			// mesh bounding boxes (currently broken...)
+			if (bRenderMeshBoundingBoxes)
+			{
+				mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
+#if 0
+				for (const MeshID meshID : pObj->mModel.mData.mMeshIDs)
+				{
+					wvp = pObj->mMeshBoundingBoxes[meshID].GetWorldTransformationMatrix() * matWorld * viewProj;
+					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+					mpRenderer->Apply();
+					mpRenderer->DrawIndexed();
+				}
+#endif
+			}
+		}
+		numRenderedObjects = (int)pObjects.size();
+	}
+
+	// LIGHT VOLUMES
+	//
+	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
+
+	// light's transform hold Translation and Rotation data,
+	// Scale is used for rendering. Hence, we use another transform
+	// here to use mRange as the lights render scale signifying its 
+	// radius of influence.
+	Transform tf;
+	constexpr size_t NUM_LIGHT_CONTAINERS = 2;
+	std::array<const std::vector<Light>*, NUM_LIGHT_CONTAINERS > lightContainers =
+	{
+		  &mLightsStatic
+		, &mLightsDynamic
+	};
+	for (int i = 0; i < NUM_LIGHT_CONTAINERS; ++i)
+	{
+		const std::vector<Light>& mLights = *lightContainers[i];
+		// point lights
+		if (bRenderPointLightCues)
+		{
+			mpRenderer->SetVertexBuffer(IABuffersSphere.first);
+			mpRenderer->SetIndexBuffer(IABuffersSphere.second);
+			for (const Light& l : mLights)
+			{
+				if (l.mType == Light::ELightType::POINT)
+				{
+					mpRenderer->SetConstant3f("diffuse", l.mColor);
+
+					tf.SetPosition(l.mTransform._position);
+					tf.SetScale(l.mRange * 0.5f); // Mesh's model space R = 2.0f, hence scale it by 0.5f...
+					wvp = tf.WorldTransformationMatrix() * viewProj;
+					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+					mpRenderer->Apply();
+					mpRenderer->DrawIndexed();
+				}
+			}
+		}
+
+		// spot lights 
+		if (bRenderSpotLightCues)
+		{
+			mpRenderer->SetVertexBuffer(IABuffersCone.first);
+			mpRenderer->SetIndexBuffer(IABuffersCone.second);
+			for (const Light& l : mLights)
+			{
+				if (l.mType == Light::ELightType::SPOT)
+				{
+					mpRenderer->SetConstant3f("diffuse", l.mColor);
+
+					tf = l.mTransform;
+
+					// reset scale as it holds the scale value for light's render mesh
+					tf.SetScale(1, 1, 1);
+
+					// align with spot light's local space
+					tf.RotateAroundLocalXAxisDegrees(-90.0f);
+
+
+					XMMATRIX alignConeToSpotLightTransformation = XMMatrixIdentity();
+					alignConeToSpotLightTransformation.r[3].m128_f32[0] = 0.0f;
+					alignConeToSpotLightTransformation.r[3].m128_f32[1] = -l.mRange;
+					alignConeToSpotLightTransformation.r[3].m128_f32[2] = 0.0f;
+					//tf.SetScale(1, 20, 1);
+
+					const float coneBaseRadius = std::tanf(l.mSpotOuterConeAngleDegrees * DEG2RAD) * l.mRange;
+					XMMATRIX scaleConeToRange = XMMatrixIdentity();
+					scaleConeToRange.r[0].m128_f32[0] = coneBaseRadius;
+					scaleConeToRange.r[1].m128_f32[1] = l.mRange;
+					scaleConeToRange.r[2].m128_f32[2] = coneBaseRadius;
+
+					//wvp = alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
+					wvp = scaleConeToRange * alignConeToSpotLightTransformation * tf.WorldTransformationMatrix() * viewProj;
+					mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+					mpRenderer->Apply();
+					mpRenderer->DrawIndexed();
+				}
+			}
+		}
+	}
+
+
+	// TODO: CAMERA FRUSTUM
+	//
+	if (mCameras.size() > 1 && mSelectedCamera != 0 && false)
+	{
+		// render camera[0]'s frustum
+		const XMMATRIX viewProj = mCameras[mSelectedCamera].GetViewMatrix() * mCameras[mSelectedCamera].GetProjectionMatrix();
+
+		auto a = FrustumPlaneset::ExtractFromMatrix(viewProj); // world space frustum plane equations
+
+		// IA: model space camera frustum 
+		// world matrix from camera[0] view ray
+		// viewProj from camera[selected]
+		mpRenderer->SetConstant3f("diffuse", LinearColor::orange);
+
+
+		Transform tf;
+		//const vec3 diag = this->hi - this->low;
+		//const vec3 pos = (this->hi + this->low) * 0.5f;
+		//tf.SetScale(diag * 0.5f);
+		//tf.SetPosition(pos);
+		XMMATRIX wvp = tf.WorldTransformationMatrix() * viewProj;
+		//mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+		mpRenderer->Apply();
+		mpRenderer->DrawIndexed();
+	}
+
+	mpRenderer->UnbindDepthTarget();
+	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
+	mpRenderer->Apply();
+
+
+	return numRenderedObjects; // objects rendered
+}
+
+
+void Scene::RenderLights() const
+{
+	if (!this->mSceneView.bIsIBLEnabled)
+		return;
+
+	mpRenderer->BeginEvent("Render Lights Pass");
+	mpRenderer->SetShader(EShaders::UNLIT);
+	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+	constexpr size_t NUM_LIGHT_CONTAINERS = 2;
+	std::array<const std::vector<Light>*, NUM_LIGHT_CONTAINERS > lightContainers =
+	{
+		  &mLightsStatic
+		, &mLightsDynamic
+	};
+	const auto BUILT_IN_MESHES = ENGINE->GetBuiltInMeshes();
+	for (int i = 0; i < NUM_LIGHT_CONTAINERS; ++i)
+	{
+		const std::vector<Light>& mLights = *lightContainers[i];
+		for (const Light& light : mLights)
+		{
+			//if (!light._bEnabled) continue; // #BreaksRelease
+
+			if (light.mType == Light::ELightType::DIRECTIONAL)
+				continue;	// do not render directional lights
+
+			const auto IABuffers = BUILT_IN_MESHES[light.mMeshID].GetIABuffers();
+			const XMMATRIX world = light.mTransform.WorldTransformationMatrix();
+			const XMMATRIX worldViewProj = world * this->mSceneView.viewProj;
+			const vec3 color = light.mColor.Value() * light.mBrightness;
+
+			mpRenderer->SetVertexBuffer(IABuffers.first);
+			mpRenderer->SetIndexBuffer(IABuffers.second);
+			mpRenderer->SetConstant4x4f("worldViewProj", worldViewProj);
+			mpRenderer->SetConstant3f("diffuse", color);
+			mpRenderer->SetConstant1f("isDiffuseMap", 0.0f);
+			mpRenderer->Apply();
+			mpRenderer->DrawIndexed();
+		}
+	}
+	mpRenderer->EndEvent();
+}
+
 
 //----------------------------------------------------------------------------------------------------------------
 // SCENE RESOURCE VIEW  FUNCTIONS
@@ -1624,7 +1641,7 @@ Material* Scene::CreateRandomMaterialOfType(EMaterialType type) { return static_
 #include "SceneResources.h"
 std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID)
 {
-	return pScene->mMeshes[meshID].GetIABuffers(pScene->mForceLODLevel);
+	return pScene->mMeshes[meshID].GetIABuffers(pScene->mLODManager.GetLODValue(meshID));
 }
 
 const Material* SceneResourceView::GetMaterial(const Scene* pScene, MaterialID materialID)

@@ -21,8 +21,6 @@
 
 #define VERBOSE_LOGGING 0
 
-#if !MESH_LOD_SYSTEM
-#else
 
 // Renderer* is used to create Vertex/Index buffer data from
 // Mesh constructor as the constructor receives raw vertex/index
@@ -42,7 +40,6 @@ std::pair<BufferID, BufferID> Mesh::GetIABuffers(int lod /*= 0*/) const
 	Log::Warning("Requested LOD level (%d) doesn't exist (LOD levels = %d). Returning LOD=0", lod, static_cast<int>(mLODs.size()));
 #endif
 
-	return mLODs[0].GetIABufferPair();
+	return mLODs.back().GetIABufferPair();
 }
 
-#endif

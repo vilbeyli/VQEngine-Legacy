@@ -148,7 +148,7 @@ struct MeshDrawData
 
 using DepthTargetIDArray = std::vector<DepthTargetID>;
 
-constexpr int MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS = 256;
+constexpr int MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS = 64;
 struct DepthOnlyPass_PerObjectMatrices             { XMMATRIX wvp; };
 struct DepthOnlyPass_PerObjectMatricesCubemap      { XMMATRIX matWorld; XMMATRIX wvp; };
 struct DepthOnlyPass_InstancedObjectCBuffer        { DepthOnlyPass_PerObjectMatrices        objMatrices[MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS]; };

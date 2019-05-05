@@ -17,7 +17,7 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "RenderPasses.h"
-#include "Engine/SceneResources.h"
+#include "Engine/SceneResourceView.h"
 #include "Engine/Engine.h"
 #include "Engine/GameObject.h"
 #include "Engine/Light.h"
@@ -220,7 +220,7 @@ struct BlurParameters { unsigned blurStrength; };
 void BloomPass::Render(Renderer* pRenderer, RenderTargetID _worldRenderTarget, const Settings::Bloom& settings) const
 {
 	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 	const ShaderID currentShader = pRenderer->GetActiveShader();
 
 	//pCPU->BeginEntry("Bloom");

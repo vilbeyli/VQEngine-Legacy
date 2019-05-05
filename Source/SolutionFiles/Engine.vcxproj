@@ -190,7 +190,7 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\Mesh.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Model.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\PerfTree.h" />
-    <ClInclude Include="$(SolutionDir)Source\Engine\SceneResources.h" />
+    <ClInclude Include="..\Engine\SceneResourceView.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\UI.h" />
     <ClInclude Include="$(SolutionDir)Source\Engine\Camera.h" />
     <ClInclude Include="..\Engine\ObjectCullingSystem.h" />

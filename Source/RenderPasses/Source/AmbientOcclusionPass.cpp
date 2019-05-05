@@ -18,7 +18,7 @@
 
 #include "RenderPasses.h"
 
-#include "Engine/SceneResources.h"
+#include "Engine/SceneResourceView.h"
 #include "Engine/Engine.h"
 #include "Engine/GameObject.h"
 #include "Engine/Light.h"
@@ -26,6 +26,7 @@
 
 #include "Renderer/Renderer.h"
 #include "Utilities/vectormath.h"
+#include "Utilities/Log.h"
 
 // temp
 #define ENABLE_COMPUTE_PASS_UNIT_TEST   0
@@ -502,7 +503,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->BeginEvent("Occlusion Pass");
 
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
 	constexpr size_t AO_KERNEL_SIZE = sAOQualityKernelSizeLookup[EAOQuality::AO_QUALITY_HIGH];
 	SSAOConstants<AO_KERNEL_SIZE> aoConsts = FillAOConstBuffer<AO_KERNEL_SIZE>(this, sceneView, pRenderer);
@@ -584,7 +585,7 @@ void AmbientOcclusionPass::RenderOcclusionInterleaved(Renderer* pRenderer, const
 
 
 	const vec2 halfScreenSize = pRenderer->GetWindowDimensionsAsFloat2() * 0.5f;
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
 	constexpr size_t AO_KERNEL_SIZE = sAOQualityKernelSizeLookup[EAOQuality::AO_QUALITY_HIGH];
 	SSAOConstants<AO_KERNEL_SIZE> aoConsts = FillAOConstBuffer<AO_KERNEL_SIZE>(this, sceneView, pRenderer);
@@ -676,11 +677,10 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer, const Texture
 #endif
 }
 
-#include "Utilities/Log.h"
 void AmbientOcclusionPass::GaussianBlurPass(Renderer* pRenderer, const TextureID texOcclusion) const
 {
 	const vec2 texDimensions = pRenderer->GetWindowDimensionsAsFloat2();
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
 	pRenderer->BeginEvent("Blur Pass <Gau>");
 

@@ -46,8 +46,12 @@ Scene::Scene(const BaseSceneParams& params)
 //----------------------------------------------------------------------------------------------------------------
 // LOAD / UNLOAD FUNCTIONS
 //----------------------------------------------------------------------------------------------------------------
-void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSettings, const std::vector<Mesh>& builtinMeshes)
+void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSettings)
 {
+
+	//
+	// Allocate GameObject & Material memory
+	//
 #ifdef _DEBUG
 	mObjectPool.Initialize(4096);
 	mMaterials.Initialize(4096);
@@ -56,9 +60,14 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 	mMaterials.Initialize(4096 * 8);
 #endif
 
-	mMeshes.resize(builtinMeshes.size());
-	std::copy(builtinMeshes.begin(), builtinMeshes.end(), mMeshes.begin());
+	mMeshes.clear();
+	mMeshes.resize(mBuiltinMeshes.size());
+	std::copy(RANGE(mBuiltinMeshes), mMeshes.begin());
 
+
+	//
+	// Lights
+	//
 	for (Light& l : scene.lights) this->AddLight(std::move(l));
 	//mLights = std::move(scene.lights);
 
@@ -67,6 +76,9 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 	mSceneRenderSettings = scene.settings;
 
 
+	//
+	// Cameras
+	//
 	for (const Settings::Camera& camSetting : scene.cameras)
 	{
 		Camera c;
@@ -74,11 +86,18 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 		mCameras.push_back(c);
 	}
 
+
+	//
+	// Game Objects
+	//
 	for (size_t i = 0; i < scene.objects.size(); ++i)
 	{
 		GameObject* pObj = mObjectPool.Create(this);
 		*pObj = scene.objects[i];
 		pObj->mpScene = this;
+
+		// if the game object has a model that is not loaded yet
+		// call the async load function
 		if (!pObj->mModel.mbLoaded && !pObj->mModel.mModelName.empty())
 		{
 			LoadModel_Async(pObj, pObj->mModel.mModelName);
@@ -86,11 +105,12 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 		mpObjects.push_back(pObj);
 	}
 
-	Load(scene);
 
-	// async model loading
-	StartLoadingModels();
+	Load(scene);            // Scene-specific load
+	StartLoadingModels();	// async model loading
+	
 	SetLightCache();
+
 	EndLoadingModels();
 
 	// initialize LOD manager
@@ -405,6 +425,47 @@ void Scene::PreRender(FrameStats& stats, SceneLightingConstantBuffer& outLightin
 void Scene::ResetActiveCamera()
 {
 	mCameras[mSelectedCamera].Reset();
+}
+
+std::vector<Mesh> Scene::mBuiltinMeshes;
+void Scene::InitializeBuiltinMeshes()
+{
+
+	// cylinder parameters
+	const float	 cylHeight = 3.1415f;		const float	 cylTopRadius = 1.0f;
+	const float	 cylBottomRadius = 1.0f;	const unsigned cylSliceCount = 120;
+	const unsigned cylStackCount = 100;
+
+	// grid parameters
+	const float gridWidth = 1.0f;		const float gridDepth = 1.0f;
+	const unsigned gridFinenessH = 100;	const unsigned gridFinenessV = 100;
+
+	// sphere parameters
+	const float sphRadius = 2.0f;
+	const unsigned sphRingCount = 25;	const unsigned sphSliceCount = 25;
+
+	// cone parameters
+	const float coneHeight = 3.0f;
+	const float coneRadius = 1.0f;
+
+	constexpr int numDefaultLODLevels_Sphere = 5;
+	constexpr int numDefaultLODLevels_Grid = 7;
+	constexpr int numDefaultLODLevels_Cone = 5;
+	constexpr int numDefaultLODLevels_Cylinder = 5;
+
+	Scene::mBuiltinMeshes =	// this should match enum declaration order
+	{
+		GeometryGenerator::Triangle(1.0f),
+		GeometryGenerator::Quad(1.0f),
+		GeometryGenerator::FullScreenQuad(),
+		GeometryGenerator::Cube(),
+		GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount, numDefaultLODLevels_Cylinder),
+		GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount, numDefaultLODLevels_Sphere),
+		GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV, numDefaultLODLevels_Grid),
+		GeometryGenerator::Cone(coneHeight, coneRadius, 120, numDefaultLODLevels_Cone),
+		GeometryGenerator::Cone(1.0f, 1.0f, 30),
+		//GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
+	};
 }
 
 void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
@@ -1606,7 +1667,7 @@ void Scene::RenderLights() const
 		  &mLightsStatic
 		, &mLightsDynamic
 	};
-	const auto BUILT_IN_MESHES = ENGINE->GetBuiltInMeshes();
+
 	for (int i = 0; i < NUM_LIGHT_CONTAINERS; ++i)
 	{
 		const std::vector<Light>& mLights = *lightContainers[i];
@@ -1617,7 +1678,7 @@ void Scene::RenderLights() const
 			if (light.mType == Light::ELightType::DIRECTIONAL)
 				continue;	// do not render directional lights
 
-			const auto IABuffers = BUILT_IN_MESHES[light.mMeshID].GetIABuffers();
+			const auto IABuffers = mBuiltinMeshes[light.mMeshID].GetIABuffers();
 			const XMMATRIX world = light.mTransform.WorldTransformationMatrix();
 			const XMMATRIX worldViewProj = world * this->mSceneView.viewProj;
 			const vec3 color = light.mColor.Value() * light.mBrightness;
@@ -1635,13 +1696,37 @@ void Scene::RenderLights() const
 }
 
 
+void Scene::RenderSkybox(const XMMATRIX& viewProj) const
+{
+	const XMMATRIX& wvp = viewProj;
+	const auto IABuffers = Scene::GetGeometryVertexAndIndexBuffers(EGeometry::CUBE);
+
+	mpRenderer->BeginEvent("Skybox Pass");
+	mpRenderer->SetShader(mSkybox.GetShader());
+	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
+	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
+	mpRenderer->SetConstant4x4f("worldViewProj", wvp);
+	mpRenderer->SetTexture("texSkybox", mSkybox.GetSkyboxTexture());
+	//mpRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
+	mpRenderer->SetSamplerState("samWrap", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+	mpRenderer->SetVertexBuffer(IABuffers.first);
+	mpRenderer->SetIndexBuffer(IABuffers.second);
+	mpRenderer->Apply();
+	mpRenderer->DrawIndexed();
+	mpRenderer->EndEvent();
+}
+
 //----------------------------------------------------------------------------------------------------------------
 // SCENE RESOURCE VIEW  FUNCTIONS
 //----------------------------------------------------------------------------------------------------------------
-#include "SceneResources.h"
+#include "SceneResourceView.h"
 std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID)
 {
 	return pScene->mMeshes[meshID].GetIABuffers(pScene->mLODManager.GetLODValue(meshID));
+}
+std::pair<BufferID, BufferID> SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry builtInGeometry, int lod)
+{
+	return Scene::GetGeometryVertexAndIndexBuffers(builtInGeometry, lod);
 }
 
 const Material* SceneResourceView::GetMaterial(const Scene* pScene, MaterialID materialID)

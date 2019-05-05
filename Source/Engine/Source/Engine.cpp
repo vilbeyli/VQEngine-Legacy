@@ -33,6 +33,7 @@
 // -------------------------------------------------------
 #include "Engine.h"
 #include "Camera.h"
+#include "SceneResourceView.h"
 
 #include "Application/Application.h"
 #include "Application/Input.h"
@@ -143,7 +144,7 @@ Engine::Engine()
 	, mbUsePaniniProjection(false)
 	, mFrameCount(0)
 	, mAccumulator(0.0f)
-	, mUI(mBuiltinMeshes, mEngineConfig)
+	, mUI(mEngineConfig)
 	, mShadowMapPass(mpCPUProfiler, mpGPUProfiler)
 	, mDeferredRenderingPasses(mpCPUProfiler, mpGPUProfiler)
 	, mAOPass(mpCPUProfiler, mpGPUProfiler)
@@ -182,46 +183,9 @@ bool Engine::Initialize(HWND hwnd)
 		return false;
 	}
 
+	Scene::InitializeBuiltinMeshes();
 	LoadShaders();
 	
-
-	// PRIMITIVES
-	//--------------------------------------------------------------------
-	{
-		// cylinder parameters
-		const float	 cylHeight = 3.1415f;		const float	 cylTopRadius = 1.0f;
-		const float	 cylBottomRadius = 1.0f;	const unsigned cylSliceCount = 120;
-		const unsigned cylStackCount = 100;
-
-		// grid parameters
-		const float gridWidth = 1.0f;		const float gridDepth = 1.0f;
-		const unsigned gridFinenessH = 100;	const unsigned gridFinenessV = 100;
-
-		// sphere parameters
-		const float sphRadius = 2.0f;
-		const unsigned sphRingCount = 25;	const unsigned sphSliceCount = 25;
-
-		// cone parameters
-		const float coneHeight = 3.0f;
-		const float coneRadius = 1.0f;
-
-		const int numDefaultLODLevels = 5;
-
-		mBuiltinMeshes =	// this should match enum declaration order
-		{
-			GeometryGenerator::Triangle(1.0f),
-			GeometryGenerator::Quad(1.0f),
-			GeometryGenerator::FullScreenQuad(),
-			GeometryGenerator::Cube(),
-			GeometryGenerator::Cylinder(cylHeight, cylTopRadius, cylBottomRadius, cylSliceCount, cylStackCount, numDefaultLODLevels),
-			GeometryGenerator::Sphere(sphRadius, sphRingCount, sphSliceCount, numDefaultLODLevels),
-			GeometryGenerator::Grid(gridWidth, gridDepth, gridFinenessH, gridFinenessV, numDefaultLODLevels),
-			GeometryGenerator::Cone(coneHeight, coneRadius, 120, numDefaultLODLevels),
-			GeometryGenerator::Cone(1.0f, 1.0f, 30),
-			//GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
-		};
-	}
-
 	if (!mpTextRenderer->Initialize(mpRenderer))
 	{
 		Log::Error("Cannot initialize Text Renderer.\n");
@@ -436,7 +400,7 @@ bool Engine::LoadSceneFromFile()
 	mpActiveScene = mpScenes[mCurrentLevel];
 	mpActiveScene->mpThreadPool = mpThreadPool;
 
-	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window, mBuiltinMeshes);
+	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window);
 
 	// update engine settings and post process settings
 	// todo: multiple data - inconsistent state -> sort out ownership
@@ -509,13 +473,13 @@ bool Engine::LoadShaders()
 			ShaderStageDesc{"MVPTransformationWithUVs_vs.hlsl", {} },
 			ShaderStageDesc{"TextureCoordinates_ps.hlsl"      , {} }
 		}},
-		ShaderDesc{ "Normal"            , ShaderDesc::CreateStageDescsFromShaderName("Normal", VS_PS)},
-		ShaderDesc{ "Tangent"           , ShaderDesc::CreateStageDescsFromShaderName("Tangent", VS_PS)},
-		ShaderDesc{ "Binormal"          , ShaderDesc::CreateStageDescsFromShaderName("Binormal", VS_PS)},
-		ShaderDesc{ "Line"              , ShaderDesc::CreateStageDescsFromShaderName("Line", VS_PS)},
-		ShaderDesc{ "TNB"               , ShaderDesc::CreateStageDescsFromShaderName("TNB", VS_PS)},
-		ShaderDesc{ "Debug"             , ShaderDesc::CreateStageDescsFromShaderName("Debug", VS_PS)},
-		ShaderDesc{ "Skybox"            , ShaderDesc::CreateStageDescsFromShaderName("Skybox", VS_PS)},
+		ShaderDesc{ "Normal"            , ShaderDesc::CreateStageDescsFromShaderName("Normal"  , VS_PS) },
+		ShaderDesc{ "Tangent"           , ShaderDesc::CreateStageDescsFromShaderName("Tangent" , VS_PS) },
+		ShaderDesc{ "Binormal"          , ShaderDesc::CreateStageDescsFromShaderName("Binormal", VS_PS) },
+		ShaderDesc{ "Line"              , ShaderDesc::CreateStageDescsFromShaderName("Line"    , VS_PS) },
+		ShaderDesc{ "TNB"               , ShaderDesc::CreateStageDescsFromShaderName("TNB"     , VS_PS) },
+		ShaderDesc{ "Debug"             , ShaderDesc::CreateStageDescsFromShaderName("Debug"   , VS_PS) },
+		ShaderDesc{ "Skybox"            , ShaderDesc::CreateStageDescsFromShaderName("Skybox"  , VS_PS) },
 		ShaderDesc{ "SkyboxEquirectangular", {
 			ShaderStageDesc{"Skybox_vs.hlsl"               , {} },
 			ShaderStageDesc{"SkyboxEquirectangular_ps.hlsl", {} }
@@ -556,7 +520,6 @@ void Engine::Exit()
 	mUI.Exit();
 	mpTextRenderer->Exit();
 	mpRenderer->Exit();
-	mBuiltinMeshes.clear();
 
 	Log::Exit();
 	if (sInstance)
@@ -1357,7 +1320,7 @@ void Engine::RenderUI() const
 void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 {
 	const XMMATRIX matTransformation = XMMatrixIdentity();
-	const auto IABuffers = mBuiltinMeshes[EGeometry::FULLSCREENQUAD].GetIABuffers();
+	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
 	if (bOneTimeRender)
 	{

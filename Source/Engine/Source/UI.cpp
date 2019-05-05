@@ -19,6 +19,7 @@
 #include "UI.h"
 #include "Transform.h"
 #include "DataStructures.h"
+#include "SceneResourceView.h"
 
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"
@@ -46,7 +47,7 @@ void UI::RenderBackground(const vec3& color, float alpha, const vec2& size, cons
 	
 	const XMMATRIX proj = XMMatrixOrthographicLH(windowSizeXY.x(), windowSizeXY.y(), 0.1f, 1000.0f);
 	const XMMATRIX matTransformation = tf.WorldTransformationMatrix();
-	const auto IABuffers = mBuiltInMeshes[EGeometry::FULLSCREENQUAD].GetIABuffers();
+	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
 	mpRenderer->SetShader(EShaders::UNLIT);
 	mpRenderer->SetVertexBuffer(IABuffers.first);
@@ -64,9 +65,8 @@ void UI::RenderBackground(const vec3& color, float alpha, const vec2& size, cons
 
 
 
-VQEngine::UI::UI(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig)
-	: mBuiltInMeshes(BuiltInMeshes)
-	, mEngineControls(engineConfig)
+VQEngine::UI::UI(const EngineConfig& engineConfig)
+	: mEngineControls(engineConfig)
 {}
 
 void VQEngine::UI::Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer, ProfilerStack& profilers)

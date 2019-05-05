@@ -112,8 +112,6 @@ public:
 	inline ShaderID			GetSelectedShader() const { return mSelectedShader; }
 	inline DepthTargetID	GetWorldDepthTarget() const { return mWorldDepthTarget; }
 	inline bool				GetSettingShowControls() const { return mEngineConfig.mbShowControls; }
-	std::pair<BufferID, BufferID> GetGeometryVertexAndIndexBuffers(EGeometry GeomEnum) const { return mBuiltinMeshes[GeomEnum].GetIABuffers(); }
-	inline const  std::vector<Mesh>& GetBuiltInMeshes() const { return mBuiltinMeshes; }
 
 	bool					IsLightingModelPBR() const { return sEngineSettings.rendering.bUseBRDFLighting; }
 	bool inline				IsProfileRenderingOn() const { return mEngineConfig.mbShowProfiler; }
@@ -188,7 +186,6 @@ private:
 
 	bool							mbUsePaniniProjection;//(UNUSED)
 	std::vector<ShaderID>			mBuiltinShaders;
-	std::vector<Mesh>				mBuiltinMeshes;
 	std::vector<TextureID>			mLoadingScreenTextures;
 
 	//----------------------------------------------------------------------------------------------------------------

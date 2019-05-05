@@ -19,7 +19,7 @@
 #include "GameObject.h"
 #include "Renderer/Renderer.h"
 #include "RenderPasses/RenderPasses.h"
-#include "SceneResources.h"
+#include "SceneResourceView.h"
 #include "SceneView.h"
 
 #include "Engine.h"

@@ -17,8 +17,13 @@
 
 #include "Skybox.h"
 #include "Engine.h"
+#include "Scene.h"
+#include "SceneResourceView.h"
+
 #include "Application/Application.h"
+
 #include "Renderer/Renderer.h"
+
 #include "Utilities/Log.h"
 
 // SKYBOX PRESETS W/ CUBEMAP / ENVIRONMENT MAP
@@ -282,29 +287,6 @@ bool Skybox::Initialize(const EnvironmentMapFileNames& environmentMapFiles, cons
 	return skyboxTexture != -1;
 }
 
-// todo: try to remove this dependency
-#include "Engine.h"	
-void Skybox::Render(const XMMATRIX& viewProj) const
-{
-	const XMMATRIX& wvp = viewProj;
-	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::CUBE);
-
-	pRenderer->BeginEvent("Skybox Pass");
-	pRenderer->SetShader(skyboxShader);
-	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
-	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
-	pRenderer->SetConstant4x4f("worldViewProj", wvp);
-	pRenderer->SetTexture("texSkybox", skyboxTexture);
-	//pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::WRAP_SAMPLER);
-	pRenderer->SetSamplerState("samWrap", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-	pRenderer->SetVertexBuffer(IABuffers.first);
-	pRenderer->SetIndexBuffer(IABuffers.second);
-	pRenderer->Apply();
-	pRenderer->DrawIndexed();
-	pRenderer->EndEvent();
-}
-
-
 // ENVIRONMENT MAP
 //==========================================================================================================
 
@@ -454,7 +436,7 @@ Texture EnvironmentMap::CreateBRDFIntegralLUTTexture()
 	sBRDFIntegrationLUTRT = spRenderer->AddRenderTarget(rtDesc);
 
 	// render the lookup table
-	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 	spRenderer->BindRenderTarget(sBRDFIntegrationLUTRT);
 	spRenderer->UnbindDepthTarget();
 	spRenderer->SetShader(sBRDFIntegrationLUTShader);
@@ -527,7 +509,7 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 	viewPort.MaxDepth = 1.0f;
 	viewPort.MinDepth = 0.0f;
 
-	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::CUBE);
+	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::CUBE);
 
 	auto SetPreFilterStates = [&]()
 	{

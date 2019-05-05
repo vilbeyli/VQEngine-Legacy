@@ -126,7 +126,7 @@ public:
 	//--------------------------------------------------------
 	inline const EnvironmentMap& GetEnvironmentMap() const { return environmentMap; }
 	inline const TextureID GetSkyboxTexture() const{ return skyboxTexture; }
-	void Render(const DirectX::XMMATRIX& viewProj) const;
+	inline const ShaderID GetShader() const { return skyboxShader; }
 
 	// initializes a skybox with environment map data (used in image-based lighting)
 	//

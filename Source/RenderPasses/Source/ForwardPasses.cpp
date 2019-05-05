@@ -18,7 +18,7 @@
 
 #include "RenderPasses.h"
 
-#include "Engine/SceneResources.h"
+#include "Engine/SceneResourceView.h"
 #include "Engine/Engine.h"
 #include "Engine/GameObject.h"
 #include "Engine/Light.h"

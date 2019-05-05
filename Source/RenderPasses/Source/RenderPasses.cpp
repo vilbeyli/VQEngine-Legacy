@@ -20,7 +20,7 @@
 #include "Engine/Engine.h"
 #include "Engine/GameObject.h"
 #include "Engine/Light.h"
-#include "Engine/SceneResources.h"
+#include "Engine/SceneResourceView.h"
 #include "Engine/Camera.h"
 #include "Engine/SceneView.h"
 
@@ -93,7 +93,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID texOverride) const
 {
 	const bool bBloom = bBloomOn && _settings.bloom.bEnabled && (texOverride == -1);
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
 	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
 	const TextureID colorTex = texOverride == -1

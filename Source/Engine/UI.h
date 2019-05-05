@@ -43,7 +43,7 @@ public:
 
 
 public:
-	UI(const std::vector<Mesh>& BuiltInMeshes, const EngineConfig& engineConfig);
+	UI(const EngineConfig& engineConfig);
 
 	void Initialize(Renderer* pRenderer, TextRenderer* pTextRenderer, ProfilerStack& profilers);
 	void Update();
@@ -56,7 +56,6 @@ public:
 	void RenderEngineControls() const;
 
 private:
-	const std::vector<Mesh>& mBuiltInMeshes;
 	const EngineConfig& mEngineControls;
 
 	Renderer*		mpRenderer;

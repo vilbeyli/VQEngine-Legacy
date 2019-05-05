@@ -101,6 +101,12 @@ protected:
 	//
 	GameObject* CreateNewGameObject();
 
+	// Updates the scene's bounding box boundaries. This has to be called after 
+	// a new game object added to a scene (or after getting done adding multiple
+	// game objects as this needs to be called only once).
+	//
+	void CalculateSceneBoundingBox();
+
 	// Adds a light to the scene resources. Scene manager differentiates between
 	// static and dynamic (moving and non-moving) lights for optimization reasons.
 	//
@@ -137,7 +143,7 @@ public:
 
 	// Moves objects from serializedScene into objects vector and sets the scene pointer in objects
 	//
-	void LoadScene(SerializedScene& scene, const Settings::Window& windowSettings, const std::vector<Mesh>& builtinMeshes);
+	void LoadScene(SerializedScene& scene, const Settings::Window& windowSettings);
 
 	// Clears object/light containers and camera settings
 	//
@@ -164,28 +170,40 @@ public:
 	//
 	int RenderDebug(const XMMATRIX& viewProj) const;
 
-	void RenderLights() const;
+	void	RenderLights() const;
+	void	RenderSkybox(const XMMATRIX& viewProj) const;
+
 
 	//	Use these functions to programmatically create material instances which you can add to game objects in the scene. 
 	//
 	Material* CreateNewMaterial(EMaterialType type); // <Thread safe>
 	Material* CreateRandomMaterialOfType(EMaterialType type); // <Thread safe>
 
+	// ???
+	//
+	MeshID AddMesh_Async(Mesh m);
+
+
+	// note: this function introduces plenty of header includes in many areas.
+	//		 at this point, its probably worth considering elsewhere for this function.
+	static inline std::pair<BufferID, BufferID> GetGeometryVertexAndIndexBuffers(EGeometry GeomEnum, int lod = 0) { return mBuiltinMeshes[GeomEnum].GetIABuffers(lod); }
+
+	// Getters
+	//
 	inline const EnvironmentMap&		GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }
 	inline const Camera&				GetActiveCamera() const { return mCameras[mSelectedCamera]; }
 	inline const Settings::SceneRender& GetSceneRenderSettings() const { return mSceneRenderSettings; }
 	inline const std::vector<Light>&	GetDynamicLights() { return mLightsDynamic; }
-	inline bool							HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
-	inline void							RenderSkybox(const XMMATRIX& viewProj) const { mSkybox.Render(viewProj); }
 	inline EEnvironmentMapPresets		GetActiveEnvironmentMapPreset() const { return mActiveSkyboxPreset; }
+	inline const std::vector<Mesh>&		GetBuiltInMeshes() const { return mBuiltinMeshes; }
 
-	void CalculateSceneBoundingBox();
+	inline bool							HasSkybox() const { return mSkybox.GetSkyboxTexture() != -1; }
+
+	// Setters
+	//
 	void SetEnvironmentMap(EEnvironmentMapPresets preset);
 	void ResetActiveCamera();
 
-	// ???
-	//
-	MeshID AddMesh_Async(Mesh m);
 
 protected:
 	//----------------------------------------------------------------------------------------------------------------
@@ -197,6 +215,9 @@ protected:
 	//
 	// SCENE RESOURCE CONTAINERS
 	//
+	static std::vector<Mesh> mBuiltinMeshes;
+	static void InitializeBuiltinMeshes();
+
 	std::vector<Mesh>			mMeshes;
 	std::vector<Camera>			mCameras;
 	std::vector<GameObject*>	mpObjects;
@@ -221,6 +242,9 @@ protected:
 	LODManager					mLODManager;
 
 private:
+	//----------------------------------------------------------------------------------------------------------------
+	// INTERNAL DATA
+	//----------------------------------------------------------------------------------------------------------------
 	//
 	// LIGHTS
 	//
@@ -269,12 +293,6 @@ private:
 	std::vector<Light>			mLightsDynamic; // moving lights
 	StaticLightCache			mStaticLightCache;
 
-
-
-private:
-	//----------------------------------------------------------------------------------------------------------------
-	// INTERNAL DATA
-	//----------------------------------------------------------------------------------------------------------------
 	friend class Engine;
 
 	GameObjectPool	mObjectPool;
@@ -285,16 +303,17 @@ private:
 	std::mutex		mSceneMeshMutex;
 
 
-	BoundingBox	mBoundingBox;
+	BoundingBox		mBoundingBox;
 
 
-	SceneView	mSceneView;
-	ShadowView	mShadowView;
+	SceneView		mSceneView;
+	ShadowView		mShadowView;
 
-	CPUProfiler* mpCPUProfiler;
+	CPUProfiler*	mpCPUProfiler;
 
 
 private:
+
 	void StartLoadingModels();
 	void EndLoadingModels();
 
@@ -332,7 +351,7 @@ private:
 
 struct SerializedScene
 {
-	GameObject*		CreateNewGameObject();
+	GameObject*		CreateNewGameObject(); // :(
 
 	std::vector<Settings::Camera>	cameras;
 	std::vector<Light>				lights;

@@ -26,6 +26,7 @@
 #include "Engine/Mesh.h"
 #include "Engine/Light.h"
 #include "Engine/Settings.h"
+#include "Engine/SceneResourceView.h" // TODO: remove after writing a fullscreen triangle shader
 
 #include "Application/SystemDefs.h"
 
@@ -1970,8 +1971,6 @@ void Renderer::DrawLine(const vec3& pos1, const vec3& pos2, const vec3& color)
 	Draw(1, EPrimitiveTopology::POINT_LIST);
 }
 
-// todo: try to remove this dependency
-#include "Engine/Engine.h"	
 // assumes (0, 0) is Bottom Left corner of the screen.
 void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 {														// warning:
@@ -1987,7 +1986,9 @@ void Renderer::DrawQuadOnScreen(const DrawQuadOnScreenCommand& cmd)
 	const XMVECTOR translation = vec3(posCenter.x(), posCenter.y(), 0);
 	const XMMATRIX transformation = XMMatrixAffineTransformation(scale, vec3::Zero, XMQuaternionIdentity(), translation);
 	
-	const auto IABuffers = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	// todo: we actually can render fullscreen triangle and remove this function call and header include.
+	//       just need to write the FST shader and bind it.
+	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
 	SetConstant4x4f("screenSpaceTransformation", transformation);
 	SetConstant1f("isDepthTexture", cmd.bIsDepthTexture ? 1.0f : 0.0f);

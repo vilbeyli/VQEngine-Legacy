@@ -18,7 +18,7 @@
 
 #include "RenderPasses.h"
 
-#include "Engine/SceneResources.h"
+#include "Engine/SceneResourceView.h"
 #include "Engine/Engine.h"
 #include "Engine/GameObject.h"
 #include "Engine/Light.h"
@@ -494,7 +494,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	const TextureID tBRDFLUT = EnvironmentMap::sBRDFIntegrationLUTTexture;
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 
-	const auto IABuffersQuad = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::FULLSCREENQUAD);
+	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 	constexpr bool bUnbindRenderTargets = false; // we're switching between lighting shaders w/ same render targets
 
 	pRenderer->UnbindDepthTarget();
@@ -551,7 +551,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	// as the scene gets more complex or depending on performance needs.
 #ifdef USE_LIGHT_VOLUMES
 #if 0
-	const auto IABuffersSphere = ENGINE->GetGeometryVertexAndIndexBuffers(EGeometry::SPHERE);
+	const auto IABuffersSphere = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::SPHERE);
 
 	pRenderer->SetConstant3f("CameraWorldPosition", sceneView.pCamera->GetPositionF());
 	pRenderer->SetConstant2f("ScreenSize", screenSize);

@@ -54,6 +54,9 @@ public:
 	int GetLODValue(MeshID meshID) const;
 
 private:
+
+
+private:
 	const vec3* mpViewerPosition = nullptr;
 	bool mbEnableForceLODLevels = false;
 	int  mForcedLODValue = 0;

@@ -29,15 +29,26 @@ class Scene;
 // https://en.wikibooks.org/wiki/More_C++_Idioms/Friendship_and_the_Attorney-Client
 class SceneResourceView
 {
+#if 1
+public:
+	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID);
+	static std::pair<BufferID, BufferID> GetBuiltinMeshVertexAndIndexBufferID(EGeometry builtInGeometry, int lod = 0);
+	static const Material* GetMaterial(const Scene* pScene, MaterialID materialID);
+#else
 private:
 	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID);
+	static std::pair<BufferID, BufferID> GetBuiltinMeshVertexAndIndexBufferID(EGeometry builtInGeometry, int lod = 0);
 	static const Material* GetMaterial(const Scene* pScene, MaterialID materialID);
 
+	// accessor struct/class list 
+	//
 	friend class GameObject;
+	friend class Renderer;
+	friend class Engine;
 
 	friend struct ShadowMapPass;
 	friend struct DeferredRenderingPasses;
 	friend struct ForwardLightingPass;
 	friend struct ZPrePass;
+#endif
 };
-

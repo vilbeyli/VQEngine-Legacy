@@ -60,9 +60,6 @@
     <ClInclude Include="$(SolutionDir)Source\Engine\PerfTree.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(SolutionDir)Source\Engine\SceneResources.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="$(SolutionDir)Source\Engine\UI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -76,6 +73,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Engine\SceneLODManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Engine\SceneResourceView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

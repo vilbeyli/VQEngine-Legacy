@@ -84,7 +84,7 @@ void LODManager::Update()
 	{
 		this->mForcedLODValue += 1;
 		Log::Info("Force LOD Level = %d", this->mForcedLODValue);
-}
+	}
 	if (ENGINE->INP()->IsKeyTriggered("["))
 	{
 		this->mForcedLODValue = std::max(0, this->mForcedLODValue - 1);

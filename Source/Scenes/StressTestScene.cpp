@@ -71,6 +71,7 @@ constexpr int TEXTURED_OBJECT_PERCENTAGE = 45;
 // selects a random mesh among built-in meshes 
 // when creating the object instances
 #define RANDOMIZE_MESH 1
+#define DEFAULT_MESH EGeometry::GRID
 
 // MODEL
 #ifdef _DEBUG
@@ -333,7 +334,7 @@ GameObject* StressTestScene::CreateRandomGameObject()
 #if RANDOMIZE_MESH
 	const EGeometry meshType = static_cast<EGeometry>(RandI(0, EGeometry::MESH_TYPE_COUNT));
 #else
-	const EGeometry meshType = EGeometry::SPHERE;
+	const EGeometry meshType = DEFAULT_MESH;
 #endif
 
 	// TRANSFORM

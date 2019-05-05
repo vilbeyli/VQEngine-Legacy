@@ -60,9 +60,10 @@ public:
 	// Adds materialID to the newest meshID (meshes.back())
 	//
 	void AddMaterial(Material* pMat);
+	void SetMeshMaterials(const Material* pMat);
 	
-	
-	inline void SetModel(Model model) { mModel = model; } // i don't like this setter...
+	inline const Model& GetModel() const { return mModel; }
+	inline void SetModel(const Model& model) { mModel = model; } // i don't like this setter...
 	inline const BoundingBox& GetAABB() const { return mBoundingBox; }
 	inline const std::vector<BoundingBox>& GetMeshBBs() const { return mMeshBoundingBoxes; }
 

@@ -21,7 +21,7 @@
 #include "Utilities/utils.h"
 vec3 vec3::Rand()
 {
-	vec3 v = vec3(RandF(0, 1), RandF(0, 1), RandF(0, 1));
+	vec3 v = vec3(MathUtil::RandF(0, 1), MathUtil::RandF(0, 1), MathUtil::RandF(0, 1));
 	return v.normalized();
 }
 const std::string vec3::print() const

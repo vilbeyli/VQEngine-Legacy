@@ -222,6 +222,8 @@ protected:
 	std::vector<Camera>			mCameras;
 	std::vector<GameObject*>	mpObjects;
 	Light						mDirectionalLight;
+	std::vector<Light>			mLightsStatic;  // non-moving lights
+	std::vector<Light>			mLightsDynamic; // moving lights
 	Skybox						mSkybox;
 
 
@@ -289,8 +291,6 @@ private:
 		void Clear() { mStaticPointLightFrustumPlanes.clear(); mStaticSpotLightFrustumPlanes.clear(); }
 	};
 
-	std::vector<Light>			mLightsStatic;  // non-moving lights
-	std::vector<Light>			mLightsDynamic; // moving lights
 	StaticLightCache			mStaticLightCache;
 
 	friend class Engine;

@@ -41,7 +41,7 @@ ThreadPool::ThreadPool(size_t numThreads)
 			std::vector<long long> nums(sz, 0);
 			for (int i = 0; i < sz; ++i)
 			{
-				nums[i] = RandI(0, 5000);
+				nums[i] = MathUtil::RandI(0, 5000);
 			}
 			unsigned long long result = 0;
 			for (int i = 0; i < sz; ++i)
@@ -56,7 +56,7 @@ ThreadPool::ThreadPool(size_t numThreads)
 			std::vector<long long> nums(sz, 0);
 			for (int i = 0; i < sz; ++i)
 			{
-				nums[i] = RandI(0, 5000);
+				nums[i] = MathUtil::RandI(0, 5000);
 			}
 			unsigned long long result = 0;
 			for (int i = 0; i < sz; ++i)

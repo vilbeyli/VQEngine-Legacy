@@ -33,6 +33,9 @@
     <ClInclude Include="..\Scenes\PBRScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="$(SolutionDir)Source\Scenes\LODTestScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Scenes\SSAOTestScene.cpp">
@@ -51,6 +54,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Scenes\PBRScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(SolutionDir)Source\Scenes\LODTestScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

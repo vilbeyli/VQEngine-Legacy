@@ -15,24 +15,30 @@
 //	along with this program.If not, see <http://www.gnu.org/licenses/>.
 //
 //	Contact: volkanilbeyli@gmail.com
-
 #pragma once
-
-#include "Engine/Mesh.h"
-
-#include "Renderer.h"
-
-namespace GeometryGenerator
+#include "Engine/Scene.h"
+class LODTestScene : public Scene
 {
-	Mesh Triangle(float scale);
-	Mesh Quad(float scale);
-	Mesh FullScreenQuad();
-	Mesh Cube();
-	Mesh Sphere(float radius, unsigned ringCount, unsigned sliceCount, int numLODLevels = 1);
-	Mesh Grid(float width, float depth, unsigned m, unsigned n, int numLODLevels = 1);
-	Mesh Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount, int numLODLevels = 1);
-	Mesh Cone(float height, float radius, unsigned sliceCount, int numLODLevels = 1);
+public:
 
-	void CalculateTangentsAndBitangents(std::vector<DefaultVertexBufferData>& vertices, const std::vector<unsigned> indices);	// Only Tangents
+	void Load(SerializedScene& scene) override;
+	void Unload() override;
+	void Update(float dt) override;
+	void RenderUI() const override;
+
+	LODTestScene(const BaseSceneParams& params) : Scene(params) {}
+	~LODTestScene() = default;
+
+private:
+	// [0, 3] : indexes the LOD object in the scene
+	//          and is not the same array index in mpObjects[]
+	int mSelectedLODObject = -1;
+	int mSelectedLODObjectPrev = -1;
+	size_t mNumLODObjects = 0;
+
+	size_t GetSelectedLODObjectIndex() const;
+	void OnSelectedLODObjectChange();
+
+	std::vector<GameObject*> mpLODWireframeObjects;
 };
 

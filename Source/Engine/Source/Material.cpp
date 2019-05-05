@@ -89,7 +89,7 @@ EMaterialType GetMaterialType(MaterialID matID)
 BlinnPhong_Material MaterialPool::RandomBlinnPhongMaterial(MaterialID matID)
 {
 	assert(false);	// TODO: fix preset blinn-phong material IDs
-	float r = RandF(0.0f, 1.0f);
+	float r = MathUtil::RandF(0.0f, 1.0f);
 	if (r >= 0.0000f && r < 0.1999f) return BlinnPhong_Material::ruby;
 	if (r >= 0.2000f && r < 0.3999f) return BlinnPhong_Material::gold;
 	if (r >= 0.4000f && r < 0.5999f) return BlinnPhong_Material::bronze;
@@ -99,15 +99,15 @@ BlinnPhong_Material MaterialPool::RandomBlinnPhongMaterial(MaterialID matID)
 BRDF_Material MaterialPool::RandomBRDFMaterial(MaterialID matID)
 {
 	BRDF_Material m = BRDF_Material(matID);
-	if (RandI(0, 100) < 50)
+	if (MathUtil::RandI(0, 100) < 50)
 	{	// PLASTIC
-		m.metalness = RandF(0.0f, 0.15f);
-		m.roughness = RandF(0.44f, 0.99f);
+		m.metalness = MathUtil::RandF(0.0f, 0.15f);
+		m.roughness = MathUtil::RandF(0.44f, 0.99f);
 	}
 	else
 	{	// METAL
-		m.metalness = RandF(0.7f, 1.0f);
-		m.roughness = RandF(0.04f, 0.7f);
+		m.metalness = MathUtil::RandF(0.7f, 1.0f);
+		m.roughness = MathUtil::RandF(0.04f, 0.7f);
 	}
 	return m;
 }

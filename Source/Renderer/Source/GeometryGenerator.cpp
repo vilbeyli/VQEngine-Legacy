@@ -512,8 +512,8 @@ Mesh GeometryGenerator::Grid(float width, float depth, unsigned horizontalTessel
 	std::vector<unsigned> LODNumHorizontalSlices(numLODLevels);
 	std::vector<unsigned> LODNumVerticalSlices(numLODLevels);
 
-	const unsigned MIN_HSLICE_COUNT = 2;
-	const unsigned MIN_VSLICE_COUNT = 2;
+	const unsigned MIN_HSLICE_COUNT = 8;
+	const unsigned MIN_VSLICE_COUNT = 8;
 
 	// using a simple lerp between min levels and given parameters 
 	// so that:
@@ -525,8 +525,8 @@ Mesh GeometryGenerator::Grid(float width, float depth, unsigned horizontalTessel
 	for (int LOD = 0; LOD < numLODLevels; ++LOD)
 	{
 		const float t = static_cast<float>(LOD) / (numLODLevels - 1);
-		LODNumHorizontalSlices[LOD] = lerp(MIN_HSLICE_COUNT, horizontalTessellation, 1.0f - t);
-		LODNumVerticalSlices[LOD]   = lerp(MIN_VSLICE_COUNT, verticalTessellation  , 1.0f - t);
+		LODNumHorizontalSlices[LOD] = lerp(MIN_HSLICE_COUNT, horizontalTessellation, std::powf(1.0f - t, 2.0f));
+		LODNumVerticalSlices[LOD]   = lerp(MIN_VSLICE_COUNT, verticalTessellation  , std::powf(1.0f - t, 2.0f));
 	}
 
 	//		Grid of m x n vertices

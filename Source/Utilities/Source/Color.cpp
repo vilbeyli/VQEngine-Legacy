@@ -89,19 +89,19 @@ const LinearColor::ColorPalette LinearColor::Palette()
 
 vec3 LinearColor::RandColorF3()
 {
-	size_t i = RandU(0, Palette().size());
+	size_t i = MathUtil::RandU(0, Palette().size());
 	return s_palette[i].Value();
 }
 
 XMVECTOR LinearColor::RandColorV()
 {
-	size_t i = RandU(0, Palette().size());
+	size_t i = MathUtil::RandU(0, Palette().size());
 	return s_palette[i].Value();
 }
 
 LinearColor LinearColor::RandColor()
 {
-	return s_palette[RandU(0, Palette().size())];
+	return s_palette[MathUtil::RandU(0, Palette().size())];
 }
 
 

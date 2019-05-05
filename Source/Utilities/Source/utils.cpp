@@ -247,6 +247,40 @@ namespace DirectoryUtil
 
 //---------------------------------------------------------------------------------------------
 
+namespace MathUtil
+{
+	float RandF(float l, float h)
+	{
+		if (l > h)
+		{	// swap params in case order is wrong
+			float tmp = l;
+			l = h;
+			h = tmp;
+		}
+		thread_local std::mt19937_64 generator(std::random_device{}());
+		std::uniform_real_distribution<float> distribution(l, h);
+		return distribution(generator);
+	}
+
+	// [)
+	int RandI(int l, int h)
+	{
+		int offset = rand() % (h - l);
+		return l + offset;
+	}
+	size_t RandU(size_t l, size_t h)
+	{
+#ifdef _DEBUG
+		assert(l <= h);
+#endif
+		int offset = rand() % (h - l);
+		return l + static_cast<size_t>(offset);
+	}
+
+}
+
+
+
 // GLOBAL NAMESPACE
 //
 std::string GetCurrentTimeAsString()
@@ -257,43 +291,18 @@ std::string GetCurrentTimeAsString()
 
 	// YYYY-MM-DD_HH-MM-SS
 	std::stringstream ss;
-	ss << (tmNow.tm_year + 1900) << "_" 
-		<< std::setfill('0') << std::setw(2) << tmNow.tm_mon + 1 << "_" 
+	ss << (tmNow.tm_year + 1900) << "_"
+		<< std::setfill('0') << std::setw(2) << tmNow.tm_mon + 1 << "_"
 		<< std::setfill('0') << std::setw(2) << tmNow.tm_mday << "-"
-		<< std::setfill('0') << std::setw(2) << tmNow.tm_hour << "_" 
-		<< std::setfill('0') << std::setw(2) << tmNow.tm_min << "_" 
+		<< std::setfill('0') << std::setw(2) << tmNow.tm_hour << "_"
+		<< std::setfill('0') << std::setw(2) << tmNow.tm_min << "_"
 		<< std::setfill('0') << std::setw(2) << tmNow.tm_sec;
 	return ss.str();
 }
-std::string GetCurrentTimeAsStringWithBrackets(){ return "[" + GetCurrentTimeAsString() + "]"; }
+std::string GetCurrentTimeAsStringWithBrackets() { return "[" + GetCurrentTimeAsString() + "]"; }
 
-float RandF(float l, float h)
-{
-	if (l > h)
-	{	// swap params in case order is wrong
-		float tmp = l;
-		l = h;
-		h = tmp;
-	}
-	thread_local std::mt19937_64 generator(std::random_device{}());
-	std::uniform_real_distribution<float> distribution(l, h);
-	return distribution(generator);
-}
 
-// [)
-int RandI(int l, int h) 
-{
-	int offset = rand() % (h - l);
-	return l + offset;
-}
-size_t RandU(size_t l, size_t h)
-{
-#ifdef _DEBUG
-	assert(l <= h);
-#endif
-	int offset = rand() % (h - l);
-	return l + static_cast<size_t>(offset);
-}
+
 
 std::string ImageFormatToFileExtension(const EImageFormat format)
 {

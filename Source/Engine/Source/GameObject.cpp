@@ -44,6 +44,14 @@ void GameObject::AddMaterial(Material * pMat)
 }
 
 
+void GameObject::SetMeshMaterials(const Material* pMat)
+{
+	if (mModel.mbLoaded)
+		mModel.OverrideMaterials(pMat->ID);
+	else
+		assert(false); // TODO: impl mesh override queue or resolve the ambiguity between material assignment queue and this case
+}
+
 void GameObject::RenderTransparent(
 	  Renderer * pRenderer
 	, const SceneView& sceneView

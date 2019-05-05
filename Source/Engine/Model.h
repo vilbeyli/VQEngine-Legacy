@@ -72,6 +72,10 @@ struct Model
 	std::string		mModelDirectory;
 	bool			mbLoaded = false;
 
+private:
+	friend class GameObject;
+	friend class Scene;
+
 	// queue of materials to be assigned in case the model has not been loaded yet.
 	std::queue<MaterialID> mMaterialAssignmentQueue;
 };

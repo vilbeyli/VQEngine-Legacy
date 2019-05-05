@@ -632,7 +632,8 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			{"cube"     , EGeometry::CUBE		},
 			{"sphere"   , EGeometry::SPHERE		},
 			{"grid"     , EGeometry::GRID		},
-			{"cylinder" , EGeometry::CYLINDER	}
+			{"cylinder" , EGeometry::CYLINDER	},
+			{"cone"     , EGeometry::CONE		}
 			// todo: assimp mesh
 		};
 		const std::string mesh = GetLowercased(command[1]);

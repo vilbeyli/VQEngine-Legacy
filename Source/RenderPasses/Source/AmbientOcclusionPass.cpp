@@ -83,19 +83,19 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 			// the resulting sample vectors will all end up in the hemisphere.
 			vec3 sample
 			(
-				RandF(-1, 1),
-				RandF(-1, 1),
-				RandF(0, 1)	// hemisphere normal direction (up)
+				MathUtil::RandF(-1, 1),
+				MathUtil::RandF(-1, 1),
+				MathUtil::RandF(0, 1)	// hemisphere normal direction (up)
 			);
 			sample.normalize();					// bring the sample to the hemisphere surface
-			sample = sample * RandF(0.1f, 1);	// scale to distribute samples within the hemisphere
+			sample = sample * MathUtil::RandF(0.1f, 1);	// scale to distribute samples within the hemisphere
 
 			// scale vectors with a power curve based on i to make samples close to center of the
 			// hemisphere more significant. think of it as i selects where we sample the hemisphere
 			// from, which starts from outer region of the hemisphere and as it increases, we 
 			// sample closer to the normal direction. 
 			float scale = static_cast<float>(i) / (AO_KERNEL_SIZE - 1);
-			scale = lerp(0.1f, 1.0f, scale * scale);
+			scale = MathUtil::lerp(0.1f, 1.0f, scale * scale);
 			sample = sample * scale;
 
 			this->sampleKernel[aoQuality].push_back(sample);
@@ -108,8 +108,8 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 	{	// create a square noise texture using random directions
 		vec2 noise
 		(
-			  RandF(-1, 1)
-			, RandF(-1, 1)
+			  MathUtil::RandF(-1, 1)
+			, MathUtil::RandF(-1, 1)
 			// 0 // noise rotates the kernel around z-axis
 		);
 		this->noiseKernel.push_back(noise.normalized());
@@ -708,27 +708,20 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer* pRenderer, const TextureID
 #endif
 
 }
+
+
 void AmbientOcclusionPass::ChangeBlurQualityLevel(int upOrDown)
 {
-	int desiredQuality = this->blurQuality + upOrDown;
-	if (upOrDown > 0)	desiredQuality = desiredQuality >= BLUR_QUALITY_NUM_OPTIONS ? BLUR_QUALITY_NUM_OPTIONS - 1 : desiredQuality;
-	else				desiredQuality = desiredQuality < 0 ? 0 : desiredQuality;
-	this->blurQuality = static_cast<EBlurQuality>(desiredQuality);
+	MathUtil::ClampedIncrementOrDecrement(this->blurQuality, upOrDown, 0, BLUR_QUALITY_NUM_OPTIONS);
 	//Log::Info("SSAO Blur Quality: %d", this->quality);
 }
 void AmbientOcclusionPass::ChangeAOTechnique(int upOrDown)
 {
-	int desiredQuality = this->aoTech + upOrDown;
-	if (upOrDown > 0)	desiredQuality = desiredQuality >= NUM_AO_TECHNIQUES ? NUM_AO_TECHNIQUES - 1 : desiredQuality;
-	else				desiredQuality = desiredQuality < 0 ? 0 : desiredQuality;
-	this->aoTech = static_cast<EAOTechnique>(desiredQuality);
+	MathUtil::ClampedIncrementOrDecrement(this->aoTech, upOrDown, 0, NUM_AO_TECHNIQUES);
 }
 void AmbientOcclusionPass::ChangeAOQuality(int upOrDown)
 {
-	int desiredQuality = this->aoQuality + upOrDown;
-	if (upOrDown > 0)	desiredQuality = desiredQuality >= AO_QUALITY_NUM_OPTIONS ? AO_QUALITY_NUM_OPTIONS - 1 : desiredQuality;
-	else				desiredQuality = desiredQuality < 0 ? 0 : desiredQuality;
-	this->aoQuality = static_cast<EAOQuality>(desiredQuality);
+	MathUtil::ClampedIncrementOrDecrement(this->aoQuality, upOrDown, 0, AO_QUALITY_NUM_OPTIONS);
 	Log::Info("AO Quality: %d", this->aoQuality);
 }
 TextureID AmbientOcclusionPass::GetBlurredAOTexture(Renderer* pRenderer) const
@@ -736,12 +729,8 @@ TextureID AmbientOcclusionPass::GetBlurredAOTexture(Renderer* pRenderer) const
 	TextureID ret = 0;
 	switch (blurQuality)
 	{
-	case AmbientOcclusionPass::BLUR_QUALITY_LOW:
-		ret = pRenderer->GetRenderTargetTexture(this->gaussianBlurRenderTarget);	// gaussian blur RT
-		break;
-	case AmbientOcclusionPass::BLUR_QUALITY_HIGH:
-		ret = this->bilateralBlurUAVs[1];
-		break;
+	case AmbientOcclusionPass::BLUR_QUALITY_LOW:	ret = pRenderer->GetRenderTargetTexture(this->gaussianBlurRenderTarget); break;
+	case AmbientOcclusionPass::BLUR_QUALITY_HIGH:	ret = this->bilateralBlurUAVs[1];	break;
 	default:
 		assert(false);
 		break;

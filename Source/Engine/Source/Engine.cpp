@@ -21,7 +21,16 @@
 
 
 #define OVERRIDE_LEVEL_LOAD      1	// Toggle for overriding level loading
-#define OVERRIDE_LEVEL_VALUE     3	// which level to load
+// 0: objects 
+// 1: ssao test 
+// 2: ibl test
+// 3: stress test
+// 4: sponza
+// 5: lights
+// 6: lod test
+#define OVERRIDE_LEVEL_VALUE     6	// which level to load
+
+
 #define FULLSCREEN_DEBUG_TEXTURE 1
 
 // ASYNC / THREADED LOADING SWITCHES
@@ -54,6 +63,7 @@
 #include "Scenes/StressTestScene.h"
 #include "Scenes/SponzaScene.h"
 #include "Scenes/LightsScene.h"
+#include "Scenes/LODTestScene.h"
 
 #include <sstream>
 #include <DirectXMath.h>
@@ -216,6 +226,7 @@ bool Engine::Initialize(HWND hwnd)
 	mpScenes.push_back(new StressTestScene (baseSceneParams));
 	mpScenes.push_back(new SponzaScene     (baseSceneParams));
 	mpScenes.push_back(new LightsScene     (baseSceneParams));
+	mpScenes.push_back(new LODTestScene    (baseSceneParams));
 
 	mpTimer->Stop();
 	Log::Info("[ENGINE]: Initialized in %.2fs --------------", mpTimer->DeltaTime());
@@ -235,7 +246,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/1.png"));
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/2.png"));
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/3.png"));
-	mActiveLoadingScreen = mLoadingScreenTextures[RandU(0, mLoadingScreenTextures.size())];
+	mActiveLoadingScreen = mLoadingScreenTextures[MathUtil::RandU(0, mLoadingScreenTextures.size())];
 
 #if LOAD_ASYNC
 
@@ -419,7 +430,7 @@ bool Engine::LoadSceneFromFile()
 bool Engine::LoadScene(int level)
 {
 #if LOAD_ASYNC
-	mActiveLoadingScreen = mLoadingScreenTextures[RandU(0, mLoadingScreenTextures.size())];
+	mActiveLoadingScreen = mLoadingScreenTextures[MathUtil::RandU(0, mLoadingScreenTextures.size())];
 	mbLoading = true;
 	Log::Info("LoadScene: %d", level);
 	auto loadFn = [&, level]()

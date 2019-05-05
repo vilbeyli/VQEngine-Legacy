@@ -198,7 +198,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	//-----------------------------------------------------------------------------------------------
 	auto Is2DGeometry = [](MeshID mesh)
 	{
-		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
+		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID || mesh == EGeometry::CYLINDER || mesh == EGeometry::SPHERE;
 	};
 	auto RenderDepth = [&](const GameObject* pObj, const XMMATRIX& viewProj, bool bIsCubemap = false)
 	{

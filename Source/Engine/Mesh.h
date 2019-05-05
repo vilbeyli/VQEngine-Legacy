@@ -52,7 +52,20 @@ struct Mesh
 {
 public:
 	friend class Renderer;
-	
+
+	struct MeshRenderSettings
+	{
+		enum EMeshRenderMode
+		{
+			FILL = 0,
+			WIREFRAME,
+
+			NUM_MESH_RENDER_MODES
+		};
+		EMeshRenderMode renderMode = EMeshRenderMode::FILL;
+	};
+
+
 	// Renderer* is used to create Vertex/Index buffer data from
 	// Mesh constructor as the constructor receives raw vertex/index
 	// buffer data.
@@ -84,10 +97,15 @@ public:
 	// Interface
 	//
 	std::pair<BufferID, BufferID> GetIABuffers(int lod = 0) const;
+	inline const MeshRenderSettings& GetRenderSettings() const { return mRenderSettings; }
+
+	inline void SetRenderMode(Mesh::MeshRenderSettings::EMeshRenderMode renderMode) { mRenderSettings.renderMode = renderMode; }
 
 	
 private:
+	MeshRenderSettings    mRenderSettings;
 	std::vector<LODLevel> mLODs;
+
 
 	// Note:
 	//
@@ -104,7 +122,6 @@ private:
 	//
 	std::string mMeshName;
 };
-
 
 //
 // Template Definitions

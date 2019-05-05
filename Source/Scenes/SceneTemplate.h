@@ -26,7 +26,7 @@ public:
 	void Update(float dt) override;
 	void RenderUI() const override;
 
-	SceneTemplate(Renderer* pRenderer, TextRenderer* pTextRenderer) : Scene(pRenderer, pTextRenderer) {}
+	SceneTemplate(const BaseSceneParams& params) : Scene(params) {}
 	~SceneTemplate() = default;
 
 private:

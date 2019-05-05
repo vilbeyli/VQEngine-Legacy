@@ -332,7 +332,7 @@ GameObject* StressTestScene::CreateRandomGameObject()
 	// MESH
 	//
 #if RANDOMIZE_MESH
-	const EGeometry meshType = static_cast<EGeometry>(RandI(0, EGeometry::MESH_TYPE_COUNT));
+	const EGeometry meshType = static_cast<EGeometry>(MathUtil::RandI(0, EGeometry::MESH_TYPE_COUNT));
 #else
 	const EGeometry meshType = DEFAULT_MESH;
 #endif
@@ -341,7 +341,7 @@ GameObject* StressTestScene::CreateRandomGameObject()
 	//
 	Transform tf;
 #if RANDOMIZE_SCALE
-	const float RandScale = RandF(SCALE_LOW, SCALE_HI) * (meshType == EGeometry::GRID ? 5.0f : 1.0f);
+	const float RandScale = MathUtil::RandF(SCALE_LOW, SCALE_HI) * (meshType == EGeometry::GRID ? 5.0f : 1.0f);
 #else
 	const float RandScale = 1.0f;
 #endif
@@ -356,7 +356,7 @@ GameObject* StressTestScene::CreateRandomGameObject()
 	tf.SetUniformScale(RandScale);
 	tf.SetPosition(position);
 #if RANDOMIZE_ROTATION
-	tf.RotateAroundAxisDegrees(vec3::Rand(), RandF(0, 360));
+	tf.RotateAroundAxisDegrees(vec3::Rand(), MathUtil::RandF(0, 360));
 #endif
 
 
@@ -364,22 +364,22 @@ GameObject* StressTestScene::CreateRandomGameObject()
 	// MATERIAL
 	//
 	Material* pMat = nullptr;
-	if (RandI(0, 100) < 15)
+	if (MathUtil::RandI(0, 100) < 15)
 	{
 		BRDF_Material* pBRDF = static_cast<BRDF_Material*>(Scene::CreateNewMaterial(GGX_BRDF));
 		pBRDF->diffuse = LinearColor::gold;
 		pBRDF->metalness = 0.98f;
-		pBRDF->roughness = RandF(0.04f, 0.15f);
+		pBRDF->roughness = MathUtil::RandF(0.04f, 0.15f);
 		pMat = static_cast<Material*>(pBRDF);
 	}
 	else
 	{
 		pMat = Scene::CreateRandomMaterialOfType(GGX_BRDF);
 	}
-	if (RandI(0, 100) < TEXTURED_OBJECT_PERCENTAGE)
+	if (MathUtil::RandI(0, 100) < TEXTURED_OBJECT_PERCENTAGE)
 	{
-		const std::string fileNameDiffuse = "openart/" + std::to_string(RandI(151, 200)) + ".JPG";
-		const std::string fileNameNormal = "openart/" + std::to_string(RandI(151, 200)) + "_norm.JPG";
+		const std::string fileNameDiffuse = "openart/" + std::to_string(MathUtil::RandI(151, 200)) + ".JPG";
+		const std::string fileNameNormal = "openart/" + std::to_string(MathUtil::RandI(151, 200)) + "_norm.JPG";
 #if !NO_TEXTURES
 		m.diffuseMap = pRenderer->CreateTextureFromFile(fileNameDiffuse);
 		m.normalMap = pRenderer->CreateTextureFromFile(fileNameNormal);
@@ -423,7 +423,7 @@ void StressTestScene::AddObjects()
 		GameObject* pObj = CreateRandomGameObject();
 		mpTestObjects.push_back(pObj);
 
-		rotationSpeeds.push_back(RandF(5.0f, 15.0f) * (RandF(0, 1) < 0.5f ? 1.0f : -1.0f));
+		rotationSpeeds.push_back(MathUtil::RandF(5.0f, 15.0f) * (MathUtil::RandF(0, 1) < 0.5f ? 1.0f : -1.0f));
 		initialPositions.push_back(pObj->GetPosition());
 	}
 	std::for_each(mpTestObjects.begin(), mpTestObjects.end(), [&](GameObject* o)
@@ -478,8 +478,8 @@ Light CreateRandomPointLight()
 {
 	const Light::ELightType type = Light::ELightType::POINT;
 	const LinearColor color = LinearColor::white;
-	const float range = RandF(300, 1500.f);
-	const float bright = RandF(100, 300);
+	const float range = MathUtil::RandF(300, 1500.f);
+	const float bright = MathUtil::RandF(100, 300);
 
 	Light l = Light();
 //	Light(color, type, bright, false, 0.001f, 0.01f, range, tf, mesh)
@@ -489,7 +489,7 @@ Light CreateRandomPointLight()
 	l.mRange = range;
 	l.mBrightness = bright;
 	l.mbCastingShadows = false;
-	l.mTransform.SetPosition(RandF(-50, 50), RandF(30, 90), RandF(-40, -90));
+	l.mTransform.SetPosition(MathUtil::RandF(-50, 50), MathUtil::RandF(30, 90), MathUtil::RandF(-40, -90));
 	l.mTransform.SetUniformScale(0.1f);
 
 	return l;
@@ -536,8 +536,8 @@ void AddLights(std::vector<Light>& mLights)
 			}
 			return LinearColor::white;
 		}();
-		const float range = RandF(800, 1500.f);
-		const float bright = RandF(2500, 5500);
+		const float range = MathUtil::RandF(800, 1500.f);
+		const float bright = MathUtil::RandF(2500, 5500);
 
 		Light l = Light();
 		//	Light(color, type, bright, false, 0.001f, 0.01f, range, tf, mesh)
@@ -547,7 +547,7 @@ void AddLights(std::vector<Light>& mLights)
 		l.mRange = range;
 		l.mBrightness = bright;
 		l.mbCastingShadows = false;
-		l.mTransform.SetPosition(RandF(-70, 40), RandF(30, 90), RandF(-40, -90));
+		l.mTransform.SetPosition(MathUtil::RandF(-70, 40), MathUtil::RandF(30, 90), MathUtil::RandF(-40, -90));
 		l.mTransform.SetUniformScale(0.3f);
 		mLights.push_back(l);
 	}

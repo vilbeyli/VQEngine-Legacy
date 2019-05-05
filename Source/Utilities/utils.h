@@ -24,8 +24,8 @@
 #define RANGE(c) std::begin(c), std::end(c)
 #define RRANGE(c) std::rbegin(c), std::rend(c)
 
-/// STRING PROCESSING
-//===============================================================================================
+
+
 namespace StrUtil
 {
 	// typedefs
@@ -66,6 +66,8 @@ namespace StrUtil
 	};
 }
 
+
+
 namespace DirectoryUtil
 {
 	enum ESpecialFolder
@@ -105,14 +107,25 @@ namespace DirectoryUtil
 std::string GetCurrentTimeAsString();
 std::string GetCurrentTimeAsStringWithBrackets();
 
-template<class T> T inline lerp(T low, T high, float t) { return low + static_cast<T>((high - low) * t); }
 
 
-/// RANDOM
-//===============================================================================================
-float	RandF(float l, float h);
-int		RandI(int l, int h);
-size_t	RandU(size_t l, size_t h);
+
+namespace MathUtil
+{
+	template<class T> inline T lerp(T low, T high, float t) { return low + static_cast<T>((high - low) * t); }
+	template<class T> void ClampedIncrementOrDecrement(T& val, int upOrDown, int lo, int hi)
+	{
+		int newVal = static_cast<int>(val) + upOrDown;
+		if (upOrDown > 0) newVal = newVal >= hi ? (hi - 1) : newVal;
+		else              newVal = newVal < lo ? lo : newVal;
+		val = static_cast<T>(newVal);
+	}
+
+	float	RandF(float l, float h);
+	int		RandI(int l, int h);
+	size_t	RandU(size_t l, size_t h);
+}
+
 
 #include "Renderer/RenderingEnums.h"
 std::string ImageFormatToFileExtension(const EImageFormat format);

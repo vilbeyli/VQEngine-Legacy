@@ -191,7 +191,6 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 			world * sceneView.viewProj,
 		};
 
-		pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 
 		SurfaceMaterial material;
 		for (MeshID id : model.mMeshIDs)
@@ -233,6 +232,9 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 			{
 				assert(false);// mMaterials.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, EShaders::DEFERRED_GEOMETRY, sceneView.bIsDeferredRendering);
 			}
+
+
+			pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 
 			pRenderer->SetVertexBuffer(IABuffer.first);
 			pRenderer->SetIndexBuffer(IABuffer.second);

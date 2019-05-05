@@ -450,8 +450,8 @@ void Scene::InitializeBuiltinMeshes()
 
 	constexpr int numDefaultLODLevels_Sphere = 5;
 	constexpr int numDefaultLODLevels_Grid = 7;
-	constexpr int numDefaultLODLevels_Cone = 5;
-	constexpr int numDefaultLODLevels_Cylinder = 5;
+	constexpr int numDefaultLODLevels_Cone = 6;
+	constexpr int numDefaultLODLevels_Cylinder = 6;
 
 	Scene::mBuiltinMeshes =	// this should match enum declaration order
 	{

@@ -65,8 +65,14 @@ const Input::KeyMapping Input::sKeyMap = []()
 	m["Numpad7"] = 103;		m["Numpad8"] = 104;			m["Numpad9"] = 105;
 	m["Numpad4"] = 100;		m["Numpad5"] = 101;			m["Numpad6"] = 102;
 	m["Numpad1"] = 97 ;		m["Numpad2"] = 98 ;			m["Numpad3"] = 99;
+	m["Numpad0"] = 96 ;
 	m["Numpad+"] = VK_ADD;	m["Numpad-"] = VK_SUBTRACT;	
 	m["+"]		 = VK_ADD;	m["-"]		 = VK_SUBTRACT;	
+
+	m["LeftArrow"] = 37;	m["RightArrow"] = 39;
+	m["UpArrow"] = 38;		m["DownArrow"] = 40;
+
+
 	return std::move(m);
 }();
 

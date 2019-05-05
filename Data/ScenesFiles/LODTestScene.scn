@@ -1,0 +1,114 @@
+// Object initializations
+// ---------------------------------------------------------------------------------------------------------------
+// Transform	: pos(3), rot(3:euler), scale(1:uniform|3:xyz)
+// Camera		: near far vfov  pos(3:xyz)  yaw pitch
+// Light		: [p]oint/[s]pot,  color,   shadowing?  brightness,  pos(vec3), range/angle, rot(X>Y>Z) | scale
+// BRDF		:
+// Phong		:
+// Object		: transform, brdf/phong, mesh
+// example: 
+//     object begin
+//      transform 85 5 -30 30 120 0 20
+//      mesh triangle
+//      brdf begin
+//     		textures "" openart/190_norm.JPG
+//     		diffuse 0.24 0.74 0.74
+//     		roughness 0.4
+//     		metalness 0.9
+//     	brdf end
+//     object end
+// ---------------------------------------------------------------------------------------------------------------
+    
+// Scene Render Settings initializations
+// ---------------------------------------------------------------------------------------------------------------
+// ao	    : enabled?, ambient multiplier, ssao range, ssao intensity
+// bloom	    : enabled?, brighness threshold
+// skylight	    : enabled?
+// directional  : colorPreset, Shadows?, brightness, direction(vec3), shadowViewPortDimension, shadowMapDimension, range, depth bias
+// ---------------------------------------------------------------------------------------------------------------
+
+
+camera 0.8 12000 60    8.32  33.48  -84.93     -5.52 -0.96
+ao true 0.15 8.0 2.90
+skylight true
+bloom true 1.05
+
+//directional sun 2.2   -20   -25   35  4096 2700 2800 0.00006
+//light begin
+//	type directional
+//	transform 0 0 0    9 -35 0    1
+//	color white
+//	brightness 1.2
+//	shadows true 0.0005   10.001 15800 
+//	directional 2048 100
+//light end
+
+object begin
+	mesh cube
+	transform 0 0 0 0 0 0 120 5 50
+	brdf
+		diffuse 0.1 0.1 0.1
+		tiling 10
+		roughness 0.89
+		metalness 0
+	brdf
+object end
+
+
+object begin
+	mesh Cylinder
+	transform -70 20 0 0 0 0 10
+object end
+object begin
+	mesh Grid
+	transform -20 10 0 0 0 0 50
+object end
+object begin
+	mesh Sphere
+	transform +30 10 0 0 0 0 8
+object end
+object begin
+	mesh Cone
+	transform +60 5 0 0 0 0 10
+object end
+
+
+light begin
+	type spot
+	transform -70 136 0   90 0 0   0.5
+	color white
+	brightness 6000
+	shadows true 0.00001 0.05
+	spot 20 1
+	range 150
+light end
+
+light begin
+	type spot
+	transform -20 136 0   90 0 0   0.5
+	color white
+	brightness 6000
+	shadows true 0.00001 0.05
+	spot 20 1
+	range 150
+light end
+
+light begin
+	type spot
+	transform +30 136 0   90 0 0   0.5
+	color white
+	brightness 6000
+	shadows true 0.00001 0.05
+	spot 20 1
+	range 150
+light end
+
+light begin
+	type spot
+	transform +60 136 0   90 0 0   0.5
+	color white
+	brightness 6000
+	shadows true 0.00001 0.05
+	spot 20 1
+	range 150
+light end

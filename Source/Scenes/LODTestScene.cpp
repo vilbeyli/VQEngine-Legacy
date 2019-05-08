@@ -28,11 +28,17 @@
 void LODTestScene::Load(SerializedScene& scene)
 {
 	// some sick wireframe rendering material here
-	Material* pWireframeMeshMaterial = this->CreateNewMaterial(EMaterialType::GGX_BRDF);
-	pWireframeMeshMaterial->diffuse = LinearColor::green;
-	pWireframeMeshMaterial->emissiveColor = LinearColor::green;
-	pWireframeMeshMaterial->emissiveIntensity = 2000.0f;
+	Material* pMat = this->CreateNewMaterial(EMaterialType::GGX_BRDF);
+	pMat->diffuse = LinearColor::black;
+	pMat->emissiveColor = LinearColor::green;
+	pMat->emissiveIntensity = 200.0f;
+	mpWireframeMaterial = pMat;
 
+	pMat = this->CreateNewMaterial(EMaterialType::GGX_BRDF);
+	pMat->diffuse = LinearColor::black;
+	pMat->emissiveColor = LinearColor::orange;
+	pMat->emissiveIntensity = 200.0f;
+	mpWireframeMaterialHighlighted = pMat;
 
 	// we know 1st object is the ground plane, and the remaining are the LOD objects.
 	// here we create a copy of them and change some render settings / material 
@@ -41,27 +47,33 @@ void LODTestScene::Load(SerializedScene& scene)
 	this->mNumLODObjects = numObjs - 1;
 	for (size_t i = 1; i < numObjs; ++i)
 	{
+		// create a copy of the object
 		const GameObject* pObjToCopy = this->mpObjects[i];
 		GameObject* pNewObject = this->CreateNewGameObject();
 		
+		// copy transform
 		pNewObject->SetTransform(pObjToCopy->GetTransform());
 		Transform& tf = pNewObject->GetTransform();
-		tf._position.y() += 50.0f;
-
-		pNewObject->SetModel(pObjToCopy->GetModel());
-		pNewObject->SetMeshMaterials(pWireframeMeshMaterial);
-
-		pNewObject->mRenderSettings.bCastShadow = false;
-		pNewObject->mRenderSettings.bRender = false;
-
-		const MeshID LODMeshID = pNewObject->GetModelData().mMeshIDs.back();
-		const Mesh&  LODMesh = this->mMeshes[LODMeshID];
+		tf._position.y() += 75.0f;
 
 
-		Mesh WireframeLODMesh = LODMesh;
+		// generate wireframe mesh for the copied geometry
+		const MeshID LODMeshID = pObjToCopy->GetModelData().mMeshIDs.back();
+		Mesh WireframeLODMesh = this->mMeshes[LODMeshID];
 		WireframeLODMesh.SetRenderMode(Mesh::MeshRenderSettings::EMeshRenderMode::WIREFRAME);
-
 		this->mMeshes.push_back(WireframeLODMesh);
+
+		// copy the geometry and assign the new mesh
+		pNewObject->AddMesh(static_cast<MeshID>(this->mMeshes.size() - 1));
+
+		// set material
+		pNewObject->SetMeshMaterials(mpWireframeMaterial);
+
+		// set render settings
+		pNewObject->mRenderSettings.bCastShadow = false;
+		pNewObject->mRenderSettings.bRender = true;
+
+		// register the wireframe object to the scene
 		mpLODWireframeObjects.push_back(pNewObject);
 	}
 }
@@ -70,7 +82,9 @@ void LODTestScene::Load(SerializedScene& scene)
 //
 void LODTestScene::Unload()
 {
-
+	mpLODWireframeObjects.clear();
+	this->mNumLODObjects = 0;
+	this->mSelectedLODObject = this->mSelectedLODObjectPrev = -1;
 }
 
 // Update() is called each frame
@@ -109,6 +123,13 @@ void LODTestScene::Update(float dt)
 	if (this->mSelectedLODObject != this->mSelectedLODObjectPrev)
 		OnSelectedLODObjectChange();
 
+	constexpr float OBJ_ROTATION_SPEED = 3.14f;
+	if (this->mSelectedLODObject >= 0)
+	{
+		const float rotationAmount = dt * OBJ_ROTATION_SPEED;
+		mpLODWireframeObjects[mSelectedLODObject]->GetTransform().RotateAroundGlobalYAxisDegrees(rotationAmount);
+		mpObjects[mSelectedLODObject + 1]->GetTransform().RotateAroundGlobalYAxisDegrees(rotationAmount);;
+	}
 }
 
 // RenderUI() is called at the last stage of rendering before presenting the frame.
@@ -144,15 +165,22 @@ void LODTestScene::OnSelectedLODObjectChange()
 	}
 	else
 	{
-		mLightsStatic[this->mSelectedLODObject].mColor = LinearColor::medium_pruple;
-		mpLODWireframeObjects[this->mSelectedLODObject]->mRenderSettings.bRender = true;
-		//mpLODWireframeObjects[this->mSelectedLODObject]->GetModel().mMaterialAssignmentQueue;
+		mLightsStatic[this->mSelectedLODObject].mColor = LinearColor::orange;
 
+		GameObject* pObj = mpLODWireframeObjects[this->mSelectedLODObject];
+		pObj->GetModel().OverrideMaterials(mpWireframeMaterialHighlighted->ID);
+		//mpLODWireframeObjects[this->mSelectedLODObject]->GetModel().mMaterialAssignmentQueue;
 	}
 
 	if (this->mSelectedLODObjectPrev != -1)
 	{
 		mLightsStatic[this->mSelectedLODObjectPrev].mColor = LinearColor::white;
-		mpLODWireframeObjects[this->mSelectedLODObjectPrev]->mRenderSettings.bRender = false;
+
+		GameObject* pObj = mpLODWireframeObjects[this->mSelectedLODObjectPrev];
+		pObj->GetModel().OverrideMaterials(mpWireframeMaterial->ID);
+		pObj->GetTransform().ResetRotation();
+		mpObjects[this->mSelectedLODObjectPrev + 1]->GetTransform().ResetRotation();
 	}
+
+	CalculateSceneBoundingBox();
 }

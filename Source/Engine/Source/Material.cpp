@@ -334,7 +334,7 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 	case EShaders::UNLIT:
 		break;
 	default:
-		const SurfaceMaterial mat = GetShaderFriendlyStruct();
+		const SurfaceMaterial mat = GetCBufferData();
 		
 		renderer->SetConstantStruct("surfaceMaterial", &mat);
 		if (bIsDeferredRendering)
@@ -367,6 +367,12 @@ int Material::GetTextureConfig() const
 	textureConfig |= heightMap == -1    ? 0 : (1 << 6);
 	textureConfig |= emissiveMap == -1  ? 0 : (1 << 7);
 	return textureConfig;
+}
+
+SurfaceMaterial Material::GetDefaultMaterialCBufferData()
+{
+	BRDF_Material m; m.Clear();
+	return m.GetCBufferData();
 }
 
 void BRDF_Material::Clear() 
@@ -406,7 +412,7 @@ void BlinnPhong_Material::Clear()
 	emissiveIntensity = 1.0f;
 }
 
-SurfaceMaterial BRDF_Material::GetShaderFriendlyStruct() const
+SurfaceMaterial BRDF_Material::GetCBufferData() const
 {	
 	return SurfaceMaterial
 	{
@@ -428,7 +434,7 @@ SurfaceMaterial BRDF_Material::GetShaderFriendlyStruct() const
 	};
 }
 
-SurfaceMaterial BlinnPhong_Material::GetShaderFriendlyStruct() const
+SurfaceMaterial BlinnPhong_Material::GetCBufferData() const
 {
 
 	return SurfaceMaterial

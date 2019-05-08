@@ -67,9 +67,7 @@ void ZPrePass::RenderDepth(const RenderParams& args) const
 			tf.NormalMatrix(world) * args.sceneView.view,
 			world * args.sceneView.viewProj,
 		};
-
-		args.pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
-
+		
 		SurfaceMaterial material;
 		args.pRenderer->SetConstant1i("textureConfig", 0);
 		for (MeshID id : model.mMeshIDs)
@@ -94,12 +92,16 @@ void ZPrePass::RenderDepth(const RenderParams& args) const
 				args.pRenderer->SetConstant2f("uvScale", pMat->tiling);
 				args.pRenderer->SetConstantStruct("ObjMatrices", &mats);
 			}
-#if _DEBUG
 			else
 			{
-				assert(false);// mMaterials.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, EShaders::DEFERRED_GEOMETRY, sceneView.bIsDeferredRendering);
+				// each object should have a material assigned.
+				// if not, we just send default
+				Material::GetDefaultMaterialCBufferData();
 			}
-#endif
+
+			args.pRenderer->SetRasterizerState(SceneResourceView::GetMeshRenderMode(args.pScene, id) == Mesh::MeshRenderSettings::EMeshRenderMode::WIREFRAME
+				? EDefaultRasterizerState::WIREFRAME
+				: EDefaultRasterizerState::CULL_BACK);
 
 			args.pRenderer->SetVertexBuffer(IABuffer.first);
 			args.pRenderer->SetIndexBuffer(IABuffer.second);
@@ -262,7 +264,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 				//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
 				//	return;
 
-				material = pMat->GetShaderFriendlyStruct();
+				material = pMat->GetCBufferData();
 				pRenderer->SetConstantStruct("surfaceMaterial", &material);
 				pRenderer->SetConstantStruct("ObjMatrices", &mats);
 
@@ -436,7 +438,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 				{
 					const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
 					const Material* pMat = SceneResourceView::GetMaterial(args.pScene, materialID);
-					cbufferMaterials.objMaterials[instanceID] = pMat->GetShaderFriendlyStruct();
+					cbufferMaterials.objMaterials[instanceID] = pMat->GetCBufferData();
 				}
 			}
 

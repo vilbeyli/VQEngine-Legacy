@@ -145,6 +145,7 @@ void Scene::UnloadScene()
 	ClearLights();
 	mLODManager.Reset();
 	Unload();
+	mpObjects.clear();
 }
 
 
@@ -434,7 +435,7 @@ void Scene::InitializeBuiltinMeshes()
 	// cylinder parameters
 	const float	 cylHeight = 3.1415f;		const float	 cylTopRadius = 1.0f;
 	const float	 cylBottomRadius = 1.0f;	const unsigned cylSliceCount = 120;
-	const unsigned cylStackCount = 100;
+	const unsigned cylStackCount = 20;
 
 	// grid parameters
 	const float gridWidth = 1.0f;		const float gridDepth = 1.0f;
@@ -1062,7 +1063,7 @@ void Scene::BatchMainViewRenderList(const std::vector<const GameObject*> mainVie
 		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
 
 		// instanced is only for built-in meshes (for now)
-		if (meshID >= EGeometry::MESH_TYPE_COUNT)
+		if (meshID >= EGeometry::MESH_TYPE_COUNT || mMeshes[meshID].GetRenderSettings().renderMode == Mesh::MeshRenderSettings::WIREFRAME)
 		{
 			mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
 			continue;
@@ -1734,6 +1735,13 @@ const Material* SceneResourceView::GetMaterial(const Scene* pScene, MaterialID m
 	return pScene->mMaterials.GetMaterial_const(materialID);
 }
 
+const Mesh::MeshRenderSettings::EMeshRenderMode SceneResourceView::GetMeshRenderMode(const Scene* pScene, MeshID meshID)
+{
+	return pScene->mMeshes[meshID].GetRenderSettings().renderMode;
+}
+
+
+// ?
 GameObject* SerializedScene::CreateNewGameObject()
 {
 	objects.push_back(GameObject(nullptr));

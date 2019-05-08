@@ -65,12 +65,16 @@ public:
 	inline void RotateInWorldSpace(const Quaternion& q)	{ _rotation = q * _rotation;	}
 	inline void RotateInLocalSpace(const Quaternion& q)	{ _rotation = _rotation * q;	}
 
+	inline void ResetPosition() { _position = vec3(0, 0, 0); }
+	inline void ResetRotation() { _rotation = Quaternion::Identity(); }
+	inline void ResetScale() { _scale = vec3(1, 1, 1); }
+	inline void Reset() { ResetScale(); ResetRotation(); ResetPosition(); }
 
 	XMMATRIX WorldTransformationMatrix() const;
 	XMMATRIX WorldTransformationMatrix_NoScale() const;
-	static XMMATRIX NormalMatrix(const XMMATRIX& world);
 	XMMATRIX RotationMatrix() const;
 
+	static XMMATRIX NormalMatrix(const XMMATRIX& world);
 	//----------------------------------------------------------------------------------------------------------------
 	// DATA
 	//----------------------------------------------------------------------------------------------------------------

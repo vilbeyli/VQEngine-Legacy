@@ -40,5 +40,7 @@ private:
 	void OnSelectedLODObjectChange();
 
 	std::vector<GameObject*> mpLODWireframeObjects;
+	Material* mpWireframeMaterial;
+	Material* mpWireframeMaterialHighlighted;
 };
 

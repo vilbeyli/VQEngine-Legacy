@@ -123,8 +123,10 @@ struct Material				// 56 Bytes
 	int GetTextureConfig() const;
 	inline bool HasTexture() const { return GetTextureConfig() != 0; }
 
-	virtual SurfaceMaterial GetShaderFriendlyStruct() const = 0;
+	virtual SurfaceMaterial GetCBufferData() const = 0;
 	virtual void Clear() = 0;
+	
+	static SurfaceMaterial GetDefaultMaterialCBufferData();
 };
 
 struct BRDF_Material : public Material	
@@ -134,7 +136,7 @@ struct BRDF_Material : public Material
 	
 	BRDF_Material() : Material({ -1 }), metalness(0.0f), roughness(0.0f) {}
 
-	SurfaceMaterial GetShaderFriendlyStruct() const override;
+	SurfaceMaterial GetCBufferData() const override;
 	void Clear() override;
 
 private:
@@ -148,7 +150,7 @@ struct BlinnPhong_Material : public Material
 
 	BlinnPhong_Material() : Material(MaterialID{ -1 }), shininess(0) {}
 
-	SurfaceMaterial GetShaderFriendlyStruct() const override;
+	SurfaceMaterial GetCBufferData() const override;
 	void Clear() override;
 
 	static const BlinnPhong_Material jade, ruby, bronze, gold;	// todo: handle preset materials in scene

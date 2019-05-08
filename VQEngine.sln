@@ -90,6 +90,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SceneFiles", "SceneFiles", "{2C145C7D-4AE8-44FD-8933-0649D7918E13}"
 	ProjectSection(SolutionItems) = preProject
 		Data\ScenesFiles\LightsScene.scn = Data\ScenesFiles\LightsScene.scn
+		Data\ScenesFiles\LODTestScene.scn = Data\ScenesFiles\LODTestScene.scn
 		Data\ScenesFiles\Objects.scn = Data\ScenesFiles\Objects.scn
 		Data\ScenesFiles\PBRScene.scn = Data\ScenesFiles\PBRScene.scn
 		Data\ScenesFiles\Sponza.scn = Data\ScenesFiles\Sponza.scn

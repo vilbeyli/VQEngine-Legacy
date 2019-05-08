@@ -407,8 +407,8 @@ Mesh GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceC
 	for (int LOD = 0; LOD < numLODLevels; ++LOD)
 	{
 		const float t = static_cast<float>(LOD) / (numLODLevels - 1);
-		LODRingCounts[LOD]  = lerp(MIN_RING_COUNT , ringCount , 1.0f - t);
-		LODSliceCounts[LOD] = lerp(MIN_SLICE_COUNT, sliceCount, 1.0f - t);
+		LODRingCounts[LOD]  = MathUtil::lerp(MIN_RING_COUNT , ringCount , 1.0f - t);
+		LODSliceCounts[LOD] = MathUtil::lerp(MIN_SLICE_COUNT, sliceCount, 1.0f - t);
 	}
 
 
@@ -525,8 +525,8 @@ Mesh GeometryGenerator::Grid(float width, float depth, unsigned horizontalTessel
 	for (int LOD = 0; LOD < numLODLevels; ++LOD)
 	{
 		const float t = static_cast<float>(LOD) / (numLODLevels - 1);
-		LODNumHorizontalSlices[LOD] = lerp(MIN_HSLICE_COUNT, horizontalTessellation, std::powf(1.0f - t, 2.0f));
-		LODNumVerticalSlices[LOD]   = lerp(MIN_VSLICE_COUNT, verticalTessellation  , std::powf(1.0f - t, 2.0f));
+		LODNumHorizontalSlices[LOD] = MathUtil::lerp(MIN_HSLICE_COUNT, horizontalTessellation, std::powf(1.0f - t, 2.0f));
+		LODNumVerticalSlices[LOD]   = MathUtil::lerp(MIN_VSLICE_COUNT, verticalTessellation  , std::powf(1.0f - t, 2.0f));
 	}
 
 	//		Grid of m x n vertices
@@ -662,8 +662,8 @@ Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadi
 	for (int LOD = 0; LOD < numLODLevels; ++LOD)
 	{
 		const float t = static_cast<float>(LOD) / (numLODLevels - 1);
-		LODStackCounts[LOD] = lerp(MIN_STACK_COUNT, numStacks, 1.0f - t);
-		LODSliceCounts[LOD] = lerp(MIN_SLICE_COUNT, numSlices, 1.0f - t);
+		LODStackCounts[LOD] = MathUtil::lerp(MIN_STACK_COUNT, numStacks, 1.0f - t);
+		LODSliceCounts[LOD] = MathUtil::lerp(MIN_SLICE_COUNT, numSlices, 1.0f - t);
 	}
 
 	for (int LOD = 0; LOD < numLODLevels; ++LOD)
@@ -866,7 +866,7 @@ Mesh GeometryGenerator::Cone(float height, float radius, unsigned numSlices, int
 	for (int LOD = 0; LOD < numLODLevels; ++LOD)
 	{
 		const float t = static_cast<float>(LOD) / (numLODLevels - 1);
-		LODSliceCounts[LOD] = lerp(MIN_SLICE_COUNT, numSlices, 1.0f - t);
+		LODSliceCounts[LOD] = MathUtil::lerp(MIN_SLICE_COUNT, numSlices, 1.0f - t);
 	}
 
 	const bool bAddBackFaceForBase = true;

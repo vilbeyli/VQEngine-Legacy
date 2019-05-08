@@ -188,6 +188,7 @@ public:
 	//		 at this point, its probably worth considering elsewhere for this function.
 	static inline std::pair<BufferID, BufferID> GetGeometryVertexAndIndexBuffers(EGeometry GeomEnum, int lod = 0) { return mBuiltinMeshes[GeomEnum].GetIABuffers(lod); }
 
+	// TODO: Move all this to SceneResourceView 
 	// Getters
 	//
 	inline const EnvironmentMap&		GetEnvironmentMap() const { return mSkybox.GetEnvironmentMap(); }

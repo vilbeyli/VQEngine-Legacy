@@ -28,10 +28,10 @@
 // ---------------------------------------------------------------------------------------------------------------
 
 
-camera 0.8 12000 60    8.32  33.48  -84.93     -5.52 -0.96
+camera 0.8 12000 65    8.32  33.48  -84.93     -5.52 -0.96
 ao true 0.15 8.0 2.90
-skylight true
-bloom true 1.05
+skylight false
+bloom true 2.55
 
 //directional sun 2.2   -20   -25   35  4096 2700 2800 0.00006
 //light begin
@@ -45,9 +45,9 @@ bloom true 1.05
 
 object begin
 	mesh cube
-	transform 0 0 0 0 0 0 120 5 50
+	transform 0 0 0 0 0 0 150 5 70
 	brdf
-		diffuse 0.1 0.1 0.1
+		diffuse 0.04 0.04 0.04
 		tiling 10
 		roughness 0.89
 		metalness 0
@@ -57,25 +57,25 @@ object end
 
 object begin
 	mesh Cylinder
-	transform -70 20 0 0 0 0 10
+	transform -90 20 0 0 0 0 15
 object end
 object begin
 	mesh Grid
-	transform -20 10 0 0 0 0 50
+	transform -30 18 0 0 0 0 75
 object end
 object begin
 	mesh Sphere
-	transform +30 10 0 0 0 0 8
+	transform +40 10 0 0 0 0 12
 object end
 object begin
 	mesh Cone
-	transform +60 5 0 0 0 0 10
+	transform +90 5 0 0 0 0 15
 object end
 
 
 light begin
 	type spot
-	transform -70 136 0   90 0 0   0.5
+	transform -90 136 0   90 0 0   0.5
 	color white
 	brightness 6000
 	shadows true 0.00001 0.05
@@ -85,7 +85,7 @@ light end
 
 light begin
 	type spot
-	transform -20 136 0   90 0 0   0.5
+	transform -30 136 0   90 0 0   0.5
 	color white
 	brightness 6000
 	shadows true 0.00001 0.05
@@ -95,7 +95,7 @@ light end
 
 light begin
 	type spot
-	transform +30 136 0   90 0 0   0.5
+	transform +40 136 0   90 0 0   0.5
 	color white
 	brightness 6000
 	shadows true 0.00001 0.05
@@ -105,7 +105,7 @@ light end
 
 light begin
 	type spot
-	transform +60 136 0   90 0 0   0.5
+	transform +90 136 0   90 0 0   0.5
 	color white
 	brightness 6000
 	shadows true 0.00001 0.05

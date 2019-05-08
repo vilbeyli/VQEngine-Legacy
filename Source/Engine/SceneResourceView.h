@@ -34,6 +34,7 @@ public:
 	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID);
 	static std::pair<BufferID, BufferID> GetBuiltinMeshVertexAndIndexBufferID(EGeometry builtInGeometry, int lod = 0);
 	static const Material* GetMaterial(const Scene* pScene, MaterialID materialID);
+	static const Mesh::MeshRenderSettings::EMeshRenderMode GetMeshRenderMode(const Scene* pScene, MeshID meshID);
 #else
 private:
 	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID);

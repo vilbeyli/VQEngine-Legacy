@@ -209,7 +209,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 				//if (pMat->IsTransparent())	// avoidable branching - perhaps keeping opaque and transparent meshes on separate vectors is better.
 				//	return;
 
-				material = pMat->GetShaderFriendlyStruct();
+				material = pMat->GetCBufferData();
 				pRenderer->SetConstantStruct("surfaceMaterial", &material);
 				pRenderer->SetConstantStruct("ObjMatrices", &mats);
 
@@ -230,11 +230,15 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 			}
 			else
 			{
-				assert(false);// mMaterials.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, EShaders::DEFERRED_GEOMETRY, sceneView.bIsDeferredRendering);
+				// each object should have a material assigned.
+				// if not, we just send default
+				Material::GetDefaultMaterialCBufferData();
 			}
 
-
-			pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+			
+			pRenderer->SetRasterizerState(SceneResourceView::GetMeshRenderMode(pScene, id) == Mesh::MeshRenderSettings::EMeshRenderMode::WIREFRAME 
+				? EDefaultRasterizerState::WIREFRAME 
+				: EDefaultRasterizerState::CULL_BACK);
 
 			pRenderer->SetVertexBuffer(IABuffer.first);
 			pRenderer->SetIndexBuffer(IABuffer.second);
@@ -407,7 +411,8 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 	//
 	int numObj = 0;
 	for (const auto* obj : sceneView.culledOpaqueList)
-	{
+	{	// TODO: nuke this object-oriented container and render 
+		//       on the mesh level.
 		RenderObject(obj);
 		++numObj;
 	}
@@ -417,8 +422,6 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 	// RENDER INSTANCED SCENE OBJECTS
 	//
 	pRenderer->SetShader(_geometryInstancedShader);
-	pRenderer->BindRenderTargets(_GBuffer.mRTDiffuseRoughness, _GBuffer.mRTSpecularMetallic, _GBuffer.mRTNormals);
-	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
 	pRenderer->Apply();
 
 	InstancedObjectMatrices<DRAW_INSTANCED_COUNT_GBUFFER_PASS> cbufferMatrices;
@@ -464,7 +467,13 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 				{
 					const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
 					const Material* pMat = SceneResourceView::GetMaterial(pScene, materialID);
-					cbufferMaterials.objMaterials[instanceID] = pMat->GetShaderFriendlyStruct();
+					cbufferMaterials.objMaterials[instanceID] = pMat->GetCBufferData();
+				}
+
+				// if an object doesn't have a material, we send default material info
+				else
+				{
+					cbufferMaterials.objMaterials[instanceID] = Material::GetDefaultMaterialCBufferData();
 				}
 			}
 
@@ -500,6 +509,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	constexpr bool bUnbindRenderTargets = false; // we're switching between lighting shaders w/ same render targets
 
 	pRenderer->UnbindDepthTarget();
+	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 	pRenderer->BindRenderTarget(args.target);
 	pRenderer->BeginRender(cmd);
 	pRenderer->Apply();

@@ -781,15 +781,18 @@ void Engine::HandleInput()
 	if (mpInput->IsKeyTriggered("4"))	mLevelLoadQueue.push(3);
 	if (mpInput->IsKeyTriggered("5"))	mLevelLoadQueue.push(4);
 	if (mpInput->IsKeyTriggered("6"))	mLevelLoadQueue.push(5);
+	if (mpInput->IsKeyTriggered("7"))	mLevelLoadQueue.push(6);
 
 
 	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
-	const EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
-	const EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
+	constexpr EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
+	constexpr EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
 		static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
 		);
 
 	EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
+	if (selectedEnvironmentMap == -1)
+		return; // if no skymap is selected, ignore input to change it
 	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
 	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
 	if (ENGINE->INP()->IsKeyTriggered("PageUp") || ENGINE->INP()->IsKeyTriggered("PageDown"))

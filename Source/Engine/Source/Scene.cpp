@@ -38,6 +38,7 @@ Scene::Scene(const BaseSceneParams& params)
 	, mSelectedCamera(0)
 	, mpCPUProfiler(params.pCPUProfiler)
 	, mLODManager(this->mMeshes)
+	, mActiveSkyboxPreset(ENVIRONMENT_MAP_PRESET_COUNT)
 {
 	mModelLoader.Initialize(mpRenderer);
 }
@@ -443,7 +444,7 @@ void Scene::InitializeBuiltinMeshes()
 
 	// sphere parameters
 	const float sphRadius = 2.0f;
-	const unsigned sphRingCount = 25;	const unsigned sphSliceCount = 25;
+	const unsigned sphRingCount = 30;	const unsigned sphSliceCount = 30;
 
 	// cone parameters
 	const float coneHeight = 3.0f;

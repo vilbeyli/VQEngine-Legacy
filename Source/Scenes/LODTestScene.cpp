@@ -92,6 +92,8 @@ void LODTestScene::Unload()
 void LODTestScene::Update(float dt)
 {
 	this->mSelectedLODObjectPrev = this->mSelectedLODObject;
+
+	// handle LOD level change input if LOD object is selected
 	if (this->mSelectedLODObject != -1)
 	{
 		if (ENGINE->INP()->IsKeyTriggered("UpArrow"))
@@ -104,6 +106,7 @@ void LODTestScene::Update(float dt)
 		}
 	}
 
+	// handle LOD Object selection key presses
 	if (ENGINE->INP()->IsKeyTriggered("RightArrow"))
 	{
 		MathUtil::ClampedIncrementOrDecrement(this->mSelectedLODObject, 1, 0, static_cast<int>(this->mNumLODObjects));
@@ -112,23 +115,32 @@ void LODTestScene::Update(float dt)
 	{
 		MathUtil::ClampedIncrementOrDecrement(this->mSelectedLODObject, -1, 0, static_cast<int>(this->mNumLODObjects));
 	}
-
-
 	if (ENGINE->INP()->IsKeyTriggered("Numpad0"))
 	{
 		this->mSelectedLODObject = -1;
 	}
 
-
+	// handle selected object change event
 	if (this->mSelectedLODObject != this->mSelectedLODObjectPrev)
 		OnSelectedLODObjectChange();
 
+	// rotate the selected object
 	constexpr float OBJ_ROTATION_SPEED = 3.14f;
 	if (this->mSelectedLODObject >= 0)
 	{
 		const float rotationAmount = dt * OBJ_ROTATION_SPEED;
 		mpLODWireframeObjects[mSelectedLODObject]->GetTransform().RotateAroundGlobalYAxisDegrees(rotationAmount);
 		mpObjects[mSelectedLODObject + 1]->GetTransform().RotateAroundGlobalYAxisDegrees(rotationAmount);;
+	}
+
+
+	const int NUM_LOD_OBJECTS = static_cast<int>(mpLODWireframeObjects.size());
+	for (int currLODObject = 0; currLODObject < NUM_LOD_OBJECTS; ++currLODObject)
+	{
+		mSceneStats.objStats[currLODObject].lod = mLODManager.GetLODValue(mpLODWireframeObjects[currLODObject]->GetModelData().mMeshIDs.back());
+		mSceneStats.objStats[currLODObject].numVert = 0;                   // TODO
+		mSceneStats.objStats[currLODObject].numTri = 0;	                   // TODO
+		mSceneStats.objStats[currLODObject].lodLevelDistanceThreshold = 0; // TODO
 	}
 }
 
@@ -138,11 +150,103 @@ void LODTestScene::Update(float dt)
 void LODTestScene::RenderUI() const 
 {
 	TextDrawDescription drawDesc;
-	drawDesc.color = LinearColor::green;
-	drawDesc.scale = 0.28f;
-	drawDesc.screenPosition = vec2(0.5f, 0.5f);
-	drawDesc.text = "Test 123123";
-	mpTextRenderer->RenderText(drawDesc);
+	drawDesc.color = LinearColor::light_blue;
+	drawDesc.scale = 0.35f;
+	int numLine = 0;
+
+	const Settings::Engine& sEngineSettings = ENGINE->GetSettings();
+	constexpr int NUM_LOD_OBJECTS = 4; // todo: not hardcode
+	
+
+	//
+	// DRAW DATA
+	//
+	const std::vector<const char*> LODObjectNames =
+	{
+		"CYLINDER"
+		, "GRID"
+		, "SPHERE"
+		, "CONE"
+	};
+	const std::vector<const char*> LODStatEntryLabels =
+	{
+		"LOD: "
+		, "Vertices: "
+		, "Triangles: "
+		, "LOD Distance: "
+	};
+	std::vector<std::string> LODValues;
+	std::vector<std::string> NumVerts;
+	std::vector<std::string> NumTriangles;
+	std::vector<std::string> LODDistance;
+	std::vector<const std::vector<std::string>*> LODStatEntries = 
+	{
+		  &LODValues
+		, &NumVerts
+		, &NumTriangles
+		, &LODDistance
+	};
+
+	// read LOD data and populate the containers which will be used to fill in draw desc data
+	for (int currLODObject = 0; currLODObject < NUM_LOD_OBJECTS; ++currLODObject)
+	{
+		LODValues.push_back   (std::to_string(mSceneStats.objStats[currLODObject].lod));
+		NumVerts.push_back    (std::to_string(mSceneStats.objStats[currLODObject].numVert));
+		NumTriangles.push_back(std::to_string(mSceneStats.objStats[currLODObject].numTri));
+		LODDistance.push_back (std::to_string(mSceneStats.objStats[currLODObject].lodLevelDistanceThreshold));
+	}
+
+
+	//
+	// Draw Settings
+	//
+	const float LOD_OBJ_STAT_X_MARGIN_PX = 0.1f * sEngineSettings.window.width;
+	const float X_START_POS_PX = 0.35f * sEngineSettings.window.width;
+	const float Y_START_POS_PX = 0.06f * sEngineSettings.window.height;
+	const float LINE_HEIGHT = 25.0f;
+	const vec2 screenPositionStart(X_START_POS_PX, Y_START_POS_PX);
+
+	//
+	// Render background
+	// 
+	constexpr float BACKGROUND_ALPHA = 0.800f;
+	const vec2 sz(NUM_LOD_OBJECTS * 0.1f, 5 * 0.033f);
+	VQEngine::UI::RenderBackground(mpRenderer, LinearColor::black, BACKGROUND_ALPHA, sz, screenPositionStart - vec2(30, 30));
+
+
+
+	// ------------------------------------------------------------------------
+	// Draw Table Header: Object Names
+	// ------------------------------------------------------------------------
+	int CURRENT_SCREEN_LINE = 0;
+	for (int currLODObject = 0; currLODObject < NUM_LOD_OBJECTS; ++currLODObject)
+	{
+		drawDesc.screenPosition = vec2(
+			  screenPositionStart.x() + currLODObject * LOD_OBJ_STAT_X_MARGIN_PX
+			, screenPositionStart.y() + CURRENT_SCREEN_LINE * LINE_HEIGHT
+		);
+		drawDesc.text = LODObjectNames[currLODObject];
+		mpTextRenderer->RenderText(drawDesc);
+	}
+	++CURRENT_SCREEN_LINE;
+	++CURRENT_SCREEN_LINE;
+
+	// ------------------------------------------------------------------------
+	// Draw Table Entries: LOD Values, num tris/verts, etc.
+	// ------------------------------------------------------------------------
+	for (size_t currStatEntry = 0; currStatEntry < LODStatEntryLabels.size(); ++currStatEntry)
+	{
+		for (int currLODObject = 0; currLODObject < NUM_LOD_OBJECTS; ++currLODObject)
+		{
+			drawDesc.screenPosition = vec2(
+				screenPositionStart.x() + currLODObject * LOD_OBJ_STAT_X_MARGIN_PX
+				, screenPositionStart.y() + CURRENT_SCREEN_LINE * LINE_HEIGHT
+			);
+			drawDesc.text = LODStatEntryLabels[currStatEntry] + (*LODStatEntries[currStatEntry])[currLODObject];
+			mpTextRenderer->RenderText(drawDesc);
+		}
+		++CURRENT_SCREEN_LINE;
+	}
 }
 
 size_t LODTestScene::GetSelectedLODObjectIndex() const

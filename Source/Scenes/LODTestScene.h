@@ -42,5 +42,32 @@ private:
 	std::vector<GameObject*> mpLODWireframeObjects;
 	Material* mpWireframeMaterial;
 	Material* mpWireframeMaterialHighlighted;
+
+	struct LODTestSceneStats
+	{
+		bool bForceLODEnabled;
+
+		struct LODStats
+		{
+			int lod;
+			int numTri;
+			int numVert;
+			float lodLevelDistanceThreshold;
+		};
+
+		union
+		{
+			struct
+			{
+				LODStats statCylinder;
+				LODStats statGrid;
+				LODStats statSphere;
+				LODStats statCone;
+			};
+			LODStats objStats[4];
+		};
+	};
+
+	LODTestSceneStats mSceneStats;
 };
 

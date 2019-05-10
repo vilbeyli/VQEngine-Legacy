@@ -32,7 +32,7 @@ using namespace VQEngine;
 
 
 
-void UI::RenderBackground(const vec3& color, float alpha, const vec2& size, const vec2& screenPosition) const
+void UI::RenderBackground(Renderer* mpRenderer, const vec3& color, float alpha, const vec2& size, const vec2& screenPosition)
 {
 	assert(mpRenderer);
 	const vec2 windowSizeXY = mpRenderer->GetWindowDimensionsAsFloat2();
@@ -177,7 +177,7 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 
 	vec2 sz = ProfilerAreaBounds +vec2(0.0f, (8 * LINE_HEIGHT_IN_PX) / screenSizeInPixels.y());
 	vec2 pos = PX_POS_FRAMESTATS - vec2(X_MARGIN_PX, Y_OFFSET_PX);
-	RenderBackground(sBackgroundColor, BACKGROUND_ALPHA, sz, pos);
+	RenderBackground(mpRenderer, sBackgroundColor, BACKGROUND_ALPHA, sz, pos);
 
 	// PROFILER STATS
 	//
@@ -255,7 +255,7 @@ void VQEngine::UI::RenderEngineControls() const
 	const float avgLetterWidthInPixels = 7.0f;		// hardcoded... determines background width
 
 	vec2 sz = vec2(avgLetterWidthInPixels * longestStringLength / screenSizeInPixels.x(), LINE_HEIGHT_PX * backGroundLineSpan / screenSizeInPixels.y());
-	RenderBackground(sBackgroundColor, BACKGROUND_ALPHA, sz, PX_POS_CONTROLS - vec2(X_MARGIN_PX, X_MARGIN_PX));
+	RenderBackground(mpRenderer, sBackgroundColor, BACKGROUND_ALPHA, sz, PX_POS_CONTROLS - vec2(X_MARGIN_PX, X_MARGIN_PX));
 
 
 	int line = 1;

@@ -1314,7 +1314,7 @@ void Engine::RenderUI() const
 	if (mEngineConfig.mbShowControls) { mUI.RenderEngineControls(); }
 	if (!mbLoading)
 	{
-		if (!mpActiveScene)
+		if (mpActiveScene)
 		{
 			mpActiveScene->RenderUI();
 		}

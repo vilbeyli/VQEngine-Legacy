@@ -50,7 +50,7 @@ public:
 	void Exit();
 
 
-	void RenderBackground(const vec3& color, float alpha, const vec2& size, const vec2& screenPosition) const;
+	static void RenderBackground(Renderer* mpRenderer, const vec3& color, float alpha, const vec2& size, const vec2& screenPosition);
 
 	void RenderPerfStats(const FrameStats& stats) const;
 	void RenderEngineControls() const;

@@ -394,8 +394,8 @@ Mesh GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceC
 	std::vector<unsigned> LODRingCounts(numLODLevels);
 	std::vector<unsigned> LODSliceCounts(numLODLevels);
 
-	const unsigned MIN_RING_COUNT = 5;
-	const unsigned MIN_SLICE_COUNT = 5;
+	const unsigned MIN_RING_COUNT = 8;
+	const unsigned MIN_SLICE_COUNT = 8;
 
 	// using a simple lerp between min levels and given parameters 
 	// so that:
@@ -650,7 +650,7 @@ Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadi
 	std::vector<unsigned> LODSliceCounts(numLODLevels);
 
 	const unsigned MIN_STACK_COUNT = 5;
-	const unsigned MIN_SLICE_COUNT = 5;
+	const unsigned MIN_SLICE_COUNT = 12;
 
 	// using a simple lerp between min levels and given parameters 
 	// so that:
@@ -854,7 +854,7 @@ Mesh GeometryGenerator::Cone(float height, float radius, unsigned numSlices, int
 	// parameters for each LOD level
 	std::vector<unsigned> LODSliceCounts(numLODLevels);
 
-	const unsigned MIN_SLICE_COUNT = 5;
+	const unsigned MIN_SLICE_COUNT = 10;
 
 	// using a simple lerp between min levels and given parameters 
 	// so that:
@@ -877,84 +877,90 @@ Mesh GeometryGenerator::Cone(float height, float radius, unsigned numSlices, int
 
 		const unsigned sliceCount = LODSliceCounts[LOD];
 
+		int IndexOfConeBaseCenterVertex = -1;
 		// BASE
 		//-----------------------------------------------------------
-		{
-			unsigned baseIndex = (unsigned)Vertices.size();
-			float y = 0.0f; // -0.33f*height;
-			float dTheta = 2.0f*XM_PI / sliceCount;
+		unsigned baseIndex = (unsigned)Vertices.size();
+		float y = 0.0f; // -0.33f*height;
+		float dTheta = 2.0f*XM_PI / sliceCount;
 
-			// Duplicate cap ring vertices because the texture coordinates and normals differ.
+		// Duplicate cap ring vertices because the texture coordinates and normals differ.
+		for (unsigned i = 0; i <= sliceCount; ++i)
+		{
+			float x = radius * cosf(i*dTheta);
+			float z = radius * sinf(i*dTheta);
+
+			// Scale down by the height to try and make top cap texture coord area proportional to base.
+			float u = x / height + 0.5f;
+			float v = z / height + 0.5f;
+
+			DefaultVertexBufferData Vert;
+			Vert.position = vec3(x, y, z);
+
+			Vert.normal = vec3(0.0f, 1.0f, 0.0f);
+			Vert.tangent = vec3(-1.0f, 0.0f, 0.0f);	// ?
+			Vert.uv = vec2(u, v);
+			Vertices.push_back(Vert);
+		} // ConeRingVertices
+
+		{
+			// Cap center vertex.
+			DefaultVertexBufferData capCenter;
+			capCenter.position = vec3(0.0f, y, 0.0f);
+			
+			capCenter.normal = vec3(0.0f, 1.0f, 0.0f);
+			capCenter.tangent = vec3(-1.0f, 0.0f, 0.0f);
+			
+			capCenter.uv = vec2(0.5f, 0.5f);
+			Vertices.push_back(capCenter);
+
+			// Index of center vertex.
+			unsigned centerIndex = (unsigned)Vertices.size() - 1;
+			IndexOfConeBaseCenterVertex = static_cast<int>(centerIndex);
+			for (unsigned i = 0; i < sliceCount; ++i)
+			{
+				Indices.push_back(centerIndex);
+				Indices.push_back(baseIndex + i + 1);
+				Indices.push_back(baseIndex + i);
+			}
+		} // ConeBaseVertex
+
+
+		if (bAddBackFaceForBase)
+		{
+			baseIndex = (unsigned)Vertices.size();
+			const float offsetInNormalDirection = 0.0f;//-1.100001f;
 			for (unsigned i = 0; i <= sliceCount; ++i)
 			{
-				float x = radius * cosf(i*dTheta);
-				float z = radius * sinf(i*dTheta);
-
-				// Scale down by the height to try and make top cap texture coord area proportional to base.
-				float u = x / height + 0.5f;
-				float v = z / height + 0.5f;
+				const float x = radius * cosf(i*dTheta);
+				const float z = radius * sinf(i*dTheta);
+				const float u = x / height + 0.5f;
+				const float v = z / height + 0.5f;
 
 				DefaultVertexBufferData Vert;
-				Vert.position = vec3(x, y, z);
-				Vert.normal = vec3(0.0f, 1.0f, 0.0f);
+				Vert.position = vec3(x, y + offsetInNormalDirection, z);
+				Vert.normal = vec3(0.0f, -1.0f, 0.0f);
 				Vert.tangent = vec3(-1.0f, 0.0f, 0.0f);	// ?
 				Vert.uv = vec2(u, v);
 				Vertices.push_back(Vert);
 			}
+
+			DefaultVertexBufferData capCenter;
+			capCenter.position = vec3(0.0f, y + offsetInNormalDirection, 0.0f);
+			capCenter.normal = vec3(0.0f, -1.0f, 0.0f);
+			capCenter.tangent = vec3(-1.0f, 0.0f, 0.0f);
+			capCenter.uv = vec2(0.5f, 0.5f);
+			Vertices.push_back(capCenter);
+
+			unsigned centerIndex = (unsigned)Vertices.size() - 1;
+			for (unsigned i = 0; i < sliceCount; ++i)
 			{
-				// Cap center vertex.
-				DefaultVertexBufferData capCenter;
-				capCenter.position = vec3(0.0f, y, 0.0f);
-				capCenter.normal = vec3(0.0f, 1.0f, 0.0f);
-				capCenter.tangent = vec3(-1.0f, 0.0f, 0.0f);
-				capCenter.uv = vec2(0.5f, 0.5f);
-				Vertices.push_back(capCenter);
-
-				// Index of center vertex.
-				unsigned centerIndex = (unsigned)Vertices.size() - 1;
-				for (unsigned i = 0; i < sliceCount; ++i)
-				{
-					Indices.push_back(centerIndex);
-					Indices.push_back(baseIndex + i + 1);
-					Indices.push_back(baseIndex + i);
-				}
-			}
-
-			if (bAddBackFaceForBase)
-			{
-				baseIndex = (unsigned)Vertices.size();
-				const float offsetInNormalDirection = 0.0f;//-1.100001f;
-				for (unsigned i = 0; i <= sliceCount; ++i)
-				{
-					const float x = radius * cosf(i*dTheta);
-					const float z = radius * sinf(i*dTheta);
-					const float u = x / height + 0.5f;
-					const float v = z / height + 0.5f;
-
-					DefaultVertexBufferData Vert;
-					Vert.position = vec3(x, y + offsetInNormalDirection, z);
-					Vert.normal = vec3(0.0f, -1.0f, 0.0f);
-					Vert.tangent = vec3(-1.0f, 0.0f, 0.0f);	// ?
-					Vert.uv = vec2(u, v);
-					Vertices.push_back(Vert);
-				}
-
-				DefaultVertexBufferData capCenter;
-				capCenter.position = vec3(0.0f, y + offsetInNormalDirection, 0.0f);
-				capCenter.normal = vec3(0.0f, -1.0f, 0.0f);
-				capCenter.tangent = vec3(-1.0f, 0.0f, 0.0f);
-				capCenter.uv = vec2(0.5f, 0.5f);
-				Vertices.push_back(capCenter);
-
-				unsigned centerIndex = (unsigned)Vertices.size() - 1;
-				for (unsigned i = 0; i < sliceCount; ++i)
-				{
-					Indices.push_back(centerIndex);
-					Indices.push_back(baseIndex + i);
-					Indices.push_back(baseIndex + i + 1);
-				}
+				Indices.push_back(centerIndex);
+				Indices.push_back(baseIndex + i);
+				Indices.push_back(baseIndex + i + 1);
 			}
 		}
+
 
 
 		// CONE
@@ -974,6 +980,38 @@ Mesh GeometryGenerator::Cone(float height, float radius, unsigned numSlices, int
 				Indices.push_back(tipVertIndex);
 				Indices.push_back(i + 1);
 				Indices.push_back(i);
+
+				// -----------------------------------
+				// calculate the tangent and normal vectors
+				// and override the placeholder values used earlier
+				//
+				// Pt : position of tip of cone
+				// P0 : position of surface triangle bottom vertex0
+				// P1 : position of surface triangle bottom vertex1
+				//
+				const vec3 Pt = tipVertex.position;
+				const vec3 P0 = Vertices[i].position;
+				const vec3 P1 = Vertices[i + 1].position;
+
+				//  T  : tangent vector: vector along the cone surface.
+				vec3 T = Pt - (P0+P1)*0.5f;
+				T.normalize();
+
+				// use the vectors pointing from P0->Pt: V0 and P0->P1: V1
+				// as the basis vectors for the triangle surface
+				vec3 V0 = Pt - P0;
+				vec3 V1 = P1 - P0;
+				V0.normalize();
+				V1.normalize();
+
+				// cross product of the normalized vectors will give
+				// the surface normal vector
+				vec3 N = XMVector3Dot(V0, V1);
+
+				Vertices[i + 1].normal = N;
+				Vertices[i + 0].normal = N;
+				Vertices[i + 0].tangent = T;
+				Vertices[i + 0].tangent = T;
 			}
 		}
 	}

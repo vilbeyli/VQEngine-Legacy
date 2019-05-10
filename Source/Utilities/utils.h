@@ -120,6 +120,17 @@ namespace MathUtil
 		else              newVal = newVal < lo ? lo : newVal;
 		val = static_cast<T>(newVal);
 	}
+	template<class T> void Clamp(T& val, const T lo, const T hi)
+	{
+		val = min(val, lo);
+		val = max(val, hi);
+	}
+	template<class T> T Clamp(const T& val, const T lo, const T hi)
+	{
+		T _val = val;
+		Clamp(_val, lo, hi);
+		return _val;
+	}
 
 	float	RandF(float l, float h);
 	int		RandI(int l, int h);

@@ -63,6 +63,7 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 #endif
 
 	mMeshes.clear();
+	mpObjects.clear();
 	mMeshes.resize(mBuiltinMeshes.size());
 	std::copy(RANGE(mBuiltinMeshes), mMeshes.begin());
 
@@ -436,16 +437,16 @@ void Scene::InitializeBuiltinMeshes()
 
 	// cylinder parameters
 	const float	 cylHeight = 3.1415f;		const float	 cylTopRadius = 1.0f;
-	const float	 cylBottomRadius = 1.0f;	const unsigned cylSliceCount = 50;
+	const float	 cylBottomRadius = 1.0f;	const unsigned cylSliceCount = 70;
 	const unsigned cylStackCount = 20;
 
 	// grid parameters
 	const float gridWidth = 1.0f;		const float gridDepth = 1.0f;
-	const unsigned gridFinenessH = 50;	const unsigned gridFinenessV = 50;
+	const unsigned gridFinenessH = 70;	const unsigned gridFinenessV = 70;
 
 	// sphere parameters
 	const float sphRadius = 2.0f;
-	const unsigned sphRingCount = 40;	const unsigned sphSliceCount = 40;
+	const unsigned sphRingCount = 70;	const unsigned sphSliceCount = 70;
 
 	// cone parameters
 	const float coneHeight = 3.0f;

@@ -45,6 +45,12 @@ void LODManager::Initialize(const Camera& camera, const std::vector<GameObject*>
 	size_t sz_MeshLODUpdateList = 0;
 	for (GameObject* pObj : pObjects)
 	{
+		if (pObj->GetModelData().mMeshIDs.empty())
+		{
+			Log::Warning("LODManager::Initialize() Obj with no model/mesh.");
+			continue;
+		}
+
 		// only a few built-in meshes support LOD levels
 		const MeshID objMeshID = pObj->GetModelData().mMeshIDs.back();
 		const bool bObjHasBuiltinMesh = objMeshID < EGeometry::MESH_TYPE_COUNT;
@@ -63,7 +69,12 @@ void LODManager::Initialize(const Camera& camera, const std::vector<GameObject*>
 
 		// LODSettings objects carry the 'current LOD level' information,
 		// hence should be attached to all objects that the LODManager will track.
-		const LODSettings lodSettings = sBuiltinMeshLODSettings.at(meshLODSettingsKey);
+		LODSettings lodSettings = sBuiltinMeshLODSettings.at(meshLODSettingsKey);
+		for (int i = 0; i < lodSettings.distanceThresholds.size(); ++i)
+		{
+			const vec3& scl = pObj->GetTransform()._scale;
+			lodSettings.distanceThresholds[i] *= std::max(std::max(scl.x(), scl.y()), scl.z());
+		}
 
 		// register object with LODSettings.
 		RegisterMeshLOD(pObj, objMeshID, lodSettings);
@@ -101,6 +112,19 @@ void LODManager::Update()
 		this->mForcedLODValue = std::max(0, this->mForcedLODValue - 1);
 		Log::Info("Force LOD Level = %d", this->mForcedLODValue);
 	}
+#if 0
+	if (ENGINE->INP()->IsKeyTriggered("L"))
+	{
+		for (const GameObject* pObj : mLODObjects)
+		{
+			for (MeshID meshID : mSceneObjectLODSettingsLookup.at(pObj).LODMeshes)
+			{
+				const LODSettings& lodSettings = GetLODSettings(pObj, meshID);
+				// TODO: print LOD settings for each object that has mesh LODs
+			}
+		}
+	}
+#endif
 #endif
 
 
@@ -130,10 +154,12 @@ void LODManager::Update()
 			const float& sqDist = sqDistV.x();
 
 			const int newLODval = LODSettings::CalculateLODValueFromSquareDistance(sqDist, lodSettings.distanceThresholds);
-
 			if (newLODval != lodSettings.activeLOD)
 			{
-				mMeshLODUpdateList[numLODUpdates++] = MeshLODUpdateParams{ pObj, meshID, newLODval };
+				mMeshLODUpdateList[numLODUpdates].pObj = pObj;
+				mMeshLODUpdateList[numLODUpdates].meshID = meshID;
+				mMeshLODUpdateList[numLODUpdates].newLOD = newLODval;
+				++numLODUpdates;
 			}
 		}
 	}
@@ -266,28 +292,28 @@ void LODManager::InitializeBuiltinMeshLODSettings()
 	LODSettings sphereSettings;
 	LODSettings cylinderSettings;
 
-	coneSettings.distanceThresholds.push_back(50.0f);
-	coneSettings.distanceThresholds.push_back(200.0f);
-	coneSettings.distanceThresholds.push_back(1000.0f);
-	coneSettings.distanceThresholds.push_back(5000.0f);
+	coneSettings.distanceThresholds.push_back(100.0f);
+	coneSettings.distanceThresholds.push_back(300.0f);
+	coneSettings.distanceThresholds.push_back(400.0f);
+	coneSettings.distanceThresholds.push_back(600.0f);
 
 
-	gridSettings.distanceThresholds.push_back(50.0f);
-	gridSettings.distanceThresholds.push_back(200.0f);
+	gridSettings.distanceThresholds.push_back(150.0f);
+	gridSettings.distanceThresholds.push_back(400.0f);
+	gridSettings.distanceThresholds.push_back(700.0f);
 	gridSettings.distanceThresholds.push_back(1000.0f);
-	gridSettings.distanceThresholds.push_back(5000.0f);
 
 
-	sphereSettings.distanceThresholds.push_back(50.0f);
-	sphereSettings.distanceThresholds.push_back(200.0f);
-	sphereSettings.distanceThresholds.push_back(1000.0f);
-	sphereSettings.distanceThresholds.push_back(5000.0f);
+	sphereSettings.distanceThresholds.push_back(80.0f);
+	sphereSettings.distanceThresholds.push_back(220.0f);
+	sphereSettings.distanceThresholds.push_back(300.0f);
+	sphereSettings.distanceThresholds.push_back(600.0f);
 
 
-	cylinderSettings.distanceThresholds.push_back(50.0f);
-	cylinderSettings.distanceThresholds.push_back(200.0f);
-	cylinderSettings.distanceThresholds.push_back(1000.0f);
-	cylinderSettings.distanceThresholds.push_back(5000.0f);
+	cylinderSettings.distanceThresholds.push_back(70.0f);
+	cylinderSettings.distanceThresholds.push_back(150.0f);
+	cylinderSettings.distanceThresholds.push_back(300.0f);
+	cylinderSettings.distanceThresholds.push_back(700.0f);
 
 	sBuiltinMeshLODSettings[EGeometry::CONE]     = coneSettings;
 	sBuiltinMeshLODSettings[EGeometry::GRID]     = gridSettings;

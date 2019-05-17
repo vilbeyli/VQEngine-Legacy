@@ -212,6 +212,7 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Camera.cpp" />
     <ClCompile Include="..\Engine\Source\ObjectCullingSystem.cpp" />
     <ClCompile Include="..\Engine\Source\SceneLODManager.cpp" />
+    <ClCompile Include="..\Engine\Source\SceneResourceView.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

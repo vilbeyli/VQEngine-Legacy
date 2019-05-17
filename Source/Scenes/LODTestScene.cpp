@@ -21,6 +21,7 @@
 #include "Engine/Material.h"
 #include "Application/Input.h"
 #include "Utilities/Log.h"
+#include "Renderer/Renderer.h"
 
 
 // Scene-specific loading logic
@@ -60,11 +61,9 @@ void LODTestScene::Load(SerializedScene& scene)
 		// generate wireframe mesh for the copied geometry
 		const MeshID LODMeshID = pObjToCopy->GetModelData().mMeshIDs.back();
 		Mesh WireframeLODMesh = this->mMeshes[LODMeshID];
-		WireframeLODMesh.SetRenderMode(Mesh::MeshRenderSettings::EMeshRenderMode::WIREFRAME);
-		this->mMeshes.push_back(WireframeLODMesh);
 
-		// copy the geometry and assign the new mesh
-		pNewObject->AddMesh(static_cast<MeshID>(this->mMeshes.size() - 1));
+		// copy the geometry and assign the new mesh with its render settings
+		pNewObject->AddMesh(LODMeshID, { MeshRenderSettings::EMeshRenderMode::WIREFRAME });
 
 		// set material
 		pNewObject->SetMeshMaterials(mpWireframeMaterial);
@@ -133,13 +132,19 @@ void LODTestScene::Update(float dt)
 		mpObjects[mSelectedLODObject + 1]->GetTransform().RotateAroundGlobalYAxisDegrees(rotationAmount);;
 	}
 
-
-	const int NUM_LOD_OBJECTS = static_cast<int>(mpLODWireframeObjects.size());
-	for (int currLODObject = 0; currLODObject < NUM_LOD_OBJECTS; ++currLODObject)
+	// update the LOD stats
+	for (int currLODObject = 0; currLODObject < this->mNumLODObjects; ++currLODObject)
 	{
-		mSceneStats.objStats[currLODObject].lod = mLODManager.GetLODValue(mpLODWireframeObjects[currLODObject]->GetModelData().mMeshIDs.back());
-		mSceneStats.objStats[currLODObject].numVert = 0;                   // TODO
-		mSceneStats.objStats[currLODObject].numTri = 0;	                   // TODO
+		const GameObject* pObj = mpLODWireframeObjects[currLODObject];
+		const MeshID meshID = pObj->GetModelData().mMeshIDs.back();
+		const int currentLODValue = mLODManager.GetLODValue(pObj, meshID);
+		auto VB_IB_IDs = mMeshes[meshID].GetIABuffers(currentLODValue);
+		const BufferDesc bufDescVB = mpRenderer->GetBufferDesc(EBufferType::VERTEX_BUFFER, VB_IB_IDs.first);
+		const BufferDesc bufDescIB = mpRenderer->GetBufferDesc(EBufferType::INDEX_BUFFER , VB_IB_IDs.second);
+
+		mSceneStats.objStats[currLODObject].lod = currentLODValue;
+		mSceneStats.objStats[currLODObject].numVert = bufDescVB.mElementCount;
+		mSceneStats.objStats[currLODObject].numTri = bufDescIB.mElementCount / 3;
 		mSceneStats.objStats[currLODObject].lodLevelDistanceThreshold = 0; // TODO
 	}
 }
@@ -151,7 +156,7 @@ void LODTestScene::RenderUI() const
 {
 	TextDrawDescription drawDesc;
 	drawDesc.color = LinearColor::light_blue;
-	drawDesc.scale = 0.35f;
+	drawDesc.scale = 0.30f;
 	int numLine = 0;
 
 	const Settings::Engine& sEngineSettings = ENGINE->GetSettings();
@@ -161,25 +166,26 @@ void LODTestScene::RenderUI() const
 	//
 	// DRAW DATA
 	//
-	const std::vector<const char*> LODObjectNames =
+	static const char* LODObjectNames[] =
 	{
 		"CYLINDER"
 		, "GRID"
 		, "SPHERE"
 		, "CONE"
 	};
-	const std::vector<const char*> LODStatEntryLabels =
+	static const char* LODStatEntryLabels[] =
 	{
 		"LOD: "
 		, "Vertices: "
 		, "Triangles: "
 		, "LOD Distance: "
 	};
+	constexpr size_t NUM_LOD_STAT_ENTRIES = sizeof(LODStatEntryLabels) / sizeof(char*);
 	std::vector<std::string> LODValues;
 	std::vector<std::string> NumVerts;
 	std::vector<std::string> NumTriangles;
 	std::vector<std::string> LODDistance;
-	std::vector<const std::vector<std::string>*> LODStatEntries = 
+	std::vector<const std::vector<std::string>*> LODStatEntries =
 	{
 		  &LODValues
 		, &NumVerts
@@ -193,7 +199,10 @@ void LODTestScene::RenderUI() const
 		LODValues.push_back   (std::to_string(mSceneStats.objStats[currLODObject].lod));
 		NumVerts.push_back    (std::to_string(mSceneStats.objStats[currLODObject].numVert));
 		NumTriangles.push_back(std::to_string(mSceneStats.objStats[currLODObject].numTri));
-		LODDistance.push_back (std::to_string(mSceneStats.objStats[currLODObject].lodLevelDistanceThreshold));
+
+		std::stringstream ss; // format the distance value and use only 2 digits after the point
+		ss << std::fixed << std::setprecision(2) << mSceneStats.objStats[currLODObject].lodLevelDistanceThreshold;
+		LODDistance.push_back (ss.str());
 	}
 
 
@@ -234,7 +243,7 @@ void LODTestScene::RenderUI() const
 	// ------------------------------------------------------------------------
 	// Draw Table Entries: LOD Values, num tris/verts, etc.
 	// ------------------------------------------------------------------------
-	for (size_t currStatEntry = 0; currStatEntry < LODStatEntryLabels.size(); ++currStatEntry)
+	for (size_t currStatEntry = 0; currStatEntry < NUM_LOD_STAT_ENTRIES; ++currStatEntry)
 	{
 		for (int currLODObject = 0; currLODObject < NUM_LOD_OBJECTS; ++currLODObject)
 		{

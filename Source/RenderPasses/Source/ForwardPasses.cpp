@@ -72,7 +72,7 @@ void ZPrePass::RenderDepth(const RenderParams& args) const
 		args.pRenderer->SetConstant1i("textureConfig", 0);
 		for (MeshID id : model.mMeshIDs)
 		{
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(args.pScene, id);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, id);
 
 			// SET MATERIAL CONSTANT BUFFER & TEXTURES
 			//
@@ -99,7 +99,7 @@ void ZPrePass::RenderDepth(const RenderParams& args) const
 				Material::GetDefaultMaterialCBufferData();
 			}
 
-			args.pRenderer->SetRasterizerState(SceneResourceView::GetMeshRenderMode(args.pScene, id) == Mesh::MeshRenderSettings::EMeshRenderMode::WIREFRAME
+			args.pRenderer->SetRasterizerState(SceneResourceView::GetMeshRenderMode(args.pScene, pObj, id) == MeshRenderSettings::EMeshRenderMode::WIREFRAME
 				? EDefaultRasterizerState::WIREFRAME
 				: EDefaultRasterizerState::CULL_BACK);
 
@@ -153,7 +153,7 @@ void ZPrePass::RenderDepth(const RenderParams& args) const
 		const MeshID& meshID = MeshID_RenderList.first;
 		const RenderList& renderList = MeshID_RenderList.second;
 		const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(args.pScene, meshID);
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, meshID);
 
 		args.pRenderer->SetRasterizerState(rasterizerState);
 		args.pRenderer->SetVertexBuffer(IABuffer.first);
@@ -250,7 +250,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 		SurfaceMaterial material;
 		for (MeshID id : model.mMeshIDs)
 		{
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(args.pScene, id);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, id);
 
 			// SET MATERIAL CONSTANT BUFFER & TEXTURES
 			//
@@ -406,7 +406,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 		const MeshID& meshID = MeshID_RenderList.first;
 		const RenderList& renderList = MeshID_RenderList.second;
 		const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(args.pScene, meshID);
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, meshID);
 
 		pRenderer->SetRasterizerState(rasterizerState);
 		pRenderer->SetVertexBuffer(IABuffer.first);

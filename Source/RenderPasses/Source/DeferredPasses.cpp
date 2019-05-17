@@ -195,7 +195,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 		SurfaceMaterial material;
 		for (MeshID id : model.mMeshIDs)
 		{
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(pScene, id);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, id, pObj);
 
 			// SET MATERIAL CONSTANT BUFFER & TEXTURES
 			//
@@ -236,7 +236,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 			}
 
 			
-			pRenderer->SetRasterizerState(SceneResourceView::GetMeshRenderMode(pScene, id) == Mesh::MeshRenderSettings::EMeshRenderMode::WIREFRAME 
+			pRenderer->SetRasterizerState(SceneResourceView::GetMeshRenderMode(pScene, pObj, id) == MeshRenderSettings::EMeshRenderMode::WIREFRAME
 				? EDefaultRasterizerState::WIREFRAME 
 				: EDefaultRasterizerState::CULL_BACK);
 
@@ -259,7 +259,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 		SurfaceMaterial material;
 		for (MeshID id : model.mMeshIDs)
 		{
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(pScene, id);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, id, pObj);
 
 			// SET MATERIAL CONSTANT BUFFER & TEXTURES
 			//
@@ -339,7 +339,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 			const RenderList& renderList = MeshID_RenderList.second;
 
 			const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(pScene, meshID);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, meshID);
 
 			pRenderer->SetRasterizerState(rasterizerState);
 			pRenderer->SetVertexBuffer(IABuffer.first);
@@ -434,7 +434,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 
 
 		const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(pScene, meshID);
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, meshID);
 
 		pRenderer->SetRasterizerState(rasterizerState);
 		pRenderer->SetVertexBuffer(IABuffer.first);

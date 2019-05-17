@@ -44,33 +44,57 @@ bloom true 2.55
 //light end
 
 object begin
-	mesh cube
-	transform 0 0 0 0 0 0 150 5 70
+	mesh cylinder
+	transform 0 0 0 0 0 0 150 0.2 150
 	brdf
-		diffuse 0.04 0.04 0.04
+		diffuse 0.002 0.002 0.002
 		tiling 10
 		roughness 0.89
 		metalness 0
 	brdf
+	//pbr cgbookcase/black-herringbone-tiles-01
 object end
 
 
 object begin
 	mesh Cylinder
 	transform -90 20 0 0 0 0 15
+	//pbr cgbookcase/blue-tiles-01
+	brdf
+		emissiveMap cgbookcase/Black_herringbone_tiles_01_2K_Emissive.png
+		emissiveIntensity 1.50
+	brdf
 object end
 object begin
 	mesh Grid
-	transform -30 18 0 0 0 0 75
+	//pbr cgbookcase/blue-green-hexagonal-tiles-01
+	transform -30 33 0 -30 0 0 75
+	brdf
+		emissiveMap cgbookcase/Black_herringbone_tiles_01_2K_Emissive.png
+		emissiveIntensity 1.50
+	brdf
 object end
 object begin
 	mesh Sphere
 	transform +40 10 0 0 0 0 12
+	//pbr cgbookcase/painted-metal-02
+	brdf
+		emissiveMap cgbookcase/Black_herringbone_tiles_01_2K_Emissive.png
+		emissiveIntensity 1.50
+		tiling 3 1
+	brdf
 object end
 object begin
 	mesh Cone
 	transform +90 5 0 0 0 0 15
+	brdf
+		emissiveMap cgbookcase/Black_herringbone_tiles_01_2K_Emissive.png
+		emissiveIntensity 1.50
+	brdf
 object end
+
+
+
 
 
 light begin

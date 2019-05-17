@@ -19,6 +19,7 @@
 #define NOMINMAX
 
 #include "Scene.h"
+#include "SceneResourceView.h"
 #include "Engine.h"
 #include "ObjectCullingSystem.h"
 
@@ -468,6 +469,8 @@ void Scene::InitializeBuiltinMeshes()
 		GeometryGenerator::Cone(1.0f, 1.0f, 30),
 		//GeometryGenerator::Sphere(sphRadius / 40, 10, 10),
 	};
+
+	LODManager::InitializeBuiltinMeshLODSettings();
 }
 
 void Scene::SetEnvironmentMap(EEnvironmentMapPresets preset)
@@ -1064,7 +1067,7 @@ void Scene::BatchMainViewRenderList(const std::vector<const GameObject*> mainVie
 		const MeshID meshID = model.mMeshIDs.empty() ? -1 : model.mMeshIDs.front();
 
 		// instanced is only for built-in meshes (for now)
-		if (meshID >= EGeometry::MESH_TYPE_COUNT || mMeshes[meshID].GetRenderSettings().renderMode == Mesh::MeshRenderSettings::WIREFRAME)
+		if (meshID >= EGeometry::MESH_TYPE_COUNT || SceneResourceView::GetMeshRenderMode(this, pObj, meshID) == MeshRenderSettings::WIREFRAME)
 		{
 			mSceneView.culledOpaqueList.push_back(std::move(mainViewRenderList[i]));
 			continue;
@@ -1300,8 +1303,8 @@ void Scene::CalculateSceneBoundingBox()
 		, maxs.x() , maxs.y() , maxs.z()
 		, timer.DeltaTime()
 	);
-	this->mBoundingBox.hi = maxs;
-	this->mBoundingBox.low = mins;
+	this->mSceneBoundingBox.hi = maxs;
+	this->mSceneBoundingBox.low = mins;
 }
 
 
@@ -1399,7 +1402,7 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 		mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 		for (MeshID id : model.mMeshIDs)
 		{
-			const auto IABuffer = mMeshes[id].GetIABuffers(mLODManager.GetLODValue(id));
+			const auto IABuffer = mMeshes[id].GetIABuffers(mLODManager.GetLODValue(pObj, id));
 
 			// SET MATERIAL CONSTANTS
 			if (ShouldSendMaterial(shader))
@@ -1492,7 +1495,7 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	//
 	if (bRenderSceneBoundingBox)
 	{
-		wvp = mBoundingBox.GetWorldTransformationMatrix() * viewProj;
+		wvp = mSceneBoundingBox.GetWorldTransformationMatrix() * viewProj;
 		mpRenderer->SetConstant4x4f("worldViewProj", wvp);
 		mpRenderer->Apply();
 		mpRenderer->DrawIndexed();
@@ -1716,29 +1719,6 @@ void Scene::RenderSkybox(const XMMATRIX& viewProj) const
 	mpRenderer->Apply();
 	mpRenderer->DrawIndexed();
 	mpRenderer->EndEvent();
-}
-
-//----------------------------------------------------------------------------------------------------------------
-// SCENE RESOURCE VIEW  FUNCTIONS
-//----------------------------------------------------------------------------------------------------------------
-#include "SceneResourceView.h"
-std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID)
-{
-	return pScene->mMeshes[meshID].GetIABuffers(pScene->mLODManager.GetLODValue(meshID));
-}
-std::pair<BufferID, BufferID> SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry builtInGeometry, int lod)
-{
-	return Scene::GetGeometryVertexAndIndexBuffers(builtInGeometry, lod);
-}
-
-const Material* SceneResourceView::GetMaterial(const Scene* pScene, MaterialID materialID)
-{
-	return pScene->mMaterials.GetMaterial_const(materialID);
-}
-
-const Mesh::MeshRenderSettings::EMeshRenderMode SceneResourceView::GetMeshRenderMode(const Scene* pScene, MeshID meshID)
-{
-	return pScene->mMeshes[meshID].GetRenderSettings().renderMode;
 }
 
 

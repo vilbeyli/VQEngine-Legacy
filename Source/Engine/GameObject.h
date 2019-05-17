@@ -56,6 +56,7 @@ public:
 	inline Transform& GetTransform() { return mTransform; }
 
 	void AddMesh(MeshID meshID);
+	void AddMesh(MeshID meshID, const MeshRenderSettings& renderSettings);
 
 	// Adds materialID to the newest meshID (meshes.back())
 	//

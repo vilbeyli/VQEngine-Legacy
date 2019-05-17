@@ -218,7 +218,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
 		{
 			const RasterizerStateID rasterizerState = Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, id);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, id);
 
 			pRenderer->SetRasterizerState(rasterizerState);
 			pRenderer->SetVertexBuffer(IABuffer.first);
@@ -246,7 +246,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		std::for_each(drawData.meshIDs.begin(), drawData.meshIDs.end(), [&](MeshID id)
 		{
 			const RasterizerStateID rasterizerState = Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, id);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, id);
 
 			pRenderer->SetRasterizerState(rasterizerState);
 			pRenderer->SetVertexBuffer(IABuffer.first);
@@ -364,7 +364,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			const std::vector<const GameObject*>& renderList = MeshID_RenderList.second;
 
 			const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_NONE;// Is2DGeometry(mesh) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, mesh);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, mesh);
 
 			pRenderer->SetRasterizerState(rasterizerState);
 			pRenderer->SetVertexBuffer(IABuffer.first);
@@ -451,7 +451,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 				assert(meshInstanceCount > 0); // make sure no empty meshID transformation list
 
 				const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-				const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(ENGINE->mpActiveScene, meshID);
+				const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, meshID);
 				pRenderer->SetVertexBuffer(IABuffer.first);
 				pRenderer->SetIndexBuffer(IABuffer.second);
 				pRenderer->SetRasterizerState(rasterizerState);

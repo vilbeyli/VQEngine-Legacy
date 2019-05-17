@@ -35,6 +35,13 @@ void GameObject::AddMesh(MeshID meshID)
 }
 
 
+void GameObject::AddMesh(MeshID meshID, const MeshRenderSettings& renderSettings)
+{
+	mModel.mbLoaded = true;
+	mModel.mData.mMeshRenderSettingsLookup[meshID] = renderSettings;
+	mModel.mData.mMeshIDs.push_back(meshID);
+}
+
 void GameObject::AddMaterial(Material * pMat)
 {
 	if (mModel.mbLoaded)
@@ -86,7 +93,7 @@ void GameObject::RenderTransparent(
 	// SET GEOMETRY & MATERIAL, THEN DRAW
 	for(MeshID id : mModel.mData.mTransparentMeshIDs)
 	{
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBuffersOfMesh(mpScene, id);
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(mpScene, id);
 
 		// SET MATERIAL CONSTANTS
 		if (UploadMaterialDataToGPU)

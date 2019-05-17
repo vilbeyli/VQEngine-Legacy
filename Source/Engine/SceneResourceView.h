@@ -20,24 +20,27 @@
 #include "Application/HandleTypedefs.h"
 
 #include "Mesh.h"
+#include "Model.h"
 #include "Material.h"
 
 #include <memory>
 
 class Scene;
+class GameObject;
 
 // https://en.wikibooks.org/wiki/More_C++_Idioms/Friendship_and_the_Attorney-Client
 class SceneResourceView
 {
 #if 1
 public:
-	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID);
+	static std::pair<BufferID, BufferID> GetVertexAndIndexBufferIDsOfMesh(const Scene* pScene, MeshID meshID); // TODO: remove this or the other
+	static std::pair<BufferID, BufferID> GetVertexAndIndexBufferIDsOfMesh(const Scene* pScene, MeshID meshID, const GameObject* pObj);
 	static std::pair<BufferID, BufferID> GetBuiltinMeshVertexAndIndexBufferID(EGeometry builtInGeometry, int lod = 0);
 	static const Material* GetMaterial(const Scene* pScene, MaterialID materialID);
-	static const Mesh::MeshRenderSettings::EMeshRenderMode GetMeshRenderMode(const Scene* pScene, MeshID meshID);
+	static const MeshRenderSettings::EMeshRenderMode GetMeshRenderMode(const Scene* pScene, const GameObject* pObj, MeshID meshID);
 #else
 private:
-	static std::pair<BufferID, BufferID> GetVertexAndIndexBuffersOfMesh(const Scene* pScene, MeshID meshID);
+	static std::pair<BufferID, BufferID> GetVertexAndIndexBufferIDsOfMesh(const Scene* pScene, MeshID meshID);
 	static std::pair<BufferID, BufferID> GetBuiltinMeshVertexAndIndexBufferID(EGeometry builtInGeometry, int lod = 0);
 	static const Material* GetMaterial(const Scene* pScene, MaterialID materialID);
 

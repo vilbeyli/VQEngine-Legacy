@@ -639,6 +639,25 @@ unsigned Renderer::WindowWidth()	const { return m_Direct3D->WindowWidth(); }
 vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(static_cast<float>(this->WindowWidth()), static_cast<float>(this->WindowHeight())); }
 HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };
 
+const BufferDesc Renderer::GetBufferDesc(EBufferType bufferType, BufferID bufferID) const
+{
+	BufferDesc desc = {};
+
+	const std::vector<Buffer>& bufferContainer = [&]()
+	{
+		switch (bufferType)
+		{
+		case VERTEX_BUFFER:     return mVertexBuffers; break;
+		case INDEX_BUFFER:      return mIndexBuffers; break;
+		case COMPUTE_RW_BUFFER: return mUABuffers; break;
+		default               : assert(false); // specify a valid buffer type
+		}
+	}();
+
+	assert(bufferContainer.size() > bufferID);
+	return bufferContainer[bufferID].mDesc;
+}
+
 const Shader* Renderer::GetShader(ShaderID shader_id) const
 {
 	assert(shader_id >= 0 && (int)mShaders.size() > shader_id);
@@ -1277,7 +1296,7 @@ BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData
 	return static_cast<int>([&]() {
 		switch (bufferDesc.mType)
 		{
-		case VERTEX_BUFER:
+		case VERTEX_BUFFER:
 			mVertexBuffers.push_back(buffer);
 			return mVertexBuffers.size() - 1;
 		case INDEX_BUFFER:

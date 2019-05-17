@@ -34,14 +34,28 @@ struct aiMesh;
 struct aiMaterial;
 class Scene;
 
+struct MeshRenderSettings
+{
+	enum EMeshRenderMode
+	{
+		FILL = 0,
+		WIREFRAME,
 
-using MeshToMaterialLookup = std::unordered_map<MeshID, MaterialID>;
+		NUM_MESH_RENDER_MODES
+	};
+	static EMeshRenderMode DefaultRenderSettings() { return { EMeshRenderMode::FILL }; }
+	EMeshRenderMode renderMode = EMeshRenderMode::FILL;
+};
+
+using MeshToMaterialLookup     = std::unordered_map<MeshID, MaterialID>;
+using MeshRenderSettingsLookup = std::unordered_map < MeshID, MeshRenderSettings>;
 
 struct ModelData
 {
-	std::vector<MeshID>		mMeshIDs;
-	std::vector<MeshID>		mTransparentMeshIDs;
-	MeshToMaterialLookup	mMaterialLookupPerMesh;
+	std::vector<MeshID>			mMeshIDs;
+	std::vector<MeshID>			mTransparentMeshIDs;
+	MeshToMaterialLookup		mMaterialLookupPerMesh;
+	MeshRenderSettingsLookup	mMeshRenderSettingsLookup;
 	bool AddMaterial(MeshID meshID, MaterialID matID, bool bTransparent = false);
 	inline bool HasMaterial() const { return !mMaterialLookupPerMesh.empty(); }
 };

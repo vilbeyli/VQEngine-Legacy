@@ -122,5 +122,8 @@
     <ClCompile Include="..\Engine\Source\SceneLODManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\Engine\Source\SceneResourceView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

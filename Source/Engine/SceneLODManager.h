@@ -30,20 +30,29 @@
 class Camera;
 class GameObject;
 
+// TODO: either change std::vector to fixed sized float array
+#define USE_NEW_CONTAINERS 0
+constexpr size_t NUM_MAX_LOD_LEVELS = 6;
 class LODManager
 {
 public:
 	// Holds distance thresholds in world units for each LOD level.
 	struct LODSettings
 	{
-		int lod;
+		int   activeLOD;
+#if USE_NEW_CONTAINERS
+		std::unordered_map<MeshID, float[NUM_MAX_LOD_LEVELS]> meshLODDistanceLookup;
+#else
 		std::vector<float> distanceThresholds;
+#endif
+		//------------------------------------------------------------------------------------------------------------
 		static int CalculateLODValueFromSquareDistance(float sqDistance, const std::vector<float>& distanceThresholds);
 		static int CalculateLODValueFromDistance(float distance, const std::vector<float>& distanceThresholds);
 	};
 
 	LODManager(std::vector<Mesh>& meshes) : mMeshContainer(meshes) {}
-	void Initialize(const Camera& camera, const std::vector<GameObject*> pObjects);
+	void Initialize(const Camera& camera, const std::vector<GameObject*>& pObjects);
+
 	void Reset();
 	void Update();
 	void LateUpdate();
@@ -51,9 +60,9 @@ public:
 	inline void SetViewer(const vec3* pViewerPos) { mpViewerPosition = pViewerPos; }
 	void SetViewer(const Camera& camera);
 	
-	int GetLODValue(MeshID meshID) const;
+	int GetLODValue(const GameObject* pObj, MeshID meshID) const;
 
-private:
+	void RegisterMeshLOD(const GameObject* pObj, MeshID meshID, const LODSettings& _LODSettings);
 
 
 private:
@@ -61,15 +70,44 @@ private:
 	bool mbEnableForceLODLevels = false;
 	int  mForcedLODValue = 0;
 
-	// TODO: static vs dynamic mesh lookup (should save a transform read cache miss for static object traversal)
-	std::unordered_map<GameObject*, LODSettings>        mGameObjectLODSettingsLookup;
-	std::unordered_map<MeshID     , const LODSettings*> mMeshLODSettingsLookup;
+
+	// Scene will have a container of GameObjects, but not all will have LOD settings
+	// so LOD manager will only track what's necessary, stored in this container.
+	// TODO: [PERF] static vs dynamic mesh lookup (should save a transform read cache miss for static object traversal)
+	//
+	std::vector<const GameObject*> mLODObjects;
+	
+
+	// LODSettings should exist per gameobject-meshID combination.
+	//
+	struct GameObjectLODSettings
+	{
+		// GameObjects can contain many meshes, and not all of them have the guarantee
+		// for having LOD levels. Hence we only map the necessary IDs per game object.
+		std::vector<MeshID>                     LODMeshes; // duplicates keys of meshLODSettingsLookup, consider iterating over keys?
+		std::unordered_map<MeshID, LODSettings> meshLODSettingsLookup;
+		const LODSettings& GetLODSettings(MeshID meshID) const;
+	};
+	std::unordered_map <const GameObject*, GameObjectLODSettings> mSceneObjectLODSettingsLookup;
+	const LODSettings& GetLODSettings(const GameObject* pObj, MeshID meshID) const;
+
+
 	std::vector<Mesh>&                           mMeshContainer; // unneeded
 
 	struct MeshLODUpdateParams
 	{
-		GameObject* pObj;
+		const GameObject* pObj;
+		MeshID meshID;
 		int newLOD;
 	};
 	std::vector<MeshLODUpdateParams> mMeshLODUpdateList;
+
+
+//
+// STATICS
+//
+public:
+	static void InitializeBuiltinMeshLODSettings();
+private:
+	static std::unordered_map<EGeometry, LODSettings> sBuiltinMeshLODSettings;
 };

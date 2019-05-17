@@ -265,8 +265,8 @@ private:
 			switch (type)
 			{
 			case Light::POINT: return mStaticLights.pointLightIndices.size() + mDynamicLights.pointLightIndices.size(); break;
-			case Light::SPOT: return mStaticLights.spotLightIndices.size() + mDynamicLights.spotLightIndices.size(); break;
-			default: return 0; break;
+			case Light::SPOT : return mStaticLights.spotLightIndices.size()  + mDynamicLights.spotLightIndices.size();  break;
+			default: return 0;
 			}
 		}
 		inline std::vector<const Light*> GetFlattenedListOfLights(const std::vector<Light>& staticLights, const std::vector<Light>& dynamicLights) const
@@ -304,7 +304,7 @@ private:
 	std::mutex		mSceneMeshMutex;
 
 
-	BoundingBox		mBoundingBox;
+	BoundingBox		mSceneBoundingBox;
 
 
 	SceneView		mSceneView;

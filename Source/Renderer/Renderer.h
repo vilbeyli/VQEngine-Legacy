@@ -74,6 +74,7 @@ public:
 	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const { return mDepthTargets[DT].texture._id; }
 	const PipelineState&	GetState() const;
 	inline const RendererStats&	GetRenderStats() const { return mRenderStats; }
+	const BufferDesc		GetBufferDesc(EBufferType bufferType, BufferID bufferID) const;
 
 	const Shader*			GetShader(ShaderID shader_id) const;
 	const Texture&			GetTextureObject(TextureID) const;

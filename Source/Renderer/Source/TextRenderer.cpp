@@ -122,7 +122,7 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 	BufferDesc bufDesc;
 	bufDesc.mElementCount = 6;
 	bufDesc.mStride = sizeof(vec4);
-	bufDesc.mType = VERTEX_BUFER;
+	bufDesc.mType = VERTEX_BUFFER;
 	bufDesc.mUsage = GPU_READ_CPU_WRITE;
 	mQuadVertexBuffer = pRenderer->CreateBuffer(bufDesc);
 

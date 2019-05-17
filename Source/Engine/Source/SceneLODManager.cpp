@@ -29,10 +29,10 @@
 #define DEBUG_LOD_LEVELS 1
 
 #if DEBUG_LOD_LEVELS
-	#define ENABLE_FORCE_LOD_LEVELS 1
+	#define ENABLE_FORCE_LOD_LEVELS 0
 #endif
 
-void LODManager::Initialize(const Camera& camera, const std::vector<GameObject*> pObjects)
+void LODManager::Initialize(const Camera& camera, const std::vector<GameObject*>& pObjects)
 {
 	Reset();
 	mpViewerPosition = &camera.mPosition;
@@ -42,23 +42,35 @@ void LODManager::Initialize(const Camera& camera, const std::vector<GameObject*>
 #endif
 
 	// create settings objects
+	size_t sz_MeshLODUpdateList = 0;
 	for (GameObject* pObj : pObjects)
 	{
-		LODSettings settings;
-
-		mGameObjectLODSettingsLookup[pObj] = settings;
-	}
-
-	// set meshID references for the LOD settings
-	for (GameObject* pObj : pObjects)
-	{
-		for (MeshID meshID : pObj->GetModelData().mMeshIDs)
+		// only a few built-in meshes support LOD levels
+		const MeshID objMeshID = pObj->GetModelData().mMeshIDs.back();
+		const bool bObjHasBuiltinMesh = objMeshID < EGeometry::MESH_TYPE_COUNT;
+		if (!bObjHasBuiltinMesh)
 		{
-			mMeshLODSettingsLookup[meshID] = &mGameObjectLODSettingsLookup.at(pObj);
+			continue;
 		}
+
+		// check if LOD settings exist for the built-in mesh
+		const EGeometry meshLODSettingsKey = static_cast<EGeometry>(objMeshID);
+		const bool bMeshLODSettingExists = sBuiltinMeshLODSettings.find(meshLODSettingsKey) != sBuiltinMeshLODSettings.end();
+		if (!bMeshLODSettingExists)
+		{
+			continue;
+		}
+
+		// LODSettings objects carry the 'current LOD level' information,
+		// hence should be attached to all objects that the LODManager will track.
+		const LODSettings lodSettings = sBuiltinMeshLODSettings.at(meshLODSettingsKey);
+
+		// register object with LODSettings.
+		RegisterMeshLOD(pObj, objMeshID, lodSettings);
+		++sz_MeshLODUpdateList;
 	}
 
-	mMeshLODUpdateList.resize(mGameObjectLODSettingsLookup.size());
+	mMeshLODUpdateList.resize(sz_MeshLODUpdateList);
 }
 
 void LODManager::Reset()
@@ -66,8 +78,7 @@ void LODManager::Reset()
 	mpViewerPosition = nullptr;
 	mbEnableForceLODLevels = false;
 	mForcedLODValue = 0;
-	mGameObjectLODSettingsLookup.clear();
-	mMeshLODSettingsLookup.clear();
+	mSceneObjectLODSettingsLookup.clear();
 }
 
 void LODManager::Update()
@@ -105,30 +116,34 @@ void LODManager::Update()
 	const vec3 viewPos = *this->mpViewerPosition; // cache the memory indirection
 
 
-	// calculate new lods and output a list of <MeshID, lodVal> pair.
+	// calculate new LODs and output a list of <MeshID, lodVal> pair.
 	int numLODUpdates = 0;
-	for (const std::pair<GameObject*, LODSettings>& kvp : mGameObjectLODSettingsLookup)
+	for(const GameObject* pObj : mLODObjects)
 	{
-		GameObject* const& pObj = kvp.first;
-		const LODSettings& lodSettings = kvp.second;
-
-		// calculate square distance to the viewer
-		vec3 sqDistV = pObj->GetTransform()._position - viewPos;
-		sqDistV = XMVector3Dot(sqDistV, sqDistV);
-		const float& sqDist = sqDistV.x();
-
-		const int newLODval = LODSettings::CalculateLODValueFromSquareDistance(sqDist, lodSettings.distanceThresholds);
-
-		if (newLODval != lodSettings.lod)
+		for (MeshID meshID : mSceneObjectLODSettingsLookup.at(pObj).LODMeshes)
 		{
-			mMeshLODUpdateList[numLODUpdates++] = MeshLODUpdateParams{ pObj, newLODval };
+			const LODSettings& lodSettings = GetLODSettings(pObj, meshID);
+
+			// calculate square distance to the viewer
+			vec3 sqDistV = pObj->GetTransform()._position - viewPos;
+			sqDistV = XMVector3Dot(sqDistV, sqDistV);
+			const float& sqDist = sqDistV.x();
+
+			const int newLODval = LODSettings::CalculateLODValueFromSquareDistance(sqDist, lodSettings.distanceThresholds);
+
+			if (newLODval != lodSettings.activeLOD)
+			{
+				mMeshLODUpdateList[numLODUpdates++] = MeshLODUpdateParams{ pObj, meshID, newLODval };
+			}
 		}
 	}
 
 	// update the LOD values
 	for(int i=0; i<numLODUpdates; ++i)
 	{
-		mGameObjectLODSettingsLookup.at(mMeshLODUpdateList[i].pObj).lod = mMeshLODUpdateList[i].newLOD;
+		mSceneObjectLODSettingsLookup.at(mMeshLODUpdateList[i].pObj)
+			.meshLODSettingsLookup.at(mMeshLODUpdateList[i].meshID)
+			.activeLOD = mMeshLODUpdateList[i].newLOD;
 	}
 #endif // THREADED_UPDATE 
 }
@@ -142,12 +157,74 @@ void LODManager::LateUpdate()
 
 void LODManager::SetViewer(const Camera& camera) { mpViewerPosition = &camera.mPosition; }
 
-int LODManager::GetLODValue(MeshID meshID) const
+int LODManager::GetLODValue(const GameObject* pObj, MeshID meshID) const
 {
-	return this->mbEnableForceLODLevels
-		? this->mForcedLODValue
-		: mMeshLODSettingsLookup.at(meshID)->lod;
+
+	// TODO: shadow map pass is set with only MeshID's and the
+	//       pass doesn't know about 'game objects'. 
+	//
+	//       Need to:
+	//        * find a way to quickly fetch LODSettings with only a meshID,
+	//          not sure if searching for meshID->pObj is a good idea...
+	//          meshID's are, in theory, only associated with Transforms
+	//          rather than game objects, so that might be an option?
+	//       OR 
+	//        * change the shadow pass to include game object pointers as well
+	//          for the parameter to the SceneResourceView::GetVertexAndIndexBufferIDsOfMesh()
+	//          function, which calls this function to get an LOD level.
+	//
+	// This will result in UI updating with correct stats but renderer
+	// only seeing LOD=0 for all meshes because they're not providing pObj.
+	//
+#if 0 // disable assert for now
+	assert(pObj);
+#endif
+
+	assert(meshID != -1);
+
+
+#if ENABLE_FORCE_LOD_LEVELS
+	if (this->mbEnableForceLODLevels) // this if is unnecessary
+	{
+		return this->mForcedLODValue;
+	}
+#endif
+	
+	if (mSceneObjectLODSettingsLookup.find(pObj) == mSceneObjectLODSettingsLookup.end())
+	{
+#if _DEBUG
+		if(std::find(RANGE(this->mLODObjects), pObj) != this->mLODObjects.end())
+			Log::Warning("LODManager::GetLODValue(): MeshID=%d of GameObj*=TODO doesn't exist in SceneMeshLODSettingsLookup table.", meshID); // TODO msg
+#endif
+		return 0;
+	}
+
+	const GameObjectLODSettings& objLODSettings = mSceneObjectLODSettingsLookup.at(pObj);
+
+	if (objLODSettings.meshLODSettingsLookup.find(meshID) == objLODSettings.meshLODSettingsLookup.end())
+	{
+		Log::Warning("LODManager::GetLODValue(): MeshID=%d of GameObj*=TODO doesn't exist in SceneMeshLODSettingsLookup table.", meshID); // TODO msg
+		return 0;
+	}
+
+	return objLODSettings.meshLODSettingsLookup.at(meshID).activeLOD;
 }
+
+
+void LODManager::RegisterMeshLOD(const GameObject* pObj, MeshID meshID, const LODSettings& _LODSettings)
+{
+	// register the pObj if it doesn't exist in the lookup
+	if (mSceneObjectLODSettingsLookup.find(pObj) == mSceneObjectLODSettingsLookup.end())
+	{
+		GameObjectLODSettings& objLODSettings = mSceneObjectLODSettingsLookup[pObj];
+		objLODSettings.LODMeshes.push_back(meshID);
+		objLODSettings.meshLODSettingsLookup[meshID] = _LODSettings;
+	}
+
+	mLODObjects.push_back(pObj);
+}
+
+std::unordered_map<EGeometry, LODManager::LODSettings> LODManager::sBuiltinMeshLODSettings;
 
 int LODManager::LODSettings::CalculateLODValueFromSquareDistance(float sqDistance, const std::vector<float>& distanceThresholds)
 {
@@ -158,7 +235,7 @@ int LODManager::LODSettings::CalculateLODValueFromSquareDistance(float sqDistanc
 			return lod;
 		}
 	}
-	return 0;
+	return static_cast<int>(distanceThresholds.size()-1);
 }
 
 int LODManager::LODSettings::CalculateLODValueFromDistance(float distance, const std::vector<float>& distanceThresholds)
@@ -171,4 +248,55 @@ int LODManager::LODSettings::CalculateLODValueFromDistance(float distance, const
 		}
 	}
 	return 0;
+}
+
+
+const LODManager::LODSettings& LODManager::GetLODSettings(const GameObject* pObj, MeshID meshID) const
+{
+	// TODO: error check + report
+	const GameObjectLODSettings& objLODSettings = mSceneObjectLODSettingsLookup.at(pObj);
+	return objLODSettings.meshLODSettingsLookup.at(meshID);
+}
+
+void LODManager::InitializeBuiltinMeshLODSettings()
+{
+
+	LODSettings coneSettings;
+	LODSettings gridSettings;
+	LODSettings sphereSettings;
+	LODSettings cylinderSettings;
+
+	coneSettings.distanceThresholds.push_back(50.0f);
+	coneSettings.distanceThresholds.push_back(200.0f);
+	coneSettings.distanceThresholds.push_back(1000.0f);
+	coneSettings.distanceThresholds.push_back(5000.0f);
+
+
+	gridSettings.distanceThresholds.push_back(50.0f);
+	gridSettings.distanceThresholds.push_back(200.0f);
+	gridSettings.distanceThresholds.push_back(1000.0f);
+	gridSettings.distanceThresholds.push_back(5000.0f);
+
+
+	sphereSettings.distanceThresholds.push_back(50.0f);
+	sphereSettings.distanceThresholds.push_back(200.0f);
+	sphereSettings.distanceThresholds.push_back(1000.0f);
+	sphereSettings.distanceThresholds.push_back(5000.0f);
+
+
+	cylinderSettings.distanceThresholds.push_back(50.0f);
+	cylinderSettings.distanceThresholds.push_back(200.0f);
+	cylinderSettings.distanceThresholds.push_back(1000.0f);
+	cylinderSettings.distanceThresholds.push_back(5000.0f);
+
+	sBuiltinMeshLODSettings[EGeometry::CONE]     = coneSettings;
+	sBuiltinMeshLODSettings[EGeometry::GRID]     = gridSettings;
+	sBuiltinMeshLODSettings[EGeometry::SPHERE]   = sphereSettings;
+	sBuiltinMeshLODSettings[EGeometry::CYLINDER] = cylinderSettings;
+}
+
+const LODManager::LODSettings& LODManager::GameObjectLODSettings::GetLODSettings(MeshID meshID) const
+{
+	// TODO: error check + report
+	return meshLODSettingsLookup.at(meshID);
 }

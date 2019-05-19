@@ -218,7 +218,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
 		{
 			const RasterizerStateID rasterizerState = Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, id);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, id, pObj);
 
 			pRenderer->SetRasterizerState(rasterizerState);
 			pRenderer->SetVertexBuffer(IABuffer.first);

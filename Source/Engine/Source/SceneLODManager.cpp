@@ -19,9 +19,12 @@
 #include "SceneLODManager.h"
 #include "Camera.h"
 #include "GameObject.h"
+#include "Engine.h"
+
+#include "Renderer/RenderingStructs.h"
+#include "Renderer/Renderer.h"
 
 #include "Application/Input.h"
-#include "Engine.h"
 
 #include "Utilities/Log.h"
 
@@ -31,6 +34,9 @@
 #if DEBUG_LOD_LEVELS
 	#define ENABLE_FORCE_LOD_LEVELS 0
 #endif
+
+std::unordered_map<EGeometry, LODManager::LODSettings> LODManager::sBuiltinMeshLODSettings;
+
 
 void LODManager::Initialize(const Camera& camera, const std::vector<GameObject*>& pObjects)
 {
@@ -101,85 +107,27 @@ void LODManager::Update()
 		return;
 	}
 
-
-#if DEBUG_LOD_LEVELS
-	if (ENGINE->INP()->IsKeyTriggered("]"))
-	{
-		this->mForcedLODValue += 1;
-		Log::Info("Force LOD Level = %d", this->mForcedLODValue);
-	}
-	if (ENGINE->INP()->IsKeyTriggered("["))
-	{
-		this->mForcedLODValue = std::max(0, this->mForcedLODValue - 1);
-		Log::Info("Force LOD Level = %d", this->mForcedLODValue);
-	}
-#if 0
-	if (ENGINE->INP()->IsKeyTriggered("L"))
-	{
-		for (const GameObject* pObj : mLODObjects)
-		{
-			for (MeshID meshID : mSceneObjectLODSettingsLookup.at(pObj).LODMeshes)
-			{
-				const LODSettings& lodSettings = GetLODSettings(pObj, meshID);
-				// TODO: print LOD settings for each object that has mesh LODs
-			}
-		}
-	}
-#endif
-#endif
+	HandleInput();
 
 
 	if (mbEnableForceLODLevels)
-		;// return;
+		return;
 
 #if THREADED_UPDATE 
-	// multi-threaded LOD update
-
-#else // THREADED_UPDATE 
-	// single-threaded LOD update
-
-	const vec3 viewPos = *this->mpViewerPosition; // cache the memory indirection
-
-
-	// calculate new LODs and output a list of <MeshID, lodVal> pair.
-	int numLODUpdates = 0;
-	for(const GameObject* pObj : mLODObjects)
-	{
-		for (MeshID meshID : mSceneObjectLODSettingsLookup.at(pObj).LODMeshes)
-		{
-			const LODSettings& lodSettings = GetLODSettings(pObj, meshID);
-
-			// calculate square distance to the viewer
-			vec3 sqDistV = pObj->GetTransform()._position - viewPos;
-			sqDistV = XMVector3Dot(sqDistV, sqDistV);
-			const float& sqDist = sqDistV.x();
-
-			const int newLODval = LODSettings::CalculateLODValueFromSquareDistance(sqDist, lodSettings.distanceThresholds);
-			if (newLODval != lodSettings.activeLOD)
-			{
-				mMeshLODUpdateList[numLODUpdates].pObj = pObj;
-				mMeshLODUpdateList[numLODUpdates].meshID = meshID;
-				mMeshLODUpdateList[numLODUpdates].newLOD = newLODval;
-				++numLODUpdates;
-			}
-		}
-	}
-
-	// update the LOD values
-	for(int i=0; i<numLODUpdates; ++i)
-	{
-		mSceneObjectLODSettingsLookup.at(mMeshLODUpdateList[i].pObj)
-			.meshLODSettingsLookup.at(mMeshLODUpdateList[i].meshID)
-			.activeLOD = mMeshLODUpdateList[i].newLOD;
-	}
-#endif // THREADED_UPDATE 
+	UpdateLODs_MultiThreaded_Begin();
+#else 
+	UpdateLODs_SingleThread();
+#endif 
 }
 
 void LODManager::LateUpdate()
 {
-#if THREADED_UPDATE 
+	if (mbEnableForceLODLevels)
+		return;
 
-#endif // THREADED_UPDATE 
+#if THREADED_UPDATE 
+	UpdateLODs_MultiThreaded_End();
+#endif 
 }
 
 void LODManager::SetViewer(const Camera& camera) { mpViewerPosition = &camera.mPosition; }
@@ -199,7 +147,7 @@ const LODManager::LODSettings& LODManager::GetMeshLODSettings(const GameObject* 
 
 int LODManager::GetLODValue(const GameObject* pObj, MeshID meshID) const
 {
-	// TODO: shadow map pass is set with only MeshID's and the
+	// TODO: shadow map / GBuffer pass is set with only MeshID's and the
 	//       pass doesn't know about 'game objects'. 
 	//
 	//       Need to:
@@ -263,8 +211,6 @@ void LODManager::RegisterMeshLOD(const GameObject* pObj, MeshID meshID, const LO
 	mLODObjects.push_back(pObj);
 }
 
-std::unordered_map<EGeometry, LODManager::LODSettings> LODManager::sBuiltinMeshLODSettings;
-
 int LODManager::LODSettings::CalculateLODValueFromSquareDistance(float sqDistance, const std::vector<float>& distanceThresholds)
 {
 	for (int lod = 0; lod < distanceThresholds.size(); ++lod)
@@ -295,6 +241,93 @@ const LODManager::LODSettings& LODManager::GetLODSettings(const GameObject* pObj
 	// TODO: error check + report
 	const GameObjectLODSettings& objLODSettings = mSceneObjectLODSettingsLookup.at(pObj);
 	return objLODSettings.meshLODSettingsLookup.at(meshID);
+}
+
+void LODManager::HandleInput()
+{
+#if DEBUG_LOD_LEVELS
+	if (ENGINE->INP()->IsKeyTriggered("]"))
+	{
+		this->mForcedLODValue += 1;
+		Log::Info("Force LOD Level = %d", this->mForcedLODValue);
+	}
+	if (ENGINE->INP()->IsKeyTriggered("["))
+	{
+		this->mForcedLODValue = std::max(0, this->mForcedLODValue - 1);
+		Log::Info("Force LOD Level = %d", this->mForcedLODValue);
+	}
+	if (ENGINE->INP()->IsKeyTriggered("L"))
+	{
+		std::stringstream ss;
+		ss << "Scene LOD Manager\n\n";
+		ss << "Game Objects / Mesh LOD Settings:\n";
+		int currObj = 0;
+		for (const GameObject* pObj : mLODObjects)
+		{
+			ss << "\tmLODObjects[" << currObj++ << "]:\n";
+			for (MeshID meshID : mSceneObjectLODSettingsLookup.at(pObj).LODMeshes)
+			{
+				const LODSettings& lodSettings = GetLODSettings(pObj, meshID);
+				ss << "\t\tMeshID=" << meshID << " | LOD=" << lodSettings.activeLOD << " | ";
+				ss << " distance threshold=" << std::fixed << std::setprecision(2) << lodSettings.distanceThresholds[lodSettings.activeLOD] << "\n";
+
+				auto VB_IB_IDs = mMeshContainer[meshID].GetIABuffers(lodSettings.activeLOD);
+				const BufferDesc bufDescVB = mpRenderer->GetBufferDesc(EBufferType::VERTEX_BUFFER, VB_IB_IDs.first);
+				const BufferDesc bufDescIB = mpRenderer->GetBufferDesc(EBufferType::INDEX_BUFFER, VB_IB_IDs.second);
+				ss << "\t\tVertices: " << bufDescVB.mElementCount << " | Triangles: " << bufDescIB.mElementCount / 3 << "\n";
+			}
+			ss << "\n";
+		}
+		Log::Info(ss.str());
+	}
+#endif
+}
+
+void LODManager::UpdateLODs_SingleThread()
+{
+	const vec3 viewPos = *this->mpViewerPosition; // cache the memory indirection
+
+	// calculate new LODs and output a list of <MeshID, lodVal> pair.
+	int numLODUpdates = 0;
+	for (const GameObject* pObj : mLODObjects)
+	{
+		for (MeshID meshID : mSceneObjectLODSettingsLookup.at(pObj).LODMeshes)
+		{
+			const LODSettings& lodSettings = GetLODSettings(pObj, meshID);
+
+			// calculate square distance to the viewer
+			vec3 sqDistV = pObj->GetTransform()._position - viewPos;
+			sqDistV = XMVector3Dot(sqDistV, sqDistV);
+			const float& sqDist = sqDistV.x();
+
+			const int newLODval = LODSettings::CalculateLODValueFromSquareDistance(sqDist, lodSettings.distanceThresholds);
+			if (newLODval != lodSettings.activeLOD)
+			{
+				mMeshLODUpdateList[numLODUpdates].pObj = pObj;
+				mMeshLODUpdateList[numLODUpdates].meshID = meshID;
+				mMeshLODUpdateList[numLODUpdates].newLOD = newLODval;
+				++numLODUpdates;
+			}
+		}
+	}
+
+	// update the LOD values
+	for (int i = 0; i < numLODUpdates; ++i)
+	{
+		mSceneObjectLODSettingsLookup.at(mMeshLODUpdateList[i].pObj)
+			.meshLODSettingsLookup.at(mMeshLODUpdateList[i].meshID)
+			.activeLOD = mMeshLODUpdateList[i].newLOD;
+	}
+}
+
+void LODManager::UpdateLODs_MultiThreaded_Begin()
+{
+	// TODO: SetupWorkers(); Dispatch();
+}
+
+void LODManager::UpdateLODs_MultiThreaded_End()
+{
+	// TODO: Sync(); ReadResults();
 }
 
 void LODManager::InitializeBuiltinMeshLODSettings()

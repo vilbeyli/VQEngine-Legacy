@@ -26,6 +26,9 @@
 
 #include "Renderer/Renderer.h"
 
+#include <unordered_map>
+#include <set>
+
 constexpr int DRAW_INSTANCED_COUNT_GBUFFER_PASS = 64;
 
 void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
@@ -339,7 +342,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 			const RenderList& renderList = MeshID_RenderList.second;
 
 			const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, meshID);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, meshID, renderList.back());
 
 			pRenderer->SetRasterizerState(rasterizerState);
 			pRenderer->SetVertexBuffer(IABuffer.first);
@@ -434,8 +437,11 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 
 
 		const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, meshID);
-
+#if 1
+		// note: using renderList.back() as the last argument to the GetVertexAndIndexBufferIDsOfMesh() will enable LOD
+		//       levels for GBuffer pass, but they won't be technically correct. we have to separate instanced render list
+		//       even further here, based on the active LOD mesh. For now, using back() will provide some nice perf results.
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, meshID, renderList.back());
 		pRenderer->SetRasterizerState(rasterizerState);
 		pRenderer->SetVertexBuffer(IABuffer.first);
 		pRenderer->SetIndexBuffer(IABuffer.second);
@@ -483,6 +489,94 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 			pRenderer->Apply();
 			pRenderer->DrawIndexedInstanced(instanceID);
 		} while (batchCount++ < renderList.size() / DRAW_INSTANCED_COUNT_GBUFFER_PASS);
+#else
+		// TODO: iterate over renderList, figure out different LOD levels for a given mesh
+		//       and then generate sub RenderLists for each LOD level that exists for that given mesh.
+#if 0
+		// note: apparently cannot use unorderedmap with std pair as key as it cannot hash (deleted fn).
+		using IABuffer_t = std::pair<BufferID, BufferID>;
+		using IABufferGameObjectLookup_t = std::unordered_map< IABuffer_t, std::vector<const GameObject*>>;
+		IABufferGameObjectLookup_t LOD_IABufferLookup;
+		std::unordered_map< std::pair<BufferID, BufferID>, std::vector<const GameObject*>> LOD_IABufferLookup;
+#else
+		struct LODRenderList
+		{
+			std::pair<BufferID, BufferID>  LOD_IABuffers;
+			std::vector<const GameObject*> LOD_RenderList;
+		};
+		std::set<LODRenderList> LOD_RenderLists;
+#endif
+
+		for (const GameObject* pObj : renderList)
+		{
+			const auto LOD_IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, meshID, pObj);
+			//if (LOD_IABufferLookup.find(LOD_IABuffer) == LOD_IABufferLookup.end())
+			//{
+			//	std::vector<const GameObject*> lodObjects(1, pObj);
+			//	LOD_IABufferLookup[LOD_IABuffer] = lodObjects;
+			//}
+			//else
+			//{
+			//	LOD_IABufferLookup.at(LOD_IABuffer).push_back(pObj);
+			//}
+
+		}
+
+
+		for (const std::pair<std::pair<BufferID, BufferID>, const std::vector<const GameObject*>>& IABufferRenderListPair : LOD_IABufferLookup)
+		{
+			const auto IABuffer = IABufferRenderListPair.first;
+			const RenderList& LOD_renderList = IABufferRenderListPair.second;
+
+			pRenderer->SetRasterizerState(rasterizerState);
+			pRenderer->SetVertexBuffer(IABuffer.first);
+			pRenderer->SetIndexBuffer(IABuffer.second);
+
+			int batchCount = 0;
+			do
+			{
+				int instanceID = 0;
+				for (; instanceID < DRAW_INSTANCED_COUNT_GBUFFER_PASS; ++instanceID)
+				{
+					const int renderListIndex = DRAW_INSTANCED_COUNT_GBUFFER_PASS * batchCount + instanceID;
+					if (renderListIndex == LOD_renderList.size())
+						break;
+
+					const GameObject* pObj = LOD_renderList[renderListIndex];
+					const Transform& tf = pObj->GetTransform();
+					const ModelData& model = pObj->GetModelData();
+
+					const XMMATRIX world = tf.WorldTransformationMatrix();
+					cbufferMatrices.objMatrices[instanceID] =
+					{
+						world * sceneView.view,
+						tf.NormalMatrix(world) * sceneView.view,
+						world * sceneView.viewProj,
+					};
+
+					const bool bMeshHasMaterial = model.mMaterialLookupPerMesh.find(meshID) != model.mMaterialLookupPerMesh.end();
+					if (bMeshHasMaterial)
+					{
+						const MaterialID materialID = model.mMaterialLookupPerMesh.at(meshID);
+						const Material* pMat = SceneResourceView::GetMaterial(pScene, materialID);
+						cbufferMaterials.objMaterials[instanceID] = pMat->GetCBufferData();
+					}
+
+					// if an object doesn't have a material, we send default material info
+					else
+					{
+						cbufferMaterials.objMaterials[instanceID] = Material::GetDefaultMaterialCBufferData();
+					}
+				}
+
+				pRenderer->SetConstantStruct("ObjMatrices", &cbufferMatrices);
+				pRenderer->SetConstantStruct("surfaceMaterial", &cbufferMaterials);
+				pRenderer->SetConstant1f("BRDFOrPhong", 1.0f);	// assume brdf for now
+				pRenderer->Apply();
+				pRenderer->DrawIndexedInstanced(instanceID);
+			} while (batchCount++ < renderList.size() / DRAW_INSTANCED_COUNT_GBUFFER_PASS);
+		}
+#endif
 	}
 }
 

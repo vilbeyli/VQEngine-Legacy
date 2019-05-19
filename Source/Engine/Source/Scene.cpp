@@ -38,7 +38,7 @@ Scene::Scene(const BaseSceneParams& params)
 	, mpTextRenderer(params.pTextRenderer)
 	, mSelectedCamera(0)
 	, mpCPUProfiler(params.pCPUProfiler)
-	, mLODManager(this->mMeshes)
+	, mLODManager(this->mMeshes, this->mpRenderer)
 	, mActiveSkyboxPreset(ENVIRONMENT_MAP_PRESET_COUNT)
 {
 	mModelLoader.Initialize(mpRenderer);

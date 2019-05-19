@@ -39,7 +39,7 @@ public:
 	// Holds distance thresholds in world units for each LOD level.
 	struct LODSettings
 	{
-		int   activeLOD;
+		int   activeLOD = 0;
 #if USE_NEW_CONTAINERS
 		std::unordered_map<MeshID, float[NUM_MAX_LOD_LEVELS]> meshLODDistanceLookup;
 #else
@@ -60,6 +60,7 @@ public:
 	inline void SetViewer(const vec3* pViewerPos) { mpViewerPosition = pViewerPos; }
 	void SetViewer(const Camera& camera);
 	
+	const LODSettings& GetMeshLODSettings(const GameObject* pObj, MeshID meshID) const;
 	int GetLODValue(const GameObject* pObj, MeshID meshID) const;
 
 	void RegisterMeshLOD(const GameObject* pObj, MeshID meshID, const LODSettings& _LODSettings);

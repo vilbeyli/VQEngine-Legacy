@@ -442,7 +442,7 @@ void Scene::InitializeBuiltinMeshes()
 
 	// grid parameters
 	const float gridWidth = 1.0f;		const float gridDepth = 1.0f;
-	const unsigned gridFinenessH = 70;	const unsigned gridFinenessV = 70;
+	const unsigned gridFinenessH = 90;	const unsigned gridFinenessV = 90;
 
 	// sphere parameters
 	const float sphRadius = 2.0f;
@@ -1002,7 +1002,6 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 	stats.scene.numPoints = static_cast<int>(shadowingLightIndices.GetLightCount(Light::ELightType::POINT));
 
 
-	
 	// Cull Static Lights
 	mpCPUProfiler->BeginEntry("Cull_ShadowView_Point_s");
 	{

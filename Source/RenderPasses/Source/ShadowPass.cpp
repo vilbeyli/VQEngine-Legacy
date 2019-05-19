@@ -265,7 +265,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	if (bNoShadowingLights) return;
 
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
-	pRenderer->SetShader(mShadowMapShader);					// shader for rendering z buffer
+	pRenderer->SetShader(mShadowMapShader); // shader for rendering z buffer
 
 	// CLEAR SHADOW MAPS
 	//
@@ -364,7 +364,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			const std::vector<const GameObject*>& renderList = MeshID_RenderList.second;
 
 			const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_NONE;// Is2DGeometry(mesh) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, mesh);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, mesh, renderList.back());
 
 			pRenderer->SetRasterizerState(rasterizerState);
 			pRenderer->SetVertexBuffer(IABuffer.first);

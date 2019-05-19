@@ -53,6 +53,7 @@ private:
 			int numTri;
 			int numVert;
 			float lodLevelDistanceThreshold;
+			float currDistance;
 		};
 
 		union

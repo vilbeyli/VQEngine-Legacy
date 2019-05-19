@@ -394,8 +394,8 @@ Mesh GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceC
 	std::vector<unsigned> LODRingCounts(numLODLevels);
 	std::vector<unsigned> LODSliceCounts(numLODLevels);
 
-	const unsigned MIN_RING_COUNT = 8;
-	const unsigned MIN_SLICE_COUNT = 8;
+	const unsigned MIN_RING_COUNT = 12;
+	const unsigned MIN_SLICE_COUNT = 12;
 
 	// using a simple lerp between min levels and given parameters 
 	// so that:
@@ -649,8 +649,8 @@ Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadi
 	std::vector<unsigned> LODStackCounts(numLODLevels);
 	std::vector<unsigned> LODSliceCounts(numLODLevels);
 
-	const unsigned MIN_STACK_COUNT = 5;
-	const unsigned MIN_SLICE_COUNT = 12;
+	const unsigned MIN_STACK_COUNT = 4;
+	const unsigned MIN_SLICE_COUNT = 8;
 
 	// using a simple lerp between min levels and given parameters 
 	// so that:

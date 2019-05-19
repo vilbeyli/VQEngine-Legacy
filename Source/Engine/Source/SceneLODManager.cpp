@@ -73,7 +73,7 @@ void LODManager::Initialize(const Camera& camera, const std::vector<GameObject*>
 		for (int i = 0; i < lodSettings.distanceThresholds.size(); ++i)
 		{
 			const vec3& scl = pObj->GetTransform()._scale;
-			lodSettings.distanceThresholds[i] *= std::max(std::max(scl.x(), scl.y()), scl.z());
+			//lodSettings.distanceThresholds[i] *= std::max(std::max(scl.x(), scl.y()), scl.z());
 		}
 
 		// register object with LODSettings.
@@ -90,6 +90,7 @@ void LODManager::Reset()
 	mbEnableForceLODLevels = false;
 	mForcedLODValue = 0;
 	mSceneObjectLODSettingsLookup.clear();
+	mMeshLODUpdateList.clear();
 }
 
 void LODManager::Update()
@@ -183,9 +184,21 @@ void LODManager::LateUpdate()
 
 void LODManager::SetViewer(const Camera& camera) { mpViewerPosition = &camera.mPosition; }
 
-int LODManager::GetLODValue(const GameObject* pObj, MeshID meshID) const
+const LODManager::LODSettings& LODManager::GetMeshLODSettings(const GameObject* pObj, MeshID meshID) const
 {
 
+	const GameObjectLODSettings& objLODSettings = mSceneObjectLODSettingsLookup.at(pObj);
+
+	if (objLODSettings.meshLODSettingsLookup.find(meshID) == objLODSettings.meshLODSettingsLookup.end())
+	{
+		assert(false);
+	}
+
+	return objLODSettings.meshLODSettingsLookup.at(meshID);
+}
+
+int LODManager::GetLODValue(const GameObject* pObj, MeshID meshID) const
+{
 	// TODO: shadow map pass is set with only MeshID's and the
 	//       pass doesn't know about 'game objects'. 
 	//
@@ -286,7 +299,6 @@ const LODManager::LODSettings& LODManager::GetLODSettings(const GameObject* pObj
 
 void LODManager::InitializeBuiltinMeshLODSettings()
 {
-
 	LODSettings coneSettings;
 	LODSettings gridSettings;
 	LODSettings sphereSettings;
@@ -296,8 +308,10 @@ void LODManager::InitializeBuiltinMeshLODSettings()
 	coneSettings.distanceThresholds.push_back(300.0f);
 	coneSettings.distanceThresholds.push_back(400.0f);
 	coneSettings.distanceThresholds.push_back(600.0f);
+	coneSettings.distanceThresholds.push_back(800.0f);
 
 
+	gridSettings.distanceThresholds.push_back(70.0f);
 	gridSettings.distanceThresholds.push_back(150.0f);
 	gridSettings.distanceThresholds.push_back(400.0f);
 	gridSettings.distanceThresholds.push_back(700.0f);
@@ -306,14 +320,16 @@ void LODManager::InitializeBuiltinMeshLODSettings()
 
 	sphereSettings.distanceThresholds.push_back(80.0f);
 	sphereSettings.distanceThresholds.push_back(220.0f);
-	sphereSettings.distanceThresholds.push_back(300.0f);
-	sphereSettings.distanceThresholds.push_back(600.0f);
+	sphereSettings.distanceThresholds.push_back(400.0f);
+	sphereSettings.distanceThresholds.push_back(800.0f);
+	sphereSettings.distanceThresholds.push_back(1000.0f);
 
 
 	cylinderSettings.distanceThresholds.push_back(70.0f);
 	cylinderSettings.distanceThresholds.push_back(150.0f);
 	cylinderSettings.distanceThresholds.push_back(300.0f);
 	cylinderSettings.distanceThresholds.push_back(700.0f);
+	cylinderSettings.distanceThresholds.push_back(1000.0f);
 
 	sBuiltinMeshLODSettings[EGeometry::CONE]     = coneSettings;
 	sBuiltinMeshLODSettings[EGeometry::GRID]     = gridSettings;

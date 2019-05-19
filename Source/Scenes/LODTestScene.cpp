@@ -141,11 +141,17 @@ void LODTestScene::Update(float dt)
 		auto VB_IB_IDs = mMeshes[meshID].GetIABuffers(currentLODValue);
 		const BufferDesc bufDescVB = mpRenderer->GetBufferDesc(EBufferType::VERTEX_BUFFER, VB_IB_IDs.first);
 		const BufferDesc bufDescIB = mpRenderer->GetBufferDesc(EBufferType::INDEX_BUFFER , VB_IB_IDs.second);
+		const LODManager::LODSettings& lod = mLODManager.GetMeshLODSettings(pObj, meshID);
+
+		vec3 distSq = pObj->GetTransform()._position - this->GetActiveCamera().GetPositionF();
+		distSq = XMVector3Dot(distSq, distSq);
+		const float distance = std::sqrtf(distSq.x());
 
 		mSceneStats.objStats[currLODObject].lod = currentLODValue;
 		mSceneStats.objStats[currLODObject].numVert = bufDescVB.mElementCount;
 		mSceneStats.objStats[currLODObject].numTri = bufDescIB.mElementCount / 3;
-		mSceneStats.objStats[currLODObject].lodLevelDistanceThreshold = 0; // TODO
+		mSceneStats.objStats[currLODObject].lodLevelDistanceThreshold = lod.distanceThresholds[currentLODValue];
+		mSceneStats.objStats[currLODObject].currDistance = distance;
 	}
 }
 
@@ -155,8 +161,6 @@ void LODTestScene::Update(float dt)
 void LODTestScene::RenderUI() const 
 {
 	TextDrawDescription drawDesc;
-	drawDesc.color = LinearColor::light_blue;
-	drawDesc.scale = 0.30f;
 	int numLine = 0;
 
 	const Settings::Engine& sEngineSettings = ENGINE->GetSettings();
@@ -179,18 +183,21 @@ void LODTestScene::RenderUI() const
 		, "Vertices: "
 		, "Triangles: "
 		, "LOD Distance: "
+		, "Current Distance: "
 	};
 	constexpr size_t NUM_LOD_STAT_ENTRIES = sizeof(LODStatEntryLabels) / sizeof(char*);
 	std::vector<std::string> LODValues;
 	std::vector<std::string> NumVerts;
 	std::vector<std::string> NumTriangles;
 	std::vector<std::string> LODDistance;
+	std::vector<std::string> CurrDistance;
 	std::vector<const std::vector<std::string>*> LODStatEntries =
 	{
 		  &LODValues
 		, &NumVerts
 		, &NumTriangles
 		, &LODDistance
+		, &CurrDistance
 	};
 
 	// read LOD data and populate the containers which will be used to fill in draw desc data
@@ -200,9 +207,16 @@ void LODTestScene::RenderUI() const
 		NumVerts.push_back    (std::to_string(mSceneStats.objStats[currLODObject].numVert));
 		NumTriangles.push_back(std::to_string(mSceneStats.objStats[currLODObject].numTri));
 
-		std::stringstream ss; // format the distance value and use only 2 digits after the point
-		ss << std::fixed << std::setprecision(2) << mSceneStats.objStats[currLODObject].lodLevelDistanceThreshold;
-		LODDistance.push_back (ss.str());
+		{
+			std::stringstream ss; // format the distance value and use only 2 digits after the point
+			ss << std::fixed << std::setprecision(2) << mSceneStats.objStats[currLODObject].lodLevelDistanceThreshold;
+			LODDistance.push_back(ss.str());
+		}
+		{
+			std::stringstream ss; // format the distance value and use only 2 digits after the point
+			ss << std::fixed << std::setprecision(2) << mSceneStats.objStats[currLODObject].currDistance;
+			CurrDistance.push_back(ss.str());
+		}
 	}
 
 
@@ -219,7 +233,7 @@ void LODTestScene::RenderUI() const
 	// Render background
 	// 
 	constexpr float BACKGROUND_ALPHA = 0.800f;
-	const vec2 sz(NUM_LOD_OBJECTS * 0.1f, 5 * 0.033f);
+	const vec2 sz(NUM_LOD_OBJECTS * 0.1f, (NUM_LOD_STAT_ENTRIES + 1) * 0.033f);
 	VQEngine::UI::RenderBackground(mpRenderer, LinearColor::black, BACKGROUND_ALPHA, sz, screenPositionStart - vec2(30, 30));
 
 
@@ -228,6 +242,8 @@ void LODTestScene::RenderUI() const
 	// Draw Table Header: Object Names
 	// ------------------------------------------------------------------------
 	int CURRENT_SCREEN_LINE = 0;
+	drawDesc.scale = 0.33f;
+	drawDesc.color = LinearColor::white;
 	for (int currLODObject = 0; currLODObject < NUM_LOD_OBJECTS; ++currLODObject)
 	{
 		drawDesc.screenPosition = vec2(
@@ -243,6 +259,8 @@ void LODTestScene::RenderUI() const
 	// ------------------------------------------------------------------------
 	// Draw Table Entries: LOD Values, num tris/verts, etc.
 	// ------------------------------------------------------------------------
+	drawDesc.color = LinearColor::light_blue;
+	drawDesc.scale = 0.25f;
 	for (size_t currStatEntry = 0; currStatEntry < NUM_LOD_STAT_ENTRIES; ++currStatEntry)
 	{
 		for (int currLODObject = 0; currLODObject < NUM_LOD_OBJECTS; ++currLODObject)

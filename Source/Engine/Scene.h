@@ -272,10 +272,10 @@ private:
 		inline std::vector<const Light*> GetFlattenedListOfLights(const std::vector<Light>& staticLights, const std::vector<Light>& dynamicLights) const
 		{
 			std::vector<const Light*> pLights;
-			for (int i : mStaticLights.spotLightIndices)   pLights.push_back(&staticLights[i]);
-			for (int i : mStaticLights.pointLightIndices)  pLights.push_back(&staticLights[i]);
-			for (int i : mDynamicLights.spotLightIndices)  pLights.push_back(&dynamicLights[i]);
-			for (int i : mDynamicLights.pointLightIndices) pLights.push_back(&dynamicLights[i]);
+			for (const int& i : mStaticLights.spotLightIndices)   pLights.push_back(&staticLights[i]);
+			for (const int& i : mStaticLights.pointLightIndices)  pLights.push_back(&staticLights[i]);
+			for (const int& i : mDynamicLights.spotLightIndices)  pLights.push_back(&dynamicLights[i]);
+			for (const int& i : mDynamicLights.pointLightIndices) pLights.push_back(&dynamicLights[i]);
 			return pLights;
 		}
 		ShadowingLightIndexCollection mStaticLights;

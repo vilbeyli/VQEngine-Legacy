@@ -119,6 +119,7 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID texOv
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
+	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 	pRenderer->SetConstant1f("exposure", _settings.toneMapping.exposure);
 	pRenderer->SetConstant1f("isHDR", _settings.HDREnabled ? 1.0f : 0.0f);
 	pRenderer->BindRenderTarget(_tonemappingPass._finalRenderTarget);

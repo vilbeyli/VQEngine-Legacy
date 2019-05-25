@@ -444,14 +444,33 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			pRenderer->Apply();
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+#if INCLUDE_OBJECT_POINTER_TO_DRAW_DATA
+			const std::vector<const XMMATRIX*>& pMatrices = shadowView.shadowCubeMapMeshDrawListLookup.at(shadowView.points[i])[face].mpTransformationMatrices;
+			for (const std::pair<const MeshID, std::vector<MeshDrawData::ObjectDrawLookupData>>& f : shadowView.shadowCubeMapMeshDrawListLookup.at(shadowView.points[i])[face].mMeshDrawDataLookup)
+#else
 			for (const std::pair<MeshID, std::vector<XMMATRIX>>& f : shadowView.shadowCubeMapMeshDrawListLookup.at(shadowView.points[i])[face].meshTransformListLookup)
+#endif
 			{
+#if INCLUDE_OBJECT_POINTER_TO_DRAW_DATA
+				const std::vector< MeshDrawData::ObjectDrawLookupData>& meshInstanceData = f.second;
+				const int meshInstanceCount = static_cast<int>(meshInstanceData.size());
+#else
 				const int meshInstanceCount = static_cast<int>(f.second.size());
+#endif
+
 				const MeshID& meshID = f.first;
 				assert(meshInstanceCount > 0); // make sure no empty meshID transformation list
 
-				const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
-				const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, meshID);
+				const RasterizerStateID rasterizerState = Is2DGeometry(meshID) 
+					? EDefaultRasterizerState::CULL_NONE 
+					: EDefaultRasterizerState::CULL_FRONT;
+
+				const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene
+					, meshID
+#if INCLUDE_OBJECT_POINTER_TO_DRAW_DATA
+					, meshInstanceData.back().pObj
+#endif
+				);
 				pRenderer->SetVertexBuffer(IABuffer.first);
 				pRenderer->SetIndexBuffer(IABuffer.second);
 				pRenderer->SetRasterizerState(rasterizerState);
@@ -465,11 +484,16 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 						const int renderListIndex = MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS * batchCount + instanceID;
 						if (renderListIndex == meshInstanceCount)
 							break;
-
+						
 						cbuffer.objMatrices[instanceID] = DepthOnlyPass_PerObjectMatricesCubemap
 						{
+#if INCLUDE_OBJECT_POINTER_TO_DRAW_DATA
+							(*pMatrices[meshInstanceData[instanceID].martixID]),
+							(*pMatrices[meshInstanceData[instanceID].martixID]) * viewProj
+#else
 							f.second[renderListIndex],
 							f.second[renderListIndex] * viewProj
+#endif
 						};
 					}
 

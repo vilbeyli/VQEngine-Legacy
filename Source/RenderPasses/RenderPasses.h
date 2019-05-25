@@ -114,6 +114,8 @@ struct RenderPass
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 struct MeshDrawData
 {
+#define INCLUDE_OBJECT_POINTER_TO_DRAW_DATA 0
+#if !INCLUDE_OBJECT_POINTER_TO_DRAW_DATA
 	void AddMeshTransformation(MeshID meshID, const XMMATRIX& matTransform)
 	{
 		if (meshTransformListLookup.find(meshID) != meshTransformListLookup.end())
@@ -131,6 +133,44 @@ struct MeshDrawData
 	// may result in a lot of XMMATRIX copies, we can use ID's to keep
 	// track of matrices instead of storing one per mesh.
 	std::unordered_map<MeshID, std::vector<XMMATRIX>> meshTransformListLookup;
+#else
+	// Want to eliminate redundant matrix copies with the above design.
+	// each mesh should be mapped to draw data which should contain:
+	// - the game object we're drawing (to be used as the LOD lookup key)
+	// - matrix data index. # game objs = # matrices.
+	//   remember to copy matrices here to an array so we can access with 
+	//   higher cache coherency. (in the long run, game objects should be
+	//   separated from transforms and transforms should all be kept in
+	//   an array so only one copy of contiguous transforms are stored
+	//   and iterated over.
+	//
+	struct ObjectDrawLookupData
+	{
+		const GameObject* pObj = nullptr;
+		int martixID = -1;
+	};
+	std::vector< ObjectDrawLookupData> mObjectdrawData;
+	std::vector<const XMMATRIX*> mpTransformationMatrices;
+	std::unordered_map<MeshID, std::vector< ObjectDrawLookupData>> mMeshDrawDataLookup;
+
+	void AddMeshTransformation(MeshID meshID, const XMMATRIX& matTransform, const GameObject* pObj = nullptr)
+	{
+		assert(pObj);
+		const bool bMeshExistsInLookup = mMeshDrawDataLookup.find(meshID) != mMeshDrawDataLookup.end();
+		if (bMeshExistsInLookup)
+		{
+			//mpTransformationMatrices
+			mMeshDrawDataLookup.at(meshID).push_back(ObjectDrawLookupData{pObj, -1});
+		}
+
+		// add to lookup
+		else
+		{
+			 mMeshDrawDataLookup[meshID].push_back(ObjectDrawLookupData{pObj,-1 });
+		}
+	}
+
+#endif
 };
 #else
 struct MeshDrawData

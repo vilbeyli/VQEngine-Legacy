@@ -93,7 +93,7 @@ void GameObject::RenderTransparent(
 	// SET GEOMETRY & MATERIAL, THEN DRAW
 	for(MeshID id : mModel.mData.mTransparentMeshIDs)
 	{
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(mpScene, id);
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(mpScene, id, this);
 
 		// SET MATERIAL CONSTANTS
 		if (UploadMaterialDataToGPU)

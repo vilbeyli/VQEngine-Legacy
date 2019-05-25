@@ -33,8 +33,7 @@ class SceneResourceView
 {
 #if 1
 public:
-	static std::pair<BufferID, BufferID> GetVertexAndIndexBufferIDsOfMesh(const Scene* pScene, MeshID meshID); // TODO: remove this or the other
-	static std::pair<BufferID, BufferID> GetVertexAndIndexBufferIDsOfMesh(const Scene* pScene, MeshID meshID, const GameObject* pObj);
+	static std::pair<BufferID, BufferID> GetVertexAndIndexBufferIDsOfMesh(const Scene* pScene, MeshID meshID, const GameObject* pObj = nullptr);
 	static std::pair<BufferID, BufferID> GetBuiltinMeshVertexAndIndexBufferID(EGeometry builtInGeometry, int lod = 0);
 	static const Material* GetMaterial(const Scene* pScene, MaterialID materialID);
 	static const MeshRenderSettings::EMeshRenderMode GetMeshRenderMode(const Scene* pScene, const GameObject* pObj, MeshID meshID);

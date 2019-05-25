@@ -652,6 +652,7 @@ const BufferDesc Renderer::GetBufferDesc(EBufferType bufferType, BufferID buffer
 		case COMPUTE_RW_BUFFER: return mUABuffers; break;
 		default               : assert(false); // specify a valid buffer type
 		}
+		return mVertexBuffers; // eliminate warning: not all control paths return
 	}();
 
 	assert(bufferContainer.size() > bufferID);

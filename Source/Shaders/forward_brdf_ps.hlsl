@@ -423,7 +423,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 	
 	//-- SPOT LIGHTS ---------------------------------------------------------------------------------------------------------------------------
 #if ENABLE_SPOT_LIGHTS_SHADOW
-	pcfTest.depthBias = 0.0000005f; // TODO
 	for (int k = 0; k < Lights.numSpotCasters; ++k)
 	{
 		const matrix matShadowView = Lights.shadowViews[spotShadowsBaseIndex + k];
@@ -432,7 +431,8 @@ float4 PSMain(PSIn In) : SV_TARGET
 		const float3 Wi        = normalize(Lw - P);
 		const float3 radiance  = SpotlightIntensity(Lights.spot_casters[k], P) * Lights.spot_casters[k].color * Lights.spot_casters[k].brightness * SPOTLIGHT_BRIGHTNESS_SCALAR;
 		pcfTest.NdotL	       = saturate(dot(s.N, Wi));
-		const float3 shadowing = ShadowTestPCF(pcfTest, texSpotShadowMaps, sShadowSampler, spotShadowMapDimensions, k);
+        pcfTest.depthBias = Lights.spot_casters[k].depthBias;
+        const float3 shadowing = ShadowTestPCF(pcfTest, texSpotShadowMaps, sShadowSampler, spotShadowMapDimensions, k);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
 #endif

@@ -939,7 +939,6 @@ void Engine::Render()
 	// LIGHTING PASS
 	//------------------------------------------------------------------------
 	mpRenderer->ResetPipelineState();
-	mpRenderer->SetRasterizerState(static_cast<int>(EDefaultRasterizerState::CULL_NONE));
 	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 
 	//==========================================================================
@@ -1101,7 +1100,7 @@ void Engine::Render()
 
 		const bool bDoClearColor = true;
 		const bool bDoClearDepth = !bZPrePass;
-		const bool bDoClearStencil = true;
+		const bool bDoClearStencil = false;
 		ClearCommand clearCmd(
 			bDoClearColor, bDoClearDepth, bDoClearStencil,
 			{ 0, 0, 0, 0 }, 1, 0
@@ -1109,7 +1108,7 @@ void Engine::Render()
 
 		mpRenderer->BindRenderTarget(renderTarget);
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
-		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
+		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 		mpRenderer->BeginRender(clearCmd);
 
 		// SKYBOX
@@ -1307,6 +1306,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 
 void Engine::RenderUI() const
 {
+	mpRenderer->BeginEvent("UI");
 	mpGPUProfiler->BeginEntry("UI");
 	mpCPUProfiler->BeginEntry("UI");
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);	
@@ -1328,6 +1328,7 @@ void Engine::RenderUI() const
 
 	mpCPUProfiler->EndEntry();	// UI
 	mpGPUProfiler->EndEntry();
+	mpRenderer->EndEvent(); // UI
 }
 
 

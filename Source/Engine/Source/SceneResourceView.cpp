@@ -19,13 +19,13 @@
 #include "SceneResourceView.h"
 #include "Scene.h"
 
-std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(const Scene* pScene, MeshID meshID)
-{
-	return pScene->mMeshes[meshID].GetIABuffers(pScene->mLODManager.GetLODValue(/*TODO*/ 0, meshID));
-}
-
 std::pair<BufferID, BufferID> SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(const Scene* pScene, MeshID meshID, const GameObject* pObj)
 {
+	if (!pObj)
+	{
+		//Log::Warning("Soon to be depracated. finish refactoring...");
+		return pScene->mMeshes[meshID].GetIABuffers(pScene->mLODManager.GetLODValue(/*TODO*/ 0, meshID));
+	}
 	return pScene->mMeshes[meshID].GetIABuffers(pScene->mLODManager.GetLODValue(pObj, meshID));
 }
 

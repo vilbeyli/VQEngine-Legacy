@@ -72,7 +72,7 @@ void ZPrePass::RenderDepth(const RenderParams& args) const
 		args.pRenderer->SetConstant1i("textureConfig", 0);
 		for (MeshID id : model.mMeshIDs)
 		{
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, id);
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, id, pObj);
 
 			// SET MATERIAL CONSTANT BUFFER & TEXTURES
 			//
@@ -153,7 +153,7 @@ void ZPrePass::RenderDepth(const RenderParams& args) const
 		const MeshID& meshID = MeshID_RenderList.first;
 		const RenderList& renderList = MeshID_RenderList.second;
 		const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, meshID);
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, meshID, renderList.back());
 
 		args.pRenderer->SetRasterizerState(rasterizerState);
 		args.pRenderer->SetVertexBuffer(IABuffer.first);
@@ -245,12 +245,9 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 			tf.NormalMatrix(world),
 		};
 
-		pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
-
 		SurfaceMaterial material;
 		for (MeshID id : model.mMeshIDs)
 		{
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, id);
 
 			// SET MATERIAL CONSTANT BUFFER & TEXTURES
 			//
@@ -286,6 +283,13 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 				assert(false);// mMaterials.GetDefaultMaterial(GGX_BRDF)->SetMaterialConstants(pRenderer, EShaders::DEFERRED_GEOMETRY, sceneView.bIsDeferredRendering);
 			}
 
+			
+			//pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+			pRenderer->SetRasterizerState(SceneResourceView::GetMeshRenderMode(args.pScene, pObj, id) == MeshRenderSettings::EMeshRenderMode::WIREFRAME
+				? EDefaultRasterizerState::WIREFRAME
+				: EDefaultRasterizerState::CULL_BACK);
+
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, id, pObj);
 			pRenderer->SetVertexBuffer(IABuffer.first);
 			pRenderer->SetIndexBuffer(IABuffer.second);
 			pRenderer->Apply();
@@ -295,7 +299,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 	//--------------------------------------------------------------------------------------------------------------------
 
 	pRenderer->BeginEvent("Lighting Pass");
-	pRenderer->SetShader(/*mSelectedShader*/fwdBRDF);
+	pRenderer->SetShader(fwdBRDF);
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 	pRenderer->Apply();
 
@@ -405,8 +409,12 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 	{
 		const MeshID& meshID = MeshID_RenderList.first;
 		const RenderList& renderList = MeshID_RenderList.second;
-		const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
-		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, meshID);
+
+		const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
+		// note: using renderList.back() as the last argument to the GetVertexAndIndexBufferIDsOfMesh() will enable LOD
+		//       levels for GBuffer pass, but they won't be technically correct. we have to separate instanced render list
+		//       even further here, based on the active LOD mesh. For now, using back() will provide some nice perf results.
+		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, meshID, renderList.back());
 
 		pRenderer->SetRasterizerState(rasterizerState);
 		pRenderer->SetVertexBuffer(IABuffer.first);

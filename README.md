@@ -6,14 +6,23 @@ Quick Look:
 
  - [Renderer.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/Renderer/Renderer.h)
  - [Scene.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/Engine/Scene.h)
+ - [Engine.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/Engine/Engine.h)
+ - [RenderPasses.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/RenderPasses/RenderPasses.h)
+ - [AmbientOcclusion.cpp](https://github.com/vilbeyli/VQEngine/blob/master/Source/RenderPasses/Source/AmbientOcclusionPass.cpp)
 
-###### Model Loading (.obj), Sponza Scene, SSAO, HDR, Bloom
+###### Model Loading (.obj), HDR, Bloom, Point Lights
 
 ![](Screenshots/models2.PNG)
 
-###### BRDF, Environment Lighting, Directional Lights, PCF Shadows
+###### PBR Pipeline, BRDF, Environment Lighting,  SSAO
 
-![](Screenshots/objs4.PNG)
+![](Screenshots/pbr0.PNG)
+
+
+###### Mesh LODs
+
+![](Screenshots/lod1.PNG)
+
 
 ###### Debug Rendering, CPU & GPU profiler, Frame Stats, Bounding Boxes
 
@@ -28,15 +37,25 @@ See [Milestones](https://github.com/vilbeyli/VQEngine/milestones) for the planne
 
 The latest changes can be found in the [dev branch](https://github.com/vilbeyli/VQEngine/tree/dev), or another branch named with the feature being implemented. _These branches might be unstable before the release_.
 
-**[v0.6.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.6.0) - Rendering Improvements: DoF, SSR, Point & Area Lights** - TBA
+**[v0.7.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.7.0) DirectX12 & Multi-threading - TBA 2019**
 
-- Point Light Shadows
-- Depth of Field
-- Reflections
-- Linear (Cylinder) Lights
-- Mipped Textures
+- TBA
 
 ## Released
+
+**[v0.6.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.6.0) - Point Light Shadows, Improved Texture Support, Mesh LODs, Improved Perf** - TBA 2019
+
+- Real-time Point Light Shadows (up to 5)
+- [Mesh Level of Detail (LOD)](https://en.wikipedia.org/wiki/Level_of_detail#A_discrete_LOD_example) System
+- PBR
+  - Roughness, Metallic, Emissive texture support
+  - Preset loading
+- New Scenes 
+  - Light Test Scene (Scene #6)
+  - LOD Test Scene (Scene #7)
+  - PBR Scene (Scene #3)
+- RenderPass Abstraction (rough)
+
 
 **[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - CPU & GPU Optimizations, Compute Shaders** - October22-2018
  
@@ -65,14 +84,15 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
  - Build scripts (Python, Batch) & Automated Build (AppVeyor)
  - Logging: Console and/or Log Files
 
- **[v0.2.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.2.0) - PBR, Deferred Rendering & Multiple Scenes** - December1-2017
+ **[v0.2.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.2.0) - PBR, Deferred Rendering & Scene Manager** - December1-2017
  - On-the-fly-switchable Forward/Deferred Rendering
  - PBR: GGX-Smith BRDF
  - Environment Mapping (Image-Based Lighting)
  - PCF Soft Shadows
  - Bloom
  - SSAO w/ Gaussian Blur
- - Custom Scene Files, Switchable/Reloadable Scenes
+ - Custom Scene File Parsing
+ - Scene Manager & Multiple Scenes
 
 **[v0.1.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.1.0) -  Shader Reflection, Phong Lighting, Shadow Mapping & Texturing** - July15-2017
  - Vertex-Geometry-Pixel Shader Pipeline
@@ -116,7 +136,7 @@ Run `PRE_BUILD.bat` once to initialize the submodules, and run `BUILD.bat` or `B
 | **C** | Cycle Through Scene Cameras |
 | **\\** | Reload Shaders (live shader editing) |
 | **Shift+R** |	Reload Current Scene From File |
-| **0-5** |	**Switch Scenes**: <br>**1**: Objects Scene <br>**2**: SSAO Test <br>**3**: Environment Map Test <br>**4**: Stress Test <br>**5**: Sponza Scene
+| **0-7** |	**Switch Scenes**: <br>**1**: Objects Scene <br>**2**: SSAO Test <br>**3**: Environment Map Test <br>**4**: Stress Test <br>**5**: Sponza Scene<br>**6**: Lights Scene<br>**7**: Mesh LOD Scene
 
 | Engine Controls |  |
 | :---: | :--- |

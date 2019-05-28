@@ -24,6 +24,7 @@
 #include "Engine/SceneView.h"
 
 #include "Renderer/Renderer.h"
+#include "Renderer/GeometryGenerator.h"
 
 #if _DEBUG
 #include "Utilities/Log.h"
@@ -196,10 +197,6 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(const Settings::ShadowMa
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const
 {
 	//-----------------------------------------------------------------------------------------------
-	auto Is2DGeometry = [](MeshID mesh)
-	{
-		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID || mesh == EGeometry::CYLINDER || mesh == EGeometry::SPHERE;
-	};
 	auto RenderDepth = [&](const GameObject* pObj, const XMMATRIX& viewProj, bool bIsCubemap = false)
 	{
 		const ModelData& model = pObj->GetModelData();
@@ -217,7 +214,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		}
 		std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
 		{
-			const RasterizerStateID rasterizerState = Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+			const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(id)) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, id, pObj);
 
 			pRenderer->SetRasterizerState(rasterizerState);
@@ -245,7 +242,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		}
 		std::for_each(drawData.meshIDs.begin(), drawData.meshIDs.end(), [&](MeshID id)
 		{
-			const RasterizerStateID rasterizerState = Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+			const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(id) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
 			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, id);
 
 			pRenderer->SetRasterizerState(rasterizerState);
@@ -461,7 +458,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 				const MeshID& meshID = f.first;
 				assert(meshInstanceCount > 0); // make sure no empty meshID transformation list
 
-				const RasterizerStateID rasterizerState = Is2DGeometry(meshID) 
+				const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(meshID))
 					? EDefaultRasterizerState::CULL_NONE 
 					: EDefaultRasterizerState::CULL_FRONT;
 

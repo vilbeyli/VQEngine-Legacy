@@ -1340,10 +1340,6 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 		XMMATRIX w;
 		XMMATRIX n;
 	};
-	auto Is2DGeometry = [](MeshID mesh)
-	{
-		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
-	};
 	auto ShouldSendMaterial = [](EShaders shader)
 	{
 		return (shader == EShaders::FORWARD_PHONG

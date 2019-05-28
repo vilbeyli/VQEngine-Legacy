@@ -25,6 +25,7 @@
 #include "Engine/SceneView.h"
 
 #include "Renderer/Renderer.h"
+#include "Renderer/GeometryGenerator.h"
 
 #include <unordered_map>
 #include <set>
@@ -177,10 +178,6 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 {
 	//--------------------------------------------------------------------------------------------------------------------
 	struct InstancedGbufferObjectMaterials { SurfaceMaterial objMaterials[DRAW_INSTANCED_COUNT_GBUFFER_PASS]; };
-	auto Is2DGeometry = [](MeshID mesh)
-	{
-		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
-	};
 	auto RenderObject = [&](const GameObject* pObj)
 	{
 		const Transform& tf = pObj->GetTransform();
@@ -341,7 +338,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 			const MeshID& meshID = MeshID_RenderList.first;
 			const RenderList& renderList = MeshID_RenderList.second;
 
-			const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
+			const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(meshID)) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
 			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(pScene, meshID, renderList.back());
 
 			pRenderer->SetRasterizerState(rasterizerState);
@@ -436,7 +433,9 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 		const RenderList& renderList = MeshID_RenderList.second;
 
 
-		const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
+		const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(meshID))
+			? EDefaultRasterizerState::CULL_NONE 
+			: EDefaultRasterizerState::CULL_BACK;
 #if 1
 		// note: using renderList.back() as the last argument to the GetVertexAndIndexBufferIDsOfMesh() will enable LOD
 		//       levels for GBuffer pass, but they won't be technically correct. we have to separate instanced render list

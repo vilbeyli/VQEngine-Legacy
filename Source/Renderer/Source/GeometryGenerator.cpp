@@ -1018,3 +1018,8 @@ Mesh GeometryGenerator::Cone(float height, float radius, unsigned numSlices, int
 
 	return Mesh(meshData);
 }
+
+bool GeometryGenerator::Is2DGeometry(EGeometry meshID)
+{
+	return meshID == EGeometry::TRIANGLE || meshID == EGeometry::QUAD || meshID == EGeometry::GRID;
+}

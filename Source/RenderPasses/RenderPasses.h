@@ -389,6 +389,7 @@ struct ForwardLightingPass : public RenderPass
 		const TextureID tSSAO;
 		const RenderTargetID targetRT;
 		const TextureID tEmptyTex;
+		const bool bZPrePass;
 	};
 
 	void Initialize(Renderer* pRenderer);

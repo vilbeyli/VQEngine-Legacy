@@ -107,7 +107,7 @@ PSOut PSMain(PSIn In) : SV_TARGET
 		: N;
 
 	const float3 finalSpecular  = HasSpecularMap(surfaceMaterial.textureConfig) > 0 
-		? texSpecularMap.Sample(sNormalSampler, uv).xxx 
+		? texSpecularMap.Sample(sNormalSampler, uv).xxx  // .xxx := quick hack for single channel specular maps (to be removed)
 		: surfaceMaterial.specular;
 
 	const float roughnessORshininess = HasRoughnessMap(surfaceMaterial.textureConfig) > 0

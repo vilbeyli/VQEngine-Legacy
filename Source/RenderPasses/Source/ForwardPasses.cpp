@@ -26,6 +26,7 @@
 #include "Engine/Scene.h"
 
 #include "Renderer/Renderer.h"
+#include "Renderer/GeometryGenerator.h"
 
 constexpr int DRAW_INSTANCED_COUNT_ZPREPASS = 64;
 
@@ -152,7 +153,9 @@ void ZPrePass::RenderDepth(const RenderParams& args) const
 	{
 		const MeshID& meshID = MeshID_RenderList.first;
 		const RenderList& renderList = MeshID_RenderList.second;
-		const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
+		const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(meshID))
+			? EDefaultRasterizerState::CULL_NONE
+			: EDefaultRasterizerState::CULL_BACK;
 		const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(args.pScene, meshID, renderList.back());
 
 		args.pRenderer->SetRasterizerState(rasterizerState);
@@ -224,10 +227,6 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 	const SceneView& sceneView = args.sceneView;
 	//--------------------------------------------------------------------------------------------------------------------
 	struct InstancedGbufferObjectMaterials { SurfaceMaterial objMaterials[DRAW_INSTANCED_COUNT_ZPREPASS]; };
-	auto Is2DGeometry = [](MeshID mesh)
-	{
-		return mesh == EGeometry::TRIANGLE || mesh == EGeometry::QUAD || mesh == EGeometry::GRID;
-	};
 	auto RenderObject = [&](const GameObject* pObj)
 	{
 		const Transform& tf = pObj->GetTransform();
@@ -298,54 +297,42 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 	};
 	//--------------------------------------------------------------------------------------------------------------------
 
+	const bool bSkylight = args.sceneView.bIsIBLEnabled && args.sceneView.environmentMap.irradianceMap != -1;
+
 	pRenderer->BeginEvent("Lighting Pass");
 	pRenderer->SetShader(fwdBRDF);
-	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 	pRenderer->Apply();
-
-	//if (mSelectedShader == EShaders::FORWARD_BRDF || mSelectedShader == EShaders::FORWARD_PHONG)
-	const bool bSkylight = args.sceneView.bIsIBLEnabled && args.sceneView.environmentMap.irradianceMap != -1;
-	{
-		pRenderer->SetTexture("texAmbientOcclusion", args.tSSAO);
-
-		// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
-		//pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
 		
-		if (bSkylight)
-		{
-			pRenderer->SetTexture("tIrradianceMap", args.sceneView.environmentMap.irradianceMap);
-			pRenderer->SetTexture("tPreFilteredEnvironmentMap", args.sceneView.environmentMap.prefilteredEnvironmentMap);
-			pRenderer->SetTexture("tBRDFIntegrationLUT", EnvironmentMap::sBRDFIntegrationLUTTexture);
-			pRenderer->SetSamplerState("sEnvMapSampler", args.sceneView.environmentMap.envMapSampler);
-		}
+	pRenderer->SetTexture("texAmbientOcclusion", args.tSSAO);
 
-		else
-		{
-			// even though SetShader() sets null SRVs, somehow when we dont have skylight on
-			// the next pass, which is RenderLights(), fails with 'TextureCube bound to Texture Slot 0'
-			// debug layer error...
-			// hence, set texture here
-			//pRenderer->SetTexture("tIrradianceMap", args.tEmptyTex);
-			//pRenderer->SetTexture("tPreFilteredEnvironmentMap", args.tEmptyTex);
-			//pRenderer->SetTexture("tBRDFIntegrationLUT", args.tEmptyTex);
-		}
-		//if (mSelectedShader == EShaders::FORWARD_BRDF)
-		{
-			pRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
-			pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
-			pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
-		}
-		//else
-		//	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-		// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
-
-		pRenderer->SetConstant1f("ambientFactor", args.sceneView.sceneRenderSettings.ssao.ambientFactor);
-		pRenderer->SetConstant3f("cameraPos", args.sceneView.cameraPosition);
-		pRenderer->SetConstant2f("screenDimensions", pRenderer->GetWindowDimensionsAsFloat2());
-		pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-
-		ENGINE->SendLightData();
+	// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
+	//pRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
+	
+	if (bSkylight)
+	{
+		pRenderer->SetTexture("tIrradianceMap", args.sceneView.environmentMap.irradianceMap);
+		pRenderer->SetTexture("tPreFilteredEnvironmentMap", args.sceneView.environmentMap.prefilteredEnvironmentMap);
+		pRenderer->SetTexture("tBRDFIntegrationLUT", EnvironmentMap::sBRDFIntegrationLUTTexture);
+		pRenderer->SetSamplerState("sEnvMapSampler", args.sceneView.environmentMap.envMapSampler);
+		pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 	}
+	
+	
+	pRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
+	pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
+	pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetSamplerState("sShadowSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetConstant1f("ambientFactor", args.sceneView.sceneRenderSettings.ssao.ambientFactor);
+	pRenderer->SetConstant4x4f("directionalProj", args.sceneView.directionalLightProjection);
+	pRenderer->SetConstant3f("cameraPos", args.sceneView.cameraPosition);
+	pRenderer->SetConstant2f("screenDimensions", pRenderer->GetWindowDimensionsAsFloat2());
+	pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+
+	ENGINE->SendLightData();
+
+	args.bZPrePass
+		? pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY)
+		: pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 
 	// RENDER NON-INSTANCED SCENE OBJECTS
 	//
@@ -356,7 +343,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 		++numObj;
 	}
 
-
+	//====================================================================================================================
 
 	// RENDER INSTANCED SCENE OBJECTS
 	//
@@ -364,7 +351,6 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 	pRenderer->SetShader(fwdBRDFInstanced);
 	pRenderer->BindRenderTarget(args.targetRT);
 	pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
-	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
 	pRenderer->SetTexture("texAmbientOcclusion", args.tSSAO);
 
 	// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
@@ -376,27 +362,13 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 		pRenderer->SetTexture("tBRDFIntegrationLUT", EnvironmentMap::sBRDFIntegrationLUTTexture);
 		pRenderer->SetSamplerState("sEnvMapSampler", args.sceneView.environmentMap.envMapSampler);
 	}
-	else
-	{
-		// even though SetShader() sets null SRVs, somehow when we dont have skylight on
-		// the next pass, which is RenderLights(), fails with 'TextureCube bound to Texture Slot 0'
-		// debug layer error...
-		// hence, set texture here
-		//pRenderer->SetTexture("tIrradianceMap"            , args.tEmptyTex);
-		//pRenderer->SetTexture("tPreFilteredEnvironmentMap", args.tEmptyTex);
-		//pRenderer->SetTexture("tBRDFIntegrationLUT"       , args.tEmptyTex);
-	}
-	//if (mSelectedShader == EShaders::FORWARD_BRDF)
-	{
-		pRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
-		pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
-		pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
-	}
-	//else
-	//	pRenderer->SetSamplerState("sNormalSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-	// todo: shader defines -> have a PBR shader with and without environment lighting through preprocessor
 
+	pRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
+	pRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetSamplerState("sShadowSampler", EDefaultSamplerState::POINT_SAMPLER);
+	pRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
 	pRenderer->SetConstant1f("ambientFactor", args.sceneView.sceneRenderSettings.ssao.ambientFactor);
+	pRenderer->SetConstant4x4f("directionalProj", args.sceneView.directionalLightProjection);
 	pRenderer->SetConstant3f("cameraPos", args.sceneView.cameraPosition);
 	pRenderer->SetConstant2f("screenDimensions", pRenderer->GetWindowDimensionsAsFloat2());
 
@@ -410,7 +382,9 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 		const MeshID& meshID = MeshID_RenderList.first;
 		const RenderList& renderList = MeshID_RenderList.second;
 
-		const RasterizerStateID rasterizerState = Is2DGeometry(meshID) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_BACK;
+		const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(meshID))
+			? EDefaultRasterizerState::CULL_NONE 
+			: EDefaultRasterizerState::CULL_BACK;
 		// note: using renderList.back() as the last argument to the GetVertexAndIndexBufferIDsOfMesh() will enable LOD
 		//       levels for GBuffer pass, but they won't be technically correct. we have to separate instanced render list
 		//       even further here, based on the active LOD mesh. For now, using back() will provide some nice perf results.

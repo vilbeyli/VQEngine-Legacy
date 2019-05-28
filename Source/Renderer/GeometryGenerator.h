@@ -33,6 +33,7 @@ namespace GeometryGenerator
 	Mesh Cylinder(float height, float topRadius, float bottomRadius, unsigned sliceCount, unsigned stackCount, int numLODLevels = 1);
 	Mesh Cone(float height, float radius, unsigned sliceCount, int numLODLevels = 1);
 
+	bool Is2DGeometry(EGeometry meshID);
 	void CalculateTangentsAndBitangents(std::vector<DefaultVertexBufferData>& vertices, const std::vector<unsigned> indices);	// Only Tangents
 };
 

@@ -231,11 +231,11 @@ cbuffer SceneVariables
 	float2 spotShadowMapDimensions;
 
 	float directionalShadowMapDimension;
-	float directionalDepthBias;
-	float2 pad;
+	float3 pad;
 	
 	SceneLighting Lights;
-
+	
+    matrix directionalProj;
 	float ambientFactor;
 };
 
@@ -349,7 +349,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 		? pow(texDiffuseMap.Sample(sAnisoSampler, uv).xyz, 2.2f)
 		: surfaceMaterial.diffuse;
 	s.specularColor = HasSpecularMap(surfaceMaterial.textureConfig) > 0 
-		? texSpecularMap.Sample(sLinearSampler, uv) 
+		? texSpecularMap.Sample(sLinearSampler, uv).xxx // .xxx := quick hack for single channel specular maps (to be removed)
 		: surfaceMaterial.specular;
 	s.roughness = HasRoughnessMap(surfaceMaterial.textureConfig) > 0
 		? texRoughnessMap.Sample(sLinearSampler, uv)
@@ -455,20 +455,22 @@ float4 PSMain(PSIn In) : SV_TARGET
 	if (Lights.directional.enabled != 0)
 	{
 		pcfTest.lightSpacePos = mul(Lights.shadowViewDirectional, float4(P, 1));
-		const float3 Wi = -Lights.directional.lightDirection;
+		const float3 Wi = normalize(-Lights.directional.lightDirection);
 		const float3 radiance
 			= Lights.directional.color
 			* Lights.directional.brightness;
 		pcfTest.NdotL = saturate(dot(s.N, Wi));
-		pcfTest.depthBias = directionalDepthBias; // TODO
+		pcfTest.depthBias = Lights.directional.depthBias;
 		const float shadowing = (Lights.directional.shadowing == 0)
 			? 1.0f
-			: ShadowTestPCF(
-			  pcfTest
-			, texDirectionalShadowMaps
-			, sShadowSampler
-			, float2(directionalShadowMapDimension, directionalShadowMapDimension)
-			, 0);
+			: ShadowTestPCF_Directional(
+				  pcfTest
+				, texDirectionalShadowMaps
+				, sShadowSampler
+				, directionalShadowMapDimension
+				, 0
+				, directionalProj
+			);
 		IdIs += BRDF(Wi, s, V, P) * radiance * shadowing * pcfTest.NdotL;
 	}
 #endif

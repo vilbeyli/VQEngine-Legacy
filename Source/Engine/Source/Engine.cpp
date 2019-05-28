@@ -1133,6 +1133,7 @@ void Engine::Render()
 			, tSSAO
 			, renderTarget
 			, mAOPass.blackTexture4x4
+			, bZPrePass
 		};
 
 		mpGPUProfiler->BeginEntry("Lighting<Forward> Pass");

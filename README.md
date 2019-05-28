@@ -12,7 +12,7 @@ Quick Look:
 
 ###### Model Loading (.obj), HDR, Bloom, Point Lights
 
-![](Screenshots/models2.PNG)
+![](Screenshots/models5.png)
 
 ###### PBR Pipeline, BRDF, Environment Lighting,  SSAO
 
@@ -47,14 +47,14 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 
 - Real-time Point Light Shadows (up to 5)
 - [Mesh Level of Detail (LOD)](https://en.wikipedia.org/wiki/Level_of_detail#A_discrete_LOD_example) System
+- RenderPass Abstraction (rough)
 - PBR
   - Roughness, Metallic, Emissive texture support
   - Preset loading
 - New Scenes 
-  - Light Test Scene (Scene #6)
-  - LOD Test Scene (Scene #7)
-  - PBR Scene (Scene #3)
-- RenderPass Abstraction (rough)
+  - Light Test Scene (#6)
+  - LOD Test Scene (#7)
+  - PBR Scene (#3)
 
 
 **[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - CPU & GPU Optimizations, Compute Shaders** - October22-2018

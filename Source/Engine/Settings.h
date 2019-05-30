@@ -60,7 +60,7 @@ namespace Settings
 		float intensity;
 	};
 
-	struct Rendering
+	struct Rendering // TODO: rename to renderer
 	{
 		ShadowMap	shadowMap;
 		PostProcess postProcess;
@@ -69,7 +69,34 @@ namespace Settings
 		bool		bAmbientOcclusion;
 		bool		bEnableEnvironmentLighting;
 		bool		bPreLoadEnvironmentMaps;
+		
+		struct AntiAliasing
+		{
+			enum EAntiAliasingTechnique
+			{
+				SSAA = 0
+				, Supersampling_Antialiasing = SSAA
+
+				// , MSAA // TODO: to be implemented v0.7 or later
+				// , FXAA // TODO: maybe...
+
+				, NUM_ANTIALIASING_TECHNIQUES
+
+				, NO_ANTI_ALIASING
+			};
+		
+
+			EAntiAliasingTechnique eAntiAliasingTechnique = NO_ANTI_ALIASING;
+			float fUpscaleFactor = 1.0f;
+			unsigned resolutionX = 0;
+			unsigned resolutionY = 0;
+			
+			bool IsAAEnabled() const { return eAntiAliasingTechnique != NO_ANTI_ALIASING; }
+		};
+
+		AntiAliasing antiAliasing;
 	};
+
 
 
 	//------------------------------------------------------------
@@ -87,7 +114,7 @@ namespace Settings
 		int fullscreen;
 		int vsync;
 	};
-	struct Camera
+	struct Camera // TODO: this is not an engine settings. move this to camera struct
 	{
 		union
 		{

@@ -55,7 +55,7 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// CORE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
-	bool					Initialize(HWND hwnd, const Settings::Window& settings);
+	bool					Initialize(HWND hwnd, const Settings::Window& settings, const Settings::Rendering& rendererSettings);
 	void					Exit();
 	void					ReloadShaders();
 
@@ -66,13 +66,15 @@ public:
 	float					AspectRatio()	const;
 	unsigned				WindowHeight()	const;
 	unsigned				WindowWidth()	const;
+	unsigned				FrameRenderTargetHeight() const;
+	unsigned				FrameRenderTargetWidth() const;
 	vec2					GetWindowDimensionsAsFloat2() const;
-	inline RenderTargetID	GetDefaultRenderTarget() const { return mBackBufferRenderTarget; }
+	inline RenderTargetID	GetBackBufferRenderTarget() const { return mBackBufferRenderTarget; }
 	inline DepthTargetID	GetBoundDepthTarget() const { return mPipelineState.depthTargets; }
 	inline TextureID		GetDefaultRenderTargetTexture() const { return mRenderTargets[mBackBufferRenderTarget].texture._id; }
 	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return mRenderTargets[RT].texture._id; }
 	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const { return mDepthTargets[DT].texture._id; }
-	const PipelineState&	GetState() const;
+	const PipelineState&	GetPipelineState() const;
 	inline const RendererStats&	GetRenderStats() const { return mRenderStats; }
 	const BufferDesc		GetBufferDesc(EBufferType bufferType, BufferID bufferID) const;
 
@@ -82,6 +84,7 @@ public:
 	inline const ShaderID	GetActiveShader() const { return mPipelineState.shader; }
 	inline const Buffer&	GetVertexBuffer(BufferID id) { return mVertexBuffers[id]; }
 	ShaderDesc				GetShaderDesc(ShaderID shaderID) const;
+	EImageFormat			GetTextureImageFormat(TextureID) const;
 
 	//----------------------------------------------------------------------------------------------------------------
 	// RESOURCE INITIALIZATION
@@ -126,6 +129,7 @@ public:
 	// PIPELINE STATE MANAGEMENT
 	//----------------------------------------------------------------------------------------------------------------
 	void					SetViewport(const unsigned width, const unsigned height);
+	void					SetViewport(const vec2 widhtHeight) { SetViewport(static_cast<unsigned>(widhtHeight.x()), static_cast<unsigned>(widhtHeight.y())); }
 	void					SetViewport(const D3D11_VIEWPORT& viewport);
 	void					SetShader(ShaderID shaderID, bool bUnbindRenderTargets = false, bool bUnbindTextures = true);
 	void					SetVertexBuffer(BufferID bufferID);
@@ -212,7 +216,7 @@ public:
 	ID3D11DeviceContext*			m_deviceContext;
 	D3DManager*						m_Direct3D;
 
-	//std
+	Settings::Rendering::AntiAliasing mAntiAliasing;
 
 	static bool						sEnableBlend; //temp
 

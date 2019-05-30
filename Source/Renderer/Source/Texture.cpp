@@ -131,9 +131,3 @@ void Texture::Release()
 	_name = "";
 	_id = -1;
 }
-
-EImageFormat Texture::GetImageFormat() const
-{
-	assert(false);	// TODO: implement
-	return EImageFormat::D24UNORM_S8U;
-}

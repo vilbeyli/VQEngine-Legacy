@@ -217,9 +217,8 @@ void BloomPass::UpdateSettings(Renderer* pRenderer, const Settings::Bloom& bloom
 
 
 struct BlurParameters { unsigned blurStrength; };
-void BloomPass::Render(Renderer* pRenderer, RenderTargetID _worldRenderTarget, const Settings::Bloom& settings) const
+void BloomPass::Render(Renderer* pRenderer, TextureID inputTextureID, const Settings::Bloom& settings) const
 {
-	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
 	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 	const ShaderID currentShader = pRenderer->GetActiveShader();
 
@@ -235,7 +234,7 @@ void BloomPass::Render(Renderer* pRenderer, RenderTargetID _worldRenderTarget, c
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
-	pRenderer->SetTexture("worldRenderTarget", worldTexture);
+	pRenderer->SetTexture("colorInput", inputTextureID);
 	pRenderer->SetConstant1f("BrightnessThreshold", settings.brightnessThreshold);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();

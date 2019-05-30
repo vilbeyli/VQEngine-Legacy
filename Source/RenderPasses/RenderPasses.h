@@ -261,7 +261,7 @@ struct BloomPass : public RenderPass
 
 
 	void Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSettings, const RenderTargetDesc& rtDesc);
-	void Render(Renderer* pRenderer, RenderTargetID rtDestination, const Settings::Bloom& settings) const;
+	void Render(Renderer* pRenderer, TextureID inputTextureID, const Settings::Bloom& settings) const;
 	void UpdateSettings(Renderer* pRenderer, const Settings::Bloom& bloomSettings);
 
 	TextureID GetBloomTexture(const Renderer* pRenderer) const;
@@ -280,15 +280,34 @@ struct PostProcessPass : public RenderPass
 		: RenderPass(pCPU_, pGPU_) 
 		, _bloomPass(pCPU_, pGPU_)
 		, _tonemappingPass(pCPU_, pGPU_) 
+		, _inputTexture(-1)
 	{}
 	void UpdateSettings(const Settings::PostProcess& newSettings, Renderer* pRenderer);
 	void Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings);
 	void Render(Renderer* pRenderer, bool bBloomOn, TextureID texOverride = -1) const;
 
+	TextureID				_inputTexture;
 	RenderTargetID			_worldRenderTarget;
 	BloomPass				_bloomPass;
 	TonemappingCombinePass	_tonemappingPass;
 	Settings::PostProcess	_settings;
+};
+
+struct AAResolvePass : public RenderPass
+{
+	AAResolvePass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_)
+		: RenderPass(pCPU, pGPU)
+		, mResolveTarget(-1) 
+		, mResolveShaderID(-1)
+		, mResolveInputTextureID(-1)
+	{}
+	void Initialize(Renderer* pRenderer, TextureID inputTextureID);
+	void Render(Renderer* pRenderer) const;
+	inline void SetInputTexture(TextureID texID) { mResolveInputTextureID = texID; }
+
+	ShaderID mResolveShaderID;
+	TextureID mResolveInputTextureID;
+	RenderTargetID mResolveTarget;
 };
 
 struct GBuffer
@@ -340,13 +359,12 @@ struct DeferredRenderingPasses : public RenderPass
 	struct RenderParams
 	{
 		Renderer* pRenderer;
-		const RenderTargetID target;
 		const SceneView& sceneView;
 		const SceneLightingConstantBuffer& lights;
 		const TextureID tSSAO;
 		bool bUseBRDFLighting;
 	};
-	void Initialize(Renderer* pRenderer);
+	void Initialize(Renderer* pRenderer, bool bAAResolve);
 	void InitializeGBuffer(Renderer* pRenderer);
 
 	void ClearGBuffer(Renderer* pRenderer);
@@ -355,6 +373,8 @@ struct DeferredRenderingPasses : public RenderPass
 	void RenderLightingPass(const RenderParams& args) const;
 
 	GBuffer _GBuffer;
+	RenderTargetID _shadeTarget;
+
 	DepthStencilStateID _geometryStencilState;
 	DepthStencilStateID _geometryStencilStatePreZ;
 	ShaderID			_geometryShader;

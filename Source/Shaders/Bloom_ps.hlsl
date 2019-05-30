@@ -28,7 +28,7 @@ struct PSOut
 	float4 brightColor	: SV_TARGET1;
 };
 
-Texture2D worldRenderTarget;
+Texture2D colorInput;
 SamplerState samTriLinearSam
 {
 	Filter = MIN_MAG_MIP_LINEAR;
@@ -43,7 +43,7 @@ cbuffer BloomParams
 
 PSOut PSMain(PSIn In) : SV_TARGET
 {
-	const float4 color = worldRenderTarget.Sample(samTriLinearSam, In.texCoord);
+    const float4 color = colorInput.Sample(samTriLinearSam, In.texCoord);
 	
 	// clamp values that is made very large by NDF in BRDF
 	// this reduces bloom flickering

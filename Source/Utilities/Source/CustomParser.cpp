@@ -38,6 +38,20 @@ const std::unordered_map<std::string, bool> sBoolTypeReflection
 	{"1", true},		{"0", false}
 };
 
+
+const std::unordered_map<std::string, Settings::Rendering::AntiAliasing::EAntiAliasingTechnique> sAATypeReflection
+{
+	{"0" , Settings::Rendering::AntiAliasing::EAntiAliasingTechnique::NO_ANTI_ALIASING }
+	, {"none", Settings::Rendering::AntiAliasing::EAntiAliasingTechnique::NO_ANTI_ALIASING  }
+
+	, {"ssaa", Settings::Rendering::AntiAliasing::EAntiAliasingTechnique::SSAA }
+	, {"SSAA", Settings::Rendering::AntiAliasing::EAntiAliasingTechnique::SSAA }
+
+	// , {"MSAA", Settings::Rendering::AntiAliasing::EAntiAliasingTechnique::MSAA } // TODO:
+	// , {"FXAA", Settings::Rendering::AntiAliasing::EAntiAliasingTechnique::FXAA } // TODO:
+};
+
+
 std::string GetLowercased(const std::string& str)
 {
 	std::string lowercase(str);
@@ -185,6 +199,12 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		//---------------------------------------------------------------
 		settings.levelToLoad = stoi(line[1]) - 1;	// input file assumes 1 as first index
 		if (settings.levelToLoad == -1) settings.levelToLoad = 0;
+	}
+	else if (cmd == "antialiasing" || cmd == "antiAliasing")
+	{
+		assert(line.size() >= 3);
+		settings.rendering.antiAliasing.eAntiAliasingTechnique = sAATypeReflection.at(line[1]);
+		settings.rendering.antiAliasing.fUpscaleFactor = std::stof(line[2]);
 	}
 	else
 	{

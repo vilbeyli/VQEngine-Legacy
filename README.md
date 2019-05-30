@@ -43,11 +43,12 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 
 ## Released
 
-**[v0.6.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.6.0) - Point Light Shadows, Improved Texture Support, Mesh LODs, Improved Perf** - TBA 2019
+**[v0.6.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.6.0) - Point Light Shadows, Improved Texture Support, Mesh LODs, Anti-Aliasing, Improved Perf** - TBA 2019
 
 - Real-time Point Light Shadows (up to 5)
 - [Mesh Level of Detail (LOD)](https://en.wikipedia.org/wiki/Level_of_detail#A_discrete_LOD_example) System
 - RenderPass Abstraction (rough)
+- [Mipped](https://en.wikipedia.org/wiki/Mipmap) Textures
 - PBR
   - Roughness, Metallic, Emissive texture support
   - Preset loading
@@ -55,6 +56,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
   - Light Test Scene (#6)
   - LOD Test Scene (#7)
   - PBR Scene (#3)
+- [Supersample Anti-Aliasing](TODO)
 
 
 **[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - CPU & GPU Optimizations, Compute Shaders** - October22-2018
@@ -136,7 +138,7 @@ Run `PRE_BUILD.bat` once to initialize the submodules, and run `BUILD.bat` or `B
 | **C** | Cycle Through Scene Cameras |
 | **\\** | Reload Shaders (live shader editing) |
 | **Shift+R** |	Reload Current Scene From File |
-| **0-7** |	**Switch Scenes**: <br>**1**: Objects Scene <br>**2**: SSAO Test <br>**3**: Environment Map Test <br>**4**: Stress Test <br>**5**: Sponza Scene<br>**6**: Lights Scene<br>**7**: Mesh LOD Scene
+| **0-7** |	**Switch Scenes**: <br>**1**: Objects Scene <br>**2**: SSAO Test <br>**3**: PBR Scene <br>**4**: Stress Test <br>**5**: Sponza Scene<br>**6**: Lights Scene<br>**7**: Mesh LOD Scene
 
 | Engine Controls |  |
 | :---: | :--- |

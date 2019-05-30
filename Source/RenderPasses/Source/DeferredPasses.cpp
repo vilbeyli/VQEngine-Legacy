@@ -32,7 +32,7 @@
 
 constexpr int DRAW_INSTANCED_COUNT_GBUFFER_PASS = 64;
 
-void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
+void DeferredRenderingPasses::Initialize(Renderer * pRenderer, bool bAAResolve)
 {
 	//const ShaderMacro testMacro = { "TEST_DEFINE", "1" };
 
@@ -86,6 +86,17 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer)
 
 	InitializeGBuffer(pRenderer);
 
+	const EImageFormat format = EImageFormat::RGBA16F; // TODO: get this from somewhere.
+	RenderTargetDesc rtDesc = {};
+	rtDesc.textureDesc.width  = pRenderer->mAntiAliasing.resolutionY; // TODO: what if aa turned off?
+	rtDesc.textureDesc.height = pRenderer->mAntiAliasing.resolutionX; // TODO: what if aa turned off?
+	rtDesc.textureDesc.mipCount = 1;
+	rtDesc.textureDesc.arraySize = 1;
+	rtDesc.textureDesc.format = format;
+	rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+	rtDesc.format = format;
+	_shadeTarget = pRenderer->AddRenderTarget(rtDesc);
+
 	_geometryShader = pRenderer->CreateShader(geomShaderDesc);
 	_geometryInstancedShader = pRenderer->CreateShader(geomShaderInstancedDesc);
 	_ambientShader = pRenderer->CreateShader(ambientShaderDesc);
@@ -108,8 +119,8 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 	RenderTargetDesc rtDesc[3] = { {}, {}, {} };
 	for (int i = 0; i < 3; ++i)
 	{
-		rtDesc[i].textureDesc.width = pRenderer->WindowWidth();
-		rtDesc[i].textureDesc.height = pRenderer->WindowHeight();
+		rtDesc[i].textureDesc.width  = pRenderer->FrameRenderTargetWidth();
+		rtDesc[i].textureDesc.height = pRenderer->FrameRenderTargetHeight();
 		rtDesc[i].textureDesc.mipCount = 1;
 		rtDesc[i].textureDesc.arraySize = 1;
 		rtDesc[i].textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
@@ -398,6 +409,7 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 
 
 	pRenderer->SetShader(_geometryShader);
+	pRenderer->SetViewport(pRenderer->FrameRenderTargetWidth(), pRenderer->FrameRenderTargetHeight());
 	pRenderer->BindRenderTargets(_GBuffer.mRTDiffuseRoughness, _GBuffer.mRTSpecularMetallic, _GBuffer.mRTNormals, _GBuffer.mRTEmissive);
 	if(!this->mbUseDepthPrepass)
 		pRenderer->BindDepthTarget(ENGINE->GetWorldDepthTarget());
@@ -603,8 +615,9 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 
 	pRenderer->UnbindDepthTarget();
 	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
-	pRenderer->BindRenderTarget(args.target);
+	pRenderer->BindRenderTarget(_shadeTarget);
 	pRenderer->BeginRender(cmd);
+	pRenderer->SetViewport(pRenderer->FrameRenderTargetWidth(), pRenderer->FrameRenderTargetHeight());
 	pRenderer->Apply();
 
 	// AMBIENT LIGHTING
@@ -730,4 +743,60 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	pRenderer->EndEvent(); // Lighting Pass
 	pRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 
+
+
+#if ENABLE_TRANSPARENCY
+	mpGPUProfiler->BeginEntry("Opaque Pass (ScreenSpace)");
+	mpCPUProfiler->BeginEntry("Opaque Pass (ScreenSpace)");
+
+
+
+	mpCPUProfiler->EndEntry();
+	mpGPUProfiler->EndEntry();
+
+
+
+	// Untested. to be refactored when transparency is fully implemented.
+
+	// TRANSPARENT OBJECTS - FORWARD RENDER
+	mpGPUProfiler->BeginEntry("Alpha Pass (Forward)");
+	mpCPUProfiler->BeginEntry("Alpha Pass (Forward)");
+	{
+		mpRenderer->BindDepthTarget(GetWorldDepthTarget());
+		mpRenderer->SetShader(EShaders::FORWARD_BRDF);
+		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
+		//mpRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
+
+
+		mpRenderer->SetConstant1f("ambientFactor", mSceneView.sceneRenderSettings.ambientFactor);
+		mpRenderer->SetConstant3f("cameraPos", mSceneView.cameraPosition);
+		mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
+		const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
+		const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler < 0 ? EDefaultSamplerState::POINT_SAMPLER : mSceneView.environmentMap.envMapSampler;
+		const TextureID prefilteredEnvMap = mSceneView.environmentMap.prefilteredEnvironmentMap;
+		const TextureID tBRDFLUT = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
+		const bool bSkylight = mSceneView.bIsIBLEnabled && texIrradianceMap != -1;
+		if (bSkylight)
+		{
+			mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
+			mpRenderer->SetTexture("tPreFilteredEnvironmentMap", prefilteredEnvMap);
+			mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
+			mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
+		}
+
+		mpRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
+		mpRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
+		mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
+		mpRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
+
+		mpRenderer->Apply();
+		mFrameStats.numSceneObjects += mpActiveScene->RenderAlpha(mSceneView);
+
+	}
+	mpCPUProfiler->EndEntry();
+	mpGPUProfiler->EndEntry();
+#endif
 }
+
+
+

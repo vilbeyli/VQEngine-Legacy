@@ -410,7 +410,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 
 				const int slotIndex = indexIDPair.first;
 				const CPUConstantID c_id = indexIDPair.second;
-
+				assert(c_id < mCPUConstantBuffers.size());
 				CPUConstant& c = mCPUConstantBuffers[c_id];
 				memcpy(bufferPos, c._data, c._size);
 				bufferPos += c._size;

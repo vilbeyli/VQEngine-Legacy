@@ -162,6 +162,7 @@ Engine::Engine()
 	, mDebugPass(mpCPUProfiler, mpGPUProfiler)
 	, mZPrePass(mpCPUProfiler, mpGPUProfiler)
 	, mForwardLightingPass(mpCPUProfiler, mpGPUProfiler)
+	, mAAResolvePass(mpCPUProfiler, mpGPUProfiler)
 {}
 
 
@@ -187,7 +188,7 @@ bool Engine::Initialize(HWND hwnd)
 	const Settings::Window& windowSettings = sEngineSettings.window;
 
 	mpInput->Initialize();
-	if (!mpRenderer->Initialize(hwnd, windowSettings))
+	if (!mpRenderer->Initialize(hwnd, windowSettings, sEngineSettings.rendering))
 	{
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
@@ -286,6 +287,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 			mShadowMapPass.Initialize(mpRenderer, sEngineSettings.rendering.shadowMap);
 		}
+		
 		if (!LoadSceneFromFile())
 		{
 			Log::Error("Engine couldn't load scene.");
@@ -298,6 +300,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 
 		// RENDER PASS INITIALIZATION
 		//
+		const bool bAAResolve = sEngineSettings.rendering.antiAliasing.IsAAEnabled();
 		Log::Info("\tINITIALIZE RENDER PASSES ===");
 		//mpTimer->Start();
 		{	// #AsyncLoad: Mutex DEVICE
@@ -305,11 +308,11 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			//renderer->m_Direct3D->ReportLiveObjects();
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-				mDeferredRenderingPasses.Initialize(mpRenderer);
+				mPostProcessPass.Initialize(mpRenderer, sEngineSettings.rendering.postProcess);
 			}
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-				mPostProcessPass.Initialize(mpRenderer, sEngineSettings.rendering.postProcess);
+				mDeferredRenderingPasses.Initialize(mpRenderer, bAAResolve);
 			}
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
@@ -326,6 +329,10 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
 				mForwardLightingPass.Initialize(mpRenderer);
+			}
+			{
+				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+				mAAResolvePass.Initialize(mpRenderer, mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._shadeTarget));
 			}
 		}
 		//mpTimer->Stop();
@@ -380,6 +387,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		mPostProcessPass.Initialize(mpRenderer, sEngineSettings.rendering.postProcess);
 		mDebugPass.Initialize(mpRenderer);
 		mAOPass.Initialize(mpRenderer);
+		mAAResolvePass.Initialize(mpRenderer, TODO);
 	}
 	Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->StopGetDeltaTimeAndReset());
 	mpCPUProfiler->EndEntry();
@@ -922,6 +930,7 @@ void Engine::Render()
 
 	const XMMATRIX& viewProj = mpActiveScene->mSceneView.viewProj;
 	const bool bSceneSSAO = mpActiveScene->mSceneView.sceneRenderSettings.ssao.bEnabled;
+	const bool bAAResolve = sEngineSettings.rendering.antiAliasing.IsAAEnabled();
 
 	// SHADOW MAPS
 	//------------------------------------------------------------------------
@@ -939,7 +948,6 @@ void Engine::Render()
 	// LIGHTING PASS
 	//------------------------------------------------------------------------
 	mpRenderer->ResetPipelineState();
-	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 
 	//==========================================================================
 	// DEFERRED RENDERER
@@ -957,7 +965,6 @@ void Engine::Render()
 		const DeferredRenderingPasses::RenderParams deferredLightingParams = 
 		{
 			mpRenderer
-			, mPostProcessPass._worldRenderTarget
 			, mpActiveScene->mSceneView
 			, mSceneLightData
 			, tSSAO
@@ -985,59 +992,7 @@ void Engine::Render()
 		mpCPUProfiler->BeginEntry("Lighting Pass");
 		mpGPUProfiler->BeginEntry("Lighting Pass");
 		mpRenderer->BeginEvent("Lighting Pass");
-#if ENABLE_TRANSPARENCY
-		mpGPUProfiler->BeginEntry("Opaque Pass (ScreenSpace)");
-		mpCPUProfiler->BeginEntry("Opaque Pass (ScreenSpace)");
-#endif
-		{
-			mDeferredRenderingPasses.RenderLightingPass(deferredLightingParams);
-		}
-#if ENABLE_TRANSPARENCY
-		mpCPUProfiler->EndEntry();
-		mpGPUProfiler->EndEntry();
-#endif
-
-#if ENABLE_TRANSPARENCY
-		// Untested. to be refactored when transparency is fully implemented.
-		
-		// TRANSPARENT OBJECTS - FORWARD RENDER
-		mpGPUProfiler->BeginEntry("Alpha Pass (Forward)");
-		mpCPUProfiler->BeginEntry("Alpha Pass (Forward)");
-		{
-			mpRenderer->BindDepthTarget(GetWorldDepthTarget());
-			mpRenderer->SetShader(EShaders::FORWARD_BRDF);
-			mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_WRITE);
-			//mpRenderer->SetBlendState(EDefaultBlendState::ADDITIVE_COLOR);
-
-
-			mpRenderer->SetConstant1f("ambientFactor", mSceneView.sceneRenderSettings.ambientFactor);
-			mpRenderer->SetConstant3f("cameraPos", mSceneView.cameraPosition);
-			mpRenderer->SetConstant2f("screenDimensions", mpRenderer->GetWindowDimensionsAsFloat2());
-			const TextureID texIrradianceMap = mSceneView.environmentMap.irradianceMap;
-			const SamplerID smpEnvMap = mSceneView.environmentMap.envMapSampler < 0 ? EDefaultSamplerState::POINT_SAMPLER : mSceneView.environmentMap.envMapSampler;
-			const TextureID prefilteredEnvMap = mSceneView.environmentMap.prefilteredEnvironmentMap;
-			const TextureID tBRDFLUT = mpRenderer->GetRenderTargetTexture(EnvironmentMap::sBRDFIntegrationLUTRT);
-			const bool bSkylight = mSceneView.bIsIBLEnabled && texIrradianceMap != -1;
-			if (bSkylight)
-			{
-				mpRenderer->SetTexture("tIrradianceMap", texIrradianceMap);
-				mpRenderer->SetTexture("tPreFilteredEnvironmentMap", prefilteredEnvMap);
-				mpRenderer->SetTexture("tBRDFIntegrationLUT", tBRDFLUT);
-				mpRenderer->SetSamplerState("sEnvMapSampler", smpEnvMap);
-			}
-
-			mpRenderer->SetConstant1f("isEnvironmentLightingOn", bSkylight ? 1.0f : 0.0f);
-			mpRenderer->SetSamplerState("sWrapSampler", EDefaultSamplerState::WRAP_SAMPLER);
-			mpRenderer->SetSamplerState("sNearestSampler", EDefaultSamplerState::POINT_SAMPLER);
-			mpRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER_WRAP_UVW);
-
-			mpRenderer->Apply();
-			mFrameStats.numSceneObjects += mpActiveScene->RenderAlpha(mSceneView);
-			
-		}
-		mpCPUProfiler->EndEntry();
-		mpGPUProfiler->EndEntry();
-#endif
+		mDeferredRenderingPasses.RenderLightingPass(deferredLightingParams);
 		mpRenderer->EndEvent();
 		mpCPUProfiler->EndEntry();
 		mpGPUProfiler->EndEntry();
@@ -1143,6 +1098,32 @@ void Engine::Render()
 
 	mpActiveScene->RenderLights(); // when skymaps are disabled, there's an error here that needs fixing.
 
+
+	// AA RESOLVE
+	//------------------------------------------------------------------------
+	if (bAAResolve)
+	{
+		// currently only SSAA is supported
+		mpRenderer->BeginEvent("Resolve AA");
+		mpGPUProfiler->BeginEntry("Resolve AA");
+		mpCPUProfiler->BeginEntry("Resolve AA");
+
+		mAAResolvePass.SetInputTexture(mpRenderer->GetRenderTargetTexture( mEngineConfig.bDeferredOrForward 
+			? mDeferredRenderingPasses._shadeTarget    // AA input for deferred rendering path
+			: mpRenderer->GetBackBufferRenderTarget()  // AA input for forward  rendering path
+		));
+		mAAResolvePass.Render(mpRenderer);
+
+		mpCPUProfiler->EndEntry();	// Resolve AA
+		mpGPUProfiler->EndEntry();	// Resolve AA
+		mpRenderer->EndEvent(); // Resolve AA
+	}
+
+	const TextureID postProcessInputTextureID = mpRenderer->GetRenderTargetTexture(bAAResolve 
+		? mAAResolvePass.mResolveTarget 
+		: mPostProcessPass._worldRenderTarget
+	);
+
 	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 
 	// POST PROCESS PASS | DEBUG PASS | UI PASS
@@ -1151,18 +1132,22 @@ void Engine::Render()
 	mpGPUProfiler->BeginEntry("Post Process"); 
 #if FULLSCREEN_DEBUG_TEXTURE
 	const TextureID texDebug = mAOPass.GetBlurredAOTexture(mpRenderer);
-	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom, mbOutputDebugTexture ? texDebug : -1);
+	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom, mbOutputDebugTexture 
+		? texDebug 
+		: postProcessInputTextureID
+	);
 #else
 	mPostProcessPass.Render(mpRenderer, mEngineConfig.bBloom);
 #endif
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndEntry();
+
 	//------------------------------------------------------------------------
 	RenderDebug(viewProj);
 	RenderUI();
 	//------------------------------------------------------------------------
+	
 	mpCPUProfiler->EndEntry();	// Render() call
-
 }
 
 void Engine::RenderDebug(const XMMATRIX& viewProj)
@@ -1184,7 +1169,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		// debug texture strip draw settings
 		const int bottomPaddingPx = 0;	 // offset from bottom of the screen
 		const int heightPx = 128; // height for every texture
-		const int paddingPx = 0;	 // padding between debug textures
+		const int paddingPx = 0;  // padding between debug textures
 		const vec2 fullscreenTextureScaledDownSize((float)heightPx * aspectRatio, (float)heightPx);
 		const vec2 squareTextureScaledDownSize((float)heightPx, (float)heightPx);
 
@@ -1300,7 +1285,7 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 		mpRenderer->EndEvent();
 	}
 #endif
-	mpCPUProfiler->EndEntry();	// UI
+	mpCPUProfiler->EndEntry();	// Debug
 	mpGPUProfiler->EndEntry();
 }
 
@@ -1348,6 +1333,7 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 	}
 
 	mpRenderer->SetShader(EShaders::UNLIT);
+	mpRenderer->UnbindDepthTarget();
 	mpRenderer->BindRenderTarget(0);
 	mpRenderer->SetVertexBuffer(IABuffers.first);
 	mpRenderer->SetIndexBuffer(IABuffers.second);

@@ -74,7 +74,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_bloomPass.Initialize(pRenderer, _settings.bloom, rtDesc);
 	
 	// Tonemapping
-	this->_tonemappingPass._finalRenderTarget = pRenderer->GetDefaultRenderTarget();
+	this->_tonemappingPass._finalRenderTarget = pRenderer->GetBackBufferRenderTarget();
 
 	const char* pFSQ_VS = "FullScreenquad_vs.hlsl";
 	const ShaderDesc tonemappingShaderDesc = ShaderDesc{"Tonemapping",
@@ -90,23 +90,23 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 
 
 
-void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID texOverride) const
+void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID inputTextureID) const
 {
-	const bool bBloom = bBloomOn && _settings.bloom.bEnabled && (texOverride == -1);
+	const bool bBloom = bBloomOn && _settings.bloom.bEnabled;
 	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
-
-	const TextureID worldTexture = pRenderer->GetRenderTargetTexture(_worldRenderTarget);
-	const TextureID colorTex = texOverride == -1
-		? ( pRenderer->GetRenderTargetTexture(bBloom ? _bloomPass._finalRT : _worldRenderTarget) )
-		: ( texOverride );
-
 
 	pRenderer->BeginEvent("Post Processing");
 	// ======================================================================================
 	// BLOOM  PASS
 	// ======================================================================================
-	if (bBloom) this->_bloomPass.Render(pRenderer, _worldRenderTarget, _settings.bloom);
+	if (bBloom)
+	{
+		this->_bloomPass.Render(pRenderer, inputTextureID, _settings.bloom);
+	}
 
+	const TextureID toneMappingInputTex = bBloom
+		? pRenderer->GetRenderTargetTexture(this->_bloomPass._finalRT)
+		: inputTextureID;
 
 	// ======================================================================================
 	// TONEMAPPING PASS
@@ -123,10 +123,10 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID texOv
 	pRenderer->SetConstant1f("exposure", _settings.toneMapping.exposure);
 	pRenderer->SetConstant1f("isHDR", _settings.HDREnabled ? 1.0f : 0.0f);
 	pRenderer->BindRenderTarget(_tonemappingPass._finalRenderTarget);
-	pRenderer->SetTexture("ColorTexture", colorTex);
+	pRenderer->SetTexture("ColorTexture", toneMappingInputTex);
 
 	// quick hack for outputting white texture for fullscreen AO debugging
-	pRenderer->SetConstant1i("isSingleChannel", texOverride != -1 ? 1 : 0);
+	pRenderer->SetConstant1i("isSingleChannel", toneMappingInputTex != -1 ? 1 : 0);
 	// quick hack for outputting white texture for fullscreen AO debugging
 
 	pRenderer->Apply();
@@ -144,4 +144,50 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID texOv
 void DebugPass::Initialize(Renderer * pRenderer)
 {
 	_scissorsRasterizer = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, false, true);
+}
+
+void AAResolvePass::Initialize(Renderer* pRenderer, TextureID inputTextureID)
+{
+	// todo shader and others
+
+	ShaderDesc shdDesc;
+	shdDesc.shaderName = "AAResolveSahder";
+	shdDesc.stages = {
+		ShaderStageDesc{ "FullScreenQuad_vs.hlsl", {} },
+		ShaderStageDesc{ "AAResolve_ps.hlsl", {} } 
+	};
+
+	const Texture& inputTex = pRenderer->GetTextureObject(inputTextureID);
+	const EImageFormat format = pRenderer->GetTextureImageFormat(inputTextureID);
+
+	RenderTargetDesc rtDesc;
+	rtDesc.format = format;
+	rtDesc.textureDesc.format = format;
+	rtDesc.textureDesc.arraySize = 1;
+	rtDesc.textureDesc.bGenerateMips = false;
+	rtDesc.textureDesc.bIsCubeMap = false;
+	rtDesc.textureDesc.height = static_cast<int>(inputTex._height * 0.5f);
+	rtDesc.textureDesc.width = static_cast<int>(inputTex._width * 0.5f);
+	rtDesc.textureDesc.mipCount = 1;
+	rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+	
+	this->mResolveShaderID = pRenderer->CreateShader(shdDesc);
+	this->mResolveTarget = pRenderer->AddRenderTarget(rtDesc);
+	this->mResolveInputTextureID = inputTextureID; // To be set by the engine, this set here is useless.
+}
+
+void AAResolvePass::Render(Renderer* pRenderer) const
+{
+	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
+	pRenderer->SetShader(this->mResolveShaderID, true, true);
+	pRenderer->UnbindDepthTarget();
+	pRenderer->BindRenderTarget(this->mResolveTarget);
+	pRenderer->SetViewport(pRenderer->GetWindowDimensionsAsFloat2());
+	pRenderer->SetVertexBuffer(IABuffersQuad.first);
+	pRenderer->SetIndexBuffer(IABuffersQuad.second);
+	pRenderer->SetSamplerState("LinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
+	pRenderer->SetTexture("ColorTexture", this->mResolveInputTextureID);
+	pRenderer->Apply();
+	pRenderer->DrawIndexed();
 }

@@ -205,6 +205,7 @@ private:
 	DebugPass						mDebugPass;
 	ZPrePass						mZPrePass;
 	ForwardLightingPass				mForwardLightingPass;
+	AAResolvePass					mAAResolvePass;
 
 	std::vector<const GameObject*>	mTBNDrawObjects;
 	

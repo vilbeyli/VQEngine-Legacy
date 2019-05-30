@@ -270,8 +270,8 @@ void ObjectsScene::UpdateCentralObj(const float dt)
 	if (ENGINE->INP()->IsKeyDown("Numpad3")) tr += vec3::Down;
 
 	const std::vector<Light>& mLights = this->GetDynamicLights();
-	if (!mLights.empty())
-		; //mLights[0].mTransform.Translate(dt * tr * moveSpeed);
+	//if (!mLights.empty())
+	//	; //mLights[0].mTransform.Translate(dt * tr * moveSpeed);
 
 
 #if TEST_EGEMEN

@@ -203,7 +203,7 @@ Renderer::Renderer()
 
 Renderer::~Renderer(){}
 
-bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
+bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Settings::Rendering& rendererSettings)
 {
 	// DIRECT3D 11
 	//--------------------------------------------------------------------
@@ -214,6 +214,12 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 		assert(false);
 		return false;
 	}
+
+	const bool& bAntiAliasing = rendererSettings.antiAliasing.IsAAEnabled();
+
+	// assuming SSAA is the only supported AA technique. otherwise swapchain initialization should be further customized.
+	this->mAntiAliasing = rendererSettings.antiAliasing;
+	const float& fUpscaleFactor = rendererSettings.antiAliasing.fUpscaleFactor;
 
 	bool result = m_Direct3D->Initialize(
 		settings.width,
@@ -234,43 +240,54 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	m_deviceContext = m_Direct3D->m_deviceContext;
 	Mesh::spRenderer = this;
 
-	// DEFAULT RENDER TARGET
+	// BACK BUFFER
 	//--------------------------------------------------------------------
+	RenderTarget backBufferRT;
+	ID3D11Texture2D* backBufferPtr = nullptr;
+	HRESULT hr = m_Direct3D->m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
+	if (FAILED(hr))
 	{
-		RenderTarget defaultRT;
+		Log::Error("Cannot get back buffer pointer in DefaultRenderTarget initialization");
+		return false;
+	}
+	D3D11_TEXTURE2D_DESC texDescBackBuffer;
+	backBufferPtr->GetDesc(&texDescBackBuffer);
 
-		ID3D11Texture2D* backBufferPtr;
-		HRESULT hr = m_Direct3D->m_swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&backBufferPtr);
-		if (FAILED(hr))
-		{
-			Log::Error("Cannot get back buffer pointer in DefaultRenderTarget initialization");
-			return false;
-		}
-		defaultRT.texture._tex2D = backBufferPtr;
-		defaultRT.texture._id = 0;
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;	// create shader resource view from back buffer desc
+	srvDesc.Format = texDescBackBuffer.Format;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MipLevels = 1;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	m_device->CreateShaderResourceView(backBufferPtr, &srvDesc, &backBufferRT.texture._srv);
 
-		D3D11_TEXTURE2D_DESC texDesc;		// get back buffer description
-		backBufferPtr->GetDesc(&texDesc);
+	backBufferRT.texture._tex2D = backBufferPtr;
+	hr = m_device->CreateRenderTargetView(backBufferPtr, nullptr, &backBufferRT.pRenderTargetView);
+	if (FAILED(hr))
+	{
+		Log::Error("Cannot create default render target view.");
+		return false;
+	}
+	mTextures.push_back(backBufferRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - don't add texture to vector
+	backBufferRT.texture._id = static_cast<int>(mTextures.size() - 1);
+	mRenderTargets.push_back(backBufferRT);
+	mBackBufferRenderTarget = static_cast<int>(mRenderTargets.size() - 1);
 
-		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;	// create shader resource view from back buffer desc
-		srvDesc.Format = texDesc.Format;
-		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		m_device->CreateShaderResourceView(backBufferPtr, &srvDesc, &defaultRT.texture._srv);
 
-		hr = m_device->CreateRenderTargetView(backBufferPtr, nullptr, &defaultRT.pRenderTargetView);
-		if (FAILED(hr))
-		{
-			Log::Error("Cannot create default render target view.");
-			return false;
-		}
+	if (bAntiAliasing)  // assuming only SSAA support
+	{
+		RenderTargetDesc rtDesc = {};
+		rtDesc.textureDesc.width  = static_cast<int>(texDescBackBuffer.Width  * std::sqrtf(fUpscaleFactor));
+		rtDesc.textureDesc.height = static_cast<int>(texDescBackBuffer.Height * std::sqrtf(fUpscaleFactor));
+		rtDesc.textureDesc.mipCount = 1;
+		rtDesc.textureDesc.arraySize = 1;
+		rtDesc.textureDesc.format = static_cast<EImageFormat>(texDescBackBuffer.Format);
+		rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
+		rtDesc.format = static_cast<EImageFormat>(texDescBackBuffer.Format);
 
-		mTextures.push_back(defaultRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - don't add texture to vector
-		defaultRT.texture._id = static_cast<int>(mTextures.size() - 1);
+		const RenderTargetID RT_ID = this->AddRenderTarget(rtDesc);
 
-		mRenderTargets.push_back(defaultRT);
-		mBackBufferRenderTarget = static_cast<int>(mRenderTargets.size() - 1);
+		this->mAntiAliasing.resolutionX = rtDesc.textureDesc.height;
+		this->mAntiAliasing.resolutionY = rtDesc.textureDesc.width;
 	}
 	//m_Direct3D->ReportLiveObjects("Init Default RT\n");
 
@@ -278,13 +295,11 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	// DEFAULT DEPTH TARGET
 	//--------------------------------------------------------------------
 	{
-		// Set up the description of the depth buffer.
-		TextureDesc depthTexDesc;
-		depthTexDesc.width = settings.width;
-		depthTexDesc.height = settings.height;
+		TextureDesc depthTexDesc;	// Set up the description of the depth buffer.
+		depthTexDesc.width  = bAntiAliasing ? this->mAntiAliasing.resolutionY : settings.width;
+		depthTexDesc.height = bAntiAliasing ? this->mAntiAliasing.resolutionX : settings.height;
 		depthTexDesc.arraySize = 1;
-		depthTexDesc.mipCount = 1;
-		//depthTexDesc.format = R24G8;
+		depthTexDesc.mipCount  = 1;
 		depthTexDesc.format = R32;
 		depthTexDesc.usage = ETextureUsage(DEPTH_TARGET | RESOURCE);
 
@@ -472,7 +487,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings)
 	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 
 	// Create the depth stencil states.
-	HRESULT hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_WRITE]);
+	hr = m_device->CreateDepthStencilState(&depthStencilDesc, &mDepthStencilStates[EDefaultDepthStencilState::DEPTH_STENCIL_WRITE]);
 	if (!checkFailed(hr)) return false;
 
 	depthStencilDesc.DepthEnable = false;
@@ -636,6 +651,8 @@ void Renderer::ReloadShaders()
 float	 Renderer::AspectRatio()	const { return m_Direct3D->AspectRatio(); };
 unsigned Renderer::WindowHeight()	const { return m_Direct3D->WindowHeight(); };
 unsigned Renderer::WindowWidth()	const { return m_Direct3D->WindowWidth(); }
+unsigned Renderer::FrameRenderTargetHeight() const { return mAntiAliasing.resolutionX; }
+unsigned Renderer::FrameRenderTargetWidth()	 const { return mAntiAliasing.resolutionY; }
 vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(static_cast<float>(this->WindowWidth()), static_cast<float>(this->WindowHeight())); }
 HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };
 
@@ -667,7 +684,7 @@ const Shader* Renderer::GetShader(ShaderID shader_id) const
 
 
 
-const PipelineState& Renderer::GetState() const
+const PipelineState& Renderer::GetPipelineState() const
 {
 	return mPipelineState;
 }
@@ -705,6 +722,13 @@ ShaderDesc Renderer::GetShaderDesc(ShaderID shaderID) const
 {
 	assert(shaderID >= 0 && mShaders.size() > shaderID);
 	return mShaders[shaderID]->mDescriptor;
+}
+
+EImageFormat Renderer::GetTextureImageFormat(TextureID texID) const
+{
+	D3D11_TEXTURE2D_DESC desc = {};
+	mTextures[texID]._tex2D->GetDesc(&desc);
+	return static_cast<EImageFormat>(desc.Format);
 }
 
 RasterizerStateID Renderer::AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors)

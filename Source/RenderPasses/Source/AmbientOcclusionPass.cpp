@@ -515,6 +515,7 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->SetSamplerState("sNoiseSampler", this->noiseSampler);
 	pRenderer->SetSamplerState("sPointSampler", EDefaultSamplerState::POINT_SAMPLER);
 	//pRenderer->SetSamplerState("sLinearSampler", EDefaultSamplerState::LINEAR_FILTER_SAMPLER);
+	pRenderer->SetViewport(pRenderer->GetWindowDimensionsAsFloat2());
 	pRenderer->SetTexture("texViewSpaceNormals", texNormals);
 	pRenderer->SetTexture("texNoise", this->noiseTexture);
 	pRenderer->SetTexture("texDepth", depthTexture);

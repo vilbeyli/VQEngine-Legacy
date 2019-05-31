@@ -12,14 +12,15 @@ Quick Look:
 
 ###### Model Loading (.obj), HDR, Bloom, Point Lights
 
-![](Screenshots/models5.png)
+![](Screenshots/9.png)
+![](Screenshots/nanosuit.PNG)
 
 ###### PBR Pipeline, BRDF, Environment Lighting,  SSAO
 
 ![](Screenshots/pbr0.PNG)
 
 
-###### Mesh LODs
+###### Dynamic Mesh LODs
 
 ![](Screenshots/lod1.PNG)
 

@@ -12,7 +12,7 @@ Quick Look:
 
 ###### Model Loading (.obj), HDR, Bloom, Point Lights
 
-![](Screenshots/9.png)
+![](Screenshots/9.PNG)
 ![](Screenshots/nanosuit.PNG)
 
 ###### PBR Pipeline, BRDF, Environment Lighting,  SSAO

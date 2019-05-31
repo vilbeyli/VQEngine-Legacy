@@ -148,12 +148,15 @@ light end
 
 object begin
 	mesh cube
-	transform 0 -10 0 0 0 0 1200 5 700
+	transform 0 -5 0 0 0 0 1200 5 700
+	//pbr cgbookcase/blue-green-hexagonal-tiles-01
 	brdf
-		diffuse 0.4 0.35 0.4
-		tiling 10
-		roughness 0.6
+		//diffuse 1 1 1
+		diffuse 0.02 0.02 0.05
+		tiling 1.4
+		roughness 0.8
 		metalness 0
+		emissiveMap Black_herringbone_tiles_01_2K_Emissive.png
 	brdf
 object end
 

@@ -52,7 +52,7 @@ light begin
 	color sun
 	brightness 6.2
 	shadows true 0.001  1 2000 
-	directional 1024 1200
+	directional 768 1200
 light end
 
 // POINT LIGHTS
@@ -90,16 +90,16 @@ light end
 //	range 125
 //light end
 
-//light begin
-//	type point
-////	transform 115.43  114.62  5.28    0 0 0   0.1
-//	transform -124.63  30.66  40.12    0 0 0   0.1
-//
-//	color white
-//	brightness 2800
-//	shadows true 0.0005
-//	range 350
-//light end
+light begin
+	type point
+//	transform 115.43  114.62  5.28    0 0 0   0.1
+	transform -124.63  30.66  40.12    0 0 0   0.1
+
+	color white
+	brightness 2800
+	shadows true 0.0005
+	range 350
+light end
 //
 //light begin
 //	type point
@@ -112,15 +112,15 @@ light end
 //light end
 // 
 // 
-//light begin
-//	type point
-//	transform 94.62  29.57  -25.91     0 0 0   0.2
-//	
-//	color sun
-//	brightness 3800
-//	shadows true 0.0005
-//	range 350
-//light end
+light begin
+	type point
+	transform 94.62  29.57  -25.91     0 0 0   0.2
+	
+	color sun
+	brightness 3800
+	shadows true 0.0005
+	range 350
+light end
 //
 //light begin
 //	type point
@@ -135,15 +135,15 @@ light end
 
   
 
-//light begin
-//	type spot
-//	transform -138.39  150.60  2.75    0 -90 50    0
-//	color white
-//	brightness 2850
-//	shadows true 0.00000009 0.01
-//	spot 80 1
-//	range 500
-//light end
+light begin
+	type spot
+	transform -138.39  150.60  2.75    0 -90 50    0
+	color white
+	brightness 2850
+	shadows true 0.00000009 0.01
+	spot 80 1
+	range 500
+light end
 
 light begin
 	type spot

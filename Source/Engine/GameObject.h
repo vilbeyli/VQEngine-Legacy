@@ -43,6 +43,7 @@ class GameObject
 // the members are references to data either in Scene or Renderer.
 //
 public:
+	~GameObject() { mpScene = nullptr; }
 	void RenderTransparent(Renderer* pRenderer, const SceneView& sceneView, bool UploadMaterialDataToGPU, const MaterialPool& materialBuffer) const;
 	void Clear();
 

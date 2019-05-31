@@ -126,7 +126,7 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID input
 	pRenderer->SetTexture("ColorTexture", toneMappingInputTex);
 
 	// quick hack for outputting white texture for fullscreen AO debugging
-	pRenderer->SetConstant1i("isSingleChannel", toneMappingInputTex != -1 ? 1 : 0);
+	pRenderer->SetConstant1i("isSingleChannel", toneMappingInputTex == -1 ? 1 : 0);
 	// quick hack for outputting white texture for fullscreen AO debugging
 
 	pRenderer->Apply();

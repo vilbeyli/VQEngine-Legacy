@@ -97,6 +97,7 @@ void LODManager::Reset()
 	mForcedLODValue = 0;
 	mSceneObjectLODSettingsLookup.clear();
 	mMeshLODUpdateList.clear();
+	mLODObjects.clear();
 }
 
 void LODManager::Update()

@@ -1161,7 +1161,10 @@ void Scene::SetLightCache()
 	// special case for directional lights for now...
 	// this should eventually be processed with the 
 	// containers above, potentially in the static one.
-	mDirectionalLight.SetMatrices();
+	if (mDirectionalLight.mbEnabled)
+	{
+		mDirectionalLight.SetMatrices();
+	}
 }
 
 void Scene::ClearLights()

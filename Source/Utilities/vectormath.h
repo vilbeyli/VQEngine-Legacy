@@ -102,6 +102,7 @@ struct vec2
 	vec2(const vec2& v_in);
 	vec2(float, float);
 	vec2(int, int);
+	vec2(unsigned, unsigned);
 	vec2(float);
 	vec2(const XMFLOAT3& f3);
 	vec2(const XMFLOAT2& f2);

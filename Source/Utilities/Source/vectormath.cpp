@@ -75,6 +75,7 @@ vec2::vec2(const vec3& v3) : _v(v3.x(), v3.y()) {}
 vec2::vec2(const vec2& v_in) : _v(v_in._v) {}
 vec2::vec2(float x, float y) : _v(x, y) {}
 vec2::vec2(int x, int y) : _v(static_cast<float>(x), static_cast<float>(y)) {}
+vec2::vec2(unsigned x, unsigned y) : _v(static_cast<float>(x), static_cast<float>(y)) {}
 vec2::vec2(float f) : _v(f, f) {}
 vec2::vec2(const XMFLOAT2& f2) : _v(f2) {}
 vec2::vec2(const XMFLOAT3& f3) : _v(f3.x, f3.y) {}

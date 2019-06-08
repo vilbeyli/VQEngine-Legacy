@@ -1027,12 +1027,16 @@ void Engine::Render()
 			: mpActiveScene->mSceneView.environmentMap.envMapSampler;
 		const TextureID prefilteredEnvMap = mpActiveScene->mSceneView.environmentMap.prefilteredEnvironmentMap;
 		const TextureID tBRDFLUT = EnvironmentMap::sBRDFIntegrationLUTTexture;
-		const RenderTargetID renderTarget = mPostProcessPass._worldRenderTarget;
+		
+		const RenderTargetID lightingRenderTarget = bAAResolve 
+			? mDeferredRenderingPasses._shadeTarget // resource reusage
+			: mPostProcessPass._worldRenderTarget;
 
 		// AMBIENT OCCLUSION - Z-PREPASS
 		if (bZPrePass)
 		{
-			const RenderTargetID normals = mDeferredRenderingPasses._GBuffer.mRTNormals;
+			mpRenderer->SetViewport(mpRenderer->FrameRenderTargetWidth(), mpRenderer->FrameRenderTargetHeight());
+			const RenderTargetID normals = mDeferredRenderingPasses._GBuffer.mRTNormals; // resource reusage
 			const TextureID texNormal = mpRenderer->GetRenderTargetTexture(normals);
 			const ZPrePass::RenderParams zPrePassParams =
 			{
@@ -1061,7 +1065,7 @@ void Engine::Render()
 			{ 0, 0, 0, 0 }, 1, 0
 		);
 
-		mpRenderer->BindRenderTarget(renderTarget);
+		mpRenderer->BindRenderTarget(lightingRenderTarget);
 		mpRenderer->BindDepthTarget(mWorldDepthTarget);
 		mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 		mpRenderer->BeginRender(clearCmd);
@@ -1086,7 +1090,7 @@ void Engine::Render()
 			, mpActiveScene->mSceneView
 			, mSceneLightData
 			, tSSAO
-			, renderTarget
+			, lightingRenderTarget
 			, mAOPass.blackTexture4x4
 			, bZPrePass
 		};
@@ -1108,9 +1112,10 @@ void Engine::Render()
 		mpGPUProfiler->BeginEntry("Resolve AA");
 		mpCPUProfiler->BeginEntry("Resolve AA");
 
-		mAAResolvePass.SetInputTexture(mpRenderer->GetRenderTargetTexture( mEngineConfig.bDeferredOrForward 
-			? mDeferredRenderingPasses._shadeTarget    // AA input for deferred rendering path
-			: mpRenderer->GetBackBufferRenderTarget()  // AA input for forward  rendering path
+		mAAResolvePass.SetInputTexture(mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._shadeTarget
+			//mEngineConfig.bDeferredOrForward 
+			//? mDeferredRenderingPasses._shadeTarget    // AA input for deferred rendering path
+			//: mpRenderer->GetBackBufferRenderTarget()  // AA input for forward  rendering path
 		));
 		mAAResolvePass.Render(mpRenderer);
 

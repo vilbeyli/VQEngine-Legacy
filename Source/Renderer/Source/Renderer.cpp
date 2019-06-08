@@ -219,6 +219,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 
 	// assuming SSAA is the only supported AA technique. otherwise swapchain initialization should be further customized.
 	this->mAntiAliasing = rendererSettings.antiAliasing;
+
 	const float& fUpscaleFactor = rendererSettings.antiAliasing.fUpscaleFactor;
 
 	bool result = m_Direct3D->Initialize(
@@ -288,6 +289,11 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 
 		this->mAntiAliasing.resolutionX = rtDesc.textureDesc.height;
 		this->mAntiAliasing.resolutionY = rtDesc.textureDesc.width;
+	}
+	else
+	{
+		this->mAntiAliasing.resolutionX = this->GetWindowDimensionsAsFloat2().y(); // set them to window dimensions. default is 0.
+		this->mAntiAliasing.resolutionY = this->GetWindowDimensionsAsFloat2().x(); // set them to window dimensions. default is 0.
 	}
 	//m_Direct3D->ReportLiveObjects("Init Default RT\n");
 
@@ -653,7 +659,8 @@ unsigned Renderer::WindowHeight()	const { return m_Direct3D->WindowHeight(); };
 unsigned Renderer::WindowWidth()	const { return m_Direct3D->WindowWidth(); }
 unsigned Renderer::FrameRenderTargetHeight() const { return mAntiAliasing.resolutionX; }
 unsigned Renderer::FrameRenderTargetWidth()	 const { return mAntiAliasing.resolutionY; }
-vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(static_cast<float>(this->WindowWidth()), static_cast<float>(this->WindowHeight())); }
+vec2	 Renderer::FrameRenderTargetDimensionsAsFloat2() const { return vec2(this->FrameRenderTargetWidth(), this->FrameRenderTargetHeight()); }
+vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(this->WindowWidth(), this->WindowHeight()); }
 HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };
 
 const BufferDesc Renderer::GetBufferDesc(EBufferType bufferType, BufferID bufferID) const

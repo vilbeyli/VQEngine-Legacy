@@ -68,6 +68,7 @@ public:
 	unsigned				WindowWidth()	const;
 	unsigned				FrameRenderTargetHeight() const;
 	unsigned				FrameRenderTargetWidth() const;
+	vec2					FrameRenderTargetDimensionsAsFloat2() const;
 	vec2					GetWindowDimensionsAsFloat2() const;
 	inline RenderTargetID	GetBackBufferRenderTarget() const { return mBackBufferRenderTarget; }
 	inline DepthTargetID	GetBoundDepthTarget() const { return mPipelineState.depthTargets; }

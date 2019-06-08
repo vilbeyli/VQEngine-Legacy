@@ -77,11 +77,34 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 	this->_tonemappingPass._finalRenderTarget = pRenderer->GetBackBufferRenderTarget();
 
 	const char* pFSQ_VS = "FullScreenquad_vs.hlsl";
-	const ShaderDesc tonemappingShaderDesc = ShaderDesc{"Tonemapping",
+
+	// -- HDR Tonemapper --------------------------------------------------------------------------
+	ShaderDesc tonemappingShaderDesc = ShaderDesc{"Tonemapping_HDR",
 		ShaderStageDesc{ pFSQ_VS              , {} },
-		ShaderStageDesc{ "Tonemapping_ps.hlsl", {} }
+		ShaderStageDesc{ "Tonemapping_ps.hlsl", { {"HDR_TONEMAPPER", "1"} } }
 	};
-	this->_tonemappingPass._toneMappingShader = pRenderer->CreateShader(tonemappingShaderDesc);
+	this->_tonemappingPass._toneMappingShaderHDR = pRenderer->CreateShader(tonemappingShaderDesc);
+
+	// -- LDR Tonemapper --------------------------------------------------------------------------
+	tonemappingShaderDesc = ShaderDesc{ "Tonemapping_LDR",
+		ShaderStageDesc{ pFSQ_VS              , {} },
+		ShaderStageDesc{ "Tonemapping_ps.hlsl", { {"LDR_TONEMAPPER", "1"} } }
+	};
+	this->_tonemappingPass._toneMappingShaderLDR = pRenderer->CreateShader(tonemappingShaderDesc);
+
+	// -- HDR Tonemapper (Single Channel)----------------------------------------------------------
+	tonemappingShaderDesc = ShaderDesc{ "Tonemapping_HDR_SingleChannel",
+		ShaderStageDesc{ pFSQ_VS              , {} },
+		ShaderStageDesc{ "Tonemapping_ps.hlsl", { {"HDR_TONEMAPPER", "1"}, {"SINGLE_CHANNEL", "1"} } }
+	};
+	this->_tonemappingPass._toneMappingShaderHDR_SingleChannelColor = pRenderer->CreateShader(tonemappingShaderDesc);
+
+	// -- LDR Tonemapper (Single Channel)----------------------------------------------------------
+	tonemappingShaderDesc = ShaderDesc{ "Tonemapping_LDR_SingleChannel",
+		ShaderStageDesc{ pFSQ_VS              , {} },
+		ShaderStageDesc{ "Tonemapping_ps.hlsl", { {"LDR_TONEMAPPER", "1"}, {"SINGLE_CHANNEL", "1"} } }
+	};
+	this->_tonemappingPass._toneMappingShaderLDR_SingleChannelColor = pRenderer->CreateShader(tonemappingShaderDesc);
 
 	// World Render Target
 	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc);
@@ -111,24 +134,24 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID input
 	// ======================================================================================
 	// TONEMAPPING PASS
 	// ======================================================================================
+	const bool bIsSingleChannel = toneMappingInputTex == -1 ? 1 : 0;
+
 	pRenderer->BeginEvent("Tonemapping");
 	pGPU->BeginEntry("Tonemapping");
 
+	pRenderer->SetShader(_settings.HDREnabled 
+		? (bIsSingleChannel ? _tonemappingPass._toneMappingShaderHDR_SingleChannelColor : _tonemappingPass._toneMappingShaderHDR)
+		: (bIsSingleChannel ? _tonemappingPass._toneMappingShaderLDR_SingleChannelColor : _tonemappingPass._toneMappingShaderLDR)
+	, true);
+
 	pRenderer->UnbindDepthTarget();
-	pRenderer->SetShader(_tonemappingPass._toneMappingShader, true);
 	pRenderer->SetVertexBuffer(IABuffersQuad.first);
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->SetSamplerState("Sampler", _bloomPass._blurSampler);
 	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_BACK);
 	pRenderer->SetConstant1f("exposure", _settings.toneMapping.exposure);
-	pRenderer->SetConstant1f("isHDR", _settings.HDREnabled ? 1.0f : 0.0f);
 	pRenderer->BindRenderTarget(_tonemappingPass._finalRenderTarget);
 	pRenderer->SetTexture("ColorTexture", toneMappingInputTex);
-
-	// quick hack for outputting white texture for fullscreen AO debugging
-	pRenderer->SetConstant1i("isSingleChannel", toneMappingInputTex == -1 ? 1 : 0);
-	// quick hack for outputting white texture for fullscreen AO debugging
-
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
 

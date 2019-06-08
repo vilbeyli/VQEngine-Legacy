@@ -44,6 +44,8 @@ namespace filesys = std::experimental::filesystem;
 #endif
 
 #include <algorithm>
+#include <cassert>
+#include "Utilities/Log.h"
 
 namespace StrUtil
 {
@@ -189,7 +191,15 @@ namespace DirectoryUtil
 
 	std::string GetFileNameWithoutExtension(const std::string& path)
 	{	// example: path: "Archetypes/player.txt" | return val: "player"
-		std::string no_extension = StrUtil::split(path.c_str(), '.')[0];
+		const std::vector<std::string> pathTokens = StrUtil::split(path.c_str(), '.');
+#if _DEBUG
+		if (pathTokens.size() == 0)
+		{
+			Log::Warning("Empty tokens: path=" + path);
+		}
+#endif
+		assert(pathTokens.size() > 0);
+		const std::string& no_extension = pathTokens[0];
 		return StrUtil::split(no_extension.c_str(), '/').back();
 	}
 

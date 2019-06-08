@@ -449,8 +449,19 @@ Texture EnvironmentMap::CreateBRDFIntegralLUTTexture()
 	return spRenderer->GetTextureObject(spRenderer->GetRenderTargetTexture(sBRDFIntegrationLUTRT));
 }
 
-TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& specularMap, const Texture& irradienceMap, const std::string& cacheFolderPath)
+TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& specularMap_, const Texture& irradienceMap_, const std::string& cacheFolderPath)
 {
+	//---------------------------------------------------
+	// Quick Bug Fix
+	//---------------------------------------------------
+	// Copy the Texture Objects to a local variable
+	const Texture specularMap = specularMap_;
+	const Texture irradienceMap = irradienceMap_;
+	// As we're adding new textures to the renderer
+	// the references are getting invalidated. hence keep a copy here.
+	// this should be avoided with a better architecture design...
+	//---------------------------------------------------
+
 	Renderer*& pRenderer = spRenderer;
 	const TextureID envMap = specularMap._id;
 

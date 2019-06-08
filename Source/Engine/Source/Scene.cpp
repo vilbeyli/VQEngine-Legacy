@@ -1706,6 +1706,7 @@ void Scene::RenderSkybox(const XMMATRIX& viewProj) const
 	const auto IABuffers = Scene::GetGeometryVertexAndIndexBuffers(EGeometry::CUBE);
 
 	mpRenderer->BeginEvent("Skybox Pass");
+	mpRenderer->SetViewport(mpRenderer->FrameRenderTargetDimensionsAsFloat2());
 	mpRenderer->SetShader(mSkybox.GetShader());
 	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_TEST_ONLY);
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);

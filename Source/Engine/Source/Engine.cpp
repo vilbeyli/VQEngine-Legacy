@@ -1006,7 +1006,9 @@ void Engine::Render()
 		//
 		if (mpActiveScene->HasSkybox())
 		{
+			mpGPUProfiler->BeginEntry("Skybox Pass");
 			mpActiveScene->RenderSkybox(mpActiveScene->mSceneView.viewProj);
+			mpGPUProfiler->EndEntry();
 		}
 
 		mpCPUProfiler->EndEntry();
@@ -1074,7 +1076,12 @@ void Engine::Render()
 		// if we're not rendering the skybox, call apply() to unbind
 		// shadow light depth target so we can bind it in the lighting pass
 		// otherwise, skybox render pass will take care of it
-		if (mpActiveScene->HasSkybox())	mpActiveScene->RenderSkybox(mpActiveScene->mSceneView.viewProj);
+		if (mpActiveScene->HasSkybox())
+		{
+			mpGPUProfiler->BeginEntry("Skybox Pass");
+			mpActiveScene->RenderSkybox(mpActiveScene->mSceneView.viewProj);
+			mpGPUProfiler->EndEntry();
+		}
 		else
 		{
 			// todo: this might be costly, profile this
@@ -1124,10 +1131,16 @@ void Engine::Render()
 		mpRenderer->EndEvent(); // Resolve AA
 	}
 
+	// Determine the output texture for Lighting Pass
+	// which is also the input texture for post processing
+	//
 	const TextureID postProcessInputTextureID = mpRenderer->GetRenderTargetTexture(bAAResolve 
-		? mAAResolvePass.mResolveTarget 
-		: mPostProcessPass._worldRenderTarget
+		? mAAResolvePass.mResolveTarget     // SSAA (shares the same render target for deferred and forward)
+		: (mEngineConfig.bDeferredOrForward 
+			? mDeferredRenderingPasses._shadeTarget // deferred / no SSAA
+			: mPostProcessPass._worldRenderTarget)  // forward  / no SSAA
 	);
+
 
 	mpRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 

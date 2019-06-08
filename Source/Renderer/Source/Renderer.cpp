@@ -292,8 +292,13 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 	}
 	else
 	{
-		this->mAntiAliasing.resolutionX = this->GetWindowDimensionsAsFloat2().y(); // set them to window dimensions. default is 0.
-		this->mAntiAliasing.resolutionY = this->GetWindowDimensionsAsFloat2().x(); // set them to window dimensions. default is 0.
+		// set antiAliasing resolution to window width and height.
+		// the default will be (0,0) and this is used by the Renderer
+		// to return the scene render target scale, which is usually
+		// affected by the SSAO upscaling factor.
+		//
+		this->mAntiAliasing.resolutionX = this->WindowHeight(); 
+		this->mAntiAliasing.resolutionY = this->WindowWidth();
 	}
 	//m_Direct3D->ReportLiveObjects("Init Default RT\n");
 

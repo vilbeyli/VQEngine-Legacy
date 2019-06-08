@@ -371,7 +371,7 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 	pRenderer->SetConstant1f("ambientFactor", args.sceneView.sceneRenderSettings.ssao.ambientFactor);
 	pRenderer->SetConstant4x4f("directionalProj", args.sceneView.directionalLightProjection);
 	pRenderer->SetConstant3f("cameraPos", args.sceneView.cameraPosition);
-	pRenderer->SetConstant2f("screenDimensions", pRenderer->GetWindowDimensionsAsFloat2());
+	pRenderer->SetConstant2f("screenDimensions", pRenderer->FrameRenderTargetDimensionsAsFloat2());
 
 	ENGINE->SendLightData();
 

@@ -16,7 +16,7 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define DO_TONEMAPPING
+#define ENABLE_TONEMAPPING 1
 
 struct PSIn
 {
@@ -30,8 +30,6 @@ SamplerState Sampler;
 cbuffer constants 
 {
 	float exposure;
-	float isHDR;
-	int isSingleChannel;
 };
 
 // src
@@ -44,15 +42,26 @@ float4 PSMain(PSIn In) : SV_TARGET
 {
 	const float3 color = ColorTexture.Sample(Sampler, In.texCoord);
 	const float gamma = 1.0f / 2.2f;
-// TODO: use pre-processor and don't calculate both
-#ifdef DO_TONEMAPPING
-	const float3 HDRToneMapped = float3(1, 1, 1) - exp(-color * exposure);
-	const float3 LDRToneMapped = color / (color + float3(1, 1, 1));
-	float3 toneMapped = HDRToneMapped * isHDR + LDRToneMapped * (1.0f - isHDR);
+	
+#if ENABLE_TONEMAPPING
+
+#ifdef HDR_TONEMAPPER
+	float3 toneMappedColor =  float3(1, 1, 1) - exp(-color * exposure);
+#else // LDR_TONEMAPPER
+	float3 toneMappedColor = color / (color + float3(1, 1, 1));
+#endif // HDR_TONEMAPPER
 #else
-	float3 toneMapped = color;
+
+	float3 toneMapped = color; // no tonemapping
+
+#endif // ENABLE_TONEMAPPING
+
+
+#ifdef SINGLE_CHANNEL
+	toneMappedColor = pow(toneMappedColor.r, gamma).rrr;
+#else
+	toneMappedColor = pow(toneMappedColor, gamma.xxx);
 #endif
 
-	toneMapped = pow(isSingleChannel ? toneMapped.xxx : toneMapped, float3(gamma, gamma, gamma));
-	return float4(toneMapped, 1.0f);
+	return float4(toneMappedColor, 1.0f);
 }

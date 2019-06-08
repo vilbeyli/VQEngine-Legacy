@@ -269,9 +269,18 @@ struct BloomPass : public RenderPass
 
 struct TonemappingCombinePass : public RenderPass
 {
-	TonemappingCombinePass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) : RenderPass(pCPU_, pGPU_) {}
+	TonemappingCombinePass(CPUProfiler*& pCPU_, GPUProfiler*& pGPU_) 
+		: RenderPass(pCPU_, pGPU_) 
+		, _toneMappingShaderHDR(-1)
+		, _toneMappingShaderLDR(-1)
+		, _toneMappingShaderHDR_SingleChannelColor(-1)
+		, _toneMappingShaderLDR_SingleChannelColor(-1)
+	{}
 	RenderTargetID	_finalRenderTarget;
-	ShaderID		_toneMappingShader;
+	ShaderID		_toneMappingShaderHDR;
+	ShaderID		_toneMappingShaderLDR;
+	ShaderID		_toneMappingShaderHDR_SingleChannelColor;
+	ShaderID		_toneMappingShaderLDR_SingleChannelColor;
 };
 
 struct PostProcessPass : public RenderPass

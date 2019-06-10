@@ -1,5 +1,6 @@
 #include "Profiler.h"
 #include "Log.h"
+#include "Renderer/D3DManager.h"
 
 #include <numeric>
 #include <sstream>
@@ -407,6 +408,12 @@ void GPUProfiler::BeginEntry(const std::string & tag)
 		{
 			mpDevice->CreateQuery(&queryDesc, &entry.pTimestampQueryBegin[bufferIndex]);
 			mpDevice->CreateQuery(&queryDesc, &entry.pTimestampQueryEnd[bufferIndex]);
+#if _DEBUG
+			const std::string QueryDebugName_B = "QueryBegin_" + tag;
+			const std::string QueryDebugName_E = "QueryEnd_" + tag;
+			D3DManager::SetDebugName(entry.pTimestampQueryBegin[bufferIndex], QueryDebugName_B);
+			D3DManager::SetDebugName(entry.pTimestampQueryEnd[bufferIndex], QueryDebugName_E);
+#endif
 		}
 	}
 

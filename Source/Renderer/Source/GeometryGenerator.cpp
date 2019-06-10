@@ -122,7 +122,7 @@ Mesh GeometryGenerator::Triangle(float scale)
 	vertices[2].uv			= vec2(1.0f, 1.0f);
 	
 	CalculateTangentsAndBitangents(vertices, indices);
-	return Mesh(vertices, indices, "Builtin_Triangle");
+	return Mesh(vertices, indices, "BuiltinTriangle");
 }
 
 Mesh GeometryGenerator::Quad(float scale)
@@ -159,7 +159,7 @@ Mesh GeometryGenerator::Quad(float scale)
 	vertices[3].uv			= vec2(1.0f, 1.0f);
 	
 	CalculateTangentsAndBitangents(vertices, indices);
-	return Mesh(vertices, indices, "Builtin_Quad");
+	return Mesh(vertices, indices, "BuiltinQuad");
 }
 
 Mesh GeometryGenerator::FullScreenQuad()
@@ -191,7 +191,7 @@ Mesh GeometryGenerator::FullScreenQuad()
 	vertices[3].position = vec3(+size, -size, 0.0f);
 	vertices[3].uv = vec2(1.0f, 1.0f);
 
-	return Mesh(vertices, indices, "Builtin_Quad");
+	return Mesh(vertices, indices, "BuiltinQuad");
 }
 
 Mesh GeometryGenerator::Cube()
@@ -377,14 +377,14 @@ Mesh GeometryGenerator::Cube()
 	//}
 
 	CalculateTangentsAndBitangents(vertices, indices);
-	return Mesh(vertices, indices, "Builtin_Cube");
+	return Mesh(vertices, indices, "BuiltinCube");
 }
 
 
 Mesh GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceCount, int numLODLevels /*= 1*/)
 {
 	// Vertex & Index buffer per LOD level
-	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "Builtin_Sphere");
+	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "BuiltinSphere");
 
 	// shorthands
 	std::vector < vector<DefaultVertexBufferData>>& LODVertices = meshData.LODVertices;
@@ -502,7 +502,7 @@ Mesh GeometryGenerator::Sphere(float radius, unsigned ringCount, unsigned sliceC
 
 Mesh GeometryGenerator::Grid(float width, float depth, unsigned horizontalTessellation, unsigned verticalTessellation, int numLODLevels /*= 1*/)
 {
-	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "Builtin_Grid");
+	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "BuiltinGrid");
 
 	// shorthands
 	std::vector < vector<DefaultVertexBufferData>>& LODVertices = meshData.LODVertices;
@@ -639,7 +639,7 @@ Mesh GeometryGenerator::Grid(float width, float depth, unsigned horizontalTessel
 
 Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadius, unsigned numSlices, unsigned numStacks, int numLODLevels /*= 1*/)
 {
-	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "Builtin_Cylinder");
+	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "BuiltinCylinder");
 
 	// shorthands
 	std::vector < vector<DefaultVertexBufferData>>& LODVertices = meshData.LODVertices;
@@ -845,7 +845,7 @@ Mesh GeometryGenerator::Cylinder(float height, float topRadius, float bottomRadi
 
 Mesh GeometryGenerator::Cone(float height, float radius, unsigned numSlices, int numLODLevels /*= 1*/)
 {
-	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "Builtin_Cone");
+	MeshLODData< DefaultVertexBufferData> meshData(numLODLevels, "BuiltinCone");
 
 	// shorthands
 	std::vector < vector<DefaultVertexBufferData>>& LODVertices = meshData.LODVertices;

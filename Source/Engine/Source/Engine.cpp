@@ -387,7 +387,7 @@ bool Engine::Load(ThreadPool* pThreadPool)
 		mPostProcessPass.Initialize(mpRenderer, sEngineSettings.rendering.postProcess);
 		mDebugPass.Initialize(mpRenderer);
 		mAOPass.Initialize(mpRenderer);
-		mAAResolvePass.Initialize(mpRenderer, TODO);
+		mAAResolvePass.Initialize(mpRenderer, mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._shadeTarget));
 	}
 	Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->StopGetDeltaTimeAndReset());
 	mpCPUProfiler->EndEntry();

@@ -102,6 +102,7 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 		texDesc.pData = face->glyph->bitmap.buffer;
 		texDesc.dataPitch = face->glyph->bitmap.pitch;
 		texDesc.dataSlicePitch = 0;
+		texDesc.texFileName = std::string("Char:") + c;
 
 		TextureID charTexture = pRenderer->CreateTexture2D(texDesc);
 		Character character = 
@@ -124,7 +125,7 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 	bufDesc.mStride = sizeof(vec4);
 	bufDesc.mType = VERTEX_BUFFER;
 	bufDesc.mUsage = GPU_READ_CPU_WRITE;
-	mQuadVertexBuffer = pRenderer->CreateBuffer(bufDesc);
+	mQuadVertexBuffer = pRenderer->CreateBuffer(bufDesc, nullptr, "TextRendererVB");
 
 	// todo: blend state desc
 	mAlphaBlendState = pRenderer->AddBlendState(); 

@@ -117,17 +117,20 @@ Mesh::Mesh(
 {
 	BufferDesc bufferDesc = {};
 
+	const std::string VBName = name + "_LOD[0]_VB";
+	const std::string IBName = name + "_LOD[0]_IB";
+
 	bufferDesc.mType = VERTEX_BUFFER;
 	bufferDesc.mUsage = GPU_READ_WRITE;
 	bufferDesc.mElementCount = static_cast<unsigned>(vertices.size());
 	bufferDesc.mStride = sizeof(vertices[0]);
-	BufferID vertexBufferID = spRenderer->CreateBuffer(bufferDesc, vertices.data());
+	BufferID vertexBufferID = spRenderer->CreateBuffer(bufferDesc, vertices.data(), VBName.c_str());
 
 	bufferDesc.mType = INDEX_BUFFER;
 	bufferDesc.mUsage = GPU_READ_WRITE;
 	bufferDesc.mElementCount = static_cast<unsigned>(indices.size());
 	bufferDesc.mStride = sizeof(unsigned);
-	BufferID indexBufferID = spRenderer->CreateBuffer(bufferDesc, indices.data());
+	BufferID indexBufferID = spRenderer->CreateBuffer(bufferDesc, indices.data(), IBName.c_str());
 
 	mLODs.push_back({ vertexBufferID, indexBufferID }); // LOD Level 0
 	mMeshName = name;
@@ -140,17 +143,20 @@ Mesh::Mesh(const MeshLODData<VertexBufferType>& meshLODData)
 	{
 		BufferDesc bufferDesc = {};
 
+		const std::string VBName = meshLODData.meshName + "_LOD[" + std::to_string(LOD) + "]_VB";
+		const std::string IBName = meshLODData.meshName + "_LOD[" + std::to_string(LOD) + "]_IB";
+
 		bufferDesc.mType = VERTEX_BUFFER;
 		bufferDesc.mUsage = GPU_READ_WRITE;
 		bufferDesc.mElementCount = static_cast<unsigned>(meshLODData.LODVertices[LOD].size());
 		bufferDesc.mStride = sizeof(meshLODData.LODVertices[LOD][0]);
-		BufferID vertexBufferID = spRenderer->CreateBuffer(bufferDesc, meshLODData.LODVertices[LOD].data());
+		BufferID vertexBufferID = spRenderer->CreateBuffer(bufferDesc, meshLODData.LODVertices[LOD].data(), VBName.c_str());
 
 		bufferDesc.mType = INDEX_BUFFER;
 		bufferDesc.mUsage = GPU_READ_WRITE;
 		bufferDesc.mElementCount = static_cast<unsigned>(meshLODData.LODIndices[LOD].size());
 		bufferDesc.mStride = sizeof(unsigned);
-		BufferID indexBufferID = spRenderer->CreateBuffer(bufferDesc, meshLODData.LODIndices[LOD].data());
+		BufferID indexBufferID = spRenderer->CreateBuffer(bufferDesc, meshLODData.LODIndices[LOD].data(), IBName.c_str());
 
 		mLODs.push_back({ vertexBufferID, indexBufferID });
 	}

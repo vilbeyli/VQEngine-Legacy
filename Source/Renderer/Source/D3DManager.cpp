@@ -21,6 +21,14 @@
 
 #include <string>
 
+///// https://walbourn.github.io/dxgi-debug-device/
+///// enable debug device 
+///#include <dxgi1_3.h>
+#include <dxgidebug.h>
+
+#define ENABLE_D3D_LIVE_OBJECT_REPORTING 0
+#define ENABLE_D3D_RESOURCE_DEBUG_NAMES 0
+
 #define xFORCE_DEBUG
 
 D3DManager::D3DManager()
@@ -161,6 +169,63 @@ bool D3DManager::Initialize(int width, int height, const bool VSYNC, HWND hwnd, 
 
 	m_wndWidth  = width;
 	m_wndHeight = height;
+
+
+#ifdef _DEBUG
+
+#if 0
+	///Microsoft::WRL::ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
+	IDXGIInfoQueue* pDXGIInfoQueue;
+	HMODULE dxgidebug = LoadLibraryEx("dxgidebug.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+	if (dxgidebug)
+	{
+		typedef HRESULT(WINAPI * LPDXGIGETDEBUGINTERFACE)(REFIID, void **);
+		auto dxgiGetDebugInterface = reinterpret_cast<LPDXGIGETDEBUGINTERFACE>(
+			reinterpret_cast<void*>(GetProcAddress(dxgidebug, "DXGIGetDebugInterface"))
+		);
+
+		if (SUCCEEDED(dxgiGetDebugInterface(IID_PPV_ARGS(&pDXGIInfoQueue))))
+		{
+			pDXGIInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+			pDXGIInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+		}
+	}
+#else
+	// Direct3D SDK Debug Layer
+	//------------------------------------------------------------------------------------------
+	// src1: https://blogs.msdn.microsoft.com/chuckw/2012/11/30/direct3d-sdk-debug-layer-tricks/
+	// src2: http://seanmiddleditch.com/direct3d-11-debug-api-tricks/
+	//------------------------------------------------------------------------------------------
+	if (SUCCEEDED(m_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&m_debug)))
+	{
+		ID3D11InfoQueue* d3dInfoQueue = nullptr;
+		if (SUCCEEDED(m_debug->QueryInterface(__uuidof(ID3D11InfoQueue), (void**)&d3dInfoQueue)))
+		{
+			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
+			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
+			D3D11_MESSAGE_ID hide[] =
+			{
+				D3D11_MESSAGE_ID_DEVICE_DRAW_RENDERTARGETVIEW_NOT_SET,
+				// Add more message IDs here as needed
+			};
+
+			D3D11_INFO_QUEUE_FILTER filter;
+			memset(&filter, 0, sizeof(filter));
+			filter.DenyList.NumIDs = _countof(hide);
+			filter.DenyList.pIDList = hide;
+			d3dInfoQueue->AddStorageFilterEntries(&filter);
+			d3dInfoQueue->Release();
+		}
+	}
+#endif
+
+	if (FAILED(m_deviceContext->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)&m_annotation)))
+	{
+		Log::Error("Can't Query(ID3DUserDefinedAnnotation)");
+		return false;
+	}
+#endif
+
 	return true;
 }
 
@@ -220,6 +285,7 @@ void D3DManager::GetVideoCardInfo(char* cardName, int& memory)
 
 void D3DManager::ReportLiveObjects(const std::string& LogHeader /*= ""*/) const
 {
+#if ENABLE_D3D_LIVE_OBJECT_REPORTING
 #ifdef _DEBUG
 	if (!LogHeader.empty())
 		Log::Info(LogHeader);
@@ -227,11 +293,19 @@ void D3DManager::ReportLiveObjects(const std::string& LogHeader /*= ""*/) const
 	HRESULT hr = m_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&m_debug);
 	hr = m_debug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
 #endif
+#endif // ENABLE_D3D_LIVE_OBJECT_REPORTING
+}
+
+void D3DManager::SetDebugName(ID3D11DeviceChild* child, const std::string& name)
+{
+#if ENABLE_D3D_RESOURCE_DEBUG_NAMES
+	if (child != nullptr && !name.empty())
+		child->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(name.size()), name.c_str());
+#endif // ENABLE_D3D_RESOURCE_DEBUG_NAMES
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------------
 // private functions
-
 bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator, DXGI_FORMAT FrameBufferFormat)
 {
 	HRESULT result;
@@ -318,41 +392,5 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 		Log::Error("D3DManager: Cannot create swap chain");
 		return false;
 	}
-
-#ifdef _DEBUG
-	// Direct3D SDK Debug Layer
-	//------------------------------------------------------------------------------------------
-	// src1: https://blogs.msdn.microsoft.com/chuckw/2012/11/30/direct3d-sdk-debug-layer-tricks/
-	// src2: http://seanmiddleditch.com/direct3d-11-debug-api-tricks/
-	//------------------------------------------------------------------------------------------
-	if ( SUCCEEDED(m_device->QueryInterface(__uuidof(ID3D11Debug), (void**)&m_debug)) )
-	{
-		ID3D11InfoQueue* d3dInfoQueue = nullptr;
-		if (SUCCEEDED(m_debug->QueryInterface(__uuidof(ID3D11InfoQueue), (void**)&d3dInfoQueue)))
-		{
-			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
-			d3dInfoQueue->SetBreakOnSeverity(D3D11_MESSAGE_SEVERITY_ERROR, true);
-			D3D11_MESSAGE_ID hide[] =
-			{
-				D3D11_MESSAGE_ID_DEVICE_DRAW_RENDERTARGETVIEW_NOT_SET,
-				// Add more message IDs here as needed
-			};
-
-			D3D11_INFO_QUEUE_FILTER filter;
-			memset(&filter, 0, sizeof(filter));
-			filter.DenyList.NumIDs = _countof(hide);
-			filter.DenyList.pIDList = hide;
-			d3dInfoQueue->AddStorageFilterEntries(&filter);
-			d3dInfoQueue->Release();
-		}
-	}
-
-	if ( FAILED(m_deviceContext->QueryInterface(__uuidof(ID3DUserDefinedAnnotation), (void**)&m_annotation)) )
-	{
-		Log::Error("Can't Query(ID3DUserDefinedAnnotation)");
-		return false;
-	}
-#endif
-
 	return true;
 }

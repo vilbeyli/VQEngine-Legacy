@@ -268,8 +268,14 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 		Log::Error("Cannot create default render target view.");
 		return false;
 	}
+#if _DEBUG
+	m_Direct3D->SetDebugName(backBufferRT.pRenderTargetView, "BackBufferRTV");
+	m_Direct3D->SetDebugName(backBufferRT.texture._srv, "BackBufferSRV");
+	m_Direct3D->SetDebugName(backBufferPtr, "BackBuffer");
+	m_Direct3D->ReportLiveObjects("Init Default RT\n");
+#endif
+	backBufferRT.texture._id = static_cast<int>(mTextures.size());
 	mTextures.push_back(backBufferRT.texture);	// set texture ID by adding it -- TODO: remove duplicate data - don't add texture to vector
-	backBufferRT.texture._id = static_cast<int>(mTextures.size() - 1);
 	mRenderTargets.push_back(backBufferRT);
 	mBackBufferRenderTarget = static_cast<int>(mRenderTargets.size() - 1);
 
@@ -300,8 +306,6 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 		this->mAntiAliasing.resolutionX = this->WindowHeight(); 
 		this->mAntiAliasing.resolutionY = this->WindowWidth();
 	}
-	//m_Direct3D->ReportLiveObjects("Init Default RT\n");
-
 
 	// DEFAULT DEPTH TARGET
 	//--------------------------------------------------------------------
@@ -616,7 +620,7 @@ void Renderer::Exit()
 		}
 	}
 
-	//m_Direct3D->ReportLiveObjects("END EXIT\n");	// todo: ifdef debug & log_mem
+	m_Direct3D->ReportLiveObjects("END EXIT\n");	// todo: ifdef debug & log_mem
 	if (m_Direct3D)
 	{
 		m_Direct3D->Shutdown();
@@ -921,7 +925,7 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 #if defined(_DEBUG) || defined(PROFILE)
 	if (!texDesc.texFileName.empty())
 	{
-		tex._tex2D->SetPrivateData(WKPDID_D3DDebugObjectName, static_cast<UINT>(texDesc.texFileName.length()), texDesc.texFileName.c_str());
+		m_Direct3D->SetDebugName(tex._tex2D, texDesc.texFileName + "_Tex2D");
 	}
 #endif
 
@@ -959,6 +963,12 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 			srvDesc.TextureCube.MostDetailedMip = 0;
 			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
 		}
+#if _DEBUG
+		if (!texDesc.texFileName.empty())
+		{
+			m_Direct3D->SetDebugName(tex._srv, texDesc.texFileName + "_SRV");
+		}
+#endif
 	}
 	else
 	{
@@ -977,6 +987,12 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 				m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srvArray[i]);
 				if (i == 0)
 					tex._srv = tex._srvArray[i];
+#if _DEBUG
+				if (!texDesc.texFileName.empty())
+				{
+					m_Direct3D->SetDebugName(tex._srvArray[i], texDesc.texFileName + "_SRV[" + std::to_string(i) + "]");
+				}
+#endif
 			}
 
 			if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
@@ -1326,10 +1342,16 @@ TextureID Renderer::CreateCubemapFromFaceTextures(const std::vector<std::string>
 #ifdef max
 #undef max
 #endif
-BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData /*=nullptr*/)
+BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData /*=nullptr*/, const char* pBufferName /*= nullptr*/)
 {
 	Buffer buffer(bufferDesc);
 	buffer.Initialize(m_device, pData);
+#if _DEBUG
+	if (pBufferName)
+	{
+		m_Direct3D->SetDebugName(buffer.mpGPUData, pBufferName);
+	}
+#endif
 	return static_cast<int>([&]() {
 		switch (bufferDesc.mType)
 		{
@@ -1455,6 +1477,13 @@ RenderTargetID Renderer::AddRenderTarget(const Texture& textureObj, D3D11_RENDER
 		Log::Error("Render Target View");
 		return -1;
 	}
+#if _DEBUG
+		const std::string RTVName = (textureObj._name.empty()
+			? "UnnamedRenderTarget"
+			: textureObj._name)
+		+ "_RTV";
+	m_Direct3D->SetDebugName(newRenderTarget.pRenderTargetView, RTVName.c_str());
+#endif
 
 	mRenderTargets.push_back(newRenderTarget);
 	return static_cast<int>(mRenderTargets.size() - 1);
@@ -1481,6 +1510,13 @@ RenderTargetID Renderer::AddRenderTarget(const RenderTargetDesc& renderTargetDes
 		Log::Error("Cannot create Render Target View");
 		return -1;
 	}
+#if _DEBUG
+	const std::string RTVName = (renderTargetDesc.textureDesc.texFileName.empty()
+		? "UnnamedRenderTarget"
+		: renderTargetDesc.textureDesc.texFileName)
+		+ "_RTV";
+	m_Direct3D->SetDebugName(newRenderTarget.pRenderTargetView, RTVName.c_str());
+#endif
 
 	// register & return
 	mRenderTargets.push_back(newRenderTarget);
@@ -1529,6 +1565,14 @@ std::vector<DepthTargetID> Renderer::AddDepthTarget(const DepthTargetDesc& depth
 				Log::Error("Depth Stencil Target View");
 				continue;
 			}
+
+#if _DEBUG
+			const std::string SRVName = (depthTargetDesc.textureDesc.texFileName.empty()
+				? "UnnamedDepthTarget"
+				: depthTargetDesc.textureDesc.texFileName) 
+				+ "_DSV[" + std::to_string(face) + "]";
+			m_Direct3D->SetDebugName(newDepthTarget.pDepthStencilView, SRVName.c_str());
+#endif
 
 			// register
 			newDepthTarget.texture = textureObj;

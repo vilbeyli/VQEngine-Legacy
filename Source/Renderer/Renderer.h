@@ -107,7 +107,7 @@ public:
 	SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc);	// TODO: samplerDesc
 
 	// --- BUFFER
-	BufferID				CreateBuffer(const BufferDesc& bufferDesc, const void* pData = nullptr);
+	BufferID				CreateBuffer(const BufferDesc& bufferDesc, const void* pData = nullptr, const char* pBufferName = nullptr);
 
 	// --- PIPELINE STATES
 	RasterizerStateID		AddRasterizerState(ERasterizerCullMode cullMode, ERasterizerFillMode fillMode, bool bEnableDepthClip, bool bEnableScissors);

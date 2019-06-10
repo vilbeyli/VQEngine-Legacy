@@ -50,6 +50,9 @@ public:
 
 	void ReportLiveObjects(const std::string& LogHeader = "") const;
 
+	// http://seanmiddleditch.com/direct3d-11-debug-api-tricks/
+	static void SetDebugName(ID3D11DeviceChild* child, const std::string& name);
+
 private:
 	bool InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scrHeight, unsigned numerator, unsigned denominator, DXGI_FORMAT FrameBufferFormat);
 

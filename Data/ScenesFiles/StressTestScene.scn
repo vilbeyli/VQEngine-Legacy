@@ -107,7 +107,7 @@ light begin
 	transform -681.67  85.89   359.20    0 0 0   0.1
 	color cyan
 	brightness 1800
-	shadows true 0.005
+	shadows true 0.4
 	range 175
 light end
 light begin
@@ -115,7 +115,7 @@ light begin
 	transform -676.52  100.49  -330.15    0 0 0   0.1
 	color green
 	brightness 1800
-	shadows true 0.005
+	shadows true 0.4
 	range 150
 light end
 light begin
@@ -123,7 +123,7 @@ light begin
 	transform -429.20  85.81  359.21   0 0 0   0.1
 	color orange
 	brightness 1800
-	shadows true 0.005
+	shadows true 0.4
 	range 150
 light end
 light begin
@@ -131,7 +131,7 @@ light begin
 	transform -428.95  92.26  -339.49    0 0 0   0.1
 	color purple
 	brightness 1800
-	shadows true 0.005
+	shadows true 0.4
 	range 150
 light end
 light begin
@@ -139,7 +139,7 @@ light begin
 	transform -475.77  218.57  -175.73    0 -90 50    0.5
 	color white
 	brightness 6000
-	shadows true 0.00000009 0.01
+	shadows true 0.0000004 0.004
 	spot 45 1
 	range 500
 light end

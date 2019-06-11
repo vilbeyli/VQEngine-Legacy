@@ -77,7 +77,7 @@ object begin
 	brdf
 		diffuse 0.3 0.3 0.3
 	brdf
-	transform 0 65 -10 0 0 0 130 65 4
+	transform 0 65 -10 0 0 0 130 65 7
 object end
 object begin
 	mesh cube
@@ -92,9 +92,9 @@ object end
 object begin
 	mesh sphere
 	brdf
-		//diffuse 1.0 1.0 1.0
-		diffuse 0.01 0.01 0.01
-		roughness 0.54
+		diffuse 1.0 1.0 1.0
+		//diffuse 0.01 0.01 0.01
+		roughness 0.04
 		//metalness 1.0
 	brdf
 	transform 0 14 -30 0 0 0 7
@@ -107,7 +107,7 @@ object begin
 		//metalness 1.0
 		roughness 0.08
 	brdf
-	transform 20 6 -55 0 0 0 3
+	transform 20 7 -55 0 0 0 3
 object end
 object begin
 	mesh sphere
@@ -116,7 +116,7 @@ object begin
 		metalness 0.8
 		roughness 0.04
 	brdf
-	transform 0 6 -60 0 0 0 3
+	transform 0 7 -60 0 0 0 3
 object end
 object begin
 	mesh sphere
@@ -125,7 +125,7 @@ object begin
 		//metalness 1.0
 		roughness 0.08
 	brdf
-	transform -20 6 -55 0 0 0 3
+	transform -20 7 -55 0 0 0 3
 object end
 
 // CUBES
@@ -207,7 +207,7 @@ light begin
 	transform 5  9.36  -50    0 0 0   0.1
 	color white
 	brightness 1000
-	shadows true 0.005
+	shadows true 0.5 0.0001
 //	attenuation 1 1 1 // currently unused
 	range 160
 light end
@@ -223,12 +223,12 @@ light end
 //
 light begin
 	type spot
-	transform 71.68  60.36  48.41   0 -90 0    0.05
+	transform 71.68  60.36  55.41   0 -90 0    0.05
 	color green
 	brightness 500
-	shadows true 0.00000009 0.1
-	spot 25 22
-	range 330
+	shadows true 0.000004 0.007
+	spot 20 18
+	range 300
 light end
 
 
@@ -268,7 +268,7 @@ light begin
 	transform 5  19.36  35    0 0 0   0.1
 	color white
 	brightness 500
-	shadows true 0.005
+	shadows true 0.4 0.001
 //	attenuation 1 1 1 // currently unused
 	range 150
 light end
@@ -286,7 +286,7 @@ light begin
 	transform 1.10  34.58  58.68   90 75 0    0.3
 	color orange
 	brightness 5000
-	shadows true 0.000000001 0.1
+	shadows true 0.00001 0.001
 	spot 15 0
 	range 50
 light end
@@ -305,11 +305,11 @@ light end
 light begin
 	type point
 	transform 80 -50 43    0 0 0   0.1
-	color white
+	color red
 	brightness 500
 	shadows false 0.005
 //	attenuation 1 1 1 // currently unused
-	range 150
+	range 48
 light end
 
 

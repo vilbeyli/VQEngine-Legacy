@@ -30,6 +30,9 @@
 #include "Utilities/Log.h"
 #endif
 
+#define FORCE_NO_CULL_SPOTLIGHTS 1
+#define FORCE_NO_CULL_POINTLIGHTS 1
+
 #if !SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 MeshDrawData::MeshDrawData(const GameObject* pObj_)
 	: meshIDs(pObj_->GetModelData().mMeshIDs)
@@ -214,7 +217,13 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		}
 		std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
 		{
-			const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(id)) ? EDefaultRasterizerState::CULL_NONE : EDefaultRasterizerState::CULL_FRONT;
+#if FORCE_NO_CULL_SPOTLIGHTS
+			const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
+#else
+			const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(id)) 
+				? EDefaultRasterizerState::CULL_NONE 
+				: EDefaultRasterizerState::CULL_FRONT;
+#endif
 			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, id, pObj);
 
 			pRenderer->SetRasterizerState(rasterizerState);
@@ -458,10 +467,14 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 				const MeshID& meshID = f.first;
 				assert(meshInstanceCount > 0); // make sure no empty meshID transformation list
 
+#if FORCE_NO_CULL_POINTLIGHTS
+				const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
+#else
 				const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(meshID))
 					? EDefaultRasterizerState::CULL_NONE 
 					: EDefaultRasterizerState::CULL_FRONT;
 
+#endif
 				const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene
 					, meshID
 #if INCLUDE_OBJECT_POINTER_TO_DRAW_DATA

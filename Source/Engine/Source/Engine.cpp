@@ -1109,6 +1109,7 @@ void Engine::Render()
 
 	mpActiveScene->RenderLights(); // when skymaps are disabled, there's an error here that needs fixing.
 
+	RenderDebug(viewProj);
 
 	// AA RESOLVE
 	//------------------------------------------------------------------------
@@ -1161,7 +1162,6 @@ void Engine::Render()
 	mpGPUProfiler->EndEntry();
 
 	//------------------------------------------------------------------------
-	RenderDebug(viewProj);
 	RenderUI();
 	//------------------------------------------------------------------------
 	

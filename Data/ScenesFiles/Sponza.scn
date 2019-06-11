@@ -97,7 +97,7 @@ light begin
 
 	color white
 	brightness 2800
-	shadows true 0.0005
+	shadows true 0.9 0.01
 	range 350
 light end
 //
@@ -118,7 +118,7 @@ light begin
 	
 	color sun
 	brightness 3800
-	shadows true 0.0005
+	shadows true 0.5 0.05
 	range 350
 light end
 //
@@ -137,20 +137,20 @@ light end
 
 light begin
 	type spot
-	transform -138.39  150.60  2.75    0 -90 50    0
-	color white
+	transform -138.39  150.60  2.75    0 -89 50    0
+	color red
 	brightness 2850
-	shadows true 0.00000009 0.01
-	spot 80 1
+	shadows true 0.009 0.01
+	spot 20 1
 	range 500
 light end
 
 light begin
 	type spot
 	transform -254.46  61.44  8.37    31.21 -90 0    0.2
-	color sun
+	color green
 	brightness 2850
-	shadows true 0.00000009 0.01
+	shadows true 0.009 0.01
 	spot 50 1
 	range 100
 light end

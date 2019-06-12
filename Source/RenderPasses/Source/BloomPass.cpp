@@ -81,6 +81,7 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	blurSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
 	blurSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	this->_blurSampler = pRenderer->CreateSamplerState(blurSamplerDesc);
+	mSelectedBloomShader = BloomShader::PS_1D_Kernels;
 
 #if USE_COMPUTE_BLUR
 	// Blur Compute Resources
@@ -374,6 +375,7 @@ void BloomPass::Render(Renderer* pRenderer, TextureID inputTextureID, const Sett
 	pGPU->BeginEntry("Bloom Combine");
 	pRenderer->BeginEvent("Combine");
 	pRenderer->SetShader(_bloomCombineShader, true, true);
+	pRenderer->Apply();
 	pRenderer->BindRenderTarget(_finalRT);
 	pRenderer->SetTexture("ColorTexture", colorTex);
 	pRenderer->SetTexture("BloomTexture", bloomTex);

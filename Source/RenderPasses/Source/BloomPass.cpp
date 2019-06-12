@@ -267,7 +267,7 @@ void BloomPass::Render(Renderer* pRenderer, TextureID inputTextureID, const Sett
 			const int texWidth = pRenderer->GetTextureObject(pingPong)._width;
 			const int texHeight = pRenderer->GetTextureObject(pingPong)._height;
 
-			pRenderer->SetShader( ((i%2 == 0) ? _blurShaderH : _blurShaderV));
+			pRenderer->SetShader( ((i%2 == 0) ? _blurShaderH : _blurShaderV), true);
 			pRenderer->BindRenderTarget(_blurPingPong[isHorizontal]);
 			pRenderer->SetConstant1i("textureWidth", texWidth);
 			pRenderer->SetConstant1i("textureHeight", texHeight);

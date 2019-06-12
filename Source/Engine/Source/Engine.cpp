@@ -1120,11 +1120,7 @@ void Engine::Render()
 		mpGPUProfiler->BeginEntry("Resolve AA");
 		mpCPUProfiler->BeginEntry("Resolve AA");
 
-		mAAResolvePass.SetInputTexture(mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._shadeTarget
-			//mEngineConfig.bDeferredOrForward 
-			//? mDeferredRenderingPasses._shadeTarget    // AA input for deferred rendering path
-			//: mpRenderer->GetBackBufferRenderTarget()  // AA input for forward  rendering path
-		));
+		mAAResolvePass.SetInputTexture(mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._shadeTarget));
 		mAAResolvePass.Render(mpRenderer);
 
 		mpCPUProfiler->EndEntry();	// Resolve AA

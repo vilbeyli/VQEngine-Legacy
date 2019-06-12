@@ -283,8 +283,8 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 	if (bAntiAliasing)  // assuming only SSAA support
 	{
 		RenderTargetDesc rtDesc = {};
-		rtDesc.textureDesc.width  = static_cast<int>(texDescBackBuffer.Width  * std::sqrtf(fUpscaleFactor));
-		rtDesc.textureDesc.height = static_cast<int>(texDescBackBuffer.Height * std::sqrtf(fUpscaleFactor));
+		rtDesc.textureDesc.width  = static_cast<int>(texDescBackBuffer.Width  * fUpscaleFactor);
+		rtDesc.textureDesc.height = static_cast<int>(texDescBackBuffer.Height * fUpscaleFactor);
 		rtDesc.textureDesc.mipCount = 1;
 		rtDesc.textureDesc.arraySize = 1;
 		rtDesc.textureDesc.format = static_cast<EImageFormat>(texDescBackBuffer.Format);

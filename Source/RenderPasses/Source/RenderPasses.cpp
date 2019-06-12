@@ -183,14 +183,16 @@ void AAResolvePass::Initialize(Renderer* pRenderer, TextureID inputTextureID)
 	const Texture& inputTex = pRenderer->GetTextureObject(inputTextureID);
 	const EImageFormat format = pRenderer->GetTextureImageFormat(inputTextureID);
 
+	const float AAScalingInverse = 1.0f / pRenderer->mAntiAliasing.fUpscaleFactor;
+
 	RenderTargetDesc rtDesc;
 	rtDesc.format = format;
 	rtDesc.textureDesc.format = format;
 	rtDesc.textureDesc.arraySize = 1;
 	rtDesc.textureDesc.bGenerateMips = false;
 	rtDesc.textureDesc.bIsCubeMap = false;
-	rtDesc.textureDesc.height = static_cast<int>(inputTex._height * 0.5f);
-	rtDesc.textureDesc.width = static_cast<int>(inputTex._width * 0.5f);
+	rtDesc.textureDesc.height = static_cast<int>(inputTex._height * AAScalingInverse);
+	rtDesc.textureDesc.width  = static_cast<int>(inputTex._width  * AAScalingInverse);
 	rtDesc.textureDesc.mipCount = 1;
 	rtDesc.textureDesc.usage = ETextureUsage::RENDER_TARGET_RW;
 	

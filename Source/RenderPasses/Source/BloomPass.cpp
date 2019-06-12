@@ -34,7 +34,7 @@
 #endif
 
 #define ENABLE_COMPUTE_BLUR             0
-#define ENABLE_COMPUTE_BLUR_TRANSPOZE   1
+#define ENABLE_COMPUTE_BLUR_TRANSPOZE   0
 constexpr bool USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH = false;
 
 #define USE_COMPUTE_BLUR                ENABLE_COMPUTE_BLUR || ENABLE_COMPUTE_BLUR_TRANSPOZE
@@ -50,16 +50,20 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 	this->_blurPingPong[1] = pRenderer->AddRenderTarget(rtDesc);
 
 	const int BLUR_KERNEL_DIMENSION = 15;	// should be odd
-	const char* pFSQ_VS = "FullScreenquad_vs.hlsl";
+	const char* pFSQ_VS = "FullScreenTriangle_vs.hlsl";
 	const ShaderDesc bloomPipelineShaders[] =
 	{
 		ShaderDesc{"Bloom",
 			ShaderStageDesc{pFSQ_VS   , {} },
 			ShaderStageDesc{"Bloom_ps.hlsl", {} },
 		},
-		ShaderDesc{"Blur",
+		ShaderDesc{"BlurH",
 			ShaderStageDesc{pFSQ_VS  , {} },
-			ShaderStageDesc{"Blur_ps.hlsl", { { "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) } } }
+			ShaderStageDesc{"Blur_ps.hlsl", { { "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) }, {"HORIZONTAL_PASS", "1"} } }
+		},
+		ShaderDesc{"BlurV",
+			ShaderStageDesc{pFSQ_VS  , {} },
+			ShaderStageDesc{"Blur_ps.hlsl", { { "KERNEL_DIMENSION", std::to_string(BLUR_KERNEL_DIMENSION) }, {"VERTICAL_PASS", "1"} } }
 		},
 		ShaderDesc{"BloomCombine",
 			ShaderStageDesc{pFSQ_VS          , {} },
@@ -67,14 +71,15 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 		},
 	};
 	this->_bloomFilterShader = pRenderer->CreateShader(bloomPipelineShaders[0]);
-	this->_blurShader = pRenderer->CreateShader(bloomPipelineShaders[1]);
-	this->_bloomCombineShader = pRenderer->CreateShader(bloomPipelineShaders[2]);
+	this->_blurShaderH = pRenderer->CreateShader(bloomPipelineShaders[1]);
+	this->_blurShaderV = pRenderer->CreateShader(bloomPipelineShaders[2]);
+	this->_bloomCombineShader = pRenderer->CreateShader(bloomPipelineShaders[3]);
 
 	D3D11_SAMPLER_DESC blurSamplerDesc = {};
 	blurSamplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
 	blurSamplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
 	blurSamplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-	blurSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	blurSamplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 	this->_blurSampler = pRenderer->CreateSamplerState(blurSamplerDesc);
 
 #if USE_COMPUTE_BLUR
@@ -231,13 +236,13 @@ void BloomPass::Render(Renderer* pRenderer, TextureID inputTextureID, const Sett
 	pRenderer->SetShader(this->_bloomFilterShader, true);
 	pRenderer->BindRenderTargets(_colorRT, _brightRT);
 	pRenderer->UnbindDepthTarget();
-	pRenderer->SetVertexBuffer(IABuffersQuad.first);
-	pRenderer->SetIndexBuffer(IABuffersQuad.second);
-	pRenderer->Apply();
+	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
+	pRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_FRONT); // Fullscreen triangle is counter clockwise -> front face cull
 	pRenderer->SetTexture("colorInput", inputTextureID);
+	pRenderer->SetSamplerState("pointSampler", EDefaultSamplerState::POINT_SAMPLER);
 	pRenderer->SetConstant1f("BrightnessThreshold", settings.brightnessThreshold);
 	pRenderer->Apply();
-	pRenderer->DrawIndexed();
+	pRenderer->Draw(3, EPrimitiveTopology::TRIANGLE_LIST);
 	pRenderer->EndEvent();
 
 	pGPU->EndEntry();
@@ -254,7 +259,6 @@ void BloomPass::Render(Renderer* pRenderer, TextureID inputTextureID, const Sett
 	{
 		pGPU->BeginEntry("Bloom Blur<PS>");
 		pRenderer->BeginEvent("Blur Pass");
-		pRenderer->SetShader(_blurShader, true);
 		for (int i = 0; i < BlurPassCount; ++i)
 		{
 			const int isHorizontal = i % 2;
@@ -262,10 +266,8 @@ void BloomPass::Render(Renderer* pRenderer, TextureID inputTextureID, const Sett
 			const int texWidth = pRenderer->GetTextureObject(pingPong)._width;
 			const int texHeight = pRenderer->GetTextureObject(pingPong)._height;
 
-			pRenderer->UnbindRenderTargets();
-			pRenderer->Apply();
+			pRenderer->SetShader( ((i%2 == 0) ? _blurShaderH : _blurShaderV));
 			pRenderer->BindRenderTarget(_blurPingPong[isHorizontal]);
-			pRenderer->SetConstant1i("isHorizontal", 1 - isHorizontal);
 			pRenderer->SetConstant1i("textureWidth", texWidth);
 			pRenderer->SetConstant1i("textureHeight", texHeight);
 			pRenderer->SetTexture("InputTexture", i == 0 ? brightTexture : pingPong);

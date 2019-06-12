@@ -29,12 +29,7 @@ struct PSOut
 };
 
 Texture2D colorInput;
-SamplerState samTriLinearSam
-{
-	Filter = MIN_MAG_MIP_LINEAR;
-	AddressU = Wrap;
-	AddressV = Wrap;
-};
+SamplerState pointSampler;
 
 cbuffer BloomParams 
 {
@@ -43,7 +38,7 @@ cbuffer BloomParams
 
 PSOut PSMain(PSIn In) : SV_TARGET
 {
-    const float4 color = colorInput.Sample(samTriLinearSam, In.texCoord);
+    const float4 color = colorInput.Sample(pointSampler, In.texCoord);
 	
 	// clamp values that is made very large by NDF in BRDF
 	// this reduces bloom flickering

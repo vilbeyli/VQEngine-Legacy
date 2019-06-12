@@ -107,9 +107,6 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer, bool bAAResolve)
 	_spotLightShader = pRenderer->CreateShader(BRDF_PointLightShaderDesc);
 	_pointLightShader = pRenderer->CreateShader(BRDF_SpotLightShaderDesc);
 #endif
-
-	// deferred geometry is accessed from elsewhere, needs to be globally defined
-	assert(EShaders::DEFERRED_GEOMETRY == _geometryShader);	// this assumption may break, make sure it doesn't...
 }
 
 void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)

@@ -210,7 +210,6 @@ enum EShaders : unsigned	// built-in shaders
 	FORWARD_BRDF,
 	SHADOWMAP_DEPTH,
 	SHADOWMAP_DEPTH_INSTANCED,
-	DEFERRED_GEOMETRY = SHADOWMAP_DEPTH +17,	// zzz... this NEEDS to change. TODO URGENT.
 
 	SHADER_COUNT
 };

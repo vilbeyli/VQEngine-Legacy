@@ -1348,8 +1348,7 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 		return (shader == EShaders::FORWARD_PHONG
 			|| shader == EShaders::UNLIT
 			|| shader == EShaders::NORMAL
-			|| shader == EShaders::FORWARD_BRDF
-			|| shader == EShaders::DEFERRED_GEOMETRY);
+			|| shader == EShaders::FORWARD_BRDF);
 	};
 	auto RenderObject = [&](const GameObject* pObj)
 	{
@@ -1367,17 +1366,6 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 			mpRenderer->SetConstant4x4f("viewProj", sceneView.viewProj);
 			mpRenderer->SetConstant4x4f("normalMatrix", tf.NormalMatrix(world));
 			break;
-		case EShaders::DEFERRED_GEOMETRY:
-		{
-			const ObjectMatrices mats =
-			{
-				world * sceneView.view,
-				tf.NormalMatrix(world) * sceneView.view,
-				wvp,
-			};
-			mpRenderer->SetConstantStruct("ObjMatrices", &mats);
-			break;
-		}
 		case EShaders::NORMAL:
 			mpRenderer->SetConstant4x4f("normalMatrix", tf.NormalMatrix(world));
 		case EShaders::UNLIT:
@@ -1452,7 +1440,6 @@ int Scene::RenderAlpha(const SceneView & sceneView) const
 		|| selectedShader == EShaders::UNLIT
 		|| selectedShader == EShaders::NORMAL
 		|| selectedShader == EShaders::FORWARD_BRDF
-		|| selectedShader == EShaders::DEFERRED_GEOMETRY
 		);
 
 	int numObj = 0;

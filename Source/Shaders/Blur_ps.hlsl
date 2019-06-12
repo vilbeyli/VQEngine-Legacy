@@ -27,10 +27,10 @@ SamplerState BlurSampler;
 
 cbuffer constants 
 {
-	int isHorizontal;
 	int textureWidth;
 	int textureHeight;
 };
+
 
 // gaussian kernel : src=https://learnopengl.com/#!Advanced-Lighting/Bloom
 float4 PSMain(PSIn In) : SV_TARGET
@@ -42,7 +42,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 	
 	int kernelOffset = 0;
 	float3 result = KERNEL_WEIGHTS[kernelOffset] * color;	// use first weight 
-	if(isHorizontal)
+#if HORIZONTAL_PASS
 	{
 		[unroll] for (kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
 		{
@@ -51,7 +51,7 @@ float4 PSMain(PSIn In) : SV_TARGET
 			result += InputTexture.Sample(BlurSampler, In.texCoord - weighedOffset).rgb * KERNEL_WEIGHTS[kernelOffset];
 		}
 	}
-	else
+#else
 	{
 		[unroll] for (kernelOffset = 1; kernelOffset < KERNEL_RANGE; ++kernelOffset)
 		{
@@ -60,6 +60,6 @@ float4 PSMain(PSIn In) : SV_TARGET
 			result += InputTexture.Sample(BlurSampler, In.texCoord - weighedOffset).rgb * KERNEL_WEIGHTS[kernelOffset];
 		}
 	}
-
+#endif
 	return float4(result, 1.0f);
 }

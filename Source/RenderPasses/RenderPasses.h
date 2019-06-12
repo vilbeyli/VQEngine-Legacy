@@ -246,7 +246,8 @@ struct BloomPass : public RenderPass
 	RenderTargetID					_brightRT;
 	RenderTargetID					_finalRT;
 	std::array<RenderTargetID, 2>	_blurPingPong;
-	ShaderID						_blurShader;
+	ShaderID						_blurShaderV;
+	ShaderID						_blurShaderH;
 	ShaderID						_bloomFilterShader;
 	ShaderID						_bloomCombineShader;
 

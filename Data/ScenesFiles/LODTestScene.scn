@@ -31,7 +31,7 @@
 camera 0.8 12000 65    8.32  33.48  -84.93     -5.52 -0.96
 ao true 0.15 8.0 2.90
 skylight false
-bloom true 2.55
+bloom true 1.55
 
 //directional sun 2.2   -20   -25   35  4096 2700 2800 0.00006
 //light begin

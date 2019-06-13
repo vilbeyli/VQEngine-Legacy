@@ -247,6 +247,11 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/1.png"));
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/2.png"));
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/3.png"));
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/4.png"));
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/5.png"));
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/6.png"));
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/7.png"));
+	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/8.png"));
 	mActiveLoadingScreen = mLoadingScreenTextures[MathUtil::RandU(0, mLoadingScreenTextures.size())];
 
 #if LOAD_ASYNC

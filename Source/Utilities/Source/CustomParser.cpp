@@ -29,7 +29,7 @@
 
 
 const std::string file_root		= "Data\\";
-const std::string scene_root	= "Data\\ScenesFiles\\";
+const std::string scene_root	= "Data\\SceneFiles\\";
 
 const std::unordered_map<std::string, bool> sBoolTypeReflection
 {

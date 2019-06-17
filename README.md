@@ -2,13 +2,6 @@
 
 ![](Data/Icons/VQEngine-icon.png) A DirectX 11 rendering framework for stuyding and practicing various rendering techniques and real-time algorithms. 
 
-Quick Look:
-
- - [Renderer.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/Renderer/Renderer.h)
- - [Scene.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/Engine/Scene.h)
- - [Engine.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/Engine/Engine.h)
- - [RenderPasses.h](https://github.com/vilbeyli/VQEngine/blob/master/Source/RenderPasses/RenderPasses.h)
- - [AmbientOcclusion.cpp](https://github.com/vilbeyli/VQEngine/blob/master/Source/RenderPasses/Source/AmbientOcclusionPass.cpp)
 
 ###### Model Loading (.obj), HDR, Bloom, Point Lights
 
@@ -40,11 +33,12 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
 
 **[v0.7.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.7.0) DirectX12 & Multi-threading - TBA 2019**
 
-- TBA
+- DirectX12 Renderer
+- Update/Render/Load Threads & Workers
 
 ## Released
 
-**[v0.6.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.6.0) - Point Light Shadows, Improved Texture Support, Mesh LODs, Anti-Aliasing, Improved Perf** - TBA 2019
+**[v0.6.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.6.0) - Point Light Shadows, Improved Texture Support, Mesh LODs, Anti-Aliasing, Improved Perf** - June16-2019
 
 - Real-time Point Light Shadows (up to 5)
 - [Mesh Level of Detail (LOD)](https://en.wikipedia.org/wiki/Level_of_detail#A_discrete_LOD_example) System
@@ -57,7 +51,7 @@ The latest changes can be found in the [dev branch](https://github.com/vilbeyli/
   - Light Test Scene (#6)
   - LOD Test Scene (#7)
   - PBR Scene (#3)
-- [Supersample Anti-Aliasing](TODO)
+- [Supersample Anti-Aliasing](https://en.wikipedia.org/wiki/Supersampling)
 
 
 **[v0.5.0](https://github.com/vilbeyli/VQEngine/releases/tag/v0.5.0) - CPU & GPU Optimizations, Compute Shaders** - October22-2018

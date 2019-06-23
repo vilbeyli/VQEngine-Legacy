@@ -43,11 +43,12 @@ static const WORD MAX_CONSOLE_LINES = 500;
 
 void InitLogFile()
 {
-	const std::string LogFileDir = Application::s_WorkspaceDirectory + "\\Logs";
+	const std::string LogFileDir = Application::GetDirectory(Application::EDirectories::LOGS);
 
 	std::string errMsg = "";
 	
-	if (CreateDirectory(Application::s_WorkspaceDirectory.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
+	const std::string& APP_DATA_DIRECTORY = Application::GetDirectory(Application::EDirectories::APP_DATA);
+	if (CreateDirectory(APP_DATA_DIRECTORY.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 	{	// AppData/VQEngine might not exist, 
 		if (CreateDirectory(LogFileDir.c_str(), NULL) || ERROR_ALREADY_EXISTS == GetLastError())
 		{
@@ -72,7 +73,7 @@ void InitLogFile()
 	}
 	else
 	{
-		errMsg = "Failed to create directory " + Application::s_WorkspaceDirectory;
+		errMsg = "Failed to create directory " + APP_DATA_DIRECTORY;
 	}
 
 	if (!errMsg.empty())

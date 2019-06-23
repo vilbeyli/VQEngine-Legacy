@@ -26,39 +26,37 @@
 
 #include <windows.h>
 #include <string>
+#include <unordered_map>
 
 namespace Settings { struct Window; }
 
 class Application
 {
 public: 
-	struct WorkspaceDirectories
+	enum EDirectories
 	{
-		std::string mAppData;
-		std::string mResources;
-		std::string mShaderCache;
-		std::string mShaderSource;
-		std::string mFonts;
+		APP_DATA = 0,
+		LOGS,
+		SHADER_BINARY_CACHE,
+		SHADER_SOURCE,
+		TEXTURES,
+		MESHES,
+		MATERIALS, // currently unused
+		MODELS,
+		SCENES,
+		FONTS,
+		ENVIRONMENT_MAPS,
 
-
-		std::string mTextures;
-		std::string mMeshes;
-		std::string mModels;
-		std::string mScenes;
-		std::string mEnvironmentMaps;
+		NUM_DIRECTORIES
 	};
-
-	// TODO: replace static strings with this struct
-	static WorkspaceDirectories s_WorkspaceDirectories;
-
-	static std::string s_WorkspaceDirectory;
-	static std::string s_ShaderCacheDirectory;
+	static std::unordered_map<EDirectories, std::string> mWorkspaceDirectoryLookup;
+	static const std::string& GetDirectory(EDirectories dirEnum);
 
 public:
 	Application(const char* psAppName);
 	~Application();
 
-	bool Init();
+	bool Init(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdShow);
 	void Run();
 	void Exit();
 
@@ -86,8 +84,6 @@ private:
 	VQEngine::ThreadPool	m_threadPool;
 };
 
-// The WndProc function and ApplicationHandle pointer are also included here so we can redirect 
-// the windows system messaging into our MessageHandler function inside the system class.
-
+// The WndProc function is also included here so we can redirect 
+// the windows system messaging into our MessageHandler function.
 static LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-static Application* gp_appHandle = 0;

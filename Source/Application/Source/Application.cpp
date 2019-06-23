@@ -39,44 +39,36 @@
 
 #define xLOG_WINDOW_EVENTS
 
-std::string Application::s_WorkspaceDirectory = "";
-std::string Application::s_ShaderCacheDirectory = "";
+ // to be assigned on App::init();
+// used to redirect message handling from WndProc to class MessageHandler().
+//
+static Application* pApplication = nullptr;
 
-// TODO:
-static Application::WorkspaceDirectories DefaultWorkspaceDirectorie = 
+static std::unordered_map<Application::EDirectories, std::string> DEFAULT_WORKSPACE_DIRECTORIES =
 {
-	//mAppData
-	  DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine"
-
-	//mResources
-	, "./Data"
-
-	//mShaderCache;
-	, DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine/ShaderCache"
-
-	//mShaderSource;
-	, "./Source/Shaders"
-
-	//mFonts
-	, "./Data/Fonts"
-
-	//mTextures;
-	, "./Data/Textures"
-
-	//mMeshes;
-	, "./Data/Meshes"
-
-	//mModels;
-	, "./"
-
-	//mScenes;
-	, "./"
-
-	//mEnvironmentMaps
-	, "./Data/Textures/EnvironmentMaps"
+	  { Application::EDirectories::APP_DATA            , DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine" }
+	, { Application::EDirectories::LOGS                , DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine/Logs" }
+	, { Application::EDirectories::SHADER_BINARY_CACHE , DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine/ShaderCache" }
+	, { Application::EDirectories::SHADER_SOURCE       , "./Source/Shaders" }
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+	, { Application::EDirectories::MESHES              , "./Data/Meshes" }
+	, { Application::EDirectories::MATERIALS           , "./Data/Materials" }
+	, { Application::EDirectories::MODELS              , "./Data/Models" }
+	, { Application::EDirectories::SCENES              , "./Data/Scenes" }
+	, { Application::EDirectories::FONTS               , "./Data/Fonts" }
+	, { Application::EDirectories::TEXTURES            , "./Data/Textures/" }
+	, { Application::EDirectories::ENVIRONMENT_MAPS    , "./Data/Textures/EnvironmentMaps"}
 };
 
-Application::WorkspaceDirectories Application::s_WorkspaceDirectories = Application::WorkspaceDirectories();
+std::unordered_map<Application::EDirectories, std::string> Application::mWorkspaceDirectoryLookup = DEFAULT_WORKSPACE_DIRECTORIES;
+
+const std::string& Application::GetDirectory(EDirectories dirEnum)
+{
+#if _DEBUG
+	assert(mWorkspaceDirectoryLookup.find(dirEnum) != mWorkspaceDirectoryLookup.end());
+#endif
+	return mWorkspaceDirectoryLookup.at(dirEnum);
+}
 
 Application::Application(const char* psAppName)
 	:
@@ -95,14 +87,20 @@ void Application::Exit()
 {
 	ENGINE->Exit();
 	ShutdownWindows();
+	pApplication = nullptr;
 }
 
-bool Application::Init()
+bool Application::Init(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iCmdShow)
 {
+	pApplication = this;
+
 	// SETTINGS
 	//
-	s_WorkspaceDirectory = DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine";
 	Settings::Engine& settings = const_cast<Settings::Engine&>(Engine::ReadSettingsFromFile());	// namespace doesn't make sense.
+
+	// DIRS
+	//
+	DirectoryUtil::CreateFolderIfItDoesntExist(Application::GetDirectory(Application::EDirectories::SHADER_BINARY_CACHE));
 
 	// LOG
 	//
@@ -171,6 +169,7 @@ void Application::Run()
 		ENGINE->SimulateAndRenderFrame();
 		const_cast<Input*>(ENGINE->INP())->PostUpdate();	// update previous state after frame;
 	}
+	Exit();
 }
 
 
@@ -374,7 +373,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
 		PostQuitMessage(0);
 		return 0;
 	default: // All other messages pass to the message handler in the system class.
-		return gp_appHandle->MessageHandler(hwnd, umessage, wparam, lparam);
+		return pApplication->MessageHandler(hwnd, umessage, wparam, lparam);
 	}
 }
 
@@ -390,9 +389,8 @@ void Application::InitWindow(Settings::Window& windowSettings)
 {
 	int width, height;
 	int posX, posY;				// window position
-	gp_appHandle = this;		// global handle		
 
-								// default settings for windows class
+	// default settings for windows class
 	WNDCLASSEX wc;
 	wc.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	wc.lpfnWndProc = WndProc;
@@ -483,9 +481,6 @@ void Application::ShutdownWindows()
 	// Remove the application instance.
 	UnregisterClass(m_appName, m_hInstance);
 	m_hInstance = NULL;
-
-	// Release the pointer to this class.
-	gp_appHandle = NULL;
 
 	return;
 }

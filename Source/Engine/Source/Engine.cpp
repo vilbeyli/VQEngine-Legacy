@@ -477,11 +477,6 @@ bool Engine::LoadScene(int level)
 
 bool Engine::LoadShaders()
 {
-	
-	// create the ShaderCache folder if it doesn't exist
-	Application::s_ShaderCacheDirectory = Application::s_WorkspaceDirectory + "\\ShaderCache";
-	DirectoryUtil::CreateFolderIfItDoesntExist(Application::s_ShaderCacheDirectory);
-
 	PerfTimer timer;
 	timer.Start();
 

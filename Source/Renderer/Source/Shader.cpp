@@ -461,7 +461,7 @@ bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 		const std::string cacheFileName = stageDesc.macros.empty()
 			? DirectoryUtil::GetFileNameFromPath(sourceFilePath) + SHADER_BINARY_EXTENSION
 			: DirectoryUtil::GetFileNameFromPath(sourceFilePath) + "_" + std::to_string(ShaderHash) + SHADER_BINARY_EXTENSION;
-		const std::string cacheFilePath = Application::s_ShaderCacheDirectory + "\\" + cacheFileName;
+		const std::string cacheFilePath = Application::GetDirectory(Application::EDirectories::SHADER_BINARY_CACHE) + "\\" + cacheFileName;
 		const bool bUseCachedShaders =
 			DirectoryUtil::FileExists(cacheFilePath)
 			&& !IsCacheDirty(sourceFilePath, cacheFilePath);

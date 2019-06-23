@@ -390,7 +390,7 @@ void EnvironmentMap::Initialize(Renderer * pRenderer)
 	spRenderer = pRenderer;
 
 	// create texture cache folders if they don't already exist
-	EnvironmentMap::sTextureCacheDirectory = Application::s_WorkspaceDirectory + "/TextureCache/";
+	EnvironmentMap::sTextureCacheDirectory = Application::GetDirectory(Application::EDirectories::APP_DATA) + "/TextureCache/";
 	DirectoryUtil::CreateFolderIfItDoesntExist(EnvironmentMap::sTextureCacheDirectory);
 	DirectoryUtil::CreateFolderIfItDoesntExist(EnvironmentMap::sTextureCacheDirectory + "/sIBL/");
 }

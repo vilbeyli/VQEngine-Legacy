@@ -37,6 +37,8 @@
 #include "Settings.h"
 #include "UI.h"
 
+#include "Application/Input.h"
+
 #include <memory>
 #include <atomic>
 #include <mutex>
@@ -58,6 +60,15 @@ class PerfTimer;
 
 class Scene;
 
+#if 0
+	class OS
+	{
+		Input mInput;
+		ThreadPool mThreadSystem; // ?
+		Window mWindow;
+	};
+}
+#endif
 
 #ifndef _WIN64
 // usage of XMMATRIX in Engine class causes alignment warning: 
@@ -92,7 +103,7 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// CORE INTERFACE
 	//----------------------------------------------------------------------------------------------------------------
-	bool			Initialize(HWND hwnd);
+	bool			Initialize(Application* pApplication);
 	void			Exit();
 	
 	bool			Load(VQEngine::ThreadPool* pThreadPool);
@@ -102,11 +113,25 @@ public:
 	inline void		Pause()  { mbIsPaused = true; }
 	inline void		Unpause(){ mbIsPaused = false; }
 	
+
+	//----------------------------------------------------------------------------------------------------------------
+	// OS EVENTS
+	//----------------------------------------------------------------------------------------------------------------
+	void			OnKeyDown(KeyCode key);
+	void			OnKeyUp(KeyCode key);
+	void			OnMouseMove(long x, long y, short scroll);
+	void			OnMouseDown(const Input::EMouseButtons& btn);
+	void			OnMouseUp(const Input::EMouseButtons& btn);
+	void			OnWindowGainFocus();
+	void			OnWindowLoseFocus();
+
+
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
 	//----------------------------------------------------------------------------------------------------------------
 	inline const Input*		INP() const { return mpInput; }
-	
+	inline bool				IsMouseCaptured() const { return mbMouseCaptured; }
+
 	int						GetFPS() const;
 	float					GetTotalTime() const;
 	inline ShaderID			GetSelectedShader() const { return mSelectedShader; }
@@ -157,6 +182,7 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	// SYSTEMS
 	//----------------------------------------------------------------------------------------------------------------
+	Application*					mpApp; // capture/release mouse, window handle etc
 	Input*							mpInput;
 	Renderer*						mpRenderer;
 	TextRenderer*					mpTextRenderer;
@@ -216,6 +242,8 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	FrameStats			mFrameStats;
 	bool				mbIsPaused;
+	bool				mbMouseCaptured;
+	bool				mbStartEngineShutdown;
 	bool				mbOutputDebugTexture;
 
 	EngineConfig		mEngineConfig;

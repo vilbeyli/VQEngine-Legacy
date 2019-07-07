@@ -163,14 +163,22 @@ Engine::Engine()
 	, mZPrePass(mpCPUProfiler, mpGPUProfiler)
 	, mForwardLightingPass(mpCPUProfiler, mpGPUProfiler)
 	, mAAResolvePass(mpCPUProfiler, mpGPUProfiler)
+	, mbMouseCaptured(false)
+	, mbIsPaused(false)
+	, mbStartEngineShutdown(false)
+	, mpApp(nullptr)
 {}
 
 
 Engine::~Engine(){}
 
 
-bool Engine::Initialize(HWND hwnd)
+bool Engine::Initialize(Application* pApplication)
 {
+	this->mpApp = pApplication;
+	this->mpApp->CaptureMouse(true);
+	this->mbMouseCaptured = true; 
+
 	Log::Info("[ENGINE]: Initializing --------------------");
 	if (!mpRenderer || !mpInput || !mpTimer)
 	{
@@ -188,7 +196,7 @@ bool Engine::Initialize(HWND hwnd)
 	const Settings::Window& windowSettings = sEngineSettings.window;
 
 	mpInput->Initialize();
-	if (!mpRenderer->Initialize(hwnd, windowSettings, sEngineSettings.rendering))
+	if (!mpRenderer->Initialize(mpApp->m_hwnd, windowSettings, sEngineSettings.rendering))
 	{
 		Log::Error("Cannot initialize Renderer.\n");
 		return false;
@@ -401,6 +409,8 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	Log::Info("[ENGINE]: Loaded (Async) ------------------");
 #endif
 
+	ENGINE->mpTimer->Reset();
+	ENGINE->mpTimer->Start();
 	return true;
 }
 
@@ -632,6 +642,13 @@ void Engine::SimulateAndRenderFrame()
 #endif
 		LoadScene(lvl);
 	}
+
+	mpInput->PostUpdate();
+
+	if (mbStartEngineShutdown)
+	{
+		mpApp->m_bAppWantsExit = true;
+	}
 }
 
 void Engine::RenderThread()	// This thread is currently only used during loading.
@@ -680,6 +697,19 @@ void Engine::RenderThread()	// This thread is currently only used during loading
 
 void Engine::HandleInput()
 {
+	if (mpInput->IsKeyUp("ESC"))
+	{
+		if (mbMouseCaptured)
+		{ 
+			mbMouseCaptured = false;
+			mpApp->CaptureMouse(mbMouseCaptured);
+		}
+		else if (!this->IsLoading())
+		{
+			mbStartEngineShutdown = true;
+		}
+	}
+
 	if (mpInput->IsKeyTriggered("Backspace"))	TogglePause();
 
 	if (mpInput->IsKeyTriggered("F1")) ToggleControlsTextRendering();
@@ -887,6 +917,84 @@ void Engine::SendLightData() const
 	if (cb.pointLightCount > cb.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
 	if (cb.spotLightCount > cb.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif
+}
+
+void Engine::OnKeyDown(KeyCode key)
+{
+#ifdef LOG_WINDOW_EVENTS
+	Log::Info("[WM_KEYDOWN]");// :\t MouseCaptured = %s", m_bMouseCaptured ? "True" : "False");
+#endif
+	if (key == VK_ESCAPE)
+	{
+		if (!IsMouseCaptured() && !IsLoading())
+		{
+			mbStartEngineShutdown = true;
+			Log::Info("[WANT EXIT ESC]");
+		}
+	}
+
+	ENGINE->mpInput->KeyDown(key);
+}
+
+void Engine::OnKeyUp(KeyCode key)
+{
+#ifdef LOG_WINDOW_EVENTS
+	Log::Info("WM_KEYUP");
+#endif
+	mpInput->KeyUp(key);
+}
+
+void Engine::OnMouseMove(long x, long y, short scroll)
+{
+	if (mbMouseCaptured)
+	{
+		mpInput->UpdateMousePos(x, y, scroll);
+	}
+}
+
+void Engine::OnMouseDown(const Input::EMouseButtons& btn)
+{
+	if (mbMouseCaptured)
+	{
+		mpInput->ButtonDown(btn);
+	}
+	else
+	{
+		mpApp->CaptureMouse(true);
+		mbMouseCaptured = true;
+	}
+}
+
+void Engine::OnMouseUp(const Input::EMouseButtons& btn)
+{
+	if (mbMouseCaptured)
+	{
+		mpInput->ButtonUp(btn);
+	}
+}
+
+void Engine::OnWindowGainFocus()
+{
+	if (!mpApp) 
+		return;
+#ifdef LOG_WINDOW_EVENTS
+	Log::Info("WM_ACTIVATE::WA_ACTIVE");
+#endif
+	mpApp->CaptureMouse(true);
+	mbMouseCaptured = true;
+
+	// paused = false
+	// timer start
+}
+
+void Engine::OnWindowLoseFocus()
+{
+#ifdef LOG_WINDOW_EVENTS
+	Log::Info("WM_ACTIVATE::WA_INACTIVE");
+#endif
+	//this->CaptureMouse(false);
+	// paused = true
+	// timer stop
 }
 
 void Engine::PreRender()

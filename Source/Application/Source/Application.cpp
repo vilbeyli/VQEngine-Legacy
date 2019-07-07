@@ -33,6 +33,8 @@
 #include <vector>
 #include <new>
 
+#include <shellapi.h> // command-line argument parsing
+
 #ifdef _DEBUG
 #include <cassert>
 #endif
@@ -73,7 +75,6 @@ const std::string& Application::GetDirectory(EDirectories dirEnum)
 Application::Application(const char* psAppName)
 	:
 	m_appName(psAppName),
-	m_bMouseCaptured(false),
 	m_bAppWantsExit(false),
 	m_threadPool(VQEngine::ThreadPool::sHardwareThreadCount - 2)
 {
@@ -94,23 +95,23 @@ bool Application::Init(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iC
 {
 	pApplication = this;
 
-	// SETTINGS
+	// COMMAND-LINE ARGUMENTS
+	//
+	int argc;
+	LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+	this->ParseCommandLineArguments(argv, argc);
+	LocalFree(argv);
+
+	// SETTINGS, LOG & DIRECTORIES
 	//
 	Settings::Engine& settings = const_cast<Settings::Engine&>(Engine::ReadSettingsFromFile());	// namespace doesn't make sense.
-
-	// DIRS
-	//
+	Log::Initialize(settings.logger);
 	DirectoryUtil::CreateFolderIfItDoesntExist(Application::GetDirectory(Application::EDirectories::SHADER_BINARY_CACHE));
 
-	// LOG
-	//
-	Log::Initialize(settings.logger);
-	
 	// WINDOW
 	//
 	InitWindow(settings.window);
 	ShowWindow(m_hwnd, SW_SHOW);
-	this->CaptureMouse(true);
 
 #ifdef ENABLE_RAW_INPUT
 	// INPUT
@@ -120,64 +121,63 @@ bool Application::Init(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iC
 
 	// ENGINE
 	//
-	if (!ENGINE->Initialize(m_hwnd))
+	if (!ENGINE->Initialize(this))
 	{
 		Log::Error("Could not initialize VQEngine. Exiting...");
 		return false;
 	}
 	
-	if (!ENGINE->Load(&m_threadPool))
-	{
-		Log::Error("Could not load VQEngine. Exiting...");
-		return false;
-	}
-
 	return true;
 }	
 
+
 void Application::Run()
 {
-	ENGINE->mpTimer->Reset();
-	ENGINE->mpTimer->Start();
-	MSG msg = { };
-	
-	while (!m_bAppWantsExit)
+	if (!ENGINE->Load(&m_threadPool))
 	{
-		// todo: keep dragging main window
-		// game engine architecture
-		// http://advances.realtimerendering.com/s2016/index.html
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);		// Translates virtual-key messages into character messages
-			DispatchMessage(&msg);		// indirectly causes Windows to invoke WndProc
-		}
-
-		if (ENGINE->INP()->IsKeyUp("ESC"))
-		{
-			if (m_bMouseCaptured)		  { this->CaptureMouse(false); }
-			else if(!ENGINE->IsLoading()) 
-			{ 
-				m_bAppWantsExit = true;    
-			}
-		}
-
-		if (msg.message == WM_QUIT && !ENGINE->IsLoading())
-		{
-			m_bAppWantsExit = true;
-		}
-		
-		ENGINE->SimulateAndRenderFrame();
-		const_cast<Input*>(ENGINE->INP())->PostUpdate();	// update previous state after frame;
+		Log::Error("Could not load VQEngine. Exiting...");
+		m_bAppWantsExit = true;
 	}
+
+	MSG msg = { };
+	while (msg.message != WM_QUIT)
+	{
+		// Process any messages in the queue.
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		if (m_bAppWantsExit)
+		{
+			PostQuitMessage(0);
+		}
+	}
+
 	Exit();
 }
 
+static std::unordered_map<UINT, Input::EMouseButtons> sWindowsMessageToMouseButtonMapping =
+{
+	  { WM_MBUTTONUP, (Input::EMouseButtons)16 }
+	, { WM_RBUTTONUP, (Input::EMouseButtons)2 }
+	, { WM_LBUTTONUP, (Input::EMouseButtons)1 }	
+};
 
 LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam, LPARAM lparam)
 {
 	const Settings::Window& setting = Engine::sEngineSettings.window;
 	switch (umsg)
 	{
+
+	//-------------------------------------------------------------------
+	// WINDOW
+	//-------------------------------------------------------------------
+	case WM_PAINT:
+		ENGINE->SimulateAndRenderFrame();
+		break;
+
 	case WM_CLOSE:		// Check if the window is being closed.
 		Log::Info("[WANT EXIT X]");
 		m_bAppWantsExit = true;
@@ -191,27 +191,12 @@ LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 		break;
 
 	case WM_ACTIVATE:	// application active/inactive
-		if (LOWORD(wparam) == WA_INACTIVE)
-		{
-#ifdef LOG_WINDOW_EVENTS
-			Log::Info("WM_ACTIVATE::WA_INACTIVE");
-#endif
-			//this->CaptureMouse(false);
-			// paused = true
-			// timer stop
-		}
-		else
-		{
-#ifdef LOG_WINDOW_EVENTS
-			Log::Info("WM_ACTIVATE::WA_ACTIVE");
-#endif
-			this->CaptureMouse(true);
-			// paused = false
-			// timer start
-		}
+		LOWORD(wparam) == WA_INACTIVE
+			? ENGINE->OnWindowLoseFocus()
+			: ENGINE->OnWindowGainFocus();
 		break;
 
-	// resize bar grab-release
+		// resize bar grab-release
 	case WM_ENTERSIZEMOVE:
 #ifdef LOG_WINDOW_EVENTS
 		Log::Info("WM_ENTERSIZEMOVE");
@@ -231,96 +216,60 @@ LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 		// onresize()
 		break;
 
-	// prevent window from becoming too small
+		// prevent window from becoming too small
 	case WM_GETMINMAXINFO:
 		((MINMAXINFO*)lparam)->ptMinTrackSize.x = 200;
 		((MINMAXINFO*)lparam)->ptMinTrackSize.y = 200;
 		break;
 
-	// keyboard
+	//-------------------------------------------------------------------
+	// KEYBOARD
+	//-------------------------------------------------------------------
 	case WM_SYSKEYDOWN:
 	case WM_KEYDOWN:
-	{
-#ifdef LOG_WINDOW_EVENTS
-		Log::Info("[WM_KEYDOWN]");// :\t MouseCaptured = %s", m_bMouseCaptured ? "True" : "False");
-#endif
-		if ( wparam == VK_ESCAPE)
-		{
-			if (!m_bMouseCaptured && !ENGINE->IsLoading())
-			{
-				m_bAppWantsExit = true;
-				Log::Info("[WANT EXIT ESC]");
-			}
-		}
-
-		ENGINE->mpInput->KeyDown((KeyCode)wparam);
+		ENGINE->OnKeyDown((KeyCode)wparam);
 		break;
-	}
 
 	case WM_KEYUP:
-	{
-#ifdef LOG_WINDOW_EVENTS
-		Log::Info("WM_UP");
-#endif
-		ENGINE->mpInput->KeyUp((KeyCode)wparam);
+		ENGINE->OnKeyUp((KeyCode)wparam);
 		break;
-	}
-
-	// mouse buttons
+	
+	//-------------------------------------------------------------------
+	// MOUSE
+	//-------------------------------------------------------------------
 	case WM_MBUTTONDOWN:
 	case WM_LBUTTONDOWN:
 	case WM_RBUTTONDOWN:
-	{
-		if (m_bMouseCaptured)	ENGINE->mpInput->ButtonDown((Input::EMouseButtons)wparam);
-		else					this->CaptureMouse(true);
+		ENGINE->OnMouseDown((Input::EMouseButtons)wparam);
 		break;
-	}
-
-	// todo: wparam is 0 for all cases? 
+	
+	// wparam seems to be 0 for all *MBUTTONUP events -> hardcoding the mapping in Input.h.
 	case WM_MBUTTONUP:
-	{
-		if (m_bMouseCaptured)
-			ENGINE->mpInput->ButtonUp((Input::EMouseButtons)16);
-		break;
-	}
 	case WM_RBUTTONUP:
-	{
-		if (m_bMouseCaptured)
-			ENGINE->mpInput->ButtonUp((Input::EMouseButtons)2);
-		break;
-	}
 	case WM_LBUTTONUP:
-	{
-		if (m_bMouseCaptured)
-			ENGINE->mpInput->ButtonUp((Input::EMouseButtons)1);
+		ENGINE->OnMouseUp(sWindowsMessageToMouseButtonMapping.at(umsg));
 		break;
-	}
-
+	
 #ifdef ENABLE_RAW_INPUT
 	// raw input for mouse - see: https://msdn.microsoft.com/en-us/library/windows/desktop/ee418864.aspx
-	case WM_INPUT:	
+	case WM_INPUT:
 	{
-		UINT rawInputSize = 48;
-		LPBYTE inputBuffer[48];
-		ZeroMemory(inputBuffer, rawInputSize);
-
+		// read raw input data ---------------------------------
+		constexpr UINT RAW_INPUT_SIZE = 48;
+		LPBYTE inputBuffer[RAW_INPUT_SIZE]; UINT rawInputSz = 0;
+		ZeroMemory(inputBuffer, RAW_INPUT_SIZE);
 		GetRawInputData(
-			(HRAWINPUT)lparam, 
+			(HRAWINPUT)lparam,
 			RID_INPUT,
-			inputBuffer, 
-			&rawInputSize, 
+			inputBuffer,
+			&rawInputSz,
 			sizeof(RAWINPUTHEADER));
-
 		RAWINPUT* raw = (RAWINPUT*)inputBuffer;
+		// read raw input data ---------------------------------
 
 		if (raw->header.dwType == RIM_TYPEMOUSE && raw->data.mouse.usFlags == MOUSE_MOVE_RELATIVE)
 		{
-			if (m_bMouseCaptured)
-			{
-				ENGINE->mpInput->UpdateMousePos(raw->data.mouse.lLastX, raw->data.mouse.lLastY, raw->data.mouse.usButtonData);
-				//SetCursorPos(setting.width / 2, setting.height / 2);
-			}
-			
+			ENGINE->OnMouseMove(raw->data.mouse.lLastX, raw->data.mouse.lLastY, raw->data.mouse.usButtonData);
 #ifdef LOG
 			char szTempOutput[1024];
 			StringCchPrintf(szTempOutput, STRSAFE_MAX_CCH, TEXT("%u  Mouse: usFlags=%04x ulButtons=%04x usButtonFlags=%04x usButtonData=%04x ulRawButtons=%04x lLastX=%04x lLastY=%04x ulExtraInformation=%04x\r\n"),
@@ -339,14 +288,12 @@ LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 		break;
 	}
 
-#else
+#else // ENABLE_RAW_INPUT
 	// client area mouse - not good for first person camera
 	case WM_MOUSEMOVE:
-	{
-		ENGINE->mpInput->UpdateMousePos(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam), scroll);
+		ENGINE->OnMouseMove(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam), scroll);
 		break;
-	}
-#endif
+#endif // ENABLE_RAW_INPUT
 
 	default:
 	{
@@ -356,11 +303,6 @@ LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 
 	return 0;
 }
-
-//-----------------------------------------------------------------------------
-// The WndProc function is where windows sends its messages to. You'll notice 
-// we tell windows the name of it when we initialize the window class with 
-// wc.lpfnWndProc = WndProc in the InitializeWindows function above.
 LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
 {
 	switch (umessage)
@@ -368,7 +310,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT umessage, WPARAM wparam, LPARAM lparam)
 	case WM_DESTROY:	// Check if the window is being destroyed.
 		PostQuitMessage(0);
 		return 0;
-		
+
 	case WM_QUIT:		// Check if the window is being closed.
 		PostQuitMessage(0);
 		return 0;
@@ -383,6 +325,22 @@ void Application::UpdateWindowDimensions(int w, int h)
 {
 	m_windowHeight = h;
 	m_windowWidth = w;
+}
+
+void Application::ParseCommandLineArguments(LPWSTR* argv, int argc)
+{
+	if (argc == 1) // no arguments, only exe path.
+	{
+		return;
+	}
+
+	// parse each argument
+	for (int i = 1; i < argc; ++i)
+	{
+		LPWSTR arg = argv[i];
+
+		// TODO: parse 
+	}
 }
 
 void Application::InitWindow(Settings::Window& windowSettings)
@@ -571,7 +529,6 @@ void Application::CaptureMouse(bool bDoCapture)
 	Log::Info("Capture Mouse: %d", bDoCapture ? 1 : 0);
 #endif
 
-	m_bMouseCaptured = bDoCapture;
 	if (bDoCapture)
 	{
 		RECT rcClip;	GetWindowRect(m_hwnd, &rcClip);

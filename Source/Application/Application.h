@@ -61,7 +61,9 @@ public:
 	void Exit();
 
 	LRESULT CALLBACK MessageHandler(HWND, UINT, WPARAM, LPARAM);
+
 	void UpdateWindowDimensions(int w, int h);
+	void ParseCommandLineArguments(LPWSTR* argv, int argc);
 
 private:
 	void InitRawInputDevices();
@@ -71,13 +73,13 @@ private:
 	void CaptureMouse(bool bDoCapture);
 
 private:
+	friend class Engine; // quick hack :( this has to be refactored.
 	LPCSTR		m_appName;
 	HINSTANCE	m_hInstance;
 	HWND		m_hwnd;
 	int			m_windowWidth, m_windowHeight;
 
 	// state
-	bool		m_bMouseCaptured;
 	bool		m_bAppWantsExit;
 	POINT		m_capturePosition;
 

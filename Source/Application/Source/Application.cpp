@@ -184,39 +184,28 @@ LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 		PostQuitMessage(0);
 		break;
 
-	case WM_SIZE:
-#ifdef LOG_WINDOW_EVENTS
-		Log::Info("[WM_SIZE]");
-#endif
-		break;
-
 	case WM_ACTIVATE:	// application active/inactive
 		LOWORD(wparam) == WA_INACTIVE
 			? ENGINE->OnWindowLoseFocus()
 			: ENGINE->OnWindowGainFocus();
 		break;
 
-		// resize bar grab-release
+	case WM_MOVE:
+		ENGINE->OnWindowMove();
+		break;
+
+	// window resizing
 	case WM_ENTERSIZEMOVE:
-#ifdef LOG_WINDOW_EVENTS
 		Log::Info("WM_ENTERSIZEMOVE");
-#endif
-		// paused = true
-		// resizing = true
-		// timer.stop()
 		break;
-
 	case WM_EXITSIZEMOVE:
-#ifdef LOG_WINDOW_EVENTS
 		Log::Info("WM_EXITSIZEMOVE");
-#endif
-		// paused = false
-		// resizing= false
-		// timer.start()
-		// onresize()
+		break;
+	case WM_SIZE:
+		ENGINE->OnWindowResize();
 		break;
 
-		// prevent window from becoming too small
+	// prevent window from becoming too small
 	case WM_GETMINMAXINFO:
 		((MINMAXINFO*)lparam)->ptMinTrackSize.x = 200;
 		((MINMAXINFO*)lparam)->ptMinTrackSize.y = 200;
@@ -256,7 +245,7 @@ LRESULT CALLBACK Application::MessageHandler(HWND hwnd, UINT umsg, WPARAM wparam
 	{
 		// read raw input data ---------------------------------
 		constexpr UINT RAW_INPUT_SIZE = 48;
-		LPBYTE inputBuffer[RAW_INPUT_SIZE]; UINT rawInputSz = 0;
+		LPBYTE inputBuffer[RAW_INPUT_SIZE]; UINT rawInputSz = 48;
 		ZeroMemory(inputBuffer, RAW_INPUT_SIZE);
 		GetRawInputData(
 			(HRAWINPUT)lparam,

@@ -117,13 +117,15 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// OS EVENTS
 	//----------------------------------------------------------------------------------------------------------------
-	void			OnKeyDown(KeyCode key);
-	void			OnKeyUp(KeyCode key);
-	void			OnMouseMove(long x, long y, short scroll);
-	void			OnMouseDown(const Input::EMouseButtons& btn);
-	void			OnMouseUp(const Input::EMouseButtons& btn);
-	void			OnWindowGainFocus();
-	void			OnWindowLoseFocus();
+	void OnKeyDown(KeyCode key);
+	void OnKeyUp(KeyCode key);
+	void OnMouseMove(long x, long y, short scroll);
+	void OnMouseDown(const Input::EMouseButtons& btn);
+	void OnMouseUp(const Input::EMouseButtons& btn);
+	void OnWindowGainFocus();
+	void OnWindowLoseFocus();
+	void OnWindowMove();
+	void OnWindowResize();
 
 
 	//----------------------------------------------------------------------------------------------------------------

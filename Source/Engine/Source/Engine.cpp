@@ -997,6 +997,16 @@ void Engine::OnWindowLoseFocus()
 	// timer stop
 }
 
+void Engine::OnWindowMove()
+{
+	Log::Info("MOVE");
+}
+
+void Engine::OnWindowResize()
+{
+	Log::Info("[WM_SIZE]");
+}
+
 void Engine::PreRender()
 {
 #if LOAD_ASYNC

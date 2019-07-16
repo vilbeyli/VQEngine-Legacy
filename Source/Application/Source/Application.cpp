@@ -59,7 +59,7 @@ static std::unordered_map<Application::EDirectories, std::string> DEFAULT_WORKSP
 	, { Application::EDirectories::SCENES              , "./Data/Scenes" }
 	, { Application::EDirectories::FONTS               , "./Data/Fonts" }
 	, { Application::EDirectories::TEXTURES            , "./Data/Textures/" }
-	, { Application::EDirectories::ENVIRONMENT_MAPS    , "./Data/Textures/EnvironmentMaps"}
+	, { Application::EDirectories::ENVIRONMENT_MAPS    , "./Data/Textures/EnvironmentMaps/"}
 };
 
 std::unordered_map<Application::EDirectories, std::string> Application::mWorkspaceDirectoryLookup = DEFAULT_WORKSPACE_DIRECTORIES;

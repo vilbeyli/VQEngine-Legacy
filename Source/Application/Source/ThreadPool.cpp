@@ -33,7 +33,7 @@ ThreadPool::ThreadPool(size_t numThreads)
 	}
 
 	// Thread Pool Unit Test ------------------------------------------------
-	if (false)
+#if 0
 	{
 		constexpr long long sz = 40000000;
 		auto sumRnd = [&]()
@@ -103,6 +103,7 @@ ThreadPool::ThreadPool(size_t numThreads)
 		}
 		Log::Info(strResult);
 	}
+#endif
 	// Thread Pool Unit Test ------------------------------------------------
 }
 ThreadPool::~ThreadPool()

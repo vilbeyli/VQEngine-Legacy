@@ -54,6 +54,7 @@
 #include "Utilities/Profiler.h"
 
 #include "Renderer/Renderer.h"
+#include "Renderer/Shader.h"
 #include "Renderer/TextRenderer.h"
 #include "Renderer/GeometryGenerator.h"
 
@@ -202,6 +203,10 @@ bool Engine::Initialize(Application* pApplication)
 		return false;
 	}
 
+#if USE_DX12
+	/// TODO
+
+#else
 	Scene::InitializeBuiltinMeshes();
 	LoadShaders();
 	
@@ -213,7 +218,7 @@ bool Engine::Initialize(Application* pApplication)
 
 	mUI.Initialize(mpRenderer, mpTextRenderer, UI::ProfilerStack{mpCPUProfiler, mpGPUProfiler});
 	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
-
+#endif
 	// INITIALIZE RENDER PASSES & SCENES
 	//--------------------------------------------------------------
 	mEngineConfig.bDeferredOrForward = sEngineSettings.rendering.bUseDeferredRendering;
@@ -345,7 +350,11 @@ bool Engine::Load(ThreadPool* pThreadPool)
 			}
 			{
 				std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
+#if USE_DX12
+				// TODO-DX12: mAAResolvePass.Initialize(mpRenderer, mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._shadeTarget));
+#else
 				mAAResolvePass.Initialize(mpRenderer, mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._shadeTarget));
+#endif
 			}
 		}
 		//mpTimer->Stop();
@@ -460,11 +469,13 @@ bool Engine::LoadScene(int level)
 	{
 		{
 			std::unique_lock<std::mutex> lck(mLoadRenderingMutex);
-
+#if USE_DX12
+			// TODO-DX12: Draw Render Screen;
+#else
 			mpRenderer->UnbindDepthTarget();
 			mpRenderer->UnbindRenderTargets();
 			mpRenderer->Apply();
-
+#endif
 			mpActiveScene->UnloadScene();
 		}
 		Engine::sEngineSettings.levelToLoad = level;
@@ -611,7 +622,11 @@ void Engine::SimulateAndRenderFrame()
 		// PRESENT THE FRAME
 		//
 		mpCPUProfiler->BeginEntry("Present");
+#if USE_DX12
+		// TODO-DX12: PRESENT QUEUE
+#else
 		mpRenderer->EndFrame();
+#endif
 		mpCPUProfiler->EndEntry();
 
 
@@ -669,7 +684,12 @@ void Engine::RenderThread()	// This thread is currently only used during loading
 		mpGPUProfiler->BeginProfile(mFrameCount);
 		mpGPUProfiler->BeginEntry("GPU");
 
+#if USE_DX12
+		// TODO-DX12: GET SWAPCHAIN IMAGE
+#else
 		mpRenderer->BeginFrame();
+#endif
+
 		RenderLoadingScreen(bOneTimeLoadingScreenRender);
 		RenderUI();	
 		
@@ -678,7 +698,11 @@ void Engine::RenderThread()	// This thread is currently only used during loading
 
 
 		mpCPUProfiler->BeginEntry("Present");
+#if USE_DX12
+		// TODO-DX12: PRESENT QUEUE
+#else
 		mpRenderer->EndFrame();
+#endif
 		mpCPUProfiler->EndEntry(); // Present
 
 
@@ -852,7 +876,8 @@ void Engine::CalcFrameStats(float dt)
 	std::for_each(dtSamples.begin(), dtSamples.end(), [&dtSampleSum](float dt) { dtSampleSum += dt; });
 	const float frameTime = dtSampleSum / SampleCount;
 
-
+#if 0
+	// TODO: this has to be moved from here, Renderer::GetWindow() is deprecated
 	if (frameCount % RefreshRate == 0)
 	{
 		mCurrentFrameTime = frameTime;
@@ -866,7 +891,7 @@ void Engine::CalcFrameStats(float dt)
 		stats << GetFPS();
 		SetWindowText(mpRenderer->GetWindow(), stats.str().c_str());
 	}
-
+#endif
 	++frameCount;
 }
 
@@ -894,8 +919,12 @@ bool Engine::ReloadScene()
 
 void Engine::SendLightData() const
 {
+#if USE_DX12
+	//TODO: remove this function
+	assert(false);
+	return; 
+#else
 	const float shadowDimension = static_cast<float>(mShadowMapPass.mShadowMapDimension_Spot);
-
 	// LIGHTS ( POINT | SPOT | DIRECTIONAL )
 	//
 	const vec2 directionalShadowMapDimensions = mShadowMapPass.GetDirectionalShadowMapDimensions(mpRenderer);
@@ -917,8 +946,13 @@ void Engine::SendLightData() const
 	if (cb.pointLightCount > cb.pointLights.size())	OutputDebugString("Warning: light count larger than MAX_LIGHTS\n");
 	if (cb.spotLightCount > cb.spotLights.size())	OutputDebugString("Warning: spot count larger than MAX_SPOTS\n");
 #endif
+#endif
 }
 
+
+//------------------------------------------------------
+// OS EVENTS
+//------------------------------------------------------
 void Engine::OnKeyDown(KeyCode key)
 {
 #ifdef LOG_WINDOW_EVENTS
@@ -1007,6 +1041,11 @@ void Engine::OnWindowResize()
 	Log::Info("[WM_SIZE]");
 }
 
+
+
+//------------------------------------------------------
+// RENDER
+//------------------------------------------------------
 void Engine::PreRender()
 {
 #if LOAD_ASYNC
@@ -1042,8 +1081,19 @@ void Engine::Render()
 	mpCPUProfiler->BeginEntry("Render()");
 
 	mpGPUProfiler->BeginProfile(mFrameCount);
-	mpGPUProfiler->BeginEntry("GPU");
+	mpGPUProfiler->BeginEntry("GPU"); // where does this close?
 
+#if USE_DX12
+	// ===================================================================================
+	// DIRECTX 12 RENDERER                                                               =
+	// ===================================================================================
+
+
+
+#else
+	// ===================================================================================
+	// DIRECTX 11 RENDERER                                                               =
+	// ===================================================================================
 	mpRenderer->BeginFrame();
 
 	const XMMATRIX& viewProj = mpActiveScene->mSceneView.viewProj;
@@ -1278,12 +1328,16 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	RenderUI();
 	//------------------------------------------------------------------------
-	
+#endif
 	mpCPUProfiler->EndEntry();	// Render() call
 }
 
 void Engine::RenderDebug(const XMMATRIX& viewProj)
 {
+#if USE_DX12
+	// TODO-DX12:
+#else
+
 	mpGPUProfiler->BeginEntry("Debug Pass");
 	mpCPUProfiler->BeginEntry("Debug Pass");
 	if (mEngineConfig.bBoundingBoxes)	// BOUNDING BOXES
@@ -1419,11 +1473,16 @@ void Engine::RenderDebug(const XMMATRIX& viewProj)
 #endif
 	mpCPUProfiler->EndEntry();	// Debug
 	mpGPUProfiler->EndEntry();
+
+#endif // USE_DX12
 }
 
 
 void Engine::RenderUI() const
 {
+#if USE_DX12
+	// TODO-DX12:
+#else
 	mpRenderer->BeginEvent("UI");
 	mpGPUProfiler->BeginEntry("UI");
 	mpCPUProfiler->BeginEntry("UI");
@@ -1447,11 +1506,15 @@ void Engine::RenderUI() const
 	mpCPUProfiler->EndEntry();	// UI
 	mpGPUProfiler->EndEntry();
 	mpRenderer->EndEvent(); // UI
+#endif
 }
 
 
 void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 {
+#if USE_DX12
+	// TODO-DX12:
+#else
 	const XMMATRIX matTransformation = XMMatrixIdentity();
 	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
@@ -1488,4 +1551,5 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 	{
 		mpGPUProfiler->EndEntry();
 	}
+#endif
 }

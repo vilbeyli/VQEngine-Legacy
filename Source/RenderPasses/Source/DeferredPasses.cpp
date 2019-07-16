@@ -34,6 +34,9 @@ constexpr int DRAW_INSTANCED_COUNT_GBUFFER_PASS = 64;
 
 void DeferredRenderingPasses::Initialize(Renderer * pRenderer, bool bAAResolve)
 {
+#if USE_DX12
+
+#else
 	//const ShaderMacro testMacro = { "TEST_DEFINE", "1" };
 
 	// TODO: reduce the code redundancy
@@ -107,10 +110,14 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer, bool bAAResolve)
 	_spotLightShader = pRenderer->CreateShader(BRDF_PointLightShaderDesc);
 	_pointLightShader = pRenderer->CreateShader(BRDF_SpotLightShaderDesc);
 #endif
+#endif
 }
 
 void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 {
+#if USE_DX12
+
+#else
 	// initialize RT descriptors for each image type
 	EImageFormat imageFormats[3] = { RGBA32F, RGBA16F, R11G11B10F };
 	RenderTargetDesc rtDesc[3] = { {}, {}, {} };
@@ -164,11 +171,14 @@ void DeferredRenderingPasses::InitializeGBuffer(Renderer* pRenderer)
 		desc.DepthFunc = D3D11_COMPARISON_EQUAL;
 		_geometryStencilStatePreZ = pRenderer->AddDepthStencilState(desc);
 	}
-
+#endif
 }
 
 void DeferredRenderingPasses::ClearGBuffer(Renderer* pRenderer)
 {
+#if USE_DX12
+
+#else
 	const bool bDoClearColor = true;
 	const bool bDoClearDepth = false;
 	const bool bDoClearStencil = false;
@@ -178,12 +188,16 @@ void DeferredRenderingPasses::ClearGBuffer(Renderer* pRenderer)
 	);
 	pRenderer->BindRenderTargets(_GBuffer.mRTDiffuseRoughness, _GBuffer.mRTSpecularMetallic, _GBuffer.mRTNormals);
 	pRenderer->BeginRender(clearCmd);
+#endif
 }
 
 
 //struct InstancedGbufferObjectMatrices { ObjectMatrices objMatrices[DRAW_INSTANCED_COUNT_GBUFFER_PASS]; };
 void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pScene, const SceneView& sceneView) const
 {
+#if USE_DX12
+
+#else
 	//--------------------------------------------------------------------------------------------------------------------
 	struct InstancedGbufferObjectMaterials { SurfaceMaterial objMaterials[DRAW_INSTANCED_COUNT_GBUFFER_PASS]; };
 	auto RenderObject = [&](const GameObject* pObj)
@@ -586,10 +600,14 @@ void DeferredRenderingPasses::RenderGBuffer(Renderer* pRenderer, const Scene* pS
 		}
 #endif
 	}
+#endif 
 }
 
 void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 {
+#if USE_DX12
+
+#else
 	ClearCommand cmd = ClearCommand::Color({ 0, 0, 0, 0 });
 
 	const bool bAmbientOcclusionOn = args.tSSAO == -1;
@@ -793,6 +811,7 @@ void DeferredRenderingPasses::RenderLightingPass(const RenderParams& args) const
 	mpCPUProfiler->EndEntry();
 	mpGPUProfiler->EndEntry();
 #endif
+#endif //USE_DX12
 }
 
 

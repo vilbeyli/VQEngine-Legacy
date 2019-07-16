@@ -17,6 +17,146 @@
 //	Contact: volkanilbeyli@gmail.com
 #pragma once
 
+#include "RenderingStructs.h"
+
+#if USE_DX12
+#include "Texture.h"
+#include "Shader.h"
+
+#include "Engine/DataStructures.h" // RendererStats
+#include "Engine/Settings.h"
+
+#include <wtypes.h>
+#include <mutex>
+
+class Shader;
+
+class Renderer
+{
+public:
+	Renderer();
+	~Renderer();
+
+	//----------------------------------------------------------------------------------------------------------------
+	// CORE INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
+	bool	Initialize(HWND hwnd, const Settings::Window& settings, const Settings::Rendering& rendererSettings);
+	void	Exit();
+	void	ReloadShaders();
+
+
+	void	BeginEvent(const std::string& marker);
+	void	EndEvent();
+
+	//----------------------------------------------------------------------------------------------------------------
+	// GETTERS
+	//----------------------------------------------------------------------------------------------------------------
+	float					AspectRatio()	const;
+	unsigned				WindowHeight()	const;
+	unsigned				WindowWidth()	const;
+	unsigned				FrameRenderTargetHeight() const;
+	unsigned				FrameRenderTargetWidth() const;
+	vec2					FrameRenderTargetDimensionsAsFloat2() const;
+	vec2					GetWindowDimensionsAsFloat2() const;
+
+#if 0
+	inline RenderTargetID	GetBackBufferRenderTarget() const { return mBackBufferRenderTarget; }
+	inline TextureID		GetDefaultRenderTargetTexture() const { return mRenderTargets[mBackBufferRenderTarget].texture._id; }
+	inline TextureID		GetRenderTargetTexture(RenderTargetID RT) const { return mRenderTargets[RT].texture._id; }
+	inline TextureID		GetDepthTargetTexture(DepthTargetID DT) const { return mDepthTargets[DT].texture._id; }
+#endif
+	inline const Buffer&	GetVertexBuffer(BufferID id) { return mVertexBuffers[id]; }
+	inline const RendererStats&	GetRenderStats() const { return mRenderStats; }
+	const BufferDesc		GetBufferDesc(EBufferType bufferType, BufferID bufferID) const;
+	const Shader*			GetShader(ShaderID shader_id) const;
+	const Texture&			GetTextureObject(TextureID) const;
+	const TextureID			GetTexture(const std::string name) const;
+	ShaderDesc				GetShaderDesc(ShaderID shaderID) const;
+	EImageFormat			GetTextureImageFormat(TextureID) const;
+
+	//----------------------------------------------------------------------------------------------------------------
+	// RESOURCE INITIALIZATION
+	//----------------------------------------------------------------------------------------------------------------
+	// --- SHADER
+	ShaderID				CreateShader(const ShaderDesc& shaderDesc);
+	ShaderID				ReloadShader(const ShaderDesc& shaderDesc, const ShaderID shaderID);
+
+	// --- TEXTURE
+	TextureID				CreateTextureFromFile(const std::string& texFileName, const std::string& rootDir = "", bool bGenerateMips = false);
+	TextureID				CreateTexture2D(const TextureDesc& texDesc);
+	
+	///TextureID				CreateTexture2D(D3D11_TEXTURE2D_DESC&	textureDesc, bool initializeSRV);	// used by AddRenderTarget() | todo: remove this?
+	///TextureID				CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot = sHDRTextureRoot);
+	///TextureID				CreateCubemapFromFaceTextures(const std::vector<std::string>& textureFiles, bool bGenerateMips, unsigned mipLevels = 1);
+
+	// --- SAMPLER
+	//
+	///SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc);	// TODO: samplerDesc
+	
+	// --- BUFFER
+	BufferID				CreateBuffer(const BufferDesc& bufferDesc, const void* pData = nullptr, const char* pBufferName = nullptr);
+
+#if 0
+	// --- PIPELINE STATES
+	
+
+	// --- RENDER / DEPTH TARGETS
+	RenderTargetID				CreateRenderTarget(const RenderTargetDesc& renderTargetDesc); // TODO: replace others
+	RenderTargetID				AddRenderTarget(const RenderTargetDesc& renderTargetDesc) { return CreateRenderTarget(renderTargetDesc); };
+	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
+#endif
+
+
+public:
+	bool SaveTextureToDisk(TextureID texID, const std::string& filePath, bool bConverToSRGB) const; // ?
+
+	//----------------------------------------------------------------------------------------------------------------
+	// DATA
+	//----------------------------------------------------------------------------------------------------------------
+	Settings::Rendering::AntiAliasing mAntiAliasing;
+
+
+private:
+	// PIPELINE STATE
+	//
+	// TODO
+
+	RenderTargetID					mBackBufferRenderTarget;	// todo: remove or rename
+	TextureID						mDefaultDepthBufferTexture;	// todo: remove or rename
+
+	// RENDERING RESOURCES
+	//
+	std::vector<Shader*>			mShaders;
+	//std::vector<Texture>			mTextures;
+	//std::vector<Sampler>			mSamplers;
+	std::vector<Buffer>				mVertexBuffers;
+	std::vector<Buffer>				mIndexBuffers;
+	std::vector<Buffer>				mUABuffers;
+	//
+	//std::vector<RenderTarget>		mRenderTargets;
+	//std::vector<DepthTarget>		mDepthTargets;
+
+
+	// PERFORMANCE COUNTERS
+	//
+	RendererStats					mRenderStats;
+
+	// WINDOW SETTINGS
+	//
+	Settings::Window				mWindowSettings;
+
+	//std::vector<Point>			m_debugLines;
+
+	// MULTI-THREADING
+	//
+	std::mutex						mTexturesMutex;
+	//Worker						m_ShaderHotswapPollWatcher;
+
+};
+
+
+#else // USE_DX12
+
 #include "RenderCommands.h"
 #include "Texture.h"
 #include "Shader.h"
@@ -289,3 +429,5 @@ void Renderer::SetTextureArray(const char* texName, Args const&... TextureIDs)
 
 	SetTextureArray(texName, texIDs, numTextures);
 }
+
+#endif // USE_DX12

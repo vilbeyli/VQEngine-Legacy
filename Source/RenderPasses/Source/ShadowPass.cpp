@@ -60,8 +60,13 @@ vec2 ShadowMapPass::GetDirectionalShadowMapDimensions(Renderer* pRenderer) const
 	if (this->mDepthTarget_Directional == -1)
 		return vec2(0, 0);
 
+#if USE_DX12
+	// TODO-DX12:
+	return vec2(0, 0);
+#else
 	const float dim = static_cast<float>(pRenderer->GetTextureObject(pRenderer->GetDepthTargetTexture(this->mDepthTarget_Directional))._width);
 	return vec2(dim);
+#endif
 }
 
 
@@ -101,6 +106,9 @@ void ShadowMapPass::InitializeSpotLightShadowMaps(const Settings::ShadowMap& sha
 	//pRenderer->m_Direct3D->ReportLiveObjects("--------SHADOW_PASS_INIT");
 #endif
 
+#if USE_DX12
+
+#else
 	// check feature support & error handle:
 	// https://msdn.microsoft.com/en-us/library/windows/apps/dn263150
 	const bool bDepthOnly = true;
@@ -124,7 +132,7 @@ void ShadowMapPass::InitializeSpotLightShadowMaps(const Settings::ShadowMap& sha
 	this->mShadowMapTextures_Spot = this->mDepthTargets_Spot.size() > 0
 		? mpRenderer->GetDepthTargetTexture(this->mDepthTargets_Spot[0])
 		: -1;
-
+#endif
 
 }
 void ShadowMapPass::InitializePointLightShadowMaps(const Settings::ShadowMap& shadowMapSettings)
@@ -142,6 +150,9 @@ void ShadowMapPass::InitializePointLightShadowMaps(const Settings::ShadowMap& sh
 	const EImageFormat format = bDepthOnly ? R32 : R24G8;
 
 
+#if USE_DX12
+
+#else
 	// CREATE DEPTH TARGETS: POINT LIGHTS
 	//
 	DepthTargetDesc depthDesc;
@@ -162,7 +173,7 @@ void ShadowMapPass::InitializePointLightShadowMaps(const Settings::ShadowMap& sh
 	this->mShadowMapTextures_Point = this->mDepthTargets_Point.size() > 0
 		? mpRenderer->GetDepthTargetTexture(this->mDepthTargets_Point[0])
 		: -1;
-
+#endif
 }
 void ShadowMapPass::InitializeDirectionalLightShadowMap(const Settings::ShadowMap & shadowMapSettings)
 {
@@ -170,6 +181,9 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(const Settings::ShadowMa
 	const int textureDimension = static_cast<int>(shadowMapSettings.directionalShadowMapDimensions);
 	const EImageFormat format = R32;
 
+#if USE_DX12
+
+#else
 	DepthTargetDesc depthDesc;
 	depthDesc.format = D32F;
 	TextureDesc& texDesc = depthDesc.textureDesc;
@@ -192,6 +206,7 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(const Settings::ShadowMa
 			mpRenderer->RecycleDepthTarget(this->mDepthTarget_Directional, depthDesc);
 		}
 	}
+#endif
 }
 
 
@@ -199,6 +214,9 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(const Settings::ShadowMa
 
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const
 {
+#if USE_DX12
+
+#else
 	//-----------------------------------------------------------------------------------------------
 	auto RenderDepth = [&](const GameObject* pObj, const XMMATRIX& viewProj, bool bIsCubemap = false)
 	{
@@ -524,6 +542,6 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		pRenderer->EndEvent();
 	}
 	pGPUProfiler->EndEntry();	// Points
-
+#endif
 }
 

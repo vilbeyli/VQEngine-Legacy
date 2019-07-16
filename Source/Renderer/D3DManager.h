@@ -18,7 +18,11 @@
 
 #pragma once
 
-#include <d3d11_1.h>
+#define USE_DX12 1
+#if USE_DX12
+
+#else
+#include <d3d11_1.h> 
 #include <string>
 
 // auto convert for enum classes: https://stackoverflow.com/questions/8357240/how-to-automatically-convert-strongly-typed-enum-into-int/8357462#8357462
@@ -81,3 +85,4 @@ private:
 #endif
 };
 
+#endif

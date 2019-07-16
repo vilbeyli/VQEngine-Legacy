@@ -19,6 +19,19 @@
 //#include "BufferObject.h"
 #include "Renderer.h"
 
+#if USE_DX12
+
+#include "RenderingStructs.h"
+
+Buffer::Buffer(const BufferDesc& desc)
+	: mDesc(desc)
+	, mDirty(true)
+	, mpCPUData(nullptr)
+	///, mpGPUData(nullptr)
+{}
+
+#else
+
 #include "Utilities/Log.h"
 
 Buffer::Buffer(const BufferDesc& desc)
@@ -109,3 +122,5 @@ void Buffer::Update(Renderer* pRenderer, const void* pData)
 	memcpy(mappedResource.pData, pData, Size);
 	ctx->Unmap(mpGPUData, Subresource);
 }
+
+#endif

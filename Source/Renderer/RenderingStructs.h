@@ -20,6 +20,49 @@
 
 #include "RenderingEnums.h"
 
+
+
+struct BufferDesc
+{
+	EBufferType  mType = EBufferType::BUFFER_TYPE_UNKNOWN;
+	EBufferUsage mUsage = EBufferUsage::GPU_READ_WRITE;
+	unsigned     mElementCount = 0;
+	unsigned     mStride = 0;
+	unsigned     mStructureByteStride = 0;
+};
+
+
+
+#if USE_DX12
+
+struct ID3D11Device; // TODO: d3d12
+class Renderer;
+
+#include <memory>
+
+struct Buffer
+{
+	bool			mDirty = true;
+	void*			mpCPUData = nullptr;
+	///ID3D11Buffer*	mpGPUData = nullptr;
+
+	bool			bInitialized = false;
+	std::allocator<char> mAllocator;
+	BufferDesc		mDesc;
+
+	void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
+	void CleanUp();
+	void Update(Renderer* pRenderer, const void* pData);
+
+	Buffer(const BufferDesc& desc);
+};
+
+
+#else // USE_DX12
+
+#include <vector>
+#include "Texture.h"
+
 // todo struct?
 using Viewport = D3D11_VIEWPORT;
 using RasterizerState = ID3D11RasterizerState;
@@ -74,14 +117,7 @@ struct PipelineState
 	DepthTargetID		depthTargets;
 };
 
-struct BufferDesc
-{
-	EBufferType  mType = EBufferType::BUFFER_TYPE_UNKNOWN;
-	EBufferUsage mUsage = EBufferUsage::GPU_READ_WRITE;
-	unsigned     mElementCount = 0;
-	unsigned     mStride = 0;
-	unsigned     mStructureByteStride = 0;
-};
+
 
 struct Buffer
 {
@@ -100,19 +136,12 @@ struct Buffer
 	Buffer(const BufferDesc& desc);
 };
 
-struct FullScreenVertexBufferData
-{
-	vec3 position;
-	vec2 uv;
-};
 
-struct DefaultVertexBufferData
-{
-	vec3 position;
-	vec3 normal;
-	vec3 tangent;
-	vec2 uv;
-};
+#endif // USE_DX12
+
+
+
+// -------------------------------------------------------------------------------------------
 
 #if 0	// TODO: abstract render target descriptor
 struct RenderTargetDesc
@@ -144,3 +173,18 @@ struct RenderTargetDesc
 	D3D11_TEXTURE2D_DESC dxDesc;
 };
 #endif
+
+#include "Utilities/vectormath.h"
+struct FullScreenVertexBufferData
+{
+	vec3 position;
+	vec2 uv;
+};
+
+struct DefaultVertexBufferData
+{
+	vec3 position;
+	vec3 normal;
+	vec3 tangent;
+	vec2 uv;
+};

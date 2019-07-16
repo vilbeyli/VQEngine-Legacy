@@ -23,9 +23,16 @@
 
 #include "Renderer/Renderer.h"
 
+#include "Application/Application.h"
+#include "Application/ThreadPool.h"
+
+
 #include <fstream>
 #include <unordered_map>
 #include <algorithm>
+
+#include <experimental/filesystem>
+namespace filesys = std::experimental::filesystem;
 
 
 const std::string file_root		= "Data\\";
@@ -407,8 +414,7 @@ static std::array<TextureID, NUM_PBR_TEXTURE_INPUTS> LoadPBRPreset(Renderer* pRe
 
 #if _MSVC_LANG >= 201703L	// CPP17
 	namespace filesys = std::experimental::filesystem;
-
-	const std::string PBR_ROOT = Renderer::sTextureRoot + std::string("PBR/");
+	const std::string PBR_ROOT = Application::GetDirectory(Application::EDirectories::TEXTURES) + std::string("PBR/");
 	const bool bGenerateMips = true;
 	const std::string _presetPath = PBR_ROOT + presetPath;
 
@@ -630,7 +636,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			? tokens[tokens.size() - 3] + "/" + tokens[tokens.size() - 2] + "/"
 			: (tokens.size() >= 2 ? tokens[tokens.size() - 2] + "/" : "");
 		
-		const std::string PBR_ROOT = Renderer::sTextureRoot + std::string("PBR/");
+		const std::string PBR_ROOT = Application::GetDirectory(Application::EDirectories::TEXTURES) + std::string("PBR/");
 		const bool bGenerateMips = true;
 		sTextureSet[textureMapIndex] = pRenderer->CreateTextureFromFile(fileName, PBR_ROOT + folderPath, bGenerateMips);
 	}

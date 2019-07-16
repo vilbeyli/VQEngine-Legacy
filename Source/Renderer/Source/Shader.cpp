@@ -66,6 +66,13 @@ const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS;
 #define CALLING_CONVENTION __stdcall
 #endif
 
+
+
+#if USE_DX12
+#include <d3d11.h> /// D3D10_SHADER_MACRO
+#pragma comment(lib, "d3dcompiler.lib")	// functionality for compiling shaders
+
+#else
 static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderConstants[EShaderStage::COUNT])
 (UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = 
 {
@@ -76,6 +83,7 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderConstants[EShader
 	&ID3D11DeviceContext::PSSetConstantBuffers, 
 	&ID3D11DeviceContext::CSSetConstantBuffers,
 };
+#endif
 
 static std::unordered_map <std::string, EShaderStage > s_ShaderTypeStrLookup = 
 {
@@ -127,7 +135,6 @@ static std::string GetIncludeFileName(const std::string& line)
 
 static bool AreIncludesDirty(const std::string& srcPath, const std::string& cachePath)
 {
-
 	const std::string ShaderSourceDir = DirectoryUtil::GetFolderPath(srcPath);
 	const std::string ShaderCacheDir = DirectoryUtil::GetFolderPath(cachePath);
 
@@ -271,6 +278,9 @@ Shader::~Shader(void)
 }
 void Shader::ReleaseResources()
 {
+#if USE_DX12
+
+#else
 	for (ConstantBufferBinding& cbuf : mConstantBuffers)
 	{
 		if (cbuf.data)
@@ -330,6 +340,7 @@ void Shader::ReleaseResources()
 			mReflections.of[type] = nullptr;
 		}
 	}
+#endif
 
 	m_CBLayouts.clear();
 	m_constants.clear();
@@ -351,14 +362,6 @@ size_t Shader::GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro
 	return std::hash<std::string>()(concatenatedMacros);
 }
 
-bool Shader::Reload(ID3D11Device* device)
-{
-	Shader copy(this->mDescriptor);
-	copy.mID = this->mID;
-	ReleaseResources();
-	this->mID = copy.mID;
-	return CompileShaders(device, copy.mDescriptor);
-}
 
 bool Shader::HasSourceFileBeenUpdated() const
 {
@@ -370,7 +373,7 @@ bool Shader::HasSourceFileBeenUpdated() const
 			const std::string& path = mDirectories.at(stage).fullPath;
 			const std::string& cachePath = mDirectories.at(stage).cachePath;
 			bUpdated |= mDirectories.at(stage).lastWriteTime < std::experimental::filesystem::last_write_time(path);
-			
+
 			if (!bUpdated) // check include files only when source is not updated
 			{
 				bUpdated |= AreIncludesDirty(path, cachePath);
@@ -378,6 +381,19 @@ bool Shader::HasSourceFileBeenUpdated() const
 		}
 	}
 	return bUpdated;
+}
+
+
+#if USE_DX12
+
+#else
+bool Shader::Reload(ID3D11Device* device)
+{
+	Shader copy(this->mDescriptor);
+	copy.mID = this->mID;
+	ReleaseResources();
+	this->mID = copy.mID;
+	return CompileShaders(device, copy.mDescriptor);
 }
 
 void Shader::ClearConstantBuffers()
@@ -425,13 +441,16 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 		}
 	}
 }
-
+#endif
 
 
 
 //-------------------------------------------------------------------------------------------------------------
 // UTILITY FUNCTIONS
 //-------------------------------------------------------------------------------------------------------------
+#if USE_DX12
+
+#else
 bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
 {
 	constexpr const char * SHADER_BINARY_EXTENSION = ".bin";
@@ -754,6 +773,46 @@ void Shader::SetReflections(const ShaderBlobs& blobs)
 	}
 }
 
+void Shader::ReflectConstantBufferLayouts(ID3D11ShaderReflection* sRefl, EShaderStage type)
+{
+	D3D11_SHADER_DESC desc;
+	sRefl->GetDesc(&desc);
+
+	unsigned bufSlot = 0;
+	for (unsigned i = 0; i < desc.ConstantBuffers; ++i)
+	{
+		ConstantBufferLayout bufferLayout;
+		bufferLayout.buffSize = 0;
+		ID3D11ShaderReflectionConstantBuffer* pCBuffer = sRefl->GetConstantBufferByIndex(i);
+		pCBuffer->GetDesc(&bufferLayout.desc);
+
+		// load desc of each variable for binding on buffer later on
+		for (unsigned j = 0; j < bufferLayout.desc.Variables; ++j)
+		{
+			// get variable and type descriptions
+			ID3D11ShaderReflectionVariable* pVariable = pCBuffer->GetVariableByIndex(j);
+			D3D11_SHADER_VARIABLE_DESC varDesc;
+			pVariable->GetDesc(&varDesc);
+			bufferLayout.variables.push_back(varDesc);
+
+			ID3D11ShaderReflectionType* pType = pVariable->GetType();
+			D3D11_SHADER_TYPE_DESC typeDesc;
+			pType->GetDesc(&typeDesc);
+			bufferLayout.types.push_back(typeDesc);
+
+			// accumulate buffer size
+			bufferLayout.buffSize += varDesc.Size;
+		}
+		bufferLayout.stage = type;
+		bufferLayout.bufSlot = bufSlot;
+		++bufSlot;
+		m_CBLayouts.push_back(bufferLayout);
+	}
+}
+
+#endif
+
+
 void Shader::CheckSignatures()
 {
 #if 0
@@ -823,43 +882,6 @@ void Shader::LogConstantBufferLayouts() const
 	});
 	strcat_s(inputTable, "-----\n");
 	Log::Info(std::string(inputTable));
-}
-
-void Shader::ReflectConstantBufferLayouts(ID3D11ShaderReflection* sRefl, EShaderStage type)
-{
-	D3D11_SHADER_DESC desc;
-	sRefl->GetDesc(&desc);
-
-	unsigned bufSlot = 0;
-	for (unsigned i = 0; i < desc.ConstantBuffers; ++i)
-	{
-		ConstantBufferLayout bufferLayout;
-		bufferLayout.buffSize = 0;
-		ID3D11ShaderReflectionConstantBuffer* pCBuffer = sRefl->GetConstantBufferByIndex(i);
-		pCBuffer->GetDesc(&bufferLayout.desc);
-
-		// load desc of each variable for binding on buffer later on
-		for (unsigned j = 0; j < bufferLayout.desc.Variables; ++j)
-		{
-			// get variable and type descriptions
-			ID3D11ShaderReflectionVariable* pVariable = pCBuffer->GetVariableByIndex(j);
-			D3D11_SHADER_VARIABLE_DESC varDesc;
-			pVariable->GetDesc(&varDesc);
-			bufferLayout.variables.push_back(varDesc);
-
-			ID3D11ShaderReflectionType* pType = pVariable->GetType();
-			D3D11_SHADER_TYPE_DESC typeDesc;
-			pType->GetDesc(&typeDesc);
-			bufferLayout.types.push_back(typeDesc);
-
-			// accumulate buffer size
-			bufferLayout.buffSize += varDesc.Size;
-		}
-		bufferLayout.stage = type;
-		bufferLayout.bufSlot = bufSlot;
-		++bufSlot;
-		m_CBLayouts.push_back(bufferLayout);
-	}
 }
 
 

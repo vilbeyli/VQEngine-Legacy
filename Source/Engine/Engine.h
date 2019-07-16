@@ -109,7 +109,7 @@ public:
 	bool			Load(VQEngine::ThreadPool* pThreadPool);
 	void			SimulateAndRenderFrame();
 
-	void			SendLightData() const;
+	void			SendLightData() const; // TODO: remove this function
 	inline void		Pause()  { mbIsPaused = true; }
 	inline void		Unpause(){ mbIsPaused = false; }
 	

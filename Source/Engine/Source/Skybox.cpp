@@ -40,7 +40,7 @@ const  FilePaths s_filePaths = []{
 	FilePaths paths(ECubeMapPresets::CUBEMAP_PRESET_COUNT * 6);	// use as an array to access using enum
 	
 	// night sky by: Hazel Whorley
-	const std::string root = Renderer::sTextureRoot;
+	const std::string root = Application::GetDirectory(Application::EDirectories::TEXTURES);
 	paths[ECubeMapPresets::NIGHT_SKY + 0] = root + "EnvironmentMaps/night_sky/nightsky_rt.png";
 	paths[ECubeMapPresets::NIGHT_SKY + 1] = root + "EnvironmentMaps/night_sky/nightsky_lf.png";
 	paths[ECubeMapPresets::NIGHT_SKY + 2] = root + "EnvironmentMaps/night_sky/nightsky_up.png";
@@ -54,9 +54,10 @@ const  FilePaths s_filePaths = []{
 }();
 
 std::vector<Skybox> Skybox::s_Presets(ECubeMapPresets::CUBEMAP_PRESET_COUNT + EEnvironmentMapPresets::ENVIRONMENT_MAP_PRESET_COUNT);
+
+static const std::string sIBLDirectory = Application::GetDirectory(Application::EDirectories::ENVIRONMENT_MAPS) + std::string("sIBL/");
 std::pair < std::string, EnvironmentMapFileNames>  GetsIBLFiles(EEnvironmentMapPresets preset)
 {
-	const std::string sIBLDirectory = Renderer::sHDRTextureRoot + std::string("sIBL/");
 	EnvironmentMapFileNames files;
 	std::string root;
 	switch (preset)
@@ -111,6 +112,9 @@ std::pair < std::string, EnvironmentMapFileNames>  GetsIBLFiles(EEnvironmentMapP
 void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Rendering& renderSettings)
 {
 	EnvironmentMap::Initialize(pRenderer);
+#if USE_DX12
+	return;
+#else
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
 		EnvironmentMap::LoadShaders();
@@ -143,7 +147,6 @@ void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Render
 		// HDR / IBL - Equirectangular Skyboxes
 		//------------------------------------------------------------------------------------------------------------------------------------
 		//EnvironmentMap::Initialize(pRenderer);
-		const std::string sIBLDirectory = Renderer::sHDRTextureRoot + std::string("sIBL/");
 		const bool bEquirectangular = true;
 
 		EnvironmentMapFileNames files;
@@ -178,13 +181,17 @@ void Skybox::InitializePresets_Async(Renderer* pRenderer, const Settings::Render
 			}
 		}
 	}
+#endif
 }
 
 void Skybox::InitializePresets(Renderer* pRenderer, const Settings::Rendering& renderSettings)
 {
 	EnvironmentMap::Initialize(pRenderer);
 	EnvironmentMap::LoadShaders();
-	
+#if USE_DX12
+	return;
+#else
+
 	const std::string extension = ".hdr";
 	const std::string BRDFLUTTextureFileName = "BRDFIntegrationLUT";
 	const std::string BRDFLUTTextureFilePath = EnvironmentMap::sTextureCacheDirectory + BRDFLUTTextureFileName + extension;
@@ -248,6 +255,7 @@ void Skybox::InitializePresets(Renderer* pRenderer, const Settings::Rendering& r
 			s_Presets[preset].Initialize(rootAndFilesPair.second, rootAndFilesPair.first);
 		});
 	}
+#endif // USE_DX12
 }
 
 
@@ -332,6 +340,9 @@ void EnvironmentMap::Initialize(Renderer * pRenderer, const EnvironmentMapFileNa
 	const bool bCacheExists  = bCacheEnabled && DirectoryUtil::FileExists(cachedPrefilteredEnvMap);
 	const bool bUseCache     = bCacheExists && DirectoryUtil::IsFileNewer(cachedPrefilteredEnvMap, irradianceTextureFilePath);
 
+#if USE_DX12
+	return;
+#else
 	// irradiance map texture
 	{
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
@@ -382,7 +393,7 @@ void EnvironmentMap::Initialize(Renderer * pRenderer, const EnvironmentMapFileNa
 		std::unique_lock<std::mutex> lck(Engine::mLoadRenderingMutex);
 		this->envMapSampler = spRenderer->CreateSamplerState(envMapSamplerDesc);
 	}
-
+#endif // USE_DX12
 }
 
 void EnvironmentMap::Initialize(Renderer * pRenderer)
@@ -421,7 +432,10 @@ void EnvironmentMap::LoadShaders()
 Texture EnvironmentMap::CreateBRDFIntegralLUTTexture()
 {
 	constexpr int TEXTURE_DIMENSION = 2048;
-	
+
+#if USE_DX12
+	return Texture();
+#else
 	// create the render target
 	RenderTargetDesc rtDesc = {};
 	rtDesc.format = RGBA32F;
@@ -447,10 +461,14 @@ Texture EnvironmentMap::CreateBRDFIntegralLUTTexture()
 	spRenderer->DrawIndexed();
 	spRenderer->m_deviceContext->Flush();
 	return spRenderer->GetTextureObject(spRenderer->GetRenderTargetTexture(sBRDFIntegrationLUTRT));
+#endif
 }
 
 TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& specularMap_, const Texture& irradienceMap_, const std::string& cacheFolderPath)
 {
+#if USE_DX12
+	return -1;
+#else
 	//---------------------------------------------------
 	// Quick Bug Fix
 	//---------------------------------------------------
@@ -623,4 +641,5 @@ TextureID EnvironmentMap::InitializePrefilteredEnvironmentMap(const Texture& spe
 	// ID3D11ShaderResourceView* pNull[6] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
 	// pRenderer->m_deviceContext->PSSetShaderResources(0, 6, &pNull[0]);
 	return prefilteredEnvironmentMap;
+#endif // USE_DX12
 }

@@ -59,6 +59,9 @@ void PostProcessPass::UpdateSettings(const Settings::PostProcess& newSettings, R
 
 void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProcess& postProcessSettings)
 {
+#if USE_DX12
+
+#else
 	_settings = postProcessSettings;
 
 	const EImageFormat imageFormat = _settings.HDREnabled ? HDR_Format : LDR_Format;
@@ -108,6 +111,7 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 
 	// World Render Target
 	this->_worldRenderTarget = pRenderer->AddRenderTarget(rtDesc);
+#endif
 }
 
 
@@ -115,6 +119,9 @@ void PostProcessPass::Initialize(Renderer* pRenderer, const Settings::PostProces
 
 void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID inputTextureID) const
 {
+#if USE_DX12
+
+#else
 	const bool bBloom = bBloomOn && _settings.bloom.bEnabled;
 	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
@@ -158,6 +165,7 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID input
 	pRenderer->EndEvent();	// Tonemapping
 	pGPU->EndEntry();		// Tonemapping
 	pRenderer->EndEvent();	// Post Process
+#endif
 }
 
 
@@ -166,11 +174,18 @@ void PostProcessPass::Render(Renderer* pRenderer, bool bBloomOn, TextureID input
 
 void DebugPass::Initialize(Renderer * pRenderer)
 {
+#if USE_DX12
+
+#else
 	_scissorsRasterizer = pRenderer->AddRasterizerState(ERasterizerCullMode::BACK, ERasterizerFillMode::SOLID, false, true);
+#endif
 }
 
 void AAResolvePass::Initialize(Renderer* pRenderer, TextureID inputTextureID)
 {
+#if USE_DX12
+
+#else
 	// todo shader and others
 
 	ShaderDesc shdDesc;
@@ -199,10 +214,14 @@ void AAResolvePass::Initialize(Renderer* pRenderer, TextureID inputTextureID)
 	this->mResolveShaderID = pRenderer->CreateShader(shdDesc);
 	this->mResolveTarget = pRenderer->AddRenderTarget(rtDesc);
 	this->mResolveInputTextureID = inputTextureID; // To be set by the engine, this set here is useless.
+#endif
 }
 
 void AAResolvePass::Render(Renderer* pRenderer) const
 {
+#if USE_DX12
+
+#else
 	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 	pRenderer->SetShader(this->mResolveShaderID, true, true);
 	pRenderer->UnbindDepthTarget();
@@ -215,4 +234,5 @@ void AAResolvePass::Render(Renderer* pRenderer) const
 	pRenderer->SetTexture("ColorTexture", this->mResolveInputTextureID);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
+#endif
 }

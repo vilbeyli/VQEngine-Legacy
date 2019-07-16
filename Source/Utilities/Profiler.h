@@ -20,6 +20,8 @@ class TextRenderer;
 struct vec2;
 struct ID3D11DeviceContext;
 struct ID3D11Device;
+struct ID3D11Query;
+struct D3D10_QUERY_DATA_TIMESTAMP_DISJOINT;
 
 struct ProfilerSettings
 {	// UNUSED

@@ -140,6 +140,9 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 		this->blackTexture4x4 = pRenderer->CreateTexture2D(texDesc);
 	}
 
+#if USE_DX12
+
+#else
 	// The tiling of the texture causes the orientation of the kernel to be repeated and 
 	// introduces regularity into the result. By keeping the texture size small we can make 
 	// this regularity occur at a high frequency, which can then be removed with a blur step 
@@ -378,12 +381,16 @@ void AmbientOcclusionPass::Initialize(Renderer * pRenderer)
 		deinterleavedSSAOShader[i] = pRenderer->CreateShader(deinterleavedSSAOSahderDesc);
 	}
 #endif // ENABLE_INTERLEAVED_SSAO_PASS
+#endif
 }
 
 
 
 void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const
 {
+#if USE_DX12
+
+#else
 	// early out if we are not rendering anything into the G-Buffer
 	if (sceneView.culledOpaqueList.empty() && sceneView.culluedOpaqueInstancedRenderListLookup.empty())
 	{
@@ -459,6 +466,7 @@ void AmbientOcclusionPass::RenderAmbientOcclusion(Renderer* pRenderer, const Tex
 
 	pRenderer->EndEvent(); // SSAO
 	pGPU->EndEntry(); // SSAO
+#endif
 }
 
 
@@ -500,6 +508,9 @@ SSAOConstants<kernelSampleSize> FillAOConstBuffer(const AmbientOcclusionPass* pT
 
 void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const
 {
+#if USE_DX12
+
+#else
 	pRenderer->BeginEvent("Occlusion Pass");
 
 	const TextureID depthTexture = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
@@ -524,14 +535,17 @@ void AmbientOcclusionPass::RenderOcclusion(Renderer* pRenderer, const TextureID 
 	pRenderer->SetIndexBuffer(IABuffersQuad.second);
 	pRenderer->Apply();
 	pRenderer->DrawIndexed();
-
 	pRenderer->EndEvent(); // Occlusion Pass
+#endif
 }
 
 
 
 void AmbientOcclusionPass::DeinterleaveDepth(Renderer* pRenderer) const
 {
+#if USE_DX12
+
+#else
 	const TextureID texDepth = pRenderer->GetDepthTargetTexture(ENGINE->GetWorldDepthTarget());
 	const vec2 imageDimensions = pRenderer->GetWindowDimensionsAsFloat2();
 
@@ -543,11 +557,15 @@ void AmbientOcclusionPass::DeinterleaveDepth(Renderer* pRenderer) const
 	pRenderer->Apply();
 	pRenderer->Dispatch((int)imageDimensions.x() / 4, (int)imageDimensions.y() / 4, 1);
 	pRenderer->EndEvent();
+#endif
 }
 
 
 void AmbientOcclusionPass::InterleaveAOTexture(Renderer* pRenderer) const
 {
+#if USE_DX12
+
+#else
 	const vec2 imageDimensions = pRenderer->GetWindowDimensionsAsFloat2();
 	const std::array<TextureID, 4> AOHalfResTextures =
 	{
@@ -577,11 +595,15 @@ void AmbientOcclusionPass::InterleaveAOTexture(Renderer* pRenderer) const
 	pRenderer->Apply();
 	pRenderer->Dispatch((int)imageDimensions.x() / 4, (int)imageDimensions.y() / 4, 1);
 	pRenderer->EndEvent();
+#endif
 }
 
 
 void AmbientOcclusionPass::RenderOcclusionInterleaved(Renderer* pRenderer, const TextureID texNormals, const SceneView& sceneView) const
 {
+#if USE_DX12
+
+#else
 	// https://developer.nvidia.com/sites/default/files/akamai/gameworks/samples/DeinterleavedTexturing.pdf
 
 
@@ -616,6 +638,7 @@ void AmbientOcclusionPass::RenderOcclusionInterleaved(Renderer* pRenderer, const
 	pRenderer->SetViewport(static_cast<unsigned>(halfScreenSize.x()*2), static_cast<unsigned>(halfScreenSize.y()*2));
 	pRenderer->UnbindRenderTargets();
 	pRenderer->EndEvent();
+#endif
 }
 
 
@@ -680,6 +703,9 @@ void AmbientOcclusionPass::BilateralBlurPass(Renderer * pRenderer, const Texture
 
 void AmbientOcclusionPass::GaussianBlurPass(Renderer* pRenderer, const TextureID texOcclusion) const
 {
+#if USE_DX12
+
+#else
 	const vec2 texDimensions = pRenderer->GetWindowDimensionsAsFloat2();
 	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
@@ -707,7 +733,7 @@ void AmbientOcclusionPass::GaussianBlurPass(Renderer* pRenderer, const TextureID
 	pRenderer->Dispatch(120, 68, 1);
 	pRenderer->EndEvent();
 #endif
-
+#endif
 }
 
 
@@ -727,6 +753,9 @@ void AmbientOcclusionPass::ChangeAOQuality(int upOrDown)
 }
 TextureID AmbientOcclusionPass::GetBlurredAOTexture(Renderer* pRenderer) const
 {
+#if USE_DX12
+	return -1;
+#else
 	TextureID ret = 0;
 	switch (blurQuality)
 	{
@@ -737,5 +766,6 @@ TextureID AmbientOcclusionPass::GetBlurredAOTexture(Renderer* pRenderer) const
 		break;
 	}
 	return ret;
+#endif
 }
 

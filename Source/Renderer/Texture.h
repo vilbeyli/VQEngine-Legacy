@@ -64,8 +64,11 @@ struct TextureDesc
 		bGenerateMips(false),
 		cpuAccessMode(ECPUAccess::NONE)
 	{}
+#if USE_DX12
 
+#else
 	D3D11_TEXTURE2D_DESC dxDesc;
+#endif
 };
 
 
@@ -101,6 +104,9 @@ public:
 	bool InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Renderer* pRenderer, bool initializeSRV);
 	void Release();
 
+#if USE_DX12
+
+#else
 	// shader resource view does 2 things
 	// - tell d3d how the resource will be used: at what stage if the pipeline it will be bound etc.
 	// - tell if the resource format was specified as typeless at creation time, then we must specify
@@ -115,7 +121,7 @@ public:
 		ID3D11Texture3D*		_tex3D;
 		ID3D11Texture2D*		_tex2D;
 	};
-
+#endif
 	unsigned					_width;
 	unsigned					_height;
 	unsigned					_depth;

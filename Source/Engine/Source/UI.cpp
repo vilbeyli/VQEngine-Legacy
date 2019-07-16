@@ -49,6 +49,10 @@ void UI::RenderBackground(Renderer* mpRenderer, const vec3& color, float alpha, 
 	const XMMATRIX matTransformation = tf.WorldTransformationMatrix();
 	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
+
+#if USE_DX12
+
+#else
 	mpRenderer->SetShader(EShaders::UNLIT);
 	mpRenderer->SetVertexBuffer(IABuffers.first);
 	mpRenderer->SetIndexBuffer(IABuffers.second);
@@ -60,7 +64,7 @@ void UI::RenderBackground(Renderer* mpRenderer, const vec3& color, float alpha, 
 	mpRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_STENCIL_DISABLED);
 	mpRenderer->Apply();
 	mpRenderer->DrawIndexed();
-
+#endif
 }
 
 
@@ -166,8 +170,11 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 	const vec2  PX_POS_PROFILER_GPU = vec2(X_PX_POS_PROFILER_GPU, Y_PX_POS_PROFILER_GPU);
 
 	const bool bSortStats = true;
+#if USE_DX12
 
+#else
 	mpRenderer->BeginEvent("Perf Stats UI Text");
+#endif
 
 	// BACKGROUND
 	//
@@ -205,7 +212,11 @@ void VQEngine::UI::RenderPerfStats(const FrameStats& stats) const
 		drawDesc.text = FrameStats::statNames[RENDER_ORDER_FRAME_STATS_ROW_2[i]] + StrUtil::CommaSeparatedNumber(std::to_string(stats[RENDER_ORDER_FRAME_STATS_ROW_2[i]]));
 		mpTextRenderer->RenderText(drawDesc);
 	}
+#if USE_DX12
+
+#else
 	mpRenderer->EndEvent();
+#endif
 
 
 }
@@ -228,8 +239,11 @@ void VQEngine::UI::RenderEngineControls() const
 
 	const float LINE_HEIGHT_PX = 18.0f;
 	const float longestStringLength = static_cast<float>(std::string("F5 - Toggle Rendering AABBs: Off").size());
+#if USE_DX12
 
+#else
 	mpRenderer->BeginEvent("Render Controls UI Text");
+#endif
 
 	// todo: rename/remove the magic numbers.
 	auto ToogleToString = [](const bool b) { return b ? "On" : "Off"; };
@@ -266,6 +280,10 @@ void VQEngine::UI::RenderEngineControls() const
 		mpTextRenderer->RenderText(drawDesc);
 	});
 
+#if USE_DX12
+
+#else
 	mpRenderer->EndEvent();
+#endif
 }
 

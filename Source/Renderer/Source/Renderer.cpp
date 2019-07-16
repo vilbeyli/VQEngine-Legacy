@@ -16,9 +16,352 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
+#include "Renderer.h"
+
+#if USE_DX12
+
+#include "Utilities/Log.h"
+
+
+Renderer::Renderer(){}
+Renderer::~Renderer() {}
+
+
+bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Settings::Rendering& rendererSettings)
+{
+	return false;
+}
+
+void Renderer::Exit()
+{
+
+}
+
+void Renderer::ReloadShaders()
+{
+	int reloadedShaderCount = 0;
+	std::vector<std::string> reloadedShaderNames;
+	for (Shader* pShader : mShaders)
+	{
+		if (pShader->HasSourceFileBeenUpdated())
+		{
+			const bool bLoadSuccess = false;/// pShader->Reload(m_device);
+			if (!bLoadSuccess)
+			{
+				//Log::Error("");
+				assert(false); // todo;remove
+				continue;
+			}
+
+			++reloadedShaderCount;
+			reloadedShaderNames.push_back(pShader->Name());
+		}
+	}
+
+	if (reloadedShaderCount == 0)
+	{
+		Log::Info("No updates have been made to shader source files: no shaders have been loaded");
+	}
+	else
+	{
+		Log::Info("Reloaded %d Shaders:", reloadedShaderCount);
+		for (const std::string& name : reloadedShaderNames)
+			Log::Info("\t%s", name.c_str());
+	}
+}
+
+float	 Renderer::AspectRatio()	const { return 0; }//m_Direct3D->AspectRatio(); };
+unsigned Renderer::WindowHeight()	const { return 0; }//m_Direct3D->WindowHeight(); };
+unsigned Renderer::WindowWidth()	const { return 0; }//m_Direct3D->WindowWidth(); }
+unsigned Renderer::FrameRenderTargetHeight() const { return mAntiAliasing.resolutionX; }
+unsigned Renderer::FrameRenderTargetWidth()	 const { return mAntiAliasing.resolutionY; }
+vec2	 Renderer::FrameRenderTargetDimensionsAsFloat2() const { return vec2(this->FrameRenderTargetWidth(), this->FrameRenderTargetHeight()); }
+vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(this->WindowWidth(), this->WindowHeight()); }
+///HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };
+
+const BufferDesc Renderer::GetBufferDesc(EBufferType bufferType, BufferID bufferID) const
+{
+	BufferDesc desc = {};
+
+#if 0
+	const std::vector<Buffer>& bufferContainer = [&]()
+	{
+		switch (bufferType)
+		{
+		case VERTEX_BUFFER:     return mVertexBuffers; break;
+		case INDEX_BUFFER:      return mIndexBuffers; break;
+		case COMPUTE_RW_BUFFER: return mUABuffers; break;
+		default: assert(false); // specify a valid buffer type
+		}
+		return mVertexBuffers; // eliminate warning: not all control paths return
+	}();
+#endif
+
+	// TODO:
+	return desc;
+	///assert(bufferContainer.size() > bufferID);
+	///return bufferContainer[bufferID].mDesc;
+}
+
+#ifdef max
+#undef max
+#endif
+BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData /*=nullptr*/, const char* pBufferName /*= nullptr*/)
+{
+	Buffer buffer(bufferDesc);
+	// TODO-DX12:
+	///buffer.Initialize(m_device, pData);
+#if _DEBUG
+	if (pBufferName)
+	{
+		// TODO-DX12:
+		///m_Direct3D->SetDebugName(buffer.mpGPUData, pBufferName);
+	}
+#endif
+	return static_cast<int>([&]() {
+		switch (bufferDesc.mType)
+		{
+		case VERTEX_BUFFER:
+			mVertexBuffers.push_back(buffer);
+			return mVertexBuffers.size() - 1;
+		case INDEX_BUFFER:
+			mIndexBuffers.push_back(buffer);
+			return mIndexBuffers.size() - 1;
+		case COMPUTE_RW_BUFFER:
+			mUABuffers.push_back(buffer);
+			return mUABuffers.size() - 1;
+		default:
+			Log::Warning("Unknown Buffer Type");
+			return std::numeric_limits<size_t>::max();
+		}
+	}());
+}
+
+
+TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/, bool bGenerateMips /*= false*/)
+{
+	return -1;
+}
+
+
+TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
+{
+	return -1;
+#if 0
+	Texture tex;
+	tex._width = texDesc.width;
+	tex._height = texDesc.height;
+	tex._name = texDesc.texFileName;
+
+
+	// check multi sampling quality level
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb173072(v=vs.85).aspx
+	//UINT maxMultiSamplingQualityLevel = 0;
+	//m_device->CheckMultisampleQualityLevels(, , &maxMultiSamplingQualityLevel);
+	//---
+
+
+	// Texture2D Resource
+	UINT miscFlags = 0;
+	miscFlags |= texDesc.bIsCubeMap ? D3D11_RESOURCE_MISC_TEXTURECUBE : 0;
+	miscFlags |= texDesc.bGenerateMips ? D3D11_RESOURCE_MISC_GENERATE_MIPS : 0;
+
+	UINT arrSize = texDesc.arraySize;
+	const bool bIsTextureArray = texDesc.arraySize > 1;
+	arrSize = texDesc.bIsCubeMap ? 6 * arrSize : arrSize;
+
+	D3D11_TEXTURE2D_DESC desc = {};
+	desc.Format = (DXGI_FORMAT)texDesc.format;
+	desc.Height = max(texDesc.height, 1);
+	desc.Width = max(texDesc.width, 1);
+	desc.ArraySize = arrSize;
+	desc.MipLevels = texDesc.mipCount;
+	desc.SampleDesc = { 1, 0 };
+	desc.BindFlags = texDesc.usage;
+	desc.Usage = D3D11_USAGE_DEFAULT;
+	desc.CPUAccessFlags = static_cast<D3D11_CPU_ACCESS_FLAG>(texDesc.cpuAccessMode);
+	desc.MiscFlags = miscFlags;
+
+	D3D11_SUBRESOURCE_DATA dataDesc = {};
+	D3D11_SUBRESOURCE_DATA* pDataDesc = nullptr;
+	if (texDesc.pData)
+	{
+		dataDesc.pSysMem = texDesc.pData;
+		dataDesc.SysMemPitch = texDesc.dataPitch;
+		dataDesc.SysMemSlicePitch = texDesc.dataSlicePitch;
+		pDataDesc = &dataDesc;
+	}
+	m_device->CreateTexture2D(&desc, pDataDesc, &tex._tex2D);
+
+#if defined(_DEBUG) || defined(PROFILE)
+	if (!texDesc.texFileName.empty())
+	{
+		m_Direct3D->SetDebugName(tex._tex2D, texDesc.texFileName + "_Tex2D");
+	}
+#endif
+
+	// Shader Resource View
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+	srvDesc.Format = (DXGI_FORMAT)texDesc.format;
+	switch (texDesc.format)
+	{
+		// caution: if initializing for depth texture, and the depth texture
+		//			has stencil defined (d24s8), we have to check for 
+		//			DXGI_FORMAT_R24_UNORM_X8_TYPELESS vs R32F
+	case EImageFormat::R24G8:
+		srvDesc.Format = (DXGI_FORMAT)EImageFormat::R24_UNORM_X8_TYPELESS;
+		break;
+	case EImageFormat::R32:
+		srvDesc.Format = (DXGI_FORMAT)EImageFormat::R32F;
+		break;
+	}
+
+	if (texDesc.bIsCubeMap)
+	{
+		if (bIsTextureArray)
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+			srvDesc.TextureCubeArray.NumCubes = arrSize / 6;
+			srvDesc.TextureCubeArray.MipLevels = texDesc.mipCount;
+			srvDesc.TextureCubeArray.MostDetailedMip = 0;
+			srvDesc.TextureCubeArray.First2DArrayFace = 0;
+			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+		}
+		else
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBE;
+			srvDesc.TextureCube.MipLevels = texDesc.mipCount;
+			srvDesc.TextureCube.MostDetailedMip = 0;
+			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+		}
+#if _DEBUG
+		if (!texDesc.texFileName.empty())
+		{
+			m_Direct3D->SetDebugName(tex._srv, texDesc.texFileName + "_SRV");
+		}
+#endif
+	}
+	else
+	{
+		if (bIsTextureArray)
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2DARRAY;
+			srvDesc.Texture2DArray.MipLevels = texDesc.mipCount;
+			srvDesc.Texture2DArray.MostDetailedMip = 0;
+
+			tex._srvArray.resize(desc.ArraySize, nullptr);
+			tex._depth = desc.ArraySize;
+			for (unsigned i = 0; i < desc.ArraySize; ++i)
+			{
+				srvDesc.Texture2DArray.FirstArraySlice = i;
+				srvDesc.Texture2DArray.ArraySize = desc.ArraySize - i;
+				m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srvArray[i]);
+				if (i == 0)
+					tex._srv = tex._srvArray[i];
+#if _DEBUG
+				if (!texDesc.texFileName.empty())
+				{
+					m_Direct3D->SetDebugName(tex._srvArray[i], texDesc.texFileName + "_SRV[" + std::to_string(i) + "]");
+				}
+#endif
+			}
+
+			if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+			{
+				D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+				uavDesc.Format = (DXGI_FORMAT)texDesc.format;
+				uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2DARRAY;
+				uavDesc.Texture2D.MipSlice = 0;
+
+				tex._uavArray.resize(desc.ArraySize, nullptr);
+				tex._depth = desc.ArraySize;
+				for (unsigned i = 0; i < desc.ArraySize; ++i)
+				{
+					uavDesc.Texture2DArray.FirstArraySlice = i;
+					uavDesc.Texture2DArray.ArraySize = desc.ArraySize - i;
+					m_device->CreateUnorderedAccessView(tex._tex2D, &uavDesc, &tex._uavArray[i]);
+					if (i == 0)
+						tex._uav = tex._uavArray[i];
+				}
+			}
+		}
+		else
+		{
+			srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2D.MipLevels = texDesc.mipCount;
+			srvDesc.Texture2D.MostDetailedMip = 0;
+			m_device->CreateShaderResourceView(tex._tex2D, &srvDesc, &tex._srv);
+
+			if (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS)
+			{
+				D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+				uavDesc.Format = (DXGI_FORMAT)texDesc.format;
+				uavDesc.ViewDimension = D3D11_UAV_DIMENSION_TEXTURE2D;
+				uavDesc.Texture2D.MipSlice = 0;
+
+				m_device->CreateUnorderedAccessView(tex._tex2D, &uavDesc, &tex._uav);
+			}
+		}
+	}
+
+	TextureID retID = -1;
+	auto itTex = std::find_if(mTextures.begin(), mTextures.end(), [](const Texture& tex1) {return tex1._id == -1; });
+	if (itTex != mTextures.end())
+	{
+		*itTex = tex;
+		itTex->_id = static_cast<TextureID>((int)std::distance(mTextures.begin(), itTex));
+		retID = itTex->_id;
+	}
+	else
+	{
+		tex._id = static_cast<int>(mTextures.size());
+		mTextures.push_back(tex);
+		retID = mTextures.back()._id;
+	}
+	return retID;
+#endif
+}
+
+ShaderID Renderer::CreateShader(const ShaderDesc& shaderDesc)
+{
+#if 0
+	Shader* shader = new Shader(shaderDesc.shaderName);
+	shader->CompileShaders(m_device, shaderDesc);
+
+	mShaders.push_back(shader);
+	shader->mID = (static_cast<int>(mShaders.size()) - 1);
+	return shader->ID();
+#else
+	return -1;
+#endif
+}
+
+ShaderID Renderer::ReloadShader(const ShaderDesc& shaderDesc, const ShaderID shaderID)
+{
+	if (shaderID == -1)
+	{
+		Log::Warning("Reload shader called on uninitialized shader.");
+		return CreateShader(shaderDesc);
+	}
+
+#if 0
+	assert(shaderID >= 0 && shaderID < mShaders.size());
+	Shader* pShader = mShaders[shaderID];
+	delete pShader;
+	pShader = new Shader(shaderDesc.shaderName);
+
+	pShader->CompileShaders(m_device, shaderDesc);
+	pShader->mID = shaderID;
+	mShaders[shaderID] = pShader;
+	return pShader->ID();
+#else
+	return -1;
+#endif
+}
+
+#else
 #define LOG_SEARCH 0
 
-#include "Renderer.h"
 #include "D3DManager.h"
 #include "BufferObject.h"
 #include "Shader.h"
@@ -46,12 +389,13 @@
 #include "Application/Application.h"
 #endif
 
+
 // HELPER FUNCTIONS
 //=======================================================================================================================================================
 std::vector<std::string> GetShaderPaths(const std::string& shaderFileName)
 {	// try to open each file
 	const std::string path = Renderer::sShaderRoot + shaderFileName;
-	const std::string paths[] = 
+	const std::string paths[] =
 	{
 		path + "_vs.hlsl",
 		path + "_gs.hlsl",
@@ -170,8 +514,6 @@ void OnShaderChange(LPTSTR dir)
 	// source: https://msdn.microsoft.com/en-us/library/aa365261(v=vs.85).aspx
 }
 //=======================================================================================================================================================
-
-
 const char*			Renderer::sShaderRoot		= "Source/Shaders/";
 const char*			Renderer::sTextureRoot		= "Data/Textures/";
 const char*			Renderer::sHDRTextureRoot	= "Data/Textures/EnvironmentMaps/";
@@ -2371,3 +2713,4 @@ void Renderer::Dispatch(int x, int y, int z)
 {
 	m_deviceContext->Dispatch(x, y, z);
 }
+#endif

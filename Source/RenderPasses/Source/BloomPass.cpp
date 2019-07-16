@@ -43,6 +43,9 @@ constexpr bool USE_CONSTANT_BUFFER_FOR_BLUR_STRENGTH = false;
 
 void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSettings, const RenderTargetDesc& rtDesc)
 {
+#if USE_DX12
+
+#else
 	this->_colorRT = pRenderer->AddRenderTarget(rtDesc);
 	this->_brightRT = pRenderer->AddRenderTarget(rtDesc);
 	this->_finalRT = pRenderer->AddRenderTarget(rtDesc);
@@ -181,6 +184,7 @@ void BloomPass::Initialize(Renderer* pRenderer, const Settings::Bloom& bloomSett
 
 	mSelectedBloomShader = BloomShader::CS_1D_Kernels_Transpoze_Out;
 #endif
+#endif
 }
 
 
@@ -225,6 +229,9 @@ void BloomPass::UpdateSettings(Renderer* pRenderer, const Settings::Bloom& bloom
 struct BlurParameters { unsigned blurStrength; };
 void BloomPass::Render(Renderer* pRenderer, TextureID inputTextureID, const Settings::Bloom& settings) const
 {
+#if USE_DX12
+
+#else
 	const auto IABuffersQuad = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 	const ShaderID currentShader = pRenderer->GetActiveShader();
 
@@ -387,12 +394,16 @@ void BloomPass::Render(Renderer* pRenderer, TextureID inputTextureID, const Sett
 	//pCPU->EndEntry(); // bloom
 	pRenderer->EndEvent(); // bloom
 	pGPU->EndEntry(); // bloom
+#endif
 }
 
 
 
 TextureID BloomPass::GetBloomTexture(const Renderer* pRenderer) const
 {
+#if USE_DX12
+	return -1;
+#else
 	switch (mSelectedBloomShader)
 	{
 	case BloomPass::PS_1D_Kernels: return pRenderer->GetRenderTargetTexture(_blurPingPong[0]);
@@ -402,4 +413,5 @@ TextureID BloomPass::GetBloomTexture(const Renderer* pRenderer) const
 	default:
 		return -1;
 	}
+#endif
 }

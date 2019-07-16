@@ -1,6 +1,11 @@
 #include "Profiler.h"
 #include "Log.h"
+
+#if USE_DX12
+#include <d3d11_1.h>  // for queries
+#else
 #include "Renderer/D3DManager.h"
+#endif
 
 #include <numeric>
 #include <sstream>
@@ -411,8 +416,12 @@ void GPUProfiler::BeginEntry(const std::string & tag)
 #if _DEBUG
 			const std::string QueryDebugName_B = "QueryBegin_" + tag;
 			const std::string QueryDebugName_E = "QueryEnd_" + tag;
+#if USE_DX12
+			// TODO-DX12:
+#else
 			D3DManager::SetDebugName(entry.pTimestampQueryBegin[bufferIndex], QueryDebugName_B);
 			D3DManager::SetDebugName(entry.pTimestampQueryEnd[bufferIndex], QueryDebugName_E);
+#endif
 #endif
 		}
 	}

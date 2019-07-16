@@ -138,7 +138,7 @@ namespace VQEngine
 		// containing the return type of the added task.
 		//
 		template<class T>
-		//std::future<decltype(task())> AddTask(T task)	// (why doesn't this compile)
+		//std::future<decltype(task())> AddTask(T task)	// (why doesn't this compile??)
 		auto AddTask(T task) -> std::future<decltype(task())>
 		{
 			// use a shared_ptr<> of packaged tasks here as we execute them in the thread pool workers as well

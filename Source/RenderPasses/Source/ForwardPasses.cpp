@@ -55,6 +55,9 @@ void ZPrePass::Initialize(Renderer* pRenderer)
 
 void ZPrePass::RenderDepth(const RenderParams& args) const
 {
+#if USE_DX12
+
+#else
 	//--------------------------------------------------------------------------------------------------------------------
 	auto RenderObject = [&](const GameObject* pObj)
 	{
@@ -200,6 +203,7 @@ void ZPrePass::RenderDepth(const RenderParams& args) const
 	}
 
 	args.pRenderer->EndEvent(); // Z-PrePass
+#endif
 }
 
 
@@ -222,6 +226,9 @@ void ForwardLightingPass::Initialize(Renderer* pRenderer)
 
 void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 {
+#if USE_DX12
+
+#else
 	// shorthands
 	Renderer* const& pRenderer = args.pRenderer;
 	const SceneView& sceneView = args.sceneView;
@@ -434,4 +441,5 @@ void ForwardLightingPass::RenderLightingPass(const RenderParams& args) const
 #endif
 
 	pRenderer->EndEvent();	// Lighting Pass
+#endif
 }

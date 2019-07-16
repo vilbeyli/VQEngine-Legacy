@@ -30,7 +30,9 @@
 #define ENABLE_D3D_RESOURCE_DEBUG_NAMES 0
 
 #define xFORCE_DEBUG
+#if USE_DX12
 
+#else
 D3DManager::D3DManager()
 {
 	m_swapChain					= nullptr;
@@ -394,3 +396,4 @@ bool D3DManager::InitSwapChain(HWND hwnd, bool fullscreen, int scrWidth, int scr
 	}
 	return true;
 }
+#endif

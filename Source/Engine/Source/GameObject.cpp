@@ -65,6 +65,9 @@ void GameObject::RenderTransparent(
 	, bool UploadMaterialDataToGPU
 	, const MaterialPool& materialBuffer) const
 {
+#if USE_DX12
+
+#else
 	const EShaders shader = static_cast<EShaders>(pRenderer->GetActiveShader());
 	const XMMATRIX world = mTransform.WorldTransformationMatrix();
 	const XMMATRIX wvp = world * sceneView.viewProj;
@@ -117,6 +120,7 @@ void GameObject::RenderTransparent(
 		pRenderer->Apply();
 		pRenderer->DrawIndexed();
 	};
+#endif
 }
 
 void GameObject::Clear()

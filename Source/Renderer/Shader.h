@@ -59,7 +59,11 @@ struct ConstantBufferBinding
 {	
 	EShaderStage  shaderStage;
 	unsigned      bufferSlot;
+#if USE_DX12
+
+#else
 	ID3D11Buffer* data;
+#endif
 	bool          dirty;
 };
 struct TextureBinding
@@ -167,6 +171,9 @@ public:
 		EShaderStage								stage;
 		unsigned									bufSlot;
 	};
+#if USE_DX12
+
+#else
 	struct ShaderStages
 	{
 		ID3D11VertexShader*    mVertexShader   = nullptr;
@@ -176,6 +183,7 @@ public:
 		ID3D11DomainShader*    mDomainShader   = nullptr;
 		ID3D11ComputeShader*   mComputeShader  = nullptr;
 	};
+#endif
 
 public:
 	//----------------------------------------------------------------------------------------------------------------
@@ -185,9 +193,13 @@ public:
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
+#if USE_DX12
+
+#else
 	bool Reload(ID3D11Device* device);
 	void ClearConstantBuffers();
 	void UpdateConstants(ID3D11DeviceContext* context);
+#endif
 
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
@@ -233,10 +245,15 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	// UTILITY FUNCTIONS
 	//----------------------------------------------------------------------------------------------------------------
+
+#if USE_DX12
+
+#else
 	void ReflectConstantBufferLayouts(ID3D11ShaderReflection * sRefl, EShaderStage type);
 	bool CompileShaders(ID3D11Device* device, const ShaderDesc& desc);
 	void SetReflections(const ShaderBlobs& blobs);
 	void CreateShaderStage(ID3D11Device* pDevice, EShaderStage stage, void* pBuffer, const size_t szShaderBinary);
+#endif
 	void CheckSignatures();
 	void LogConstantBufferLayouts() const;
 	void ReleaseResources();
@@ -247,10 +264,15 @@ private:
 	// DATA
 	//----------------------------------------------------------------------------------------------------------------
 	ShaderID mID;
+
+#if USE_DX12
+
+#else
 	ShaderStages mStages;
 
 	ShaderReflections	mReflections;	// shader reflections, temporary?
 	ID3D11InputLayout*	mpInputLayout = nullptr;
+#endif
 
 	std::string	mName;
 

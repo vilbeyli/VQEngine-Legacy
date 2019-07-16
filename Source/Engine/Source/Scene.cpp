@@ -800,9 +800,14 @@ Scene::SceneShadowingLightIndexCollection Scene::CullShadowingLights(int& outNum
 				const float rangeSqr = l.mRange * l.mRange;
 
 				const bool bIsCameraInPointLightSphereOfIncluence = dstSqrCameraToLight < rangeSqr;
-				const bool bSphereInFrustum = IsSphereInFrustum(GetActiveCamera().GetViewFrustumPlanes(), Sphere(l.mTransform._position, l.mRange));
+				if (bIsCameraInPointLightSphereOfIncluence)
+				{
+					outLightIndices.pointLightIndices.push_back(i);
+					continue;
+				}
 
-				if (bIsCameraInPointLightSphereOfIncluence || bSphereInFrustum)
+				const bool bSphereInFrustum = IsSphereInFrustum(GetActiveCamera().GetViewFrustumPlanes(), Sphere(l.mTransform._position, l.mRange));
+				if (bSphereInFrustum)
 				{
 					outLightIndices.pointLightIndices.push_back(i);
 				}
@@ -1352,6 +1357,10 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 	};
 	auto RenderObject = [&](const GameObject* pObj)
 	{
+
+#if USE_DX12
+
+#else
 		const Transform& tf = pObj->GetTransform();
 		const ModelData& model = pObj->GetModelData();
 
@@ -1415,6 +1424,7 @@ int Scene::RenderOpaque(const SceneView& sceneView) const
 			mpRenderer->Apply();
 			mpRenderer->DrawIndexed();
 		};
+#endif
 	};
 	//-----------------------------------------------------------------------------------------------
 
@@ -1463,8 +1473,12 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	const auto IABuffersSphere = mMeshes[EGeometry::SPHERE].GetIABuffers();
 	const auto IABuffersCone = mMeshes[EGeometry::LIGHT_CUE_CONE].GetIABuffers();
 
+	int numRenderedObjects = 0;
 	XMMATRIX wvp;
 
+#if USE_DX12
+
+#else
 	// set debug render states
 	mpRenderer->SetShader(EShaders::UNLIT);
 	mpRenderer->SetConstant3f("diffuse", LinearColor::yellow);
@@ -1489,7 +1503,6 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 
 	// GAME OBJECT OBB & MESH BOUNDING BOXES
 	//
-	int numRenderedObjects = 0;
 	if (bRenderObjectBoundingBoxes)
 	{
 		std::vector<const GameObject*> pObjects(
@@ -1639,13 +1652,16 @@ int Scene::RenderDebug(const XMMATRIX& viewProj) const
 	mpRenderer->SetRasterizerState(EDefaultRasterizerState::CULL_NONE);
 	mpRenderer->Apply();
 
-
+#endif
 	return numRenderedObjects; // objects rendered
 }
 
 
 void Scene::RenderLights() const
 {
+#if USE_DX12
+
+#else
 	if (!this->mSceneView.bIsIBLEnabled)
 		return;
 
@@ -1684,6 +1700,7 @@ void Scene::RenderLights() const
 		}
 	}
 	mpRenderer->EndEvent();
+#endif
 }
 
 
@@ -1692,6 +1709,9 @@ void Scene::RenderSkybox(const XMMATRIX& viewProj) const
 	const XMMATRIX& wvp = viewProj;
 	const auto IABuffers = Scene::GetGeometryVertexAndIndexBuffers(EGeometry::CUBE);
 
+#if USE_DX12
+
+#else
 	mpRenderer->BeginEvent("Skybox Pass");
 	mpRenderer->SetViewport(mpRenderer->FrameRenderTargetDimensionsAsFloat2());
 	mpRenderer->SetShader(mSkybox.GetShader());
@@ -1706,6 +1726,7 @@ void Scene::RenderSkybox(const XMMATRIX& viewProj) const
 	mpRenderer->Apply();
 	mpRenderer->DrawIndexed();
 	mpRenderer->EndEvent();
+#endif
 }
 
 

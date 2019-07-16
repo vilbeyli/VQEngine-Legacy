@@ -46,9 +46,13 @@ DirectX::XMMATRIX Texture::CubemapUtility::CalculateViewMatrix(Texture::CubemapU
 
 Texture::Texture()
 	:
+#if USE_DX12
+
+#else
 	_srv(nullptr),	// assigned and deleted by renderer
 	_uav(nullptr),	// assigned and deleted by renderer
 	_tex2D(nullptr),
+#endif
 	_width(0),
 	_height(0),
 	_depth(0),
@@ -62,6 +66,10 @@ Texture::~Texture()
 
 bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Renderer* pRenderer, bool initializeSRV)
 {
+#if USE_DX12
+	return false;
+#else
+
 	HRESULT hr = pRenderer->m_device->CreateTexture2D(&descriptor, nullptr, &this->_tex2D);
 #if defined(_DEBUG) || defined(PROFILE)
 	if (!this->_name.empty())
@@ -92,6 +100,7 @@ bool Texture::InitializeTexture2D(const D3D11_TEXTURE2D_DESC& descriptor, Render
 #endif
 	}
 	return true;
+#endif
 }
 
 template<class T>
@@ -120,6 +129,10 @@ void ReleaseResources(std::vector<T*>& resources, T*& pResourceView)
 
 void Texture::Release()
 {
+#if USE_DX12
+	assert(false);
+	return;
+#else
 	ReleaseResources(_srvArray, _srv);
 	ReleaseResources(_uavArray, _uav);
 	if (_tex2D)
@@ -130,4 +143,5 @@ void Texture::Release()
 	_width = _height = _depth = 0;
 	_name = "";
 	_id = -1;
+#endif
 }

@@ -20,6 +20,7 @@
 #include "Renderer/Renderer.h"
 
 #include "Utilities/Log.h"
+#include "Utilities/utils.h"
 
 const BlinnPhong_Material BlinnPhong_Material::ruby = BlinnPhong_Material(
 	MaterialID{ -1 },
@@ -299,6 +300,9 @@ Material::~Material() {}
 
 void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool bIsDeferredRendering) const
 {
+#if USE_DX12
+	// TODO-DX12:
+#else
 	// todo: this function and material design needs to be redone.
 	switch (shader)
 	{
@@ -348,6 +352,7 @@ void Material::SetMaterialConstants(Renderer * renderer, EShaders shader, bool b
 		}
 		break;
 	}
+#endif
 }
 
 bool Material::IsTransparent() const

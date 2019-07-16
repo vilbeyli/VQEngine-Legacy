@@ -38,6 +38,11 @@
 #else	// _WIN32
 #define CALLING_CONVENTION __stdcall
 #endif
+
+#if USE_DX12
+
+#else
+
 static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[EShaderStage::COUNT])
 (UINT StartSlot, UINT NumViews, ID3D11ShaderResourceView *const *ppShaderResourceViews) =
 {
@@ -48,6 +53,18 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderResources[EShader
 	&ID3D11DeviceContext::PSSetShaderResources,
 	&ID3D11DeviceContext::CSSetShaderResources,
 };
+
+static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[EShaderStage::COUNT])
+(UINT StartSlot, UINT NumViews, ID3D11SamplerState* const *ppShaderResourceViews) =
+{
+	&ID3D11DeviceContext::VSSetSamplers,
+	&ID3D11DeviceContext::GSSetSamplers,
+	&ID3D11DeviceContext::DSSetSamplers,
+	&ID3D11DeviceContext::HSSetSamplers,
+	&ID3D11DeviceContext::PSSetSamplers,
+	&ID3D11DeviceContext::CSSetSamplers,
+};
+#endif
 
 #if 0 // experimental (there's code duplication that can use some template programming)
 template<class T>
@@ -85,6 +102,10 @@ void SetResource(SetTextureCommand& cmd, Renderer* pRenderer, ID3D11DeviceContex
 
 void SetTextureCommand::SetResource(Renderer * pRenderer)
 {
+#if USE_DX12
+	assert(false);
+	return;
+#else
 	auto* pContext = pRenderer->m_deviceContext;
 	auto* pDevice = pRenderer->m_device;
 	if (bUnorderedAccess)
@@ -159,23 +180,19 @@ void SetTextureCommand::SetResource(Renderer * pRenderer)
 			(pContext->*SetShaderResources[binding.shaderStage])(binding.textureSlot, numTextures, pSRVs.data());
 		}
 	}
+#endif
 }
 
-static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[EShaderStage::COUNT])
-(UINT StartSlot, UINT NumViews, ID3D11SamplerState* const *ppShaderResourceViews) =
-{
-	&ID3D11DeviceContext::VSSetSamplers,
-	&ID3D11DeviceContext::GSSetSamplers,
-	&ID3D11DeviceContext::DSSetSamplers,
-	&ID3D11DeviceContext::HSSetSamplers,
-	&ID3D11DeviceContext::PSSetSamplers,
-	&ID3D11DeviceContext::CSSetSamplers,
-};
 
 void SetSamplerCommand::SetResource(Renderer * pRenderer)
 {
+#if USE_DX12
+	assert(false);
+	return;
+#else
 	assert(samplerID >= 0);
 	(pRenderer->m_deviceContext->*SetSampler[binding.shaderStage])(binding.samplerSlot, 1, &pRenderer->mSamplers[samplerID]._samplerState);
+#endif
 }
 
 ClearCommand ClearCommand::Depth(float depthClearValue)

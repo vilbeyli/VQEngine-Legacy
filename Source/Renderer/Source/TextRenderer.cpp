@@ -127,8 +127,11 @@ bool TextRenderer::Initialize(Renderer* pRenderer)
 	bufDesc.mUsage = GPU_READ_CPU_WRITE;
 	mQuadVertexBuffer = pRenderer->CreateBuffer(bufDesc, nullptr, "TextRendererVB");
 
+#if USE_DX12
+#else
 	// todo: blend state desc
 	mAlphaBlendState = pRenderer->AddBlendState(); 
+#endif
 	return true;
 }
 
@@ -142,6 +145,9 @@ void TextRenderer::RenderText(const TextDrawDescription& drawDesc)
 	const vec2 windowSizeXY = pRenderer->GetWindowDimensionsAsFloat2();
 	const XMMATRIX proj = XMMatrixOrthographicLH(windowSizeXY.x(), windowSizeXY.y(), 0.1f, 1000.0f);
 	
+#if USE_DX12
+
+#else
 	
 	std::stringstream ss;
 	ss << "RenderText: " << drawDesc.text;
@@ -190,4 +196,5 @@ void TextRenderer::RenderText(const TextDrawDescription& drawDesc)
 	pRenderer->SetBlendState(EDefaultBlendState::DISABLED);
 
 	pRenderer->EndEvent();
+#endif
 }

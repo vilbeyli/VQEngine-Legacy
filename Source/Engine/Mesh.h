@@ -105,6 +105,7 @@ private:
 	std::string mMeshName;
 };
 
+
 //
 // Template Definitions
 //

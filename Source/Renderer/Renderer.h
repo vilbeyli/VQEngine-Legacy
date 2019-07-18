@@ -106,6 +106,8 @@ public:
 	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
 #endif
 
+	void					BeginFrame();	// resets render stats
+	void					EndFrame();		// presents the swapchain and clears shaders
 
 public:
 	bool SaveTextureToDisk(TextureID texID, const std::string& filePath, bool bConverToSRGB) const; // ?

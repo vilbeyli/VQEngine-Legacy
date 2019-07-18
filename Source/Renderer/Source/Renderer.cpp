@@ -22,6 +22,8 @@
 
 #include "Utilities/Log.h"
 
+#include "Engine/Mesh.h"
+
 
 Renderer::Renderer(){}
 Renderer::~Renderer() {}
@@ -29,7 +31,19 @@ Renderer::~Renderer() {}
 
 bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Settings::Rendering& rendererSettings)
 {
-	return false;
+	Mesh::spRenderer = this;
+
+	// SETTINGS
+	//
+	mWindowSettings = settings;
+	const bool& bAntiAliasing = rendererSettings.antiAliasing.IsAAEnabled();
+	// assuming SSAA is the only supported AA technique. otherwise, 
+	// swapchain initialization should be further customized.
+	this->mAntiAliasing = rendererSettings.antiAliasing;
+
+
+
+	return true;
 }
 
 void Renderer::Exit()
@@ -78,6 +92,18 @@ unsigned Renderer::FrameRenderTargetWidth()	 const { return mAntiAliasing.resolu
 vec2	 Renderer::FrameRenderTargetDimensionsAsFloat2() const { return vec2(this->FrameRenderTargetWidth(), this->FrameRenderTargetHeight()); }
 vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(this->WindowWidth(), this->WindowHeight()); }
 ///HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };
+
+
+void Renderer::BeginFrame()
+{
+	mRenderStats = { 0, 0, 0 };
+}
+
+void Renderer::EndFrame()
+{
+	;// m_Direct3D->EndFrame();
+}
+
 
 const BufferDesc Renderer::GetBufferDesc(EBufferType bufferType, BufferID bufferID) const
 {

@@ -116,6 +116,7 @@ Mesh::Mesh(
 	const std::string& name
 )
 {
+	assert(spRenderer);
 	BufferDesc bufferDesc = {};
 
 	const std::string VBName = name + "_LOD[0]_VB";
@@ -140,6 +141,7 @@ Mesh::Mesh(
 template<class VertexBufferType>
 Mesh::Mesh(const MeshLODData<VertexBufferType>& meshLODData)
 {
+	assert(spRenderer);
 	for (size_t LOD = 0; LOD < meshLODData.LODVertices.size(); ++LOD)
 	{
 		BufferDesc bufferDesc = {};

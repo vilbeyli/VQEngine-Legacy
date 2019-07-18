@@ -176,6 +176,7 @@ Engine::~Engine(){}
 
 bool Engine::Initialize(Application* pApplication)
 {
+	mbLoading = true;
 	this->mpApp = pApplication;
 	this->mpApp->CaptureMouse(true);
 	this->mbMouseCaptured = true; 
@@ -203,11 +204,11 @@ bool Engine::Initialize(Application* pApplication)
 		return false;
 	}
 
+	Scene::InitializeBuiltinMeshes();
 #if USE_DX12
 	/// TODO
 
 #else
-	Scene::InitializeBuiltinMeshes();
 	LoadShaders();
 	
 	if (!mpTextRenderer->Initialize(mpRenderer))
@@ -244,7 +245,6 @@ bool Engine::Initialize(Application* pApplication)
 
 	mpTimer->Stop();
 	Log::Info("[ENGINE]: Initialized in %.2fs --------------", mpTimer->DeltaTime());
-	mbLoading = false;
 	return true;
 }
 
@@ -575,6 +575,9 @@ void Engine::Exit()
 // ====================================================================================
 void Engine::SimulateAndRenderFrame()
 {
+	mpCPUProfiler->EndProfile();	// reset the cpu profiler entries
+	mpCPUProfiler->BeginProfile();
+
 	const float dt = mpTimer->Tick();
 
 	HandleInput();
@@ -679,15 +682,20 @@ void Engine::RenderThread()	// This thread is currently only used during loading
 		//           StopRenderThreadAndWait() waits on join
 		mSignalRender.wait(lck);
 #endif
+		if (mbLoading)
+		{
+			continue;
+		}
+
 		mpCPUProfiler->BeginEntry("CPU");
 
 		mpGPUProfiler->BeginProfile(mFrameCount);
 		mpGPUProfiler->BeginEntry("GPU");
+		
+		mpRenderer->BeginFrame();
 
 #if USE_DX12
 		// TODO-DX12: GET SWAPCHAIN IMAGE
-#else
-		mpRenderer->BeginFrame();
 #endif
 
 		RenderLoadingScreen(bOneTimeLoadingScreenRender);
@@ -830,13 +838,6 @@ void Engine::HandleInput()
 #endif
 
 	// SCENE -------------------------------------------------------------
-	if (mpInput->IsKeyTriggered("R"))
-	{
-		if (mpInput->IsKeyDown("Shift")) ReloadScene();
-		else							 mpActiveScene->ResetActiveCamera();
-	}
-
-
 	if (mpInput->IsKeyTriggered("1"))	mLevelLoadQueue.push(0);
 	if (mpInput->IsKeyTriggered("2"))	mLevelLoadQueue.push(1);
 	if (mpInput->IsKeyTriggered("3"))	mLevelLoadQueue.push(2);
@@ -844,22 +845,28 @@ void Engine::HandleInput()
 	if (mpInput->IsKeyTriggered("5"))	mLevelLoadQueue.push(4);
 	if (mpInput->IsKeyTriggered("6"))	mLevelLoadQueue.push(5);
 	if (mpInput->IsKeyTriggered("7"))	mLevelLoadQueue.push(6);
+	if (mpActiveScene)
+	{
+		if (mpInput->IsKeyTriggered("R"))
+		{
+			if (mpInput->IsKeyDown("Shift")) ReloadScene();
+			else							 mpActiveScene->ResetActiveCamera();
+		}
 
+		// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
+		constexpr EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
+		constexpr EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
+			static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
+			);
 
-	// index using enums. first element of environment map presets starts with cubemap preset count, as if both lists were concatenated.
-	constexpr EEnvironmentMapPresets firstPreset = static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT);
-	constexpr EEnvironmentMapPresets lastPreset = static_cast<EEnvironmentMapPresets>(
-		static_cast<EEnvironmentMapPresets>(CUBEMAP_PRESET_COUNT) + ENVIRONMENT_MAP_PRESET_COUNT - 1
-		);
-
-	EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
-	if (selectedEnvironmentMap == -1)
-		return; // if no skymap is selected, ignore input to change it
-	if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
-	if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
-	if (ENGINE->INP()->IsKeyTriggered("PageUp") || ENGINE->INP()->IsKeyTriggered("PageDown"))
-		mpActiveScene->SetEnvironmentMap(selectedEnvironmentMap);
-	
+		EEnvironmentMapPresets selectedEnvironmentMap = mpActiveScene->GetActiveEnvironmentMapPreset();
+		if (selectedEnvironmentMap == -1)
+			return; // if no skymap is selected, ignore input to change it
+		if (ENGINE->INP()->IsKeyTriggered("PageUp"))	selectedEnvironmentMap = selectedEnvironmentMap == lastPreset ? firstPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap + 1);
+		if (ENGINE->INP()->IsKeyTriggered("PageDown"))	selectedEnvironmentMap = selectedEnvironmentMap == firstPreset ? lastPreset : static_cast<EEnvironmentMapPresets>(selectedEnvironmentMap - 1);
+		if (ENGINE->INP()->IsKeyTriggered("PageUp") || ENGINE->INP()->IsKeyTriggered("PageDown"))
+			mpActiveScene->SetEnvironmentMap(selectedEnvironmentMap);
+	}
 }
 
 void Engine::CalcFrameStats(float dt)
@@ -1512,9 +1519,6 @@ void Engine::RenderUI() const
 
 void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 {
-#if USE_DX12
-	// TODO-DX12:
-#else
 	const XMMATRIX matTransformation = XMMatrixIdentity();
 	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 
@@ -1527,6 +1531,9 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 		mpGPUProfiler->BeginEntry("Loading Screen");
 	}
 
+#if USE_DX12
+	// TODO-DX12:
+#else
 	mpRenderer->SetShader(EShaders::UNLIT);
 	mpRenderer->UnbindDepthTarget();
 	mpRenderer->BindRenderTarget(0);
@@ -1541,15 +1548,19 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 	mpRenderer->Apply();
 	mpRenderer->DrawIndexed();
+#endif
 
 	if (bOneTimeRender)
 	{
 		mpRenderer->EndFrame();
+#if USE_DX12
+		// TODO-DX12:
+#else
 		mpRenderer->UnbindRenderTargets();
+#endif
 	}
 	else
 	{
 		mpGPUProfiler->EndEntry();
 	}
-#endif
 }

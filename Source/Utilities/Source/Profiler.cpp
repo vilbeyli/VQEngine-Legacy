@@ -11,8 +11,14 @@
 #include <sstream>
 #include <iomanip>
 
+
+#if USE_DX12
+#define DISABLE_CPU_PROFILER 0
+#define DISABLE_GPU_PROFILER 1
+#else
 #define DISABLE_CPU_PROFILER 0
 #define DISABLE_GPU_PROFILER 0
+#endif
 
 #if DISABLE_CPU_PROFILER
 #define CPU_PROFILER_ENABLE_CHECK return;
@@ -475,7 +481,11 @@ size_t GPUProfiler::RenderPerformanceStats(
 	, TextDrawDescription drawDesc
 	, bool bSort)
 {
+#if USE_DX12
+	return 0;
+#else
 	GPU_PROFILER_ENABLE_CHECK
+#endif
 		if (bSort)
 			mQueryDataTree.Sort();
 	return mQueryDataTree.RenderTree(pTextRenderer, screenPosition, drawDesc);

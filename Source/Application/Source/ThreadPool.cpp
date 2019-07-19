@@ -109,7 +109,7 @@ ThreadPool::ThreadPool(size_t numThreads)
 ThreadPool::~ThreadPool()
 {
 	{
-		std::unique_lock<std::mutex > lock(mMutex);
+		std::unique_lock<std::mutex > lock(mTaskQueueMutex);
 		mStopThreads = true;
 	}
 
@@ -127,7 +127,7 @@ void ThreadPool::Execute()
 	{
 		Task task;
 		{
-			std::unique_lock<std::mutex > lock(mMutex);
+			std::unique_lock<std::mutex > lock(mTaskQueueMutex);
 			mSignal.wait(lock, [=] { return mStopThreads || !mTaskQueue.queue.empty(); });
 
 			if (mStopThreads)

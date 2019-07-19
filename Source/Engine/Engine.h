@@ -47,7 +47,11 @@
 using std::shared_ptr;
 using std::unique_ptr;
 
+#if USE_DX12
+#include "Application/ThreadPool.h"
+#else
 namespace VQEngine { class ThreadPool; }
+#endif
 
 class Renderer;
 class TextRenderer;
@@ -253,27 +257,48 @@ private:
 	unsigned long long	mFrameCount;
 
 	//----------------------------------------------------------------------------------------------------------------
-	// THREADED LOADING
+	// THREADING
 	//---------------------------------------------------------------------------------------------------------------- 
 	std::atomic<bool>	mbLoading;
 	std::atomic<float>	mAccumulator;	// frame time accumulator
 	std::queue<int>		mLevelLoadQueue;
 
+#if USE_DX12
+	// Starts the Rendering, Loading and Update threads.
+	//
+	void StartThreads();
+	
+	// Signals Rendering, Loading and Update threads to finalize and calls join on them.
+	// Blocks the calling thread until the three threads are all finished.
+	//
+	void StopThreads();
+	
+	VQEngine::Thread mRenderThread;
+	bool mbStopLoadThread = false;
+#else
+
 	// Starts the rendering thread when loading scenes
 	//
-	inline void StartRenderThread();
-
-	// Loading screen + perf numbers rendering on own thread
-	//
-	void RenderThread();
+	void StartRenderThread();
 
 	// Signals render thread to stop and blocks the current thread until the render thread joins
 	//
-	void StopRenderThreadAndWait();	
+	void StopRenderThreadAndWait();
 
 	bool mbStopRenderThread = false;
 	std::thread mRenderThread;
 	std::condition_variable mSignalRender;
+#endif
+
+	// Loading screen + perf numbers rendering on own thread
+	//
+	void RenderThread();
+	void SimulationThread();
+	void LoadingThread();
+
+#if USE_NEW_THREADING
+#else
+#endif
 public:
 	static std::mutex	mLoadRenderingMutex;
 };

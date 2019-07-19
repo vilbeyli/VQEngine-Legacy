@@ -92,12 +92,21 @@ private:
 
 namespace VQEngine
 {
-	// src: https://www.youtube.com/watch?v=eWTGtp3HXiw
+	class Thread
+	{
+		
 
+		std::condition_variable mSignal;
+		std::thread mThread;
+		bool mbStopThread;
+	};
+
+	// src: https://www.youtube.com/watch?v=eWTGtp3HXiw
 	class ThreadPool
 	{
 	public:
 		const static size_t ThreadPool::sHardwareThreadCount;
+		//static 
 
 		ThreadPool(size_t numThreads);
 		~ThreadPool();
@@ -146,7 +155,7 @@ namespace VQEngine
 			using typename task_return_t = decltype(task());
 			auto pTask = std::make_shared< std::packaged_task<task_return_t()>>(std::move(task));
 			{
-				std::unique_lock<std::mutex> lock(mMutex);
+				std::unique_lock<std::mutex> lock(mTaskQueueMutex);
 				mTaskQueue.queue.emplace([=]
 				{					// Add a lambda function to the task queue which 
 					(*pTask)();		// calls the packaged_task<>'s callable object -> T task 
@@ -162,9 +171,9 @@ namespace VQEngine
 
 		std::vector<std::thread>	mThreads;
 		std::condition_variable		mSignal;
-		std::mutex					mMutex;
 		bool						mStopThreads = false;
 
+		std::mutex					mTaskQueueMutex;
 		TaskQueue					mTaskQueue;
 	};
 

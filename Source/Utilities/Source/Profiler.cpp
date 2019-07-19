@@ -62,7 +62,7 @@ void CPUProfiler::EndProfile(const unsigned long long FRAME_NUMBER)
 
 	if (!entryStack.empty())
 	{
-		Log::Warning("Begin/End Entry mismatch! Last profiling entry: %s", entryStack.top());
+		Log::Warning("CPUProfiler::EndProfile : Begin/End Entry mismatch! Last profiling entry: %s", entryStack.top());
 		while (!entryStack.empty()) entryStack.pop();
 	}
 
@@ -78,7 +78,7 @@ void CPUProfiler::BeginEntry(const std::string & entryName)
 	CPU_PROFILER_ENABLE_CHECK
 	if (!mState.bIsProfiling)
 	{
-		Log::Error("Profiler::BeginProfile() hasn't been called.");
+		Log::Error("CPUProfiler::BeginProfile() hasn't been called.");
 		return;
 	}
 		
@@ -122,13 +122,13 @@ void CPUProfiler::EndEntry()
 	CPU_PROFILER_ENABLE_CHECK
 	if (!mState.bIsProfiling)
 	{
-		Log::Error("Profiler::BeginProfile() hasn't been called.");
+		Log::Error("CPUProfiler::BeginProfile() hasn't been called.");
 		return;
 	}
 
 	if (mState.EntryNameStack.empty())
 	{
-		Log::Error("Profiler::EndEntry() called without BeginEntry().");
+		Log::Error("CPUProfiler::EndEntry() called without BeginEntry().");
 		return;
 	}
 
@@ -194,7 +194,8 @@ void CPUProfiler::PerfEntry::UpdateSampleEnd()
 	timer.Stop();
 	float dt = timer.DeltaTime();
 
-	samples[currSampleIndex++ % samples.size()] = dt;
+	if(samples.size() > 0)
+		samples[currSampleIndex++ % samples.size()] = dt;
 }
 void CPUProfiler::PerfEntry::UpdateSampleBegin()
 {

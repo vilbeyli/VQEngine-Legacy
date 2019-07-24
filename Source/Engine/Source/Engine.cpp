@@ -231,12 +231,20 @@ bool Engine::Initialize(Application* pApplication)
 }
 
 
-bool Engine::Load(ThreadPool* pThreadPool)
+bool Engine::Load()
 {
+#if 0//USE_DX12
+	// TODO: proper threaaded laoding
+	///mEngineLoadingTaskQueue.queue.push()
+	return true;
+#else
+
 	Log::Info("[ENGINE]: Loading -------------------------");
 	mpCPUProfiler->BeginProfile();
-	mpThreadPool = pThreadPool;
-	
+
+	mpThreadPool = new ThreadPool(4);
+	mpThreadPool->StartThreads();
+
 	// prepare loading screen resources
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/0.png"));
 	mLoadingScreenTextures.push_back(mpRenderer->CreateTextureFromFile("LoadingScreen/1.png"));
@@ -403,6 +411,8 @@ bool Engine::Load(ThreadPool* pThreadPool)
 	ENGINE->mpTimer->Reset();
 	ENGINE->mpTimer->Start();
 	return true;
+
+#endif // USE_DX12
 }
 
 
@@ -537,6 +547,12 @@ bool Engine::LoadShaders()
 
 void Engine::Exit()
 {
+#if USE_DX12
+	StopThreads();
+#endif
+
+	delete mpThreadPool;
+
 	mpCPUProfiler->EndProfile();
 	mpGPUProfiler->Exit();
 	mUI.Exit();

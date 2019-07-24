@@ -118,6 +118,9 @@ void Parser::ParseSetting(const std::vector<std::string>& line, Settings::Engine
 		settings.window.height     = stoi(line[2]);
 		settings.window.fullscreen = stoi(line[3]);
 		settings.window.vsync      = stoi(line[4]);
+		settings.window.bTopBarVisible = line.size() > 5
+			? sBoolTypeReflection.at(line[5])
+			: true;
 	}
 	else if (cmd == "logger" || cmd == "logging" || cmd == "log")
 	{

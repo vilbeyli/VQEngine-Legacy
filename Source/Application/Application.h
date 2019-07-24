@@ -82,8 +82,6 @@ private:
 	// state
 	bool		m_bAppWantsExit;
 	POINT		m_capturePosition;
-
-	VQEngine::ThreadPool	m_threadPool;
 };
 
 // The WndProc function is also included here so we can redirect 

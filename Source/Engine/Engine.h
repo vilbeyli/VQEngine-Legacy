@@ -110,7 +110,7 @@ public:
 	bool			Initialize(Application* pApplication);
 	void			Exit();
 	
-	bool			Load(VQEngine::ThreadPool* pThreadPool);
+	bool			Load();
 	void			SimulateAndRenderFrame();
 
 	void			SendLightData() const; // TODO: remove this function
@@ -273,13 +273,35 @@ private:
 	//
 	void StopThreads();
 	
+#if 0
 	VQEngine::Thread mRenderThread;
-	bool mbStopLoadThread = false;
+	VQEngine::Thread mLoadingThread;
+	VQEngine::Thread mSimulationThread;
+#else
+	std::thread mRenderThread;
+	std::thread mLoadingThread;
+	std::thread mSimulationThread;
+
+	std::condition_variable mEvent_StopThreads;
+	std::condition_variable mEvent_LoadFinished;
+	std::condition_variable mEvent_FrameUpdateFinished;
+	std::condition_variable mEvent_FrameRenderFinished;
+
+	std::mutex mEventMutex_LoadFinished;
+	std::mutex mEventMutex_FrameUpdateFinished;
+	std::mutex mEventMutex_FrameRenderFinished;
+
+	TaskQueue mEngineLoadingTaskQueue;
+
+#endif
+
+	bool mbStopThreads = false;
 #else
 
 	// Starts the rendering thread when loading scenes
 	//
 	void StartRenderThread();
+
 
 	// Signals render thread to stop and blocks the current thread until the render thread joins
 	//
@@ -292,9 +314,9 @@ private:
 
 	// Loading screen + perf numbers rendering on own thread
 	//
-	void RenderThread();
-	void SimulationThread();
-	void LoadingThread();
+	void RenderThread(unsigned numWorkers);
+	void SimulationThread(unsigned numWorkers);
+	void LoadingThread(unsigned numWorkers);
 
 #if USE_NEW_THREADING
 #else

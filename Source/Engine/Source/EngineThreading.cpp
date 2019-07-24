@@ -19,6 +19,8 @@
 
 #include "Renderer/Renderer.h"
 
+#include "Utilities/Log.h"
+
 using namespace VQEngine;
 
 
@@ -31,28 +33,120 @@ std::mutex Engine::mLoadRenderingMutex;
 
 void Engine::StartThreads()
 {
+	Log::Info("StartingThreads...");
+#if 0
+	mRenderThread     = VQEngine::Thread(&Engine::RenderThread, this);
+	mLoadingThread    = VQEngine::Thread(&Engine::LoadingThread, this);
+	mSimulationThread = VQEngine::Thread(&Engine::SimulationThread, this);
+#else
+	constexpr unsigned NUM_LOADING_THREAD_WORKERS = 2;
+	constexpr unsigned NUM_RENDER_THREAD_WORKERS = 4;
+	constexpr unsigned NUM_SIMULATION_THREAD_WORKERS = 2;
 
+
+	mRenderThread     = std::thread(&Engine::RenderThread    , this, NUM_RENDER_THREAD_WORKERS);
+	mLoadingThread    = std::thread(&Engine::LoadingThread   , this, NUM_LOADING_THREAD_WORKERS);
+	mSimulationThread = std::thread(&Engine::SimulationThread, this, NUM_SIMULATION_THREAD_WORKERS);
+#endif
 }
+
 void Engine::StopThreads()
 {
+	// signal stop events
+	this->mbStopThreads = true;
+	mEvent_StopThreads.notify_all();
 
+	// wait for threads to exit
+	this->mRenderThread.join();
+	this->mLoadingThread.join();
+	this->mSimulationThread.join();
 }
 
 
 
-void Engine::RenderThread()	
+//
+// RENDER THREAD
+//
+void Engine::RenderThread(unsigned numWorkers)	
 {
+	// Init --------------------------------------------------------------------
+	ThreadPool mThreadPool(numWorkers);
+	mThreadPool.StartThreads(); 
 
+	// Loop --------------------------------------------------------------------
+	while (!this->mbStopThreads)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds::duration(300));
+		Log::Info("[RenderThread] Tick.");
+	}
+
+
+	// Exit --------------------------------------------------------------------
+	Log::Info("[RenderThread] Exiting.");
 }
 
-void Engine::SimulationThread()
-{
 
+//
+// SIMULATION THREAD
+//
+void Engine::SimulationThread(unsigned numWorkers)
+{
+	// Init --------------------------------------------------------------------
+	ThreadPool mThreadPool(numWorkers);
+	mThreadPool.StartThreads();
+
+	// Loop --------------------------------------------------------------------
+	while (!this->mbStopThreads)
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds::duration(98));
+		Log::Info("[SimulationThread] Tick.");
+
+	}
+
+	// Exit --------------------------------------------------------------------
+	Log::Info("[SimulationThread] Exiting.");
 }
 
-void Engine::LoadingThread()
-{
 
+//
+// LOADING THREAD
+//
+void Engine::LoadingThread(unsigned numWorkers)
+{
+	// Init --------------------------------------------------------------------
+	// TODO: shall we be using the thread context for this? or is it better to 
+	//       move the ThreadPool to engine and keep a pointer for a lighter context?
+	ThreadPool mThreadPool(numWorkers); 
+	mThreadPool.StartThreads();
+
+
+	// Loop --------------------------------------------------------------------
+	// TODO: this looks pretty much like a copy of threadpool code...
+	Task task;
+	while (!this->mbStopThreads)
+	{
+		///std::this_thread::sleep_for(std::chrono::milliseconds::duration(2500));
+		///Log::Info("[LoadingThread] Tick.");
+		{
+			std::unique_lock<std::mutex> lock(mEngineLoadingTaskQueue.mutex);
+			mEvent_StopThreads.wait(lock, [=] { return this->mbStopThreads || !mEngineLoadingTaskQueue.queue.empty(); });
+
+			// if mbStopThreads were issued, abort the current task and exit right away
+			if (this->mbStopThreads)
+			{
+				break;
+			}
+
+			mEngineLoadingTaskQueue.GetTaskFromTopOfQueue(task);
+		}
+
+		// TODO: distribute to the workers.
+		// execute the task 
+		task();
+	}
+
+	// Exit --------------------------------------------------------------------
+	Log::Info("[LoadingThread] Exiting.");
 }
 
 #else
@@ -61,7 +155,7 @@ void Engine::LoadingThread()
 void Engine::StartRenderThread()
 {
 	mbStopRenderThread = false;
-	mRenderThread = std::thread(&Engine::RenderThread, this);
+	mRenderThread = std::thread(&Engine::RenderThread, this, 4);
 }
 
 
@@ -69,11 +163,12 @@ void Engine::StopRenderThreadAndWait()
 {
 	mbStopRenderThread = true;
 	mSignalRender.notify_all();
-	mRenderThread.join();
+	if(mRenderThread.joinable())
+		mRenderThread.join();
 }
 
 
-void Engine::RenderThread()	// This thread is currently only used during loading.
+void Engine::RenderThread(unsigned numWorkers)	// This thread is currently only used during loading.
 {
 	constexpr bool bOneTimeLoadingScreenRender = false; // We're looping;
 	while (!mbStopRenderThread)

@@ -27,11 +27,7 @@ const size_t ThreadPool::sHardwareThreadCount = std::thread::hardware_concurrenc
 
 ThreadPool::ThreadPool(size_t numThreads)
 {
-	for (auto i = 0u; i < numThreads; ++i)
-	{
-		mThreads.emplace_back(std::thread(&ThreadPool::Execute, this));
-	}
-
+	mThreads.resize(numThreads);
 	// Thread Pool Unit Test ------------------------------------------------
 #if 0
 	{
@@ -133,9 +129,16 @@ void ThreadPool::Execute()
 			if (mStopThreads)
 				break;
 
-			task = std::move(mTaskQueue.queue.front());
-			mTaskQueue.queue.pop();
+			mTaskQueue.GetTaskFromTopOfQueue(task);
 		}
 		task();
+	}
+}
+
+void VQEngine::ThreadPool::StartThreads()
+{
+	for (auto i = 0u; i < mThreads.size(); ++i)
+	{
+		mThreads[i] = std::thread(&ThreadPool::Execute, this);
 	}
 }

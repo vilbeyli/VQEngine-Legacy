@@ -113,6 +113,7 @@ namespace Settings
 		int height;
 		int fullscreen;
 		int vsync;
+		bool bTopBarVisible;
 	};
 	struct Camera // TODO: this is not an engine settings. move this to camera struct
 	{

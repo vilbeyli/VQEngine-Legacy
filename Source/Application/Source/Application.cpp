@@ -75,8 +75,7 @@ const std::string& Application::GetDirectory(EDirectories dirEnum)
 Application::Application(const char* psAppName)
 	:
 	m_appName(psAppName),
-	m_bAppWantsExit(false),
-	m_threadPool(VQEngine::ThreadPool::sHardwareThreadCount - 2)
+	m_bAppWantsExit(false)
 {
 	m_hInstance		= GetModuleHandle(NULL);	// instance of this application
 }
@@ -133,7 +132,7 @@ bool Application::Init(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iC
 
 void Application::Run()
 {
-	if (!ENGINE->Load(&m_threadPool))
+	if (!ENGINE->Load())
 	{
 		Log::Error("Could not load VQEngine. Exiting...");
 		m_bAppWantsExit = true;
@@ -397,6 +396,7 @@ void Application::InitWindow(Settings::Window& windowSettings)
 		m_appName,					// class name
 		m_appName,					// Window name
 		WS_POPUP,					// Window style
+		///WS_OVERLAPPED,
 		posX, posY, width, height,	// Window position and dimensions
 		NULL, NULL,					// parent, menu
 		m_hInstance, NULL

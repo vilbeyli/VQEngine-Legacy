@@ -34,6 +34,11 @@ using Task = std::function<void()>;
 
 struct TaskQueue
 {
+	void GetTaskFromTopOfQueue(Task& task) 
+	{
+		task = std::move(queue.front());
+		queue.pop();
+	}
 	std::mutex		 mutex;
 	std::queue<Task> queue;
 };
@@ -92,13 +97,31 @@ private:
 
 namespace VQEngine
 {
+	// WIP
 	class Thread
 	{
-		
+	public:
+#if 0
+		template<class _Fn, class... _Args>
+		Thread(_Fn pFunction, _Args&&... _Arguments)
+			: mThread(pFunction, _Arguments...)
+			//, mbStopThread(false)
+		{}
 
+
+		///template<class _Fn, class... _Args>
+		///Thread(bool bStartThread, _Fn pFunction, _Args&&... _Arguments)
+		///	:
+		///	mThread(pFunction, _Arguments...)
+		///	mbStopThread(!bStartThread)
+		///{}
+#endif
+		void StartThread();
+
+	private:
 		std::condition_variable mSignal;
 		std::thread mThread;
-		bool mbStopThread;
+		///bool mbStopThread;
 	};
 
 	// src: https://www.youtube.com/watch?v=eWTGtp3HXiw
@@ -111,6 +134,7 @@ namespace VQEngine
 		ThreadPool(size_t numThreads);
 		~ThreadPool();
 
+		void StartThreads();
 
 		// Notes on C++11 Threading:
 		// ------------------------------------------------------------------------------------

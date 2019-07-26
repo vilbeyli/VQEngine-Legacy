@@ -639,7 +639,7 @@ void Parser::ParseScene(Renderer* pRenderer, const std::vector<std::string>& com
 			? tokens[tokens.size() - 3] + "/" + tokens[tokens.size() - 2] + "/"
 			: (tokens.size() >= 2 ? tokens[tokens.size() - 2] + "/" : "");
 		
-		const std::string PBR_ROOT = Application::GetDirectory(Application::EDirectories::TEXTURES) + std::string("PBR/");
+		const std::string PBR_ROOT = Application::GetDirectory(Application::EDirectories::TEXTURES) + std::string("PBR/cgbookcase/");
 		const bool bGenerateMips = true;
 		sTextureSet[textureMapIndex] = pRenderer->CreateTextureFromFile(fileName, PBR_ROOT + folderPath, bGenerateMips);
 	}

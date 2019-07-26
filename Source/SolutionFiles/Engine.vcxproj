@@ -210,6 +210,8 @@
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Model.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\UI.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Engine\Source\Camera.cpp" />
+    <ClCompile Include="..\Engine\Source\EngineInput.cpp" />
+    <ClCompile Include="..\Engine\Source\EngineLoad.cpp" />
     <ClCompile Include="..\Engine\Source\EngineOS.cpp" />
     <ClCompile Include="..\Engine\Source\EngineRender.cpp" />
     <ClCompile Include="..\Engine\Source\EngineThreading.cpp" />

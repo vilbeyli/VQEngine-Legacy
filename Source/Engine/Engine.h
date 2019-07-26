@@ -25,6 +25,12 @@
 //
 #define ENABLE_PARALLAX_MAPPING 0
 
+// Uses a thread pool of worker threads to load scene models
+// while utilizing a render thread to render loading screen
+//
+#define LOAD_ASYNC 1
+
+
 #include "Utilities/PerfTimer.h"
 #include "Utilities/Profiler.h"
 
@@ -64,6 +70,10 @@ class PerfTimer;
 
 class Scene;
 
+
+//
+// TODO: CleanUp
+//--------------------------------------------------------------
 #if 0
 	class OS
 	{
@@ -73,7 +83,6 @@ class Scene;
 	};
 }
 #endif
-
 #ifndef _WIN64
 // usage of XMMATRIX in Engine class causes alignment warning: 
 // > Engine might not be on 16-byte boundary. 
@@ -83,12 +92,14 @@ class Scene;
 #else
 #define ALIGNMENT
 #endif
+//--------------------------------------------------------------
 
 ALIGNMENT class Engine
 {
-	friend struct ShadowMapPass;	//temporary
 	friend class Application;
+	friend struct ShadowMapPass;	//temporary
 	friend class SceneManager;	// read/write ZPassObjects
+
 
 public:	
 	//----------------------------------------------------------------------------------------------------------------
@@ -160,15 +171,49 @@ public:
 
 private:
 	Engine();
+	void CalcFrameStats(float dt);
+	void HandleInput();
 
+	//----------------------------------------------------------------------------------------------------------------
+	// THREADING
+	//----------------------------------------------------------------------------------------------------------------
+#if USE_DX12
+	// Starts the Rendering, Loading and Update threads.
+	//
+	void StartThreads();
+
+	// Signals Rendering, Loading and Update threads to finalize and calls join on them.
+	// Blocks the calling thread until the three threads are all finished.
+	//
+	void StopThreads();
+#else  // USE_DX12
+	// Starts the rendering thread when loading scenes
+	//
+	void StartRenderThread();
+
+	// Signals render thread to stop and blocks the current thread until the render thread joins
+	//
+	void StopRenderThreadAndWait();
+#endif // USE_DX12
+
+	//----------------------------------------------------------------------------------------------------------------
+	// LOADING
+	//----------------------------------------------------------------------------------------------------------------
+#if USE_DX12
+#else
+	bool Load_Async();
+	bool Load_Serial();
+#endif
 	bool LoadSceneFromFile();
 	bool LoadScene(int level);
 	bool LoadShaders();
 	bool ReloadScene();
+	void LoadLoadingScreenTextures();
+	//void Load
 
-	void CalcFrameStats(float dt);
-	void HandleInput();
-
+	//----------------------------------------------------------------------------------------------------------------
+	// RENDERING
+	//----------------------------------------------------------------------------------------------------------------
 	// prepares rendering context: gets data from scene and sets up data structures ready to be sent to GPU
 	void PreRender();
 	void Render();
@@ -264,15 +309,7 @@ private:
 	std::queue<int>		mLevelLoadQueue;
 
 #if USE_DX12
-	// Starts the Rendering, Loading and Update threads.
-	//
-	void StartThreads();
-	
-	// Signals Rendering, Loading and Update threads to finalize and calls join on them.
-	// Blocks the calling thread until the three threads are all finished.
-	//
-	void StopThreads();
-	
+
 #if 0
 	VQEngine::Thread mRenderThread;
 	VQEngine::Thread mLoadingThread;
@@ -296,21 +333,11 @@ private:
 #endif
 
 	bool mbStopThreads = false;
-#else
-
-	// Starts the rendering thread when loading scenes
-	//
-	void StartRenderThread();
-
-
-	// Signals render thread to stop and blocks the current thread until the render thread joins
-	//
-	void StopRenderThreadAndWait();
-
+#else // USE_DX12
 	bool mbStopRenderThread = false;
 	std::thread mRenderThread;
 	std::condition_variable mSignalRender;
-#endif
+#endif // USE_DX12
 
 	// Loading screen + perf numbers rendering on own thread
 	//

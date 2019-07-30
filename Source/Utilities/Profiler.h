@@ -12,10 +12,6 @@
 #include "Renderer/TextRenderer.h"
 #include "Engine/DataStructures.h"
 
-#ifdef max
-#undef max
-#endif
-
 class TextRenderer;
 struct vec2;
 struct ID3D11DeviceContext;

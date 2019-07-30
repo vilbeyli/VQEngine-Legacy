@@ -18,13 +18,11 @@
 
 #pragma once
 
-#include "Engine/Mesh.h"
-
-
 class Renderer;
 class TextRenderer;
 
 struct vec3;
+struct vec2;
 class CPUProfiler;
 class GPUProfiler;
 struct FrameStats;

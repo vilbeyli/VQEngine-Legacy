@@ -29,9 +29,6 @@
 
 
 #include <algorithm>
-#ifdef min
-#undef min
-#endif
 
 #define ENABLE_COMPUTE_BLUR             0
 #define ENABLE_COMPUTE_BLUR_TRANSPOZE   0

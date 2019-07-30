@@ -35,7 +35,7 @@ using std::string;
 #define CACHE_LIGHT_MATRICES 1
 
 
-// I want my parameter names Windows...
+// I want my parameter names, Windows...
 #ifdef near
 #undef near
 #endif

@@ -38,7 +38,7 @@ namespace filesys = std::experimental::filesystem;
 const std::string file_root		= "Data\\";
 const std::string scene_root	= "Data\\SceneFiles\\";
 
-const std::unordered_map<std::string, bool> sBoolTypeReflection
+static const std::unordered_map<std::string, bool> sBoolTypeReflection
 {
 	{"true", true},		{"false", false},
 	{"yes", true},		{"no", false},
@@ -46,7 +46,7 @@ const std::unordered_map<std::string, bool> sBoolTypeReflection
 };
 
 
-const std::unordered_map<std::string, Settings::Rendering::AntiAliasing::EAntiAliasingTechnique> sAATypeReflection
+static const std::unordered_map<std::string, Settings::Rendering::AntiAliasing::EAntiAliasingTechnique> sAATypeReflection
 {
 	{"0" , Settings::Rendering::AntiAliasing::EAntiAliasingTechnique::NO_ANTI_ALIASING }
 	, {"none", Settings::Rendering::AntiAliasing::EAntiAliasingTechnique::NO_ANTI_ALIASING  }

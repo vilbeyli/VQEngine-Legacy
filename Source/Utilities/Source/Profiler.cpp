@@ -11,6 +11,7 @@
 #include <sstream>
 #include <iomanip>
 
+#include <algorithm>
 
 #if USE_DX12
 #define DISABLE_CPU_PROFILER 0

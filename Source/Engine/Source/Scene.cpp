@@ -16,8 +16,6 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-#define NOMINMAX
-
 #include "Scene.h"
 #include "SceneResourceView.h"
 #include "Engine.h"

@@ -26,6 +26,18 @@
 #include "Utilities/Log.h"
 #include "Utilities/CustomParser.h"
 
+
+#define OVERRIDE_LEVEL_LOAD      1	// Toggle for overriding level loading
+// 0: objects 
+// 1: ssao test 
+// 2: ibl test
+// 3: stress test
+// 4: sponza
+// 5: lights
+// 6: lod test
+#define OVERRIDE_LEVEL_VALUE     6	// which level to load
+
+
 #if !USE_DX12
 bool Engine::Load_Async()
 {
@@ -165,16 +177,6 @@ bool Engine::Load_Serial()
 }
 #endif
 
-#define OVERRIDE_LEVEL_LOAD      1	// Toggle for overriding level loading
-// 0: objects 
-// 1: ssao test 
-// 2: ibl test
-// 3: stress test
-// 4: sponza
-// 5: lights
-// 6: lod test
-#define OVERRIDE_LEVEL_VALUE     6	// which level to load
-
 bool Engine::ReloadScene()
 {
 #if LOAD_ASYNC
@@ -222,7 +224,7 @@ bool Engine::LoadSceneFromFile()
 
 	assert(mCurrentLevel < mpScenes.size());
 	mpActiveScene = mpScenes[mCurrentLevel];
-	mpActiveScene->mpThreadPool = mpThreadPool;
+	mpActiveScene->mpThreadPool = &mSimulationWorkers;
 
 	mpActiveScene->LoadScene(mSerializedScene, sEngineSettings.window);
 
@@ -268,7 +270,7 @@ bool Engine::LoadScene(int level)
 		mbLoading = false;
 		return bLoadSuccess;
 	};
-	mpThreadPool->AddTask(loadFn);
+	mSimulationWorkers.AddTask(loadFn);
 	return true;
 #else
 	mpActiveScene->UnloadScene();

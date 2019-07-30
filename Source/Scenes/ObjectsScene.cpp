@@ -35,13 +35,6 @@ enum class WALLS
 	CEILING
 };
 
-#ifdef min
-#undef min
-#endif
-#ifdef max
-#undef max
-#endif
-
 #define TEST_EGEMEN  0
 #define LOAD_FLOOR   1
 #define LOAD_SPHERES 1

@@ -19,9 +19,6 @@
 #include "SSAOTestScene.h"
 #include "Renderer/Renderer.h"
 
-#undef min
-#undef max
-
 constexpr int MODEL_COUNT = 10;
 #define LOAD_MODELS 0
 #define LOAD_CUBE_GRID 0

@@ -22,6 +22,7 @@
 
 #if USE_DX12
 
+#define NOMINMAX
 #include <dxgi.h>
 
 // TODO-DX12:

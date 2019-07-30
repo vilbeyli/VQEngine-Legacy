@@ -30,6 +30,7 @@ std::mutex Engine::mLoadRenderingMutex;
 
 #if USE_DX12
 
+#define DEBUG_LOG_THREAD_TICKS 0
 
 void Engine::StartThreads()
 {
@@ -39,13 +40,11 @@ void Engine::StartThreads()
 	mLoadingThread    = VQEngine::Thread(&Engine::LoadingThread, this);
 	mSimulationThread = VQEngine::Thread(&Engine::SimulationThread, this);
 #else
-	constexpr unsigned NUM_LOADING_THREAD_WORKERS = 2;
 	constexpr unsigned NUM_RENDER_THREAD_WORKERS = 4;
 	constexpr unsigned NUM_SIMULATION_THREAD_WORKERS = 2;
 
-
+	// TODO: pass threadpool pointers instead of allocating them on stack
 	mRenderThread     = std::thread(&Engine::RenderThread    , this, NUM_RENDER_THREAD_WORKERS);
-	mLoadingThread    = std::thread(&Engine::LoadingThread   , this, NUM_LOADING_THREAD_WORKERS);
 	mSimulationThread = std::thread(&Engine::SimulationThread, this, NUM_SIMULATION_THREAD_WORKERS);
 #endif
 }
@@ -58,7 +57,6 @@ void Engine::StopThreads()
 
 	// wait for threads to exit
 	this->mRenderThread.join();
-	this->mLoadingThread.join();
 	this->mSimulationThread.join();
 }
 
@@ -77,7 +75,9 @@ void Engine::RenderThread(unsigned numWorkers)
 	while (!this->mbStopThreads)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds::duration(300));
+#if DEBUG_LOG_THREAD_TICKS
 		Log::Info("[RenderThread] Tick.");
+#endif
 	}
 
 
@@ -99,55 +99,15 @@ void Engine::SimulationThread(unsigned numWorkers)
 	while (!this->mbStopThreads)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds::duration(98));
+#if DEBUG_LOG_THREAD_TICKS
 		Log::Info("[SimulationThread] Tick.");
-
+#endif
 	}
 
 	// Exit --------------------------------------------------------------------
 	Log::Info("[SimulationThread] Exiting.");
 }
 
-
-//
-// LOADING THREAD
-//
-void Engine::LoadingThread(unsigned numWorkers)
-{
-	// Init --------------------------------------------------------------------
-	// TODO: shall we be using the thread context for this? or is it better to 
-	//       move the ThreadPool to engine and keep a pointer for a lighter context?
-	ThreadPool mThreadPool(numWorkers); 
-	mThreadPool.StartThreads();
-
-
-	// Loop --------------------------------------------------------------------
-	// TODO: this looks pretty much like a copy of threadpool code...
-	Task task;
-	while (!this->mbStopThreads)
-	{
-		///std::this_thread::sleep_for(std::chrono::milliseconds::duration(2500));
-		///Log::Info("[LoadingThread] Tick.");
-		{
-			std::unique_lock<std::mutex> lock(mEngineLoadingTaskQueue.mutex);
-			mEvent_StopThreads.wait(lock, [=] { return this->mbStopThreads || !mEngineLoadingTaskQueue.queue.empty(); });
-
-			// if mbStopThreads were issued, abort the current task and exit right away
-			if (this->mbStopThreads)
-			{
-				break;
-			}
-
-			mEngineLoadingTaskQueue.GetTaskFromTopOfQueue(task);
-		}
-
-		// TODO: distribute to the workers.
-		// execute the task 
-		task();
-	}
-
-	// Exit --------------------------------------------------------------------
-	Log::Info("[LoadingThread] Exiting.");
-}
 
 #else
 

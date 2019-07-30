@@ -1707,9 +1707,6 @@ TextureID Renderer::CreateCubemapFromFaceTextures(const std::vector<std::string>
 }
 
 
-#ifdef max
-#undef max
-#endif
 BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData /*=nullptr*/, const char* pBufferName /*= nullptr*/)
 {
 	Buffer buffer(bufferDesc);

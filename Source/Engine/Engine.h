@@ -241,8 +241,7 @@ private:
 	CPUProfiler*					mpCPUProfiler;
 	GPUProfiler*					mpGPUProfiler;
 	float mCurrentFrameTime;
-public:
-	VQEngine::ThreadPool*			mpThreadPool;
+
 private:
 	//----------------------------------------------------------------------------------------------------------------
 	// SCENE
@@ -304,50 +303,53 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	// THREADING
 	//---------------------------------------------------------------------------------------------------------------- 
-	std::atomic<bool>	mbLoading;
-	std::atomic<float>	mAccumulator;	// frame time accumulator
-	std::queue<int>		mLevelLoadQueue;
+	//struct Threading
+	//{
+		VQEngine::ThreadPool mSimulationWorkers;
+		VQEngine::ThreadPool mRenderWorkers;
+	
+		std::atomic<bool>	mbLoading;
+		std::atomic<float>	mAccumulator;	// frame time accumulator
+		std::queue<int>		mLevelLoadQueue;
 
 #if USE_DX12
 
 #if 0
-	VQEngine::Thread mRenderThread;
-	VQEngine::Thread mLoadingThread;
-	VQEngine::Thread mSimulationThread;
+		VQEngine::Thread mRenderThread;
+		VQEngine::Thread mLoadingThread;
+		VQEngine::Thread mSimulationThread;
 #else
-	std::thread mRenderThread;
-	std::thread mLoadingThread;
-	std::thread mSimulationThread;
+		std::thread mRenderThread;
+		std::thread mSimulationThread;
 
-	std::condition_variable mEvent_StopThreads;
-	std::condition_variable mEvent_LoadFinished;
-	std::condition_variable mEvent_FrameUpdateFinished;
-	std::condition_variable mEvent_FrameRenderFinished;
+		std::condition_variable mEvent_StopThreads;
+		std::condition_variable mEvent_LoadFinished;
+		std::condition_variable mEvent_FrameUpdateFinished;
+		std::condition_variable mEvent_FrameRenderFinished;
 
-	std::mutex mEventMutex_LoadFinished;
-	std::mutex mEventMutex_FrameUpdateFinished;
-	std::mutex mEventMutex_FrameRenderFinished;
+		std::mutex mEventMutex_LoadFinished;
+		std::mutex mEventMutex_FrameUpdateFinished;
+		std::mutex mEventMutex_FrameRenderFinished;
 
-	TaskQueue mEngineLoadingTaskQueue;
-
+		TaskQueue mEngineLoadingTaskQueue;
 #endif
 
-	bool mbStopThreads = false;
+		bool mbStopThreads = false;
 #else // USE_DX12
-	bool mbStopRenderThread = false;
-	std::thread mRenderThread;
-	std::condition_variable mSignalRender;
+		bool mbStopRenderThread = false;
+		std::thread mRenderThread;
+		std::condition_variable mSignalRender;
 #endif // USE_DX12
 
-	// Loading screen + perf numbers rendering on own thread
-	//
-	void RenderThread(unsigned numWorkers);
-	void SimulationThread(unsigned numWorkers);
-	void LoadingThread(unsigned numWorkers);
+		// Loading screen + perf numbers rendering on own thread
+		//
+		void RenderThread(unsigned numWorkers);
+		void SimulationThread(unsigned numWorkers);
 
 #if USE_NEW_THREADING
 #else
 #endif
+	//};
 public:
 	static std::mutex	mLoadRenderingMutex;
 };

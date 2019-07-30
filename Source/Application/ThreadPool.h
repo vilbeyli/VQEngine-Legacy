@@ -167,6 +167,27 @@ namespace VQEngine
 		// ------------------------------------------------------------------------------------
 
 
+		// doesn't compile...
+#define USE_STATIC_ADDTASK_FN 0 
+
+#if USE_STATIC_ADDTASK_FN
+		template <class T>
+		static auto AddTask(T&& task, std::queue<T>& q, std::mutex& m) -> std::future<decltype(task())>
+		{
+			// use a shared_ptr<> of packaged tasks here as we execute them in the thread pool workers as well
+			// as accesing its get_future() on the thread that calls this AddTask() function.
+			using typename task_return_t = decltype(task());
+			auto pTask = std::make_shared< std::packaged_task<task_return_t()>>(task);
+			{
+				std::unique_lock<std::mutex> lock(m);
+				q.emplace([=]
+				{					// Add a lambda function to the task queue which 
+					(*pTask)();		// calls the packaged_task<>'s callable object -> T task 
+				});
+			}
+		}
+#endif
+
 		// Adds a task to the thread pool and returns the std::future<> 
 		// containing the return type of the added task.
 		//
@@ -174,6 +195,7 @@ namespace VQEngine
 		//std::future<decltype(task())> AddTask(T task)	// (why doesn't this compile??)
 		auto AddTask(T task) -> std::future<decltype(task())>
 		{
+#if !USE_STATIC_ADDTASK_FN
 			// use a shared_ptr<> of packaged tasks here as we execute them in the thread pool workers as well
 			// as accesing its get_future() on the thread that calls this AddTask() function.
 			using typename task_return_t = decltype(task());
@@ -183,6 +205,33 @@ namespace VQEngine
 				mTaskQueue.queue.emplace([=]
 				{					// Add a lambda function to the task queue which 
 					(*pTask)();		// calls the packaged_task<>'s callable object -> T task 
+				});
+			}
+#else
+			AddTask<T>(std::move(task), mTaskQueue.queue, mTaskQueueMutex);
+#endif
+
+			mSignal.notify_one();
+			return pTask->get_future();
+		}
+
+		// Adds a task to the thread pool and returns the std::future<> 
+		// containing the return type of the added task.
+		//
+		template<class T>
+		//std::future<decltype(task())> AddTask(T task)	// (why doesn't this compile??)
+		auto AddTask(T task, std::condition_variable& eventToSignal) -> std::future<decltype(task())>
+		{
+			// use a shared_ptr<> of packaged tasks here as we execute them in the thread pool workers as well
+			// as accesing its get_future() on the thread that calls this AddTask() function.
+			using typename task_return_t = decltype(task());
+			auto pTask = std::make_shared< std::packaged_task<task_return_t()>>(std::move(task));
+			{
+				std::unique_lock<std::mutex> lock(mTaskQueueMutex);
+				mTaskQueue.queue.emplace([=, &eventToSignal]
+				{					// Add a lambda function to the task queue which 
+					(*pTask)();		// calls the packaged_task<>'s callable object -> T task 
+					eventToSignal.notify_one();
 				});
 			}
 

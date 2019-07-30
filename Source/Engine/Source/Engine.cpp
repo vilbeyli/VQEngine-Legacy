@@ -73,7 +73,9 @@ Engine::Engine()
 	, mbMouseCaptured(false)
 	, mbIsPaused(false)
 	, mbStartEngineShutdown(false)
-	, mpApp(nullptr)
+	, mpApp(nullptr) 
+	, mSimulationWorkers(std::max(1ull, (VQEngine::ThreadPool::sHardwareThreadCount >> 1) - 1))
+	, mRenderWorkers    (std::max(1ull, (VQEngine::ThreadPool::sHardwareThreadCount >> 1) - 1))
 {}
 
 Engine::~Engine(){}
@@ -165,14 +167,32 @@ bool Engine::Load()
 	mpCPUProfiler->BeginProfile();
 
 #if USE_DX12
+	mSimulationWorkers.StartThreads();
+	mRenderWorkers.StartThreads();
+
+	//mSimulationWorkers.AddTask([=](){ LoadLoadingScreenTextures(); });
+
+	mSimulationWorkers.AddTask([]() 
+	{ 
+		std::this_thread::sleep_for(std::chrono::milliseconds::duration(3000)); 
+		Log::Info("Worker done.");
+		return;
+	}, mEvent_LoadFinished);
+
+	Log::Info("Started worker task. Waiting...");
+	{
+		std::unique_lock<std::mutex> lock(mEventMutex_LoadFinished);
+		mEvent_LoadFinished.wait(lock);
+	}
+	Log::Info("Worker task wait has finished on main thread.");
+
 	// TODO: proper threaded loAding
 
 
 	
 	return true;
 #else
-	mpThreadPool = new ThreadPool(4);
-	mpThreadPool->StartThreads();
+	mpThreadPool.StartThreads();
 
 	LoadLoadingScreenTextures();
 
@@ -200,8 +220,6 @@ void Engine::Exit()
 #if USE_DX12
 	StopThreads();
 #endif
-
-	delete mpThreadPool;
 
 	mpCPUProfiler->EndProfile();
 	mpGPUProfiler->Exit();

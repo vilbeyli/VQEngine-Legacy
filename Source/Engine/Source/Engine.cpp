@@ -161,60 +161,6 @@ bool Engine::Initialize(Application* pApplication)
 	return true;
 }
 
-bool Engine::Load()
-{
-	Log::Info("[ENGINE]: Loading -------------------------");
-	mpCPUProfiler->BeginProfile();
-
-#if USE_DX12
-	mSimulationWorkers.StartThreads();
-	mRenderWorkers.StartThreads();
-
-	//mSimulationWorkers.AddTask([=](){ LoadLoadingScreenTextures(); });
-
-	mSimulationWorkers.AddTask([]() 
-	{ 
-		std::this_thread::sleep_for(std::chrono::milliseconds::duration(3000)); 
-		Log::Info("Worker done.");
-		return;
-	}, mEvent_LoadFinished);
-
-	Log::Info("Started worker task. Waiting...");
-	{
-		std::unique_lock<std::mutex> lock(mEventMutex_LoadFinished);
-		mEvent_LoadFinished.wait(lock);
-	}
-	Log::Info("Worker task wait has finished on main thread.");
-
-	// TODO: proper threaded loAding
-
-
-	
-	return true;
-#else
-	mpThreadPool.StartThreads();
-
-	LoadLoadingScreenTextures();
-
-#if LOAD_ASYNC
-	mbLoading = true;
-	mAccumulator = 1.0f;		// start rendering loading screen on update loop
-	RenderLoadingScreen(true);	// quickly render one frame of loading screen
-
-	// set up a parallel task to load everything.
-	mpThreadPool->AddTask([=]() { this->Load_Async(); });
-#else // LOAD_ASYNC
-	RenderLoadingScreen(true);
-	this->Load_Serial();
-#endif // LOAD_ASYNC
-
-	ENGINE->mpTimer->Reset();
-	ENGINE->mpTimer->Start();
-	return true;
-
-#endif // USE_DX12
-}
-
 void Engine::Exit()
 {
 #if USE_DX12

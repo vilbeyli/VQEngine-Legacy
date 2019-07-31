@@ -219,7 +219,7 @@ private:
 	void Render();
 	void RenderDebug(const XMMATRIX& viewProj);
 	void RenderUI() const;
-	void RenderLoadingScreen(bool bOneTimeRender) const;
+	void RenderLoadingScreen(bool bOneTimeRender = false) const;
 
 //==============================================================================================================
 
@@ -324,6 +324,7 @@ private:
 
 		std::condition_variable mEvent_StopThreads;
 		std::condition_variable mEvent_LoadFinished;
+		std::condition_variable mEvent_LoadingScreenReady;
 		std::condition_variable mEvent_FrameUpdateFinished;
 		std::condition_variable mEvent_FrameRenderFinished;
 

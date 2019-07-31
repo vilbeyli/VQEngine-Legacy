@@ -38,6 +38,116 @@
 #define OVERRIDE_LEVEL_VALUE     6	// which level to load
 
 
+
+bool Engine::Load()
+{
+	Log::Info("[ENGINE]: Loading -------------------------");
+	mbLoading = true;
+	mpCPUProfiler->BeginProfile();
+
+#if USE_DX12
+	mSimulationWorkers.StartThreads();
+	mRenderWorkers.StartThreads();
+
+#if 0 // TEST GROUNDS
+	//mSimulationWorkers.AddTask([=](){ LoadLoadingScreenTextures(); });
+
+	mSimulationWorkers.AddTask([]()
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds::duration(3000));
+		Log::Info("Worker done.");
+		return;
+	}, mEvent_LoadFinished);
+
+	Log::Info("Started worker task. Waiting...");
+	{
+		std::unique_lock<std::mutex> lock(mEventMutex_LoadFinished);
+		mEvent_LoadFinished.wait(lock);
+	}
+	Log::Info("Worker task wait has finished on main thread.");
+	mEvent_FrameUpdateFinished.notify_one();
+#endif
+
+	// TODO: proper threaded loading
+	mSimulationWorkers.AddTask([&]() { this->LoadLoadingScreenTextures(); }, mEvent_LoadingScreenReady);
+	mSimulationWorkers.AddTask([&]()
+	{
+
+#if 0 /// TODO: rewrite the proper multithreaded loading code for the code below
+		// LOAD ENVIRONMENT MAPS
+		//
+		mpTimer->Start();
+		mpCPUProfiler->BeginEntry("EngineLoad");
+		Log::Info("-------------------- LOADING ENVIRONMENT MAPS --------------------- ");
+		Skybox::InitializePresets(mpRenderer, sEngineSettings.rendering);
+		Log::Info("-------------------- ENVIRONMENT MAPS LOADED IN %.2fs. --------------------", mpTimer->StopGetDeltaTimeAndReset());
+
+		// SCENE INITIALIZATION
+		//
+		Log::Info("-------------------- LOADING SCENE --------------------- ");
+		mpTimer->Start();
+		const size_t numScenes = sEngineSettings.sceneNames.size();
+		assert(sEngineSettings.levelToLoad < numScenes);
+#if /*defined(_DEBUG) &&*/ (OVERRIDE_LEVEL_LOAD > 0)
+		sEngineSettings.levelToLoad = OVERRIDE_LEVEL_VALUE;
+#endif
+		if (!LoadSceneFromFile())
+		{
+			Log::Error("Engine couldn't load scene.");
+			return false;
+		}
+		Log::Info("-------------------- SCENE LOADED IN %.2fs. --------------------", mpTimer->StopGetDeltaTimeAndReset());
+
+		// RENDER PASS INITIALIZATION
+		//
+		mpTimer->Start();
+		{
+			Log::Info("---------------- INITIALIZING RENDER PASSES ---------------- ");
+			mShadowMapPass.Initialize(mpRenderer, sEngineSettings.rendering.shadowMap);
+			//renderer->m_Direct3D->ReportLiveObjects();
+
+			mDeferredRenderingPasses.Initialize(mpRenderer, sEngineSettings.rendering.antiAliasing.IsAAEnabled());
+			mPostProcessPass.Initialize(mpRenderer, sEngineSettings.rendering.postProcess);
+			mDebugPass.Initialize(mpRenderer);
+			mAOPass.Initialize(mpRenderer);
+			mAAResolvePass.Initialize(mpRenderer, mpRenderer->GetRenderTargetTexture(mDeferredRenderingPasses._shadeTarget));
+		}
+		Log::Info("---------------- INITIALIZING RENDER PASSES DONE IN %.2fs ---------------- ", mpTimer->StopGetDeltaTimeAndReset());
+		mpCPUProfiler->EndEntry();
+		mpCPUProfiler->EndProfile();
+		mpCPUProfiler->BeginProfile();
+		Log::Info("[ENGINE]: Loaded (Serial) ------------------");
+		return true;
+#endif
+
+	});
+
+	return true;
+
+#else // USE_DX12
+	mpThreadPool.StartThreads();
+
+	LoadLoadingScreenTextures();
+
+#if LOAD_ASYNC
+	mbLoading = true;
+	mAccumulator = 1.0f;		// start rendering loading screen on update loop
+	RenderLoadingScreen(true);	// quickly render one frame of loading screen
+
+	// set up a parallel task to load everything.
+	mpThreadPool->AddTask([=]() { this->Load_Async(); });
+#else // LOAD_ASYNC
+	RenderLoadingScreen(true);
+	this->Load_Serial();
+#endif // LOAD_ASYNC
+
+	ENGINE->mpTimer->Reset();
+	ENGINE->mpTimer->Start();
+	return true;
+
+#endif // USE_DX12
+}
+
 #if !USE_DX12
 bool Engine::Load_Async()
 {

@@ -24,8 +24,9 @@ using namespace VQEngine;
 
 const size_t ThreadPool::sHardwareThreadCount = std::thread::hardware_concurrency();
 
-
-void RunThreadPoolUnitTest(ThreadPool*& p)
+#define RUN_THREADPOOL_UNIT_TESTS 0
+#if RUN_THREADPOOL_UNIT_TESTS
+static void RunThreadPoolUnitTest(ThreadPool*& p)
 {
 	constexpr long long sz = 40000000;
 	auto sumRnd = [&]()
@@ -95,10 +96,14 @@ void RunThreadPoolUnitTest(ThreadPool*& p)
 	}
 	Log::Info(strResult);
 }
+#endif
+
 ThreadPool::ThreadPool(size_t numThreads)
 {
 	mThreads.resize(numThreads);
-	///RunThreadPoolUnitTest(this);
+#if RUN_THREADPOOL_UNIT_TESTS
+	RunThreadPoolUnitTest(this);
+#endif
 }
 ThreadPool::~ThreadPool()
 {

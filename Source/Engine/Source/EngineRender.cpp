@@ -23,6 +23,10 @@
 #include "Renderer/Renderer.h"
 
 
+#if USE_DX12
+#include "Utilities/Log.h"
+#endif
+
 using namespace VQEngine;
 
 
@@ -531,6 +535,11 @@ void Engine::RenderUI() const
 
 void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 {
+
+#if USE_DX12
+	Log::Info("-----RenderLoadingScreen");
+	return;
+#endif
 	const XMMATRIX matTransformation = XMMatrixIdentity();
 	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
 

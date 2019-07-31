@@ -30,7 +30,7 @@ std::mutex Engine::mLoadRenderingMutex;
 
 #if USE_DX12
 
-#define DEBUG_LOG_THREAD_TICKS 0
+#define DEBUG_LOG_THREAD_TICKS 1
 
 void Engine::StartThreads()
 {
@@ -67,23 +67,53 @@ void Engine::StopThreads()
 //
 void Engine::RenderThread(unsigned numWorkers)	
 {
-	// Init --------------------------------------------------------------------
-	ThreadPool mThreadPool(numWorkers);
-	mThreadPool.StartThreads(); 
+	// wait for the initial load before rendering a loading screen.
+	// this is expected to happen after renderer is initialized and
+	// first rendering screen texture is loaded.
+	{
+		std::mutex _mtxLoadingScreen;
+		std::unique_lock<std::mutex> lock(_mtxLoadingScreen);
+		mEvent_LoadingScreenReady.wait(lock);
+	}
+	this->RenderLoadingScreen();
+
 
 	// Loop --------------------------------------------------------------------
 	while (!this->mbStopThreads)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds::duration(300));
+		{
+			std::unique_lock<std::mutex> lock(mEventMutex_FrameUpdateFinished);
+			mEvent_FrameUpdateFinished.wait(lock);
+		}
+
 #if DEBUG_LOG_THREAD_TICKS
 		Log::Info("[RenderThread] Tick.");
 #endif
+
+		// render loading screen if we're currently loading
+		if (this->mbLoading)
+		{
+			this->RenderLoadingScreen();
+
+			// signal update thread that frame is done rendering
+			mEvent_FrameRenderFinished.notify_one();
+			continue;
+		}
+
+		// render frame TODO:
+		Log::Info("----- RenderFrame.");
+
+
+		// signal update thread that frame is done rendering
+		mEvent_FrameRenderFinished.notify_one();
 	}
 
 
 	// Exit --------------------------------------------------------------------
 	Log::Info("[RenderThread] Exiting.");
 }
+
+
 
 
 //
@@ -98,10 +128,17 @@ void Engine::SimulationThread(unsigned numWorkers)
 	// Loop --------------------------------------------------------------------
 	while (!this->mbStopThreads)
 	{
-		std::this_thread::sleep_for(std::chrono::milliseconds::duration(98));
 #if DEBUG_LOG_THREAD_TICKS
 		Log::Info("[SimulationThread] Tick.");
 #endif
+
+		// TODO: wait for render to finish / acquire image or something
+
+		// TODO: update
+		std::this_thread::sleep_for(std::chrono::milliseconds::duration(16 * 100));
+
+		// signal render thread to kick off rendering
+		mEvent_FrameUpdateFinished.notify_one();
 	}
 
 	// Exit --------------------------------------------------------------------

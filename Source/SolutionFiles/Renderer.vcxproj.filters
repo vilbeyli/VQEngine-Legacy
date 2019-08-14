@@ -9,18 +9,15 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Source Files\RenderingAPI">
+      <UniqueIdentifier>{75e3f817-bbd5-49d6-8220-903b7e9484b0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\RenderCommands.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\D3DManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\GeometryGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Renderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Shader.cpp">
@@ -34,6 +31,18 @@
     </ClCompile>
     <ClCompile Include="..\Renderer\Source\Buffer.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Renderer\Source\RendererDX11.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Renderer\Source\RendererDX12.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Renderer\Source\RenderingAPI\Direct3D11.cpp">
+      <Filter>Source Files\RenderingAPI</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Renderer\Source\RenderingAPI\Direct3D12.cpp">
+      <Filter>Source Files\RenderingAPI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

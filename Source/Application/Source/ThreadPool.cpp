@@ -25,6 +25,58 @@ using namespace VQEngine;
 const size_t ThreadPool::sHardwareThreadCount = std::thread::hardware_concurrency();
 
 #define RUN_THREADPOOL_UNIT_TESTS 0
+
+
+ThreadPool::ThreadPool(size_t numThreads)
+{
+	mThreads.resize(numThreads);
+#if RUN_THREADPOOL_UNIT_TESTS
+	RunThreadPoolUnitTest(this);
+#endif
+}
+ThreadPool::~ThreadPool()
+{
+	{
+		std::unique_lock<std::mutex > lock(mTaskQueueMutex);
+		mStopThreads = true;
+	}
+
+	mSignal.notify_all();
+
+	for (auto& thread : mThreads)
+	{
+		thread.join();
+	}
+}
+
+void ThreadPool::Execute()
+{
+	while (true)
+	{
+		Task task;
+		{
+			std::unique_lock<std::mutex > lock(mTaskQueueMutex);
+			mSignal.wait(lock, [=] { return mStopThreads || !mTaskQueue.queue.empty(); });
+
+			if (mStopThreads)
+				break;
+
+			mTaskQueue.GetTaskFromTopOfQueue(task);
+		}
+		task();
+	}
+}
+
+void VQEngine::ThreadPool::StartThreads()
+{
+	for (auto i = 0u; i < mThreads.size(); ++i)
+	{
+		mThreads[i] = std::thread(&ThreadPool::Execute, this);
+	}
+}
+
+
+
 #if RUN_THREADPOOL_UNIT_TESTS
 static void RunThreadPoolUnitTest(ThreadPool*& p)
 {
@@ -97,51 +149,3 @@ static void RunThreadPoolUnitTest(ThreadPool*& p)
 	Log::Info(strResult);
 }
 #endif
-
-ThreadPool::ThreadPool(size_t numThreads)
-{
-	mThreads.resize(numThreads);
-#if RUN_THREADPOOL_UNIT_TESTS
-	RunThreadPoolUnitTest(this);
-#endif
-}
-ThreadPool::~ThreadPool()
-{
-	{
-		std::unique_lock<std::mutex > lock(mTaskQueueMutex);
-		mStopThreads = true;
-	}
-
-	mSignal.notify_all();
-
-	for (auto& thread : mThreads)
-	{
-		thread.join();
-	}
-}
-
-void ThreadPool::Execute()
-{
-	while (true)
-	{
-		Task task;
-		{
-			std::unique_lock<std::mutex > lock(mTaskQueueMutex);
-			mSignal.wait(lock, [=] { return mStopThreads || !mTaskQueue.queue.empty(); });
-
-			if (mStopThreads)
-				break;
-
-			mTaskQueue.GetTaskFromTopOfQueue(task);
-		}
-		task();
-	}
-}
-
-void VQEngine::ThreadPool::StartThreads()
-{
-	for (auto i = 0u; i < mThreads.size(); ++i)
-	{
-		mThreads[i] = std::thread(&ThreadPool::Execute, this);
-	}
-}

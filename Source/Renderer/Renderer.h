@@ -31,6 +31,12 @@
 
 class Shader;
 
+// D3D12 Forward Decls
+//
+struct ID3D12Device;
+struct ID3D12CommandQueue;
+struct IDXGISwapChain4;
+
 class Renderer
 {
 public:
@@ -43,6 +49,7 @@ public:
 	bool	Initialize(HWND hwnd, const Settings::Window& settings, const Settings::Rendering& rendererSettings);
 	void	Exit();
 	void	ReloadShaders();
+	bool	LoadDefaultResources();
 
 
 	void	BeginEvent(const std::string& marker);
@@ -106,12 +113,14 @@ public:
 	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
 #endif
 
-	void					BeginFrame();	// resets render stats
-	void					EndFrame();		// presents the swapchain and clears shaders
-
-public:
+	void BeginFrame();	// resets render stats
+	void EndFrame();	// presents the swapchain and clears shaders
 	bool SaveTextureToDisk(TextureID texID, const std::string& filePath, bool bConverToSRGB) const; // ?
 
+private:
+	bool InitializeRenderingAPI(HWND hwnd);
+
+public:
 	//----------------------------------------------------------------------------------------------------------------
 	// DATA
 	//----------------------------------------------------------------------------------------------------------------
@@ -119,6 +128,66 @@ public:
 
 
 private:
+#if 0
+	class SwapChain
+	{
+	public:
+		void OnCreate(Device *pDevice, uint32_t numberBackBuffers, HWND hWnd);
+		void OnDestroy();
+
+		void OnCreateWindowSizeDependentResources(uint32_t dwWidth, uint32_t dwHeight);
+		void OnDestroyWindowSizeDependentResources();
+
+		void SetFullScreen(bool fullscreen);
+
+		void Present();
+		ID3D12Resource *GetCurrentBackBufferResource();
+		D3D12_CPU_DESCRIPTOR_HANDLE *GetCurrentBackBufferRTV();
+		void WaitForSwapChain();
+		void CreateRTV();
+		DXGI_FORMAT GetFormat();
+
+	private:
+		HWND m_hWnd = NULL;
+		uint32_t m_BackBufferCount = 0;
+
+		ID3D12Device *m_pDevice = NULL;
+		IDXGIFactory4 *m_pFactory = NULL;
+		IDXGISwapChain3 *m_pSwapChain = NULL;
+
+		std::vector<Fence> m_Fences;
+
+		ID3D12CommandQueue*    m_pDirectQueue;
+
+		ID3D12DescriptorHeap * m_RTVHeaps;
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_CPUView;
+
+		DXGI_SWAP_CHAIN_DESC1 m_descSwapChain = {};
+	};
+#endif
+
+	struct Device
+	{
+		ID3D12Device* ptr;
+	};
+	struct CommandQueue
+	{
+		ID3D12CommandQueue* ptr;
+	};
+	struct SwapChain
+	{
+		IDXGISwapChain4* ptr;
+	};
+
+	// DEVICE RESOURCES
+	//
+	Device mDevice;
+	CommandQueue mCmdQueue_GFX;
+	CommandQueue mCmdQueue_Compute;
+	CommandQueue mCmdQueue_Copy;
+	SwapChain mSwapChain;
+	int mCurrentFrameIndex;
+
 	// PIPELINE STATE
 	//
 	// TODO
@@ -416,6 +485,7 @@ private:
 // template helper empty function
 //
 template<typename... Args> inline void pass(Args&&...) {}
+
 // note: we can use the expand operator (...) in a function parameter scope
 //       to access the expanded parameters one by one in an enclosed function call.
 

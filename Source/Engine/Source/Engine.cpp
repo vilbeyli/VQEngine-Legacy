@@ -112,13 +112,8 @@ bool Engine::Initialize(Application* pApplication)
 
 #if USE_DX12
 	StartThreads();
-
-
-	// LOADING
-	//
-	/// TODO
-	Scene::InitializeBuiltinMeshes();
-
+	// Multi-threaded loading can be done from this point on.
+	
 #else
 	StartRenderThread();
 	Scene::InitializeBuiltinMeshes();
@@ -133,6 +128,7 @@ bool Engine::Initialize(Application* pApplication)
 	mUI.Initialize(mpRenderer, mpTextRenderer, UI::ProfilerStack{mpCPUProfiler, mpGPUProfiler});
 	mpGPUProfiler->Init(mpRenderer->m_deviceContext, mpRenderer->m_device);
 #endif
+
 	// INITIALIZE RENDER PASSES & SCENES
 	//--------------------------------------------------------------
 	mEngineConfig.bDeferredOrForward = sEngineSettings.rendering.bUseDeferredRendering;

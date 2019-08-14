@@ -395,8 +395,7 @@ void Application::InitWindow(Settings::Window& windowSettings)
 		WS_EX_APPWINDOW,			// Forces a top-level window onto the taskbar when the window is visible.
 		m_appName,					// class name
 		m_appName,					// Window name
-		WS_POPUP,					// Window style
-		///WS_OVERLAPPED,
+		WS_OVERLAPPED | WS_MAXIMIZEBOX | WS_MINIMIZEBOX | WS_SYSMENU, // Window style
 		posX, posY, width, height,	// Window position and dimensions
 		NULL, NULL,					// parent, menu
 		m_hInstance, NULL

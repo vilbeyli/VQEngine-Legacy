@@ -46,8 +46,18 @@ bool Engine::Load()
 	mpCPUProfiler->BeginProfile();
 
 #if USE_DX12
-	mSimulationWorkers.StartThreads();
-	mRenderWorkers.StartThreads();
+
+	mSimulationWorkers.AddTask([]()
+	{
+		Scene::InitializeBuiltinMeshes();
+	});
+	mSimulationWorkers.AddTask([&]()
+	{
+		// TODO: this could be further refined to better
+		//       utilize the workers.
+		mpRenderer->LoadDefaultResources();
+	});
+
 
 #if 0 // TEST GROUNDS
 	//mSimulationWorkers.AddTask([=](){ LoadLoadingScreenTextures(); });

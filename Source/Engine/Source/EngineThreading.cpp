@@ -47,6 +47,9 @@ void Engine::StartThreads()
 	mRenderThread     = std::thread(&Engine::RenderThread    , this, NUM_RENDER_THREAD_WORKERS);
 	mSimulationThread = std::thread(&Engine::SimulationThread, this, NUM_SIMULATION_THREAD_WORKERS);
 #endif
+
+	mSimulationWorkers.StartThreads();
+	mRenderWorkers.StartThreads();
 }
 
 void Engine::StopThreads()
@@ -122,8 +125,7 @@ void Engine::RenderThread(unsigned numWorkers)
 void Engine::SimulationThread(unsigned numWorkers)
 {
 	// Init --------------------------------------------------------------------
-	ThreadPool mThreadPool(numWorkers);
-	mThreadPool.StartThreads();
+
 
 	// Loop --------------------------------------------------------------------
 	while (!this->mbStopThreads)

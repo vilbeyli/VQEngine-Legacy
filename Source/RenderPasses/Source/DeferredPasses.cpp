@@ -91,8 +91,8 @@ void DeferredRenderingPasses::Initialize(Renderer * pRenderer, bool bAAResolve)
 
 	const EImageFormat format = EImageFormat::RGBA16F; // TODO: get this from somewhere.
 	RenderTargetDesc rtDesc = {};
-	rtDesc.textureDesc.width  = pRenderer->mAntiAliasing.resolutionY; // TODO: what if aa turned off?
-	rtDesc.textureDesc.height = pRenderer->mAntiAliasing.resolutionX; // TODO: what if aa turned off?
+	rtDesc.textureDesc.width  = pRenderer->mAntiAliasingSettings.resolutionY; // TODO: what if aa turned off?
+	rtDesc.textureDesc.height = pRenderer->mAntiAliasingSettings.resolutionX; // TODO: what if aa turned off?
 	rtDesc.textureDesc.mipCount = 1;
 	rtDesc.textureDesc.arraySize = 1;
 	rtDesc.textureDesc.format = format;

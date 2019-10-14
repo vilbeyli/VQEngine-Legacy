@@ -18,8 +18,19 @@
 
 #pragma once
 
-#include "RenderingEnums.h"
+#include "ShaderCommon.h"
 
+#if USE_DX12
+//
+// DIRECTX 12
+//
+#include "ShaderDX12.h"
+
+
+#else 
+//
+// DIRECTX 11
+//
 #include <d3dcompiler.h>
 
 #include <string>
@@ -29,12 +40,9 @@
 #include <stack>
 #include <unordered_map>
 
-#include <experimental/filesystem>	// cpp17
-
 using CPUConstantID = int;
 using GPU_ConstantBufferSlotIndex = int;
 using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
-using FileTimeStamp = std::experimental::filesystem::file_time_type;
 
 //----------------------------------------------------------------------------------------------------------------
 // SHADER DATA/RESOURCE INTERFACE STRUCTS
@@ -59,11 +67,7 @@ struct ConstantBufferBinding
 {	
 	EShaderStage  shaderStage;
 	unsigned      bufferSlot;
-#if USE_DX12
-
-#else
 	ID3D11Buffer* data;
-#endif
 	bool          dirty;
 };
 struct TextureBinding
@@ -84,40 +88,6 @@ struct InputLayout
 };
 
 
-struct ShaderMacro
-{
-	std::string name;
-	std::string value;
-};
-
-struct ShaderStageDesc
-{
-	std::string fileName;
-	std::vector<ShaderMacro> macros;
-};
-
-struct ShaderDesc
-{
-	using ShaderStageArr = std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT>;
-	static ShaderStageArr CreateStageDescsFromShaderName(const char* shaderName, unsigned flagStages);
-
-	std::string shaderName;
-	std::array<ShaderStageDesc, EShaderStage::COUNT> stages;
-};
-
-struct ShaderLoadDesc
-{
-	ShaderLoadDesc() = default;
-	ShaderLoadDesc(const std::string& path, const std::string& cachePath_) : fullPath(path), cachePath(cachePath_)
-	{
-		this->lastWriteTime = std::experimental::filesystem::last_write_time(fullPath);
-		this->cacheLastWriteTime = std::experimental::filesystem::last_write_time(cachePath);
-	}
-	std::string fullPath;
-	std::string cachePath;
-	FileTimeStamp lastWriteTime;
-	FileTimeStamp cacheLastWriteTime;
-};
 
 
 class Shader
@@ -171,9 +141,6 @@ public:
 		EShaderStage								stage;
 		unsigned									bufSlot;
 	};
-#if USE_DX12
-
-#else
 	struct ShaderStages
 	{
 		ID3D11VertexShader*    mVertexShader   = nullptr;
@@ -183,7 +150,6 @@ public:
 		ID3D11DomainShader*    mDomainShader   = nullptr;
 		ID3D11ComputeShader*   mComputeShader  = nullptr;
 	};
-#endif
 
 public:
 	//----------------------------------------------------------------------------------------------------------------
@@ -193,13 +159,9 @@ public:
 	Shader(const std::string& shaderFileName);
 	~Shader();
 
-#if USE_DX12
-
-#else
 	bool Reload(ID3D11Device* device);
 	void ClearConstantBuffers();
 	void UpdateConstants(ID3D11DeviceContext* context);
-#endif
 
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
@@ -207,8 +169,8 @@ public:
 	const std::string& Name() const { return mName; }
 	inline ShaderID    ID()   const { return mID; }
 	
-	const std::vector<ConstantBufferLayout>& GetConstantBufferLayouts() const;
-	const std::vector<ConstantBufferBinding      >& GetConstantBuffers() const;
+	const std::vector<ConstantBufferLayout>&  GetConstantBufferLayouts() const;
+	const std::vector<ConstantBufferBinding>& GetConstantBuffers() const;
 	
 	const TextureBinding& GetTextureBinding(const std::string& textureName) const;
 	const SamplerBinding& GetSamplerBinding(const std::string& samplerName) const;
@@ -246,18 +208,14 @@ private:
 	// UTILITY FUNCTIONS
 	//----------------------------------------------------------------------------------------------------------------
 
-#if USE_DX12
-
-#else
 	void ReflectConstantBufferLayouts(ID3D11ShaderReflection * sRefl, EShaderStage type);
 	bool CompileShaders(ID3D11Device* device, const ShaderDesc& desc);
 	void SetReflections(const ShaderBlobs& blobs);
 	void CreateShaderStage(ID3D11Device* pDevice, EShaderStage stage, void* pBuffer, const size_t szShaderBinary);
-#endif
 	void CheckSignatures();
 	void LogConstantBufferLayouts() const;
 	void ReleaseResources();
-	size_t GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro>& macros) const;
+	static size_t GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro>& macros);
 
 private:
 	//----------------------------------------------------------------------------------------------------------------
@@ -265,14 +223,10 @@ private:
 	//----------------------------------------------------------------------------------------------------------------
 	ShaderID mID;
 
-#if USE_DX12
-
-#else
 	ShaderStages mStages;
 
 	ShaderReflections	mReflections;	// shader reflections, temporary?
 	ID3D11InputLayout*	mpInputLayout = nullptr;
-#endif
 
 	std::string	mName;
 
@@ -290,3 +244,4 @@ private:
 	ShaderDesc mDescriptor;	// used for shader reloading
 	ShaderDirectoryLookup mDirectories;
 };
+#endif

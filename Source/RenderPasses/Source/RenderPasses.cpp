@@ -198,7 +198,7 @@ void AAResolvePass::Initialize(Renderer* pRenderer, TextureID inputTextureID)
 	const Texture& inputTex = pRenderer->GetTextureObject(inputTextureID);
 	const EImageFormat format = pRenderer->GetTextureImageFormat(inputTextureID);
 
-	const float AAScalingInverse = 1.0f / pRenderer->mAntiAliasing.fUpscaleFactor;
+	const float AAScalingInverse = 1.0f / pRenderer->mAntiAliasingSettings.fUpscaleFactor;
 
 	RenderTargetDesc rtDesc;
 	rtDesc.format = format;

@@ -23,6 +23,9 @@
 
 class Renderer;
 
+#if USE_DX12
+
+#else
 
 // inheritance... ?
 
@@ -102,3 +105,4 @@ struct DrawQuadOnScreenCommand
 	bool bIsDepthTexture;
 	int numChannels = 3;
 };
+#endif

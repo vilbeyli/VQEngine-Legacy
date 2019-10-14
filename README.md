@@ -153,6 +153,7 @@ Run `PRE_BUILD.bat` once to initialize the submodules, and run `BUILD.bat` or `B
 
 # 3rd Party Open Source Libraries
  
+ - [GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
  - [nothings/stb](https://github.com/nothings/stb)
  - [freetype-windows-binaries](https://github.com/ubawurinna/freetype-windows-binaries)
  - [DirectXTex](https://github.com/Microsoft/DirectXTex)

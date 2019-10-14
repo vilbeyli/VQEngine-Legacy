@@ -31,6 +31,8 @@
 #pragma comment(lib, "d3d12.lib")		// contains all the Direct3D functionality
 #pragma comment(lib, "dxgi.lib")		// tools to interface with the hardware
 
+
+
 //----------------------------------------------------------------------------------------------------------------
 // Adapted from Microsoft's open source D3D12 Sample repo: https://github.com/microsoft/DirectX-Graphics-Samples
 // Naming helper for ComPtr<T>.
@@ -46,8 +48,210 @@ inline void SetName(ID3D12Object* pObject, LPCWSTR name) {}
 //----------------------------------------------------------------------------------------------------------------
 
 
-Renderer::Renderer(){}
+// from @adam-sawicki-a's D3D12 Memory Allocator: https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator 
+// TODO:
+// - replace wprintf()
+// - declare member CPUAllocCount
+constexpr bool ENABLE_DEBUG_LAYER = true;
+constexpr bool ENABLE_CPU_ALLOCATION_CALLBACKS = true;
+constexpr bool ENABLE_CPU_ALLOCATION_CALLBACKS_PRINT = false;
+static void* const CUSTOM_ALLOCATION_USER_DATA = (void*)(uintptr_t)0xDEADC0DE;
+
+constexpr unsigned FRAME_BUFFER_COUNT = 3;
+constexpr bool ENABLE_TEARING_SUPPORT = true;
+
+// Custom Allocator keeps track of CPU allocation count through this static global
+static std::atomic<size_t> g_CpuAllocationCount;
+
+static void* CustomAllocate(size_t Size, size_t Alignment, void* pUserData)
+{
+	assert(pUserData == CUSTOM_ALLOCATION_USER_DATA);
+	void* memory = _aligned_malloc(Size, Alignment);
+	if (ENABLE_CPU_ALLOCATION_CALLBACKS_PRINT)
+	{
+		wprintf(L"Allocate Size=%llu Alignment=%llu -> %p\n", Size, Alignment, memory);
+	}
+	++g_CpuAllocationCount;
+	return memory;
+}
+
+static void CustomFree(void* pMemory, void* pUserData)
+{
+	assert(pUserData == CUSTOM_ALLOCATION_USER_DATA);
+	if (pMemory)
+	{
+		--g_CpuAllocationCount;
+		if (ENABLE_CPU_ALLOCATION_CALLBACKS_PRINT)
+		{
+			wprintf(L"Free %p\n", pMemory);
+		}
+		_aligned_free(pMemory);
+	}
+}
+
+static void SetDefaultRasterizerDesc(D3D12_RASTERIZER_DESC & outDesc)
+{
+	outDesc.FillMode = D3D12_FILL_MODE_SOLID;
+	outDesc.CullMode = D3D12_CULL_MODE_BACK;
+	outDesc.FrontCounterClockwise = FALSE;
+	outDesc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+	outDesc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+	outDesc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+	outDesc.DepthClipEnable = TRUE;
+	outDesc.MultisampleEnable = FALSE;
+	outDesc.AntialiasedLineEnable = FALSE;
+	outDesc.ForcedSampleCount = 0;
+	outDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+}
+
+static void SetDefaultBlendDesc(D3D12_BLEND_DESC & outDesc)
+{
+	outDesc.AlphaToCoverageEnable = FALSE;
+	outDesc.IndependentBlendEnable = FALSE;
+	const D3D12_RENDER_TARGET_BLEND_DESC defaultRenderTargetBlendDesc = {
+		FALSE,FALSE,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_LOGIC_OP_NOOP,
+		D3D12_COLOR_WRITE_ENABLE_ALL };
+	for (UINT i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i)
+		outDesc.RenderTarget[i] = defaultRenderTargetBlendDesc;
+}
+// from @adam-sawicki-a's D3D12 Memory Allocator -----------------------------------------------------------------
+
+//
+// STATICS
+//
+static const DXGI_FORMAT SWAPCHAIN_FORMAT = DXGI_FORMAT_R8G8B8A8_UNORM;
+static const DXGI_FORMAT DEPTH_BUFFER_FORMAT = DXGI_FORMAT_D32_FLOAT;
+static const D3D_FEATURE_LEVEL D3D_FEATURE_LEVEL_TO_REQUEST = D3D_FEATURE_LEVEL_12_1;
+
+//---------------------------------------------------------------------------------------------------------------------
+// D3D12 UTILIY FUNCTIONS
+//---------------------------------------------------------------------------------------------------------------------
+namespace VQ_D3D12_UTILS
+{
+	static inline void ThrowIfFailed(HRESULT hr)
+	{
+		if (FAILED(hr))
+		{
+			Log::Error("Win Call failed, HR=0x%08X", static_cast<UINT>(hr));
+			assert(false);
+		}
+	}
+	// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
+	// If no such adapter can be found, *ppAdapter will be set to nullptr.
+	static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
+	{
+		IDXGIAdapter1* adapter;
+		*ppAdapter = nullptr;
+
+		for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
+		{
+			DXGI_ADAPTER_DESC1 desc;
+			ThrowIfFailed(adapter->GetDesc1(&desc));
+
+			if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+			{
+				// Don't select the Basic Render Driver adapter.
+				// If you want a software adapter, pass in "/warp" on the command line.
+				continue;
+			}
+
+			// Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
+			if (SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_TO_REQUEST, _uuidof(ID3D12Device), nullptr)))
+			{
+				break;
+			}
+		}
+
+		adapter->Release();
+		*ppAdapter = nullptr;
+	}
+
+	static void CreateCommandQueues(ID3D12Device* pDevice, ID3D12CommandQueue*& pCmdQueueGFX, ID3D12CommandQueue*& pCmdQueueCompute, ID3D12CommandQueue*& pCmdQueueCopy, D3D12_COMMAND_QUEUE_PRIORITY queuePriority)
+	{
+#if _DEBUG
+		assert(&pCmdQueueGFX != &pCmdQueueCompute);
+		assert(&pCmdQueueCompute != &pCmdQueueCopy);
+#endif
+
+		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+		queueDesc.Priority = queuePriority; 
+
+		// Graphics
+		//if (pCmdQueueGFX)
+		{
+			queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+			ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCmdQueueGFX)));
+			NAME_D3D12_OBJECT(pCmdQueueGFX);
+		}
+
+		// Compute
+		//if (pCmdQueueCompute)
+		{
+			queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+			ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCmdQueueCompute)));
+			NAME_D3D12_OBJECT(pCmdQueueCompute);
+		}
+
+		// Copy
+		//if (pCmdQueueCopy)
+		{
+			queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+			queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+			ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCmdQueueCopy)));
+			NAME_D3D12_OBJECT(pCmdQueueCopy);
+		}
+	}
+
+	static void InitializeD3DMA(ID3D12Device* pDevice, D3D12MA::Allocator*& mpAllocator)
+	{
+		// Create allocator
+		D3D12MA::ALLOCATOR_DESC desc = {};
+		desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+		desc.pDevice = pDevice;
+
+		D3D12MA::ALLOCATION_CALLBACKS allocationCallbacks = {};
+		if (ENABLE_CPU_ALLOCATION_CALLBACKS)
+		{
+			allocationCallbacks.pAllocate = &CustomAllocate;
+			allocationCallbacks.pFree = &CustomFree;
+			allocationCallbacks.pUserData = CUSTOM_ALLOCATION_USER_DATA;
+			desc.pAllocationCallbacks = &allocationCallbacks;
+		}
+
+		CHECK_HR(D3D12MA::CreateAllocator(&desc, &mpAllocator));
+
+		switch (mpAllocator->GetD3D12Options().ResourceHeapTier)
+		{
+		case D3D12_RESOURCE_HEAP_TIER_1:
+			wprintf(L"ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1\n");
+			break;
+		case D3D12_RESOURCE_HEAP_TIER_2:
+			wprintf(L"ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2\n");
+			break;
+		default:
+			assert(0);
+		}
+	}
+
+}
+
+
+
+// ================================================================================================================
+// RENDERER
+// ================================================================================================================
+Renderer::Renderer()
+// TODO: initialize default state
+//		:
+///	: mCPUAllocationCount(0)
+{}
 Renderer::~Renderer() {}
+
 
 
 bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Settings::Rendering& rendererSettings)
@@ -60,13 +264,13 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 	const bool& bAntiAliasing = rendererSettings.antiAliasing.IsAAEnabled();
 	// assuming SSAA is the only supported AA technique. otherwise, 
 	// swapchain initialization should be further customized.
-	this->mAntiAliasing = rendererSettings.antiAliasing;
+	this->mAntiAliasingSettings = rendererSettings.antiAliasing;
 
 	// RENDERING API
 	//
 	bool bRenderingAPIInitialized = InitializeRenderingAPI(hwnd);
 
-	return true;
+	return bRenderingAPIInitialized;
 }
 
 void Renderer::Exit()
@@ -79,179 +283,193 @@ void Renderer::Exit()
 	mDevice.ptr->Release();
 }
 
-//---------------------------------------------------------------------------------------------------------------------
-// D3D12 UTILIY FUNCTIONS
-//---------------------------------------------------------------------------------------------------------------------
-static inline void ThrowIfFailed(HRESULT hr)
-{
-	if (FAILED(hr))
-	{
-		Log::Error("Win Call failed, HR=0x%08X", static_cast<UINT>(hr));
-		assert(false);
-	}
-}
-// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
-// If no such adapter can be found, *ppAdapter will be set to nullptr.
-static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
-{
-	IDXGIAdapter1* adapter;
-	*ppAdapter = nullptr;
-
-	for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
-	{
-		DXGI_ADAPTER_DESC1 desc;
-		ThrowIfFailed(adapter->GetDesc1(&desc));
-
-		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-		{
-			// Don't select the Basic Render Driver adapter.
-			// If you want a software adapter, pass in "/warp" on the command line.
-			continue;
-		}
-
-		// Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-		if (SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_12_0, _uuidof(ID3D12Device), nullptr)))
-		{
-			break;
-		}
-	}
-
-	adapter->Release();
-	*ppAdapter = nullptr;
-}
-
 
 // Adapted from Microsoft's open source D3D12 Sample repo
 // source: https://github.com/microsoft/DirectX-Graphics-Samples
 bool Renderer::InitializeRenderingAPI(HWND hwnd)
 {
-	constexpr unsigned NUM_FRAMES = 3;
-	constexpr bool bTearingSupport = true;
+	using VQ_D3D12_UTILS::ThrowIfFailed;
 
 	ID3D12Device*& pDevice = mDevice.ptr; // shorthand
-
+	IDXGIFactory4* pFactory = nullptr;
 
 	// CREATE FACTORY & DEVICE
 	//
-	UINT dxgiFactoryFlags = 0;
+	{
+		UINT dxgiFactoryFlags = 0;
 #if defined(_DEBUG)
-	// NOTE: Enabling the debug layer after device creation will invalidate the active device.
-	ID3D12Debug* pDebugController;
-	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController))))
-	{
-		pDebugController->EnableDebugLayer();
-		dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-	}
-	pDebugController->Release();
+		// NOTE: Enabling the debug layer after device creation will invalidate the active device.
+		ID3D12Debug* pDebugController;
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController))))
+		{
+			pDebugController->EnableDebugLayer();
+			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+		}
+		pDebugController->Release();
 #endif
-	IDXGIAdapter1* pHardwareAdapter;
-	
-	IDXGIFactory4* pFactory;
-	ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&pFactory)));
-	
-	GetHardwareAdapter(pFactory, &pHardwareAdapter);
-	if ( FAILED(D3D12CreateDevice(pHardwareAdapter, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&mDevice.ptr))) )
-	{
-		; // TODO: Log
-		return false;
-	}
 
+		IDXGIAdapter1* pHardwareAdapter;
+
+		ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&pFactory)));
+		VQ_D3D12_UTILS::GetHardwareAdapter(pFactory, &pHardwareAdapter); // D3D_FEATURE_LEVEL_12_0 in here, would this cause an issue?
+		ThrowIfFailed(D3D12CreateDevice(pHardwareAdapter, D3D_FEATURE_LEVEL_TO_REQUEST, IID_PPV_ARGS(&mDevice.ptr)));
+	}
 
 	// CREATE COMMAND QUEUES
 	//
-	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-	queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_HIGH; // currently only 1 priority is supported, might iterate on this later.
-
-	// Graphics
-	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	queueDesc.Type  = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&mCmdQueue_GFX.ptr)));
-	NAME_D3D12_OBJECT(mCmdQueue_GFX.ptr);
-
-	// Compute
-	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-	ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&mCmdQueue_Compute.ptr)));
-	NAME_D3D12_OBJECT(mCmdQueue_Compute.ptr);
-
-	// Copy
-	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-	ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&mCmdQueue_Copy.ptr)));
-	NAME_D3D12_OBJECT(mCmdQueue_Copy.ptr);
-
+	// currently only 1 priority is supported, might iterate on this later.
+	VQ_D3D12_UTILS::CreateCommandQueues(pDevice, mCmdQueue_GFX.ptr, mCmdQueue_Compute.ptr, mCmdQueue_Copy.ptr, D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_HIGH);
+		
+	
 
 	// SWAP CHAIN
 	//
-	// The resolution of the swap chain buffers will match the resolution of the window, enabling the
-	// app to enter iFlip when in fullscreen mode. We will also keep a separate buffer that is not part
-	// of the swap chain as an intermediate render target, whose resolution will control the rendering
-	// resolution of the scene.
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-	swapChainDesc.BufferCount = NUM_FRAMES;
-	swapChainDesc.Width  = mAntiAliasing.resolutionX;
-	swapChainDesc.Height = mAntiAliasing.resolutionY;
-	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; // BGRA ?
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swapChainDesc.SampleDesc.Count = 1; // MSAA
-	swapChainDesc.Flags = bTearingSupport ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
-
-	IDXGISwapChain1* pSwapChain;
-	ThrowIfFailed(pFactory->CreateSwapChainForHwnd(
-		mCmdQueue_GFX.ptr,  // Swap chain needs the queue so that it can force a flush on it.
-		hwnd,
-		&swapChainDesc,
-		nullptr,
-		nullptr,
-		&pSwapChain
-	));
-
-	if (bTearingSupport)
 	{
-		// When tearing support is enabled we will handle ALT+Enter key presses in the
-		// window message loop rather than let DXGI handle it by calling SetFullscreenState.
-		pFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
-	}
+		// The resolution of the swap chain buffers will match the resolution of the window, enabling the
+		// app to enter iFlip when in fullscreen mode. We will also keep a separate buffer that is not part
+		// of the swap chain as an intermediate render target, whose resolution will control the rendering
+		// resolution of the scene.
+		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+		swapChainDesc.BufferCount = FRAME_BUFFER_COUNT;
+		swapChainDesc.Width  = mWindowSettings.width;
+		swapChainDesc.Height = mWindowSettings.height;
+		swapChainDesc.Format = SWAPCHAIN_FORMAT; // BGRA ?
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swapChainDesc.SampleDesc.Count = 1; // MSAA
+		swapChainDesc.Flags = ENABLE_TEARING_SUPPORT ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
-	ThrowIfFailed(pSwapChain->QueryInterface(__uuidof(IDXGISwapChain4), (void**)&mSwapChain.ptr));
-	pSwapChain->Release();
-	pFactory->Release();
+		IDXGISwapChain1* pSwapChain;
+		ThrowIfFailed(pFactory->CreateSwapChainForHwnd(
+			mCmdQueue_GFX.ptr,  // Swap chain needs the queue so that it can force a flush on it.
+			hwnd,
+			&swapChainDesc,
+			nullptr,
+			nullptr,
+			&pSwapChain
+		));
+
+		if (ENABLE_TEARING_SUPPORT)
+		{
+			// When tearing support is enabled we will handle ALT+Enter key presses in the
+			// window message loop rather than let DXGI handle it by calling SetFullscreenState.
+			pFactory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
+		}
+
+		ThrowIfFailed(pSwapChain->QueryInterface(__uuidof(IDXGISwapChain4), (void**)&mSwapChain.ptr));
+		pSwapChain->Release();
+		pFactory->Release();
+	}
 
 	mCurrentFrameIndex = mSwapChain.ptr->GetCurrentBackBufferIndex();
 
 
-	// RESOURCES: RTV, CBV, SRV, UAV HEAPS
+	// INITIALIZE D3D12MA
 	//
-#if 0
-	// Create descriptor heaps.
+	VQ_D3D12_UTILS::InitializeD3DMA(pDevice, mpAllocator);
+
+
+	// RESOURCE HEAPS: RTV, DSV, CBV, SRV, UAV 
+	//
 	{
-		// Describe and create a render target view (RTV) descriptor heap.
+		//
+		// BACK BUFFER RTVs
+		//
+		// describe an RTV descriptor heap and create
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = NUM_FRAMES + 1; // + 1 for the intermediate render target.
-		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		rtvHeapDesc.NumDescriptors = FRAME_BUFFER_COUNT; // number of descriptors for this heap.
+		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV; // this heap is a render target view heap
+
+		// This heap will not be directly referenced by the shaders (not shader visible), as this will store the output from the pipeline
+		// otherwise we would set the heap's flag to D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
 		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		ThrowIfFailed(pDevice->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
+		CHECK_HR(mDevice.ptr->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&mRTVDescHeap.ptr)));
 
+		// get the size of a descriptor in this heap (this is a rtv heap, so only rtv descriptors should be stored in it.
+		// descriptor sizes may vary from mpDevice.ptr to mpDevice.ptr, which is why there is no set size and we must ask the 
+		// mpDevice.ptr to give us the size. we will use this size to increment a descriptor handle offset
+		mRTVDescHeap.mDescSize = mDevice.ptr->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-		// Describe and create a constant buffer view (CBV) and shader resource view (SRV) descriptor heap.
-		D3D12_DESCRIPTOR_HEAP_DESC cbvSrvHeapDesc = {};
-		cbvSrvHeapDesc.NumDescriptors = NUM_FRAMES + 1; // One CBV per frame and one SRV for the intermediate render target.
-		cbvSrvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		cbvSrvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		ThrowIfFailed(pDevice->CreateDescriptorHeap(&cbvSrvHeapDesc, IID_PPV_ARGS(&m_cbvSrvHeap)));
+		// get a handle to the first descriptor in the descriptor heap. a handle is basically a pointer,
+		// but we cannot literally use it like a c++ pointer.
+		D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle{ mRTVDescHeap.ptr->GetCPUDescriptorHandleForHeapStart() };
 
-		m_rtvDescriptorSize    = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		m_cbvSrvDescriptorSize = pDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		// Create a RTV for each buffer (double buffering is two buffers, tripple buffering is 3).
+		mpRenderTargets.resize(FRAME_BUFFER_COUNT);
+		for (int i = 0; i < FRAME_BUFFER_COUNT; i++)
+		{
+			// first we get the n'th buffer in the swap chain and store it in the n'th
+			// position of our ID3D12Resource array
+			CHECK_HR(mSwapChain.ptr->GetBuffer(i, IID_PPV_ARGS(&mpRenderTargets[i])));
+
+			// the we "create" a render target view which binds the swap chain buffer (ID3D12Resource[n]) to the rtv handle
+			mDevice.ptr->CreateRenderTargetView(mpRenderTargets[i], nullptr, rtvHandle);
+
+			// we increment the rtv handle by the rtv descriptor size we got above
+			rtvHandle.ptr += mRTVDescHeap.mDescSize;
+		}
+
+		//
+		// MAIN DEPTH TARGET DSV
+		//
+		// create a depth stencil descriptor heap so we can get a pointer to the depth stencil buffer
+		D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+		dsvHeapDesc.NumDescriptors = 1;
+		dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+		dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		CHECK_HR(pDevice->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&mDSVDescHeap.ptr)));
+
+		D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
+		depthOptimizedClearValue.Format = DEPTH_BUFFER_FORMAT;
+		depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+		depthOptimizedClearValue.DepthStencil.Stencil = 0;
+
+		D3D12MA::ALLOCATION_DESC depthStencilAllocDesc = {};
+		depthStencilAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+		D3D12_RESOURCE_DESC depthStencilResourceDesc = {};
+		depthStencilResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		depthStencilResourceDesc.Alignment = 0;
+		depthStencilResourceDesc.Width  = mWindowSettings.width;
+		depthStencilResourceDesc.Height = mWindowSettings.height;
+		depthStencilResourceDesc.DepthOrArraySize = 1;
+		depthStencilResourceDesc.MipLevels = 1;
+		depthStencilResourceDesc.Format = DEPTH_BUFFER_FORMAT;
+		depthStencilResourceDesc.SampleDesc.Count = 1;
+		depthStencilResourceDesc.SampleDesc.Quality = 0;
+		depthStencilResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+		depthStencilResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		CHECK_HR(mpAllocator->CreateResource(
+			&depthStencilAllocDesc,
+			&depthStencilResourceDesc,
+			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+			&depthOptimizedClearValue,
+			&mpDepthStencilAllocation,
+			IID_PPV_ARGS(&mpDepthTarget)
+		));
+		CHECK_HR(mpDepthTarget->SetName(L"Depth/Stencil Resource Heap"));
+
+		D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
+		depthStencilDesc.Format = DEPTH_BUFFER_FORMAT;
+		depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
+		pDevice->CreateDepthStencilView(mpDepthTarget, &depthStencilDesc, mDSVDescHeap.ptr->GetCPUDescriptorHandleForHeapStart());
 	}
 
-	// Create command allocators for each frame.
-	for (UINT n = 0; n < NUM_FRAMES; n++)
+
+	// 
+	// CREATE FENCES & FENCE EVENTS
+	//
+	mFences.resize(FRAME_BUFFER_COUNT);
+	mFenceValues.resize(FRAME_BUFFER_COUNT);
+	for (int i = 0; i < FRAME_BUFFER_COUNT; i++)
 	{
-		ThrowIfFailed(pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_sceneCommandAllocators[n])));
-		ThrowIfFailed(pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_postCommandAllocators[n])));
+		CHECK_HR(pDevice->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mFences[i])));
+		mFenceValues[i] = 0; // set the initial fence values to 0
 	}
-#endif
+	mFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	assert(mFenceEvent); // create a handle to a mFenceEvent
+
+
 
 	return true;
 }
@@ -259,12 +477,13 @@ bool Renderer::InitializeRenderingAPI(HWND hwnd)
 // called from a worker.
 bool Renderer::LoadDefaultResources()
 {
+	using VQ_D3D12_UTILS::ThrowIfFailed;
+
 	ID3D12Device*& pDevice = mDevice.ptr; // shorthand
 
 
-	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
-
 	// This is the highest version - If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
+	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
 	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
 	if (FAILED(pDevice->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
 	{
@@ -272,15 +491,20 @@ bool Renderer::LoadDefaultResources()
 	}
 
 	// Create a root signature consisting of a descriptor table with a single CBV.
-#if 0
 	{
-		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+		D3D12_DESCRIPTOR_RANGE1 ranges[1] = {};
+		D3D12_ROOT_PARAMETER1 rootParameters[1] = {};
 
-		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC);
-		rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_VERTEX);
+		ranges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+		ranges[0].Flags = D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC;
+		ranges[0].NumDescriptors = 1;
 
-		// Allow input layout and deny uneccessary access to certain pipeline stages.
+		rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+		rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE::D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+		rootParameters[0].DescriptorTable.pDescriptorRanges = &ranges[0];
+
+		// Allow input layout and deny unnecessary access to certain pipeline stages.
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
@@ -288,30 +512,43 @@ bool Renderer::LoadDefaultResources()
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS;
 
-		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr, rootSignatureFlags);
+		D3D12_VERSIONED_ROOT_SIGNATURE_DESC  rootSignatureDesc = { };
+		rootSignatureDesc.Version = featureData.HighestVersion;
+		rootSignatureDesc.Desc_1_1.Flags = rootSignatureFlags;
+		rootSignatureDesc.Desc_1_1.NumParameters = _countof(rootParameters);
+		rootSignatureDesc.Desc_1_1.pParameters = &rootParameters[0];
+		rootSignatureDesc.Desc_1_1.NumStaticSamplers = 0;
+		rootSignatureDesc.Desc_1_1.pStaticSamplers = nullptr;
 
-		ComPtr<ID3DBlob> signature;
-		ComPtr<ID3DBlob> error;
-		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-		ThrowIfFailed(pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_sceneRootSignature)));
-		NAME_D3D12_OBJECT(m_sceneRootSignature);
+		ID3DBlob* pSignature = nullptr;
+		ID3DBlob* pError     = nullptr;
+		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &pSignature, &pError));
+		ThrowIfFailed(pDevice->CreateRootSignature(0, pSignature->GetBufferPointer(), pSignature->GetBufferSize(), IID_PPV_ARGS(&mpRootSignature_Default.ptr)));
+		NAME_D3D12_OBJECT(mpRootSignature_Default.ptr);
 	}
-#endif
 
 	// Create a root signature consisting of a descriptor table with a SRV and a sampler.
-#if 0
 	{
-		CD3DX12_DESCRIPTOR_RANGE1 ranges[1];
-		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+		D3D12_DESCRIPTOR_RANGE1 ranges[1] = {};
+		D3D12_ROOT_PARAMETER1 rootParameters[1] = {};
 
 		// We don't modify the SRV in the post-processing command list after
 		// SetGraphicsRootDescriptorTable is executed on the GPU so we can use the default
 		// range behavior: D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE
-		ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
-		rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+		
+		///ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
+		ranges[0].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+		ranges[0].Flags = D3D12_DESCRIPTOR_RANGE_FLAGS::D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
+		ranges[0].NumDescriptors = 1;
 
-		// Allow input layout and pixel shader access and deny uneccessary access to certain pipeline stages.
+		///rootParameters[0].InitAsDescriptorTable(1, &ranges[0], D3D12_SHADER_VISIBILITY_PIXEL);
+		rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		rootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE::D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		rootParameters[0].DescriptorTable.NumDescriptorRanges = 1;
+		rootParameters[0].DescriptorTable.pDescriptorRanges = &ranges[0];
+
+
+		// Allow input layout and pixel shader access and deny unnecessary access to certain pipeline stages.
 		D3D12_ROOT_SIGNATURE_FLAGS rootSignatureFlags =
 			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
@@ -319,42 +556,47 @@ bool Renderer::LoadDefaultResources()
 			D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
 
 		// Create a sampler.
-		D3D12_STATIC_SAMPLER_DESC sampler = {};
-		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.MipLODBias = 0;
-		sampler.MaxAnisotropy = 0;
-		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		sampler.MinLOD = 0.0f;
-		sampler.MaxLOD = D3D12_FLOAT32_MAX;
-		sampler.ShaderRegister = 0;
-		sampler.RegisterSpace = 0;
-		sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		D3D12_STATIC_SAMPLER_DESC samplerDesc = {};
+		samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		samplerDesc.MipLODBias = 0;
+		samplerDesc.MaxAnisotropy = 0;
+		samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		samplerDesc.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		samplerDesc.MinLOD = 0.0f;
+		samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+		samplerDesc.ShaderRegister = 0;
+		samplerDesc.RegisterSpace = 0;
+		samplerDesc.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, rootSignatureFlags);
+		D3D12_VERSIONED_ROOT_SIGNATURE_DESC  rootSignatureDesc = { };
+		rootSignatureDesc.Version = featureData.HighestVersion;
+		rootSignatureDesc.Desc_1_1.Flags = rootSignatureFlags;
+		rootSignatureDesc.Desc_1_1.NumParameters = _countof(rootParameters);
+		rootSignatureDesc.Desc_1_1.pParameters = &rootParameters[0];
+		rootSignatureDesc.Desc_1_1.NumStaticSamplers = 1;
+		rootSignatureDesc.Desc_1_1.pStaticSamplers = &samplerDesc;
 
-		ComPtr<ID3DBlob> signature;
-		ComPtr<ID3DBlob> error;
-		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDesc, featureData.HighestVersion, &signature, &error));
-		ThrowIfFailed(pDevice->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_postRootSignature)));
-		NAME_D3D12_OBJECT(m_postRootSignature);
+		ID3DBlob* pSignature = nullptr;
+		ID3DBlob* pError     = nullptr;
+		ThrowIfFailed(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &pSignature, &pError));
+		ThrowIfFailed(pDevice->CreateRootSignature(0, pSignature->GetBufferPointer(), pSignature->GetBufferSize(), IID_PPV_ARGS(&mpRootSignature_LoadingScreen.ptr)));
+		NAME_D3D12_OBJECT(mpRootSignature_LoadingScreen.ptr);
 	}
 
-#endif
 
 	// Create the pipeline state, which includes compiling and loading shaders.
-#if 0
+#if 1
 	{
-		ComPtr<ID3DBlob> sceneVertexShader;
-		ComPtr<ID3DBlob> scenePixelShader;
-		ComPtr<ID3DBlob> postVertexShader;
-		ComPtr<ID3DBlob> postPixelShader;
-		ComPtr<ID3DBlob> error;
+		ID3DBlob* pVS = nullptr;
+		ID3DBlob* pPS = nullptr;
+		ID3DBlob* pErrBlob = nullptr;
 
+		//
+		// Shader compile flags
+		//
 #if defined(_DEBUG)
 		// Enable better shader debugging with the graphics debugging tools.
 		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
@@ -362,32 +604,27 @@ bool Renderer::LoadDefaultResources()
 		UINT compileFlags = 0;
 #endif
 
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"sceneShaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &sceneVertexShader, &error));
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"sceneShaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &scenePixelShader, &error));
 
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"postShaders.hlsl").c_str(), nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &postVertexShader, &error));
-		ThrowIfFailed(D3DCompileFromFile(GetAssetFullPath(L"postShaders.hlsl").c_str(), nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &postPixelShader, &error));
+		//
+		// COMPILE SHADERS
+		//
+		ShaderDesc fullScreenTextureVSPSDesc = {};
+		fullScreenTextureVSPSDesc.shaderName = "fullScreenTextureGfx";
+		fullScreenTextureVSPSDesc.stages[EShaderStage::VS].fileName = "";
+		fullScreenTextureVSPSDesc.stages[EShaderStage::VS].macros = { {"", ""} };
+		fullScreenTextureVSPSDesc.stages[EShaderStage::PS].fileName = "";
+		fullScreenTextureVSPSDesc.stages[EShaderStage::PS].macros = { {"", ""} };
+		Shader fullScreenTextureVSPS = ShaderUtil::CompileShader(fullScreenTextureVSPSDesc);
 
-		// Define the vertex input layouts.
-		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		};
-		D3D12_INPUT_ELEMENT_DESC scaleInputElementDescs[] =
-		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		};
 
 		// Describe and create the graphics pipeline state objects (PSOs).
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		psoDesc.pRootSignature = m_sceneRootSignature.Get();
-		psoDesc.VS = CD3DX12_SHADER_BYTECODE(sceneVertexShader.Get());
-		psoDesc.PS = CD3DX12_SHADER_BYTECODE(scenePixelShader.Get());
-		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+		psoDesc.InputLayout = fullScreenTextureVSPS.GetShaderInputLayoutType(); // { inputLayouts.data(), inputLayouts.size() };
+		psoDesc.pRootSignature = mpRootSignature_LoadingScreen.ptr;
+		psoDesc.VS = D3D12_SHADER_BYTECODE(fullScreenTextureVSPS.GetShaderByteCode(EShaderStage::VS));
+		psoDesc.PS = D3D12_SHADER_BYTECODE(fullScreenTextureVSPS.GetShaderByteCode(EShaderStage::PS));
+		SetDefaultRasterizerDesc(psoDesc.RasterizerState);
+		SetDefaultBlendDesc(psoDesc.BlendState);
 		psoDesc.DepthStencilState.DepthEnable = FALSE;
 		psoDesc.DepthStencilState.StencilEnable = FALSE;
 		psoDesc.SampleMask = UINT_MAX;
@@ -396,36 +633,37 @@ bool Renderer::LoadDefaultResources()
 		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 		psoDesc.SampleDesc.Count = 1;
 
-		ThrowIfFailed(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_scenePipelineState)));
-		NAME_D3D12_OBJECT(m_scenePipelineState);
+		ThrowIfFailed(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&mPSO_FullscreenTexture.ptr)));
+		NAME_D3D12_OBJECT(mPSO_FullscreenTexture.ptr);
 
-		psoDesc.InputLayout = { scaleInputElementDescs, _countof(scaleInputElementDescs) };
-		psoDesc.pRootSignature = m_postRootSignature.Get();
-		psoDesc.VS = CD3DX12_SHADER_BYTECODE(postVertexShader.Get());
-		psoDesc.PS = CD3DX12_SHADER_BYTECODE(postPixelShader.Get());
-
-		ThrowIfFailed(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_postPipelineState)));
-		NAME_D3D12_OBJECT(m_postPipelineState);
+		///psoDesc.InputLayout = { scaleInputElementDescs, _countof(scaleInputElementDescs) };
+		///psoDesc.pRootSignature = m_postRootSignature.Get();
+		///psoDesc.VS = CD3DX12_SHADER_BYTECODE(postVertexShader.Get());
+		///psoDesc.PS = CD3DX12_SHADER_BYTECODE(postPixelShader.Get());
+		///
+		///ThrowIfFailed(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_postPipelineState)));
+		///NAME_D3D12_OBJECT(m_postPipelineState);
 	}
 
 	// Single-use command allocator and command list for creating resources.
-	ComPtr<ID3D12CommandAllocator> commandAllocator;
-	ComPtr<ID3D12GraphicsCommandList> commandList;
+	ID3D12CommandAllocator* pCmdAllocator = nullptr;
+	ID3D12GraphicsCommandList* pCmdList   = nullptr;
 
-	ThrowIfFailed(pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator)));
-	ThrowIfFailed(pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
+	ThrowIfFailed(pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&pCmdAllocator)));
+	ThrowIfFailed(pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pCmdAllocator, nullptr, IID_PPV_ARGS(&pCmdList)));
 
+#if 0
 	// Create the command lists.
 	{
 		ThrowIfFailed(pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_sceneCommandAllocators[m_frameIndex].Get(), m_scenePipelineState.Get(), IID_PPV_ARGS(&m_sceneCommandList)));
 		NAME_D3D12_OBJECT(m_sceneCommandList);
 
-		ThrowIfFailed(pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_postCommandAllocators[m_frameIndex].Get(), m_postPipelineState.Get(), IID_PPV_ARGS(&m_postCommandList)));
-		NAME_D3D12_OBJECT(m_postCommandList);
+		///ThrowIfFailed(pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_postCommandAllocators[m_frameIndex].Get(), m_postPipelineState.Get(), IID_PPV_ARGS(&m_postCommandList)));
+		///NAME_D3D12_OBJECT(m_postCommandList);
 
 		// Close the command lists.
-		ThrowIfFailed(m_sceneCommandList->Close());
-		ThrowIfFailed(m_postCommandList->Close());
+		ThrowIfFailed(m_scenepCmdList->Close());
+		///ThrowIfFailed(m_postpCmdList->Close());
 	}
 
 	LoadSizeDependentResources();
@@ -473,8 +711,8 @@ bool Renderer::LoadDefaultResources()
 		memcpy(pVertexDataBegin, quadVertices, sizeof(quadVertices));
 		sceneVertexBufferUpload->Unmap(0, nullptr);
 
-		commandList->CopyBufferRegion(m_sceneVertexBuffer.Get(), 0, sceneVertexBufferUpload.Get(), 0, vertexBufferSize);
-		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_sceneVertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+		pCmdList->CopyBufferRegion(m_sceneVertexBuffer.Get(), 0, sceneVertexBufferUpload.Get(), 0, vertexBufferSize);
+		pCmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_sceneVertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
 		// Initialize the vertex buffer views.
 		m_sceneVertexBufferView.BufferLocation = m_sceneVertexBuffer->GetGPUVirtualAddress();
@@ -522,8 +760,8 @@ bool Renderer::LoadDefaultResources()
 		memcpy(pVertexDataBegin, quadVertices, sizeof(quadVertices));
 		postVertexBufferUpload->Unmap(0, nullptr);
 
-		commandList->CopyBufferRegion(m_postVertexBuffer.Get(), 0, postVertexBufferUpload.Get(), 0, vertexBufferSize);
-		commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_postVertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+		pCmdList->CopyBufferRegion(m_postVertexBuffer.Get(), 0, postVertexBufferUpload.Get(), 0, vertexBufferSize);
+		pCmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_postVertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
 		// Initialize the vertex buffer views.
 		m_postVertexBufferView.BufferLocation = m_postVertexBuffer->GetGPUVirtualAddress();
@@ -567,7 +805,7 @@ bool Renderer::LoadDefaultResources()
 
 	// Close the resource creation command list and execute it to begin the vertex buffer copy into
 	// the default heap.
-	ThrowIfFailed(commandList->Close());
+	ThrowIfFailed(pCmdList->Close());
 	ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
 	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
@@ -586,6 +824,118 @@ bool Renderer::LoadDefaultResources()
 		// Wait for the command list to execute before continuing.
 		WaitForGpu();
 	}
+#endif // 1
+#endif  // 0
+
+	return true;
+}
+
+bool Renderer::LoadSizeDependentResources()
+{
+#if 0
+	//UpdatePostViewAndScissor();
+	{
+		float viewWidthRatio = static_cast<float>(m_resolutionOptions[m_resolutionIndex].Width) / m_width;
+		float viewHeightRatio = static_cast<float>(m_resolutionOptions[m_resolutionIndex].Height) / m_height;
+
+		float x = 1.0f;
+		float y = 1.0f;
+
+		if (viewWidthRatio < viewHeightRatio)
+		{
+			// The scaled image's height will fit to the viewport's height and 
+			// its width will be smaller than the viewport's width.
+			x = viewWidthRatio / viewHeightRatio;
+		}
+		else
+		{
+			// The scaled image's width will fit to the viewport's width and 
+			// its height may be smaller than the viewport's height.
+			y = viewHeightRatio / viewWidthRatio;
+		}
+
+		m_postViewport.TopLeftX = m_width * (1.0f - x) / 2.0f;
+		m_postViewport.TopLeftY = m_height * (1.0f - y) / 2.0f;
+		m_postViewport.Width = x * m_width;
+		m_postViewport.Height = y * m_height;
+
+		m_postScissorRect.left = static_cast<LONG>(m_postViewport.TopLeftX);
+		m_postScissorRect.right = static_cast<LONG>(m_postViewport.TopLeftX + m_postViewport.Width);
+		m_postScissorRect.top = static_cast<LONG>(m_postViewport.TopLeftY);
+		m_postScissorRect.bottom = static_cast<LONG>(m_postViewport.TopLeftY + m_postViewport.Height);
+	}
+
+	// Create frame resources.
+	{
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+
+		// Create a RTV for each frame.
+		for (UINT n = 0; n < FrameCount; n++)
+		{
+			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n])));
+			m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+			rtvHandle.Offset(1, m_rtvDescriptorSize);
+
+			NAME_D3D12_OBJECT_INDEXED(m_renderTargets, n);
+		}
+	}
+
+	// Update resolutions shown in app title.
+	UpdateTitle();
+#endif
+
+	// This is where you would create/resize intermediate render targets, depth stencils, or other resources
+	// dependent on the window size.
+
+	return true;
+}
+
+bool Renderer::LoadSceneResolutionDependentResources()
+{
+#if 0
+	// Update resolutions shown in app title.
+	UpdateTitle();
+
+	// Set up the scene viewport and scissor rect to match the current scene rendering resolution.
+	{
+		m_sceneViewport.Width = static_cast<float>(m_resolutionOptions[m_resolutionIndex].Width);
+		m_sceneViewport.Height = static_cast<float>(m_resolutionOptions[m_resolutionIndex].Height);
+
+		m_sceneScissorRect.right = static_cast<LONG>(m_resolutionOptions[m_resolutionIndex].Width);
+		m_sceneScissorRect.bottom = static_cast<LONG>(m_resolutionOptions[m_resolutionIndex].Height);
+	}
+
+	// Update post-process viewport and scissor rectangle.
+	UpdatePostViewAndScissor();
+
+	// Create RTV for the intermediate render target.
+	{
+		D3D12_RESOURCE_DESC swapChainDesc = m_renderTargets[m_frameIndex]->GetDesc();
+		const CD3DX12_CLEAR_VALUE clearValue(swapChainDesc.Format, ClearColor);
+		const CD3DX12_RESOURCE_DESC renderTargetDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+			swapChainDesc.Format,
+			m_resolutionOptions[m_resolutionIndex].Width,
+			m_resolutionOptions[m_resolutionIndex].Height,
+			1u, 1u,
+			swapChainDesc.SampleDesc.Count,
+			swapChainDesc.SampleDesc.Quality,
+			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+			D3D12_TEXTURE_LAYOUT_UNKNOWN, 0u);
+
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), FrameCount, m_rtvDescriptorSize);
+		ThrowIfFailed(m_device->CreateCommittedResource(
+			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+			D3D12_HEAP_FLAG_NONE,
+			&renderTargetDesc,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			&clearValue,
+			IID_PPV_ARGS(&m_intermediateRenderTarget)));
+		m_device->CreateRenderTargetView(m_intermediateRenderTarget.Get(), nullptr, rtvHandle);
+		NAME_D3D12_OBJECT(m_intermediateRenderTarget);
+	}
+
+	// Create SRV for the intermediate render target.
+	m_device->CreateShaderResourceView(m_intermediateRenderTarget.Get(), nullptr, m_cbvSrvHeap->GetCPUDescriptorHandleForHeapStart());
 #endif
 
 	return true;
@@ -627,8 +977,8 @@ void Renderer::ReloadShaders()
 float	 Renderer::AspectRatio()	const { return 0; }//m_Direct3D->AspectRatio(); };
 unsigned Renderer::WindowHeight()	const { return 0; }//m_Direct3D->WindowHeight(); };
 unsigned Renderer::WindowWidth()	const { return 0; }//m_Direct3D->WindowWidth(); }
-unsigned Renderer::FrameRenderTargetHeight() const { return mAntiAliasing.resolutionX; }
-unsigned Renderer::FrameRenderTargetWidth()	 const { return mAntiAliasing.resolutionY; }
+unsigned Renderer::FrameRenderTargetHeight() const { return mAntiAliasingSettings.resolutionX; }
+unsigned Renderer::FrameRenderTargetWidth()	 const { return mAntiAliasingSettings.resolutionY; }
 vec2	 Renderer::FrameRenderTargetDimensionsAsFloat2() const { return vec2(this->FrameRenderTargetWidth(), this->FrameRenderTargetHeight()); }
 vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(this->WindowWidth(), this->WindowHeight()); }
 ///HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };
@@ -645,11 +995,9 @@ void Renderer::EndFrame()
 }
 
 
-const BufferDesc Renderer::GetBufferDesc(EBufferType bufferType, BufferID bufferID) const
+const BufferDesc& Renderer::GetBufferDesc(EBufferType bufferType, BufferID bufferID) const
 {
 	BufferDesc desc = {};
-
-#if 0
 	const std::vector<Buffer>& bufferContainer = [&]()
 	{
 		switch (bufferType)
@@ -661,20 +1009,17 @@ const BufferDesc Renderer::GetBufferDesc(EBufferType bufferType, BufferID buffer
 		}
 		return mVertexBuffers; // eliminate warning: not all control paths return
 	}();
-#endif
 
-	// TODO:
-	return desc;
-	///assert(bufferContainer.size() > bufferID);
-	///return bufferContainer[bufferID].mDesc;
+	assert(bufferContainer.size() > bufferID);
+	return bufferContainer[bufferID].GetBufferDesc();
 }
 
 #ifdef max
 #undef max
 #endif
-BufferID Renderer::CreateBuffer(const BufferDesc & bufferDesc, const void* pData /*=nullptr*/, const char* pBufferName /*= nullptr*/)
+BufferID Renderer::CreateBuffer(const BufferDesc& bufferDesc, const void* pData /*=nullptr*/, const char* pBufferName /*= nullptr*/)
 {
-	Buffer buffer(bufferDesc);
+	Buffer buffer(mpAllocator, bufferDesc);
 	// TODO-DX12:
 	///buffer.Initialize(m_device, pData);
 #if _DEBUG

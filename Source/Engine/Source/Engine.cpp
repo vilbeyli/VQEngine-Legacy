@@ -84,6 +84,7 @@ Engine::~Engine(){}
 bool Engine::Initialize(Application* pApplication)
 {
 	mbLoading = true;
+	mpCPUProfiler->BeginProfile();
 	this->mpApp = pApplication;
 	this->mpApp->CaptureMouse(true);
 	this->mbMouseCaptured = true; 

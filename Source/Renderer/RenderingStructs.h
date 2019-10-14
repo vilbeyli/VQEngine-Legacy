@@ -35,26 +35,27 @@ struct BufferDesc
 
 #if USE_DX12
 
-struct ID3D11Device; // TODO: d3d12
-class Renderer;
+#include "D3D12MemAlloc.h"
 
-#include <memory>
 
 struct Buffer
 {
-	bool			mDirty = true;
+public:
+	Buffer(D3D12MA::Allocator*& pAllocator, const BufferDesc& desc);
+
+	//void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
+	//void CleanUp();
+	//void Update(Renderer* pRenderer, const void* pData);
+	const BufferDesc& GetBufferDesc() const;
+
+	// TODO: remove or rename/move;
 	void*			mpCPUData = nullptr;
-	///ID3D11Buffer*	mpGPUData = nullptr;
+private:
+	ID3D12Resource* ptr;
 
-	bool			bInitialized = false;
-	std::allocator<char> mAllocator;
-	BufferDesc		mDesc;
-
-	void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
-	void CleanUp();
-	void Update(Renderer* pRenderer, const void* pData);
-
-	Buffer(const BufferDesc& desc);
+	D3D12MA::Allocation* mpAllocation;
+	D3D12MA::ALLOCATION_DESC mAllocationDesc;
+	BufferDesc mBufferDesc;
 };
 
 
@@ -68,6 +69,26 @@ using Viewport = D3D11_VIEWPORT;
 using RasterizerState = ID3D11RasterizerState;
 using DepthStencilState = ID3D11DepthStencilState;
 using RenderTargetIDs = std::vector<RenderTargetID>;
+
+
+
+struct Buffer
+{
+	bool			mDirty = true;
+	void*			mpCPUData = nullptr;
+	ID3D11Buffer*	mpGPUData = nullptr;
+
+	bool			bInitialized = false;
+	std::allocator<char> mAllocator;
+	BufferDesc		mDesc;
+
+	void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
+	void CleanUp();
+	void Update(Renderer* pRenderer, const void* pData);
+
+	Buffer(const BufferDesc& desc);
+};
+
 
 struct BlendState
 {
@@ -117,24 +138,6 @@ struct PipelineState
 	DepthTargetID		depthTargets;
 };
 
-
-
-struct Buffer
-{
-	bool			mDirty = true;
-	void*			mpCPUData = nullptr;
-	ID3D11Buffer*	mpGPUData = nullptr;
-
-	bool			bInitialized = false;
-	std::allocator<char> mAllocator;
-	BufferDesc		mDesc;
-
-	void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
-	void CleanUp();
-	void Update(Renderer* pRenderer, const void* pData);
-
-	Buffer(const BufferDesc& desc);
-};
 
 
 #endif // USE_DX12

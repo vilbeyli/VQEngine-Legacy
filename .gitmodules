@@ -4,3 +4,6 @@
 [submodule "Source/3rdParty/freetype-windows-binaries"]
 	path = Source/3rdParty/freetype-windows-binaries
 	url = https://github.com/ubawurinna/freetype-windows-binaries.git
+[submodule "Source/3rdParty/D3D12MemoryAllocator"]
+	path = Source/3rdParty/D3D12MemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator.git

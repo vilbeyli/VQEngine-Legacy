@@ -44,6 +44,9 @@
     <ClCompile Include="..\Renderer\Source\RenderingAPI\Direct3D12.cpp">
       <Filter>Source Files\RenderingAPI</Filter>
     </ClCompile>
+    <ClCompile Include="..\Renderer\Source\ShaderDX12.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Renderer\D3DManager.h">
@@ -71,6 +74,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingStructs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Renderer\ShaderCommon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Renderer\ShaderDX12.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

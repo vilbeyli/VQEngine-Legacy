@@ -16,19 +16,46 @@
 //
 //	Contact: volkanilbeyli@gmail.com
 
-//#include "BufferObject.h"
 #include "Renderer.h"
 
 #if USE_DX12
 
-#include "RenderingStructs.h"
+// Renderer has to include RenderingStructs.h due to DX12 definition
+// so we ignore it here.
+///#include "RenderingStructs.h"
 
-Buffer::Buffer(const BufferDesc& desc)
-	: mDesc(desc)
-	, mDirty(true)
-	, mpCPUData(nullptr)
-	///, mpGPUData(nullptr)
-{}
+Buffer::Buffer(D3D12MA::Allocator*& pAllocator, const BufferDesc& desc)
+	: mBufferDesc(desc)
+{
+	D3D12MA::ALLOCATION_DESC bufferAllocDesc = {};
+	bufferAllocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+	D3D12_RESOURCE_DESC bufferResourceDesc = {};
+	bufferResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	bufferResourceDesc.Alignment = 0;
+	bufferResourceDesc.Width = desc.mStride * desc.mElementCount;
+	bufferResourceDesc.Height = 1;
+	bufferResourceDesc.DepthOrArraySize = 1;
+	bufferResourceDesc.MipLevels = 1;
+	bufferResourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+	bufferResourceDesc.SampleDesc.Count = 1;
+	bufferResourceDesc.SampleDesc.Quality = 0;
+	bufferResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	bufferResourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	CHECK_HR(pAllocator->CreateResource(
+		&bufferAllocDesc,
+		&bufferResourceDesc, // resource description for a buffer
+		D3D12_RESOURCE_STATE_COPY_DEST, // we will start this heap in the copy destination state since we will copy data
+										// from the upload heap to this heap
+		nullptr, // optimized clear value must be null for this type of resource. used for render targets and depth/stencil buffers
+		&mpAllocation,
+		IID_PPV_ARGS(&ptr)));
+}
+
+const BufferDesc& Buffer::GetBufferDesc() const
+{
+	return mBufferDesc;
+}
 
 #else
 

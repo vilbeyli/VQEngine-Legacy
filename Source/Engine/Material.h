@@ -20,6 +20,7 @@
 #include "Utilities/Color.h"
 #include "Application/HandleTypedefs.h"
 #include "Renderer/RenderingEnums.h"
+#include "Renderer/Shader.h"
 
 #include <mutex>
 

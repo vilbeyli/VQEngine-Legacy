@@ -23,19 +23,36 @@
 #include "Texture.h"
 #include "Shader.h"
 
+#include "D3D12MemAlloc.h"
+#define STRINGIZE(x) STRINGIZE2(x)
+#define STRINGIZE2(x) #x
+#define LINE_STRING STRINGIZE(__LINE__)
+#define FAIL(msg) do { \
+        assert(0 && msg); \
+        throw std::runtime_error(msg); \
+    } while(false)
+
+#define CHECK_BOOL(expr)  do { if(!(expr)) FAIL(__FILE__ "(" LINE_STRING "): !( " #expr " )"); } while(false)
+#define CHECK_HR(expr)  do { if(FAILED(expr)) FAIL(__FILE__ "(" LINE_STRING "): FAILED( " #expr " )"); } while(false)
+
 #include "Engine/DataStructures.h" // RendererStats
 #include "Engine/Settings.h"
 
+
 #include <wtypes.h>
 #include <mutex>
+#include <atomic>
 
 class Shader;
 
 // D3D12 Forward Decls
 //
+struct IDXGISwapChain4;
+
 struct ID3D12Device;
 struct ID3D12CommandQueue;
-struct IDXGISwapChain4;
+struct ID3D12RootSignature;
+struct ID3D12PipelineState;
 
 class Renderer
 {
@@ -49,7 +66,10 @@ public:
 	bool	Initialize(HWND hwnd, const Settings::Window& settings, const Settings::Rendering& rendererSettings);
 	void	Exit();
 	void	ReloadShaders();
+
 	bool	LoadDefaultResources();
+	bool	LoadSizeDependentResources();
+	bool	LoadSceneResolutionDependentResources();
 
 
 	void	BeginEvent(const std::string& marker);
@@ -74,7 +94,7 @@ public:
 #endif
 	inline const Buffer&	GetVertexBuffer(BufferID id) { return mVertexBuffers[id]; }
 	inline const RendererStats&	GetRenderStats() const { return mRenderStats; }
-	const BufferDesc		GetBufferDesc(EBufferType bufferType, BufferID bufferID) const;
+	const BufferDesc&		GetBufferDesc(EBufferType bufferType, BufferID bufferID) const;
 	const Shader*			GetShader(ShaderID shader_id) const;
 	const Texture&			GetTextureObject(TextureID) const;
 	const TextureID			GetTexture(const std::string name) const;
@@ -124,7 +144,7 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	// DATA
 	//----------------------------------------------------------------------------------------------------------------
-	Settings::Rendering::AntiAliasing mAntiAliasing;
+	Settings::Rendering::AntiAliasing mAntiAliasingSettings;
 
 
 private:
@@ -178,6 +198,21 @@ private:
 	{
 		IDXGISwapChain4* ptr;
 	};
+	struct RootSignature
+	{
+		ID3D12RootSignature* ptr;
+	};
+	struct PipelineState
+	{
+		ID3D12PipelineState* ptr;
+	};
+	struct DescriptorHeap
+	{
+		ID3D12DescriptorHeap* ptr;
+		unsigned mDescSize;
+	};
+
+
 
 	// DEVICE RESOURCES
 	//
@@ -186,11 +221,15 @@ private:
 	CommandQueue mCmdQueue_Compute;
 	CommandQueue mCmdQueue_Copy;
 	SwapChain mSwapChain;
+
 	int mCurrentFrameIndex;
 
 	// PIPELINE STATE
 	//
-	// TODO
+	RootSignature mpRootSignature_LoadingScreen;
+	RootSignature mpRootSignature_Default;
+	
+	PipelineState mPSO_FullscreenTexture;
 
 	RenderTargetID					mBackBufferRenderTarget;	// todo: remove or rename
 	TextureID						mDefaultDepthBufferTexture;	// todo: remove or rename
@@ -198,15 +237,39 @@ private:
 	// RENDERING RESOURCES
 	//
 	std::vector<Shader*>			mShaders;
-	//std::vector<Texture>			mTextures;
-	//std::vector<Sampler>			mSamplers;
-	std::vector<Buffer>				mVertexBuffers;
-	std::vector<Buffer>				mIndexBuffers;
-	std::vector<Buffer>				mUABuffers;
-	//
-	//std::vector<RenderTarget>		mRenderTargets;
-	//std::vector<DepthTarget>		mDepthTargets;
+#if 0
+	std::vector<Texture>			mTextures;
+	std::vector<Sampler>			mSamplers;
+	
+	std::vector<RenderTarget>		mRenderTargets;
+	std::vector<DepthTarget>		mDepthTargets;
+#else
+	D3D12MA::Allocator*  mpAllocator;
 
+	std::vector<Buffer> mVertexBuffers;
+	std::vector<Buffer> mIndexBuffers;
+	std::vector<Buffer>	mUABuffers;
+
+	D3D12MA::Allocation* mpDepthStencilAllocation;
+	D3D12MA::Allocation* mpTextureAllocation;
+
+	std::vector<D3D12MA::Allocation*> mpCbPerObjectUploadHeapAllocations; // sized to num back buffer frames
+	std::vector<D3D12MA::Allocation*> mpConstantBufferUploadAllocation;	  // sized to num back buffer frames
+	
+	DescriptorHeap mRTVDescHeap;
+	std::vector<ID3D12Resource*> mpRenderTargets;
+
+	// TODO: move this to vector and use generic name
+	DescriptorHeap mDSVDescHeap;
+	ID3D12Resource* mpDepthTarget;
+#endif
+
+
+	// SYNCHRONIZATION
+	//
+	std::vector<ID3D12Fence*> mFences;
+	std::vector<unsigned long long> mFenceValues;
+	HANDLE mFenceEvent;
 
 	// PERFORMANCE COUNTERS
 	//
@@ -428,7 +491,7 @@ public:
 	ID3D11DeviceContext*			m_deviceContext;
 	D3DManager*						m_Direct3D;
 
-	Settings::Rendering::AntiAliasing mAntiAliasing;
+	Settings::Rendering::AntiAliasing mAntiAliasingSettings;
 
 	static bool						sEnableBlend; //temp
 
@@ -485,6 +548,7 @@ private:
 // template helper empty function
 //
 template<typename... Args> inline void pass(Args&&...) {}
+
 
 // note: we can use the expand operator (...) in a function parameter scope
 //       to access the expanded parameters one by one in an enclosed function call.

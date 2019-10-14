@@ -67,28 +67,6 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 
 
 	//
-	// Lights
-	//
-	for (Light& l : scene.lights) this->AddLight(std::move(l));
-	//mLights = std::move(scene.lights);
-
-	mMaterials = std::move(scene.materials);
-	mDirectionalLight = std::move(scene.directionalLight);
-	mSceneRenderSettings = scene.settings;
-
-
-	//
-	// Cameras
-	//
-	for (const Settings::Camera& camSetting : scene.cameras)
-	{
-		Camera c;
-		c.ConfigureCamera(camSetting, windowSettings, mpRenderer);
-		mCameras.push_back(c);
-	}
-
-
-	//
 	// Game Objects
 	//
 	for (size_t i = 0; i < scene.objects.size(); ++i)
@@ -110,7 +88,28 @@ void Scene::LoadScene(SerializedScene& scene, const Settings::Window& windowSett
 	Load(scene);            // Scene-specific load
 	StartLoadingModels();	// async model loading
 	
+
+	//
+	// Lights
+	//
+	for (Light& l : scene.lights) this->AddLight(std::move(l));
+	//mLights = std::move(scene.lights);
+
+	mMaterials = std::move(scene.materials);
+	mDirectionalLight = std::move(scene.directionalLight);
+	mSceneRenderSettings = scene.settings;
 	SetLightCache();
+
+
+	//
+	// Cameras
+	//
+	for (const Settings::Camera& camSetting : scene.cameras)
+	{
+		Camera c;
+		c.ConfigureCamera(camSetting, windowSettings, mpRenderer);
+		mCameras.push_back(c);
+	}
 
 	EndLoadingModels();
 
@@ -1208,8 +1207,8 @@ void Scene::CalculateSceneBoundingBox()
 		{
 			const BufferID VertexBufferID = mMeshes[meshID].GetIABuffers().first;
 			const Buffer& VertexBuffer = mpRenderer->GetVertexBuffer(VertexBufferID);
-			const size_t numVerts = VertexBuffer.mDesc.mElementCount;
-			const size_t stride = VertexBuffer.mDesc.mStride;
+			const size_t numVerts = VertexBuffer.GetBufferDesc().mElementCount;
+			const size_t stride = VertexBuffer.GetBufferDesc().mStride;
 
 			constexpr size_t defaultSz = sizeof(DefaultVertexBufferData);
 			constexpr float DegenerateMeshPositionChannelValueMax = 15000.0f; // make sure no vertex.xyz is > 15,000.0f

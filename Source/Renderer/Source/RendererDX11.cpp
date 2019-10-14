@@ -219,7 +219,7 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 	const bool& bAntiAliasing = rendererSettings.antiAliasing.IsAAEnabled();
 
 	// assuming SSAA is the only supported AA technique. otherwise swapchain initialization should be further customized.
-	this->mAntiAliasing = rendererSettings.antiAliasing;
+	this->mAntiAliasingSettings = rendererSettings.antiAliasing;
 
 	const float& fUpscaleFactor = rendererSettings.antiAliasing.fUpscaleFactor;
 
@@ -294,8 +294,8 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 
 		const RenderTargetID RT_ID = this->AddRenderTarget(rtDesc);
 
-		this->mAntiAliasing.resolutionX = rtDesc.textureDesc.height;
-		this->mAntiAliasing.resolutionY = rtDesc.textureDesc.width;
+		this->mAntiAliasingSettings.resolutionX = rtDesc.textureDesc.height;
+		this->mAntiAliasingSettings.resolutionY = rtDesc.textureDesc.width;
 	}
 	else
 	{
@@ -304,16 +304,16 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 		// to return the scene render target scale, which is usually
 		// affected by the SSAO upscaling factor.
 		//
-		this->mAntiAliasing.resolutionX = this->WindowHeight(); 
-		this->mAntiAliasing.resolutionY = this->WindowWidth();
+		this->mAntiAliasingSettings.resolutionX = this->WindowHeight(); 
+		this->mAntiAliasingSettings.resolutionY = this->WindowWidth();
 	}
 
 	// DEFAULT DEPTH TARGET
 	//--------------------------------------------------------------------
 	{
 		TextureDesc depthTexDesc;	// Set up the description of the depth buffer.
-		depthTexDesc.width  = bAntiAliasing ? this->mAntiAliasing.resolutionY : settings.width;
-		depthTexDesc.height = bAntiAliasing ? this->mAntiAliasing.resolutionX : settings.height;
+		depthTexDesc.width  = bAntiAliasing ? this->mAntiAliasingSettings.resolutionY : settings.width;
+		depthTexDesc.height = bAntiAliasing ? this->mAntiAliasingSettings.resolutionX : settings.height;
 		depthTexDesc.arraySize = 1;
 		depthTexDesc.mipCount  = 1;
 		depthTexDesc.format = R32;
@@ -667,8 +667,8 @@ void Renderer::ReloadShaders()
 float	 Renderer::AspectRatio()	const { return m_Direct3D->AspectRatio(); };
 unsigned Renderer::WindowHeight()	const { return m_Direct3D->WindowHeight(); };
 unsigned Renderer::WindowWidth()	const { return m_Direct3D->WindowWidth(); }
-unsigned Renderer::FrameRenderTargetHeight() const { return mAntiAliasing.resolutionX; }
-unsigned Renderer::FrameRenderTargetWidth()	 const { return mAntiAliasing.resolutionY; }
+unsigned Renderer::FrameRenderTargetHeight() const { return mAntiAliasingSettings.resolutionX; }
+unsigned Renderer::FrameRenderTargetWidth()	 const { return mAntiAliasingSettings.resolutionY; }
 vec2	 Renderer::FrameRenderTargetDimensionsAsFloat2() const { return vec2(this->FrameRenderTargetWidth(), this->FrameRenderTargetHeight()); }
 vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(this->WindowWidth(), this->WindowHeight()); }
 HWND	 Renderer::GetWindow()			const { return m_Direct3D->WindowHandle(); };

@@ -17,13 +17,85 @@
 //	Contact: volkanilbeyli@gmail.com
 
 #include "Shader.h"
-
+#include "Renderer.h"
 #include "Utilities/Log.h"
 #include "Utilities/utils.h"
+#include "Utilities/PerfTimer.h"
+#include "Application/Application.h"
 
 #include <fstream>
 #include <sstream>
-#include <stack>
+#include <unordered_map>
+#include <functional>
+
+//-------------------------------------------------------------------------------------------------------------
+// CONSTANTS & STATICS
+//-------------------------------------------------------------------------------------------------------------
+static const std::unordered_map<EShaderStage, const char*> SHADER_COMPILER_VERSION_LOOKUP = 
+{
+	{ EShaderStage::VS, "vs_5_0" },
+	{ EShaderStage::GS, "gs_5_0" },
+	{ EShaderStage::DS, "ds_5_0" },
+	{ EShaderStage::HS, "hs_5_0" },
+	{ EShaderStage::PS, "ps_5_0" },
+	{ EShaderStage::CS, "cs_5_0" },
+};
+static const std::unordered_map<EShaderStage, const char*> SHADER_ENTRY_POINT_LOOKUP =
+{
+	{ EShaderStage::VS, "VSMain" },
+	{ EShaderStage::GS, "GSMain" },
+	{ EShaderStage::DS, "DSMain" },
+	{ EShaderStage::HS, "HSMain" },
+	{ EShaderStage::PS, "PSMain" },
+	{ EShaderStage::CS, "CSMain" },
+};
+
+ID3DInclude* const SHADER_INCLUDE_HANDLER = D3D_COMPILE_STANDARD_FILE_INCLUDE;		// use default include handler for using #include in shader files
+
+#if defined( _DEBUG ) || defined ( FORCE_DEBUG )
+const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#else
+const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS;
+#endif
+
+
+
+#ifdef _WIN64
+#define CALLING_CONVENTION __cdecl
+#else	// _WIN32
+#define CALLING_CONVENTION __stdcall
+#endif
+
+
+
+#if USE_DX12
+#include <d3d11.h> /// D3D10_SHADER_MACRO
+#pragma comment(lib, "d3dcompiler.lib")	// functionality for compiling shaders
+
+#else
+static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderConstants[EShaderStage::COUNT])
+(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = 
+{
+	&ID3D11DeviceContext::VSSetConstantBuffers,
+	&ID3D11DeviceContext::GSSetConstantBuffers,
+	&ID3D11DeviceContext::DSSetConstantBuffers,
+	&ID3D11DeviceContext::HSSetConstantBuffers,
+	&ID3D11DeviceContext::PSSetConstantBuffers, 
+	&ID3D11DeviceContext::CSSetConstantBuffers,
+};
+#endif
+
+static std::unordered_map <std::string, EShaderStage > s_ShaderTypeStrLookup = 
+{
+	{"vs", EShaderStage::VS},
+	{"gs", EShaderStage::GS},
+	{"ds", EShaderStage::DS},
+	{"hs", EShaderStage::HS},
+	{"cs", EShaderStage::CS},
+	{"ps", EShaderStage::PS}
+};
+
+
 //-------------------------------------------------------------------------------------------------------------
 // STATIC FUNCTIONS
 //-------------------------------------------------------------------------------------------------------------
@@ -103,98 +175,6 @@ static bool IsCacheDirty(const std::string& sourcePath, const std::string& cache
 
 	return DirectoryUtil::IsFileNewer(sourcePath, cachePath) || AreIncludesDirty(sourcePath, cachePath);
 }
-
-
-bool Shader::HasSourceFileBeenUpdated() const
-{
-	bool bUpdated = false;
-	for (EShaderStage stage = EShaderStage::VS; stage < EShaderStage::COUNT; stage = (EShaderStage)(stage + 1))
-	{
-		if (mDirectories.find(stage) != mDirectories.end())
-		{
-			const std::string& path = mDirectories.at(stage).fullPath;
-			const std::string& cachePath = mDirectories.at(stage).cachePath;
-			bUpdated |= mDirectories.at(stage).lastWriteTime < std::experimental::filesystem::last_write_time(path);
-
-			if (!bUpdated) // check include files only when source is not updated
-			{
-				bUpdated |= AreIncludesDirty(path, cachePath);
-			}
-		}
-	}
-	return bUpdated;
-}
-
-
-#if !USE_DX12
-#include "Renderer.h"
-#include "Utilities/PerfTimer.h"
-#include "Application/Application.h"
-
-#include <unordered_map>
-#include <functional>
-
-//-------------------------------------------------------------------------------------------------------------
-// CONSTANTS & STATICS
-//-------------------------------------------------------------------------------------------------------------
-static const std::unordered_map<EShaderStage, const char*> SHADER_COMPILER_VERSION_LOOKUP = 
-{
-	{ EShaderStage::VS, "vs_5_0" },
-	{ EShaderStage::GS, "gs_5_0" },
-	{ EShaderStage::DS, "ds_5_0" },
-	{ EShaderStage::HS, "hs_5_0" },
-	{ EShaderStage::PS, "ps_5_0" },
-	{ EShaderStage::CS, "cs_5_0" },
-};
-static const std::unordered_map<EShaderStage, const char*> SHADER_ENTRY_POINT_LOOKUP =
-{
-	{ EShaderStage::VS, "VSMain" },
-	{ EShaderStage::GS, "GSMain" },
-	{ EShaderStage::DS, "DSMain" },
-	{ EShaderStage::HS, "HSMain" },
-	{ EShaderStage::PS, "PSMain" },
-	{ EShaderStage::CS, "CSMain" },
-};
-
-ID3DInclude* const SHADER_INCLUDE_HANDLER = D3D_COMPILE_STANDARD_FILE_INCLUDE;		// use default include handler for using #include in shader files
-
-#if defined( _DEBUG ) || defined ( FORCE_DEBUG )
-const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS;
-#endif
-
-
-
-#ifdef _WIN64
-#define CALLING_CONVENTION __cdecl
-#else	// _WIN32
-#define CALLING_CONVENTION __stdcall
-#endif
-
-
-static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderConstants[EShaderStage::COUNT])
-(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = 
-{
-	&ID3D11DeviceContext::VSSetConstantBuffers,
-	&ID3D11DeviceContext::GSSetConstantBuffers,
-	&ID3D11DeviceContext::DSSetConstantBuffers,
-	&ID3D11DeviceContext::HSSetConstantBuffers,
-	&ID3D11DeviceContext::PSSetConstantBuffers, 
-	&ID3D11DeviceContext::CSSetConstantBuffers,
-};
-
-
-static std::unordered_map <std::string, EShaderStage > s_ShaderTypeStrLookup = 
-{
-	{"vs", EShaderStage::VS},
-	{"gs", EShaderStage::GS},
-	{"ds", EShaderStage::DS},
-	{"hs", EShaderStage::HS},
-	{"cs", EShaderStage::CS},
-	{"ps", EShaderStage::PS}
-};
-
 
 
 bool Shader::CompileFromSource(const std::string& pathToFile, const EShaderStage& type, ID3D10Blob *& ref_pBob, std::string& errMsg, const std::vector<ShaderMacro>& macros)
@@ -298,6 +278,9 @@ Shader::~Shader(void)
 }
 void Shader::ReleaseResources()
 {
+#if USE_DX12
+
+#else
 	for (ConstantBufferBinding& cbuf : mConstantBuffers)
 	{
 		if (cbuf.data)
@@ -357,6 +340,7 @@ void Shader::ReleaseResources()
 			mReflections.of[type] = nullptr;
 		}
 	}
+#endif
 
 	m_CBLayouts.clear();
 	m_constants.clear();
@@ -379,7 +363,30 @@ size_t Shader::GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro
 }
 
 
+bool Shader::HasSourceFileBeenUpdated() const
+{
+	bool bUpdated = false;
+	for (EShaderStage stage = EShaderStage::VS; stage < EShaderStage::COUNT; stage = (EShaderStage)(stage + 1))
+	{
+		if (mDirectories.find(stage) != mDirectories.end())
+		{
+			const std::string& path = mDirectories.at(stage).fullPath;
+			const std::string& cachePath = mDirectories.at(stage).cachePath;
+			bUpdated |= mDirectories.at(stage).lastWriteTime < std::experimental::filesystem::last_write_time(path);
 
+			if (!bUpdated) // check include files only when source is not updated
+			{
+				bUpdated |= AreIncludesDirty(path, cachePath);
+			}
+		}
+	}
+	return bUpdated;
+}
+
+
+#if USE_DX12
+
+#else
 bool Shader::Reload(ID3D11Device* device)
 {
 	Shader copy(this->mDescriptor);
@@ -434,14 +441,18 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 		}
 	}
 }
-
+#endif
 
 
 
 //-------------------------------------------------------------------------------------------------------------
 // UTILITY FUNCTIONS
 //-------------------------------------------------------------------------------------------------------------
+#if USE_DX12
+bool Shader::CompileShaders(ID3D12Device* device, const ShaderDesc& desc)
+#else
 bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
+#endif
 {
 	constexpr const char * SHADER_BINARY_EXTENSION = ".bin";
 	mDescriptor = desc;
@@ -906,5 +917,3 @@ std::array<ShaderStageDesc, EShaderStageFlags::SHADER_STAGE_COUNT> ShaderDesc::C
 	}
 	return descs;
 }
-
-#endif // !USE_DX12

@@ -82,13 +82,13 @@
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);$(IncludePath)</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2017\$(Platform)\$(Configuration);$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)</LibraryPath>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)\</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir);$(IncludePath)</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);$(NETFXKitsDir)Lib\um\x64;$(SolutionDir)Source\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2017\$(Platform)\$(Configuration);$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration);$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)Build\$(ProjectName)\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Build\Temp\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
@@ -190,6 +190,9 @@ xcopy "$(SolutionDir)Source\3rdParty\assimp\lib\$(Platform)\$(Configuration)\ass
   <ItemGroup>
     <ProjectReference Include="Application.vcxproj">
       <Project>{ab5bc0cc-a11f-4edc-9338-9ba351c624a8}</Project>
+    </ProjectReference>
+    <ProjectReference Include="D3D12MA.vcxproj">
+      <Project>{8008924d-1620-4934-951c-0230cb11817f}</Project>
     </ProjectReference>
     <ProjectReference Include="Engine.vcxproj">
       <Project>{9780d393-8ef6-43c8-b821-6b6a6661831c}</Project>

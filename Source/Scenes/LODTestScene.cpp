@@ -139,8 +139,8 @@ void LODTestScene::Update(float dt)
 		const MeshID meshID = pObj->GetModelData().mMeshIDs.back();
 		const int currentLODValue = mLODManager.GetLODValue(pObj, meshID);
 		auto VB_IB_IDs = mMeshes[meshID].GetIABuffers(currentLODValue);
-		const BufferDesc bufDescVB = mpRenderer->GetBufferDesc(EBufferType::VERTEX_BUFFER, VB_IB_IDs.first);
-		const BufferDesc bufDescIB = mpRenderer->GetBufferDesc(EBufferType::INDEX_BUFFER , VB_IB_IDs.second);
+		const BufferDesc& bufDescVB = mpRenderer->GetBufferDesc(EBufferType::VERTEX_BUFFER, VB_IB_IDs.first);
+		const BufferDesc& bufDescIB = mpRenderer->GetBufferDesc(EBufferType::INDEX_BUFFER , VB_IB_IDs.second);
 		const LODManager::LODSettings& lod = mLODManager.GetMeshLODSettings(pObj, meshID);
 
 		vec3 distSq = pObj->GetTransform()._position - this->GetActiveCamera().GetPositionF();

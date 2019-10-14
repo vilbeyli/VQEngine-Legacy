@@ -280,55 +280,6 @@ enum EGeometry
 
 
 
-// https://learnopengl.com/#!PBR/IBL/Diffuse-irradiance
-// todo: add convolution shaders (compute)
-enum EShaders : unsigned	// built-in shaders
-{
-	FORWARD_PHONG = 0,
-	UNLIT,
-	TEXTURE_COORDINATES,
-	NORMAL,
-	TANGENT,
-	BINORMAL,
-	LINE,
-	TBN,
-	DEBUG,
-	SKYBOX,
-	SKYBOX_EQUIRECTANGULAR,
-	FORWARD_BRDF,
-	SHADOWMAP_DEPTH,
-	SHADOWMAP_DEPTH_INSTANCED,
-
-	SHADER_COUNT
-};
-
-enum EShaderStageFlags : unsigned
-{
-	SHADER_STAGE_NONE = 0x00000000,
-	SHADER_STAGE_VS = 0x00000001,
-	SHADER_STAGE_GS = 0x00000002,
-	SHADER_STAGE_DS = 0x00000004,
-	SHADER_STAGE_HS = 0x00000008,
-	SHADER_STAGE_PS = 0x00000010,
-	SHADER_STAGE_ALL_GRAPHICS = 0X0000001F,
-	SHADER_STAGE_CS = 0x00000020,
-
-	SHADER_STAGE_COUNT = 6
-};
-
-enum EShaderStage : unsigned	// array-index enum mapping
-{	// used to map **SetShaderConstant(); function in Renderer::Apply()
-	VS = 0,
-	GS,
-	DS,
-	HS,
-	PS,
-	CS,
-
-	COUNT
-};
-
-
 enum EMaterialType
 {
 	GGX_BRDF = 0,

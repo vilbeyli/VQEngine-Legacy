@@ -64,7 +64,6 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetSampler[EShaderStage::C
 	&ID3D11DeviceContext::PSSetSamplers,
 	&ID3D11DeviceContext::CSSetSamplers,
 };
-#endif
 
 #if 0 // experimental (there's code duplication that can use some template programming)
 template<class T>
@@ -222,3 +221,5 @@ ClearCommand ClearCommand::Color(float r, float g, float b, float a)
 	return ClearCommand::Color({ r,g,b,a });
 }
 
+
+#endif

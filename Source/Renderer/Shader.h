@@ -24,6 +24,10 @@
 //
 // DIRECTX 12
 //
+
+struct ID3D12Device;
+using RHIDevice = ID3D12Device * ;
+
 #include "ShaderDX12.h"
 
 
@@ -40,6 +44,7 @@
 #include <stack>
 #include <unordered_map>
 
+using RHIDevice = ID3D11Device * ;
 using CPUConstantID = int;
 using GPU_ConstantBufferSlotIndex = int;
 using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
@@ -181,35 +186,11 @@ public:
 
 private:
 	//----------------------------------------------------------------------------------------------------------------
-	// STATIC PRIVATE INTERFACE
-	//----------------------------------------------------------------------------------------------------------------
-	// Compiles shader from source file with the given shader macros
-	//
-	static bool CompileFromSource(
-		  const std::string&              pathToFile
-		, const EShaderStage&             type
-		, ID3D10Blob *&                   ref_pBob
-		, std::string&                    outErrMsg
-		, const std::vector<ShaderMacro>& macros);
-	
-	// Reads in cached binary from %APPDATA%/VQEngine/ShaderCache folder into ID3D10Blob 
-	//
-	static ID3D10Blob * CompileFromCachedBinary(const std::string& cachedBinaryFilePath);
-
-	// Writes out compiled ID3D10Blob into %APPDATA%/VQEngine/ShaderCache folder
-	//
-	static void			CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blob * pCompiledBinary);
-
-	// example filePath: "rootPath/filename_vs.hlsl"
-	//                                      ^^----- shaderTypeString
-	static EShaderStage	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
-
-	//----------------------------------------------------------------------------------------------------------------
 	// UTILITY FUNCTIONS
 	//----------------------------------------------------------------------------------------------------------------
 
 	void ReflectConstantBufferLayouts(ID3D11ShaderReflection * sRefl, EShaderStage type);
-	bool CompileShaders(ID3D11Device* device, const ShaderDesc& desc);
+	bool CompileShaderStages(RHIDevice device, const ShaderDesc& desc);
 	void SetReflections(const ShaderBlobs& blobs);
 	void CreateShaderStage(ID3D11Device* pDevice, EShaderStage stage, void* pBuffer, const size_t szShaderBinary);
 	void CheckSignatures();

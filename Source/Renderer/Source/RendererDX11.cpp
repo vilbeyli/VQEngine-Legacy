@@ -709,7 +709,7 @@ const PipelineState& Renderer::GetPipelineState() const
 ShaderID Renderer::CreateShader(const ShaderDesc& shaderDesc)
 {
 	Shader* shader = new Shader(shaderDesc.shaderName);
-	shader->CompileShaders(m_device, shaderDesc);
+	shader->CompileShaderStages(m_device, shaderDesc);
 
 	mShaders.push_back(shader);
 	shader->mID = (static_cast<int>(mShaders.size()) - 1);
@@ -729,7 +729,7 @@ ShaderID Renderer::ReloadShader(const ShaderDesc& shaderDesc, const ShaderID sha
 	delete pShader;
 	pShader = new Shader(shaderDesc.shaderName);
 
-	pShader->CompileShaders(m_device, shaderDesc);
+	pShader->CompileShaderStages(m_device, shaderDesc);
 	pShader->mID = shaderID;
 	mShaders[shaderID] = pShader;
 	return pShader->ID();

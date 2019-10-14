@@ -27,6 +27,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <functional>
+#include <stack>
 
 //-------------------------------------------------------------------------------------------------------------
 // CONSTANTS & STATICS
@@ -83,7 +84,7 @@ static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderConstants[EShader
 	&ID3D11DeviceContext::PSSetConstantBuffers, 
 	&ID3D11DeviceContext::CSSetConstantBuffers,
 };
-#endif
+#endif // USE_DX12
 
 static std::unordered_map <std::string, EShaderStage > s_ShaderTypeStrLookup = 
 {
@@ -133,7 +134,7 @@ static std::string GetIncludeFileName(const std::string& line)
 	return std::string();
 }
 
-static bool AreIncludesDirty(const std::string& srcPath, const std::string& cachePath)
+bool ShaderUtils::AreIncludesDirty(const std::string& srcPath, const std::string& cachePath)
 {
 	const std::string ShaderSourceDir = DirectoryUtil::GetFolderPath(srcPath);
 	const std::string ShaderCacheDir = DirectoryUtil::GetFolderPath(cachePath);
@@ -169,15 +170,18 @@ static bool AreIncludesDirty(const std::string& srcPath, const std::string& cach
 	return false;
 }
 
-static bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
+bool ShaderUtils::IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
 {
-	if (!DirectoryUtil::FileExists(cachePath)) return true;
+	if (!DirectoryUtil::FileExists(cachePath))
+	{
+		return true;
+	}
 
 	return DirectoryUtil::IsFileNewer(sourcePath, cachePath) || AreIncludesDirty(sourcePath, cachePath);
 }
 
 
-bool Shader::CompileFromSource(const std::string& pathToFile, const EShaderStage& type, ID3D10Blob *& ref_pBob, std::string& errMsg, const std::vector<ShaderMacro>& macros)
+bool ShaderUtils::CompileFromSource(const std::string& pathToFile, const EShaderStage& type, ID3D10Blob *& ref_pBob, std::string& errMsg, const std::vector<ShaderMacro>& macros)
 {
 	const StrUtil::UnicodeString Path = pathToFile;
 	const WCHAR* PathStr = Path.GetUnicodePtr();
@@ -209,7 +213,7 @@ bool Shader::CompileFromSource(const std::string& pathToFile, const EShaderStage
 	return true;
 }
 
-ID3D10Blob * Shader::CompileFromCachedBinary(const std::string & cachedBinaryFilePath)
+ID3D10Blob * ShaderUtils::CompileFromCachedBinary(const std::string & cachedBinaryFilePath)
 {
 	std::ifstream cache(cachedBinaryFilePath, std::ios::in | std::ios::binary | std::ios::ate);
 	const size_t shaderBinarySize = cache.tellg();
@@ -226,7 +230,7 @@ ID3D10Blob * Shader::CompileFromCachedBinary(const std::string & cachedBinaryFil
 	return pBlob;
 }
 
-void Shader::CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blob * pCompiledBinary)
+void ShaderUtils::CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blob * pCompiledBinary)
 {
 	const size_t shaderBinarySize = pCompiledBinary->GetBufferSize();
 
@@ -236,17 +240,30 @@ void Shader::CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blo
 	cache.close();
 }
 
-EShaderStage Shader::GetShaderTypeFromSourceFilePath(const std::string & shaderFilePath)
+EShaderStage ShaderUtils::GetShaderTypeFromSourceFilePath(const std::string & shaderFilePath)
 {
 	const std::string sourceFileName = DirectoryUtil::GetFileNameWithoutExtension(shaderFilePath);
 	const std::string shaderTypeStr = { *(sourceFileName.rbegin() + 1), *sourceFileName.rbegin() };
 	return s_ShaderTypeStrLookup.at(shaderTypeStr);
 }
 
+size_t ShaderUtils::GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro>& macros)
+{
+	if (macros.empty()) return 0;
+	std::string concatenatedMacros;
+	for (const ShaderMacro& macro : macros)
+		concatenatedMacros += macro.name + macro.value;
+	return std::hash<std::string>()(concatenatedMacros);
+}
+
+
+
 
 //-------------------------------------------------------------------------------------------------------------
 // PUBLIC INTERFACE
 //-------------------------------------------------------------------------------------------------------------
+
+#if !USE_DX12
 const std::vector<Shader::ConstantBufferLayout>& Shader::GetConstantBufferLayouts() const { return m_CBLayouts; }
 const std::vector<ConstantBufferBinding>& Shader::GetConstantBuffers() const { return mConstantBuffers; }
 const TextureBinding& Shader::GetTextureBinding(const std::string& textureName) const { return mTextureBindings[mShaderTextureLookup.at(textureName)]; }
@@ -276,91 +293,7 @@ Shader::~Shader(void)
 	// release constants
 	ReleaseResources();
 }
-void Shader::ReleaseResources()
-{
-#if USE_DX12
-
-#else
-	for (ConstantBufferBinding& cbuf : mConstantBuffers)
-	{
-		if (cbuf.data)
-		{
-			cbuf.data->Release();
-			cbuf.data = nullptr;
-		}
-	}
-	mConstantBuffers.clear();
-
-	for (CPUConstant cbuf : mCPUConstantBuffers)
-	{
-		if (cbuf._data)
-		{
-			delete cbuf._data;
-			cbuf._data = nullptr;
-		}
-	}
-	mCPUConstantBuffers.clear();
-
-
-	if (mpInputLayout)
-	{
-		mpInputLayout->Release();
-		mpInputLayout = nullptr;
-	}
-
-	if (mStages.mPixelShader)
-	{
-		mStages.mPixelShader->Release();
-		mStages.mPixelShader = nullptr;
-	}
-
-	if (mStages.mVertexShader)
-	{
-		mStages.mVertexShader->Release();
-		mStages.mVertexShader = nullptr;
-	}
-
-	if (mStages.mComputeShader)
-	{
-		mStages.mComputeShader->Release();
-		mStages.mComputeShader = nullptr;
-	}
-
-	if (mStages.mGeometryShader)
-	{
-		mStages.mGeometryShader->Release();
-		mStages.mGeometryShader = nullptr;
-	}
-
-	for (unsigned type = EShaderStage::VS; type < EShaderStage::COUNT; ++type)
-	{
-		if (mReflections.of[type])
-		{
-			mReflections.of[type]->Release();
-			mReflections.of[type] = nullptr;
-		}
-	}
 #endif
-
-	m_CBLayouts.clear();
-	m_constants.clear();
-	mTextureBindings.clear();
-	mSamplerBindings.clear();
-	mShaderTextureLookup.clear();
-	mShaderSamplerLookup.clear();
-}
-
-
-
-
-size_t Shader::GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro>& macros)
-{
-	if (macros.empty()) return 0;
-	std::string concatenatedMacros;
-	for (const ShaderMacro& macro : macros)
-		concatenatedMacros += macro.name + macro.value;
-	return std::hash<std::string>()(concatenatedMacros);
-}
 
 
 bool Shader::HasSourceFileBeenUpdated() const
@@ -376,7 +309,7 @@ bool Shader::HasSourceFileBeenUpdated() const
 
 			if (!bUpdated) // check include files only when source is not updated
 			{
-				bUpdated |= AreIncludesDirty(path, cachePath);
+				bUpdated |= ShaderUtils::AreIncludesDirty(path, cachePath);
 			}
 		}
 	}
@@ -442,447 +375,6 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 	}
 }
 #endif
-
-
-
-//-------------------------------------------------------------------------------------------------------------
-// UTILITY FUNCTIONS
-//-------------------------------------------------------------------------------------------------------------
-#if USE_DX12
-bool Shader::CompileShaders(ID3D12Device* device, const ShaderDesc& desc)
-#else
-bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
-#endif
-{
-	constexpr const char * SHADER_BINARY_EXTENSION = ".bin";
-	mDescriptor = desc;
-	HRESULT result;
-	ShaderBlobs blobs;
-	bool bPrinted = false;
-
-	PerfTimer timer;
-	timer.Start();
-
-	// COMPILE SHADER STAGES
-	//----------------------------------------------------------------------------
-	for (const ShaderStageDesc& stageDesc : desc.stages)
-	{
-		if (stageDesc.fileName.empty())
-			continue;
-
-		// stage.macros
-		const std::string sourceFilePath = std::string(Renderer::sShaderRoot + stageDesc.fileName);
-		
-		const EShaderStage stage = GetShaderTypeFromSourceFilePath(sourceFilePath);
-
-		// USE SHADER CACHE
-		//
-		const size_t ShaderHash = GeneratePreprocessorDefinitionsHash(stageDesc.macros);
-		const std::string cacheFileName = stageDesc.macros.empty()
-			? DirectoryUtil::GetFileNameFromPath(sourceFilePath) + SHADER_BINARY_EXTENSION
-			: DirectoryUtil::GetFileNameFromPath(sourceFilePath) + "_" + std::to_string(ShaderHash) + SHADER_BINARY_EXTENSION;
-		const std::string cacheFilePath = Application::GetDirectory(Application::EDirectories::SHADER_BINARY_CACHE) + "\\" + cacheFileName;
-		const bool bUseCachedShaders =
-			DirectoryUtil::FileExists(cacheFilePath)
-			&& !IsCacheDirty(sourceFilePath, cacheFilePath);
-		//---------------------------------------------------------------------------------
-		if (!bPrinted)	// quick status print here
-		{
-			const char* pMsgLoad = bUseCachedShaders ? "Loading cached shader binaries" : "Compiling shader from source";
-			Log::Info("\t%s %s...", pMsgLoad, mName.c_str());
-			bPrinted = true;
-		}
-		//---------------------------------------------------------------------------------
-		if (bUseCachedShaders)
-		{
-			blobs.of[stage] = CompileFromCachedBinary(cacheFilePath);
-		}
-		else
-		{
-			std::string errMsg;
-			ID3D10Blob* pBlob;
-			if (CompileFromSource(sourceFilePath, stage, pBlob, errMsg, stageDesc.macros))
-			{
-				blobs.of[stage] = pBlob;
-				CacheShaderBinary(cacheFilePath, blobs.of[stage]);
-			}
-			else
-			{
-				Log::Error(errMsg);
-				return false;
-			}
-		}
-
-		CreateShaderStage(device, stage, blobs.of[stage]->GetBufferPointer(), blobs.of[stage]->GetBufferSize());
-		SetReflections(blobs);
-		//CheckSignatures();
-
-		mDirectories[stage] = ShaderLoadDesc(sourceFilePath, cacheFilePath);
-	}
-
-	// INPUT LAYOUT (VS)
-	//---------------------------------------------------------------------------
-	// src: https://stackoverflow.com/questions/42388979/directx-11-vertex-shader-reflection
-	// setup the layout of the data that goes into the shader
-	//
-	if(mReflections.vsRefl)
-	{
-
-		D3D11_SHADER_DESC shaderDesc = {};
-		mReflections.vsRefl->GetDesc(&shaderDesc);
-		std::vector<D3D11_INPUT_ELEMENT_DESC> inputLayout(shaderDesc.InputParameters);
-
-		D3D_PRIMITIVE primitiveDesc = shaderDesc.InputPrimitive;
-
-		for (unsigned i = 0; i < shaderDesc.InputParameters; ++i)
-		{
-			D3D11_SIGNATURE_PARAMETER_DESC paramDesc;
-			mReflections.vsRefl->GetInputParameterDesc(i, &paramDesc);
-
-			// fill out input element desc
-			D3D11_INPUT_ELEMENT_DESC elementDesc;
-			elementDesc.SemanticName = paramDesc.SemanticName;
-			elementDesc.SemanticIndex = paramDesc.SemanticIndex;
-			elementDesc.InputSlot = 0;
-			elementDesc.AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
-			elementDesc.InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
-			elementDesc.InstanceDataStepRate = 0;
-
-			// determine DXGI format
-			if (paramDesc.Mask == 1)
-			{
-				if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32_UINT;
-				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32_SINT;
-				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32_FLOAT;
-			}
-			else if (paramDesc.Mask <= 3)
-			{
-				if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32_UINT;
-				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32_SINT;
-				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32_FLOAT;
-			}
-			else if (paramDesc.Mask <= 7)
-			{
-				if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32_UINT;
-				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32_SINT;
-				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-			}
-			else if (paramDesc.Mask <= 15)
-			{
-				if      (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_UINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32A32_UINT;
-				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_SINT32)  elementDesc.Format = DXGI_FORMAT_R32G32B32A32_SINT;
-				else if (paramDesc.ComponentType == D3D_REGISTER_COMPONENT_FLOAT32) elementDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-			}
-
-			inputLayout[i] = elementDesc; //save element desc
-		}
-
-		// Try to create Input Layout
-		const auto* pData = inputLayout.data();
-		if (pData)
-		{
-			result = device->CreateInputLayout(
-				pData,
-				shaderDesc.InputParameters,
-				blobs.vs->GetBufferPointer(),
-				blobs.vs->GetBufferSize(),
-				&mpInputLayout);
-
-			if (FAILED(result))
-			{
-				OutputDebugString("Error creating input layout");
-				return false;
-			}
-		}
-	}
-
-	// CONSTANT BUFFERS 
-	//---------------------------------------------------------------------------
-	// Obtain cbuffer layout information
-	for (EShaderStage type = EShaderStage::VS; type < EShaderStage::COUNT; type = (EShaderStage)(type + 1))
-	{
-		if (mReflections.of[type])
-		{
-			ReflectConstantBufferLayouts(mReflections.of[type], type);
-		}
-	}
-
-	// Create CPU & GPU constant buffers
-	// CPU CBuffers
-	int constantBufferSlot = 0;
-	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
-	{
-		std::vector<CPUConstantID> cpuBuffers;
-		for (D3D11_SHADER_VARIABLE_DESC varDesc : cbLayout.variables)
-		{
-			CPUConstant c;
-			CPUConstantID c_id = static_cast<CPUConstantID>(mCPUConstantBuffers.size());
-
-			c._name = varDesc.Name;
-			c._size = varDesc.Size;
-			c._data = new char[c._size];
-			memset(c._data, 0, c._size);
-			m_constants.push_back(std::make_pair(constantBufferSlot, c_id));
-			mCPUConstantBuffers.push_back(c);
-		}
-		++constantBufferSlot;
-	}
-
-	// GPU CBuffers
-	D3D11_BUFFER_DESC cBufferDesc;
-	cBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-	cBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	cBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	cBufferDesc.MiscFlags = 0;
-	cBufferDesc.StructureByteStride = 0;
-	for (const ConstantBufferLayout& cbLayout : m_CBLayouts)
-	{
-		ConstantBufferBinding cBuffer;
-		cBufferDesc.ByteWidth = cbLayout.desc.Size;
-		if (FAILED(device->CreateBuffer(&cBufferDesc, NULL, &cBuffer.data)))
-		{
-			OutputDebugString("Error creating constant buffer");
-			return false;
-		}
-		cBuffer.dirty = true;
-		cBuffer.shaderStage = cbLayout.stage;
-		cBuffer.bufferSlot = cbLayout.bufSlot;
-		mConstantBuffers.push_back(cBuffer);
-	}
-
-
-	// TEXTURES & SAMPLERS
-	//---------------------------------------------------------------------------
-	for (int shaderStage = 0; shaderStage < EShaderStage::COUNT; ++shaderStage)
-	{
-		unsigned texSlot = 0;	unsigned smpSlot = 0;
-		unsigned uavSlot = 0;
-		auto& sRefl = mReflections.of[shaderStage];
-		if (sRefl)
-		{
-			D3D11_SHADER_DESC desc = {};
-			sRefl->GetDesc(&desc);
-
-			for (unsigned i = 0; i < desc.BoundResources; ++i)
-			{
-				D3D11_SHADER_INPUT_BIND_DESC shdInpDesc;
-				sRefl->GetResourceBindingDesc(i, &shdInpDesc);
-
-				switch (shdInpDesc.Type)
-				{
-					case D3D_SIT_SAMPLER:
-					{
-						SamplerBinding smp;
-						smp.shaderStage = static_cast<EShaderStage>(shaderStage);
-						smp.samplerSlot = smpSlot++;
-						mSamplerBindings.push_back(smp);
-						mShaderSamplerLookup[shdInpDesc.Name] = static_cast<int>(mSamplerBindings.size() - 1);
-					} break;
-
-					case D3D_SIT_TEXTURE:
-					{
-						TextureBinding tex;
-						tex.shaderStage = static_cast<EShaderStage>(shaderStage);
-						tex.textureSlot = texSlot++;
-						mTextureBindings.push_back(tex);
-						mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(mTextureBindings.size() - 1);
-					} break;
-
-					case D3D_SIT_UAV_RWTYPED:
-					{
-						TextureBinding tex;
-						tex.shaderStage = static_cast<EShaderStage>(shaderStage);
-						tex.textureSlot = uavSlot++;
-						mTextureBindings.push_back(tex);
-						mShaderTextureLookup[shdInpDesc.Name] = static_cast<int>(mTextureBindings.size() - 1);
-					} break;
-
-					case D3D_SIT_CBUFFER: break;
-
-
-					default:
-						Log::Warning("Unhandled shader input bind type in shader reflection");
-						break;
-
-				} // switch shader input type
-			} // bound resource
-		} // sRefl
-	} // shaderStage
-
-	// release blobs
-	for (unsigned type = EShaderStage::VS; type < EShaderStage::COUNT; ++type)
-	{
-		if (blobs.of[type])
-			blobs.of[type]->Release();
-	}
-
-	return true;
-}
-
-void Shader::CreateShaderStage(ID3D11Device* pDevice, EShaderStage stage, void* pBuffer, const size_t szShaderBinary)
-{
-	HRESULT result = {};
-	const char* msg = "";
-	switch (stage)
-	{
-	case EShaderStage::VS:
-		if (FAILED(pDevice->CreateVertexShader(pBuffer, szShaderBinary, NULL, &mStages.mVertexShader)))
-		{
-			msg = "Error creating vertex shader program";
-		}
-		break;
-	case EShaderStage::PS:
-		if (FAILED(pDevice->CreatePixelShader(pBuffer, szShaderBinary, NULL, &mStages.mPixelShader)))
-		{
-			msg = "Error creating pixel shader program";
-		}
-		break;
-	case EShaderStage::GS:
-		if (FAILED(pDevice->CreateGeometryShader(pBuffer, szShaderBinary, NULL, &mStages.mGeometryShader)))
-		{
-			msg = "Error creating pixel geometry program";
-		}
-		break;
-	case EShaderStage::CS:
-		if (FAILED(pDevice->CreateComputeShader(pBuffer, szShaderBinary, NULL, &mStages.mComputeShader)))
-		{
-			msg = "Error creating compute shader program";
-		}
-		break;
-	}
-
-	if (FAILED(result))
-	{
-		OutputDebugString(msg);
-		assert(false);
-	}
-}
-
-void Shader::SetReflections(const ShaderBlobs& blobs)
-{
-	for(unsigned type = EShaderStage::VS; type < EShaderStage::COUNT; ++type)
-	{
-		if (blobs.of[type])
-		{
-			void** ppBuffer = reinterpret_cast<void**>(&this->mReflections.of[type]);
-			if (FAILED(D3DReflect(blobs.of[type]->GetBufferPointer(), blobs.of[type]->GetBufferSize(), IID_ID3D11ShaderReflection, ppBuffer)))
-			{
-				Log::Error("Cannot get vertex shader reflection");
-				assert(false);
-			}
-		}
-	}
-}
-
-void Shader::ReflectConstantBufferLayouts(ID3D11ShaderReflection* sRefl, EShaderStage type)
-{
-	D3D11_SHADER_DESC desc;
-	sRefl->GetDesc(&desc);
-
-	unsigned bufSlot = 0;
-	for (unsigned i = 0; i < desc.ConstantBuffers; ++i)
-	{
-		ConstantBufferLayout bufferLayout;
-		bufferLayout.buffSize = 0;
-		ID3D11ShaderReflectionConstantBuffer* pCBuffer = sRefl->GetConstantBufferByIndex(i);
-		pCBuffer->GetDesc(&bufferLayout.desc);
-
-		// load desc of each variable for binding on buffer later on
-		for (unsigned j = 0; j < bufferLayout.desc.Variables; ++j)
-		{
-			// get variable and type descriptions
-			ID3D11ShaderReflectionVariable* pVariable = pCBuffer->GetVariableByIndex(j);
-			D3D11_SHADER_VARIABLE_DESC varDesc;
-			pVariable->GetDesc(&varDesc);
-			bufferLayout.variables.push_back(varDesc);
-
-			ID3D11ShaderReflectionType* pType = pVariable->GetType();
-			D3D11_SHADER_TYPE_DESC typeDesc;
-			pType->GetDesc(&typeDesc);
-			bufferLayout.types.push_back(typeDesc);
-
-			// accumulate buffer size
-			bufferLayout.buffSize += varDesc.Size;
-		}
-		bufferLayout.stage = type;
-		bufferLayout.bufSlot = bufSlot;
-		++bufSlot;
-		m_CBLayouts.push_back(bufferLayout);
-	}
-}
-
-
-
-void Shader::CheckSignatures()
-{
-#if 0
-	// get shader description --> input/output parameters
-	std::vector<D3D11_SIGNATURE_PARAMETER_DESC> VSISignDescs, VSOSignDescs, PSISignDescs, PSOSignDescs;
-	D3D11_SHADER_DESC VSDesc;
-	m_vsRefl->GetDesc(&VSDesc);
-	for (unsigned i = 0; i < VSDesc.InputParameters; ++i)
-	{
-		D3D11_SIGNATURE_PARAMETER_DESC input_desc;
-		m_vsRefl->GetInputParameterDesc(i, &input_desc);
-		VSISignDescs.push_back(input_desc);
-	}
-
-	for (unsigned i = 0; i < VSDesc.OutputParameters; ++i)
-	{
-		D3D11_SIGNATURE_PARAMETER_DESC output_desc;
-		m_vsRefl->GetInputParameterDesc(i, &output_desc);
-		VSOSignDescs.push_back(output_desc);
-	}
-
-
-	D3D11_SHADER_DESC PSDesc;
-	m_psRefl->GetDesc(&PSDesc);
-	for (unsigned i = 0; i < PSDesc.InputParameters; ++i)
-	{
-		D3D11_SIGNATURE_PARAMETER_DESC input_desc;
-		m_psRefl->GetInputParameterDesc(i, &input_desc);
-		PSISignDescs.push_back(input_desc);
-	}
-
-	for (unsigned i = 0; i < PSDesc.OutputParameters; ++i)
-	{
-		D3D11_SIGNATURE_PARAMETER_DESC output_desc;
-		m_psRefl->GetInputParameterDesc(i, &output_desc);
-		PSOSignDescs.push_back(output_desc);
-	}
-
-	// check VS-PS signature compatibility | wont be necessary when its 1 file.
-	// THIS IS TEMPORARY
-	if (VSOSignDescs.size() != PSISignDescs.size())
-	{
-		OutputDebugString("Error: Incompatible shader input/output signatures (sizes don't match)\n");
-		assert(false);
-	}
-	else
-	{
-		for (size_t i = 0; i < VSOSignDescs.size(); ++i)
-		{
-			// TODO: order matters, semantic slot doesn't. check order
-			;
-		}
-	}
-#endif
-	assert(false); // todo: refactor this
-}
-
-
-void Shader::LogConstantBufferLayouts() const
-{
-	char inputTable[2048];
-	sprintf_s(inputTable, "\n%s ConstantBuffers: -----\n", this->mName.c_str());
-	std::for_each(m_constants.begin(), m_constants.end(), [&](const ConstantBufferMapping& cMapping) {
-		char entry[32];
-		sprintf_s(entry, "(%d, %d)\t- %s\n", cMapping.first, cMapping.second, mCPUConstantBuffers[cMapping.second]._name.c_str());
-		strcat_s(inputTable, entry);
-	});
-	strcat_s(inputTable, "-----\n");
-	Log::Info(std::string(inputTable));
-}
 
 
 

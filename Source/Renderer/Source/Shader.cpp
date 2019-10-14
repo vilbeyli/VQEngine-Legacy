@@ -18,115 +18,15 @@
 
 #include "Shader.h"
 
+#if !USE_DX12
 #include "Utilities/Log.h"
 #include "Utilities/utils.h"
 
 #include <fstream>
 #include <sstream>
 #include <stack>
-//-------------------------------------------------------------------------------------------------------------
-// STATIC FUNCTIONS
-//-------------------------------------------------------------------------------------------------------------
-static std::string GetCompileError(ID3D10Blob*& errorMessage, const std::string& shdPath)
-{
-	if (errorMessage)
-	{
-		char* compileErrors = (char*)errorMessage->GetBufferPointer();
-		size_t bufferSize = errorMessage->GetBufferSize();
-
-		std::stringstream ss;
-		for (unsigned int i = 0; i < bufferSize; ++i)
-		{
-			ss << compileErrors[i];
-		}
-		errorMessage->Release();
-		return ss.str();
-	}
-	else
-	{
-		Log::Error(shdPath);
-		return ("Error: " + shdPath);
-	}
-}
-
-static std::string GetIncludeFileName(const std::string& line)
-{
-	const std::string str_search = "#include \"";
-	const size_t foundPos = line.find(str_search);
-	if (foundPos != std::string::npos)
-	{
-		std::string quotedFileName = line.substr(foundPos + strlen("#include "), line.size() - foundPos);// +str_search.size() - 1);
-		return quotedFileName.substr(1, quotedFileName.size() - 2);
-	}
-	return std::string();
-}
-
-static bool AreIncludesDirty(const std::string& srcPath, const std::string& cachePath)
-{
-	const std::string ShaderSourceDir = DirectoryUtil::GetFolderPath(srcPath);
-	const std::string ShaderCacheDir = DirectoryUtil::GetFolderPath(cachePath);
-
-	std::stack<std::string> includeStack;
-	includeStack.push(srcPath);
-	while (!includeStack.empty())
-	{
-		const std::string includeFilePath = includeStack.top();
-		includeStack.pop();
-		std::ifstream src = std::ifstream(includeFilePath.c_str());
-		if (!src.good())
-		{
-			Log::Error("[ShaderCompile] Cannot open source file: %s", includeFilePath.c_str());
-			continue;
-		}
-
-		std::string line;
-		while (getline(src, line))
-		{
-			const std::string includeFileName = GetIncludeFileName(line);
-			if (includeFileName.empty()) continue;
-
-			const std::string includeSourcePath = ShaderSourceDir + includeFileName;
-			const std::string includeCachePath = ShaderCacheDir + includeFileName;
-
-			if (DirectoryUtil::IsFileNewer(includeSourcePath, cachePath))
-				return true;
-			includeStack.push(includeSourcePath);
-		}
-		src.close();
-	}
-	return false;
-}
-
-static bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath)
-{
-	if (!DirectoryUtil::FileExists(cachePath)) return true;
-
-	return DirectoryUtil::IsFileNewer(sourcePath, cachePath) || AreIncludesDirty(sourcePath, cachePath);
-}
 
 
-bool Shader::HasSourceFileBeenUpdated() const
-{
-	bool bUpdated = false;
-	for (EShaderStage stage = EShaderStage::VS; stage < EShaderStage::COUNT; stage = (EShaderStage)(stage + 1))
-	{
-		if (mDirectories.find(stage) != mDirectories.end())
-		{
-			const std::string& path = mDirectories.at(stage).fullPath;
-			const std::string& cachePath = mDirectories.at(stage).cachePath;
-			bUpdated |= mDirectories.at(stage).lastWriteTime < std::experimental::filesystem::last_write_time(path);
-
-			if (!bUpdated) // check include files only when source is not updated
-			{
-				bUpdated |= AreIncludesDirty(path, cachePath);
-			}
-		}
-	}
-	return bUpdated;
-}
-
-
-#if !USE_DX12
 #include "Renderer.h"
 #include "Utilities/PerfTimer.h"
 #include "Application/Application.h"
@@ -196,72 +96,6 @@ static std::unordered_map <std::string, EShaderStage > s_ShaderTypeStrLookup =
 };
 
 
-
-bool Shader::CompileFromSource(const std::string& pathToFile, const EShaderStage& type, ID3D10Blob *& ref_pBob, std::string& errMsg, const std::vector<ShaderMacro>& macros)
-{
-	const StrUtil::UnicodeString Path = pathToFile;
-	const WCHAR* PathStr = Path.GetUnicodePtr();
-	ID3D10Blob* errorMessage = nullptr;
-
-	int i = 0;
-	std::vector<D3D10_SHADER_MACRO> d3dMacros(macros.size() + 1);
-	std::for_each(RANGE(macros), [&](const ShaderMacro& macro)
-	{
-		d3dMacros[i++] = D3D10_SHADER_MACRO({ macro.name.c_str(), macro.value.c_str() });
-	});
-	d3dMacros[i] = { NULL, NULL };
-
-	if (FAILED(D3DCompileFromFile(
-		PathStr,
-		d3dMacros.data(),
-		SHADER_INCLUDE_HANDLER,
-		SHADER_ENTRY_POINT_LOOKUP.at(type),
-		SHADER_COMPILER_VERSION_LOOKUP.at(type),
-		SHADER_COMPILE_FLAGS,
-		0,
-		&ref_pBob,
-		&errorMessage)))
-	{
-
-		errMsg = GetCompileError(errorMessage, pathToFile);
-		return false;
-	}
-	return true;
-}
-
-ID3D10Blob * Shader::CompileFromCachedBinary(const std::string & cachedBinaryFilePath)
-{
-	std::ifstream cache(cachedBinaryFilePath, std::ios::in | std::ios::binary | std::ios::ate);
-	const size_t shaderBinarySize = cache.tellg();
-	void* pBuffer = calloc(1, shaderBinarySize);
-	cache.seekg(0);
-	cache.read(reinterpret_cast<char*>(pBuffer), shaderBinarySize);
-	cache.close();
-
-	ID3D10Blob* pBlob = { nullptr };
-	D3DCreateBlob(shaderBinarySize, &pBlob);
-	memcpy(pBlob->GetBufferPointer(), pBuffer, shaderBinarySize);
-	free(pBuffer);
-
-	return pBlob;
-}
-
-void Shader::CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blob * pCompiledBinary)
-{
-	const size_t shaderBinarySize = pCompiledBinary->GetBufferSize();
-
-	char* pBuffer = reinterpret_cast<char*>(pCompiledBinary->GetBufferPointer());
-	std::ofstream cache(shaderCacheFileName, std::ios::out | std::ios::binary);
-	cache.write(pBuffer, shaderBinarySize);
-	cache.close();
-}
-
-EShaderStage Shader::GetShaderTypeFromSourceFilePath(const std::string & shaderFilePath)
-{
-	const std::string sourceFileName = DirectoryUtil::GetFileNameWithoutExtension(shaderFilePath);
-	const std::string shaderTypeStr = { *(sourceFileName.rbegin() + 1), *sourceFileName.rbegin() };
-	return s_ShaderTypeStrLookup.at(shaderTypeStr);
-}
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -369,15 +203,6 @@ void Shader::ReleaseResources()
 
 
 
-size_t Shader::GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro>& macros)
-{
-	if (macros.empty()) return 0;
-	std::string concatenatedMacros;
-	for (const ShaderMacro& macro : macros)
-		concatenatedMacros += macro.name + macro.value;
-	return std::hash<std::string>()(concatenatedMacros);
-}
-
 
 
 bool Shader::Reload(ID3D11Device* device)
@@ -386,7 +211,7 @@ bool Shader::Reload(ID3D11Device* device)
 	copy.mID = this->mID;
 	ReleaseResources();
 	this->mID = copy.mID;
-	return CompileShaders(device, copy.mDescriptor);
+	return CompileShaderStages(device, copy.mDescriptor);
 }
 
 void Shader::ClearConstantBuffers()
@@ -441,7 +266,7 @@ void Shader::UpdateConstants(ID3D11DeviceContext* context)
 //-------------------------------------------------------------------------------------------------------------
 // UTILITY FUNCTIONS
 //-------------------------------------------------------------------------------------------------------------
-bool Shader::CompileShaders(ID3D11Device* device, const ShaderDesc& desc)
+bool Shader::CompileShaderStages(ID3D11Device* device, const ShaderDesc& desc)
 {
 	constexpr const char * SHADER_BINARY_EXTENSION = ".bin";
 	mDescriptor = desc;

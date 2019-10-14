@@ -210,6 +210,7 @@ devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2017.sln" /Build "$(Configu
     <ClCompile Include="..\Renderer\Source\RendererDX12.cpp" />
     <ClCompile Include="..\Renderer\Source\RenderingAPI\Direct3D11.cpp" />
     <ClCompile Include="..\Renderer\Source\RenderingAPI\Direct3D12.cpp" />
+    <ClCompile Include="..\Renderer\Source\ShaderCommon.cpp" />
     <ClCompile Include="..\Renderer\Source\ShaderDX12.cpp" />
   </ItemGroup>
   <ItemGroup>

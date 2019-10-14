@@ -614,7 +614,8 @@ bool Renderer::LoadDefaultResources()
 		fullScreenTextureVSPSDesc.stages[EShaderStage::VS].macros = { {"", ""} };
 		fullScreenTextureVSPSDesc.stages[EShaderStage::PS].fileName = "";
 		fullScreenTextureVSPSDesc.stages[EShaderStage::PS].macros = { {"", ""} };
-		Shader fullScreenTextureVSPS = ShaderUtil::CompileShader(fullScreenTextureVSPSDesc);
+		ShaderID fullScreenTextureVSPS_ID = this->CreateShader(fullScreenTextureVSPSDesc);
+		Shader& fullScreenTextureVSPS = *mShaders[fullScreenTextureVSPS_ID];
 
 
 		// Describe and create the graphics pipeline state objects (PSOs).
@@ -1235,16 +1236,11 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 ShaderID Renderer::CreateShader(const ShaderDesc& shaderDesc)
 {
-#if 0
-	Shader* shader = new Shader(shaderDesc.shaderName);
-	shader->CompileShaders(m_device, shaderDesc);
-
+	Shader* shader = new Shader(shaderDesc);
+	shader->CompileShaderStages(mDevice.ptr);
 	mShaders.push_back(shader);
 	shader->mID = (static_cast<int>(mShaders.size()) - 1);
 	return shader->ID();
-#else
-	return -1;
-#endif
 }
 
 ShaderID Renderer::ReloadShader(const ShaderDesc& shaderDesc, const ShaderID shaderID)
@@ -1261,7 +1257,7 @@ ShaderID Renderer::ReloadShader(const ShaderDesc& shaderDesc, const ShaderID sha
 	delete pShader;
 	pShader = new Shader(shaderDesc.shaderName);
 
-	pShader->CompileShaders(m_device, shaderDesc);
+	pShader->CompileShaderStages(m_device, shaderDesc);
 	pShader->mID = shaderID;
 	mShaders[shaderID] = pShader;
 	return pShader->ID();

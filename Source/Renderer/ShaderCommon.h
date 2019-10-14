@@ -120,7 +120,7 @@ namespace ShaderUtils
 {
 	// Compiles shader from source file with the given shader macros
 	//
-	static bool CompileFromSource(
+	extern bool CompileFromSource(
 		const std::string&              pathToFile
 		, const EShaderStage&             type
 		, ID3D10Blob *&                   ref_pBob
@@ -129,14 +129,26 @@ namespace ShaderUtils
 
 	// Reads in cached binary from %APPDATA%/VQEngine/ShaderCache folder into ID3D10Blob 
 	//
-	static ID3D10Blob * CompileFromCachedBinary(const std::string& cachedBinaryFilePath);
+	extern ID3D10Blob * CompileFromCachedBinary(const std::string& cachedBinaryFilePath);
 
 	// Writes out compiled ID3D10Blob into %APPDATA%/VQEngine/ShaderCache folder
 	//
-	static void			CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blob * pCompiledBinary);
+	extern void CacheShaderBinary(const std::string& shaderCacheFileName, ID3D10Blob * pCompiledBinary);
 
 	// example filePath: "rootPath/filename_vs.hlsl"
 	//                                      ^^----- shaderTypeString
-	static EShaderStage	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
+	extern EShaderStage	GetShaderTypeFromSourceFilePath(const std::string& shaderFilePath);
+
+
+	// TODO: declare in  APIs-specific header filesw?
+	///static Shader CompileShader(RHIDevice pDevice, const ShaderDesc& desc);
+
+
+	extern size_t GeneratePreprocessorDefinitionsHash(const std::vector<ShaderMacro>& macros);
+
+
+	extern bool AreIncludesDirty(const std::string& srcPath, const std::string& cachePath);
+
+	extern bool IsCacheDirty(const std::string& sourcePath, const std::string& cachePath);
 }
 

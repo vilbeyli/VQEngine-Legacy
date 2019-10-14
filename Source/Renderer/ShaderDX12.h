@@ -18,14 +18,11 @@
 
 #pragma once
 
-#include "ShaderCommon.h"
 
 #include <d3dcompiler.h>
 #include <d3d12.h>
 #include <unordered_map>
 
-struct D3D12Device;
-using RHIDevice = D3D12Device*;
 
 //----------------------------------------------------------------------------------------------------------------
 // SHADER DATA/RESOURCE INTERFACE STRUCTS
@@ -68,7 +65,7 @@ public:
 	Shader(const ShaderDesc& desc);
 	~Shader();
 
-	bool CompileShader(RHIDevice pDevice);
+	bool CompileShaderStages(RHIDevice pDevice);
 	bool HasSourceFileBeenUpdated() const;
 
 	//----------------------------------------------------------------------------------------------------------------
@@ -117,8 +114,3 @@ private:
 	std::string	mName;
 };
 
-class ShaderUtil
-{
-public:
-	static Shader CompileShader(const ShaderDesc& desc);
-};

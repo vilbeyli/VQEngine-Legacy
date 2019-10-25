@@ -34,69 +34,6 @@
 #include <unordered_map>
 #include <functional>
 
-//-------------------------------------------------------------------------------------------------------------
-// CONSTANTS & STATICS
-//-------------------------------------------------------------------------------------------------------------
-static const std::unordered_map<EShaderStage, const char*> SHADER_COMPILER_VERSION_LOOKUP = 
-{
-	{ EShaderStage::VS, "vs_5_0" },
-	{ EShaderStage::GS, "gs_5_0" },
-	{ EShaderStage::DS, "ds_5_0" },
-	{ EShaderStage::HS, "hs_5_0" },
-	{ EShaderStage::PS, "ps_5_0" },
-	{ EShaderStage::CS, "cs_5_0" },
-};
-static const std::unordered_map<EShaderStage, const char*> SHADER_ENTRY_POINT_LOOKUP =
-{
-	{ EShaderStage::VS, "VSMain" },
-	{ EShaderStage::GS, "GSMain" },
-	{ EShaderStage::DS, "DSMain" },
-	{ EShaderStage::HS, "HSMain" },
-	{ EShaderStage::PS, "PSMain" },
-	{ EShaderStage::CS, "CSMain" },
-};
-
-ID3DInclude* const SHADER_INCLUDE_HANDLER = D3D_COMPILE_STANDARD_FILE_INCLUDE;		// use default include handler for using #include in shader files
-
-#if defined( _DEBUG ) || defined ( FORCE_DEBUG )
-const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-const UINT SHADER_COMPILE_FLAGS = D3DCOMPILE_ENABLE_STRICTNESS;
-#endif
-
-
-
-#ifdef _WIN64
-#define CALLING_CONVENTION __cdecl
-#else	// _WIN32
-#define CALLING_CONVENTION __stdcall
-#endif
-
-
-static void(CALLING_CONVENTION ID3D11DeviceContext:: *SetShaderConstants[EShaderStage::COUNT])
-(UINT StartSlot, UINT NumBuffers, ID3D11Buffer *const *ppConstantBuffers) = 
-{
-	&ID3D11DeviceContext::VSSetConstantBuffers,
-	&ID3D11DeviceContext::GSSetConstantBuffers,
-	&ID3D11DeviceContext::DSSetConstantBuffers,
-	&ID3D11DeviceContext::HSSetConstantBuffers,
-	&ID3D11DeviceContext::PSSetConstantBuffers, 
-	&ID3D11DeviceContext::CSSetConstantBuffers,
-};
-
-
-static std::unordered_map <std::string, EShaderStage > s_ShaderTypeStrLookup = 
-{
-	{"vs", EShaderStage::VS},
-	{"gs", EShaderStage::GS},
-	{"ds", EShaderStage::DS},
-	{"hs", EShaderStage::HS},
-	{"cs", EShaderStage::CS},
-	{"ps", EShaderStage::PS}
-};
-
-
-
 
 //-------------------------------------------------------------------------------------------------------------
 // PUBLIC INTERFACE

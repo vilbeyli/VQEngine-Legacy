@@ -52,9 +52,10 @@ public:
 	void*			mpCPUData = nullptr;
 private:
 	ID3D12Resource* ptr;
-
 	D3D12MA::Allocation* mpAllocation;
-	D3D12MA::ALLOCATION_DESC mAllocationDesc;
+
+	
+	D3D12MA::ALLOCATION_DESC mAllocationDesc; // TODO: write a converter and don't store?
 	BufferDesc mBufferDesc;
 };
 

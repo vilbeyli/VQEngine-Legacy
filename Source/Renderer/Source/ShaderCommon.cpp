@@ -32,7 +32,7 @@
 //-------------------------------------------------------------------------------------------------------------
 // CONSTANTS & STATICS
 //-------------------------------------------------------------------------------------------------------------
-static const std::unordered_map<EShaderStage, const char*> SHADER_COMPILER_VERSION_LOOKUP = 
+static const std::unordered_map<EShaderStage, const char*> SHADER_COMPILER_VERSION_5_LOOKUP = 
 {
 	{ EShaderStage::VS, "vs_5_0" },
 	{ EShaderStage::GS, "gs_5_0" },
@@ -41,7 +41,16 @@ static const std::unordered_map<EShaderStage, const char*> SHADER_COMPILER_VERSI
 	{ EShaderStage::PS, "ps_5_0" },
 	{ EShaderStage::CS, "cs_5_0" },
 };
-static const std::unordered_map<EShaderStage, const char*> SHADER_ENTRY_POINT_LOOKUP =
+static const std::unordered_map<EShaderStage, const char*> SHADER_COMPILER_VERSION_6_LOOKUP =
+{
+	{ EShaderStage::VS, "vs_6_0" },
+	{ EShaderStage::GS, "gs_6_0" },
+	{ EShaderStage::DS, "ds_6_0" },
+	{ EShaderStage::HS, "hs_6_0" },
+	{ EShaderStage::PS, "ps_6_0" },
+	{ EShaderStage::CS, "cs_6_0" },
+};
+static const std::unordered_map<EShaderStage, const char*> SHADER_DEFAULT_ENTRY_POINT_LOOKUP =
 {
 	{ EShaderStage::VS, "VSMain" },
 	{ EShaderStage::GS, "GSMain" },
@@ -95,6 +104,7 @@ static std::unordered_map <std::string, EShaderStage > s_ShaderTypeStrLookup =
 	{"cs", EShaderStage::CS},
 	{"ps", EShaderStage::PS}
 };
+
 
 
 //-------------------------------------------------------------------------------------------------------------
@@ -199,8 +209,8 @@ bool ShaderUtils::CompileFromSource(const std::string& pathToFile, const EShader
 		PathStr,
 		d3dMacros.data(),
 		SHADER_INCLUDE_HANDLER,
-		SHADER_ENTRY_POINT_LOOKUP.at(type),
-		SHADER_COMPILER_VERSION_LOOKUP.at(type),
+		SHADER_DEFAULT_ENTRY_POINT_LOOKUP.at(type),
+		SHADER_COMPILER_VERSION_5_LOOKUP.at(type),
 		SHADER_COMPILE_FLAGS,
 		0,
 		&ref_pBob,

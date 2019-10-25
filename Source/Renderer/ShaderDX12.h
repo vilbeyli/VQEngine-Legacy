@@ -36,25 +36,38 @@ class Shader
 	using ShaderSamplerLookup   = std::unordered_map<std::string, int>;
 	using ShaderDirectoryLookup = std::unordered_map<EShaderStage, ShaderLoadDesc>;
 
+public:
 	using ByteCodeType          = D3D12_SHADER_BYTECODE;
-	using InputLayoutType       = D3D12_INPUT_LAYOUT_DESC;
+	using InputLayoutDescType   = D3D12_INPUT_LAYOUT_DESC;
 
 	//
 	// STRUCTS/ENUMS
 	//
-public:
 	union ShaderBlobs
 	{
 		struct
 		{
-			ID3D10Blob* vs;
-			ID3D10Blob* gs;
-			ID3D10Blob* ds;
-			ID3D10Blob* hs;
-			ID3D10Blob* ps;
-			ID3D10Blob* cs;
+			ID3DBlob* vs;
+			ID3DBlob* gs;
+			ID3DBlob* ds;
+			ID3DBlob* hs;
+			ID3DBlob* ps;
+			ID3DBlob* cs;
 		};
-		ID3D10Blob* of[EShaderStage::COUNT] = { nullptr };
+		ID3DBlob* of[EShaderStage::COUNT] = { nullptr };
+	};
+	union ShaderReflections
+	{
+		struct
+		{
+			ID3D12ShaderReflection* vsRefl;
+			ID3D12ShaderReflection* gsRefl;
+			ID3D12ShaderReflection* dsRefl;
+			ID3D12ShaderReflection* hsRefl;
+			ID3D12ShaderReflection* psRefl;
+			ID3D12ShaderReflection* csRefl;
+		};
+		ID3D12ShaderReflection* of[EShaderStage::COUNT] = { nullptr };
 	};
 
 
@@ -74,14 +87,8 @@ public:
 	const std::string& Name() const { return mName; }
 	inline ShaderID    ID()   const { return mID; }
 
-	ByteCodeType GetShaderByteCode(EShaderStage stage) const;
-	InputLayoutType GetShaderInputLayoutType() const;
-
-
-private:
-	//----------------------------------------------------------------------------------------------------------------
-	// UTILITY FUNCTIONS
-	//----------------------------------------------------------------------------------------------------------------
+	ByteCodeType		GetShaderByteCode(EShaderStage stage) const;
+	InputLayoutDescType	GetShaderInputLayoutDesc() const;
 
 
 private:
@@ -92,21 +99,25 @@ private:
 
 #if 0
 	ShaderStages mStages;
-
-	ShaderReflections	mReflections;	// shader reflections, temporary?
 	ID3D11InputLayout*	mpInputLayout = nullptr;
-
 	std::vector<ConstantBufferBinding>	mConstantBuffers;	// https://msdn.microsoft.com/en-us/library/windows/desktop/bb509581(v=vs.85).aspx
 	std::vector<ConstantBufferLayout>  m_CBLayouts;
 	std::vector<ConstantBufferMapping> m_constants;// currently redundant
 	std::vector<CPUConstant> mCPUConstantBuffers;
-
 	std::vector<TextureBinding> mTextureBindings;
 	std::vector<SamplerBinding> mSamplerBindings;
-	
 	ShaderTextureLookup mShaderTextureLookup;
 	ShaderSamplerLookup mShaderSamplerLookup;
 #endif
+
+	//
+	// PSO Creation Data
+	//
+	///ShaderReflections	mReflections;
+	///InputLayoutDescType mInputLayoutDesc; // populated by shader reflection
+	std::vector<D3D12_INPUT_ELEMENT_DESC> mVSInputElements;
+	ShaderBlobs mShaderStageByteCodes;
+	///Renderer::RootSignature mpRootSignature;
 
 
 	ShaderDesc mDescriptor;	// used for shader reloading

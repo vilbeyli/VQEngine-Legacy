@@ -22,18 +22,9 @@
 #if USE_DX12
 #include "Texture.h"
 #include "Shader.h"
+#include "UploadHeap.h"
 
-#include "D3D12MemAlloc.h"
-#define STRINGIZE(x) STRINGIZE2(x)
-#define STRINGIZE2(x) #x
-#define LINE_STRING STRINGIZE(__LINE__)
-#define FAIL(msg) do { \
-        assert(0 && msg); \
-        throw std::runtime_error(msg); \
-    } while(false)
-
-#define CHECK_BOOL(expr)  do { if(!(expr)) FAIL(__FILE__ "(" LINE_STRING "): !( " #expr " )"); } while(false)
-#define CHECK_HR(expr)  do { if(FAILED(expr)) FAIL(__FILE__ "(" LINE_STRING "): FAILED( " #expr " )"); } while(false)
+#include "D3DUtils.h"
 
 #include "Engine/DataStructures.h" // RendererStats
 #include "Engine/Settings.h"
@@ -65,15 +56,17 @@ public:
 	//----------------------------------------------------------------------------------------------------------------
 	bool	Initialize(HWND hwnd, const Settings::Window& settings, const Settings::Rendering& rendererSettings);
 	void	Exit();
-	void	ReloadShaders();
 
 	bool	LoadDefaultResources();
 	bool	LoadSizeDependentResources();
 	bool	LoadSceneResolutionDependentResources();
 
+	void	ReloadShaders();
 
 	void	BeginEvent(const std::string& marker);
 	void	EndEvent();
+
+	void	GPUFlush();
 
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
@@ -112,10 +105,6 @@ public:
 	TextureID				CreateTextureFromFile(const std::string& texFileName, const std::string& rootDir = "", bool bGenerateMips = false);
 	TextureID				CreateTexture2D(const TextureDesc& texDesc);
 	
-	///TextureID				CreateTexture2D(D3D11_TEXTURE2D_DESC&	textureDesc, bool initializeSRV);	// used by AddRenderTarget() | todo: remove this?
-	///TextureID				CreateHDRTexture(const std::string& texFileName, const std::string& fileRoot = sHDRTextureRoot);
-	///TextureID				CreateCubemapFromFaceTextures(const std::vector<std::string>& textureFiles, bool bGenerateMips, unsigned mipLevels = 1);
-
 	// --- SAMPLER
 	//
 	///SamplerID				CreateSamplerState(D3D11_SAMPLER_DESC&	samplerDesc);	// TODO: samplerDesc
@@ -141,51 +130,7 @@ private:
 	bool InitializeRenderingAPI(HWND hwnd);
 
 public:
-	//----------------------------------------------------------------------------------------------------------------
-	// DATA
-	//----------------------------------------------------------------------------------------------------------------
-	Settings::Rendering::AntiAliasing mAntiAliasingSettings;
-
-
-private:
-#if 0
-	class SwapChain
-	{
-	public:
-		void OnCreate(Device *pDevice, uint32_t numberBackBuffers, HWND hWnd);
-		void OnDestroy();
-
-		void OnCreateWindowSizeDependentResources(uint32_t dwWidth, uint32_t dwHeight);
-		void OnDestroyWindowSizeDependentResources();
-
-		void SetFullScreen(bool fullscreen);
-
-		void Present();
-		ID3D12Resource *GetCurrentBackBufferResource();
-		D3D12_CPU_DESCRIPTOR_HANDLE *GetCurrentBackBufferRTV();
-		void WaitForSwapChain();
-		void CreateRTV();
-		DXGI_FORMAT GetFormat();
-
-	private:
-		HWND m_hWnd = NULL;
-		uint32_t m_BackBufferCount = 0;
-
-		ID3D12Device *m_pDevice = NULL;
-		IDXGIFactory4 *m_pFactory = NULL;
-		IDXGISwapChain3 *m_pSwapChain = NULL;
-
-		std::vector<Fence> m_Fences;
-
-		ID3D12CommandQueue*    m_pDirectQueue;
-
-		ID3D12DescriptorHeap * m_RTVHeaps;
-		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_CPUView;
-
-		DXGI_SWAP_CHAIN_DESC1 m_descSwapChain = {};
-	};
-#endif
-
+	// renderer structs
 	struct Device
 	{
 		ID3D12Device* ptr;
@@ -212,8 +157,14 @@ private:
 		unsigned mDescSize;
 	};
 
+	//----------------------------------------------------------------------------------------------------------------
+	// DATA
+	//----------------------------------------------------------------------------------------------------------------
+public:
+	Settings::Rendering::AntiAliasing mAntiAliasingSettings;
 
-
+private:
+	//
 	// DEVICE RESOURCES
 	//
 	Device mDevice;
@@ -223,7 +174,8 @@ private:
 	SwapChain mSwapChain;
 
 	int mCurrentFrameIndex;
-
+	
+	//
 	// PIPELINE STATE
 	//
 	RootSignature mpRootSignature_LoadingScreen;
@@ -234,6 +186,7 @@ private:
 	RenderTargetID					mBackBufferRenderTarget;	// todo: remove or rename
 	TextureID						mDefaultDepthBufferTexture;	// todo: remove or rename
 
+	//
 	// RENDERING RESOURCES
 	//
 	std::vector<Shader*>			mShaders;
@@ -244,6 +197,16 @@ private:
 	std::vector<RenderTarget>		mRenderTargets;
 	std::vector<DepthTarget>		mDepthTargets;
 #else
+	// TODO: move this to vector and use generic name
+	DescriptorHeap mDSVDescHeap;
+	ID3D12Resource* mpDepthTarget;
+
+	DescriptorHeap mRTVDescHeap;
+	std::vector<ID3D12Resource*> mpRenderTargets;
+
+	//
+	// MEMORY MANAGEMENT
+	//
 	D3D12MA::Allocator*  mpAllocator;
 
 	std::vector<Buffer> mVertexBuffers;
@@ -255,39 +218,36 @@ private:
 
 	std::vector<D3D12MA::Allocation*> mpCbPerObjectUploadHeapAllocations; // sized to num back buffer frames
 	std::vector<D3D12MA::Allocation*> mpConstantBufferUploadAllocation;	  // sized to num back buffer frames
-	
-	DescriptorHeap mRTVDescHeap;
-	std::vector<ID3D12Resource*> mpRenderTargets;
 
-	// TODO: move this to vector and use generic name
-	DescriptorHeap mDSVDescHeap;
-	ID3D12Resource* mpDepthTarget;
+	UploadHeap	mUploadHeap;
 #endif
 
-
+	//
 	// SYNCHRONIZATION
 	//
 	std::vector<ID3D12Fence*> mFences;
 	std::vector<unsigned long long> mFenceValues;
 	HANDLE mFenceEvent;
 
+	//
 	// PERFORMANCE COUNTERS
 	//
 	RendererStats					mRenderStats;
 
+	//
 	// WINDOW SETTINGS
 	//
 	Settings::Window				mWindowSettings;
 
 	//std::vector<Point>			m_debugLines;
 
+	//
 	// MULTI-THREADING
 	//
 	std::mutex						mTexturesMutex;
 	//Worker						m_ShaderHotswapPollWatcher;
 
 };
-
 
 #else // USE_DX12
 

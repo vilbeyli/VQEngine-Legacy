@@ -31,21 +31,14 @@
 #pragma comment(lib, "d3d12.lib")		// contains all the Direct3D functionality
 #pragma comment(lib, "dxgi.lib")		// tools to interface with the hardware
 
+using VQ_D3D12_UTILS::ThrowIfFailed;
 
-
-//----------------------------------------------------------------------------------------------------------------
-// Adapted from Microsoft's open source D3D12 Sample repo: https://github.com/microsoft/DirectX-Graphics-Samples
-// Naming helper for ComPtr<T>.
-// Assigns the name of the variable as the name of the object.
-// The indexed variant will include the index in the name of the object.
-#if defined(_DEBUG) || defined(DBG)
-inline void SetName(ID3D12Object* pObject, LPCWSTR name){ pObject->SetName(name); }
-#else
-inline void SetName(ID3D12Object* pObject, LPCWSTR name) {}
-#endif
-#define NAME_D3D12_OBJECT_COM(x) SetName((x).Get(), L#x)
-#define NAME_D3D12_OBJECT(x) SetName(x, L#x)
-//----------------------------------------------------------------------------------------------------------------
+//
+// STATICS
+//
+static const DXGI_FORMAT SWAPCHAIN_FORMAT = DXGI_FORMAT_R8G8B8A8_UNORM;
+static const DXGI_FORMAT DEPTH_BUFFER_FORMAT = DXGI_FORMAT_D32_FLOAT;
+static const D3D_FEATURE_LEVEL D3D_FEATURE_LEVEL_TO_REQUEST = D3D_FEATURE_LEVEL_12_1;
 
 
 // from @adam-sawicki-a's D3D12 Memory Allocator: https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator 
@@ -56,6 +49,7 @@ constexpr bool ENABLE_DEBUG_LAYER = true;
 constexpr bool ENABLE_CPU_ALLOCATION_CALLBACKS = true;
 constexpr bool ENABLE_CPU_ALLOCATION_CALLBACKS_PRINT = false;
 static void* const CUSTOM_ALLOCATION_USER_DATA = (void*)(uintptr_t)0xDEADC0DE;
+constexpr size_t UPLOAD_HEAP_MEMORY = 1024;
 
 constexpr unsigned FRAME_BUFFER_COUNT = 3;
 constexpr bool ENABLE_TEARING_SUPPORT = true;
@@ -89,6 +83,67 @@ static void CustomFree(void* pMemory, void* pUserData)
 	}
 }
 
+static void InitializeD3DMA(ID3D12Device* pDevice, D3D12MA::Allocator*& mpAllocator)
+{
+	// Create allocator
+	D3D12MA::ALLOCATOR_DESC desc = {};
+	desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
+	desc.pDevice = pDevice;
+
+	D3D12MA::ALLOCATION_CALLBACKS allocationCallbacks = {};
+	if (ENABLE_CPU_ALLOCATION_CALLBACKS)
+	{
+		allocationCallbacks.pAllocate = &CustomAllocate;
+		allocationCallbacks.pFree = &CustomFree;
+		allocationCallbacks.pUserData = CUSTOM_ALLOCATION_USER_DATA;
+		desc.pAllocationCallbacks = &allocationCallbacks;
+	}
+
+	CHECK_HR(D3D12MA::CreateAllocator(&desc, &mpAllocator));
+
+	switch (mpAllocator->GetD3D12Options().ResourceHeapTier)
+	{
+	case D3D12_RESOURCE_HEAP_TIER_1:
+		wprintf(L"ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1\n");
+		break;
+	case D3D12_RESOURCE_HEAP_TIER_2:
+		wprintf(L"ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2\n");
+		break;
+	default:
+		assert(0);
+	}
+}
+// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
+// If no such adapter can be found, *ppAdapter will be set to nullptr.
+static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
+{
+	
+
+	IDXGIAdapter1* adapter;
+	*ppAdapter = nullptr;
+
+	for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
+	{
+		DXGI_ADAPTER_DESC1 desc;
+		ThrowIfFailed(adapter->GetDesc1(&desc));
+
+		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+		{
+			// Don't select the Basic Render Driver adapter.
+			// If you want a software adapter, pass in "/warp" on the command line.
+			continue;
+		}
+
+		// Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
+		if (SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_TO_REQUEST, _uuidof(ID3D12Device), nullptr)))
+		{
+			break;
+		}
+	}
+
+	adapter->Release();
+	*ppAdapter = nullptr;
+}
 static void SetDefaultRasterizerDesc(D3D12_RASTERIZER_DESC & outDesc)
 {
 	outDesc.FillMode = D3D12_FILL_MODE_SOLID;
@@ -119,126 +174,46 @@ static void SetDefaultBlendDesc(D3D12_BLEND_DESC & outDesc)
 }
 // from @adam-sawicki-a's D3D12 Memory Allocator -----------------------------------------------------------------
 
-//
-// STATICS
-//
-static const DXGI_FORMAT SWAPCHAIN_FORMAT = DXGI_FORMAT_R8G8B8A8_UNORM;
-static const DXGI_FORMAT DEPTH_BUFFER_FORMAT = DXGI_FORMAT_D32_FLOAT;
-static const D3D_FEATURE_LEVEL D3D_FEATURE_LEVEL_TO_REQUEST = D3D_FEATURE_LEVEL_12_1;
 
-//---------------------------------------------------------------------------------------------------------------------
-// D3D12 UTILIY FUNCTIONS
-//---------------------------------------------------------------------------------------------------------------------
-namespace VQ_D3D12_UTILS
+static void CreateCommandQueues(ID3D12Device* pDevice, ID3D12CommandQueue*& pCmdQueueGFX, ID3D12CommandQueue*& pCmdQueueCompute, ID3D12CommandQueue*& pCmdQueueCopy, D3D12_COMMAND_QUEUE_PRIORITY queuePriority)
 {
-	static inline void ThrowIfFailed(HRESULT hr)
-	{
-		if (FAILED(hr))
-		{
-			Log::Error("Win Call failed, HR=0x%08X", static_cast<UINT>(hr));
-			assert(false);
-		}
-	}
-	// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
-	// If no such adapter can be found, *ppAdapter will be set to nullptr.
-	static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
-	{
-		IDXGIAdapter1* adapter;
-		*ppAdapter = nullptr;
-
-		for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
-		{
-			DXGI_ADAPTER_DESC1 desc;
-			ThrowIfFailed(adapter->GetDesc1(&desc));
-
-			if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-			{
-				// Don't select the Basic Render Driver adapter.
-				// If you want a software adapter, pass in "/warp" on the command line.
-				continue;
-			}
-
-			// Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-			if (SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_TO_REQUEST, _uuidof(ID3D12Device), nullptr)))
-			{
-				break;
-			}
-		}
-
-		adapter->Release();
-		*ppAdapter = nullptr;
-	}
-
-	static void CreateCommandQueues(ID3D12Device* pDevice, ID3D12CommandQueue*& pCmdQueueGFX, ID3D12CommandQueue*& pCmdQueueCompute, ID3D12CommandQueue*& pCmdQueueCopy, D3D12_COMMAND_QUEUE_PRIORITY queuePriority)
-	{
+	
 #if _DEBUG
-		assert(&pCmdQueueGFX != &pCmdQueueCompute);
-		assert(&pCmdQueueCompute != &pCmdQueueCopy);
+	assert(&pCmdQueueGFX != &pCmdQueueCompute);
+	assert(&pCmdQueueCompute != &pCmdQueueCopy);
 #endif
 
-		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-		queueDesc.Priority = queuePriority; 
+	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+	queueDesc.Priority = queuePriority;
 
-		// Graphics
-		//if (pCmdQueueGFX)
-		{
-			queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-			ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCmdQueueGFX)));
-			NAME_D3D12_OBJECT(pCmdQueueGFX);
-		}
-
-		// Compute
-		//if (pCmdQueueCompute)
-		{
-			queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
-			ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCmdQueueCompute)));
-			NAME_D3D12_OBJECT(pCmdQueueCompute);
-		}
-
-		// Copy
-		//if (pCmdQueueCopy)
-		{
-			queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-			queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
-			ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCmdQueueCopy)));
-			NAME_D3D12_OBJECT(pCmdQueueCopy);
-		}
-	}
-
-	static void InitializeD3DMA(ID3D12Device* pDevice, D3D12MA::Allocator*& mpAllocator)
+	// Graphics
+	//if (pCmdQueueGFX)
 	{
-		// Create allocator
-		D3D12MA::ALLOCATOR_DESC desc = {};
-		desc.Flags = D3D12MA::ALLOCATOR_FLAG_NONE;
-		desc.pDevice = pDevice;
-
-		D3D12MA::ALLOCATION_CALLBACKS allocationCallbacks = {};
-		if (ENABLE_CPU_ALLOCATION_CALLBACKS)
-		{
-			allocationCallbacks.pAllocate = &CustomAllocate;
-			allocationCallbacks.pFree = &CustomFree;
-			allocationCallbacks.pUserData = CUSTOM_ALLOCATION_USER_DATA;
-			desc.pAllocationCallbacks = &allocationCallbacks;
-		}
-
-		CHECK_HR(D3D12MA::CreateAllocator(&desc, &mpAllocator));
-
-		switch (mpAllocator->GetD3D12Options().ResourceHeapTier)
-		{
-		case D3D12_RESOURCE_HEAP_TIER_1:
-			wprintf(L"ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_1\n");
-			break;
-		case D3D12_RESOURCE_HEAP_TIER_2:
-			wprintf(L"ResourceHeapTier = D3D12_RESOURCE_HEAP_TIER_2\n");
-			break;
-		default:
-			assert(0);
-		}
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+		ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCmdQueueGFX)));
+		NAME_D3D12_OBJECT(pCmdQueueGFX);
 	}
 
+	// Compute
+	//if (pCmdQueueCompute)
+	{
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+		ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCmdQueueCompute)));
+		NAME_D3D12_OBJECT(pCmdQueueCompute);
+	}
+
+	// Copy
+	//if (pCmdQueueCopy)
+	{
+		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+		queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
+		ThrowIfFailed(pDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&pCmdQueueCopy)));
+		NAME_D3D12_OBJECT(pCmdQueueCopy);
+	}
 }
+
 
 
 
@@ -275,6 +250,8 @@ bool Renderer::Initialize(HWND hwnd, const Settings::Window& settings, const Set
 
 void Renderer::Exit()
 {
+	mUploadHeap.Exit();
+
 	mCmdQueue_GFX.ptr->Release();
 	mCmdQueue_Compute.ptr->Release();
 	mCmdQueue_Copy.ptr->Release();
@@ -288,7 +265,7 @@ void Renderer::Exit()
 // source: https://github.com/microsoft/DirectX-Graphics-Samples
 bool Renderer::InitializeRenderingAPI(HWND hwnd)
 {
-	using VQ_D3D12_UTILS::ThrowIfFailed;
+	
 
 	ID3D12Device*& pDevice = mDevice.ptr; // shorthand
 	IDXGIFactory4* pFactory = nullptr;
@@ -311,17 +288,16 @@ bool Renderer::InitializeRenderingAPI(HWND hwnd)
 		IDXGIAdapter1* pHardwareAdapter;
 
 		ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&pFactory)));
-		VQ_D3D12_UTILS::GetHardwareAdapter(pFactory, &pHardwareAdapter); // D3D_FEATURE_LEVEL_12_0 in here, would this cause an issue?
+		GetHardwareAdapter(pFactory, &pHardwareAdapter); // D3D_FEATURE_LEVEL_12_0 in here, would this cause an issue?
 		ThrowIfFailed(D3D12CreateDevice(pHardwareAdapter, D3D_FEATURE_LEVEL_TO_REQUEST, IID_PPV_ARGS(&mDevice.ptr)));
 	}
 
 	// CREATE COMMAND QUEUES
 	//
 	// currently only 1 priority is supported, might iterate on this later.
-	VQ_D3D12_UTILS::CreateCommandQueues(pDevice, mCmdQueue_GFX.ptr, mCmdQueue_Compute.ptr, mCmdQueue_Copy.ptr, D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_HIGH);
-		
+	CreateCommandQueues(pDevice, mCmdQueue_GFX.ptr, mCmdQueue_Compute.ptr, mCmdQueue_Copy.ptr, D3D12_COMMAND_QUEUE_PRIORITY::D3D12_COMMAND_QUEUE_PRIORITY_HIGH);
 	
-
+	
 	// SWAP CHAIN
 	//
 	{
@@ -366,8 +342,9 @@ bool Renderer::InitializeRenderingAPI(HWND hwnd)
 
 	// INITIALIZE D3D12MA
 	//
-	VQ_D3D12_UTILS::InitializeD3DMA(pDevice, mpAllocator);
+	InitializeD3DMA(pDevice, mpAllocator);
 
+	mUploadHeap.Initialize(pDevice, mCmdQueue_GFX.ptr, UPLOAD_HEAP_MEMORY);
 
 	// RESOURCE HEAPS: RTV, DSV, CBV, SRV, UAV 
 	//
@@ -477,11 +454,10 @@ bool Renderer::InitializeRenderingAPI(HWND hwnd)
 // called from a worker.
 bool Renderer::LoadDefaultResources()
 {
-	using VQ_D3D12_UTILS::ThrowIfFailed;
 
 	ID3D12Device*& pDevice = mDevice.ptr; // shorthand
 
-
+#if 1
 	// This is the highest version - If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
 	featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
@@ -585,7 +561,7 @@ bool Renderer::LoadDefaultResources()
 		ThrowIfFailed(pDevice->CreateRootSignature(0, pSignature->GetBufferPointer(), pSignature->GetBufferSize(), IID_PPV_ARGS(&mpRootSignature_LoadingScreen.ptr)));
 		NAME_D3D12_OBJECT(mpRootSignature_LoadingScreen.ptr);
 	}
-
+#endif
 
 	// Create the pipeline state, which includes compiling and loading shaders.
 #if 1
@@ -610,9 +586,10 @@ bool Renderer::LoadDefaultResources()
 		//
 		ShaderDesc fullScreenTextureVSPSDesc = {};
 		fullScreenTextureVSPSDesc.shaderName = "fullScreenTextureGfx";
-		fullScreenTextureVSPSDesc.stages[EShaderStage::VS].fileName = "";
+		//fullScreenTextureVSPSDesc.stages[EShaderStage::VS].fileName = "FullscreenTriangle_vs.hlsl"; // TODO: use this later
+		fullScreenTextureVSPSDesc.stages[EShaderStage::VS].fileName = "FullscreenQuad_vs.hlsl";
 		fullScreenTextureVSPSDesc.stages[EShaderStage::VS].macros = { {"", ""} };
-		fullScreenTextureVSPSDesc.stages[EShaderStage::PS].fileName = "";
+		fullScreenTextureVSPSDesc.stages[EShaderStage::PS].fileName = "PassThrough_ps.hlsl";
 		fullScreenTextureVSPSDesc.stages[EShaderStage::PS].macros = { {"", ""} };
 		ShaderID fullScreenTextureVSPS_ID = this->CreateShader(fullScreenTextureVSPSDesc);
 		Shader& fullScreenTextureVSPS = *mShaders[fullScreenTextureVSPS_ID];
@@ -620,10 +597,10 @@ bool Renderer::LoadDefaultResources()
 
 		// Describe and create the graphics pipeline state objects (PSOs).
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		psoDesc.InputLayout = fullScreenTextureVSPS.GetShaderInputLayoutType(); // { inputLayouts.data(), inputLayouts.size() };
 		psoDesc.pRootSignature = mpRootSignature_LoadingScreen.ptr;
 		psoDesc.VS = D3D12_SHADER_BYTECODE(fullScreenTextureVSPS.GetShaderByteCode(EShaderStage::VS));
 		psoDesc.PS = D3D12_SHADER_BYTECODE(fullScreenTextureVSPS.GetShaderByteCode(EShaderStage::PS));
+		psoDesc.InputLayout = fullScreenTextureVSPS.GetShaderInputLayoutDesc();
 		SetDefaultRasterizerDesc(psoDesc.RasterizerState);
 		SetDefaultBlendDesc(psoDesc.BlendState);
 		psoDesc.DepthStencilState.DepthEnable = FALSE;
@@ -636,14 +613,6 @@ bool Renderer::LoadDefaultResources()
 
 		ThrowIfFailed(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&mPSO_FullscreenTexture.ptr)));
 		NAME_D3D12_OBJECT(mPSO_FullscreenTexture.ptr);
-
-		///psoDesc.InputLayout = { scaleInputElementDescs, _countof(scaleInputElementDescs) };
-		///psoDesc.pRootSignature = m_postRootSignature.Get();
-		///psoDesc.VS = CD3DX12_SHADER_BYTECODE(postVertexShader.Get());
-		///psoDesc.PS = CD3DX12_SHADER_BYTECODE(postPixelShader.Get());
-		///
-		///ThrowIfFailed(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_postPipelineState)));
-		///NAME_D3D12_OBJECT(m_postPipelineState);
 	}
 
 	// Single-use command allocator and command list for creating resources.
@@ -1023,6 +992,14 @@ BufferID Renderer::CreateBuffer(const BufferDesc& bufferDesc, const void* pData 
 	Buffer buffer(mpAllocator, bufferDesc);
 	// TODO-DX12:
 	///buffer.Initialize(m_device, pData);
+
+	// 
+	// Create resource
+	// create upload head and upload resource to GPU
+	// create views
+
+
+
 #if _DEBUG
 	if (pBufferName)
 	{
@@ -1236,11 +1213,18 @@ TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 
 ShaderID Renderer::CreateShader(const ShaderDesc& shaderDesc)
 {
+	ShaderID retShaderID = -1;
 	Shader* shader = new Shader(shaderDesc);
-	shader->CompileShaderStages(mDevice.ptr);
-	mShaders.push_back(shader);
-	shader->mID = (static_cast<int>(mShaders.size()) - 1);
-	return shader->ID();
+	
+	const bool bShaderCompileSuccess = shader->CompileShaderStages(mDevice.ptr);
+	if (bShaderCompileSuccess)
+	{
+		mShaders.push_back(shader);
+		shader->mID = (static_cast<int>(mShaders.size()) - 1);
+		retShaderID = shader->ID();
+	}
+
+	return retShaderID;
 }
 
 ShaderID Renderer::ReloadShader(const ShaderDesc& shaderDesc, const ShaderID shaderID)
@@ -1265,5 +1249,22 @@ ShaderID Renderer::ReloadShader(const ShaderDesc& shaderDesc, const ShaderID sha
 	return -1;
 #endif
 }
+
+
+void Renderer::GPUFlush()
+{
+	ID3D12Fence *pFence;
+	ThrowIfFailed(mDevice.ptr->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&pFence)));
+
+	ThrowIfFailed(mCmdQueue_GFX.ptr->Signal(pFence, 1));
+
+	HANDLE mHandleFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	pFence->SetEventOnCompletion(1, mHandleFenceEvent);
+	WaitForSingleObject(mHandleFenceEvent, INFINITE);
+	CloseHandle(mHandleFenceEvent);
+
+	pFence->Release();
+}
+
 
 #endif

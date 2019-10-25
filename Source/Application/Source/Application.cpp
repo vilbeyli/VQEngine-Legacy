@@ -51,7 +51,7 @@ static std::unordered_map<Application::EDirectories, std::string> DEFAULT_WORKSP
 	  { Application::EDirectories::APP_DATA            , DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine" }
 	, { Application::EDirectories::LOGS                , DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine/Logs" }
 	, { Application::EDirectories::SHADER_BINARY_CACHE , DirectoryUtil::GetSpecialFolderPath(DirectoryUtil::ESpecialFolder::LOCALAPPDATA) + "/VQEngine/ShaderCache" }
-	, { Application::EDirectories::SHADER_SOURCE       , "./Source/Shaders" }
+	, { Application::EDirectories::SHADER_SOURCE       , "./Source/Shaders/" }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 	, { Application::EDirectories::MESHES              , "./Data/Meshes" }
 	, { Application::EDirectories::MATERIALS           , "./Data/Materials" }

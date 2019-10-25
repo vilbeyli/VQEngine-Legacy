@@ -206,12 +206,14 @@ devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2017.sln" /Build "$(Configu
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Shader.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\Texture.cpp" />
     <ClCompile Include="$(SolutionDir)Source\Renderer\Source\TextRenderer.cpp" />
+    <ClCompile Include="..\Renderer\Source\D3DUtils.cpp" />
     <ClCompile Include="..\Renderer\Source\RendererDX11.cpp" />
     <ClCompile Include="..\Renderer\Source\RendererDX12.cpp" />
     <ClCompile Include="..\Renderer\Source\RenderingAPI\Direct3D11.cpp" />
     <ClCompile Include="..\Renderer\Source\RenderingAPI\Direct3D12.cpp" />
     <ClCompile Include="..\Renderer\Source\ShaderCommon.cpp" />
     <ClCompile Include="..\Renderer\Source\ShaderDX12.cpp" />
+    <ClCompile Include="..\Renderer\Source\UploadHeap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(SolutionDir)Source\Renderer\D3DManager.h" />
@@ -223,8 +225,10 @@ devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2017.sln" /Build "$(Configu
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingEnums.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\TextRenderer.h" />
     <ClInclude Include="$(SolutionDir)Source\Renderer\RenderingStructs.h" />
+    <ClInclude Include="..\Renderer\D3DUtils.h" />
     <ClInclude Include="..\Renderer\ShaderCommon.h" />
     <ClInclude Include="..\Renderer\ShaderDX12.h" />
+    <ClInclude Include="..\Renderer\UploadHeap.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

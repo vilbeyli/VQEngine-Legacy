@@ -34,7 +34,11 @@ SamplerState samAnisotropic
 
 float4 PSMain(PSIn In) : SV_TARGET
 {
+	#if 1
+    return float4(1, 0, 0, 1);
+	#else
 	float2 uv = In.texCoord;
     float4 outColor = texInput.Sample(samAnisotropic, uv);
 	return outColor;
+	#endif
 }

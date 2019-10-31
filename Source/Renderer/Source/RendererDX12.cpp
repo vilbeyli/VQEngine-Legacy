@@ -49,13 +49,15 @@ constexpr bool ENABLE_DEBUG_LAYER = true;
 constexpr bool ENABLE_CPU_ALLOCATION_CALLBACKS = true;
 constexpr bool ENABLE_CPU_ALLOCATION_CALLBACKS_PRINT = false;
 static void* const CUSTOM_ALLOCATION_USER_DATA = (void*)(uintptr_t)0xDEADC0DE;
-constexpr size_t UPLOAD_HEAP_MEMORY = 1024;
+constexpr size_t UPLOAD_HEAP_MEMORY = 100 * 1024 * 1024;
 
 constexpr unsigned FRAME_BUFFER_COUNT = 3;
 constexpr bool ENABLE_TEARING_SUPPORT = true;
+static const UINT PRESENT_SYNC_INTERVAL = 1;
 
 // Custom Allocator keeps track of CPU allocation count through this static global
 static std::atomic<size_t> g_CpuAllocationCount;
+
 
 static void* CustomAllocate(size_t Size, size_t Alignment, void* pUserData)
 {
@@ -113,37 +115,7 @@ static void InitializeD3DMA(ID3D12Device* pDevice, D3D12MA::Allocator*& mpAlloca
 		assert(0);
 	}
 }
-// Helper function for acquiring the first available hardware adapter that supports Direct3D 12.
-// If no such adapter can be found, *ppAdapter will be set to nullptr.
-static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
-{
-	
 
-	IDXGIAdapter1* adapter;
-	*ppAdapter = nullptr;
-
-	for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter); ++adapterIndex)
-	{
-		DXGI_ADAPTER_DESC1 desc;
-		ThrowIfFailed(adapter->GetDesc1(&desc));
-
-		if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-		{
-			// Don't select the Basic Render Driver adapter.
-			// If you want a software adapter, pass in "/warp" on the command line.
-			continue;
-		}
-
-		// Check to see if the adapter supports Direct3D 12, but don't create the actual device yet.
-		if (SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_TO_REQUEST, _uuidof(ID3D12Device), nullptr)))
-		{
-			break;
-		}
-	}
-
-	adapter->Release();
-	*ppAdapter = nullptr;
-}
 static void SetDefaultRasterizerDesc(D3D12_RASTERIZER_DESC & outDesc)
 {
 	outDesc.FillMode = D3D12_FILL_MODE_SOLID;
@@ -222,8 +194,10 @@ static void CreateCommandQueues(ID3D12Device* pDevice, ID3D12CommandQueue*& pCmd
 // ================================================================================================================
 Renderer::Renderer()
 // TODO: initialize default state
-//		:
-///	: mCPUAllocationCount(0)
+	: mNumPresentedFrames(0)
+	, mCurrentFrameIndex(0)
+///	, mCPUAllocationCount(0)
+	
 {}
 Renderer::~Renderer() {}
 
@@ -265,8 +239,6 @@ void Renderer::Exit()
 // source: https://github.com/microsoft/DirectX-Graphics-Samples
 bool Renderer::InitializeRenderingAPI(HWND hwnd)
 {
-	
-
 	ID3D12Device*& pDevice = mDevice.ptr; // shorthand
 	IDXGIFactory4* pFactory = nullptr;
 
@@ -288,7 +260,7 @@ bool Renderer::InitializeRenderingAPI(HWND hwnd)
 		IDXGIAdapter1* pHardwareAdapter;
 
 		ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&pFactory)));
-		GetHardwareAdapter(pFactory, &pHardwareAdapter); // D3D_FEATURE_LEVEL_12_0 in here, would this cause an issue?
+		VQ_D3D12_UTILS::GetHardwareAdapter(pFactory, &pHardwareAdapter, D3D_FEATURE_LEVEL_TO_REQUEST); // D3D_FEATURE_LEVEL_12_0 in here, would this cause an issue?
 		ThrowIfFailed(D3D12CreateDevice(pHardwareAdapter, D3D_FEATURE_LEVEL_TO_REQUEST, IID_PPV_ARGS(&mDevice.ptr)));
 	}
 
@@ -340,11 +312,16 @@ bool Renderer::InitializeRenderingAPI(HWND hwnd)
 	mCurrentFrameIndex = mSwapChain.ptr->GetCurrentBackBufferIndex();
 
 
-	// INITIALIZE D3D12MA
+	// INITIALIZE D3D12MA, UPLOAD HEAP & COMMAND ALLOCATORS PER FRAME
 	//
 	InitializeD3DMA(pDevice, mpAllocator);
-
 	mUploadHeap.Initialize(pDevice, mCmdQueue_GFX.ptr, UPLOAD_HEAP_MEMORY);
+	mFrameCmdAllocators.resize(FRAME_BUFFER_COUNT);
+	for (int i = 0; i < FRAME_BUFFER_COUNT; i++)
+	{
+		CHECK_HR(mDevice.ptr->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&mFrameCmdAllocators[i])));
+	}
+
 
 	// RESOURCE HEAPS: RTV, DSV, CBV, SRV, UAV 
 	//
@@ -566,13 +543,11 @@ bool Renderer::LoadDefaultResources()
 	// Create the pipeline state, which includes compiling and loading shaders.
 #if 1
 	{
-		ID3DBlob* pVS = nullptr;
-		ID3DBlob* pPS = nullptr;
-		ID3DBlob* pErrBlob = nullptr;
+		//
+		// COMPILE SHADERS
+		//
 
-		//
 		// Shader compile flags
-		//
 #if defined(_DEBUG)
 		// Enable better shader debugging with the graphics debugging tools.
 		UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
@@ -580,10 +555,6 @@ bool Renderer::LoadDefaultResources()
 		UINT compileFlags = 0;
 #endif
 
-
-		//
-		// COMPILE SHADERS
-		//
 		ShaderDesc fullScreenTextureVSPSDesc = {};
 		fullScreenTextureVSPSDesc.shaderName = "fullScreenTextureGfx";
 		//fullScreenTextureVSPSDesc.stages[EShaderStage::VS].fileName = "FullscreenTriangle_vs.hlsl"; // TODO: use this later
@@ -594,8 +565,9 @@ bool Renderer::LoadDefaultResources()
 		ShaderID fullScreenTextureVSPS_ID = this->CreateShader(fullScreenTextureVSPSDesc);
 		Shader& fullScreenTextureVSPS = *mShaders[fullScreenTextureVSPS_ID];
 
-
-		// Describe and create the graphics pipeline state objects (PSOs).
+		//
+		// COMPILE PSOs
+		//
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.pRootSignature = mpRootSignature_LoadingScreen.ptr;
 		psoDesc.VS = D3D12_SHADER_BYTECODE(fullScreenTextureVSPS.GetShaderByteCode(EShaderStage::VS));
@@ -614,188 +586,6 @@ bool Renderer::LoadDefaultResources()
 		ThrowIfFailed(pDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&mPSO_FullscreenTexture.ptr)));
 		NAME_D3D12_OBJECT(mPSO_FullscreenTexture.ptr);
 	}
-
-	// Single-use command allocator and command list for creating resources.
-	ID3D12CommandAllocator* pCmdAllocator = nullptr;
-	ID3D12GraphicsCommandList* pCmdList   = nullptr;
-
-	ThrowIfFailed(pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&pCmdAllocator)));
-	ThrowIfFailed(pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pCmdAllocator, nullptr, IID_PPV_ARGS(&pCmdList)));
-
-#if 0
-	// Create the command lists.
-	{
-		ThrowIfFailed(pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_sceneCommandAllocators[m_frameIndex].Get(), m_scenePipelineState.Get(), IID_PPV_ARGS(&m_sceneCommandList)));
-		NAME_D3D12_OBJECT(m_sceneCommandList);
-
-		///ThrowIfFailed(pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_postCommandAllocators[m_frameIndex].Get(), m_postPipelineState.Get(), IID_PPV_ARGS(&m_postCommandList)));
-		///NAME_D3D12_OBJECT(m_postCommandList);
-
-		// Close the command lists.
-		ThrowIfFailed(m_scenepCmdList->Close());
-		///ThrowIfFailed(m_postpCmdList->Close());
-	}
-
-	LoadSizeDependentResources();
-	LoadSceneResolutionDependentResources();
-
-	// Create/update the vertex buffer.
-	ComPtr<ID3D12Resource> sceneVertexBufferUpload;
-	{
-		// Define the geometry for a thin quad that will animate across the screen.
-		const float x = QuadWidth / 2.0f;
-		const float y = QuadHeight / 2.0f;
-		SceneVertex quadVertices[] =
-		{
-			{ { -x, -y, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
-			{ { -x, y, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
-			{ { x, -y, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } },
-			{ { x, y, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f } }
-		};
-
-		const UINT vertexBufferSize = sizeof(quadVertices);
-
-		ThrowIfFailed(pDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&m_sceneVertexBuffer)));
-
-		ThrowIfFailed(pDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&sceneVertexBufferUpload)));
-
-		NAME_D3D12_OBJECT(m_sceneVertexBuffer);
-
-		// Copy data to the intermediate upload heap and then schedule a copy 
-		// from the upload heap to the vertex buffer.
-		UINT8* pVertexDataBegin;
-		CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-		ThrowIfFailed(sceneVertexBufferUpload->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-		memcpy(pVertexDataBegin, quadVertices, sizeof(quadVertices));
-		sceneVertexBufferUpload->Unmap(0, nullptr);
-
-		pCmdList->CopyBufferRegion(m_sceneVertexBuffer.Get(), 0, sceneVertexBufferUpload.Get(), 0, vertexBufferSize);
-		pCmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_sceneVertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-
-		// Initialize the vertex buffer views.
-		m_sceneVertexBufferView.BufferLocation = m_sceneVertexBuffer->GetGPUVirtualAddress();
-		m_sceneVertexBufferView.StrideInBytes = sizeof(SceneVertex);
-		m_sceneVertexBufferView.SizeInBytes = vertexBufferSize;
-	}
-
-	// Create/update the fullscreen quad vertex buffer.
-	ComPtr<ID3D12Resource> postVertexBufferUpload;
-	{
-		// Define the geometry for a fullscreen quad.
-		PostVertex quadVertices[] =
-		{
-			{ { -1.0f, -1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },    // Bottom left.
-			{ { -1.0f, 1.0f, 0.0f, 1.0f }, { 0.0f, 1.0f } },    // Top left.
-			{ { 1.0f, -1.0f, 0.0f, 1.0f }, { 1.0f, 0.0f } },    // Bottom right.
-			{ { 1.0f, 1.0f, 0.0f, 1.0f }, { 1.0f, 1.0f } }        // Top right.
-		};
-
-		const UINT vertexBufferSize = sizeof(quadVertices);
-
-		ThrowIfFailed(pDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-			D3D12_RESOURCE_STATE_COPY_DEST,
-			nullptr,
-			IID_PPV_ARGS(&m_postVertexBuffer)));
-
-		ThrowIfFailed(pDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&postVertexBufferUpload)));
-
-		NAME_D3D12_OBJECT(m_postVertexBuffer);
-
-		// Copy data to the intermediate upload heap and then schedule a copy 
-		// from the upload heap to the vertex buffer.
-		UINT8* pVertexDataBegin;
-		CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-		ThrowIfFailed(postVertexBufferUpload->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-		memcpy(pVertexDataBegin, quadVertices, sizeof(quadVertices));
-		postVertexBufferUpload->Unmap(0, nullptr);
-
-		pCmdList->CopyBufferRegion(m_postVertexBuffer.Get(), 0, postVertexBufferUpload.Get(), 0, vertexBufferSize);
-		pCmdList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(m_postVertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-
-		// Initialize the vertex buffer views.
-		m_postVertexBufferView.BufferLocation = m_postVertexBuffer->GetGPUVirtualAddress();
-		m_postVertexBufferView.StrideInBytes = sizeof(PostVertex);
-		m_postVertexBufferView.SizeInBytes = vertexBufferSize;
-	}
-
-	// Create the constant buffer.
-	{
-		ThrowIfFailed(pDevice->CreateCommittedResource(
-			&CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
-			D3D12_HEAP_FLAG_NONE,
-			&CD3DX12_RESOURCE_DESC::Buffer(sizeof(SceneConstantBuffer) * FrameCount),
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_sceneConstantBuffer)));
-
-		NAME_D3D12_OBJECT(m_sceneConstantBuffer);
-
-		// Describe and create constant buffer views.
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-		cbvDesc.BufferLocation = m_sceneConstantBuffer->GetGPUVirtualAddress();
-		cbvDesc.SizeInBytes = sizeof(SceneConstantBuffer);
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE cpuHandle(m_cbvSrvHeap->GetCPUDescriptorHandleForHeapStart(), 1, m_cbvSrvDescriptorSize);
-
-		for (UINT n = 0; n < FrameCount; n++)
-		{
-			pDevice->CreateConstantBufferView(&cbvDesc, cpuHandle);
-
-			cbvDesc.BufferLocation += sizeof(SceneConstantBuffer);
-			cpuHandle.Offset(m_cbvSrvDescriptorSize);
-		}
-
-		// Map and initialize the constant buffer. We don't unmap this until the
-		// app closes. Keeping things mapped for the lifetime of the resource is okay.
-		CD3DX12_RANGE readRange(0, 0);        // We do not intend to read from this resource on the CPU.
-		ThrowIfFailed(m_sceneConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&m_pCbvDataBegin)));
-		memcpy(m_pCbvDataBegin, &m_sceneConstantBufferData, sizeof(m_sceneConstantBufferData));
-	}
-
-	// Close the resource creation command list and execute it to begin the vertex buffer copy into
-	// the default heap.
-	ThrowIfFailed(pCmdList->Close());
-	ID3D12CommandList* ppCommandLists[] = { commandList.Get() };
-	m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-
-	// Create synchronization objects and wait until assets have been uploaded to the GPU.
-	{
-		ThrowIfFailed(pDevice->CreateFence(m_fenceValues[m_frameIndex], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-		m_fenceValues[m_frameIndex]++;
-
-		// Create an event handle to use for frame synchronization.
-		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		if (m_fenceEvent == nullptr)
-		{
-			ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-		}
-
-		// Wait for the command list to execute before continuing.
-		WaitForGpu();
-	}
-#endif // 1
-#endif  // 0
 
 	return true;
 }
@@ -956,12 +746,92 @@ vec2	 Renderer::GetWindowDimensionsAsFloat2() const { return vec2(this->WindowWi
 
 void Renderer::BeginFrame()
 {
+	// swap the current rtv buffer index so we draw on the correct buffer
+	mCurrentFrameIndex = static_cast<int>(this->GetCurrentBackBufferIndex());
+	// We have to wait for the GPU to finish with the command allocator before we reset it
+	WaitForFrame(mCurrentFrameIndex);
+	// increment mFenceValues for next frame
+	mFenceValues[mCurrentFrameIndex]++;
+
+	// we can only reset an allocator once the GPU is done with it
+	// resetting an allocator frees the memory that the command list was stored in
+	CHECK_HR(mFrameCmdAllocators[mCurrentFrameIndex]->Reset());
+	
+	mCmdListGFX_CurrentFrame = static_cast<ID3D12GraphicsCommandList*>(
+		this->CreateCommandList(D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT)
+	);
+	ID3D12GraphicsCommandList*& pCmdList = mCmdListGFX_CurrentFrame;
+	pCmdList->Close();
+
+	// reset the command list. by resetting the command list we are putting it into
+	// a recording state so we can start recording commands into the command allocator.
+	// the command allocator that we reference here may have multiple command lists
+	// associated with it, but only one can be recording at any time. Make sure
+	// that any other command lists associated to this command allocator are in
+	// the closed state (not recording).
+	// Here you will pass an initial pipeline state object as the second parameter,
+	// but in this tutorial we are only clearing the RTV, and do not actually need
+	// anything but an initial default pipeline, which is what we get by setting
+	// the second parameter to NULL
+	CHECK_HR(pCmdList->Reset(mFrameCmdAllocators[mCurrentFrameIndex], NULL));
+
+	// here we start recording commands into the pCmdList (which all the commands will be stored in the mFrameCmdAllocators)
+
+	// transition the "mCurrentFrameIndex" render target from the present state to the render target state so the command list draws to it starting from here
+	D3D12_RESOURCE_BARRIER presentToRenderTargetBarrier = {};
+	presentToRenderTargetBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	presentToRenderTargetBarrier.Transition.pResource = mpRenderTargets[mCurrentFrameIndex];
+	presentToRenderTargetBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+	presentToRenderTargetBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	presentToRenderTargetBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	pCmdList->ResourceBarrier(1, &presentToRenderTargetBarrier);
+
 	mRenderStats = { 0, 0, 0 };
 }
 
 void Renderer::EndFrame()
 {
-	;// m_Direct3D->EndFrame();
+	ID3D12GraphicsCommandList*& pCmdList = mCmdListGFX_CurrentFrame;
+
+	// transition the "mCurrentFrameIndex" render target from the render target state to the present state. If the debug layer is enabled, you will receive a
+	// warning if present is called on the render target when it's not in the present state
+	D3D12_RESOURCE_BARRIER renderTargetToPresentBarrier = {};
+	renderTargetToPresentBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	renderTargetToPresentBarrier.Transition.pResource = mpRenderTargets[mCurrentFrameIndex];
+	renderTargetToPresentBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+	renderTargetToPresentBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+	renderTargetToPresentBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	pCmdList->ResourceBarrier(1, &renderTargetToPresentBarrier);
+
+	CHECK_HR(pCmdList->Close());
+
+
+	// create an array of command lists (only one command list here)
+	ID3D12CommandList* ppCommandLists[] = { pCmdList };
+
+	// execute the array of command lists
+	mCmdQueue_GFX.ptr->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+	// this command goes in at the end of our command queue. we will know when our command queue 
+	// has finished because the g_Fences value will be set to "mFenceValues" from the GPU since the command
+	// queue is being executed on the GPU
+	CHECK_HR(mCmdQueue_GFX.ptr->Signal(mFences[mCurrentFrameIndex], mFenceValues[mCurrentFrameIndex]));
+
+	// present the current backbuffer
+	CHECK_HR(mSwapChain.ptr->Present(PRESENT_SYNC_INTERVAL, 0));
+
+	++mNumPresentedFrames;
+}
+
+
+void Renderer::SetVertexBuffer(ID3D12GraphicsCommandList *& pCmd, BufferID bufferID)
+{
+	pCmd->IASetVertexBuffers(0, 1, &mVertexBuffers[bufferID].GetVertexBufferView());
+}
+
+void Renderer::SetIndexBuffer(ID3D12GraphicsCommandList *& pCmd, BufferID bufferID)
+{
+	pCmd->IASetIndexBuffer(&mIndexBuffers[bufferID].GetIndexBufferView());
 }
 
 
@@ -987,15 +857,89 @@ const BufferDesc& Renderer::GetBufferDesc(EBufferType bufferType, BufferID buffe
 #ifdef max
 #undef max
 #endif
+
+static void InitializeBuffer(EBufferType eType, UploadHeap& uploadHeap, const void* pData, Buffer& buffer)
+{
+	// store buffer in upload heap
+	D3D12_SUBRESOURCE_DATA rscData = {};
+
+
+	const UINT bufferSize = buffer.GetBufferDesc().mStride * buffer.GetBufferDesc().mElementCount;
+	rscData.pData = reinterpret_cast<const BYTE*>(pData);
+	rscData.RowPitch = bufferSize;
+	rscData.SlicePitch = bufferSize;
+
+	ID3D12GraphicsCommandList* cmd = uploadHeap.GetCommandList();
+
+	///CHECK_HR(cmd->Reset(mFrameCmdAllocators[mCurrentFrameIndex], NULL));
+
+	// we are now creating a command with the command list to copy the data from the upload heap to the default heap
+	UINT64 r = UpdateSubresources(cmd, buffer.GetResource(), uploadHeap.GetResource(), 0, 0, 1, &rscData);
+	assert(r);
+
+	// transition the vertex buffer data from copy destination state to vertex buffer state
+	D3D12_RESOURCE_BARRIER vbBarrier = {};
+	vbBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	vbBarrier.Transition.pResource = buffer.GetResource();
+	vbBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	vbBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	switch (eType)
+	{
+	case VERTEX_BUFFER:
+		vbBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+		break;
+	case INDEX_BUFFER:
+		vbBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_INDEX_BUFFER;
+		break;
+	case COMPUTE_RW_BUFFER:
+		assert(false);
+		break;
+	//case BUFFER_TYPE_UNKNOWN:
+	//	break;
+	default:
+		Log::Warning("TODO: Warn resource transition for resource uploading for buffers");
+		break;
+	}
+	cmd->ResourceBarrier(1, &vbBarrier);
+}
+
+
+ID3D12CommandList* Renderer::CreateCommandList(D3D12_COMMAND_LIST_TYPE cmdListType)
+{
+	const size_t frameIndex = this->GetCurrentBackBufferIndex();
+	assert(mFrameCmdAllocators.size() > frameIndex);
+
+	ID3D12CommandList * pCmdList = nullptr;
+	ID3D12CommandAllocator*& pCmdAllocator = mFrameCmdAllocators[frameIndex];
+
+	switch (cmdListType)
+	{
+	case D3D12_COMMAND_LIST_TYPE_DIRECT:
+	case D3D12_COMMAND_LIST_TYPE_COMPUTE:
+	case D3D12_COMMAND_LIST_TYPE_COPY:
+		break;	// ignore these tpyes
+	default:
+		Log::Warning("Command List Type not supported");
+		return pCmdList; // nullptr
+	}
+	ThrowIfFailed(mDevice.ptr->CreateCommandList(0, cmdListType, pCmdAllocator, nullptr, IID_PPV_ARGS(&pCmdList)));
+	return pCmdList;
+}
+
+
 BufferID Renderer::CreateBuffer(const BufferDesc& bufferDesc, const void* pData /*=nullptr*/, const char* pBufferName /*= nullptr*/)
 {
-	Buffer buffer(mpAllocator, bufferDesc);
-	// TODO-DX12:
-	///buffer.Initialize(m_device, pData);
-
-	// 
 	// Create resource
-	// create upload head and upload resource to GPU
+	Buffer buffer(mpAllocator, bufferDesc);
+
+
+	// upload resource to GPU
+	if (pData)
+	{
+		InitializeBuffer(bufferDesc.mType, mUploadHeap, pData, buffer);
+	}
+
+
 	// create views
 
 
@@ -1029,12 +973,14 @@ BufferID Renderer::CreateBuffer(const BufferDesc& bufferDesc, const void* pData 
 
 TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const std::string& fileRoot /*= s_textureRoot*/, bool bGenerateMips /*= false*/)
 {
+	Log::Warning("TODO: Implement CreateTextureFromFile() : texFileName=%s ", texFileName.c_str());
 	return -1;
 }
 
 
 TextureID Renderer::CreateTexture2D(const TextureDesc& texDesc)
 {
+	Log::Warning("TODO: Implement CreateTexture2D() : texFileName=%s ", texDesc.texFileName.c_str());
 	return -1;
 #if 0
 	Texture tex;
@@ -1267,4 +1213,36 @@ void Renderer::GPUFlush()
 }
 
 
+size_t Renderer::GetCurrentBackBufferIndex() const
+{
+	return mSwapChain.ptr->GetCurrentBackBufferIndex();
+}
+
+void Renderer::WaitForFrame(size_t frameIndex)
+{
+	// if the current mFences value is still less than "mFenceValues", then we know the GPU has not finished executing
+	// the command queue since it has not reached the "g_CommandQueue->Signal(mFences, mFenceValues)" command
+	if (mFences[frameIndex]->GetCompletedValue() < mFenceValues[frameIndex])
+	{
+		// we have the mFences create an event which is signaled once the mFences's current value is "mFenceValues"
+		CHECK_HR(mFences[frameIndex]->SetEventOnCompletion(mFenceValues[frameIndex], mFenceEvent));
+
+		// We will wait until the mFences has triggered the event that it's current value has reached "mFenceValues". once it's value
+		// has reached "mFenceValues", we know the command queue has finished executing
+		WaitForSingleObject(mFenceEvent, INFINITE);
+	}
+}
+
+void Renderer::WaitGPUIdle(size_t frameIndex)
+{
+	mFenceValues[frameIndex]++;
+	CHECK_HR(mCmdQueue_GFX.ptr->Signal(mFences[frameIndex], mFenceValues[frameIndex]));
+#if 0
+	CHECK_HR(mCmdQueue_Compute.ptr->Signal(mFences[frameIndex], mFenceValues[frameIndex]));
+	CHECK_HR(mCmdQueue_Copy.ptr->Signal(mFences[frameIndex], mFenceValues[frameIndex]));
+#endif
+	WaitForFrame(frameIndex);
+}
+
+#endif
 #endif

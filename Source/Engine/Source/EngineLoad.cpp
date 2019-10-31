@@ -46,10 +46,11 @@ bool Engine::Load()
 	mpCPUProfiler->BeginProfile();
 
 #if USE_DX12
-
-	mSimulationWorkers.AddTask([]()
+	
+	mSimulationWorkers.AddTask([this]()
 	{
 		Scene::InitializeBuiltinMeshes();
+		this->mpRenderer->GPUFlush_UploadHeap();
 	});
 	mSimulationWorkers.AddTask([&]()
 	{

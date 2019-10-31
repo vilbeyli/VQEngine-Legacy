@@ -39,8 +39,8 @@ void UploadHeap::Initialize(ID3D12Device* pDevice, ID3D12CommandQueue* pCmdQueue
 
 	pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&mpCommandAllocator));
 	pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, mpCommandAllocator, nullptr, IID_PPV_ARGS(&mpCommandList));
-	SetName(mpCommandAllocator, L"UploadHeap::m_pCommandAllocator");
-	SetName(mpCommandList, L"UploadHeap::m_pCommandList");
+	SetName(mpCommandAllocator, L"UploadHeap::mpCommandAllocator");
+	SetName(mpCommandList, L"UploadHeap::mpCommandList");
 
 	// Create buffer to suballocate
 
@@ -66,9 +66,9 @@ void UploadHeap::Initialize(ID3D12Device* pDevice, ID3D12CommandQueue* pCmdQueue
 			IID_PPV_ARGS(&mpUploadHeap)
 		)
 	);
+	SetName(mpUploadHeap, L"UploadHeap::mpUploadHeap (Resource)");
 
 	ThrowIfFailed(mpUploadHeap->Map(0, NULL, (void**)&mpDataBegin));
-
 	mpDataCur = mpDataBegin;
 	mpDataEnd = mpDataBegin + mpUploadHeap->GetDesc().Width;
 
@@ -78,7 +78,6 @@ void UploadHeap::Initialize(ID3D12Device* pDevice, ID3D12CommandQueue* pCmdQueue
 void UploadHeap::Exit()
 {
 	mpUploadHeap->Release();
-
 	mpCommandList->Release();
 	mpCommandAllocator->Release();
 }

@@ -55,6 +55,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shaders", "Shaders", "{571D
 		Source\Shaders\Normal_ps.hlsl = Source\Shaders\Normal_ps.hlsl
 		Source\Shaders\Normal_vs.hlsl = Source\Shaders\Normal_vs.hlsl
 		Source\Shaders\Panini.hlsl = Source\Shaders\Panini.hlsl
+		Source\Shaders\PassThrough_ps.hlsl = Source\Shaders\PassThrough_ps.hlsl
 		Source\Shaders\Phong.hlsl = Source\Shaders\Phong.hlsl
 		Source\Shaders\PreFilterConvolution_ps.hlsl = Source\Shaders\PreFilterConvolution_ps.hlsl
 		Source\Shaders\RenderIntoCubemap_ps.hlsl = Source\Shaders\RenderIntoCubemap_ps.hlsl

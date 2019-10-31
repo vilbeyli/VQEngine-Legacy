@@ -129,7 +129,7 @@ struct SceneLightingConstantBuffer
 class TextRenderer;
 struct TextDrawDescription;
 
-#define DENDER_STATS_STRUCT_ELEM_COUNT 4
+#define RENDER_STATS_STRUCT_ELEM_COUNT 4
 #define DEFINE_RENDER_STATS_STRUCT_MEMBERS\
 		int numVertices;                  \
 		int numIndices;	                  \
@@ -144,7 +144,7 @@ struct RendererStats
 		{
 			DEFINE_RENDER_STATS_STRUCT_MEMBERS
 		};
-		int arr[DENDER_STATS_STRUCT_ELEM_COUNT];
+		int arr[RENDER_STATS_STRUCT_ELEM_COUNT];
 	};
 };
 struct SceneStats

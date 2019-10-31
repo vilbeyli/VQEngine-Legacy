@@ -66,7 +66,32 @@ public:
 	void	BeginEvent(const std::string& marker);
 	void	EndEvent();
 
+
+	// Waits for current swachain buffer to finish, gets next swapchain image
+	// and transitions into render target state.
+	//
+	void BeginFrame();
+
+	// presents the swapchain 
+	//
+	void EndFrame();	
+	
+
+	size_t GetCurrentBackBufferIndex() const;
+
+	void WaitForFrame(size_t frameIndex);
+	void WaitGPUIdle(size_t frameIndex);
+
+	// Forces sync on GFX queue
+	//
 	void	GPUFlush();
+	
+	// Closes GFX command list and forces sync on the GFX queue on RenderThread
+	//
+	inline void GPUFlush_UploadHeap() { mUploadHeap.FlushAndFinish(this); };
+
+	ID3D12CommandList* CreateCommandList(D3D12_COMMAND_LIST_TYPE cmdListType);
+	ID3D12CommandList* GetCurrentFrameCommandList() const { return mCmdListGFX_CurrentFrame; };
 
 	//----------------------------------------------------------------------------------------------------------------
 	// GETTERS
@@ -79,6 +104,7 @@ public:
 	vec2					FrameRenderTargetDimensionsAsFloat2() const;
 	vec2					GetWindowDimensionsAsFloat2() const;
 
+	// Resource Getters
 #if 0
 	inline RenderTargetID	GetBackBufferRenderTarget() const { return mBackBufferRenderTarget; }
 	inline TextureID		GetDefaultRenderTargetTexture() const { return mRenderTargets[mBackBufferRenderTarget].texture._id; }
@@ -93,6 +119,13 @@ public:
 	const TextureID			GetTexture(const std::string name) const;
 	ShaderDesc				GetShaderDesc(ShaderID shaderID) const;
 	EImageFormat			GetTextureImageFormat(TextureID) const;
+
+
+	//----------------------------------------------------------------------------------------------------------------
+	// COMMAND INTERFACE
+	//----------------------------------------------------------------------------------------------------------------
+	void					SetVertexBuffer(ID3D12GraphicsCommandList*& pCmd, BufferID bufferID);
+	void					SetIndexBuffer(ID3D12GraphicsCommandList*& pCmd, BufferID bufferID);
 
 	//----------------------------------------------------------------------------------------------------------------
 	// RESOURCE INITIALIZATION
@@ -122,35 +155,16 @@ public:
 	std::vector<DepthTargetID>	AddDepthTarget(const DepthTargetDesc& depthTargetDesc);
 #endif
 
-	void BeginFrame();	// resets render stats
-	void EndFrame();	// presents the swapchain and clears shaders
-	bool SaveTextureToDisk(TextureID texID, const std::string& filePath, bool bConverToSRGB) const; // ?
-
 private:
 	bool InitializeRenderingAPI(HWND hwnd);
 
 public:
 	// renderer structs
-	struct Device
-	{
-		ID3D12Device* ptr;
-	};
-	struct CommandQueue
-	{
-		ID3D12CommandQueue* ptr;
-	};
-	struct SwapChain
-	{
-		IDXGISwapChain4* ptr;
-	};
-	struct RootSignature
-	{
-		ID3D12RootSignature* ptr;
-	};
-	struct PipelineState
-	{
-		ID3D12PipelineState* ptr;
-	};
+	struct Device			{ ID3D12Device* ptr; };
+	struct CommandQueue		{ ID3D12CommandQueue* ptr; };
+	struct SwapChain		{ IDXGISwapChain4* ptr; };
+	struct RootSignature	{ ID3D12RootSignature* ptr; };
+	struct PipelineState	{ ID3D12PipelineState* ptr; };
 	struct DescriptorHeap
 	{
 		ID3D12DescriptorHeap* ptr;
@@ -168,12 +182,21 @@ private:
 	// DEVICE RESOURCES
 	//
 	Device mDevice;
+	SwapChain mSwapChain;
+	short mCurrentFrameIndex;
+	unsigned long long mNumPresentedFrames;
+
+	std::vector<ID3D12CommandAllocator*> mFrameCmdAllocators;
+
+	ID3D12GraphicsCommandList* mCmdListGFX_CurrentFrame;
+
+	//
+	// COMMAND RESOURCES
+	//
 	CommandQueue mCmdQueue_GFX;
 	CommandQueue mCmdQueue_Compute;
 	CommandQueue mCmdQueue_Copy;
-	SwapChain mSwapChain;
 
-	int mCurrentFrameIndex;
 	
 	//
 	// PIPELINE STATE
@@ -183,20 +206,22 @@ private:
 	
 	PipelineState mPSO_FullscreenTexture;
 
-	RenderTargetID					mBackBufferRenderTarget;	// todo: remove or rename
-	TextureID						mDefaultDepthBufferTexture;	// todo: remove or rename
+	RenderTargetID	mBackBufferRenderTarget;	// todo: remove or rename
+	TextureID		mDefaultDepthBufferTexture;	// todo: remove or rename
 
 	//
 	// RENDERING RESOURCES
 	//
-	std::vector<Shader*>			mShaders;
+	std::vector<Shader*>		mShaders;
+
 #if 0
-	std::vector<Texture>			mTextures;
-	std::vector<Sampler>			mSamplers;
+	std::vector<Texture>		mTextures;
+	std::vector<Sampler>		mSamplers;
 	
-	std::vector<RenderTarget>		mRenderTargets;
-	std::vector<DepthTarget>		mDepthTargets;
-#else
+	std::vector<RenderTarget>	mRenderTargets;
+	std::vector<DepthTarget>	mDepthTargets;
+#endif
+
 	// TODO: move this to vector and use generic name
 	DescriptorHeap mDSVDescHeap;
 	ID3D12Resource* mpDepthTarget;
@@ -220,14 +245,13 @@ private:
 	std::vector<D3D12MA::Allocation*> mpConstantBufferUploadAllocation;	  // sized to num back buffer frames
 
 	UploadHeap	mUploadHeap;
-#endif
 
 	//
 	// SYNCHRONIZATION
 	//
-	std::vector<ID3D12Fence*> mFences;
+	std::vector<ID3D12Fence*>		mFences;
 	std::vector<unsigned long long> mFenceValues;
-	HANDLE mFenceEvent;
+	HANDLE							mFenceEvent;
 
 	//
 	// PERFORMANCE COUNTERS

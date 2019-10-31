@@ -70,6 +70,8 @@ class PerfTimer;
 
 class Scene;
 
+struct ID3D12GraphicsCommandList;
+
 
 //
 // TODO: CleanUp
@@ -219,7 +221,11 @@ private:
 	void Render();
 	void RenderDebug(const XMMATRIX& viewProj);
 	void RenderUI() const;
+#if USE_DX12
+	void RenderLoadingScreen(ID3D12GraphicsCommandList* pCmd = nullptr) const;
+#else
 	void RenderLoadingScreen(bool bOneTimeRender = false) const;
+#endif // USE_DX12
 
 //==============================================================================================================
 

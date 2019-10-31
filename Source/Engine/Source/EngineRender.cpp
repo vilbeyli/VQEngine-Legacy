@@ -533,15 +533,59 @@ void Engine::RenderUI() const
 }
 
 
-void Engine::RenderLoadingScreen(bool bOneTimeRender) const
-{
-
 #if USE_DX12
-	Log::Info("-----RenderLoadingScreen");
-	return;
+void Engine::RenderLoadingScreen(ID3D12GraphicsCommandList* pCmd /*= nullptr*/) const
+#else
+void Engine::RenderLoadingScreen(bool bOneTimeRender, ID3D12GraphicsCommandList* pCmd) const
 #endif
+{
+	assert(pCmd);
 	const XMMATRIX matTransformation = XMMatrixIdentity();
 	const auto IABuffers = SceneResourceView::GetBuiltinMeshVertexAndIndexBufferID(EGeometry::FULLSCREENQUAD);
+	long SIZE_X = this->sEngineSettings.window.width;
+	long SIZE_Y = this->sEngineSettings.window.height;
+
+
+#if USE_DX12
+	
+#if 0
+	// here we again get the handle to our current render target view so we can set it as the render target in the output merger stage of the pipeline
+	D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = { g_RtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + mCurrentFrameIndex * g_RtvDescriptorSize };
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = g_DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	
+	const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+
+	ID3D12DescriptorHeap* descriptorHeaps[] = { g_MainDescriptorHeap[mCurrentFrameIndex] };
+	D3D12_VIEWPORT viewport{ 0.f, 0.f, (float)SIZE_X, (float)SIZE_Y, 0.f, 1.f };
+	D3D12_RECT scissorRect{ 0, 0, SIZE_X, SIZE_Y };
+
+	// set the render target for the output merger stage (the output of the pipeline)
+	pCmd->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+	pCmd->ClearDepthStencilView(g_DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+	// Clear the render target by using the ClearRenderTargetView command
+	pCmd->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	
+	pCmd->SetPipelineState(g_PipelineStateObject);
+	pCmd->SetGraphicsRootSignature(g_RootSignature);
+
+	pCmd->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	pCmd->SetGraphicsRootDescriptorTable(0, g_MainDescriptorHeap[mCurrentFrameIndex]->GetGPUDescriptorHandleForHeapStart());
+	pCmd->SetGraphicsRootDescriptorTable(2, g_MainDescriptorHeap[mCurrentFrameIndex]->GetGPUDescriptorHandleForHeapStart());
+
+	pCmd->RSSetViewports(1, &viewport); // set the viewports
+	pCmd->RSSetScissorRects(1, &scissorRect); // set the scissor rects
+
+	pCmd->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // set the primitive topology
+	mpRenderer->SetVertexBuffer(pCmd, IABuffers.first);
+	mpRenderer->SetIndexBuffer(pCmd, IABuffers.second);
+
+
+	pCmd->SetGraphicsRootConstantBufferView(1, g_CbPerObjectUploadHeaps[mCurrentFrameIndex]->GetGPUVirtualAddress());
+	pCmd->DrawIndexedInstanced(g_CubeIndexCount, 1, 0, 0, 0);
+#endif
+
+#else // USE_DX12
 
 	if (bOneTimeRender)
 	{
@@ -552,9 +596,7 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 		mpGPUProfiler->BeginEntry("Loading Screen");
 	}
 
-#if USE_DX12
-	// TODO-DX12:
-#else
+
 	mpRenderer->SetShader(EShaders::UNLIT);
 	mpRenderer->UnbindDepthTarget();
 	mpRenderer->BindRenderTarget(0);
@@ -569,19 +611,16 @@ void Engine::RenderLoadingScreen(bool bOneTimeRender) const
 	mpRenderer->SetViewport(mpRenderer->WindowWidth(), mpRenderer->WindowHeight());
 	mpRenderer->Apply();
 	mpRenderer->DrawIndexed();
-#endif
 
 	if (bOneTimeRender)
 	{
 		mpRenderer->EndFrame();
-#if USE_DX12
-		// TODO-DX12:
-#else
 		mpRenderer->UnbindRenderTargets();
-#endif
 	}
 	else
 	{
 		mpGPUProfiler->EndEntry();
 	}
+
+#endif
 }

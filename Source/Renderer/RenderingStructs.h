@@ -41,18 +41,35 @@ struct BufferDesc
 struct Buffer
 {
 public:
+
+	// Creates a GPU-only heap in COPY_DEST state. Call Initializte()
+	// to upload data into the heap.
+	//
 	Buffer(D3D12MA::Allocator*& pAllocator, const BufferDesc& desc);
 
-	//void Initialize(ID3D11Device* device = nullptr, const void* pData = nullptr);
+
 	//void CleanUp();
 	//void Update(Renderer* pRenderer, const void* pData);
 	const BufferDesc& GetBufferDesc() const;
+	ID3D12Resource* GetResource() const { return ptr; }
+
+	const D3D12_VERTEX_BUFFER_VIEW& GetVertexBufferView() const { return mVertexBufferView; }
+	const D3D12_INDEX_BUFFER_VIEW& GetIndexBufferView() const { return mIndexBufferView;  }
+	const D3D12_STREAM_OUTPUT_BUFFER_VIEW& GetStreamOutBufferView() const { return mStreamOutBufferView; };
 
 	// TODO: remove or rename/move;
 	void*			mpCPUData = nullptr;
+
 private:
 	ID3D12Resource* ptr;
 	D3D12MA::Allocation* mpAllocation;
+	
+	union
+	{
+		D3D12_VERTEX_BUFFER_VIEW mVertexBufferView;
+		D3D12_INDEX_BUFFER_VIEW mIndexBufferView;
+		D3D12_STREAM_OUTPUT_BUFFER_VIEW mStreamOutBufferView;
+	};
 
 	
 	D3D12MA::ALLOCATION_DESC mAllocationDesc; // TODO: write a converter and don't store?

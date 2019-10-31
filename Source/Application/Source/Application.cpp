@@ -94,6 +94,7 @@ bool Application::Init(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iC
 {
 	pApplication = this;
 
+	//
 	// COMMAND-LINE ARGUMENTS
 	//
 	int argc;
@@ -101,23 +102,27 @@ bool Application::Init(HINSTANCE hInst, HINSTANCE hPrevInst, PSTR pScmdl, int iC
 	this->ParseCommandLineArguments(argv, argc);
 	LocalFree(argv);
 
-	// SETTINGS, LOG & DIRECTORIES
+	//
+	// SETTINGS, LOGGING & DIRECTORIES
 	//
 	Settings::Engine& settings = const_cast<Settings::Engine&>(Engine::ReadSettingsFromFile());	// namespace doesn't make sense.
 	Log::Initialize(settings.logger);
 	DirectoryUtil::CreateFolderIfItDoesntExist(Application::GetDirectory(Application::EDirectories::SHADER_BINARY_CACHE));
 
+	//
 	// WINDOW
 	//
 	InitWindow(settings.window);
 	ShowWindow(m_hwnd, SW_SHOW);
 
 #ifdef ENABLE_RAW_INPUT
+	//
 	// INPUT
 	//
 	InitRawInputDevices();
 #endif
 
+	//
 	// ENGINE
 	//
 	if (!ENGINE->Initialize(this))

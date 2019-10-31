@@ -20,6 +20,7 @@
 
 #if USE_DX12
 
+
 // Renderer has to include RenderingStructs.h due to DX12 definition
 // so we ignore it here.
 ///#include "RenderingStructs.h"
@@ -50,7 +51,29 @@ Buffer::Buffer(D3D12MA::Allocator*& pAllocator, const BufferDesc& desc)
 		nullptr, // optimized clear value must be null for this type of resource. used for render targets and depth/stencil buffers
 		&mpAllocation,
 		IID_PPV_ARGS(&ptr)));
+
+
+	// Create BufferView
+	switch (desc.mType)
+	{
+	case EBufferType::VERTEX_BUFFER:
+		mVertexBufferView.BufferLocation = 0; // TODO: remove hardcode
+		mVertexBufferView.SizeInBytes    = bufferResourceDesc.Width;
+		mVertexBufferView.StrideInBytes  = desc.mStride;
+		SetName(ptr, L"Vertex Buffer Resource Heap");
+		break;
+	case EBufferType::INDEX_BUFFER:
+		mIndexBufferView.BufferLocation = 0;  // TODO: remove hardcode
+		mIndexBufferView.Format = desc.mStride == 4 ? DXGI_FORMAT::DXGI_FORMAT_R32_UINT : DXGI_FORMAT::DXGI_FORMAT_R16_UINT;
+		mIndexBufferView.SizeInBytes = bufferResourceDesc.Width;
+		SetName(ptr, L"Index Buffer Resource Heap");
+		break;
+	default:
+		assert(false); // not yet implemented...
+		break;
+	}
 }
+
 
 const BufferDesc& Buffer::GetBufferDesc() const
 {

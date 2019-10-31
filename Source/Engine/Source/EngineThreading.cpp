@@ -78,7 +78,6 @@ void Engine::RenderThread(unsigned numWorkers)
 		std::unique_lock<std::mutex> lock(_mtxLoadingScreen);
 		mEvent_LoadingScreenReady.wait(lock);
 	}
-	this->RenderLoadingScreen();
 
 
 	// Loop --------------------------------------------------------------------
@@ -93,19 +92,28 @@ void Engine::RenderThread(unsigned numWorkers)
 		Log::Info("[RenderThread] Tick.");
 #endif
 
-		// render loading screen if we're currently loading
-		if (this->mbLoading)
-		{
-			this->RenderLoadingScreen();
+		// SYNC BACK BUFFER
+		//
+		mpRenderer->BeginFrame();
 
-			// signal update thread that frame is done rendering
-			mEvent_FrameRenderFinished.notify_one();
-			continue;
+		// RENDER COMMANDS
+		//
+		// render loading screen if we're currently loading
+		if (this->mbLoading) 
+		{
+			this->RenderLoadingScreen(static_cast<ID3D12GraphicsCommandList*>(mpRenderer->GetCurrentFrameCommandList()));
 		}
 
-		// render frame TODO:
-		Log::Info("----- RenderFrame.");
+		// render scene otherwise
+		else
+		{
+			Log::Info("----- RenderScene.");
+		}
 
+
+		// PRESENT BACK BUFFER
+		//
+		mpRenderer->EndFrame();
 
 		// signal update thread that frame is done rendering
 		mEvent_FrameRenderFinished.notify_one();

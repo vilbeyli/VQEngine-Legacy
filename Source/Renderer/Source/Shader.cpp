@@ -369,7 +369,7 @@ bool Shader::HasSourceFileBeenUpdated() const
 		{
 			const std::string& path = mDirectories.at(stage).fullPath;
 			const std::string& cachePath = mDirectories.at(stage).cachePath;
-			bUpdated |= mDirectories.at(stage).lastWriteTime < std::experimental::filesystem::last_write_time(path);
+			bUpdated |= mDirectories.at(stage).lastWriteTime < std::filesystem::last_write_time(path);
 			
 			if (!bUpdated) // check include files only when source is not updated
 			{

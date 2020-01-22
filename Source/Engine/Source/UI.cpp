@@ -25,7 +25,7 @@
 #include "Renderer/TextRenderer.h"
 
 #include "Utilities/vectormath.h"
-#include "Utilities/Profiler.h"
+#include "Renderer/Profiler.h"
 
 using namespace VQEngine;
 

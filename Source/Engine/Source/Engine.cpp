@@ -51,7 +51,7 @@
 #include "Utilities/Log.h"
 #include "Utilities/PerfTimer.h"
 #include "Utilities/CustomParser.h"
-#include "Utilities/Profiler.h"
+#include "Renderer/Profiler.h"
 
 #include "Renderer/Renderer.h"
 #include "Renderer/TextRenderer.h"

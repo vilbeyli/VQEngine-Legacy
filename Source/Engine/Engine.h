@@ -26,7 +26,7 @@
 #define ENABLE_PARALLAX_MAPPING 0
 
 #include "Utilities/PerfTimer.h"
-#include "Utilities/Profiler.h"
+#include "Renderer/Profiler.h"
 
 #include "RenderPasses/RenderPasses.h"
 

@@ -36,9 +36,9 @@
 
 // 2011**L::C++11 | 201402L::C++14 | 201703L::C++17
 #if _MSVC_LANG >= 201703L	// CPP17
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace filesys = std::experimental::filesystem;
+namespace filesys = std::filesystem;
 #else
 #include <fstream>
 #endif

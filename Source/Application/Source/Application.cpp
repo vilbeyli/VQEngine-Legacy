@@ -27,7 +27,7 @@
 #include "Utilities/utils.h"
 #include "Utilities/CustomParser.h"
 #include "Utilities/Log.h"
-#include "Utilities/Profiler.h"
+#include "Renderer/Profiler.h"
 
 #include <strsafe.h>
 #include <vector>

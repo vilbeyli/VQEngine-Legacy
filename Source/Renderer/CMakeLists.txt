@@ -46,6 +46,7 @@ set (Includes
 set (Libraries
     DirectXTex
     freetype
+    dxguid
 )
 
 
@@ -63,10 +64,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${
 target_link_directories(${PROJECT_NAME} PUBLIC ${LibraryDirs})
 target_link_libraries(${PROJECT_NAME} ${Libraries})
 
-# TODO: add the following build script
-#call "$(SolutionDir)PRE_BUILD.bat"
-#SET DXTexture_proj_location=$(SolutionDir)Source\3rdParty\DirectXTex
-#IF EXIST "$(ProjectDir)..\3rdParty\DirectXTex\DirectXTex\Bin\Desktop_2017\$(Platform)\$(Configuration)\DirectXTex.lib" (
-#echo DirectXTex.lib already built. ) ELSE (
-#echo Building dependency library: DirectXTex... 
-#devenv "%DXTexture_proj_location%\DirectXTex_Desktop_2017.sln" /Build "$(Configuration)|$(Platform)")
+add_custom_command(TARGET ${PROJECT_NAME} 
+    PRE_BUILD
+    COMMAND cmd /C "${CMAKE_CURRENT_SOURCE_DIR}/../../Scripts/BUILD_DEPENDENCIES.bat -Dir:${CMAKE_CURRENT_SOURCE_DIR} -$(Configuration)"
+)

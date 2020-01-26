@@ -52,4 +52,4 @@ add_executable( ${PROJECT_NAME} ${SourceVQ} )
 # Make sure the compile can find include files for the library
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${Includes})
 
-target_link_libraries(${PROJECT_NAME} Application)
+target_link_libraries(${PROJECT_NAME} Application msvcrt)

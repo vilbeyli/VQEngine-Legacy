@@ -172,7 +172,7 @@ void OnShaderChange(LPTSTR dir)
 //=======================================================================================================================================================
 
 
-const char*			Renderer::sShaderRoot		= "Source/Shaders/";
+const char*			Renderer::sShaderRoot		= "Shaders/";
 const char*			Renderer::sTextureRoot		= "Data/Textures/";
 const char*			Renderer::sHDRTextureRoot	= "Data/Textures/EnvironmentMaps/";
 bool				Renderer::sEnableBlend = true;
@@ -1642,7 +1642,7 @@ const TextureID Renderer::GetTexture(const std::string name) const
 void Renderer::SetShader(ShaderID id, bool bUnbindRenderTargets, bool bUnbindTextures)
 {
 	assert(id >= 0 && static_cast<unsigned>(id) < mShaders.size());
-	if (mPipelineState.shader != -1)		// if valid shader
+	if (mPipelineState.shader > -1)		// if valid shader
 	{
 		if (id != mPipelineState.shader)	// if not the same shader
 		{

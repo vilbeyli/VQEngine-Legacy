@@ -171,6 +171,7 @@ Engine::~Engine(){}
 
 bool Engine::Initialize(HWND hwnd)
 {
+	mbIsPaused = false;
 	Log::Info("[ENGINE]: Initializing --------------------");
 	if (!mpRenderer || !mpInput || !mpTimer)
 	{
@@ -599,9 +600,6 @@ void Engine::SimulateAndRenderFrame()
 			PreRender();
 			Render();
 		}
-		
-		mpGPUProfiler->EndEntry();
-		mpGPUProfiler->EndProfile(mFrameCount);
 
 		// PRESENT THE FRAME
 		//
@@ -1167,6 +1165,9 @@ void Engine::Render()
 	//------------------------------------------------------------------------
 	
 	mpCPUProfiler->EndEntry();	// Render() call
+
+	mpGPUProfiler->EndEntry(); // GPU
+	mpGPUProfiler->EndProfile(mFrameCount);
 }
 
 void Engine::RenderDebug(const XMMATRIX& viewProj)

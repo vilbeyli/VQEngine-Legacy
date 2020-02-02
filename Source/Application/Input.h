@@ -28,7 +28,7 @@ using KeyCode = unsigned int;
 
 class Input
 {
-	using KeyMapping = std::unordered_map<const char*, KeyCode>;
+	using KeyMapping = std::unordered_map<std::string, KeyCode>;
 	
 	static const KeyMapping sKeyMap;
 	friend class Application;

@@ -28,7 +28,7 @@
 // 4: sponza
 // 5: lights
 // 6: lod test
-#define OVERRIDE_LEVEL_VALUE     6	// which level to load
+#define OVERRIDE_LEVEL_VALUE     3	// which level to load
 
 
 #define FULLSCREEN_DEBUG_TEXTURE 1

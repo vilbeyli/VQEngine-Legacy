@@ -415,7 +415,7 @@ void Scene::PreRender(FrameStats& stats, SceneLightingConstantBuffer& outLightin
 		});
 		bReportedList = true;
 	}
-#endif // THREADED_FRUSTUM_CULL
+#endif
 
 
 	mpCPUProfiler->BeginEntry("GatherLightData");

@@ -802,7 +802,8 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 	tex._name = texFileName;
 	std::wstring wpath(path.begin(), path.end());
 	std::unique_ptr<DirectX::ScratchImage> img = std::make_unique<DirectX::ScratchImage>();
-	if (SUCCEEDED(LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img)))
+	HRESULT hr = LoadFromWICFile(wpath.c_str(), WIC_FLAGS_NONE, nullptr, *img);
+	if (SUCCEEDED(hr))
 	{
 		auto meta = img->GetMetadata();
 		
@@ -870,7 +871,8 @@ TextureID Renderer::CreateTextureFromFile(const std::string& texFileName, const 
 	}
 	else
 	{
-		Log::Error("Cannot load texture file: %s\n", texFileName.c_str());
+		std::string message = std::system_category().message(hr);
+		Log::Error("Cannot load texture file: %s, Reason: %s\n", texFileName.c_str(), message.c_str());
 		return mTextures[0]._id;
 	}
 }

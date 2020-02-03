@@ -96,9 +96,9 @@ const char* FrameStats::statNames[FrameStats::numStat] =
 	"Draw Calls : ",
 	"Triangles    : ",
 
-	"# Objects        : ",
-	"# Spot Lights  : ",
-	"# Point Lights : ",
+	"# Objects           : ",
+	"# Spot Lights     : ",
+	"# Point Lights    : ",
 
 	"[Cull] MainView  : ",
 	"[Cull] SpotViews : ",

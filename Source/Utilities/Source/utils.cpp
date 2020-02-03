@@ -109,7 +109,7 @@ namespace StrUtil
 		int i = 0;
 		for (auto it = num.rbegin(); it != num.rend(); ++it)
 		{
-			if (i % 3 == 0 && i != 0)
+			if (i % 3 == 0 && i != 0 && i != num.size()-1)
 			{
 				_num += ",";
 			}

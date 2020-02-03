@@ -34,21 +34,21 @@ using RenderList = std::vector<const GameObject*>;
 using MeshDrawList = std::vector<MeshDrawData>;
 #endif
 
-using RenderListLookup                = std::unordered_map<MeshID, RenderList>;
+using MeshRenderListLookup            = std::unordered_map<MeshID      , RenderList>;
 using LightRenderListLookup           = std::unordered_map<const Light*, RenderList>;
 using PointLightRenderListLookup      = std::unordered_map<const Light*, std::array<RenderList, 6>>;
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-using PointLightMeshDrawListLookup    = std::unordered_map < const Light*, std::array<MeshDrawData, 6>>;
+using PointLightMeshDrawListLookup    = std::unordered_map<const Light*, std::array<MeshInstanceTransformationLookup, 6>>;
 #else
 using PointLightMeshDrawListLookup    = std::unordered_map<const Light*, std::array<MeshDrawList, 6>>;
 #endif
-using LightInstancedRenderListLookup   = std::unordered_map<const Light*, RenderListLookup>;
+using SpotLightMeshDrawListLookup     = std::unordered_map<const Light*, MeshInstanceTransformationLookup>;
+using LightInstancedRenderListLookup  = std::unordered_map<const Light*, MeshRenderListLookup>;
 
 using RenderListLookupEntry = std::pair<MeshID, RenderList>;
 
 struct ShadowView
 {
-
 	// shadowing Lights
 	std::vector<const Light*> spots;
 	std::vector<const Light*> points;
@@ -56,14 +56,11 @@ struct ShadowView
 
 	// game obj casting shadows (=render list of directional light)
 	RenderList casters;
-	RenderListLookup RenderListsPerMeshType;
-
-	// culled render lists per shadowing light
-	LightRenderListLookup shadowMapRenderListLookUp;
-	LightInstancedRenderListLookup shadowMapInstancedRenderListLookUp;
-
-	// mesh render list (to replace other render lists which are in object-level)
+	MeshRenderListLookup RenderListsPerMeshType;
+	
+	// mesh render lists per light type
 	PointLightMeshDrawListLookup shadowCubeMapMeshDrawListLookup;
+	SpotLightMeshDrawListLookup  shadowMapMeshDrawListLookup;
 
 	void Clear()
 	{
@@ -96,6 +93,6 @@ struct SceneView
 
 	// list of objects that fall within the main camera's view frustum
 	RenderList culledOpaqueList;
-	RenderListLookup culluedOpaqueInstancedRenderListLookup;
+	MeshRenderListLookup culluedOpaqueInstancedRenderListLookup;
 
 };

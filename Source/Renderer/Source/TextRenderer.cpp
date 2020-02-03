@@ -158,6 +158,10 @@ void TextRenderer::RenderText(const TextDrawDescription& drawDesc)
 	      float x =  drawDesc.screenPosition.x() - windowSizeXY.x() / 2;
 	const float y = -drawDesc.screenPosition.y() + windowSizeXY.y() / 2;
 
+	// Note: this is the easiest way to get a character rendering on screen,
+	//       and the worst possible way to render text in general when performance is concerned.
+	//       Each character is drawn as a quad with each character being a Texture Resource.
+	//       Instead, font atlast texture should be created and characters should be drawn with instances.
 	for (const char& c : drawDesc.text)
 	{
 		const Character& ch = sCharacters.at(c);

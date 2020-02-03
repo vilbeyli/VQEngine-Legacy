@@ -110,23 +110,19 @@ struct RenderPass
 };
 
 
+template<class TKey, class TVal>
+void AddToMappedList(std::unordered_map<TKey, std::vector<TVal>>& m, const TKey& k, const TVal& v)
+{
+	if (m.find(k) != m.end()) m.at(k).push_back(v);
+	else                      m[k].push_back(v);
+}
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-struct MeshDrawData
+struct MeshInstanceTransformationLookup
 {
 #define INCLUDE_OBJECT_POINTER_TO_DRAW_DATA 0
 #if !INCLUDE_OBJECT_POINTER_TO_DRAW_DATA
-	void AddMeshTransformation(MeshID meshID, const XMMATRIX& matTransform)
-	{
-		if (meshTransformListLookup.find(meshID) != meshTransformListLookup.end())
-		{
-			meshTransformListLookup.at(meshID).push_back(matTransform);
-		}
-		else
-		{
-			meshTransformListLookup[meshID].push_back(matTransform);
-		}
-	}
+	inline void AddMeshTransformation(MeshID meshID, const XMMATRIX& matTransform){ AddToMappedList(meshTransformListLookup, meshID, matTransform); }
 
 	// Note:
 	//
@@ -141,33 +137,22 @@ struct MeshDrawData
 	//   remember to copy matrices here to an array so we can access with 
 	//   higher cache coherency. (in the long run, game objects should be
 	//   separated from transforms and transforms should all be kept in
-	//   an array so only one copy of contiguous transforms are stored
-	//   and iterated over.
+	//   an array so only one copy of contiguous transforms per frame 
+	//   are stored and iterated over.
 	//
 	struct ObjectDrawLookupData
 	{
 		const GameObject* pObj = nullptr;
 		int martixID = -1;
 	};
-	std::vector< ObjectDrawLookupData> mObjectdrawData;
+	std::vector<ObjectDrawLookupData> mObjectdrawData;
 	std::vector<const XMMATRIX*> mpTransformationMatrices;
 	std::unordered_map<MeshID, std::vector< ObjectDrawLookupData>> mMeshDrawDataLookup;
 
 	void AddMeshTransformation(MeshID meshID, const XMMATRIX& matTransform, const GameObject* pObj = nullptr)
 	{
 		assert(pObj);
-		const bool bMeshExistsInLookup = mMeshDrawDataLookup.find(meshID) != mMeshDrawDataLookup.end();
-		if (bMeshExistsInLookup)
-		{
-			//mpTransformationMatrices
-			mMeshDrawDataLookup.at(meshID).push_back(ObjectDrawLookupData{pObj, -1});
-		}
-
-		// add to lookup
-		else
-		{
-			 mMeshDrawDataLookup[meshID].push_back(ObjectDrawLookupData{pObj,-1 });
-		}
+		AddToMappedList(mMeshDrawDataLookup, meshID, { pObj, -1 })
 	}
 
 #endif

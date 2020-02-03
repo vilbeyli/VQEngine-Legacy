@@ -25,7 +25,7 @@
 
 struct FrustumPlaneset;
 struct vec3;
-struct MeshDrawData;
+struct MeshInstanceTransformationLookup;
 
 class GameObject;
 
@@ -36,6 +36,8 @@ struct BoundingBox
 	vec3 hi = vec3::Zero;
 	DirectX::XMMATRIX GetWorldTransformationMatrix() const;
 	std::array<vec4, 8> GetCornerPointsV4() const;
+	std::array<XMVECTOR, 8> GetCornerPointsV4_0() const;
+	std::array<XMVECTOR, 8> GetCornerPointsV4_1() const;
 	std::array<vec3, 8> GetCornerPointsV3() const;
 };
 
@@ -64,7 +66,7 @@ struct CullMeshData
 	const std::vector<BoundingBox>* pLocalSpaceBoundingBoxes;
 
 	const std::vector<MeshID>* pMeshIDs;
-	MeshDrawData* pMeshDrawData;
+	MeshInstanceTransformationLookup* pMeshDrawData;
 };
 
 namespace VQEngine
@@ -78,7 +80,7 @@ namespace VQEngine
 	bool IsIntersecting(const Sphere& s1, const Sphere& s2);
 
 	// deprecated
-	size_t CullMeshes(const FrustumPlaneset& frustumPlanes, const GameObject* pObj, MeshDrawData& meshDrawData);
+	size_t CullMeshes(const FrustumPlaneset& frustumPlanes, const GameObject* pObj, MeshInstanceTransformationLookup& meshDrawData);
 
 
 	// returns the indices of visible bounding boxes

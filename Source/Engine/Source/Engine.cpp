@@ -171,7 +171,12 @@ Engine::~Engine(){}
 
 bool Engine::Initialize(HWND hwnd)
 {
+	//
+	// Set states
+	//
 	mbIsPaused = false;
+	mbOutputDebugTexture = false;
+
 	Log::Info("[ENGINE]: Initializing --------------------");
 	if (!mpRenderer || !mpInput || !mpTimer)
 	{

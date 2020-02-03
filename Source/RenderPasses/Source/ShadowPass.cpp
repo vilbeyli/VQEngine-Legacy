@@ -200,39 +200,6 @@ void ShadowMapPass::InitializeDirectionalLightShadowMap(const Settings::ShadowMa
 void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shadowView, GPUProfiler* pGPUProfiler) const
 {
 	//-----------------------------------------------------------------------------------------------
-	auto RenderDepth = [&](const GameObject* pObj, const XMMATRIX& viewProj, bool bIsCubemap = false)
-	{
-		const ModelData& model = pObj->GetModelData();
-		const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
-
-		if (bIsCubemap)
-		{
-			const DepthOnlyPass_PerObjectMatricesCubemap objMats = DepthOnlyPass_PerObjectMatricesCubemap({ matWorld, matWorld * viewProj });
-			pRenderer->SetConstantStruct("ObjMats", &objMats);
-		}
-		else
-		{
-			const DepthOnlyPass_PerObjectMatrices objMats = DepthOnlyPass_PerObjectMatrices({ matWorld * viewProj });
-			pRenderer->SetConstantStruct("ObjMats", &objMats);
-		}
-		std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
-		{
-#if FORCE_NO_CULL_SPOTLIGHTS
-			const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
-#else
-			const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(id)) 
-				? EDefaultRasterizerState::CULL_NONE 
-				: EDefaultRasterizerState::CULL_FRONT;
-#endif
-			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, id, pObj);
-
-			pRenderer->SetRasterizerState(rasterizerState);
-			pRenderer->SetVertexBuffer(IABuffer.first);
-			pRenderer->SetIndexBuffer(IABuffer.second);
-			pRenderer->Apply();
-			pRenderer->DrawIndexed();
-		});
-	};
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 
 #else
@@ -271,10 +238,11 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	if (bNoShadowingLights) return;
 
 	pRenderer->SetDepthStencilState(EDefaultDepthStencilState::DEPTH_WRITE);
-	pRenderer->SetShader(mShadowMapShader); // shader for rendering z buffer
+	pRenderer->SetShader(mShadowMapShaderInstanced);
 
 	// CLEAR SHADOW MAPS
 	//
+	pGPUProfiler->BeginEntry("Clear");
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
 		pRenderer->BindDepthTarget(mDepthTargets_Spot[i]);	// only depth stencil buffer
@@ -289,6 +257,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 			pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 		}
 	}
+	pGPUProfiler->EndEntry(); // Clear
 
 
 	//-----------------------------------------------------------------------------------------------
@@ -300,10 +269,10 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 	pRenderer->SetViewport(viewPort);
 	for (size_t i = 0; i < shadowView.spots.size(); i++)
 	{
-		const XMMATRIX viewProj = shadowView.spots[i]->GetLightSpaceMatrix();
-		pRenderer->BeginEvent("Spot[" + std::to_string(i) + "]: DrawSceneZ()");
+		const Light* l = shadowView.spots[i];
+		const XMMATRIX viewProj = l->GetLightSpaceMatrix();
 #if _DEBUG
-		if (shadowView.shadowMapRenderListLookUp.find(shadowView.spots[i]) == shadowView.shadowMapRenderListLookUp.end())
+		if (shadowView.shadowMapMeshDrawListLookup.find(shadowView.spots[i]) == shadowView.shadowMapMeshDrawListLookup.end())
 		{
 			Log::Error("Spot light not found in shadowmap render list lookup");
 			continue;
@@ -316,17 +285,93 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 #if _DEBUG
 			Log::Error("Invalid depth target =-1 !");
 #endif
-			pRenderer->EndEvent();
 			continue;
 		}
-		
+
+		pRenderer->BeginEvent("Spot[" + std::to_string(i) + "]: DrawSceneZ()");
 		pRenderer->BindDepthTarget(mDepthTargets_Spot[i]);	// only depth stencil buffer
 		//pRenderer->Apply();
 
+#if 0
 		for (const GameObject* pObj : shadowView.shadowMapRenderListLookUp.at(shadowView.spots[i]))
 		{
-			RenderDepth(pObj, viewProj);
+			const ModelData& model = pObj->GetModelData();
+			const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+			const DepthOnlyPass_PerObjectMatrices objMats = DepthOnlyPass_PerObjectMatrices({ matWorld * viewProj });
+			pRenderer->SetConstantStruct("ObjMats", &objMats);
+			
+			std::for_each(model.mMeshIDs.begin(), model.mMeshIDs.end(), [&](MeshID id)
+			{
+#if FORCE_NO_CULL_SPOTLIGHTS
+				const RasterizerStateID rasterizerState = EDefaultRasterizerState::CULL_BACK;
+#else
+				const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(id))
+					? EDefaultRasterizerState::CULL_NONE
+					: EDefaultRasterizerState::CULL_FRONT;
+#endif
+				const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene, id, pObj);
+
+				pRenderer->SetRasterizerState(rasterizerState);
+				pRenderer->SetVertexBuffer(IABuffer.first);
+				pRenderer->SetIndexBuffer(IABuffer.second);
+				pRenderer->Apply();
+				pRenderer->DrawIndexed();
+			});
 		}
+#else
+		DepthOnlyPass_InstancedObjectCBuffer cbuffer;
+		for (const std::pair<MeshID, std::vector<XMMATRIX>>& f : shadowView.shadowMapMeshDrawListLookup.at(l).meshTransformListLookup)
+		{
+			const int meshInstanceCount = static_cast<int>(f.second.size());
+			const MeshID& meshID        = f.first;
+			assert(meshInstanceCount > 0); // make sure no empty meshID transformation list
+
+#if FORCE_NO_CULL_SPOTLIGHTS
+			const RasterizerStateID rasterizerState =  EDefaultRasterizerState::CULL_BACK;
+#else
+			const RasterizerStateID rasterizerState = GeometryGenerator::Is2DGeometry(static_cast<EGeometry>(meshID))
+				? EDefaultRasterizerState::CULL_NONE
+				: EDefaultRasterizerState::CULL_FRONT;
+#endif
+
+			const auto IABuffer = SceneResourceView::GetVertexAndIndexBufferIDsOfMesh(ENGINE->mpActiveScene
+				, meshID
+#if INCLUDE_OBJECT_POINTER_TO_DRAW_DATA
+				, meshInstanceData.back().pObj
+#endif
+			);
+
+			pRenderer->SetVertexBuffer(IABuffer.first);
+			pRenderer->SetIndexBuffer(IABuffer.second);
+			pRenderer->SetRasterizerState(rasterizerState);
+
+			int batchCount = 0;
+			do
+			{
+				int instanceID = 0;
+				for (; instanceID < MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS; ++instanceID)
+				{
+					const int renderListIndex = MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS * batchCount + instanceID;
+					if (renderListIndex == meshInstanceCount)
+						break;
+
+					cbuffer.objMatrices[instanceID] = DepthOnlyPass_PerObjectMatrices
+					{
+#if INCLUDE_OBJECT_POINTER_TO_DRAW_DATA
+							(*pMatrices[meshInstanceData[instanceID].martixID]) * viewProj
+#else
+							f.second[renderListIndex] * viewProj
+#endif
+					};
+				}
+
+				pRenderer->SetConstantStruct("ObjMats", &cbuffer);
+				pRenderer->Apply();
+				pRenderer->DrawIndexedInstanced(instanceID);
+			} while (batchCount++ < meshInstanceCount / MAX_DRAW_INSTANCED_COUNT__DEPTH_PASS);
+
+		}
+#endif
 		pRenderer->EndEvent();
 	}
 	pGPUProfiler->EndEntry();	// spots
@@ -354,7 +399,7 @@ void ShadowMapPass::RenderShadowMaps(Renderer* pRenderer, const ShadowView& shad
 		pRenderer->BeginRender(ClearCommand::Depth(1.0f));
 		for (const GameObject* pObj : shadowView.casters)
 		{
-			RenderDepth(pObj, viewProj);
+			;// RenderDepth(pObj, viewProj);
 		}
 
 

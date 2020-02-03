@@ -28,7 +28,7 @@ struct vec3;
 struct MeshInstanceTransformationLookup;
 
 class GameObject;
-
+struct Light;
 
 struct BoundingBox
 {
@@ -80,8 +80,9 @@ namespace VQEngine
 	bool IsIntersecting(const Sphere& s1, const Sphere& s2);
 
 	// deprecated
-	size_t CullMeshes(const FrustumPlaneset& frustumPlanes, const GameObject* pObj, MeshInstanceTransformationLookup& meshDrawData);
+	size_t FrustumCullMeshes(const FrustumPlaneset& frustumPlanes, const GameObject* pObj, MeshInstanceTransformationLookup& meshDrawData);
 
+	std::vector<const GameObject*> DistanceCullLight(const Light* l, const std::vector<const GameObject*>& sceneShadowCasterObjects, int& outNumCulledMeshes);
 
 	// returns the indices of visible bounding boxes
 	//

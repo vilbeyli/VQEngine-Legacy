@@ -233,6 +233,17 @@ void Scene::AddDynamicLight(const Light& l)
 	mLightsDynamic.push_back(l);
 }
 
+void Scene::UpdateBoundingBoxes()
+{
+	for (GameObject& obj : mObjectPool.mObjects)
+	{
+		if (obj.mpScene == this)
+		{
+			obj.UpdateBoundingBox();
+		}
+	}
+}
+
 Model Scene::LoadModel(const std::string & modelPath)
 {
 	return mModelLoader.LoadModel(modelPath, this);
@@ -277,13 +288,18 @@ void Scene::UpdateScene(float dt)
 	}
 #endif
 
-
-
 	// UPDATE CAMERA & WORLD
 	//
 	mpCPUProfiler->BeginEntry("Scene::Update()");
 	mCameras[mSelectedCamera].Update(dt);
 	Update(dt);
+	mpCPUProfiler->EndEntry();
+
+
+	// UPDATE WORLD-SPACE BOUNDING BOXES
+	//
+	mpCPUProfiler->BeginEntry("Scene::UpdateBoundingBoxes()");
+	UpdateBoundingBoxes();
 	mpCPUProfiler->EndEntry();
 
 	// UPDATE LOD MANAGER
@@ -843,10 +859,10 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 {
 	using namespace VQEngine;
 
-
-	auto fnCullPointLightView = [&](const Light* l, const std::array<FrustumPlaneset, 6>& frustumPlaneSetPerFace)
+	auto fnCullPointLightView = [&](const Light* l, const std::array<FrustumPlaneset, 6>& frustumPlaneSetPerFace, const std::vector<const GameObject*>& sceneShadowCasterObjects, int& outNumCulledObj)
 	{
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
+		// Get & Reset Mesh-Transformation data
 		std::array< MeshInstanceTransformationLookup, 6>& meshDrawDataPerFace = mShadowView.shadowCubeMapMeshDrawListLookup[l];
 		for (int i = 0; i < 6; ++i)
 			meshDrawDataPerFace[i].meshTransformListLookup.clear();
@@ -857,20 +873,11 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 #endif
 
 		// cull for far distance
-		std::vector<const GameObject*> culledMainViewShadowCasterList(sceneShadowCasterObjects.size(), nullptr);
-		int numObjs = 0;
-		for (const GameObject* pObj : sceneShadowCasterObjects)
-		{
-			const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
-			BoundingBox BB = pObj->GetAABB(); // local space AABB (this is wrong, AABB should be calculated on update()).
-			BB.low = XMVector3Transform(BB.low, matWorld);
-			BB.hi  = XMVector3Transform(BB.hi , matWorld); // world space BB
-			if (IsBoundingBoxInsideSphere_Approx(BB, Sphere(l->GetTransform()._position, l->mRange)))
-				culledMainViewShadowCasterList[numObjs++] = pObj;
-			else
-				stats.scene.numPointsCulledObjects += pObj->GetModelData().mMeshIDs.size();
-		}
-		if (numObjs == 0)
+		std::vector<const GameObject*> culledMainViewShadowCasterList = DistanceCullLight(l, sceneShadowCasterObjects, outNumCulledObj);
+		
+		// culledMainViewShadowCasterList is resized to input vector length with nullptr initial values, and populated based on culling.
+		// if the first element is a nullptr, there's no meshes to cull futrher.
+		if (!culledMainViewShadowCasterList[0]) 
 		{
 			return;
 		}
@@ -885,35 +892,26 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 					break;
 
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
-				stats.scene.numPointsCulledObjects += CullMeshes
-				(
-					frustumPlaneSetPerFace[face],
-					pObj,
-					meshDrawDataPerFace[face]
-				);
+				outNumCulledObj += FrustumCullMeshes(frustumPlaneSetPerFace[face], pObj, meshDrawDataPerFace[face]);
 #else
 				meshDrawData.meshIDs.clear();
-				stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes
-				(
-					frustumPlaneSetPerFace[face],
-					pObj,
-					meshDrawData
-				));
+				stats.scene.numPointsCulledObjects += static_cast<int>(CullMeshes(frustumPlaneSetPerFace[face], pObj, meshDrawData));
 				meshListForPoints[face].push_back(meshDrawData);
 #endif
 			}
 		}
 	};
-	auto fnCullSpotLightView = [&](const Light* l, const FrustumPlaneset& frustumPlaneSet)
+	auto fnCullSpotLightView = [&](const Light* l, const FrustumPlaneset& frustumPlaneSet, const std::vector<const GameObject*>& sceneShadowCasterObjects, int& outNumCulledObj)
 	{
 		MeshInstanceTransformationLookup& meshRenderList = mShadowView.shadowMapMeshDrawListLookup[l];
 		meshRenderList.meshTransformListLookup.clear();
-		for (const GameObject* pObj : sceneShadowCasterObjects)
+		//std::vector<const GameObject*> culledMainViewShadowCasterList(DistanceCullLight(l, sceneShadowCasterObjects, stats.scene.numSpotsCulledObjects));
+		for (const GameObject* pObj : sceneShadowCasterObjects/*culledMainViewShadowCasterList*/)
 		{
-			if (!pObj) // stop at first null game object because we resize @filteredMainViewShadowCasterList when creating it.
+			if (!pObj) // stop at first null game object 
 				break;
 
-			stats.scene.numSpotsCulledObjects += CullMeshes(frustumPlaneSet, pObj, meshRenderList);
+			outNumCulledObj += FrustumCullMeshes(frustumPlaneSet, pObj, meshRenderList);
 		}
 	};
 
@@ -925,26 +923,30 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 	//
 	if (!mSceneRenderSettings.optimization.bViewFrustumCull_LocalLights)
 	{
-		// spots
-		auto fnCopySpotLightRenderLists = [&]()
+		auto fnCopySpotLightRenderLists = [&](const std::vector<Light>& lightContainer, const std::vector<int>& lightIndices)
 		{
-			// TODO
+			for (int i = 0; i < lightIndices.size(); ++i)
+			{
+				const Light* l = &lightContainer[lightIndices[i]];
+				MeshInstanceTransformationLookup& meshDrawData = mShadowView.shadowMapMeshDrawListLookup[l];
+				for (const GameObject* pObj : sceneShadowCasterObjects)
+				{
+					const XMMATRIX matWorld = pObj->GetTransform().WorldTransformationMatrix();
+					for (MeshID meshID : pObj->GetModelData().mMeshIDs)
+						meshDrawData.AddMeshTransformation(meshID, matWorld);
+				}
+			}
 		};
-
-
-		// points
 		auto fnCopyPointLightRenderLists = [&](const std::vector<Light>& lightContainer, const std::vector<int>& lightIndices)
 		{
 			for (int i = 0; i < lightIndices.size(); ++i)
 			{
 				const Light* l = &lightContainer[lightIndices[i]];
-
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 				std::array< MeshInstanceTransformationLookup, 6>& meshDrawDataPerFace = mShadowView.shadowCubeMapMeshDrawListLookup[l];
 #else
 				std::array< MeshDrawList, 6>& meshListForPoints = mShadowView.shadowCubeMapMeshDrawListLookup[l];
 #endif
-
 				for (int face = 0; face < 6; ++face)
 				{
 					for (const GameObject* pObj : sceneShadowCasterObjects)
@@ -963,8 +965,8 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 
 		fnCopyPointLightRenderLists(mLightsStatic , shadowingLightIndices.mStaticLights.pointLightIndices);
 		fnCopyPointLightRenderLists(mLightsDynamic, shadowingLightIndices.mDynamicLights.pointLightIndices);
-		//fnCopySpotLightRenderLists(); // TODO
-		//fnCopySpotLightRenderLists(); // TODO
+		fnCopySpotLightRenderLists(mLightsStatic  , shadowingLightIndices.mStaticLights.spotLightIndices);
+		fnCopySpotLightRenderLists(mLightsDynamic , shadowingLightIndices.mDynamicLights.spotLightIndices);
 		return;
 	}
 
@@ -986,7 +988,7 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 		{
 			int lightIndex = lightIndexContainer[i];
 			const Light* l = &mLightsStatic[lightIndex];
-			fnCullPointLightView(l, mStaticLightCache.mStaticPointLightFrustumPlanes.at(l));
+			fnCullPointLightView(l, mStaticLightCache.mStaticPointLightFrustumPlanes.at(l), sceneShadowCasterObjects, stats.scene.numPointsCulledObjects);
 		}
 	}
 	mpCPUProfiler->EndEntry();
@@ -998,7 +1000,7 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 		{
 			int lightIndex = lightIndexContainer[i];
 			const Light* l = &mLightsStatic[lightIndex];
-			fnCullSpotLightView(&mLightsStatic[lightIndex], mStaticLightCache.mStaticSpotLightFrustumPlanes.at(l));
+			fnCullSpotLightView(&mLightsStatic[lightIndex], mStaticLightCache.mStaticSpotLightFrustumPlanes.at(l), sceneShadowCasterObjects, stats.scene.numSpotsCulledObjects);
 		}
 	}
 	mpCPUProfiler->EndEntry();
@@ -1016,7 +1018,7 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 			, mLightsDynamic[lightIndex].GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(4))
 			, mLightsDynamic[lightIndex].GetViewFrustumPlanes(static_cast<Texture::CubemapUtility::ECubeMapLookDirections>(5))
 		};
-		fnCullPointLightView(&mLightsDynamic[lightIndex], frustumPlanesPerFace);
+		fnCullPointLightView(&mLightsDynamic[lightIndex], frustumPlanesPerFace, sceneShadowCasterObjects, stats.scene.numPointsCulledObjects);
 	}
 	mpCPUProfiler->EndEntry();
 
@@ -1024,7 +1026,7 @@ void Scene::FrustumCullPointAndSpotShadowViews(
 	for (int lightIndex : shadowingLightIndices.mDynamicLights.spotLightIndices)
 	{
 		const Light* l = &mLightsDynamic[lightIndex];
-		fnCullSpotLightView(l, l->GetViewFrustumPlanes());
+		fnCullSpotLightView(l, l->GetViewFrustumPlanes(), sceneShadowCasterObjects, stats.scene.numSpotsCulledObjects);
 	}
 	mpCPUProfiler->EndEntry();
 }

@@ -19,6 +19,7 @@
 
 #include "ObjectCullingSystem.h"
 #include "GameObject.h"
+#include "Light.h"
 
 #include "RenderPasses/RenderPasses.h"
 #include "Utilities/Log.h"
@@ -151,7 +152,7 @@ namespace VQEngine
 		return true;
 	}
 
-	size_t CullMeshes(
+	size_t FrustumCullMeshes(
 		const FrustumPlaneset& frustumPlanes,
 		const GameObject* pObj,
 		MeshInstanceTransformationLookup& meshDrawData
@@ -167,9 +168,7 @@ namespace VQEngine
 #endif
 
 		// first test at GameObject granularity
-		BoundingBox BB = pObj->GetAABB();
-		BB.low = XMVector3Transform(BB.low, matWorld);
-		BB.hi  = XMVector3Transform(BB.hi , matWorld); // world space BB
+		const BoundingBox& BB = pObj->GetAABB_World();
 		if (!IsBoundingBoxVisibleFromFrustum(frustumPlanes, BB))
 		{
 			return numCulled;
@@ -181,10 +180,8 @@ namespace VQEngine
 		{
 			const MeshID meshID = objMeshIDs[meshIDIndex];
 
-			BB = pObj->GetMeshBBs()[meshIDIndex]; // local space BB
-			BB.low = XMVector3Transform(BB.low, matWorld);
-			BB.hi  = XMVector3Transform(BB.hi , matWorld); // world space BB
-			if (IsBoundingBoxVisibleFromFrustum(frustumPlanes, BB))
+			const BoundingBox& BBMesh = pObj->GetMeshBBs_World()[meshIDIndex];
+			if (IsBoundingBoxVisibleFromFrustum(frustumPlanes, BBMesh))
 			{
 #if SHADOW_PASS_USE_INSTANCED_DRAW_DATA
 				meshDrawData.AddMeshTransformation(meshID, matWorld);
@@ -306,6 +303,20 @@ namespace VQEngine
 		return pObjs.size() - currIdx;
 	}
 
+
+	std::vector<const GameObject*> DistanceCullLight(const Light* l, const std::vector<const GameObject*>& sceneShadowCasterObjects, int& outNumCulledMeshes)
+	{
+		std::vector<const GameObject*> culledGameObjectList(sceneShadowCasterObjects.size(), nullptr);
+		int numObjs = 0;
+		for (const GameObject* pObj : sceneShadowCasterObjects)
+		{
+			if (IsBoundingBoxInsideSphere_Approx(pObj->GetAABB_World(), Sphere(l->GetTransform()._position, l->mRange)))
+				culledGameObjectList[numObjs++] = pObj;
+			else
+				outNumCulledMeshes += pObj->GetModelData().mMeshIDs.size();
+		}
+		return std::move(culledGameObjectList);
+	}
 
 
 #if THREADED_FRUSTUM_CULL

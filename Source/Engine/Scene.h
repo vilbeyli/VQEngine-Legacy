@@ -321,6 +321,8 @@ private:
 	void AddStaticLight(const Light& l);
 	void AddDynamicLight(const Light& l);
 
+	void UpdateBoundingBoxes();
+
 	//-------------------------------
 	// PreRender() ROUTINES
 	//-------------------------------

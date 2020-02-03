@@ -59,6 +59,28 @@ void GameObject::SetMeshMaterials(const Material* pMat)
 		assert(false); // TODO: impl mesh override queue or resolve the ambiguity between material assignment queue and this case
 }
 
+void GameObject::UpdateBoundingBox()
+{
+	const XMMATRIX matWorld = GetTransform().WorldTransformationMatrix();
+	BoundingBox BB = GetAABB();
+	BB.low = XMVector3Transform(BB.low, matWorld);
+	BB.hi  = XMVector3Transform(BB.hi , matWorld); // world space BB
+	mBoundingBox_World = BB;
+
+	std::vector<MeshID>& meshes = mModel.mData.mMeshIDs;
+	if (mMeshBoundingBoxes_World.size() != meshes.size())
+		mMeshBoundingBoxes_World.resize(meshes.size());
+
+	for (MeshID meshIDIndex = 0; meshIDIndex < meshes.size(); ++meshIDIndex)
+	{
+		const MeshID meshID = meshes[meshIDIndex];
+		BB = mMeshBoundingBoxes[meshIDIndex]; // local space BB
+		BB.low = XMVector3Transform(BB.low, matWorld);
+		BB.hi  = XMVector3Transform(BB.hi, matWorld); // world space BB
+		mMeshBoundingBoxes_World[meshIDIndex] = BB;
+	}
+}
+
 void GameObject::RenderTransparent(
 	  Renderer * pRenderer
 	, const SceneView& sceneView

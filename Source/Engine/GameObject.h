@@ -68,8 +68,11 @@ public:
 	inline Model& GetModel() { return mModel; }
 	inline void SetModel(const Model& model) { mModel = model; } // i don't like this setter...
 	inline const BoundingBox& GetAABB() const { return mBoundingBox; }
+	inline const BoundingBox& GetAABB_World() const { return mBoundingBox_World; }
 	inline const std::vector<BoundingBox>& GetMeshBBs() const { return mMeshBoundingBoxes; }
+	inline const std::vector<BoundingBox>& GetMeshBBs_World() const { return mMeshBoundingBoxes_World; }
 
+	void UpdateBoundingBox();
 
 //---------------------------------------------------------------------------------------------------
 
@@ -98,7 +101,9 @@ private:
 	Transform			mTransform;
 	Model				mModel;
 	BoundingBox			mBoundingBox;
+	BoundingBox			mBoundingBox_World;
 	std::vector<BoundingBox> mMeshBoundingBoxes;
+	std::vector<BoundingBox> mMeshBoundingBoxes_World;
 
 };
 

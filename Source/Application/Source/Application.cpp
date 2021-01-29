@@ -529,7 +529,7 @@ void Application::InitRawInputDevices()
 
 			UINT dataSize = 0;
 			GetRawInputDeviceInfo(
-				device.hDevice, RIDI_DEVICENAME, nullptr, &dataSize);
+			device.hDevice, RIDI_DEVICENAME, nullptr, &dataSize);
 			if (dataSize)
 			{
 				deviceNameData.resize(dataSize);
@@ -540,7 +540,7 @@ void Application::InitRawInputDevices()
 					deviceName.assign(deviceNameData.begin(), deviceNameData.end());
 
 					char info[1024];
-					std::string ndeviceName(deviceName.begin(), deviceName.end());
+					std::string ndeviceName = StrUtil::UnicodeString::ToASCII(deviceName.data());
 					sprintf_s(info, "  Name=%s\n", ndeviceName.c_str());
 					OutputDebugString(info);
 				}

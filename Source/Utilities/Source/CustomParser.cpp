@@ -406,7 +406,7 @@ static std::array<TextureID, NUM_PBR_TEXTURE_INPUTS> LoadPBRPreset(Renderer* pRe
 
 
 #if _MSVC_LANG >= 201703L	// CPP17
-	namespace filesys = std::experimental::filesystem;
+	namespace filesys = std::filesystem;
 
 	const std::string PBR_ROOT = Renderer::sTextureRoot + std::string("PBR/");
 	const bool bGenerateMips = true;

@@ -5,6 +5,7 @@
 #include <numeric>
 #include <sstream>
 #include <iomanip>
+#include <algorithm>
 
 #define DISABLE_CPU_PROFILER 0
 #define DISABLE_GPU_PROFILER 0

@@ -36,9 +36,9 @@
 
 // 2011**L::C++11 | 201402L::C++14 | 201703L::C++17
 #if _MSVC_LANG >= 201703L	// CPP17
-#include <experimental/filesystem>
+#include <filesystem>
 
-namespace filesys = std::experimental::filesystem;
+namespace filesys = std::filesystem;
 #else
 #include <fstream>
 #endif
@@ -119,6 +119,17 @@ namespace StrUtil
 		return std::string(_num.rbegin(), _num.rend());
 	}
 
+	std::string UnicodeString::ToASCII(PWSTR pwstr)
+	{
+		std::wstring wstr(pwstr);
+		// https://codingtidbit.com/2020/02/09/c17-codecvt_utf8-is-deprecated/
+		if (wstr.empty()) return std::string();
+		int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+		std::string strTo(size_needed, 0);
+		WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+		return strTo;
+	}
+
 	UnicodeString::UnicodeString(const std::string& strIn)
 		: str(strIn)
 	{
@@ -129,7 +140,7 @@ namespace StrUtil
 	UnicodeString::UnicodeString(PWSTR strIn)
 		: wstr(strIn)
 	{
-		str = std::string(wstr.begin(), wstr.end());
+		str = ToASCII(strIn);
 	}
 }
 

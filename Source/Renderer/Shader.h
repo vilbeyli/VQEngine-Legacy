@@ -29,12 +29,12 @@
 #include <stack>
 #include <unordered_map>
 
-#include <experimental/filesystem>	// cpp17
+#include <filesystem>	// cpp17
 
 using CPUConstantID = int;
 using GPU_ConstantBufferSlotIndex = int;
 using ConstantBufferMapping = std::pair<GPU_ConstantBufferSlotIndex, CPUConstantID>;
-using FileTimeStamp = std::experimental::filesystem::file_time_type;
+using FileTimeStamp = std::filesystem::file_time_type;
 
 //----------------------------------------------------------------------------------------------------------------
 // SHADER DATA/RESOURCE INTERFACE STRUCTS
@@ -106,8 +106,8 @@ struct ShaderLoadDesc
 	ShaderLoadDesc() = default;
 	ShaderLoadDesc(const std::string& path, const std::string& cachePath_) : fullPath(path), cachePath(cachePath_)
 	{
-		this->lastWriteTime = std::experimental::filesystem::last_write_time(fullPath);
-		this->cacheLastWriteTime = std::experimental::filesystem::last_write_time(cachePath);
+		this->lastWriteTime = std::filesystem::last_write_time(fullPath);
+		this->cacheLastWriteTime = std::filesystem::last_write_time(cachePath);
 	}
 	std::string fullPath;
 	std::string cachePath;

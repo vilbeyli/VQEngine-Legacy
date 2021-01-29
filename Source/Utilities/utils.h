@@ -47,7 +47,7 @@ namespace StrUtil
 	struct UnicodeString
 	{
 	public:
-		static std::string ToASCII(PWSTR pwstr) { std::wstring wstr(pwstr); return std::string(wstr.begin(), wstr.end()); }
+		static std::string ToASCII(PWSTR pwstr);
 		static std::wstring ASCIIToUnicode(const std::string& str) { return std::wstring(str.begin(), str.end()); }
 
 	private:
